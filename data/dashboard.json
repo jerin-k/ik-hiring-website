@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-04T06:00:00Z",
+  "lastUpdated": "2026-08-04T19:22:11.461Z",
   "openings": [
     {
       "title": "Program Advisor - US (AI Programs)",
@@ -1585,5 +1585,37 @@
       "candidates": 1,
       "hires": 0
     }
-  ]
+  ],
+  "quarterly": {
+    "2026-Q1": {
+      "funnel": {
+        "applied": 29767,
+        "screened": 3036,
+        "interviewed": 1056,
+        "offered": 257,
+        "hired": 166
+      },
+      "topJobs": []
+    },
+    "2026-Q2": {
+      "funnel": {
+        "applied": 21405,
+        "screened": 1905,
+        "interviewed": 1121,
+        "offered": 220,
+        "hired": 170
+      },
+      "topJobs": []
+    },
+    "2026-Q3": {
+      "funnel": {
+        "applied": 864,
+        "screened": 439,
+        "interviewed": 293,
+        "offered": 103,
+        "hired": 30
+      },
+      "topJobs": []
+    }
+  }
 }
