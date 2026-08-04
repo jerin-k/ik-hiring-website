@@ -1,0 +1,27 @@
+{
+  "defaultRole": "none",
+  "users": [
+    {
+      "email": "jerin@interviewkickstart.com",
+      "role": "admin"
+    },
+    {
+      "email": "swati.p@interviewkickstart.com",
+      "role": "admin"
+    },
+    {
+      "email": "recruiter1@interviewkickstart.com",
+      "role": "restricted",
+      "isRecruiter": true,
+      "departments": [],
+      "teams": []
+    },
+    {
+      "email": "hm@interviewkickstart.com",
+      "role": "restricted",
+      "isRecruiter": false,
+      "departments": ["Engineering"],
+      "teams": ["Software Development"]
+    }
+  ]
+}
