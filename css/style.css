@@ -14,7 +14,7 @@
   --red-light: #fff1f2;
   --orange: #a16207;
   --orange-light: #fffbeb;
-  --blue: #1d4ed8;
+  --blue: #2563eb;
   --blue-light: #eff6ff;
   --yellow: #a16207;
 }
@@ -481,7 +481,7 @@ hr.section-divider { border: none; border-top: 1px solid var(--border); margin: 
   transition: background .15s;
 }
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:hover { background: #1e50c9; }
 .btn-danger { background: var(--red); color: #fff; }
 .btn-sm { padding: 3px 8px; font-size: 11px; }
 
