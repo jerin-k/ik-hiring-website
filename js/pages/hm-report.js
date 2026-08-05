@@ -1,4 +1,5 @@
 import { getData } from '../data.js';
+import { resolveDeptTeam as splitDT } from '../dept-map.js';
 
 const STAGES_ORDER = ['appReview','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 const STAGE_LABELS = {
@@ -15,16 +16,8 @@ const TP_LABELS = {
 // Reached-stage funnel order (excludes raw Application intake)
 const FUNNEL_ORDER = ['taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 
-// The pipeline currently stores department & team as one combined "Department (Team)"
-// string. Parse it apart so we can present real Department and Team columns. For values
-// with no "(Team)" suffix, both fall back to the same value until the pipeline emits
-// proper separate fields.
-function splitDT(val) {
-  const s = (val || '').trim();
-  const m = s.match(/^(.*?)\s*\((.*)\)\s*$/);
-  if (m && m[1].trim()) return { dept: m[1].trim(), team: m[2].trim() };
-  return { dept: s, team: s };
-}
+// Department/Team resolution lives in ../dept-map.js (the authoritative Ashby dump),
+// imported above as splitDT.
 const byDeptTeam = (a, b) =>
   a._dept.localeCompare(b._dept) || a._team.localeCompare(b._team) ||
   ((b.total || 0) - (a.total || 0)) || String(a.title || '').localeCompare(String(b.title || ''));
@@ -113,6 +106,39 @@ const valueLabels = {
   }
 };
 
+// Wires collapse/expand for a dept -> team -> leaf tree table body.
+// Rows use: class dept-header|team-header|leaf, data-g (dept index), data-tg (team key), data-exp.
+function wireTree(tbody) {
+  tbody.querySelectorAll('tr.dept-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const gi = h.dataset.g;
+      const exp = h.dataset.exp === '1';
+      h.dataset.exp = exp ? '0' : '1';
+      const c = h.querySelector('.caret'); if (c) c.textContent = exp ? '▸' : '▾';
+      tbody.querySelectorAll(`tr[data-g="${gi}"]`).forEach(r => {
+        if (r === h) return;
+        r.style.display = exp ? 'none' : '';
+      });
+      if (!exp) {
+        tbody.querySelectorAll(`tr.team-header[data-g="${gi}"]`).forEach(t => {
+          t.dataset.exp = '1';
+          const tc = t.querySelector('.caret'); if (tc) tc.textContent = '▾';
+        });
+      }
+    });
+  });
+  tbody.querySelectorAll('tr.team-header').forEach(h => {
+    h.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tg = h.dataset.tg;
+      const exp = h.dataset.exp === '1';
+      h.dataset.exp = exp ? '0' : '1';
+      const c = h.querySelector('.caret'); if (c) c.textContent = exp ? '▸' : '▾';
+      tbody.querySelectorAll(`tr.leaf[data-tg="${tg}"]`).forEach(r => { r.style.display = exp ? 'none' : ''; });
+    });
+  });
+}
+
 export function renderHmReport(data) {
   if (!data || !data.jobs) return '<p>No data available.</p>';
 
@@ -165,6 +191,13 @@ export function renderHmReport(data) {
       <tbody id="hm1JobBody"></tbody>
     </table></div>
 
+    <h3 class="subsection-title">Joining Pending — Cases</h3>
+    <p class="sub-note">Individual candidates in Ref Check, Documentation, or Offer stage, by expected date of joining.</p>
+    <div class="scroll-table"><table>
+      <thead><tr><th>Department</th><th>Team</th><th>DOJ</th><th>Job</th><th>Name</th></tr></thead>
+      <tbody id="hmJPBody"></tbody>
+    </table></div>
+
     <hr class="section-divider">
 
     <!-- ===== SECTION 2: THROUGHPUT ===== -->
@@ -189,6 +222,16 @@ export function renderHmReport(data) {
     <h3 class="subsection-title">Pipeline Funnel — Total</h3>
     <p class="sub-note">Candidates who reached each stage, aggregated across the jobs matching the filters above.</p>
     <div class="chart-wrap" id="hm2FunnelWrap" style="height:360px"><canvas id="hm2Funnel"></canvas></div>
+
+    <hr class="section-divider">
+
+    <!-- ===== PANELIST DASHBOARD ===== -->
+    <h2 class="section-title">Panelist Dashboard</h2>
+    <p class="sub-note">Interview load and feedback turnaround per panelist. Click a department or team row to expand.</p>
+    <div class="scroll-table"><table>
+      <thead><tr><th>Department</th><th>Team</th><th>Panelist</th><th>Job</th><th>Interview Count</th><th>Avg Time for Feedback</th></tr></thead>
+      <tbody id="hmPanelBody"></tbody>
+    </table></div>
 
     <hr class="section-divider">
 
@@ -429,37 +472,68 @@ export function initHmFilters(data) {
     row2 += '</tr>';
     document.getElementById('hm2Head').innerHTML = row1 + row2;
 
-    let html = '';
+    // Per-job throughput, grouped Department -> Team -> Job
     const tpTotals = {};
     TP_KEYS.forEach(k => { tpTotals[k] = { i: 0, o: 0 }; });
-    let overallSum = 0, overallCount = 0;
-
+    const groups = {};
     filtered.forEach(j => {
       const t = computeThroughput(j.pipeline, j.total);
       TP_KEYS.forEach(k => { tpTotals[k].i += t[k].i; tpTotals[k].o += t[k].o; });
-      if (t.overall !== null) { overallSum += t.overall; overallCount++; }
+      if (!groups[j._dept]) groups[j._dept] = { all: [], teams: {} };
+      groups[j._dept].all.push({ job: j, t });
+      if (!groups[j._dept].teams[j._team]) groups[j._dept].teams[j._team] = [];
+      groups[j._dept].teams[j._team].push({ job: j, t });
+    });
 
-      html += `<tr><td style="color:var(--muted);font-size:11px;max-width:120px">${j._dept}</td>`;
-      html += `<td style="color:var(--muted);font-size:11px;max-width:120px">${j._team}</td>`;
-      html += `<td style="font-weight:500;max-width:200px;white-space:nowrap">${j.title}</td>`;
+    function aggTP(list) {
+      const acc = {}; TP_KEYS.forEach(k => acc[k] = { i: 0, o: 0 });
+      list.forEach(({ t }) => TP_KEYS.forEach(k => { acc[k].i += t[k].i; acc[k].o += t[k].o; }));
+      acc.overall = acc.r1.i > 0 ? acc.ds.i / acc.r1.i : null;
+      return acc;
+    }
+    function tpCells(per) {
+      let s = '';
       visStages.forEach(sk => {
-        const s = t[sk];
-        const cls = s.i === 0 ? 'zero' : '';
-        html += `<td class="stage-cell stage-first ${cls}">${zv(s.i)}</td><td class="stage-cell ${cls}">${zv(s.o)}</td><td class="stage-cell">${pctCell(s.o, s.i)}</td>`;
+        const c = per[sk]; const cls = c.i === 0 ? 'zero' : '';
+        s += `<td class="stage-cell stage-first ${cls}">${zv(c.i)}</td><td class="stage-cell ${cls}">${zv(c.o)}</td><td class="stage-cell">${pctCell(c.o, c.i)}</td>`;
       });
-      const ov = t.overall !== null ? (t.overall * 100).toFixed(1) + '%' : '—';
-      const ovc = pctClass(ov);
-      html += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="${ovc}">${ov}</span></td></tr>`;
-    });
+      const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
+      s += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="${pctClass(ov)}">${ov}</span></td>`;
+      return s;
+    }
+    const caret = '<span class="caret" style="display:inline-block;width:12px;color:var(--muted)">▾</span>';
 
-    html += '<tr class="totals-row"><td>Total</td><td></td><td></td>';
-    visStages.forEach(sk => {
-      const s = tpTotals[sk];
-      html += `<td class="stage-cell stage-first">${s.i}</td><td class="stage-cell">${s.o}</td><td class="stage-cell">${pctCell(s.o, s.i)}</td>`;
+    let html = '';
+    Object.keys(groups).sort().forEach((deptName, gi) => {
+      const G = groups[deptName];
+      const teamNames = Object.keys(G.teams).sort();
+      html += `<tr class="dept-header" data-g="${gi}" data-exp="1" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${caret}${deptName}</td>
+        <td style="color:var(--muted)">${teamNames.length} team${teamNames.length > 1 ? 's' : ''}</td>
+        <td style="color:var(--muted);font-size:11px">${G.all.length} jobs</td>
+        ${tpCells(aggTP(G.all))}</tr>`;
+      teamNames.forEach((teamName, ti) => {
+        const list = G.teams[teamName];
+        const tg = gi + '-' + ti;
+        html += `<tr class="team-header" data-g="${gi}" data-tg="${tg}" data-exp="1" style="cursor:pointer;background:#fafbfc">
+          <td></td>
+          <td style="padding-left:16px;font-weight:500">${caret}${teamName}</td>
+          <td style="color:var(--muted);font-size:11px">${list.length} jobs</td>
+          ${tpCells(aggTP(list))}</tr>`;
+        list.forEach(({ job, t }) => {
+          html += `<tr class="leaf" data-g="${gi}" data-tg="${tg}">
+            <td></td><td></td>
+            <td style="font-weight:500;max-width:220px;white-space:nowrap;padding-left:28px">${job.title}</td>
+            ${tpCells(t)}</tr>`;
+        });
+      });
     });
-    const avgOv = overallCount > 0 ? ((overallSum / overallCount) * 100).toFixed(1) + '%' : '—';
-    html += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600">${avgOv}</td></tr>`;
-    document.getElementById('hm2Body').innerHTML = html;
+    const allList = [];
+    Object.values(groups).forEach(G => allList.push(...G.all));
+    html += `<tr class="totals-row"><td>Total</td><td></td><td></td>${tpCells(aggTP(allList))}</tr>`;
+    const hm2Body = document.getElementById('hm2Body');
+    hm2Body.innerHTML = html;
+    wireTree(hm2Body);
 
     // Chart 1: In vs Out by stage — Application stage excluded, values labeled
     const chartLabels = [], chartIn = [], chartOut = [];
@@ -543,37 +617,131 @@ export function initHmFilters(data) {
     hdr += '</tr>';
     document.getElementById('hm3Head').innerHTML = hdr;
 
-    const stageTotals = {};
-    visStages.forEach(s => { stageTotals[s] = 0; });
+    // Group Department -> Team -> Job
+    const stageTotalsAll = {}; visStages.forEach(s => { stageTotalsAll[s] = 0; });
     let grandTotal = 0;
-
-    let html = '';
+    const groups = {};
     filtered.forEach(j => {
-      const p = j.pipeline;
       grandTotal += j.total;
-      html += `<tr><td style="color:var(--muted);font-size:11px">${j._dept}</td>`;
-      html += `<td style="color:var(--muted);font-size:11px">${j._team}</td>`;
-      html += `<td style="font-weight:500;max-width:200px;white-space:nowrap">${j.title}</td><td style="font-weight:600">${j.total}</td>`;
+      visStages.forEach(k => { stageTotalsAll[k] += (j.pipeline[k] || 0); });
+      if (!groups[j._dept]) groups[j._dept] = { total: 0, stages: {}, teams: {} };
+      const G = groups[j._dept]; G.total += j.total;
+      visStages.forEach(k => { G.stages[k] = (G.stages[k] || 0) + (j.pipeline[k] || 0); });
+      if (!G.teams[j._team]) G.teams[j._team] = { total: 0, stages: {}, jobs: [] };
+      const T = G.teams[j._team]; T.total += j.total;
+      visStages.forEach(k => { T.stages[k] = (T.stages[k] || 0) + (j.pipeline[k] || 0); });
+      T.jobs.push(j);
+    });
+
+    function pipeCells(total, stages) {
+      let s = `<td style="font-weight:600">${total}</td>`;
       visStages.forEach(k => {
-        const v = p[k] || 0;
-        stageTotals[k] += v;
-        let style = '';
+        const v = stages[k] || 0; let style = '';
         if (k === 'hired' && v > 0) style = ' class="good"';
         else if (k === 'offer' && v > 0) style = ' style="color:var(--blue);font-weight:600"';
         else if (v === 0) style = ' class="zero"';
-        html += `<td${style}>${v}</td>`;
+        s += `<td${style}>${v}</td>`;
       });
-      html += '</tr>';
-    });
+      return s;
+    }
+    const caret = '<span class="caret" style="display:inline-block;width:12px;color:var(--muted)">▾</span>';
 
-    html += `<tr class="totals-row"><td>Total</td><td></td><td></td><td>${grandTotal}</td>`;
-    visStages.forEach(k => { html += `<td>${stageTotals[k]}</td>`; });
-    html += '</tr>';
-    document.getElementById('hm3Body').innerHTML = html;
+    let html = '';
+    Object.keys(groups).sort().forEach((deptName, gi) => {
+      const G = groups[deptName];
+      const teamNames = Object.keys(G.teams).sort();
+      const deptJobs = teamNames.reduce((s, tn) => s + G.teams[tn].jobs.length, 0);
+      html += `<tr class="dept-header" data-g="${gi}" data-exp="1" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${caret}${deptName}</td>
+        <td style="color:var(--muted)">${teamNames.length} team${teamNames.length > 1 ? 's' : ''}</td>
+        <td style="color:var(--muted);font-size:11px">${deptJobs} jobs</td>
+        ${pipeCells(G.total, G.stages)}</tr>`;
+      teamNames.forEach((teamName, ti) => {
+        const T = G.teams[teamName];
+        const tg = gi + '-' + ti;
+        html += `<tr class="team-header" data-g="${gi}" data-tg="${tg}" data-exp="1" style="cursor:pointer;background:#fafbfc">
+          <td></td>
+          <td style="padding-left:16px;font-weight:500">${caret}${teamName}</td>
+          <td style="color:var(--muted);font-size:11px">${T.jobs.length} jobs</td>
+          ${pipeCells(T.total, T.stages)}</tr>`;
+        T.jobs.forEach(j => {
+          html += `<tr class="leaf" data-g="${gi}" data-tg="${tg}">
+            <td></td><td></td>
+            <td style="font-weight:500;max-width:220px;white-space:nowrap;padding-left:28px">${j.title}</td>
+            ${pipeCells(j.total, j.pipeline)}</tr>`;
+        });
+      });
+    });
+    html += `<tr class="totals-row"><td>Total</td><td></td><td></td>${pipeCells(grandTotal, stageTotalsAll)}</tr>`;
+    const hm3Body = document.getElementById('hm3Body');
+    hm3Body.innerHTML = html;
+    wireTree(hm3Body);
+  }
+
+  // ===== Joining Pending — Cases (candidate-level; pending pipeline data) =====
+  function renderJoiningPending() {
+    const body = document.getElementById('hmJPBody');
+    if (!body) return;
+    const deptG = gDept(), teamG = gTeam();
+    let list = (data.joiningPendingCases || []);
+    list = list.filter(c => (!deptG || (c.department || c._dept) === deptG) && (!teamG || (c.team || c._team) === teamG));
+    if (!list.length) {
+      body.innerHTML = `<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — needs candidate-level joining data (Name + DOJ) from the pipeline redesign.</td></tr>`;
+      return;
+    }
+    list.sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.team || '').localeCompare(b.team || '') || (a.doj || '').localeCompare(b.doj || ''));
+    body.innerHTML = list.map(c => `<tr>
+      <td style="font-weight:500">${c.department || ''}</td><td style="color:var(--muted)">${c.team || ''}</td>
+      <td>${c.doj || '—'}</td><td>${c.job || ''}</td><td style="font-weight:500">${c.name || ''}</td>
+    </tr>`).join('');
+  }
+
+  // ===== Panelist Dashboard (interviewer-level; pending pipeline data) =====
+  function renderPanelist() {
+    const body = document.getElementById('hmPanelBody');
+    if (!body) return;
+    const deptG = gDept(), teamG = gTeam();
+    let list = (data.panelists || []);
+    list = list.filter(p => (!deptG || (p.department || p._dept) === deptG) && (!teamG || (p.team || p._team) === teamG));
+    if (!list.length) {
+      body.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — needs per-interview panelist data (interview counts + feedback turnaround) from the pipeline redesign.</td></tr>`;
+      return;
+    }
+    // Department -> Team -> Panelist tree
+    const groups = {};
+    list.forEach(p => {
+      const dept = p.department || '—', team = p.team || '—';
+      if (!groups[dept]) groups[dept] = {};
+      if (!groups[dept][team]) groups[dept][team] = [];
+      groups[dept][team].push(p);
+    });
+    const caret = '<span class="caret" style="display:inline-block;width:12px;color:var(--muted)">▾</span>';
+    let html = '';
+    Object.keys(groups).sort().forEach((dept, gi) => {
+      const teams = Object.keys(groups[dept]).sort();
+      const deptCount = teams.reduce((s, t) => s + groups[dept][t].reduce((a, p) => a + (p.interviewCount || 0), 0), 0);
+      html += `<tr class="dept-header" data-g="${gi}" data-exp="1" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${caret}${dept}</td><td style="color:var(--muted)">${teams.length} team${teams.length > 1 ? 's' : ''}</td>
+        <td></td><td></td><td style="font-weight:600">${deptCount}</td><td></td></tr>`;
+      teams.forEach((team, ti) => {
+        const arr = groups[dept][team]; const tg = gi + '-' + ti;
+        const teamCount = arr.reduce((a, p) => a + (p.interviewCount || 0), 0);
+        html += `<tr class="team-header" data-g="${gi}" data-tg="${tg}" data-exp="1" style="cursor:pointer;background:#fafbfc">
+          <td></td><td style="padding-left:16px;font-weight:500">${caret}${team}</td>
+          <td></td><td></td><td style="font-weight:600">${teamCount}</td><td></td></tr>`;
+        arr.forEach(p => {
+          html += `<tr class="leaf" data-g="${gi}" data-tg="${tg}">
+            <td></td><td></td><td style="font-weight:500">${p.panelist || p.name || ''}</td>
+            <td>${p.job || ''}</td><td>${p.interviewCount || 0}</td><td>${p.avgFeedbackTime || p.avgFeedback || '—'}</td></tr>`;
+        });
+      });
+    });
+    body.innerHTML = html;
+    wireTree(body);
   }
 
   // ---- Master re-render for global filters ----
-  function renderAll() { renderSection1(); renderThroughput(); renderPipeline(); }
+  function renderAll() { renderSection1(); renderJoiningPending(); renderThroughput(); renderPanelist(); renderPipeline(); }
 
   // Global filter listeners
   document.getElementById('hmDept')?.addEventListener('change', () => { repopulateTeams(); renderAll(); });
@@ -592,6 +760,19 @@ export function initHmFilters(data) {
   document.getElementById('hm3JobFilter')?.addEventListener('input', renderPipeline);
   document.getElementById('hm3HideEmpty')?.addEventListener('change', renderPipeline);
   document.querySelectorAll('.hm3Stage').forEach(cb => cb.addEventListener('change', renderPipeline));
+
+  // Default the period filter to the current year + current quarter (falls back to the
+  // latest year present in the data if the current year has no openings yet).
+  const nowY = String(new Date().getFullYear());
+  const nowQ = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+  const yearSel = document.getElementById('hmYear');
+  const qSel = document.getElementById('hmQuarter');
+  if (yearSel) {
+    const hasNow = [...yearSel.options].some(o => o.value === nowY);
+    yearSel.value = hasNow ? nowY : (yearSel.options[1] ? yearSel.options[1].value : '');
+  }
+  if (qSel) qSel.value = nowQ;
+  applyYearQuarter();
 
   renderAll();
 }
