@@ -12,8 +12,23 @@ const TP_LABELS = {
   r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
   rc:'Ref Check', ds:'Doc Sub', offer:'Offer'
 };
+// Reached-stage funnel order (excludes raw Application intake)
+const FUNNEL_ORDER = ['taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 
-function pctFmt(num, den) { return den > 0 ? ((num / den) * 100).toFixed(1) + '%' : '—'; }
+// The pipeline currently stores department & team as one combined "Department (Team)"
+// string. Parse it apart so we can present real Department and Team columns. For values
+// with no "(Team)" suffix, both fall back to the same value until the pipeline emits
+// proper separate fields.
+function splitDT(val) {
+  const s = (val || '').trim();
+  const m = s.match(/^(.*?)\s*\((.*)\)\s*$/);
+  if (m && m[1].trim()) return { dept: m[1].trim(), team: m[2].trim() };
+  return { dept: s, team: s };
+}
+const byDeptTeam = (a, b) =>
+  a._dept.localeCompare(b._dept) || a._team.localeCompare(b._team) ||
+  ((b.total || 0) - (a.total || 0)) || String(a.title || '').localeCompare(String(b.title || ''));
+
 function pctClass(val) {
   const n = parseFloat(val);
   if (isNaN(n)) return '';
@@ -52,45 +67,101 @@ function computeThroughput(p, total) {
   };
 }
 
+// Reached count per stage = cumulative reverse-sum of an aggregated pipeline object
+function reachedFunnel(agg) {
+  const reached = {};
+  let running = 0;
+  for (let i = FUNNEL_ORDER.length - 1; i >= 0; i--) {
+    running += (agg[FUNNEL_ORDER[i]] || 0);
+    reached[FUNNEL_ORDER[i]] = running;
+  }
+  return FUNNEL_ORDER.map(s => ({ key: s, label: STAGE_LABELS[s], value: reached[s] }));
+}
+
+// Draws the numeric value on each bar segment (skips segments too small to fit).
+const valueLabels = {
+  id: 'valueLabels',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = "600 10px -apple-system, system-ui, sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach((el, i) => {
+        const raw = ds.data[i];
+        const val = Array.isArray(raw) ? Math.round(raw[1] - raw[0]) : raw;
+        if (!val) return;
+        const props = el.getProps(['x', 'y', 'base', 'horizontal'], true);
+        let cx, cy, segLen;
+        if (props.horizontal) {
+          cx = (el.x + props.base) / 2; cy = el.y;
+          segLen = Math.abs(el.x - props.base);
+          if (segLen < String(val).length * 7 + 4) return;
+        } else {
+          cx = el.x; cy = (el.y + props.base) / 2;
+          segLen = Math.abs(el.y - props.base);
+          if (segLen < 13) return;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(val, cx, cy);
+      });
+    });
+    ctx.restore();
+  }
+};
+
 export function renderHmReport(data) {
   if (!data || !data.jobs) return '<p>No data available.</p>';
 
-  const openings = data.openings || [];
-  const jobs = data.jobs || [];
-  const openingDepts = [...new Set(openings.map(o => o.department))].sort();
-  const jobDepts = [...new Set(jobs.map(j => j.department))].sort();
+  const openings = (data.openings || []).map(o => { const dt = splitDT(o.department); return { d: dt.dept, t: dt.team }; });
+  const jobs = (data.jobs || []).map(j => { const dt = splitDT(j.department); return { d: dt.dept, t: dt.team }; });
+  const allDepts = [...new Set([...openings, ...jobs].map(x => x.d))].filter(Boolean).sort();
+  const allTeams = [...new Set([...openings, ...jobs].map(x => x.t))].filter(Boolean).sort();
+  const years = [...new Set((data.openings || []).map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
 
   return `
-    <!-- ===== SECTION 1: JOB OPENINGS ===== -->
-    <h2 class="section-title">Job Openings</h2>
+    <!-- ===== GLOBAL PAGE FILTERS ===== -->
+    <div class="hm-global-filters" style="position:sticky;top:0;z-index:5;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:20px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin-right:2px">Filters</span>
+      <select id="hmDept"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
+      <select id="hmTeam"><option value="">All Teams</option>${allTeams.map(t => `<option value="${t}">${t}</option>`).join('')}</select>
+      <span style="border-left:1px solid var(--border);height:24px;margin:0 2px"></span>
+      <label style="font-size:11px;color:var(--muted)">From <input type="date" id="hmDateFrom" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
+      <label style="font-size:11px;color:var(--muted)">To <input type="date" id="hmDateTo" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
+      <span style="border-left:1px solid var(--border);height:24px;margin:0 2px"></span>
+      <label style="font-size:11px;color:var(--muted)">Year <select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></label>
+      <label style="font-size:11px;color:var(--muted)">Quarter <select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></label>
+      <span id="hmDateScopeNote" style="font-size:10px;color:var(--muted);margin-left:auto">Date/Year/Quarter apply to Positions only (pipeline sections are a live snapshot)</span>
+    </div>
+
+    <!-- ===== SECTION 1: POSITIONS ===== -->
+    <h2 class="section-title">Positions</h2>
     <div class="filter-bar">
-      <label style="font-size:11px;color:var(--muted)">From <input type="date" id="hm1DateFrom" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
-      <label style="font-size:11px;color:var(--muted)">To <input type="date" id="hm1DateTo" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
-      <span style="border-left:1px solid var(--border);height:24px;margin:0 4px"></span>
-      <span style="font-size:11px;color:var(--muted);margin-right:2px">Job Status:</span>
+      <span style="font-size:11px;color:var(--muted);margin-right:2px">Status:</span>
       <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="hm1Status" value="Open" checked> Open</label>
       <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" class="hm1Status" value="Closed" checked> Closed</label>
-      <span style="border-left:1px solid var(--border);height:24px;margin:0 4px"></span>
-      <select id="hm1DeptFilter"><option value="">All Departments</option>${openingDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
     </div>
 
     <div class="cards" id="hm1Cards"></div>
 
-    <h3 class="subsection-title">Department &amp; Team Summary</h3>
+    <h3 class="subsection-title">Department Summary</h3>
+    <p class="sub-note">Click a department row to expand or collapse its teams.</p>
     <div class="scroll-table"><table>
-      <thead><tr><th>Department</th><th>Team</th><th>#Openings</th><th>Joined (Filled)</th><th>Joining Pending</th><th>Open</th></tr></thead>
-      <tbody id="hm1TeamBody"></tbody>
+      <thead><tr><th>Department</th><th>Team</th><th>Total Positions</th><th>Joined</th><th>Joining Pending</th><th>Open</th></tr></thead>
+      <tbody id="hm1DeptBody"></tbody>
     </table></div>
 
-    <div class="chart-wrap" style="height:300px"><canvas id="hm1Chart"></canvas></div>
+    <div class="chart-wrap" id="hm1ChartWrap" style="height:340px"><canvas id="hm1Chart"></canvas></div>
 
     <h3 class="subsection-title">Job-wise Detail</h3>
     <div class="filter-bar">
-      <select id="hm1DeptFilter2"><option value="">All Departments</option>${openingDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
       <input type="text" id="hm1JobFilter" placeholder="Filter by job title..." style="width:220px">
     </div>
     <div class="scroll-table"><table>
-      <thead><tr><th>Department</th><th>Team</th><th>Job Title</th><th>#Openings</th><th>Joined</th><th>Joining Pending</th><th>Open</th></tr></thead>
+      <thead><tr><th>Department</th><th>Team</th><th>Job Title</th><th>Total Positions</th><th>Joined</th><th>Joining Pending</th><th>Open</th></tr></thead>
       <tbody id="hm1JobBody"></tbody>
     </table></div>
 
@@ -100,8 +171,6 @@ export function renderHmReport(data) {
     <h2 class="section-title">Job-wise Throughput Report</h2>
     <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
     <div class="filter-bar">
-      <select id="hm2StatusFilter"><option value="">All Job Statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
-      <select id="hm2TeamFilter"><option value="">All Departments</option>${jobDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
       <input type="text" id="hm2JobFilter" placeholder="Filter by job title..." style="width:220px">
       <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
     </div>
@@ -114,15 +183,18 @@ export function renderHmReport(data) {
       <tbody id="hm2Body"></tbody>
     </table></div>
 
+    <h3 class="subsection-title">Stage Throughput (In vs Out)</h3>
     <div class="chart-wrap" style="height:300px"><canvas id="hm2Chart"></canvas></div>
+
+    <h3 class="subsection-title">Pipeline Funnel — Total</h3>
+    <p class="sub-note">Candidates who reached each stage, aggregated across the jobs matching the filters above.</p>
+    <div class="chart-wrap" id="hm2FunnelWrap" style="height:360px"><canvas id="hm2Funnel"></canvas></div>
 
     <hr class="section-divider">
 
     <!-- ===== SECTION 3: CURRENT PIPELINE ===== -->
     <h2 class="section-title">Current Stage-wise Pipeline</h2>
     <div class="filter-bar">
-      <select id="hm3StatusFilter"><option value="">All Job Statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
-      <select id="hm3TeamFilter"><option value="">All Departments</option>${jobDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
       <input type="text" id="hm3JobFilter" placeholder="Filter by job title..." style="width:220px">
       <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
     </div>
@@ -134,21 +206,74 @@ export function renderHmReport(data) {
       <thead id="hm3Head"></thead>
       <tbody id="hm3Body"></tbody>
     </table></div>
-
-    <div class="chart-wrap" style="height:300px"><canvas id="hm3Chart"></canvas></div>
   `;
 }
 
 let hm1ChartInstance = null;
 let hm2ChartInstance = null;
-let hm3ChartInstance = null;
+let hm2FunnelInstance = null;
 
 export function initHmFilters(data) {
   if (!data) return;
   const openings = data.openings || [];
   const jobs = data.jobs || [];
+  const jobById = {};
+  jobs.forEach(j => { jobById[j.id] = j; });
 
-  // ===== Section 1: Job Openings =====
+  // Derive real Department / Team from the combined field
+  openings.forEach(o => { const dt = splitDT(o.department); o._dept = dt.dept; o._team = dt.team; });
+  jobs.forEach(j => { const dt = splitDT(j.department); j._dept = dt.dept; j._team = dt.team; });
+
+  // Joining Pending = Ref Check + Doc Submission + Offer (from the linked job pipeline)
+  function jpOf(o) {
+    const j = jobById[o.jobId];
+    if (j && j.pipeline) {
+      const p = j.pipeline;
+      return (p.refCheck || 0) + (p.docSub || 0) + (p.offer || 0);
+    }
+    return o.joiningPending || 0;
+  }
+
+  // ---- Global filter accessors ----
+  function gDept() { return document.getElementById('hmDept')?.value || ''; }
+  function gTeam() { return document.getElementById('hmTeam')?.value || ''; }
+  function gFrom() { return document.getElementById('hmDateFrom')?.value || ''; }
+  function gTo() { return document.getElementById('hmDateTo')?.value || ''; }
+
+  function applyYearQuarter() {
+    const y = document.getElementById('hmYear')?.value || '';
+    const q = document.getElementById('hmQuarter')?.value || '';
+    const fromEl = document.getElementById('hmDateFrom');
+    const toEl = document.getElementById('hmDateTo');
+    if (!y && !q) { return; }
+    const years = [...new Set(openings.map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+    const yr = y || years[0] || String(new Date().getFullYear());
+    if (q) {
+      const qi = parseInt(q.slice(1), 10);
+      const sm = (qi - 1) * 3 + 1;
+      const em = sm + 2;
+      const lastDay = new Date(parseInt(yr, 10), em, 0).getDate();
+      fromEl.value = `${yr}-${String(sm).padStart(2, '0')}-01`;
+      toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    } else {
+      fromEl.value = `${yr}-01-01`;
+      toEl.value = `${yr}-12-31`;
+    }
+  }
+
+  // Rebuild Team options to the teams within the selected department
+  function repopulateTeams() {
+    const dept = gDept();
+    const teamSel = document.getElementById('hmTeam');
+    if (!teamSel) return;
+    const prev = teamSel.value;
+    const src = [...openings, ...jobs].filter(x => !dept || x._dept === dept);
+    const teams = [...new Set(src.map(x => x._team).filter(Boolean))].sort();
+    teamSel.innerHTML = `<option value="">All Teams</option>` + teams.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (teams.indexOf(prev) !== -1) teamSel.value = prev;
+  }
+
+  // ===== Section 1: Positions =====
   function getSelectedStatuses() {
     const checked = [];
     document.querySelectorAll('.hm1Status').forEach(cb => { if (cb.checked) checked.push(cb.value); });
@@ -156,136 +281,145 @@ export function initHmFilters(data) {
   }
 
   function renderSection1() {
-    const dateFrom = document.getElementById('hm1DateFrom')?.value || '';
-    const dateTo = document.getElementById('hm1DateTo')?.value || '';
+    const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept(), teamG = gTeam();
     const statuses = getSelectedStatuses();
-    const deptF = document.getElementById('hm1DeptFilter')?.value || '';
-    const deptF2 = document.getElementById('hm1DeptFilter2')?.value || '';
     const jobF = (document.getElementById('hm1JobFilter')?.value || '').toLowerCase();
 
-    const statusFiltered = openings.filter(o => {
+    const filtered = openings.filter(o => {
       if (dateFrom && (o.openedAt || '') < dateFrom) return false;
       if (dateTo && (o.openedAt || '') > dateTo) return false;
       if (statuses.length > 0 && statuses.indexOf(o.status || 'Open') === -1) return false;
+      if (deptG && o._dept !== deptG) return false;
+      if (teamG && o._team !== teamG) return false;
       return true;
     });
 
-    const deptFiltered = deptF ? statusFiltered.filter(o => o.department === deptF) : statusFiltered;
-
-    const teamMap = {};
-    deptFiltered.forEach(o => {
-      const key = o.department + '|||' + o.team;
-      if (!teamMap[key]) teamMap[key] = { dept: o.department, tm: o.team, total: 0, filled: 0, open: 0, jp: 0 };
-      teamMap[key].total += o.total;
-      teamMap[key].filled += o.filled;
-      teamMap[key].open += o.open;
-      teamMap[key].jp += o.joiningPending || 0;
+    // Department -> Team rollup
+    const deptMap = {}; // dept -> { total, filled, open, jp, teams: {team -> {...}} }
+    filtered.forEach(o => {
+      if (!deptMap[o._dept]) deptMap[o._dept] = { dept: o._dept, total: 0, filled: 0, open: 0, jp: 0, teams: {} };
+      const D = deptMap[o._dept];
+      const jp = jpOf(o);
+      D.total += o.total; D.filled += o.filled; D.open += o.open; D.jp += jp;
+      if (!D.teams[o._team]) D.teams[o._team] = { team: o._team, total: 0, filled: 0, open: 0, jp: 0 };
+      const T = D.teams[o._team];
+      T.total += o.total; T.filled += o.filled; T.open += o.open; T.jp += jp;
     });
-    const teamArr = Object.values(teamMap).sort((a, b) => b.total - a.total);
+    const deptArr = Object.values(deptMap).sort((a, b) => a.dept.localeCompare(b.dept));
 
     const totals = { total: 0, filled: 0, open: 0, jp: 0 };
-    teamArr.forEach(t => { totals.total += t.total; totals.filled += t.filled; totals.open += t.open; totals.jp += t.jp; });
+    deptArr.forEach(t => { totals.total += t.total; totals.filled += t.filled; totals.open += t.open; totals.jp += t.jp; });
 
     document.getElementById('hm1Cards').innerHTML = `
-      <div class="card"><div class="label">Total Openings</div><div class="value">${totals.total}</div></div>
-      <div class="card"><div class="label">Joined (Filled)</div><div class="value" style="color:var(--green)">${totals.filled}</div></div>
-      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jp}</div><div class="sub">Offer + Doc Submission</div></div>
+      <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div></div>
+      <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.filled}</div></div>
+      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jp}</div><div class="sub">Ref Check + Doc + Offer</div></div>
       <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div></div>
     `;
 
+    // Expandable Department -> Team tree
     let html = '';
-    teamArr.forEach(t => {
-      html += `<tr>
-        <td style="font-weight:500">${t.dept}</td><td style="color:var(--muted)">${t.tm}</td>
-        <td style="font-weight:600">${t.total}</td>
-        <td class="good">${t.filled}</td><td style="color:var(--orange)">${t.jp}</td>
-        <td style="color:var(--blue)">${t.open}</td>
+    deptArr.forEach((D, gi) => {
+      const teams = Object.values(D.teams).sort((a, b) => a.team.localeCompare(b.team));
+      const single = teams.length === 1 && teams[0].team === D.dept;
+      html += `<tr class="dept-header" data-group="${gi}" data-exp="1" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600"><span class="caret" style="display:inline-block;width:12px;color:var(--muted)">${single ? '' : '▾'}</span>${D.dept}</td>
+        <td style="color:var(--muted)">${single ? teams[0].team : teams.length + ' teams'}</td>
+        <td style="font-weight:600">${D.total}</td>
+        <td class="good">${D.filled}</td><td style="color:var(--orange)">${D.jp}</td>
+        <td style="color:var(--blue)">${D.open}</td>
       </tr>`;
+      if (!single) {
+        teams.forEach(T => {
+          html += `<tr data-group="${gi}" class="team-row">
+            <td></td>
+            <td style="padding-left:20px;color:var(--muted)">${T.team}</td>
+            <td style="font-weight:500">${T.total}</td>
+            <td class="good">${T.filled}</td><td style="color:var(--orange)">${T.jp}</td>
+            <td style="color:var(--blue)">${T.open}</td>
+          </tr>`;
+        });
+      }
     });
     html += `<tr class="totals-row"><td>Total</td><td></td><td>${totals.total}</td><td>${totals.filled}</td><td>${totals.jp}</td><td>${totals.open}</td></tr>`;
-    document.getElementById('hm1TeamBody').innerHTML = html;
+    const deptBody = document.getElementById('hm1DeptBody');
+    deptBody.innerHTML = html;
+    deptBody.querySelectorAll('.dept-header').forEach(h => {
+      h.addEventListener('click', () => {
+        const gi = h.getAttribute('data-group');
+        const exp = h.getAttribute('data-exp') === '1';
+        h.setAttribute('data-exp', exp ? '0' : '1');
+        const caret = h.querySelector('.caret');
+        if (caret && caret.textContent) caret.textContent = exp ? '▸' : '▾';
+        deptBody.querySelectorAll(`tr.team-row[data-group="${gi}"]`).forEach(r => { r.style.display = exp ? 'none' : ''; });
+      });
+    });
 
-    let jobFiltered = deptF2 ? statusFiltered.filter(o => o.department === deptF2) : [...statusFiltered];
+    // Job-wise detail (sorted Dept -> Team -> title)
+    let jobFiltered = [...filtered];
     if (jobF) jobFiltered = jobFiltered.filter(o => o.title.toLowerCase().includes(jobF));
-    jobFiltered.sort((a, b) => b.total - a.total);
+    jobFiltered.sort(byDeptTeam);
 
     html = '';
     jobFiltered.forEach(o => {
       html += `<tr>
-        <td style="font-weight:500">${o.department}</td><td style="color:var(--muted)">${o.team}</td>
+        <td style="font-weight:500">${o._dept}</td><td style="color:var(--muted)">${o._team}</td>
         <td style="font-weight:500">${o.title}</td>
         <td style="font-weight:600">${o.total}</td>
-        <td class="good">${o.filled}</td><td style="color:var(--orange)">${o.joiningPending || 0}</td>
+        <td class="good">${o.filled}</td><td style="color:var(--orange)">${jpOf(o)}</td>
         <td style="color:var(--blue)">${o.open}</td>
       </tr>`;
     });
     document.getElementById('hm1JobBody').innerHTML = html;
 
-    // Chart: dept breakdown horizontal stacked bar
-    const chartMap = {};
-    deptFiltered.forEach(o => {
-      if (!chartMap[o.department]) chartMap[o.department] = { filled: 0, jp: 0, open: 0 };
-      chartMap[o.department].filled += o.filled;
-      chartMap[o.department].open += o.open;
-      chartMap[o.department].jp += o.joiningPending || 0;
-    });
-    const cDepts = Object.keys(chartMap).sort((a, b) => {
-      const ta = chartMap[a].filled + chartMap[a].jp + chartMap[a].open;
-      const tb = chartMap[b].filled + chartMap[b].jp + chartMap[b].open;
-      return ta - tb;
-    });
+    // Chart: department-wise stacked bar with value labels
+    const cDepts = deptArr.map(t => t.dept).slice().reverse();
     if (hm1ChartInstance) hm1ChartInstance.destroy();
     const ctx1 = document.getElementById('hm1Chart');
     if (ctx1) {
+      const wrap = document.getElementById('hm1ChartWrap');
+      if (wrap) wrap.style.height = Math.max(300, cDepts.length * 48 + 80) + 'px';
       hm1ChartInstance = new Chart(ctx1, {
         type: 'bar',
         data: {
           labels: cDepts,
           datasets: [
-            { label: 'Joined (Filled)', data: cDepts.map(d => chartMap[d].filled), backgroundColor: '#22c55e', borderRadius: 4, barPercentage: 0.65 },
-            { label: 'Joining Pending', data: cDepts.map(d => chartMap[d].jp), backgroundColor: '#f97316', borderRadius: 4, barPercentage: 0.65 },
-            { label: 'Open', data: cDepts.map(d => chartMap[d].open), backgroundColor: '#3b82f6', borderRadius: 4, barPercentage: 0.65 }
+            { label: 'Joined', data: cDepts.map(d => deptMap[d].filled), backgroundColor: '#22c55e', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Joining Pending', data: cDepts.map(d => deptMap[d].jp), backgroundColor: '#f97316', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Open', data: cDepts.map(d => deptMap[d].open), backgroundColor: '#3b82f6', borderRadius: 4, barPercentage: 0.7 }
           ]
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } } } },
           scales: {
-            x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Number of Openings', font: { size: 11 }, color: '#64748b' } },
+            x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions / Candidates', font: { size: 11 }, color: '#64748b' } },
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
           }
-        }
+        },
+        plugins: [valueLabels]
       });
     }
   }
 
-  document.getElementById('hm1DateFrom')?.addEventListener('change', renderSection1);
-  document.getElementById('hm1DateTo')?.addEventListener('change', renderSection1);
-  document.querySelectorAll('.hm1Status').forEach(cb => cb.addEventListener('change', renderSection1));
-  document.getElementById('hm1DeptFilter')?.addEventListener('change', renderSection1);
-  document.getElementById('hm1DeptFilter2')?.addEventListener('change', renderSection1);
-  document.getElementById('hm1JobFilter')?.addEventListener('input', renderSection1);
-  renderSection1();
-
   // ===== Section 2: Throughput =====
   function renderThroughput() {
-    const statusF = document.getElementById('hm2StatusFilter')?.value || '';
-    const teamF = document.getElementById('hm2TeamFilter')?.value || '';
+    const deptG = gDept(), teamG = gTeam();
     const jobF = (document.getElementById('hm2JobFilter')?.value || '').toLowerCase();
     const hideEmpty = document.getElementById('hm2HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm2Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
 
     const filtered = jobs.filter(j => {
-      if (statusF && j.status !== statusF) return false;
-      if (teamF && j.department !== teamF) return false;
+      if (deptG && j._dept !== deptG) return false;
+      if (teamG && j._team !== teamG) return false;
       if (jobF && !j.title.toLowerCase().includes(jobF)) return false;
       if (hideEmpty && j.total === 0) return false;
       if (!j.pipeline) return false;
       return true;
-    });
+    }).sort(byDeptTeam);
 
-    let row1 = '<tr><th rowspan="2">Department</th><th rowspan="2">Job</th>';
+    let row1 = '<tr><th rowspan="2">Department</th><th rowspan="2">Team</th><th rowspan="2">Job</th>';
     let row2 = '<tr>';
     visStages.forEach(s => {
       row1 += `<th colspan="3" class="stage-hdr">${TP_LABELS[s]}</th>`;
@@ -305,7 +439,8 @@ export function initHmFilters(data) {
       TP_KEYS.forEach(k => { tpTotals[k].i += t[k].i; tpTotals[k].o += t[k].o; });
       if (t.overall !== null) { overallSum += t.overall; overallCount++; }
 
-      html += `<tr><td style="color:var(--muted);font-size:11px;max-width:120px">${j.department}</td>`;
+      html += `<tr><td style="color:var(--muted);font-size:11px;max-width:120px">${j._dept}</td>`;
+      html += `<td style="color:var(--muted);font-size:11px;max-width:120px">${j._team}</td>`;
       html += `<td style="font-weight:500;max-width:200px;white-space:nowrap">${j.title}</td>`;
       visStages.forEach(sk => {
         const s = t[sk];
@@ -317,22 +452,18 @@ export function initHmFilters(data) {
       html += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="${ovc}">${ov}</span></td></tr>`;
     });
 
-    // Totals row
-    html += '<tr class="totals-row"><td>Total</td><td></td>';
+    html += '<tr class="totals-row"><td>Total</td><td></td><td></td>';
     visStages.forEach(sk => {
       const s = tpTotals[sk];
       html += `<td class="stage-cell stage-first">${s.i}</td><td class="stage-cell">${s.o}</td><td class="stage-cell">${pctCell(s.o, s.i)}</td>`;
     });
     const avgOv = overallCount > 0 ? ((overallSum / overallCount) * 100).toFixed(1) + '%' : '—';
     html += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600">${avgOv}</td></tr>`;
-
     document.getElementById('hm2Body').innerHTML = html;
 
-    // Chart: throughput In vs Out by stage
-    const chartLabels = [];
-    const chartIn = [];
-    const chartOut = [];
-    visStages.forEach(sk => {
+    // Chart 1: In vs Out by stage — Application stage excluded, values labeled
+    const chartLabels = [], chartIn = [], chartOut = [];
+    visStages.filter(sk => sk !== 'app').forEach(sk => {
       chartLabels.push(TP_LABELS[sk]);
       chartIn.push(tpTotals[sk].i);
       chartOut.push(tpTotals[sk].o);
@@ -345,45 +476,69 @@ export function initHmFilters(data) {
         data: {
           labels: chartLabels,
           datasets: [
-            { label: 'In', data: chartIn, backgroundColor: '#4f46e5cc', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Out', data: chartOut, backgroundColor: '#22c55ecc', borderRadius: 4, barPercentage: 0.7 }
+            { label: 'In', data: chartIn, backgroundColor: '#4f46e5', borderRadius: 4, barPercentage: 0.75 },
+            { label: 'Out', data: chartOut, backgroundColor: '#22c55e', borderRadius: 4, barPercentage: 0.75 }
           ]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } } } },
           scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-        }
+        },
+        plugins: [valueLabels]
+      });
+    }
+
+    // Chart 2: aggregate reached-stage funnel (total across filtered jobs)
+    const agg = {};
+    filtered.forEach(j => { Object.keys(j.pipeline).forEach(k => { agg[k] = (agg[k] || 0) + (j.pipeline[k] || 0); }); });
+    const funnel = reachedFunnel(agg);
+    if (hm2FunnelInstance) hm2FunnelInstance.destroy();
+    const ctxF = document.getElementById('hm2Funnel');
+    if (ctxF) {
+      hm2FunnelInstance = new Chart(ctxF, {
+        type: 'bar',
+        data: {
+          labels: funnel.map(f => f.label),
+          datasets: [{
+            label: 'Reached',
+            data: funnel.map(f => [-f.value / 2, f.value / 2]),
+            backgroundColor: '#0d9488',
+            borderRadius: 3,
+            barPercentage: 0.85
+          }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => 'Reached: ' + Math.round(c.raw[1] - c.raw[0]) } } },
+          scales: {
+            x: { display: false, grid: { display: false } },
+            y: { grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
+          }
+        },
+        plugins: [valueLabels]
       });
     }
   }
 
-  document.getElementById('hm2StatusFilter')?.addEventListener('change', renderThroughput);
-  document.getElementById('hm2TeamFilter')?.addEventListener('change', renderThroughput);
-  document.getElementById('hm2JobFilter')?.addEventListener('input', renderThroughput);
-  document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);
-  document.querySelectorAll('.hm2Stage').forEach(cb => cb.addEventListener('change', renderThroughput));
-  renderThroughput();
-
   // ===== Section 3: Current Pipeline =====
   function renderPipeline() {
-    const statusF = document.getElementById('hm3StatusFilter')?.value || '';
-    const teamF = document.getElementById('hm3TeamFilter')?.value || '';
+    const deptG = gDept(), teamG = gTeam();
     const jobF = (document.getElementById('hm3JobFilter')?.value || '').toLowerCase();
     const hideEmpty = document.getElementById('hm3HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm3Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
 
     const filtered = jobs.filter(j => {
-      if (statusF && j.status !== statusF) return false;
-      if (teamF && j.department !== teamF) return false;
+      if (deptG && j._dept !== deptG) return false;
+      if (teamG && j._team !== teamG) return false;
       if (jobF && !j.title.toLowerCase().includes(jobF)) return false;
       if (hideEmpty && j.total === 0) return false;
       if (!j.pipeline) return false;
       return true;
-    });
+    }).sort(byDeptTeam);
 
-    let hdr = '<tr><th>Department</th><th>Job</th><th>Total</th>';
+    let hdr = '<tr><th>Department</th><th>Team</th><th>Job</th><th>Total</th>';
     visStages.forEach(s => { hdr += `<th>${STAGE_LABELS[s]}</th>`; });
     hdr += '</tr>';
     document.getElementById('hm3Head').innerHTML = hdr;
@@ -396,7 +551,8 @@ export function initHmFilters(data) {
     filtered.forEach(j => {
       const p = j.pipeline;
       grandTotal += j.total;
-      html += `<tr><td style="color:var(--muted);font-size:11px">${j.department}</td>`;
+      html += `<tr><td style="color:var(--muted);font-size:11px">${j._dept}</td>`;
+      html += `<td style="color:var(--muted);font-size:11px">${j._team}</td>`;
       html += `<td style="font-weight:500;max-width:200px;white-space:nowrap">${j.title}</td><td style="font-weight:600">${j.total}</td>`;
       visStages.forEach(k => {
         const v = p[k] || 0;
@@ -410,50 +566,32 @@ export function initHmFilters(data) {
       html += '</tr>';
     });
 
-    // Totals row
-    html += `<tr class="totals-row"><td>Total</td><td></td><td>${grandTotal}</td>`;
+    html += `<tr class="totals-row"><td>Total</td><td></td><td></td><td>${grandTotal}</td>`;
     visStages.forEach(k => { html += `<td>${stageTotals[k]}</td>`; });
     html += '</tr>';
-
     document.getElementById('hm3Body').innerHTML = html;
-
-    // Chart: pipeline by dept horizontal stacked bar
-    const stageColors = { appReview:'#94a3b8', taScreen:'#4f46e5', hmReview:'#7c3aed', oa:'#0891b2', r1:'#2563eb', r2:'#0ea5e9', r3:'#06b6d4', r4:'#14b8a6', r5:'#10b981', refCheck:'#f59e0b', docSub:'#ea580c', offer:'#3b82f6', hired:'#16a34a' };
-    const deptPipeline = {};
-    filtered.forEach(j => {
-      if (!deptPipeline[j.department]) { deptPipeline[j.department] = {}; visStages.forEach(s => { deptPipeline[j.department][s] = 0; }); }
-      visStages.forEach(s => { deptPipeline[j.department][s] += (j.pipeline[s] || 0); });
-    });
-    const chartDepts = Object.keys(deptPipeline).sort((a, b) => {
-      let sa = 0, sb = 0;
-      visStages.forEach(s => { sa += deptPipeline[a][s]; sb += deptPipeline[b][s]; });
-      return sa - sb;
-    });
-    const datasets = visStages.map(s => ({
-      label: STAGE_LABELS[s],
-      data: chartDepts.map(d => deptPipeline[d][s]),
-      backgroundColor: (stageColors[s] || '#94a3b8') + 'cc',
-      borderRadius: 2, barPercentage: 0.7
-    }));
-    if (hm3ChartInstance) hm3ChartInstance.destroy();
-    const ctx3 = document.getElementById('hm3Chart');
-    if (ctx3) {
-      hm3ChartInstance = new Chart(ctx3, {
-        type: 'bar',
-        data: { labels: chartDepts, datasets },
-        options: {
-          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true, pointStyle: 'circle', padding: 10 } } },
-          scales: { x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' }, padding: 6 } } }
-        }
-      });
-    }
   }
 
-  document.getElementById('hm3StatusFilter')?.addEventListener('change', renderPipeline);
-  document.getElementById('hm3TeamFilter')?.addEventListener('change', renderPipeline);
+  // ---- Master re-render for global filters ----
+  function renderAll() { renderSection1(); renderThroughput(); renderPipeline(); }
+
+  // Global filter listeners
+  document.getElementById('hmDept')?.addEventListener('change', () => { repopulateTeams(); renderAll(); });
+  document.getElementById('hmTeam')?.addEventListener('change', renderAll);
+  document.getElementById('hmDateFrom')?.addEventListener('change', renderSection1);
+  document.getElementById('hmDateTo')?.addEventListener('change', renderSection1);
+  document.getElementById('hmYear')?.addEventListener('change', () => { applyYearQuarter(); renderSection1(); });
+  document.getElementById('hmQuarter')?.addEventListener('change', () => { applyYearQuarter(); renderSection1(); });
+
+  // Section-local listeners
+  document.querySelectorAll('.hm1Status').forEach(cb => cb.addEventListener('change', renderSection1));
+  document.getElementById('hm1JobFilter')?.addEventListener('input', renderSection1);
+  document.getElementById('hm2JobFilter')?.addEventListener('input', renderThroughput);
+  document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);
+  document.querySelectorAll('.hm2Stage').forEach(cb => cb.addEventListener('change', renderThroughput));
   document.getElementById('hm3JobFilter')?.addEventListener('input', renderPipeline);
   document.getElementById('hm3HideEmpty')?.addEventListener('change', renderPipeline);
   document.querySelectorAll('.hm3Stage').forEach(cb => cb.addEventListener('change', renderPipeline));
-  renderPipeline();
+
+  renderAll();
 }
