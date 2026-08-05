@@ -116,15 +116,21 @@ export function initHomeFilters() {
     container.innerHTML = `
       <div style="margin-bottom:24px;">
         <h3 class="subsection-title" style="margin-top:0;">Key Metrics — ${periodLabel}</h3>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
           <div class="card">
             <div class="label">Total Positions</div>
             <div class="value">${totalPositions}</div>
             <div class="sub">${totalOpen} open · ${totalFilled} filled</div>
           </div>
           <div class="card">
-            <div class="label">Total Interviews Managed</div>
+            <div class="label">Applications</div>
             <div class="value">${(f.applied || 0).toLocaleString()}</div>
+            <div class="sub">candidates applied</div>
+          </div>
+          <div class="card">
+            <div class="label">Total Interviews Managed</div>
+            <div class="value" style="color:var(--muted)">—</div>
+            <div class="sub">Pending pipeline redesign</div>
           </div>
           <div class="card">
             <div class="label">Total Hired</div>
