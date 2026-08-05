@@ -6,8 +6,8 @@ export function renderEfficiency(data) {
   const jobDepts = [...new Set((data.jobs || []).map(j => j.department))].sort();
 
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><div style="width:4px;height:20px;background:var(--accent);border-radius:2px;"></div><h2 style="margin:0;">Overall Hiring Efficiency</h2></div>
-    <p class="sub-note">Aggregated metrics across all candidates and jobs.</p>
+    <h2 class="section-title">Overall Hiring Efficiency</h2>
+    <p class="sub-note" style="margin-top:-8px;">Aggregated metrics across all candidates and jobs.</p>
 
     <div class="filter-bar">
       <select id="effStatusFilter"><option value="">All Job Statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
@@ -16,26 +16,26 @@ export function renderEfficiency(data) {
 
     <div class="cards" id="effCards"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--accent);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Application Velocity</h3></div>
+    <h3 class="subsection-title">Application Velocity</h3>
     <div class="chart-wrap" style="height:250px"><canvas id="velocityChart"></canvas></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--accent);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">TA Screen Filtering</h3></div>
+    <h3 class="subsection-title">TA Screen Filtering</h3>
     <div class="metric-grid" id="effTaFilter"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--green);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Screening Efficiency</h3></div>
+    <h3 class="subsection-title">Screening Efficiency</h3>
     <div class="metric-grid" id="effScreening"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--orange);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Joining Conversion</h3></div>
+    <h3 class="subsection-title">Joining Conversion</h3>
     <div class="metric-grid" id="effJoining"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--blue);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Stage-wise Funnel</h3></div>
+    <h3 class="subsection-title">Stage-wise Funnel</h3>
     <div class="card" style="padding:14px" id="effFunnel"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--accent);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Funnel Breakdown</h3></div>
+    <h3 class="subsection-title">Funnel Breakdown</h3>
     <div class="chart-wrap" style="height:300px"><canvas id="funnelChart"></canvas></div>
     <div class="scroll-table" id="effBreakdown"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--red);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Position Fulfilment</h3></div>
+    <h3 class="subsection-title">Position Fulfilment</h3>
     <p class="sub-note">Set offer/hire targets below. Gap = Target − Actual.</p>
     <div class="metric-grid" id="effFulfilment"></div>
   `;

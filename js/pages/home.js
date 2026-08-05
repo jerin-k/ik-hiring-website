@@ -14,12 +14,11 @@ export function renderHome(access) {
   return `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:24px;">
       <div>
-        <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Welcome to IK Hiring Dashboard</h2>
-        <p style="color:var(--muted);font-size:13px;">Your talent acquisition command center. Track openings, pipeline, and hiring performance across InterviewKickstart.</p>
+        <h2 style="font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-0.01em;">Overview</h2>
+        <p style="color:var(--muted);font-size:12px;">Talent acquisition performance across InterviewKickstart.</p>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-        <span style="font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.3px;">Period</span>
-        <select id="period-selector" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;background:var(--card);color:var(--text);cursor:pointer;min-width:120px;">
+        <select id="period-selector" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;background:var(--card);color:var(--text);cursor:pointer;min-width:110px;">
           ${sortedYears.map(y => `<option value="${y}">${y}</option>`).join('')}
           ${sortedYears.map(y => `
             <optgroup label="${y} Quarters">
@@ -104,12 +103,18 @@ export function initHomeFilters() {
     const deptArr = Object.entries(deptMap).sort((a, b) => (b[1].open + b[1].filled) - (a[1].open + a[1].filled));
     const maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].open + deptArr[0][1].filled : 1;
 
+    const pipelineStages = [
+      { label: 'Applied', value: f.applied || 0, color: '#3b82f6' },
+      { label: 'Screened', value: f.screened || 0, color: '#6366f1' },
+      { label: 'Interviewed', value: f.interviewed || 0, color: '#2563eb' },
+      { label: 'Offered', value: f.offered || 0, color: '#0891b2' },
+      { label: 'Hired', value: f.hired || 0, color: '#0f766e' },
+    ];
+    const maxPipeline = Math.max(...pipelineStages.map(s => s.value), 1);
+
     container.innerHTML = `
       <div style="margin-bottom:24px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <div style="width:4px;height:18px;background:var(--accent);border-radius:2px;"></div>
-          <h3 style="margin:0;font-size:14px;font-weight:600;color:var(--text);">Key Metrics — ${periodLabel}</h3>
-        </div>
+        <h3 class="subsection-title" style="margin-top:0;">Key Metrics — ${periodLabel}</h3>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
           <div class="card">
             <div class="label">Total Positions</div>
@@ -133,23 +138,22 @@ export function initHomeFilters() {
         </div>
       </div>
 
-      <div class="card" style="padding:16px;margin-bottom:24px;">
-        <h3 style="margin:0 0 12px;">Hiring Pipeline</h3>
-        <div style="display:flex;align-items:center;gap:0;">
-          ${renderPipelineArrow('Applied', f.applied || 0, '#4f46e5', true)}
-          ${renderPipelineArrow('Screened', f.screened || 0, '#6366f1', false)}
-          ${renderPipelineArrow('Interviewed', f.interviewed || 0, '#2563eb', false)}
-          ${renderPipelineArrow('Offered', f.offered || 0, '#0891b2', false)}
-          ${renderPipelineArrow('Hired', f.hired || 0, '#16a34a', false, true)}
+      <div class="pipeline-wrap">
+        <h3>Hiring Pipeline</h3>
+        <div class="pipeline-flow">
+          ${pipelineStages.map(s => {
+            const flex = Math.max((s.value / maxPipeline) * 100, s.value > 0 ? 8 : 2);
+            return `<div class="stage" style="flex:${flex.toFixed(1)};background:${s.color}">${s.value.toLocaleString()}</div>`;
+          }).join('')}
+        </div>
+        <div class="pipeline-labels">
+          ${pipelineStages.map(s => `<span>${s.label}</span>`).join('')}
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            <div style="width:4px;height:18px;background:var(--accent);border-radius:2px;"></div>
-            <h3 style="margin:0;">Top Jobs by Applications</h3>
-          </div>
+          <h3 class="subsection-title" style="margin-top:0;">Top Jobs by Applications</h3>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             ${displayJobs.length === 0 ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No application data for this period</div>' :
               displayJobs.map((j, i) => {
@@ -159,7 +163,7 @@ export function initHomeFilters() {
                     <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;">${i + 1}</span>
                     <div style="flex:1;min-width:0;">
                       <div style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${j.title}</div>
-                      <div style="margin-top:4px;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden;">
+                      <div style="margin-top:4px;background:var(--border-light);border-radius:3px;height:6px;overflow:hidden;">
                         <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
                       </div>
                     </div>
@@ -174,10 +178,7 @@ export function initHomeFilters() {
         </div>
 
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            <div style="width:4px;height:18px;background:var(--green);border-radius:2px;"></div>
-            <h3 style="margin:0;">Positions by Department</h3>
-          </div>
+          <h3 class="subsection-title" style="margin-top:0;">Positions by Department</h3>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             ${deptArr.length === 0 ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No opening data for this period</div>' :
               deptArr.slice(0, 6).map(([ dept, v ], i) => {
@@ -189,7 +190,7 @@ export function initHomeFilters() {
                       <span style="font-weight:500;font-size:12px;">${dept}</span>
                       <span style="font-size:12px;"><span class="good">${v.filled}</span> <span style="color:var(--muted)">/ ${v.open + v.filled}</span></span>
                     </div>
-                    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:#f1f5f9;">
+                    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border-light);">
                       <div style="width:${filledPct}%;background:var(--green);"></div>
                       <div style="width:${openPct}%;background:var(--blue);"></div>
                     </div>
@@ -213,17 +214,3 @@ function getQuarterFromDate(dateStr) {
   return y + '-Q' + q;
 }
 
-function renderPipelineArrow(label, value, color, isFirst, isLast) {
-  return `
-    <div style="flex:1;text-align:center;position:relative;">
-      <div style="background:${color};color:#fff;padding:8px 4px;font-size:11px;font-weight:700;
-        ${isFirst ? 'border-radius:6px 0 0 6px;' : ''}
-        ${isLast ? 'border-radius:0 6px 6px 0;' : ''}
-      ">
-        ${value.toLocaleString()}
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;">${label}</div>
-      ${!isLast ? `<svg style="position:absolute;right:-6px;top:4px;z-index:1;" width="12" height="22" viewBox="0 0 12 22"><path d="M0 0L10 11L0 22" fill="${color}"/></svg>` : ''}
-    </div>
-  `;
-}

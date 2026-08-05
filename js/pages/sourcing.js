@@ -18,7 +18,7 @@ export function renderSourcing(data) {
   const colors = ['var(--accent)', 'var(--blue)', 'var(--orange)', 'var(--green)', 'var(--yellow)', 'var(--red)'];
 
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><div style="width:4px;height:20px;background:var(--accent);border-radius:2px;"></div><h2 style="margin:0;">Sourcing Mix</h2></div>
+    <h2 class="section-title">Sourcing Mix</h2>
 
     <div class="cards">
       <div class="card">
@@ -36,7 +36,7 @@ export function renderSourcing(data) {
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--green);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Source Distribution</h3></div>
+    <h3 class="subsection-title">Source Distribution</h3>
     <div class="source-bar">
       ${data.sources.map((s, i) => {
         const pct = totalApplied > 0 ? (s.candidates / totalApplied) * 100 : 0;
@@ -45,10 +45,10 @@ export function renderSourcing(data) {
     </div>
     <p class="sub-note">${totalCandidates.toLocaleString()} of ${totalApplied.toLocaleString()} total applications have a categorized source type. ${uncategorized.toLocaleString()} are uncategorized.</p>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--orange);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Source Distribution</h3></div>
+    <h3 class="subsection-title">Channel Breakdown</h3>
     <div class="chart-wrap" style="max-width:400px;margin:0 auto 20px"><canvas id="sourceChart"></canvas></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--blue);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Source Breakdown</h3></div>
+    <h3 class="subsection-title">Source Breakdown</h3>
     <div class="scroll-table">
       <table>
         <thead><tr><th>Source</th><th>Candidates</th><th>% of Categorized</th><th>% of Total</th><th>Hires</th><th>Conversion</th></tr></thead>

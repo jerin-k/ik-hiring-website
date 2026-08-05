@@ -14,12 +14,12 @@ let currentAccess = null;
 let accessConfig = null;
 
 const NAV_ITEMS = [
-  { id: 'hm-report', icon: '📋', title: 'Hiring Manager Report', desc: 'Job openings, pipeline throughput, and fulfilment tracking' },
-  { id: 'recruiter', icon: '📈', title: 'Recruiter Efficiency', desc: 'Recruiter activity, candidate velocity, and workload' },
-  { id: 'efficiency', icon: '⚙️', title: 'Overall Efficiency', desc: 'Org-wide funnel, conversion rates, and offer-to-hire gap' },
-  { id: 'sourcing', icon: '🔍', title: 'Sourcing Mix', desc: 'Source channel breakdown and effectiveness' },
-  { id: 'interviewer', icon: '🎯', title: 'Interviewer Efficiency', desc: 'Feedback TAT and quality of hire metrics' },
-  { id: 'admin', icon: '🛠️', title: 'Admin', desc: 'Manage user access and roles' },
+  { id: 'hm-report', title: 'Hiring Manager' },
+  { id: 'recruiter', title: 'Recruiter' },
+  { id: 'efficiency', title: 'Efficiency' },
+  { id: 'sourcing', title: 'Sourcing' },
+  { id: 'interviewer', title: 'Interviewer' },
+  { id: 'admin', title: 'Admin' },
 ];
 
 const DEV_MODE = location.hostname === 'localhost';
@@ -90,22 +90,8 @@ function buildNavStrip() {
   const visible = NAV_ITEMS.filter(n => canAccessPage(currentAccess, n.id));
 
   strip.innerHTML = `
-    <div class="nav-strip-home active" data-nav="home" title="Home">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 10L10 3L17 10M5 8.5V16H8.5V12H11.5V16H15V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div class="nav-strip-cards">
-      ${visible.map(n => `
-        <div class="nav-strip-card" data-nav="${n.id}">
-          <span class="nsc-icon">${n.icon}</span>
-          <div>
-            <div class="nsc-title">${n.title}</div>
-            <div class="nsc-desc">${n.desc}</div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
+    <div class="nav-tab active" data-nav="home">Overview</div>
+    ${visible.map(n => `<div class="nav-tab" data-nav="${n.id}">${n.title}</div>`).join('')}
   `;
 
   strip.addEventListener('click', (e) => {

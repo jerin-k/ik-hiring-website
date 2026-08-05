@@ -62,7 +62,7 @@ export function renderHmReport(data) {
 
   return `
     <!-- ===== SECTION 1: JOB OPENINGS ===== -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><div style="width:4px;height:20px;background:var(--accent);border-radius:2px;"></div><h2 style="margin:0;">1. Job Openings</h2></div>
+    <h2 class="section-title">Job Openings</h2>
     <div class="filter-bar">
       <label style="font-size:11px;color:var(--muted)">From <input type="date" id="hm1DateFrom" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
       <label style="font-size:11px;color:var(--muted)">To <input type="date" id="hm1DateTo" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
@@ -76,7 +76,7 @@ export function renderHmReport(data) {
 
     <div class="cards" id="hm1Cards"></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--accent);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Department &amp; Team Summary</h3></div>
+    <h3 class="subsection-title">Department &amp; Team Summary</h3>
     <div class="scroll-table"><table>
       <thead><tr><th>Department</th><th>Team</th><th>#Openings</th><th>Joined (Filled)</th><th>Joining Pending</th><th>Open</th></tr></thead>
       <tbody id="hm1TeamBody"></tbody>
@@ -84,7 +84,7 @@ export function renderHmReport(data) {
 
     <div class="chart-wrap" style="height:300px"><canvas id="hm1Chart"></canvas></div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--accent);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Job-wise Detail</h3></div>
+    <h3 class="subsection-title">Job-wise Detail</h3>
     <div class="filter-bar">
       <select id="hm1DeptFilter2"><option value="">All Departments</option>${openingDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>
       <input type="text" id="hm1JobFilter" placeholder="Filter by job title..." style="width:220px">
@@ -97,7 +97,7 @@ export function renderHmReport(data) {
     <hr class="section-divider">
 
     <!-- ===== SECTION 2: THROUGHPUT ===== -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><div style="width:4px;height:20px;background:var(--green);border-radius:2px;"></div><h2 style="margin:0;">2. Job-wise Throughput Report</h2></div>
+    <h2 class="section-title">Job-wise Throughput Report</h2>
     <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
     <div class="filter-bar">
       <select id="hm2StatusFilter"><option value="">All Job Statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
@@ -119,7 +119,7 @@ export function renderHmReport(data) {
     <hr class="section-divider">
 
     <!-- ===== SECTION 3: CURRENT PIPELINE ===== -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><div style="width:4px;height:20px;background:var(--blue);border-radius:2px;"></div><h2 style="margin:0;">3. Current Stage-wise Pipeline</h2></div>
+    <h2 class="section-title">Current Stage-wise Pipeline</h2>
     <div class="filter-bar">
       <select id="hm3StatusFilter"><option value="">All Job Statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
       <select id="hm3TeamFilter"><option value="">All Departments</option>${jobDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select>

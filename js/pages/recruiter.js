@@ -23,8 +23,8 @@ export function renderRecruiter(data) {
   }
 
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><div style="width:4px;height:20px;background:var(--accent);border-radius:2px;"></div><h2 style="margin:0;">Recruiter Efficiency</h2></div>
-    <p class="sub-note">Per-recruiter metrics based on "reached stage" data. Only recruiters with applications shown.</p>
+    <h2 class="section-title">Recruiter Efficiency</h2>
+    <p class="sub-note" style="margin-top:-8px;">Per-recruiter metrics based on "reached stage" data. Only recruiters with applications shown.</p>
     <div class="filter-bar">
       <input type="text" id="recNameFilter" placeholder="Filter by recruiter name..." style="width:220px">
       <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="recHideZero" checked> Hide zero-app recruiters</label>
@@ -33,7 +33,7 @@ export function renderRecruiter(data) {
     <div class="cards" id="recKpiCards"></div>
 
     <!-- Submission Velocity -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--accent);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Submission Velocity</h3></div>
+    <h3 class="subsection-title">Submission Velocity</h3>
     <div class="chart-wrap" style="height:250px"><canvas id="recruiterVelocityChart"></canvas></div>
     <div class="scroll-table">
       <table>
@@ -45,7 +45,7 @@ export function renderRecruiter(data) {
     <hr class="section-divider">
 
     <!-- Resume Filtering Efficiency -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--green);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Resume Filtering Efficiency</h3></div>
+    <h3 class="subsection-title">Resume Filtering Efficiency</h3>
     <p class="sub-note">TA Screen: candidates who reached TA Screen vs those who progressed beyond it.</p>
     <div class="scroll-table">
       <table>
@@ -57,7 +57,7 @@ export function renderRecruiter(data) {
     <hr class="section-divider">
 
     <!-- Screening Efficiency -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--blue);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Screening Efficiency</h3></div>
+    <h3 class="subsection-title">Screening Efficiency</h3>
     <div class="scroll-table">
       <table>
         <thead><tr><th>Recruiter</th><th>R1 In</th><th>R1→Offer</th><th>R1→Offer %</th><th>Offer</th><th>Hired</th><th>Offer→Hired %</th></tr></thead>
@@ -68,7 +68,7 @@ export function renderRecruiter(data) {
     <hr class="section-divider">
 
     <!-- Joining Conversion -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--orange);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Joining Conversion</h3></div>
+    <h3 class="subsection-title">Joining Conversion</h3>
     <div class="scroll-table">
       <table>
         <thead><tr><th>Recruiter</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
@@ -79,7 +79,7 @@ export function renderRecruiter(data) {
     <hr class="section-divider">
 
     <!-- Position Fulfilment -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;"><div style="width:3px;height:14px;background:var(--red);border-radius:2px;opacity:.5;"></div><h3 style="margin:0;">Position Fulfilment</h3></div>
+    <h3 class="subsection-title">Position Fulfilment</h3>
     <p class="sub-note">Target vs actual. Set targets using the input fields below.</p>
     <div class="scroll-table">
       <table>
