@@ -116,7 +116,13 @@ const valueLabels = {
 
 // Collapse/expand a 2-level Department -> leaf tree. dept-header rows have data-g; leaf rows have data-g.
 function wireTree(tbody) {
+  const expandAll = document.getElementById('hmExpandAll')?.checked;
   tbody.querySelectorAll('tr.dept-header').forEach(h => {
+    if (expandAll) {
+      h.dataset.exp = '1';
+      const c = h.querySelector('.caret'); if (c) c.textContent = '▾';
+      tbody.querySelectorAll(`tr.leaf[data-g="${h.dataset.g}"]`).forEach(r => { r.style.display = ''; });
+    }
     h.addEventListener('click', () => {
       const gi = h.dataset.g;
       const exp = h.dataset.exp === '1';
@@ -149,9 +155,9 @@ export function renderHmReport(data) {
       .hm-filters select:hover, .hm-filters input[type=date]:hover { border-color:var(--muted); }
       .hm-filters select:focus, .hm-filters input[type=date]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.12); }
       .hm-filters .fchip { display:flex; align-items:center; gap:7px; }
-      .hm-filters .fchip > span.lbl { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; }
+      .hm-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
       .hm-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; }
-      .hm-filters .fdiv { width:1px; align-self:stretch; background:var(--border); margin:2px 2px; }
+      .hm-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
       .hm-report table td, .hm-report table th { vertical-align:middle; }
 
       /* sub-tabs */
@@ -162,9 +168,10 @@ export function renderHmReport(data) {
       .hm-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
 
       /* even, compact numeric columns for the Department Summary table */
-      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; }
+      .hm-report .hm-summary { width:auto; min-width:min(100%,720px); }
+      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:340px; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
-        text-align:right; width:118px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        text-align:right; width:96px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 
       /* tidy, evenly spaced stage checkbox strip */
       .hm-stages { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:2px 0 14px; }
@@ -174,7 +181,7 @@ export function renderHmReport(data) {
 
     <div class="hm-report">
     <!-- ===== GLOBAL PAGE FILTERS ===== -->
-    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04)">
+    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:#d7e5fb;border:1px solid #b0ccf2;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.06)">
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">Status</span>
@@ -186,7 +193,7 @@ export function renderHmReport(data) {
       <div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div>
       <div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
-      <span style="margin-left:auto;font-size:10.5px;color:var(--muted);max-width:230px;text-align:right;line-height:1.4">Status + Date / Year / Quarter apply to <strong>Positions</strong> only — pipeline sections are a live snapshot.</span>
+      <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll"> Expand all branches</label>
     </div>
 
     <!-- ===== SUB-TAB STRIP ===== -->
@@ -400,14 +407,15 @@ export function initHmFilters(data) {
         data: {
           labels: cDepts,
           datasets: [
-            { label: 'Joined', data: cDepts.map(d => groups[d].filled), backgroundColor: '#22c55e', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Joining Pending', data: cDepts.map(d => groups[d].jp), backgroundColor: '#f97316', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#3b82f6', borderRadius: 4, barPercentage: 0.7 }
+            { label: 'Joined', data: cDepts.map(d => groups[d].filled), backgroundColor: '#0f766e', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Joining Pending', data: cDepts.map(d => groups[d].jp), backgroundColor: '#0891b2', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#2563eb', borderRadius: 4, barPercentage: 0.7 }
           ]
         },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } } } },
+          layout: { padding: { top: 4 } },
+          plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } } },
           scales: {
             x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions / Candidates', font: { size: 11 }, color: '#64748b' } },
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
@@ -499,12 +507,12 @@ export function initHmFilters(data) {
       hm2ChartInstance = new Chart(ctx2, {
         type: 'bar',
         data: { labels: chartLabels, datasets: [
-          { label: 'In', data: chartIn, backgroundColor: '#4f46e5', borderRadius: 4, barPercentage: 0.75 },
-          { label: 'Out', data: chartOut, backgroundColor: '#22c55e', borderRadius: 4, barPercentage: 0.75 }
+          { label: 'In', data: chartIn, backgroundColor: '#2563eb', borderRadius: 4, barPercentage: 0.75 },
+          { label: 'Out', data: chartOut, backgroundColor: '#0f766e', borderRadius: 4, barPercentage: 0.75 }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } } } },
+          plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } } },
           scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
         },
         plugins: [valueLabels]
@@ -522,7 +530,7 @@ export function initHmFilters(data) {
         type: 'bar',
         data: { labels: funnel.map(f => f.label), datasets: [{
           label: 'Reached', data: funnel.map(f => [-f.value / 2, f.value / 2]),
-          backgroundColor: '#0d9488', borderRadius: 3, barPercentage: 0.85
+          backgroundColor: '#0f766e', borderRadius: 3, barPercentage: 0.85
         }] },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -684,6 +692,7 @@ export function initHmFilters(data) {
   document.getElementById('hmYear')?.addEventListener('change', () => { applyYearQuarter(); renderActive(); });
   document.getElementById('hmQuarter')?.addEventListener('change', () => { applyYearQuarter(); renderActive(); });
   document.querySelectorAll('.hm1Status').forEach(cb => cb.addEventListener('change', renderActive));
+  document.getElementById('hmExpandAll')?.addEventListener('change', renderActive);
 
   // Positions-local listeners
   document.getElementById('hm1JobFilter')?.addEventListener('input', renderSection1);
