@@ -1,3 +1,5 @@
+import { DEPT_TREE } from '../dept-map.js';
+
 export function renderAdmin(accessConfig) {
   const users = accessConfig?.users || [];
 
@@ -51,6 +53,31 @@ export function renderAdmin(accessConfig) {
           <tbody id="users-table-body">
             ${users.map(u => renderUserRow(u)).join('')}
             ${users.length === 0 ? '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No users configured</td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <h3>Departments &amp; Teams</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Authoritative Ashby department → team hierarchy, used across all reports to resolve department names.
+        Mirrors Ashby → Admin → Organization Setup → Departments &amp; Teams.
+        ${Object.keys(DEPT_TREE).length} departments,
+        ${Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0)} teams.
+        Edit <code>site/js/dept-map.js</code> when Ashby changes.
+      </p>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th style="width:180px">Department</th><th>Teams</th></tr></thead>
+          <tbody>
+            ${Object.keys(DEPT_TREE).sort().map(dept => `
+              <tr>
+                <td style="font-weight:600; white-space:nowrap; vertical-align:top">${dept}</td>
+                <td style="font-size:0.85rem">${DEPT_TREE[dept].length
+                  ? DEPT_TREE[dept].map(t => `<span style="display:inline-block; background:var(--border-light,#f1f5f9); border:1px solid var(--border,#e2e8f0); border-radius:4px; padding:1px 6px; margin:2px 3px 2px 0">${t}</span>`).join('')
+                  : '<span style="color:var(--text-muted)">— no teams —</span>'}</td>
+              </tr>`).join('')}
           </tbody>
         </table>
       </div>
