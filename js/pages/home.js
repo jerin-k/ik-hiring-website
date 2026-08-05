@@ -143,11 +143,11 @@ export function initHomeFilters() {
         <div class="pipeline-flow">
           ${pipelineStages.map(s => {
             const flex = Math.max((s.value / maxPipeline) * 100, s.value > 0 ? 8 : 2);
-            return `<div class="stage" style="flex:${flex.toFixed(1)};background:${s.color}">${s.value.toLocaleString()}</div>`;
+            return `<div class="pipeline-col" style="flex:${flex.toFixed(1)}">
+              <div class="stage" style="background:${s.color}">${s.value.toLocaleString()}</div>
+              <div class="stage-label">${s.label}</div>
+            </div>`;
           }).join('')}
-        </div>
-        <div class="pipeline-labels">
-          ${pipelineStages.map(s => `<span>${s.label}</span>`).join('')}
         </div>
       </div>
 
