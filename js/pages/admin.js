@@ -1,16 +1,7 @@
 import { DEPT_TREE } from '../dept-map.js';
-import { POD_OPTIONS, podOf, setPodOverride, mergedPodMap } from '../recruiter-pods.js';
 
 export function renderAdmin(accessConfig, data) {
   const users = accessConfig?.users || [];
-  const recruiters = [...new Set((data?.recruiters || []).map(r => r.name))].filter(Boolean).sort();
-
-  const podSelect = (name) => {
-    const cur = podOf(name);
-    const opts = ['Unassigned', ...POD_OPTIONS]
-      .map(p => `<option value="${p}"${p === cur ? ' selected' : ''}>${p === 'Unassigned' ? '— Unassigned —' : p}</option>`).join('');
-    return `<select class="rec-pod-select" data-rec="${name}" style="padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);min-width:150px">${opts}</select>`;
-  };
 
   return `
     <div class="admin-section">
@@ -91,57 +82,7 @@ export function renderAdmin(accessConfig, data) {
         </table>
       </div>
     </div>
-
-    <div class="admin-section">
-      <h3>Recruiter → Pod Mapping</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-        Assign each recruiter to a pod (Sales / Lateral / SME-US / SME-India). Pods drive the Recruiter tab's
-        grouping and the Sales-vs-Non-Sales split in Position Fulfilment. Edits save to this browser immediately;
-        click <strong>Export mapping</strong> and commit the result into <code>site/js/recruiter-pods.js</code> to make it permanent for everyone.
-        ${recruiters.length ? '' : '<br><em>No recruiters in the current data yet.</em>'}
-      </p>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th style="width:60%">Recruiter</th><th>Pod</th></tr></thead>
-          <tbody>
-            ${recruiters.map(name => `<tr><td style="font-weight:500">${name}</td><td>${podSelect(name)}</td></tr>`).join('')}
-            ${recruiters.length === 0 ? '<tr><td colspan="2" style="text-align:center;color:var(--text-muted)">—</td></tr>' : ''}
-          </tbody>
-        </table>
-      </div>
-      <div class="form-row" style="margin-top:12px;align-items:center">
-        <button class="btn btn-primary" id="rec-pod-export">Export mapping</button>
-        <span id="rec-pod-summary" style="font-size:12px;color:var(--muted)"></span>
-      </div>
-      <textarea id="rec-pod-out" readonly placeholder="Click Export mapping — then paste the RECRUITER_POD block into site/js/recruiter-pods.js and commit."
-        style="display:none;width:100%;margin-top:10px;min-height:140px;font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)"></textarea>
-    </div>
   `;
-}
-
-// Wires the Recruiter → Pod dropdowns + Export. Call after renderAdmin is in the DOM.
-export function initAdminPods() {
-  const summary = document.getElementById('rec-pod-summary');
-  const selects = [...document.querySelectorAll('.rec-pod-select')];
-  function refreshSummary() {
-    const counts = {};
-    selects.forEach(s => { counts[s.value] = (counts[s.value] || 0) + 1; });
-    const parts = Object.keys(counts).sort().map(k => `${k === 'Unassigned' ? 'Unassigned' : k}: ${counts[k]}`);
-    if (summary) summary.textContent = parts.join('  ·  ');
-  }
-  selects.forEach(s => s.addEventListener('change', () => {
-    setPodOverride(s.dataset.rec, s.value);
-    refreshSummary();
-  }));
-  refreshSummary();
-
-  document.getElementById('rec-pod-export')?.addEventListener('click', () => {
-    const map = mergedPodMap();
-    const lines = Object.keys(map).sort().map(n => `  ${JSON.stringify(n)}: ${JSON.stringify(map[n])},`);
-    const snippet = `export const RECRUITER_POD = {\n${lines.join('\n')}\n};`;
-    const out = document.getElementById('rec-pod-out');
-    if (out) { out.style.display = 'block'; out.value = snippet; out.focus(); out.select(); }
-  });
 }
 
 function renderUserRow(user) {
