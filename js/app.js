@@ -7,7 +7,7 @@ import { renderRecruiter, initRecruiterFilters } from './pages/recruiter.js';
 import { renderEfficiency, initEfficiencyFilters } from './pages/efficiency.js';
 import { renderSourcing, initSourcingChart } from './pages/sourcing.js';
 import { renderInterviewer } from './pages/interviewer.js';
-import { renderAdmin, initAdminPods } from './pages/admin.js';
+import { renderAdmin } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
 
 let currentAccess = null;
@@ -15,10 +15,10 @@ let accessConfig = null;
 
 const NAV_ITEMS = [
   { id: 'hm-report', title: 'Hiring Manager' },
-  { id: 'recruiter', title: 'Recruiter' },
-  { id: 'efficiency', title: 'Efficiency' },
-  { id: 'sourcing', title: 'Sourcing' },
-  { id: 'interviewer', title: 'Interviewer' },
+  { id: 'recruiter', title: 'Recruiter Efficiency' },
+  { id: 'efficiency', title: 'Overall Efficiency' },
+  { id: 'sourcing', title: 'Sourcing Mix' },
+  { id: 'interviewer', title: 'Interviewer Efficiency' },
   { id: 'admin', title: 'Admin' },
 ];
 
@@ -173,7 +173,6 @@ function navigateTo(page) {
       break;
     case 'admin':
       content.innerHTML = renderAdmin(accessConfig, data);
-      initAdminPods();
       break;
   }
 }
