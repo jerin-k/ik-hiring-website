@@ -211,7 +211,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="filter-bar" style="margin-bottom:10px">
-        <input type="text" id="hm1JobFilter" placeholder="Filter by job title..." style="width:240px">
+        <div class="ms" id="msHm1Job"></div>
       </div>
       <div class="scroll-table"><table class="hm-summary">
         <thead><tr><th>Department</th><th>Total Positions</th><th>Joined</th><th>Joining Pending</th><th>Open</th></tr></thead>
@@ -223,7 +223,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Joining Pending — Cases</h3>
       <p class="sub-note">Individual candidates in Ref Check, Documentation, or Offer stage. This table lists everyone currently pending joining — the page date/quarter filter does not apply here.</p>
       <div class="filter-bar">
-        <input type="text" id="hmJPJob" placeholder="Filter by job title..." style="width:220px">
+        <div class="ms" id="msHmJP"></div>
         <select id="hmJPMonth"><option value="">All DOJ Months</option>${jpMonths.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
         <span style="font-size:11px;color:var(--muted)">DOJ</span>
         <input type="date" id="hmJPFrom" title="DOJ from">
@@ -241,7 +241,7 @@ export function renderHmReport(data) {
       <p class="sub-note" style="color:var(--orange)">Live snapshot — the <strong>Department</strong> filter applies here; the date/quarter filter does not (no per-stage dates in the data yet). Click a department to drill in.</p>
       <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
       <div class="filter-bar">
-        <input type="text" id="hm2JobFilter" placeholder="Filter by job title..." style="width:220px">
+        <div class="ms" id="msHm2Job"></div>
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="hm-stages">
@@ -265,7 +265,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="pipeline" style="display:none">
       <p class="sub-note" style="color:var(--orange)">Live snapshot — the <strong>Department</strong> filter applies here; the date/quarter filter does not. Click a department to drill in.</p>
       <div class="filter-bar">
-        <input type="text" id="hm3JobFilter" placeholder="Filter by job title..." style="width:220px">
+        <div class="ms" id="msHm3Job"></div>
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="hm-stages">
@@ -303,6 +303,23 @@ export function initHmFilters(data) {
 
   openings.forEach(o => { o._dept = deptOf(o.department); });
   jobs.forEach(j => { j._dept = deptOf(j.department); });
+
+  // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
+  let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null;
+  const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  function makeMultiSelect(container, label, options, onChange) {
+    if (!container) return null;
+    const selected = new Set();
+    const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+    container.classList.add('ms');
+    container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">${options.map(o => `<label class="ms-opt"><input type="checkbox" value="${String(o).replace(/"/g, '&quot;')}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No jobs yet</span>'}</div>`;
+    const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
+    btn.textContent = labelText();
+    btn.addEventListener('click', (e) => { e.stopPropagation(); const open = panel.style.display !== 'none'; document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'); panel.style.display = open ? 'none' : 'block'; });
+    panel.addEventListener('click', e => e.stopPropagation());
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
+    return { getSelected: () => [...selected] };
+  }
 
   // Joining Pending = Ref Check + Doc Submission + Offer (from the linked job pipeline)
   function jpOf(o) {
@@ -346,14 +363,14 @@ export function initHmFilters(data) {
   function renderSection1() {
     const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept();
     const statuses = getSelectedStatuses();
-    const jobF = (document.getElementById('hm1JobFilter')?.value || '').toLowerCase();
+    const jobSel = msHm1Job ? msHm1Job.getSelected() : [];
 
     const filtered = openings.filter(o => {
       if (dateFrom && (o.openedAt || '') < dateFrom) return false;
       if (dateTo && (o.openedAt || '') > dateTo) return false;
       if (statuses.length > 0 && statuses.indexOf(o.status || 'Open') === -1) return false;
       if (deptG && o._dept !== deptG) return false;
-      if (jobF && !o.title.toLowerCase().includes(jobF)) return false;
+      if (jobSel.length && !jobSel.includes(o.title)) return false;
       return true;
     });
 
@@ -429,14 +446,14 @@ export function initHmFilters(data) {
   // ===== Section 2: Throughput (Department -> Job tree) =====
   function renderThroughput() {
     const deptG = gDept();
-    const jobF = (document.getElementById('hm2JobFilter')?.value || '').toLowerCase();
+    const jobSel = msHm2Job ? msHm2Job.getSelected() : [];
     const hideEmpty = document.getElementById('hm2HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm2Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
 
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
-      if (jobF && !j.title.toLowerCase().includes(jobF)) return false;
+      if (jobSel.length && !jobSel.includes(j.title)) return false;
       if (hideEmpty && j.total === 0) return false;
       if (!j.pipeline) return false;
       return true;
@@ -578,7 +595,7 @@ export function initHmFilters(data) {
     const body = document.getElementById('hmJPBody');
     if (!body) return;
     const deptG = gDept();
-    const jobF = (document.getElementById('hmJPJob')?.value || '').toLowerCase();
+    const jobSel = msHmJP ? msHmJP.getSelected() : [];
     const monthF = document.getElementById('hmJPMonth')?.value || '';
     const dojFrom = document.getElementById('hmJPFrom')?.value || '';
     const dojTo = document.getElementById('hmJPTo')?.value || '';
@@ -586,7 +603,7 @@ export function initHmFilters(data) {
     let list = (data.joiningPendingCases || []).map(c => ({ ...c, _dept: deptOf(c.department || '') }));
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
-      if (jobF && !(c.job || '').toLowerCase().includes(jobF)) return false;
+      if (jobSel.length && !jobSel.includes(c.job)) return false;
       if (monthF && monthOf(c.doj) !== monthF) return false;
       if (dojFrom && (c.doj || '') < dojFrom) return false;
       if (dojTo && (c.doj || '') > dojTo) return false;
@@ -609,14 +626,14 @@ export function initHmFilters(data) {
   // ===== Section 3: Current Pipeline (Department -> Job tree) =====
   function renderPipeline() {
     const deptG = gDept();
-    const jobF = (document.getElementById('hm3JobFilter')?.value || '').toLowerCase();
+    const jobSel = msHm3Job ? msHm3Job.getSelected() : [];
     const hideEmpty = document.getElementById('hm3HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm3Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
 
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
-      if (jobF && !j.title.toLowerCase().includes(jobF)) return false;
+      if (jobSel.length && !jobSel.includes(j.title)) return false;
       if (hideEmpty && j.total === 0) return false;
       if (!j.pipeline) return false;
       return true;
@@ -694,19 +711,20 @@ export function initHmFilters(data) {
   document.querySelectorAll('.hm1Status').forEach(cb => cb.addEventListener('change', renderActive));
   document.getElementById('hmExpandAll')?.addEventListener('change', renderActive);
 
-  // Positions-local listeners
-  document.getElementById('hm1JobFilter')?.addEventListener('input', renderSection1);
+  // Job-title multi-selects (build + wire) — one per section
+  msHm1Job = makeMultiSelect(document.getElementById('msHm1Job'), 'Job', jobTitles, renderSection1);
+  msHmJP = makeMultiSelect(document.getElementById('msHmJP'), 'Job', jobTitles, renderJoiningPending);
+  msHm2Job = makeMultiSelect(document.getElementById('msHm2Job'), 'Job', jobTitles, renderThroughput);
+  msHm3Job = makeMultiSelect(document.getElementById('msHm3Job'), 'Job', jobTitles, renderPipeline);
+  document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
   // Joining Pending local listeners
-  document.getElementById('hmJPJob')?.addEventListener('input', renderJoiningPending);
   document.getElementById('hmJPMonth')?.addEventListener('change', renderJoiningPending);
   document.getElementById('hmJPFrom')?.addEventListener('change', renderJoiningPending);
   document.getElementById('hmJPTo')?.addEventListener('change', renderJoiningPending);
   // Throughput-local listeners
-  document.getElementById('hm2JobFilter')?.addEventListener('input', renderThroughput);
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);
   document.querySelectorAll('.hm2Stage').forEach(cb => cb.addEventListener('change', renderThroughput));
   // Pipeline-local listeners
-  document.getElementById('hm3JobFilter')?.addEventListener('input', renderPipeline);
   document.getElementById('hm3HideEmpty')?.addEventListener('change', renderPipeline);
   document.querySelectorAll('.hm3Stage').forEach(cb => cb.addEventListener('change', renderPipeline));
 
