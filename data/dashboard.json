@@ -1,11 +1,11 @@
 {
-  "lastUpdated": "2026-08-08T01:36:07.898Z",
+  "lastUpdated": "2026-08-08T13:50:13.077Z",
   "funnel": {
-    "applied": 82500,
-    "screened": 1285,
-    "interviewed": 1280,
-    "offered": 1270,
-    "hired": 1267
+    "applied": 80000,
+    "screened": 1276,
+    "interviewed": 1271,
+    "offered": 1262,
+    "hired": 1259
   },
   "openings": [
     {
@@ -567,13 +567,13 @@
       "title": "Sales Associate - AI Programs (Junior Program Advisor)",
       "department": "US Business (Sales)",
       "team": "US Business (Sales)",
-      "total": 13603,
+      "total": 13488,
       "status": "Closed",
-      "applied": 13603,
+      "applied": 13488,
       "screen": 0,
       "interview": 0,
       "offer": 0,
-      "hired": 67,
+      "hired": 66,
       "pipeline": {
         "appReview": 0,
         "taScreen": 0,
@@ -587,7 +587,7 @@
         "refCheck": 0,
         "docSub": 0,
         "offer": 0,
-        "hired": 67
+        "hired": 66
       }
     },
     {
@@ -595,9 +595,9 @@
       "title": "Customer Success Associate (US)",
       "department": "Customer Success Management",
       "team": "Customer Success Management",
-      "total": 5189,
+      "total": 5188,
       "status": "Open",
-      "applied": 5189,
+      "applied": 5188,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -623,9 +623,9 @@
       "title": "Associate Product Manager",
       "department": "Product Management (Tech)",
       "team": "Product Management (Tech)",
-      "total": 3672,
+      "total": 3376,
       "status": "Open",
-      "applied": 3672,
+      "applied": 3376,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -707,13 +707,13 @@
       "title": "Program Advisor - US (Interview Preparation)",
       "department": "US Business (Sales)",
       "team": "US Business (Sales)",
-      "total": 1983,
+      "total": 1957,
       "status": "Closed",
-      "applied": 1983,
+      "applied": 1957,
       "screen": 0,
       "interview": 1,
       "offer": 0,
-      "hired": 115,
+      "hired": 113,
       "pipeline": {
         "appReview": 0,
         "taScreen": 0,
@@ -727,63 +727,7 @@
         "refCheck": 0,
         "docSub": 0,
         "offer": 0,
-        "hired": 115
-      }
-    },
-    {
-      "id": "b62f546a",
-      "title": "Senior Manager/Associate Director -Delivery Operations (Night Shift)",
-      "department": "Delivery Operations",
-      "team": "Delivery Operations",
-      "total": 1945,
-      "status": "Closed",
-      "applied": 1945,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 1,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 1
-      }
-    },
-    {
-      "id": "132fa05a",
-      "title": "Product Analyst",
-      "department": "Product Management (Tech)",
-      "team": "Product Management (Tech)",
-      "total": 1895,
-      "status": "Closed",
-      "applied": 1895,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 1,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 1
+        "hired": 113
       }
     },
     {
@@ -815,41 +759,13 @@
       }
     },
     {
-      "id": "e3092eda",
-      "title": "Assistant Manager - Visual Designer",
-      "department": "Marketing",
-      "team": "Marketing",
-      "total": 1774,
-      "status": "Closed",
-      "applied": 1774,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 1,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 1
-      }
-    },
-    {
       "id": "9eb766a1",
       "title": "Senior Product Manager",
       "department": "Product Management (Curriculum)",
       "team": "Product Management (Curriculum)",
-      "total": 1773,
+      "total": 1759,
       "status": "Closed",
-      "applied": 1773,
+      "applied": 1759,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -871,23 +787,23 @@
       }
     },
     {
-      "id": "22fcd2e7",
-      "title": "Program Advisor - US (AI Programs)",
-      "department": "US Business (Sales)",
-      "team": "US Business (Sales)",
-      "total": 1735,
-      "status": "Open",
-      "applied": 1735,
-      "screen": 2,
-      "interview": 7,
+      "id": "132fa05a",
+      "title": "Product Analyst",
+      "department": "Product Management (Tech)",
+      "team": "Product Management (Tech)",
+      "total": 1640,
+      "status": "Closed",
+      "applied": 1640,
+      "screen": 0,
+      "interview": 0,
       "offer": 0,
-      "hired": 111,
+      "hired": 1,
       "pipeline": {
         "appReview": 0,
-        "taScreen": 2,
+        "taScreen": 0,
         "hmReview": 0,
         "oa": 0,
-        "r1": 7,
+        "r1": 0,
         "r2": 0,
         "r3": 0,
         "r4": 0,
@@ -895,7 +811,63 @@
         "refCheck": 0,
         "docSub": 0,
         "offer": 0,
-        "hired": 111
+        "hired": 1
+      }
+    },
+    {
+      "id": "e3092eda",
+      "title": "Assistant Manager - Visual Designer",
+      "department": "Marketing",
+      "team": "Marketing",
+      "total": 1625,
+      "status": "Closed",
+      "applied": 1625,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 1,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 1
+      }
+    },
+    {
+      "id": "b62f546a",
+      "title": "Senior Manager/Associate Director -Delivery Operations (Night Shift)",
+      "department": "Delivery Operations",
+      "team": "Delivery Operations",
+      "total": 1585,
+      "status": "Closed",
+      "applied": 1585,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 1,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 1
       }
     },
     {
@@ -903,9 +875,9 @@
       "title": "Manager - Sales (US)",
       "department": "US Business (Sales)",
       "team": "US Business (Sales)",
-      "total": 1587,
+      "total": 1573,
       "status": "Open",
-      "applied": 1587,
+      "applied": 1573,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -927,13 +899,41 @@
       }
     },
     {
+      "id": "22fcd2e7",
+      "title": "Program Advisor - US (AI Programs)",
+      "department": "US Business (Sales)",
+      "team": "US Business (Sales)",
+      "total": 1568,
+      "status": "Open",
+      "applied": 1568,
+      "screen": 2,
+      "interview": 6,
+      "offer": 0,
+      "hired": 107,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 2,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 6,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 107
+      }
+    },
+    {
       "id": "db4054a4",
       "title": "Director - Performance Marketing",
       "department": "Marketing",
       "team": "Marketing",
-      "total": 1504,
+      "total": 1501,
       "status": "Closed",
-      "applied": 1504,
+      "applied": 1501,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -987,9 +987,9 @@
       "title": "Wordpress Developer",
       "department": "Engineering",
       "team": "Engineering",
-      "total": 1224,
+      "total": 1195,
       "status": "Closed",
-      "applied": 1224,
+      "applied": 1195,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1071,9 +1071,9 @@
       "title": "Video Editor (Freelancer)",
       "department": "Youtube",
       "team": "Youtube",
-      "total": 960,
+      "total": 953,
       "status": "Closed",
-      "applied": 960,
+      "applied": 953,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1099,9 +1099,9 @@
       "title": "Head - University Partnerships",
       "department": "Operations",
       "team": "Operations",
-      "total": 953,
+      "total": 928,
       "status": "Closed",
-      "applied": 953,
+      "applied": 928,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1183,9 +1183,9 @@
       "title": "Assistant Manager - Video Editing",
       "department": "Video Editing (Marketing)",
       "team": "Video Editing (Marketing)",
-      "total": 883,
+      "total": 882,
       "status": "Closed",
-      "applied": 883,
+      "applied": 882,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1211,9 +1211,9 @@
       "title": "Manager, CRM",
       "department": "Marketing",
       "team": "Marketing",
-      "total": 843,
+      "total": 839,
       "status": "Closed",
-      "applied": 843,
+      "applied": 839,
       "screen": 0,
       "interview": 1,
       "offer": 0,
@@ -1232,62 +1232,6 @@
         "docSub": 0,
         "offer": 0,
         "hired": 5
-      }
-    },
-    {
-      "id": "4fb8aca3",
-      "title": "Assistant Manager - Copywriting",
-      "department": "Content",
-      "team": "Content",
-      "total": 834,
-      "status": "Closed",
-      "applied": 834,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 0
-      }
-    },
-    {
-      "id": "6df7741d",
-      "title": "Leadership Recruiter",
-      "department": "Talent Acquisition (Delivery)",
-      "team": "Talent Acquisition (Delivery)",
-      "total": 827,
-      "status": "Closed",
-      "applied": 827,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 4,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 4
       }
     },
     {
@@ -1347,13 +1291,41 @@
       }
     },
     {
-      "id": "6073a805",
-      "title": "Senior Manager - Design",
-      "department": "Marketing",
-      "team": "Marketing",
-      "total": 735,
+      "id": "6df7741d",
+      "title": "Leadership Recruiter",
+      "department": "Talent Acquisition (Delivery)",
+      "team": "Talent Acquisition (Delivery)",
+      "total": 797,
       "status": "Closed",
-      "applied": 735,
+      "applied": 797,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 4,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 4
+      }
+    },
+    {
+      "id": "4fb8aca3",
+      "title": "Assistant Manager - Copywriting",
+      "department": "Content",
+      "team": "Content",
+      "total": 772,
+      "status": "Closed",
+      "applied": 772,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1372,62 +1344,6 @@
         "docSub": 0,
         "offer": 0,
         "hired": 0
-      }
-    },
-    {
-      "id": "6b881aaa",
-      "title": "Senior Manager - Performance Marketing",
-      "department": "Marketing",
-      "team": "Marketing",
-      "total": 729,
-      "status": "Open",
-      "applied": 729,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 5,
-      "pipeline": {
-        "appReview": 1,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 5
-      }
-    },
-    {
-      "id": "092e9d9b",
-      "title": "Program Advisor - India",
-      "department": "Business India (Sales)",
-      "team": "Business India (Sales)",
-      "total": 727,
-      "status": "Open",
-      "applied": 727,
-      "screen": 0,
-      "interview": 0,
-      "offer": 1,
-      "hired": 30,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 1,
-        "hired": 30
       }
     },
     {
@@ -1487,17 +1403,17 @@
       }
     },
     {
-      "id": "a39c870d",
-      "title": "Senior Manager - Talent Acquisition",
-      "department": "Talent Acquisition (Delivery)",
-      "team": "Talent Acquisition (Delivery)",
-      "total": 712,
-      "status": "Closed",
-      "applied": 712,
+      "id": "092e9d9b",
+      "title": "Program Advisor - India",
+      "department": "Business India (Sales)",
+      "team": "Business India (Sales)",
+      "total": 711,
+      "status": "Open",
+      "applied": 711,
       "screen": 0,
       "interview": 0,
-      "offer": 0,
-      "hired": 0,
+      "offer": 1,
+      "hired": 30,
       "pipeline": {
         "appReview": 0,
         "taScreen": 0,
@@ -1510,8 +1426,8 @@
         "r5": 0,
         "refCheck": 0,
         "docSub": 0,
-        "offer": 0,
-        "hired": 0
+        "offer": 1,
+        "hired": 30
       }
     },
     {
@@ -1543,17 +1459,45 @@
       }
     },
     {
-      "id": "4dd15d3b",
-      "title": "Director- Revenue",
-      "department": "US Business",
-      "team": "US Business",
-      "total": 669,
-      "status": "Closed",
-      "applied": 669,
+      "id": "6b881aaa",
+      "title": "Senior Manager - Performance Marketing",
+      "department": "Marketing",
+      "team": "Marketing",
+      "total": 706,
+      "status": "Open",
+      "applied": 706,
       "screen": 0,
       "interview": 0,
       "offer": 0,
-      "hired": 1,
+      "hired": 5,
+      "pipeline": {
+        "appReview": 1,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 5
+      }
+    },
+    {
+      "id": "6073a805",
+      "title": "Senior Manager - Design",
+      "department": "Marketing",
+      "team": "Marketing",
+      "total": 675,
+      "status": "Closed",
+      "applied": 675,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 0,
       "pipeline": {
         "appReview": 0,
         "taScreen": 0,
@@ -1567,7 +1511,35 @@
         "refCheck": 0,
         "docSub": 0,
         "offer": 0,
-        "hired": 1
+        "hired": 0
+      }
+    },
+    {
+      "id": "a39c870d",
+      "title": "Senior Manager - Talent Acquisition",
+      "department": "Talent Acquisition (Delivery)",
+      "team": "Talent Acquisition (Delivery)",
+      "total": 668,
+      "status": "Closed",
+      "applied": 668,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 0
       }
     },
     {
@@ -1603,9 +1575,37 @@
       "title": "Assistant Manager - CRM",
       "department": "CRM",
       "team": "CRM",
-      "total": 637,
+      "total": 632,
       "status": "Closed",
-      "applied": 637,
+      "applied": 632,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 1,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 1
+      }
+    },
+    {
+      "id": "4dd15d3b",
+      "title": "Director- Revenue",
+      "department": "US Business",
+      "team": "US Business",
+      "total": 621,
+      "status": "Closed",
+      "applied": 621,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1659,9 +1659,9 @@
       "title": "Associate Director - University Partnerships",
       "department": "Business - India",
       "team": "Business - India",
-      "total": 589,
+      "total": 587,
       "status": "Closed",
-      "applied": 589,
+      "applied": 587,
       "screen": 1,
       "interview": 0,
       "offer": 0,
@@ -1683,13 +1683,13 @@
       }
     },
     {
-      "id": "71601113",
-      "title": "Manager, Sales",
-      "department": "US Business (Sales)",
-      "team": "US Business (Sales)",
-      "total": 544,
+      "id": "aebed2ab",
+      "title": "Director, SEO",
+      "department": "Marketing",
+      "team": "Marketing",
+      "total": 543,
       "status": "Closed",
-      "applied": 544,
+      "applied": 543,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1711,13 +1711,13 @@
       }
     },
     {
-      "id": "aebed2ab",
-      "title": "Director, SEO",
-      "department": "Marketing",
-      "team": "Marketing",
-      "total": 543,
+      "id": "71601113",
+      "title": "Manager, Sales",
+      "department": "US Business (Sales)",
+      "team": "US Business (Sales)",
+      "total": 529,
       "status": "Closed",
-      "applied": 543,
+      "applied": 529,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1851,41 +1851,13 @@
       }
     },
     {
-      "id": "4078cca1",
-      "title": "Software Engineer 2, Machine Learning",
-      "department": "Machine Learning",
-      "team": "Machine Learning",
-      "total": 452,
-      "status": "Closed",
-      "applied": 452,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 1,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 1
-      }
-    },
-    {
       "id": "de1662d8",
       "title": "Sales Trainer",
       "department": "US Business",
       "team": "US Business",
-      "total": 452,
+      "total": 440,
       "status": "Closed",
-      "applied": 452,
+      "applied": 440,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -1904,6 +1876,34 @@
         "docSub": 0,
         "offer": 0,
         "hired": 2
+      }
+    },
+    {
+      "id": "4078cca1",
+      "title": "Software Engineer 2, Machine Learning",
+      "department": "Machine Learning",
+      "team": "Machine Learning",
+      "total": 439,
+      "status": "Closed",
+      "applied": 439,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 1,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 1
       }
     },
     {
@@ -1935,34 +1935,6 @@
       }
     },
     {
-      "id": "8e698484",
-      "title": "Manager, Career Transformation",
-      "department": "Career Transformation",
-      "team": "Career Transformation",
-      "total": 398,
-      "status": "Closed",
-      "applied": 398,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 7,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 7
-      }
-    },
-    {
       "id": "c2d81b66",
       "title": "Part Time Instructor - Data Science (US)",
       "department": "SME - US",
@@ -1991,13 +1963,41 @@
       }
     },
     {
+      "id": "8e698484",
+      "title": "Manager, Career Transformation",
+      "department": "Career Transformation",
+      "team": "Career Transformation",
+      "total": 390,
+      "status": "Closed",
+      "applied": 390,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 7,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 7
+      }
+    },
+    {
       "id": "84640934",
       "title": "Part Time Instructor - Machine Learning (US)",
       "department": "SME - US",
       "team": "SME - US",
-      "total": 387,
+      "total": 377,
       "status": "Open",
-      "applied": 387,
+      "applied": 377,
       "screen": 0,
       "interview": 0,
       "offer": 1,
@@ -2051,37 +2051,9 @@
       "title": "Sr Associate - HR Analytics",
       "department": "HR Operations",
       "team": "HR Operations",
-      "total": 341,
+      "total": 335,
       "status": "Closed",
-      "applied": 341,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 2,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 2
-      }
-    },
-    {
-      "id": "99ad4937",
-      "title": "Intern - Operations (Night Shift role)",
-      "department": "Delivery Operations",
-      "team": "Delivery Operations",
-      "total": 325,
-      "status": "Closed",
-      "applied": 325,
+      "applied": 335,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -2187,34 +2159,6 @@
       }
     },
     {
-      "id": "287b5616",
-      "title": "Technical Content SME (YouTube Marketing)",
-      "department": "Marketing",
-      "team": "Marketing",
-      "total": 281,
-      "status": "Closed",
-      "applied": 281,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 0
-      }
-    },
-    {
       "id": "16b8f866",
       "title": "Part Time Instructor- Data Analytics /Business Analytics (DABA) (US)",
       "department": "SME - US",
@@ -2271,6 +2215,34 @@
       }
     },
     {
+      "id": "287b5616",
+      "title": "Technical Content SME (YouTube Marketing)",
+      "department": "Marketing",
+      "team": "Marketing",
+      "total": 272,
+      "status": "Closed",
+      "applied": 272,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 0
+      }
+    },
+    {
       "id": "db365cc9",
       "title": "Curriculum Manager - APM / PM",
       "department": "Product Management (Curriculum)",
@@ -2299,41 +2271,13 @@
       }
     },
     {
-      "id": "63fe03bc",
-      "title": "Manager Sales",
-      "department": "Business India (Sales)",
-      "team": "Business India (Sales)",
-      "total": 247,
-      "status": "Closed",
-      "applied": 247,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 2,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 2
-      }
-    },
-    {
       "id": "e8867563",
       "title": "Intern, Talent Acquisition",
       "department": "Talent Acquisition",
       "team": "Talent Acquisition",
-      "total": 239,
+      "total": 235,
       "status": "Open",
-      "applied": 239,
+      "applied": 235,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -2355,17 +2299,17 @@
       }
     },
     {
-      "id": "c856f068",
-      "title": "Associate Director - University Partnerships (India)",
-      "department": "Business - India",
-      "team": "Business - India",
-      "total": 237,
+      "id": "63fe03bc",
+      "title": "Manager Sales",
+      "department": "Business India (Sales)",
+      "team": "Business India (Sales)",
+      "total": 232,
       "status": "Closed",
-      "applied": 237,
+      "applied": 232,
       "screen": 0,
       "interview": 0,
       "offer": 0,
-      "hired": 0,
+      "hired": 2,
       "pipeline": {
         "appReview": 0,
         "taScreen": 0,
@@ -2379,7 +2323,7 @@
         "refCheck": 0,
         "docSub": 0,
         "offer": 0,
-        "hired": 0
+        "hired": 2
       }
     },
     {
@@ -2387,9 +2331,9 @@
       "title": "SME India : Machine Learning (Instructor)",
       "department": "SME - India",
       "team": "SME - India",
-      "total": 228,
+      "total": 216,
       "status": "Closed",
-      "applied": 228,
+      "applied": 216,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -2408,34 +2352,6 @@
         "docSub": 0,
         "offer": 0,
         "hired": 95
-      }
-    },
-    {
-      "id": "b9a5a189",
-      "title": "Manager - Placement Partnerships (US)",
-      "department": "Corporate Partnerships",
-      "team": "Corporate Partnerships",
-      "total": 226,
-      "status": "Open",
-      "applied": 226,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 4,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 4
       }
     },
     {
@@ -2586,6 +2502,34 @@
       "total": 190,
       "status": "Closed",
       "applied": 190,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 0
+      }
+    },
+    {
+      "id": "c856f068",
+      "title": "Associate Director - University Partnerships (India)",
+      "department": "Business - India",
+      "team": "Business - India",
+      "total": 183,
+      "status": "Closed",
+      "applied": 183,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -2807,9 +2751,9 @@
       "title": "SME India : Agentic AI Instructor",
       "department": "SME - India",
       "team": "SME - India",
-      "total": 126,
+      "total": 125,
       "status": "Open",
-      "applied": 126,
+      "applied": 125,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -2856,34 +2800,6 @@
         "docSub": 0,
         "offer": 0,
         "hired": 1
-      }
-    },
-    {
-      "id": "3c1dbb02",
-      "title": "Part Time Instructor - Agentic AI (US)",
-      "department": "SME - US",
-      "team": "SME - US",
-      "total": 123,
-      "status": "Open",
-      "applied": 123,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 13,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 13
       }
     },
     {
@@ -2940,6 +2856,34 @@
         "docSub": 0,
         "offer": 0,
         "hired": 1
+      }
+    },
+    {
+      "id": "3c1dbb02",
+      "title": "Part Time Instructor - Agentic AI (US)",
+      "department": "SME - US",
+      "team": "SME - US",
+      "total": 118,
+      "status": "Open",
+      "applied": 118,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 12,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 12
       }
     },
     {
@@ -3003,9 +2947,9 @@
       "title": "SME India : Applied Gen AI Instructor",
       "department": "SME - India",
       "team": "SME - India",
-      "total": 110,
+      "total": 109,
       "status": "Closed",
-      "applied": 110,
+      "applied": 109,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -3055,13 +2999,41 @@
       }
     },
     {
+      "id": "b9a5a189",
+      "title": "Manager - Placement Partnerships (US)",
+      "department": "Corporate Partnerships",
+      "team": "Corporate Partnerships",
+      "total": 97,
+      "status": "Open",
+      "applied": 97,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 4,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 4
+      }
+    },
+    {
       "id": "544be6de",
       "title": "Senior Manager - Sales",
       "department": "Business - India",
       "team": "Business - India",
-      "total": 103,
+      "total": 96,
       "status": "Closed",
-      "applied": 103,
+      "applied": 96,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -3587,34 +3559,6 @@
       }
     },
     {
-      "id": "84c6118b",
-      "title": "Intern - Wordpress Developer",
-      "department": "Engineering",
-      "team": "Engineering",
-      "total": 60,
-      "status": "Closed",
-      "applied": 60,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 0
-      }
-    },
-    {
       "id": "efcb1c19",
       "title": "Senior Manager - Programs",
       "department": "US Business (Sales)",
@@ -3892,34 +3836,6 @@
         "docSub": 0,
         "offer": 0,
         "hired": 2
-      }
-    },
-    {
-      "id": "ce2dc584",
-      "title": "Junior Program Advisor (Sales) INDIA",
-      "department": "Business India (Sales)",
-      "team": "Business India (Sales)",
-      "total": 47,
-      "status": "Closed",
-      "applied": 47,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 0
       }
     },
     {
@@ -4511,6 +4427,34 @@
       }
     },
     {
+      "id": "ce2dc584",
+      "title": "Junior Program Advisor (Sales) INDIA",
+      "department": "Business India (Sales)",
+      "team": "Business India (Sales)",
+      "total": 27,
+      "status": "Closed",
+      "applied": 27,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 0
+      }
+    },
+    {
       "id": "0e1a8b33",
       "title": "Director - Founders Office",
       "department": "Founder's Office",
@@ -4798,6 +4742,34 @@
       "total": 18,
       "status": "Closed",
       "applied": 18,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 2,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 2
+      }
+    },
+    {
+      "id": "99ad4937",
+      "title": "Intern - Operations (Night Shift role)",
+      "department": "Delivery Operations",
+      "team": "Delivery Operations",
+      "total": 16,
+      "status": "Closed",
+      "applied": 16,
       "screen": 0,
       "interview": 0,
       "offer": 0,
@@ -5883,34 +5855,6 @@
       }
     },
     {
-      "id": "a21afb52",
-      "title": "Container Job",
-      "department": "Marketing",
-      "team": "Marketing",
-      "total": 5,
-      "status": "Closed",
-      "applied": 5,
-      "screen": 0,
-      "interview": 0,
-      "offer": 0,
-      "hired": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 0,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 0
-      }
-    },
-    {
       "id": "cfcced18",
       "title": "Associate Director - Social Media Marketing",
       "department": "Social Media",
@@ -6667,6 +6611,34 @@
       }
     },
     {
+      "id": "a21afb52",
+      "title": "Container Job",
+      "department": "Marketing",
+      "team": "Marketing",
+      "total": 2,
+      "status": "Closed",
+      "applied": 2,
+      "screen": 0,
+      "interview": 0,
+      "offer": 0,
+      "hired": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 0,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 0
+      }
+    },
+    {
       "id": "6c1031bb",
       "title": "AD- Growth Analytics",
       "department": "Growth Analytics",
@@ -7034,7 +7006,7 @@
   "recruiters": [
     {
       "name": "Oshin Verma",
-      "total": 215,
+      "total": 211,
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -7044,7 +7016,7 @@
     },
     {
       "name": "Gopu Nair V",
-      "total": 28,
+      "total": 31,
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -7064,7 +7036,7 @@
     },
     {
       "name": "Smriti Das",
-      "total": 11,
+      "total": 10,
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -7084,17 +7056,17 @@
     },
     {
       "name": "G Darshan",
-      "total": 9,
+      "total": 8,
       "ta": 2,
       "hm": 0,
       "oa": 0,
-      "r1": 7,
+      "r1": 6,
       "offer": 0,
       "hired": 0
     },
     {
-      "name": "Deepti Leslie",
-      "total": 8,
+      "name": "Mashika De Almeida",
+      "total": 6,
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -7103,8 +7075,8 @@
       "hired": 0
     },
     {
-      "name": "Mashika De Almeida",
-      "total": 7,
+      "name": "Deepti Leslie",
+      "total": 6,
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -7133,16 +7105,6 @@
       "hired": 0
     },
     {
-      "name": "Siva Sruthi V S",
-      "total": 4,
-      "ta": 0,
-      "hm": 0,
-      "oa": 0,
-      "r1": 0,
-      "offer": 0,
-      "hired": 0
-    },
-    {
       "name": "M Navya",
       "total": 3,
       "ta": 0,
@@ -7153,14 +7115,14 @@
       "hired": 1
     },
     {
-      "name": "Tina Anisha Bibeiro",
+      "name": "Siva Sruthi V S",
       "total": 3,
       "ta": 0,
       "hm": 0,
       "oa": 0,
       "r1": 0,
       "offer": 0,
-      "hired": 1
+      "hired": 0
     },
     {
       "name": "Aditya Singh",
@@ -7171,6 +7133,16 @@
       "r1": 0,
       "offer": 0,
       "hired": 0
+    },
+    {
+      "name": "Tina Anisha Bibeiro",
+      "total": 2,
+      "ta": 0,
+      "hm": 0,
+      "oa": 0,
+      "r1": 0,
+      "offer": 0,
+      "hired": 1
     },
     {
       "name": "Sanghamitra Moulik",
@@ -7197,32 +7169,32 @@
     {
       "name": "Third-party boards",
       "type": "Third-party boards",
-      "candidates": 55558,
+      "candidates": 53716,
       "hires": 501
     },
     {
       "name": "Other",
       "type": "Other",
-      "candidates": 17027,
-      "hires": 443
+      "candidates": 16651,
+      "hires": 438
     },
     {
       "name": "Company marketing",
       "type": "Company marketing",
-      "candidates": 8841,
+      "candidates": 8674,
       "hires": 230
     },
     {
       "name": "Referral",
       "type": "Referral",
-      "candidates": 805,
+      "candidates": 787,
       "hires": 73
     },
     {
       "name": "Agencies",
       "type": "Agencies",
-      "candidates": 233,
-      "hires": 9
+      "candidates": 136,
+      "hires": 6
     },
     {
       "name": "In person event",
@@ -8162,42 +8134,42 @@
     },
     "2025-Q2": {
       "funnel": {
-        "applied": 35316,
-        "screened": 217,
-        "interviewed": 215,
-        "offered": 211,
-        "hired": 210
+        "applied": 33737,
+        "screened": 211,
+        "interviewed": 209,
+        "offered": 205,
+        "hired": 204
       },
       "topJobs": [
         {
           "title": "Sales Associate - AI Programs (Junior Program Advisor)",
           "department": "US Business (Sales)",
-          "applied": 3810,
-          "hired": 44
+          "applied": 3716,
+          "hired": 43
         },
         {
           "title": "Associate Product Manager",
           "department": "Product Management (Tech)",
-          "applied": 3484,
-          "hired": 1
-        },
-        {
-          "title": "Product Analyst",
-          "department": "Product Management (Tech)",
-          "applied": 1841,
-          "hired": 1
-        },
-        {
-          "title": "Senior Manager/Associate Director -Delivery Operations (Night Shift)",
-          "department": "Delivery Operations",
-          "applied": 1840,
+          "applied": 3282,
           "hired": 1
         },
         {
           "title": "Senior Product Manager",
           "department": "Product Management (Curriculum)",
-          "applied": 1761,
+          "applied": 1757,
           "hired": 0
+        },
+        {
+          "title": "Product Analyst",
+          "department": "Product Management (Tech)",
+          "applied": 1640,
+          "hired": 1
+        },
+        {
+          "title": "Senior Manager/Associate Director -Delivery Operations (Night Shift)",
+          "department": "Delivery Operations",
+          "applied": 1585,
+          "hired": 1
         },
         {
           "title": "Senior Associate/ AM - HR Operations",
@@ -8208,151 +8180,53 @@
         {
           "title": "Head - University Partnerships",
           "department": "Operations",
-          "applied": 944,
+          "applied": 926,
           "hired": 0
         },
         {
           "title": "Customer Success Associate (US)",
           "department": "Customer Success Management",
-          "applied": 858,
+          "applied": 857,
           "hired": 2
-        },
-        {
-          "title": "Assistant Manager - Copywriting",
-          "department": "Content",
-          "applied": 825,
-          "hired": 0
         },
         {
           "title": "Senior Category Manager - Growth",
           "department": "US Business",
           "applied": 776,
           "hired": 1
+        },
+        {
+          "title": "Assistant Manager - Copywriting",
+          "department": "Content",
+          "applied": 772,
+          "hired": 0
         }
       ],
       "sources": [
         {
           "name": "Third-party boards",
-          "candidates": 27098,
+          "candidates": 25994,
           "hires": 32
         },
         {
           "name": "Other",
-          "candidates": 6038,
-          "hires": 161
+          "candidates": 5761,
+          "hires": 158
         },
         {
           "name": "Company marketing",
-          "candidates": 1765,
+          "candidates": 1647,
           "hires": 3
         },
         {
           "name": "Referral",
-          "candidates": 228,
+          "candidates": 216,
           "hires": 8
         },
         {
           "name": "Agencies",
-          "candidates": 187,
-          "hires": 6
-        }
-      ]
-    },
-    "2025-Q3": {
-      "funnel": {
-        "applied": 921,
-        "screened": 3,
-        "interviewed": 3,
-        "offered": 2,
-        "hired": 2
-      },
-      "topJobs": [
-        {
-          "title": "Intern - Operations (Night Shift role)",
-          "department": "Delivery Operations",
-          "applied": 309,
-          "hired": 0
-        },
-        {
-          "title": "Senior Manager/Associate Director -Delivery Operations (Night Shift)",
-          "department": "Delivery Operations",
-          "applied": 105,
-          "hired": 0
-        },
-        {
-          "title": "Associate Product Manager",
-          "department": "Product Management (Tech)",
-          "applied": 94,
-          "hired": 0
-        },
-        {
-          "title": "Intern - Wordpress Developer",
-          "department": "Engineering",
-          "applied": 60,
-          "hired": 0
-        },
-        {
-          "title": "Product Analyst",
-          "department": "Product Management (Tech)",
-          "applied": 54,
-          "hired": 0
-        },
-        {
-          "title": "Program Advisor - US (AI Programs)",
-          "department": "US Business (Sales)",
-          "applied": 40,
-          "hired": 0
-        },
-        {
-          "title": "Senior Manager - Design",
-          "department": "Marketing",
-          "applied": 31,
-          "hired": 0
-        },
-        {
-          "title": "Sales Associate - AI Programs (Junior Program Advisor)",
-          "department": "US Business (Sales)",
-          "applied": 21,
-          "hired": 0
-        },
-        {
-          "title": "Manager - Placement Partnerships (US)",
-          "department": "Corporate Partnerships",
-          "applied": 17,
-          "hired": 0
-        },
-        {
-          "title": "Assistant Manager - Visual Designer",
-          "department": "Marketing",
-          "applied": 17,
-          "hired": 0
-        }
-      ],
-      "sources": [
-        {
-          "name": "Third-party boards",
-          "candidates": 738,
-          "hires": 0
-        },
-        {
-          "name": "Other",
-          "candidates": 99,
-          "hires": 2
-        },
-        {
-          "name": "Company marketing",
-          "candidates": 49,
-          "hires": 0
-        },
-        {
-          "name": "Agencies",
-          "candidates": 29,
-          "hires": 0
-        },
-        {
-          "name": "Referral",
-          "candidates": 6,
-          "hires": 0
+          "candidates": 119,
+          "hires": 3
         }
       ]
     }
