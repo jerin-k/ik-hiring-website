@@ -284,6 +284,16 @@ td.stage-cell { text-align: center; border-left: 1px solid var(--border-light); 
 td.stage-first { border-left: 1px solid var(--border); }
 
 /* ===== Filter Bar ===== */
+/* multi-select checkbox dropdown (shared: Recruiter + HM tabs) */
+.ms { position: relative; display: inline-block; }
+.ms-btn { appearance: none; height: 34px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 500;
+  background: var(--card); color: var(--text); cursor: pointer; min-width: 120px; text-align: left; white-space: nowrap; }
+.ms-btn:hover { border-color: var(--muted); }
+.ms-panel { position: absolute; top: 38px; left: 0; z-index: 20; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px; min-width: 200px; max-height: 280px; overflow: auto; box-shadow: 0 6px 20px rgba(15,23,42,0.12); }
+.ms-opt { display: flex; align-items: center; gap: 7px; padding: 5px 8px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.ms-opt:hover { background: var(--border-light); }
+
 .filter-bar {
   display: flex;
   gap: 10px;
