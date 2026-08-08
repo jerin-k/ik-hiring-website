@@ -1,4 +1,4 @@
-import { podOf, POD_OPTIONS, isSalesPod } from '../recruiter-pods.js';
+import { podOf, POD_OPTIONS, isSalesPod, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -35,6 +35,13 @@ function wirePodTree(tbody) {
       tbody.querySelectorAll(`tr.leaf[data-g="${g}"]`).forEach(r => { r.style.display = exp ? 'none' : ''; });
     });
   });
+  if (document.getElementById('recExpandAll')?.checked) {
+    tbody.querySelectorAll('tr.pod-header').forEach(h => {
+      h.dataset.exp = '1';
+      const c = h.querySelector('.caret'); if (c) c.textContent = '▾';
+      tbody.querySelectorAll(`tr.leaf[data-g="${h.dataset.g}"]`).forEach(r => { r.style.display = ''; });
+    });
+  }
 }
 
 // Collapse/expand a 3-level Pod -> Recruiter -> Stage tree (Submission Velocity).
@@ -61,12 +68,40 @@ function wireVelTree(tbody) {
       tbody.querySelectorAll(`tr.lvl-stage[data-parent-rec="${rk}"]`).forEach(s => { s.style.display = exp ? 'none' : ''; });
     });
   });
+  if (document.getElementById('recExpandAll')?.checked) {
+    tbody.querySelectorAll('tr.lvl-pod').forEach(h => { h.dataset.exp = '1'; const c = h.querySelector('.caret'); if (c) c.textContent = '▾'; });
+    tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.style.display = ''; r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; });
+    tbody.querySelectorAll('tr.lvl-stage').forEach(s => { s.style.display = ''; });
+  }
 }
 
-function groupByPod(recs) {
+function groupByPod(recs, quarter) {
   const g = {};
-  recs.forEach(r => { const p = podOf(r.name); (g[p] || (g[p] = [])).push(r); });
+  recs.forEach(r => { const p = podOf(r.name, quarter); (g[p] || (g[p] = [])).push(r); });
   return POD_ORDER.filter(p => g[p] && g[p].length).map(p => ({ pod: p, recs: g[p] }));
+}
+
+// Generic N-level collapsible tree. Each row: data-path ("0", "0-1", "0-1-2"…), data-haschild for
+// expandable rows. Clicking shows only direct children; collapsing hides + resets all descendants.
+function wireTreePath(tbody) {
+  tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
+    row.addEventListener('click', () => {
+      const path = row.dataset.path, depth = path.split('-').length;
+      const exp = row.dataset.exp === '1';
+      row.dataset.exp = exp ? '0' : '1';
+      const c = row.querySelector('.caret'); if (c) c.textContent = exp ? '▸' : '▾';
+      tbody.querySelectorAll('tr[data-path]').forEach(r => {
+        const p = r.dataset.path;
+        if (!p || p === path || !p.startsWith(path + '-')) return;
+        const d = p.split('-').length;
+        if (exp) { r.style.display = 'none'; if (d > depth) { r.dataset.exp = '0'; const rc = r.querySelector('.caret'); if (rc) rc.textContent = '▸'; } }
+        else if (d === depth + 1) { r.style.display = ''; }
+      });
+    });
+  });
+  if (document.getElementById('recExpandAll')?.checked) {
+    tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.dataset.haschild) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
+  }
 }
 
 // ===== manual targets (Position Fulfilment) persisted per browser =====
@@ -81,6 +116,53 @@ function saveTarget(name, type, val) {
 }
 
 let recVelChart = null, recScreenChart = null, recJoinChart = null, recFulfilChart = null, recSourceChart = null;
+
+// ===== Metric Configuration model (see project_recruiter-score-model in memory) =====
+const SCORE_TIERS = [['Vanilla', 6], ['Regular', 12], ['Semi-Niche', 15], ['Niche', 20], ['Super Niche', 40], ['Leadership', 60], ['Senior Leadership', 120]];
+// Classification → default complexity tier. Grouped for display via the leading family label.
+const CLASSIFICATIONS = [
+  ['India SME', 'India SME - Normal', 'Vanilla'], ['India SME', 'India SME - Complex', 'Regular'], ['India SME', 'India SME - Uber Complex', 'Semi-Niche'],
+  ['US SME', 'US SME - Normal', 'Regular'], ['US SME', 'US SME - Complex', 'Semi-Niche'], ['US SME', 'US SME - Uber Complex', 'Niche'],
+  ['PA', 'India PA Junior', 'Vanilla'], ['PA', 'India PA', 'Regular'], ['PA', 'US PA Junior', 'Vanilla'], ['PA', 'US PA', 'Semi-Niche'],
+  ['NonTech', 'NonTech - Intern - Normal', 'Vanilla'], ['NonTech', 'NonTech - Intern - Complex', 'Regular'], ['NonTech', 'NonTech L1 to L3 - Normal', 'Semi-Niche'], ['NonTech', 'NonTech L1 to L3 - Complex', 'Niche'], ['NonTech', 'NonTech L4 to L6 - Normal', 'Niche'], ['NonTech', 'NonTech L4 to L6 - Complex', 'Super Niche'],
+  ['Tech', 'Tech - Intern - Normal', 'Regular'], ['Tech', 'Tech - Intern - Complex', 'Semi-Niche'], ['Tech', 'Tech L1 to L3 - Normal', 'Niche'], ['Tech', 'Tech L1 to L3 - Complex', 'Super Niche'], ['Tech', 'Tech L4 to L6 - Normal', 'Super Niche'], ['Tech', 'Tech L4 to L6 - Complex', 'Leadership'],
+  ['Leadership', 'L7 - L8', 'Leadership'], ['Leadership', 'L9 & above', 'Senior Leadership'],
+];
+const FAMILY_OPTIONS = ['India SME', 'US SME', 'India PA', 'US PA', 'NonTech', 'Tech', 'Leadership', 'Exclude'];
+const DEPT_FAMILY_DEFAULT = [
+  ['SME - India', 'India SME', ''], ['SME - US', 'US SME', ''], ['Engineering', 'Tech', 'Tech = Engineering only'],
+  ['IT', 'NonTech', ''], ['Curriculum', 'NonTech', ''],
+  ['Business - India', 'India PA', 'PA if title = Program Advisor, else NonTech'], ['US Business', 'US PA', 'PA if title = Program Advisor, else NonTech'],
+  ['Marketing', 'NonTech', ''], ['Operations', 'NonTech', ''], ['Finance', 'NonTech', ''], ['Human Resource', 'NonTech', ''],
+  ['Talent Acquisition', 'NonTech', ''], ['New Programs', 'NonTech', ''], ["Founder's Office", 'NonTech', ''], ['B2B', 'NonTech', ''], ['Test', 'Exclude', ''],
+];
+const LEVEL_BANDS = [['Intern', 'L0'], ['Junior (PA/Sales only)', 'L1'], ['L1–L3', 'L1, L2, L3'], ['L4–L6', 'L4, L5, L6'], ['L7–L8', 'L7, L8'], ['L9 & above', 'L9–L12']];
+
+const GRID_LS = 'ik_score_grid_q';   // { "2026-Q3": { tierPoints:{}, rowTier:{} } } — per quarter, copy-forward
+const DEPT_FAM_LS = 'ik_dept_family';
+function defaultGrid() {
+  const tierPoints = {}; SCORE_TIERS.forEach(([n, p]) => { tierPoints[n] = p; });
+  const rowTier = {}; CLASSIFICATIONS.forEach(([, cls, tier]) => { rowTier[cls] = tier; });
+  return { tierPoints, rowTier };
+}
+function loadGridStore() { try { return JSON.parse(localStorage.getItem(GRID_LS) || '{}'); } catch (e) { return {}; } }
+function saveGridStore(o) { localStorage.setItem(GRID_LS, JSON.stringify(o)); }
+function gridQRank(k) { const m = /^(\d{4})-Q([1-4])$/.exec(k || ''); return m ? parseInt(m[1], 10) * 10 + parseInt(m[2], 10) : 0; }
+// Grid for a quarter: explicit, else latest earlier quarter (copy-forward), else default.
+function gridForQuarter(quarter) {
+  const store = loadGridStore();
+  if (store[quarter]) return store[quarter];
+  const target = gridQRank(quarter); let best = null, br = -1;
+  for (const k of Object.keys(store)) { const r = gridQRank(k); if (r <= target && r > br) { br = r; best = store[k]; } }
+  return best ? JSON.parse(JSON.stringify(best)) : defaultGrid();
+}
+// Materialise the quarter (copy inherited grid) before an edit so prior quarters aren't touched.
+function materialiseGrid(quarter) { const s = loadGridStore(); if (!s[quarter]) { s[quarter] = gridForQuarter(quarter); saveGridStore(s); } return s; }
+function setGridTier(quarter, cls, tier) { const s = materialiseGrid(quarter); s[quarter].rowTier[cls] = tier; saveGridStore(s); }
+function setGridPoints(quarter, tier, pts) { const s = materialiseGrid(quarter); s[quarter].tierPoints[tier] = pts; saveGridStore(s); }
+function loadDeptFamily() { try { return JSON.parse(localStorage.getItem(DEPT_FAM_LS) || '{}'); } catch (e) { return {}; } }
+function saveDeptFamily(o) { localStorage.setItem(DEPT_FAM_LS, JSON.stringify(o)); }
+function familyOf(dept) { const o = loadDeptFamily(); const d = DEPT_FAMILY_DEFAULT.find(x => x[0] === dept); return o[dept] || (d ? d[1] : ''); }
 
 export function renderRecruiter(data) {
   if (!data || !data.recruiters || data.recruiters.length === 0) {
@@ -129,14 +211,44 @@ export function renderRecruiter(data) {
       .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:var(--bg); }
       .vel-table tbody td:nth-child(1), .vel-table tbody td:nth-child(2) { background:var(--card); }
       .vel-table tbody tr.lvl-pod td:nth-child(1), .vel-table tbody tr.lvl-pod td:nth-child(2) { background:var(--border-light); }
+
+      /* multi-select checkbox dropdown */
+      .ms { position:relative; display:inline-block; }
+      .ms-btn { appearance:none; height:34px; padding:0 11px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-weight:500;
+        background:var(--card); color:var(--text); cursor:pointer; min-width:120px; text-align:left; white-space:nowrap; }
+      .ms-btn:hover { border-color:var(--muted); }
+      .ms-panel { position:absolute; top:38px; left:0; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:8px;
+        padding:6px; min-width:180px; max-height:260px; overflow:auto; box-shadow:0 6px 20px rgba(15,23,42,0.12); }
+      .ms-opt { display:flex; align-items:center; gap:7px; padding:5px 8px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; white-space:nowrap; }
+      .ms-opt:hover { background:var(--border-light); }
+
+      /* Metric Configuration */
+      .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }
+      .cfg-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+      .cfg-card .fchip { display:flex; align-items:center; gap:7px; }
+      .cfg-card .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      .cfg-card select, .cfg-card input[type=date], .cfg-card input[type=number] {
+        appearance:none; -webkit-appearance:none; height:32px; padding:0 10px; border:1px solid var(--border);
+        border-radius:8px; font-size:12px; font-weight:500; background:var(--bg); color:var(--text); }
+      .btn-secondary { background:var(--bg); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-weight:600; color:var(--text); }
+      .btn-secondary:hover { border-color:var(--muted); }
+      .cfg-grid td, .cfg-grid th { text-align:center; white-space:nowrap; }
+      .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:210px; white-space:normal; }
+      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); text-align:left; }
+      .cfg-grid .tier-pts { width:46px; text-align:center; padding:2px; font-size:11px; }
+      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+      .cfg-ref table { width:100%; font-size:12px; }
+      .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
     </style>
 
     <h2 class="section-title">Recruiter Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in Admin → Recruiter → Pod Mapping). Click a pod to expand its recruiters. Date filter drives <strong>Submission Velocity</strong>.</p>
+    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in the <strong>Metric Configuration</strong> tab, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives <strong>Submission Velocity</strong>.</p>
     <div class="rec-filters">
-      <div class="fchip"><span class="lbl">POD</span><select id="recPod"><option value="">All</option>${POD_ORDER.map(p => `<option value="${p}">${p}</option>`).join('')}</select></div>
-      <div class="fchip"><span class="lbl">Recruiter</span><input type="text" id="recNameFilter" placeholder="Name…" style="width:150px"></div>
+      <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
+      <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
+      <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
+      <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll"> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="recVelTo"></div>
@@ -148,8 +260,9 @@ export function renderRecruiter(data) {
       <button class="rec-subtab active" data-tab="velocity">Submission Velocity</button>
       <button class="rec-subtab" data-tab="screening">Screening Efficiency</button>
       <button class="rec-subtab" data-tab="joining">Joining Conversion</button>
-      <button class="rec-subtab" data-tab="fulfilment">Position Fulfilment</button>
+      <button class="rec-subtab" data-tab="fulfilment">Fulfilment</button>
       <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
+      <button class="rec-subtab" data-tab="config">Metric Configuration</button>
     </div>
 
     <!-- PANEL: Submission Velocity (scaffold — filters/chart live, per-day/stage cells pending pipeline) -->
@@ -187,30 +300,89 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Position Fulfilment -->
     <div class="rec-panel" data-panel="fulfilment" style="display:none">
-      <p class="sub-note">Targets are manual (saved to this browser). <strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>.</p>
+      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = min(Capacity, Assigned Score)</strong> — Capacity is set in <strong>Metric Configuration</strong> (per quarter).</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Non-Sales — Offer Fulfilment</h4>
+      <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = sum of role scores. Offered/Hired <strong>HC is live</strong>; Assigned, Score, Target and Gap need the recruiter×job rollup + score engine (pipeline) — shown as <span class="zero">—</span> for now.</p>
+
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th>Offer Target</th><th>Offered</th><th>Gap</th></tr></thead>
+        <thead>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+        </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Sales — Hire Fulfilment</h4>
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th>Hire Target</th><th>Hired</th><th>Gap</th></tr></thead>
+        <thead>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Hired</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+        </thead>
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
     </div>
 
-    <!-- PANEL: Sourcing Mix (skeleton — needs recruiter×source data) -->
+    <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note" style="color:var(--orange)">Structure preview — <strong>Pod → Recruiter → Source Category → Source Name → Count</strong> needs the recruiter×source rollup from the pipeline redesign. The chart below shows the current <strong>org-wide</strong> source mix; the per-recruiter breakdown is pending.</p>
+      <p class="sub-note"><strong>Pod → Recruiter → Source Category → Source Name.</strong> Category = Ashby <code>source_type</code> (Sourced / Referral / Inbound / Internal). Per-recruiter values need the pipeline (recruiter×source rollup) — shown as <span class="zero">—</span> until then. Org-wide / pod totals will live in <strong>Overall Efficiency</strong>.</p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th>Source Category</th><th>Source Name</th><th>Count</th></tr></thead>
+        <thead><tr><th style="min-width:320px">Pod / Recruiter / Category / Source</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
+    </div>
+
+    <!-- PANEL: Metric Configuration -->
+    <div class="rec-panel" data-panel="config" style="display:none">
+      <p class="sub-note">The whole scoring &amp; capacity model lives here — the pipeline just reads it. Everything is saved to this browser (export to bake into the committed files).</p>
+
+      <div class="cfg-card" style="display:flex;align-items:center;gap:12px;background:#d7e5fb;border-color:#b0ccf2">
+        <span class="lbl" style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em">Quarter</span>
+        <select id="cfgQuarter"></select>
+        <span style="font-size:11px;color:var(--muted)">Drives Pod, Capacity &amp; Score Grid below — each stored per quarter, inheriting the previous quarter (copy-forward); edit to override.</span>
+      </div>
+
+      <!-- Section 1: Recruiter → Pod & Capacity (per quarter) -->
+      <div class="cfg-card">
+        <h3 class="subsection-title" style="margin:0 0 8px">Recruiter → Pod &amp; Capacity</h3>
+        <p class="sub-note" style="margin:0 0 10px">Pod feeds grouping across the tab; Capacity (a Score) is the ideal Fulfilment target.</p>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th></tr></thead>
+          <tbody id="cfgPodBody"></tbody>
+        </table></div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+          <span id="cfgPodSummary"></span>
+          <span style="margin-left:6px">· edits auto-save to this browser (team-wide sync is pending the pipeline).</span>
+        </div>
+      </div>
+
+      <!-- Section 2: Role Score Grid (per quarter) -->
+      <div class="cfg-card">
+        <h3 class="subsection-title" style="margin:0 0 6px">Role Score Grid <span id="cfgGridNote" style="font-weight:400;font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0"></span></h3>
+        <p class="sub-note" style="margin:0 0 10px">Each role classification maps to one complexity tier → its point value. Stored <strong>per quarter</strong> (copy-forward); a candidate scores off the grid for the quarter of its offer/hire date. Points editable in the header; one tier per row.</p>
+        <div class="scroll-table" style="margin-top:4px"><table class="cfg-grid">
+          <thead id="cfgGridHead"></thead>
+          <tbody id="cfgGridBody"></tbody>
+        </table></div>
+      </div>
+
+      <!-- Section 3: Department → Family -->
+      <div class="cfg-card">
+        <h3 class="subsection-title" style="margin:0 0 6px">Department → Family</h3>
+        <p class="sub-note" style="margin:0 0 10px">Maps each Ashby department to a scoring family. Business departments resolve to <strong>PA</strong> only when the job title is <em>Program Advisor</em> (incl. Sr PA → PA Regular); otherwise NonTech.</p>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:200px">Ashby Department</th><th style="width:150px">Family</th><th>Note</th></tr></thead>
+          <tbody id="cfgDeptBody"></tbody>
+        </table></div>
+      </div>
+
+      <!-- Section 4: Level / Complexity / Leadership -->
+      <div class="cfg-card">
+        <h3 class="subsection-title" style="margin:0 0 6px">Level → Band · Complexity · Leadership override</h3>
+        <div id="cfgRefBlock"></div>
+      </div>
     </div>
   `;
 }
@@ -221,21 +393,48 @@ export function initRecruiterFilters(data) {
   const nDate = 7;
   let lastGroups = [], lastRecs = [], activeTab = 'velocity';
 
+  let msPod = null, msRec = null, msJob = null;
+
+  // Quarter selected in the global filter (Year+Quarter) — drives pod grouping + capacity lookups.
+  function selQuarter() {
+    const y = document.getElementById('recVelYear')?.value;
+    const q = document.getElementById('recVelQuarter')?.value;
+    return (y && q) ? qKey(y, q) : currentQuarter();
+  }
+
+  // Styled multi-select checkbox dropdown. Returns { getSelected } ; empty selection = "All".
+  function makeMultiSelect(container, label, options, onChange) {
+    if (!container) return null;
+    const selected = new Set();
+    const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+    container.classList.add('ms');
+    container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">${options.map(o => `<label class="ms-opt"><input type="checkbox" value="${String(o).replace(/"/g, '&quot;')}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No options yet</span>'}</div>`;
+    const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
+    btn.textContent = labelText();
+    btn.addEventListener('click', (e) => { e.stopPropagation(); const open = panel.style.display !== 'none'; document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'); panel.style.display = open ? 'none' : 'block'; });
+    panel.addEventListener('click', e => e.stopPropagation());
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
+    return { getSelected: () => [...selected] };
+  }
+
   function getFilteredRecs() {
-    const nameF = (document.getElementById('recNameFilter')?.value || '').toLowerCase();
+    const q = selQuarter();
     const hideZero = document.getElementById('recHideZero')?.checked;
-    const podF = document.getElementById('recPod')?.value || '';
+    const pods = msPod ? msPod.getSelected() : [];
+    const names = msRec ? msRec.getSelected() : [];
+    // Job multi-select (msJob) is present but pending — recruiter×job attribution needs the pipeline,
+    // so it can't scope the recruiter list yet; wired for when that data lands.
     return allRecs.filter(r => {
       if (hideZero && (r.total || 0) === 0) return false;
-      if (nameF && !r.name.toLowerCase().includes(nameF)) return false;
-      if (podF && podOf(r.name) !== podF) return false;
+      if (names.length && !names.includes(r.name)) return false;
+      if (pods.length && !pods.includes(podOf(r.name, q))) return false;
       return true;
     });
   }
 
   function renderAll() {
     const recs = getFilteredRecs();
-    const groups = groupByPod(recs);
+    const groups = groupByPod(recs, selQuarter());
 
     // ===== Submission Velocity (scaffold — own POD/date filters; values pending pipeline) =====
     renderVelocity();
@@ -249,18 +448,23 @@ export function initRecruiterFilters(data) {
         <td>${r1A}</td><td>${DASH}</td><td>${DASH}</td>`;
     };
     const sumStages = (list) => list.reduce((a, r) => ({ hm: a.hm + (r.hm || 0), oa: a.oa + (r.oa || 0), r1: a.r1 + (r.r1 || 0) }), { hm: 0, oa: 0, r1: 0 });
+    const dashScreen = `<td>${DASH}</td>`.repeat(9);
     const screenBody = document.getElementById('recScreenBody');
     if (screenBody) {
       let html = '';
-      groups.forEach((G, gi) => {
-        html += `<tr class="pod-header" data-g="s${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+      groups.forEach((G, pi) => {
+        html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${screenCells(sumStages(G.recs))}</tr>`;
-        G.recs.forEach(r => {
-          html += `<tr class="leaf" data-g="s${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}</td>${screenCells(r)}</tr>`;
+        G.recs.forEach((r, ri) => {
+          const rk = `s${pi}-${ri}`;
+          html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${screenCells(r)}</tr>`;
+          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+            <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — pending recruiter×job rollup</td>${dashScreen}</tr>`;
         });
       });
       screenBody.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
-      wirePodTree(screenBody);
+      wireVelTree(screenBody);
     }
 
     // ===== Joining Conversion =====
@@ -286,76 +490,70 @@ export function initRecruiterFilters(data) {
     const salesGroups = groups.filter(G => isSalesPod(G.pod));
     const nonSalesGroups = groups.filter(G => !isSalesPod(G.pod)); // includes Unassigned
 
-    function fulfilRows(gs, type, actualKey) {
+    // Funnel columns. Non-Sales (mode 'offer'): Assigned(HC|Score) · Target Score · Offered(HC|Score) ·
+    // Joining Pending(HC|Score) · Gap Score. Sales (mode 'hire') adds Hired(HC|Score) before Gap.
+    // Offered HC (both) and Hired HC (Sales) are LIVE; Assigned / all Score / Target / Joining Pending / Gap
+    // need the recruiter×job rollup + score engine + stage detail (pipeline). Tree = Pod → Recruiter → Job.
+    function fulfilRows(gs, mode) {
+      const isSales = mode === 'hire';
+      const ncol = isSales ? 11 : 9;
+      const jobDash = `<td>${DASH}</td>`.repeat(ncol - 1);
+      // metric cells for a row given live Offered HC + (Sales) Hired HC; everything else pending.
+      const cells = (offHC, hireHC, bold) => {
+        const w = bold ? ' style="font-weight:600"' : '';
+        let c = `<td>${DASH}</td><td>${DASH}</td>`      // Assigned HC/Score
+          + `<td>${DASH}</td>`                          // Target Score
+          + `<td${w}>${offHC}</td><td>${DASH}</td>`      // Offered HC/Score (HC live)
+          + `<td>${DASH}</td><td>${DASH}</td>`;          // Joining Pending HC/Score (pending)
+        if (isSales) c += `<td${w}>${hireHC}</td><td>${DASH}</td>`; // Hired HC/Score (HC live)
+        c += `<td>${DASH}</td>`;                         // Gap Score
+        return c;
+      };
       let html = '';
-      gs.forEach((G, gi) => {
-        const target = G.recs.reduce((s, r) => s + targetOf(r.name, type), 0);
-        const actual = G.recs.reduce((s, r) => s + (r[actualKey] || 0), 0);
-        const gap = actual - target;
-        html += `<tr class="pod-header" data-g="${type}${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>
-          <td style="font-weight:600">${target}</td><td>${actual}</td><td class="pod-gap ${gap >= 0 ? 'good' : 'bad'}" data-g="${type}${gi}">${gap}</td></tr>`;
-        G.recs.forEach(r => {
-          const tv = targetOf(r.name, type);
-          const av = r[actualKey] || 0;
-          const g = av - tv;
-          html += `<tr class="leaf" data-g="${type}${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}</td>
-            <td><input type="number" min="0" class="rec-target" data-rec="${r.name}" data-type="${type}" data-g="${type}${gi}" value="${tv}" style="width:64px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px"></td>
-            <td>${av}</td><td class="rec-gap ${g >= 0 ? 'good' : 'bad'}" data-rec="${r.name}" data-type="${type}">${g}</td></tr>`;
+      gs.forEach((G, pi) => {
+        const offSum = G.recs.reduce((s, r) => s + (r.offer || 0), 0);
+        const hireSum = G.recs.reduce((s, r) => s + (r.hired || 0), 0);
+        html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${cells(offSum, hireSum, true)}</tr>`;
+        G.recs.forEach((r, ri) => {
+          const rk = `${mode}${pi}-${ri}`;
+          html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${cells(r.offer || 0, r.hired || 0, false)}</tr>`;
+          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+            <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — pending recruiter×job rollup</td>${jobDash}</tr>`;
         });
       });
-      return html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No recruiters in this group.</td></tr>`;
+      return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters in this group.</td></tr>`;
     }
 
     const offerBody = document.getElementById('recFulfilOfferBody');
     const hireBody = document.getElementById('recFulfilHireBody');
-    if (offerBody) { offerBody.innerHTML = fulfilRows(nonSalesGroups, 'offer', 'offer'); wirePodTree(offerBody); }
-    if (hireBody) { hireBody.innerHTML = fulfilRows(salesGroups, 'hire', 'hired'); wirePodTree(hireBody); }
+    if (offerBody) { offerBody.innerHTML = fulfilRows(nonSalesGroups, 'offer'); wireVelTree(offerBody); }
+    if (hireBody) { hireBody.innerHTML = fulfilRows(salesGroups, 'hire'); wireVelTree(hireBody); }
 
-    // Wire manual target inputs — persist + recompute row gap + pod-header gap.
-    document.querySelectorAll('.rec-target').forEach(inp => {
-      inp.addEventListener('input', () => {
-        const name = inp.dataset.rec, type = inp.dataset.type;
-        const val = parseInt(inp.value, 10) || 0;
-        saveTarget(name, type, val);
-        const r = allRecs.find(x => x.name === name);
-        const actual = (type === 'hire' ? (r?.hired || 0) : (r?.offer || 0));
-        const gap = actual - val;
-        const cell = document.querySelector(`.rec-gap[data-rec="${CSS.escape(name)}"][data-type="${type}"]`);
-        if (cell) { cell.textContent = gap; cell.className = 'rec-gap ' + (gap >= 0 ? 'good' : 'bad'); }
-        // recompute the pod-header target/gap for this group
-        const gid = inp.dataset.g;
-        const bodyEl = inp.closest('tbody');
-        const leafInputs = [...bodyEl.querySelectorAll(`.rec-target[data-g="${gid}"]`)];
-        let tSum = 0, aSum = 0;
-        leafInputs.forEach(li => {
-          tSum += parseInt(li.value, 10) || 0;
-          const rr = allRecs.find(x => x.name === li.dataset.rec);
-          aSum += (type === 'hire' ? (rr?.hired || 0) : (rr?.offer || 0));
-        });
-        const header = bodyEl.querySelector(`tr.pod-header[data-g="${gid}"]`);
-        if (header) {
-          const tds = header.querySelectorAll('td');
-          if (tds[1]) tds[1].textContent = tSum;
-          const gcell = header.querySelector('.pod-gap');
-          if (gcell) { gcell.textContent = aSum - tSum; gcell.className = 'pod-gap ' + ((aSum - tSum) >= 0 ? 'good' : 'bad'); }
-        }
-      });
-    });
-
-    // ===== Sourcing Mix (skeleton — needs recruiter×source data) =====
+    // ===== Sourcing Mix — Pod → Recruiter → Category → Source (per-recruiter; pending pipeline) =====
+    // Totals (grand + pod) intentionally dropped — those live in Overall Efficiency. Category = Ashby
+    // source_type (Sourced/Referral/Inbound/Internal); values need the recruiter×source rollup.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
+      const CATS = ['Sourced', 'Referral', 'Inbound', 'Internal'];
       let html = '';
-      groups.forEach((G, gi) => {
-        html += `<tr class="pod-header" data-g="src${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
-        G.recs.forEach(r => {
-          html += `<tr class="leaf" data-g="src${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+      groups.forEach((G, pi) => {
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td><td>${DASH}</td><td>${DASH}</td></tr>`;
+        G.recs.forEach((r, ri) => {
+          html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+          CATS.forEach((cat, ci) => {
+            html += `<tr data-path="${pi}-${ri}-${ci}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+              <td style="padding-left:52px;color:var(--muted)">${CARET}${cat}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+            html += `<tr data-path="${pi}-${ri}-${ci}-0" style="display:none">
+              <td style="padding-left:82px;color:var(--muted);font-style:italic">Source names — pending recruiter×source rollup</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+          });
         });
       });
-      srcBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
-      wirePodTree(srcBody);
+      srcBody.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+      wireTreePath(srcBody);
     }
 
     lastGroups = groups; lastRecs = recs;
@@ -366,7 +564,9 @@ export function initRecruiterFilters(data) {
   function velDates() {
     const toV = document.getElementById('recVelTo')?.value;
     const fromV = document.getElementById('recVelFrom')?.value;
-    const end = toV ? new Date(toV + 'T00:00:00') : new Date();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let end = toV ? new Date(toV + 'T00:00:00') : today;
+    if (end > today) end = today; // never show future dates — cap the window at today
     const start = fromV ? new Date(fromV + 'T00:00:00') : null;
     const out = [];
     for (let i = 0; i < 30; i++) {
@@ -394,18 +594,18 @@ export function initRecruiterFilters(data) {
     const body = document.getElementById('recVelBody');
     if (!body) return;
     const recs = getFilteredRecs();
-    const groups = groupByPod(recs);
+    const groups = groupByPod(recs, selQuarter());
     const dates = velDates();
     const STAGES = [['oa', 'Online Assessment'], ['hm', 'HM Screening'], ['r1', 'R1']];
 
     if (head) {
-      let h = '<tr><th style="min-width:240px">Pod / Recruiter / Stage</th><th>Total - 15 days</th>';
+      let h = '<tr><th style="min-width:240px">Pod / Recruiter / Stage</th><th>Total - 30 days</th>';
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
-      h += '<th>Total - 30 days</th></tr>';
+      h += '</tr>';
       head.innerHTML = h;
     }
-    const dashCells = `<td>${DASH}</td>`.repeat(dates.length + 2); // Total-15 + dates + Total-30
-    const ncol = dates.length + 3;
+    const dashCells = `<td>${DASH}</td>`.repeat(dates.length + 1); // Total-30 + dates
+    const ncol = dates.length + 2;
     let html = '';
     groups.forEach((G, pi) => {
       html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -448,41 +648,157 @@ export function initRecruiterFilters(data) {
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
     if (recScreenChart) recScreenChart.destroy();
-    const s = lastRecs.reduce((a, r) => ({ hm: a.hm + (r.hm || 0), oa: a.oa + (r.oa || 0), r1: a.r1 + (r.r1 || 0) }), { hm: 0, oa: 0, r1: 0 });
+    // Y = recruiter, X = candidate count. One bar per stage (HM / OA / R1): full length = Added (in),
+    // dark segment = Cleared (out), light remainder = didn't clear. Roles enter at different first
+    // stages, so Added is a real reached-count; Cleared uses the interim approximation and R1-Cleared
+    // is pending until the recruiter×job×stage rollup. Data labels: total at bar end, Cleared on the dark part.
+    const recs = [...lastRecs].sort((a, b) => ((b.hm || 0) + (b.oa || 0) + (b.r1 || 0)) - ((a.hm || 0) + (a.oa || 0) + (a.r1 || 0)));
+    const A = { hm: recs.map(r => r.hm || 0), oa: recs.map(r => r.oa || 0), r1: recs.map(r => r.r1 || 0) };
+    const clHM = recs.map(r => Math.min(r.hm || 0, r.oa || 0));           // cleared HM ≈ reached OA (clamped)
+    const remHM = recs.map((r, i) => Math.max(0, (r.hm || 0) - clHM[i]));
+    const clOA = recs.map(r => Math.min(r.oa || 0, r.r1 || 0));           // cleared OA ≈ reached R1 (clamped)
+    const remOA = recs.map((r, i) => Math.max(0, (r.oa || 0) - clOA[i]));
+    const h = Math.max(240, recs.length * 48 + 80);
+    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+    ctx.style.maxHeight = h + 'px';
+    const seg = (label, data, color, stack) => ({ label, data, backgroundColor: color, stack, borderRadius: 2, barPercentage: 0.9, categoryPercentage: 0.78 });
+    // labels: full-bar total (added) at the end of each stack; Cleared value centered on the dark segment
+    const labelPlugin = {
+      id: 'screenLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx: c } = chart;
+        c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.textBaseline = 'middle';
+        const stages = [
+          { added: A.hm, cleared: clHM, clIdx: 0, endIdx: 1 },
+          { added: A.oa, cleared: clOA, clIdx: 2, endIdx: 3 },
+          { added: A.r1, cleared: null, clIdx: 4, endIdx: 4 },
+        ];
+        stages.forEach(st => {
+          const clMeta = chart.getDatasetMeta(st.clIdx);
+          const endMeta = chart.getDatasetMeta(st.endIdx);
+          clMeta.data.forEach((bar, i) => {
+            if (st.cleared && st.cleared[i] > 0 && (bar.x - bar.base) > 16) {
+              c.fillStyle = '#fff'; c.textAlign = 'center';
+              c.fillText(String(st.cleared[i]), (bar.base + bar.x) / 2, bar.y);
+            }
+            if (st.added[i] > 0) {
+              c.fillStyle = '#334155'; c.textAlign = 'left';
+              c.fillText(String(st.added[i]), endMeta.data[i].x + 4, endMeta.data[i].y);
+            }
+          });
+        });
+        c.restore();
+      }
+    };
     recScreenChart = new Chart(ctx, { type: 'bar',
-      data: { labels: ['HM Screening', 'Online Assessment', 'R1'], datasets: [
-        { label: 'Added', data: [s.hm, s.oa, s.r1], backgroundColor: C.blue, borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Cleared', data: [s.oa, s.r1, 0], backgroundColor: C.green, borderRadius: 4, barPercentage: 0.7 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: legendSquare() }, scales: { y: gridY, x: gridX } } });
+      data: { labels: recs.map(r => r.name), datasets: [
+        seg('HM Screening', clHM, C.blue, 'HM'), seg('_hmRem', remHM, '#bfdbfe', 'HM'),
+        seg('Online Assessment', clOA, C.cyan, 'OA'), seg('_oaRem', remOA, '#a5f3fc', 'OA'),
+        seg('R1 (reached)', A.r1, C.green, 'R1')] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 28 } },
+        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, filter: (item, data) => !(data.datasets[item.datasetIndex].label || '').startsWith('_') } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Count of Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+      plugins: [labelPlugin] });
   }
   function buildJoinChart() {
     const ctx = document.getElementById('recJoinChart'); if (!ctx) return;
     if (recJoinChart) recJoinChart.destroy();
+    // Y = recruiter. Full bar = Offered; dark segment = Hired. Labels: Offered at bar end,
+    // Hired (with conversion %) on the dark segment.
+    const recs = [...lastRecs].sort((a, b) => (b.offer || 0) - (a.offer || 0));
+    const hired = recs.map(r => r.hired || 0);
+    const offered = recs.map(r => r.offer || 0);
+    const rem = recs.map((r, i) => Math.max(0, offered[i] - hired[i]));
+    const h = Math.max(240, recs.length * 34 + 80);
+    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+    ctx.style.maxHeight = h + 'px';
+    const labelPlugin = {
+      id: 'joinLabels',
+      afterDatasetsDraw(chart) {
+        const c = chart.ctx; c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        const hMeta = chart.getDatasetMeta(0), rMeta = chart.getDatasetMeta(1);
+        hMeta.data.forEach((bar, i) => {
+          if (hired[i] > 0 && (bar.x - bar.base) > 26) {
+            const p = offered[i] ? Math.round((hired[i] / offered[i]) * 100) : 0;
+            c.fillStyle = '#fff'; c.textAlign = 'center';
+            c.fillText(`${hired[i]} (${p}%)`, (bar.base + bar.x) / 2, bar.y);
+          }
+          if (offered[i] > 0) {
+            c.fillStyle = '#334155'; c.textAlign = 'left';
+            c.fillText(String(offered[i]), rMeta.data[i].x + 4, rMeta.data[i].y);
+          }
+        });
+        c.restore();
+      }
+    };
     recJoinChart = new Chart(ctx, { type: 'bar',
-      data: { labels: podLabels(), datasets: [
-        { label: 'Offered', data: lastGroups.map(G => sumBy(G, 'offer')), backgroundColor: C.cyan, borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Hired', data: lastGroups.map(G => sumBy(G, 'hired')), backgroundColor: C.green, borderRadius: 4, barPercentage: 0.7 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: legendSquare() }, scales: { y: gridY, x: gridX } } });
+      data: { labels: recs.map(r => r.name), datasets: [
+        { label: 'Hired', data: hired, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
+        { label: '_rem', data: rem, backgroundColor: '#a7f3d0', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 34 } },
+        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, generateLabels: () => [{ text: 'Hired', fillStyle: C.green, strokeStyle: C.green, pointStyle: 'rect' }, { text: 'Offered (full bar)', fillStyle: '#a7f3d0', strokeStyle: '#a7f3d0', pointStyle: 'rect' }] } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+      plugins: [labelPlugin] });
   }
   function buildFulfilChart() {
     const ctx = document.getElementById('recFulfilChart'); if (!ctx) return;
     if (recFulfilChart) recFulfilChart.destroy();
-    const tgt = lastGroups.map(G => { const type = isSalesPod(G.pod) ? 'hire' : 'offer'; return G.recs.reduce((s, r) => s + targetOf(r.name, type), 0); });
-    const act = lastGroups.map(G => sumBy(G, isSalesPod(G.pod) ? 'hired' : 'offer'));
+    // Y = recruiter, X = Score. Target = Capacity (interim, until Assigned Score lands → then min(Cap,Assigned)).
+    // Bar = Target; the Gap (shortfall to target) is the dark segment, Achieved the light. Labels on all.
+    const q = selQuarter();
+    const recs = lastRecs.map(r => { const target = capacityOf(r.name, q); const achieved = 0; return { name: r.name, target, achieved, gap: Math.max(0, target - achieved) }; })
+      .filter(r => r.target > 0).sort((a, b) => b.target - a.target);
+    const wrap = ctx.parentElement;
+    let emptyMsg = wrap && wrap.querySelector('.chart-empty');
+    if (recs.length === 0) {
+      if (recFulfilChart) { recFulfilChart.destroy(); recFulfilChart = null; }
+      ctx.style.display = 'none';
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (emptyMsg) { emptyMsg.textContent = `No capacities set for ${q.replace('-', ' ')} — set them in Metric Configuration to populate this chart.`; emptyMsg.style.display = 'flex'; }
+      return;
+    }
+    ctx.style.display = '';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    const h = Math.max(220, recs.length * 30 + 80);
+    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+    ctx.style.maxHeight = h + 'px';
+    const labelPlugin = {
+      id: 'fulfilLabels',
+      afterDatasetsDraw(chart) {
+        const c = chart.ctx; c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        const aMeta = chart.getDatasetMeta(0), gMeta = chart.getDatasetMeta(1);
+        recs.forEach((r, i) => {
+          if (r.achieved > 0 && (aMeta.data[i].x - aMeta.data[i].base) > 18) { c.fillStyle = '#334155'; c.textAlign = 'center'; c.fillText(String(r.achieved), (aMeta.data[i].base + aMeta.data[i].x) / 2, aMeta.data[i].y); }
+          if (r.gap > 0 && (gMeta.data[i].x - gMeta.data[i].base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.gap), (gMeta.data[i].base + gMeta.data[i].x) / 2, gMeta.data[i].y); }
+          if (r.target > 0) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText('Target ' + r.target, gMeta.data[i].x + 4, gMeta.data[i].y); }
+        });
+        c.restore();
+      }
+    };
     recFulfilChart = new Chart(ctx, { type: 'bar',
-      data: { labels: podLabels(), datasets: [
-        { label: 'Target', data: tgt, backgroundColor: C.blue, borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Actual', data: act, backgroundColor: C.green, borderRadius: 4, barPercentage: 0.7 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: legendSquare() }, scales: { y: gridY, x: gridX } } });
+      data: { labels: recs.map(r => r.name), datasets: [
+        { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: '#a7f3d0', stack: 'f', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Gap to Target (Score)', data: recs.map(r => r.gap), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 60 } },
+        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+      plugins: [labelPlugin] });
   }
   function buildSourceChart() {
     const ctx = document.getElementById('recSourceChart'); if (!ctx) return;
-    if (recSourceChart) recSourceChart.destroy();
-    const srcs = (data.sources || []).filter(s => (s.candidates || 0) > 0);
-    const palette = [C.blue, C.green, C.cyan, C.amber, C.slate, '#7c3aed', '#0369a1'];
-    recSourceChart = new Chart(ctx, { type: 'doughnut',
-      data: { labels: srcs.map(s => s.name), datasets: [{ data: srcs.map(s => s.candidates || 0), backgroundColor: srcs.map((_, i) => palette[i % palette.length]), borderWidth: 2, borderColor: '#fff' }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 12 } } } } } });
+    // Recruiter-centric: Y = recruiter names, one bar per source category, each bar split by source name.
+    // Needs recruiter×source + source_type from the pipeline — empty-state until then (org-wide totals move
+    // to Overall Efficiency).
+    if (recSourceChart) { recSourceChart.destroy(); recSourceChart = null; }
+    const wrap = ctx.parentElement;
+    let emptyMsg = wrap && wrap.querySelector('.chart-empty');
+    ctx.style.display = 'none';
+    if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+    if (emptyMsg) { emptyMsg.innerHTML = 'Recruiter-centric source mix — one bar per recruiter, grouped by <strong>source category</strong> with the <strong>source-name split</strong> inside — pending the recruiter×source rollup + <code>source_type</code> from the pipeline.'; emptyMsg.style.display = 'flex'; }
   }
   function renderActiveChart() {
     if (activeTab === 'velocity') buildVelChart();
@@ -492,24 +808,100 @@ export function initRecruiterFilters(data) {
     else if (activeTab === 'sourcing') buildSourceChart();
   }
 
+  // ===== Metric Configuration =====
+  let cfgInited = false;
+  function cfgQ() { return document.getElementById('cfgQuarter')?.value || currentQuarter(); }
+  function updatePodSummary() {
+    const el = document.getElementById('cfgPodSummary'); if (!el) return;
+    const q = cfgQ(); const counts = {};
+    allRecs.forEach(r => { const p = podOf(r.name, q); counts[p] = (counts[p] || 0) + 1; });
+    el.textContent = Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join('  ·  ');
+  }
+  function renderPodCapacity() {
+    const body = document.getElementById('cfgPodBody'); if (!body) return;
+    const q = cfgQ();
+    const names = allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b));
+    const podOpts = [...POD_OPTIONS, 'Unassigned'];
+    body.innerHTML = names.map(name => `<tr>
+      <td style="font-weight:500">${name}</td>
+      <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
+      <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td></tr>`).join('');
+    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); updatePodSummary(); }));
+    body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => setCapacity(inp.dataset.name, inp.value, cfgQ())));
+    updatePodSummary();
+  }
+  function renderScoreGrid() {
+    const head = document.getElementById('cfgGridHead'); if (!head) return;
+    const q = cfgQ();
+    const grid = gridForQuarter(q);
+    head.innerHTML = `<tr><th>Role Classification</th>${SCORE_TIERS.map(([n]) => `<th>${n}<br><input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}"></th>`).join('')}</tr>`;
+    let html = '', lastFam = null;
+    CLASSIFICATIONS.forEach(([fam, cls]) => {
+      if (fam !== lastFam) { html += `<tr class="fam-sep"><td colspan="${SCORE_TIERS.length + 1}">${fam}</td></tr>`; lastFam = fam; }
+      const rname = 'grid_' + cls.replace(/[^a-z0-9]/gi, '_');
+      html += `<tr><td>${cls}</td>${SCORE_TIERS.map(([n]) => `<td><input type="radio" name="${rname}" class="grid-radio" data-cls="${cls}" data-tier="${n}"${n === grid.rowTier[cls] ? ' checked' : ''}></td>`).join('')}</tr>`;
+    });
+    document.getElementById('cfgGridBody').innerHTML = html;
+    document.querySelectorAll('#cfgGridBody .grid-radio').forEach(r => r.addEventListener('change', () => { if (r.checked) setGridTier(cfgQ(), r.dataset.cls, r.dataset.tier); }));
+    document.querySelectorAll('#cfgGridHead .tier-pts').forEach(inp => inp.addEventListener('input', () => setGridPoints(cfgQ(), inp.dataset.tier, parseInt(inp.value, 10) || 0)));
+    const note = document.getElementById('cfgGridNote');
+    if (note) note.textContent = ` — ${loadGridStore()[q] ? 'edited for ' + q.replace('-', ' ') : 'inherited (copy-forward)'}`;
+  }
+  function renderDeptFamily() {
+    const body = document.getElementById('cfgDeptBody'); if (!body) return;
+    body.innerHTML = DEPT_FAMILY_DEFAULT.map(([dept, , note]) => `<tr>
+      <td style="font-weight:500">${dept}</td>
+      <td><select class="cfg-fam" data-dept="${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select></td>
+      <td style="color:var(--muted);font-size:11px">${note || ''}</td></tr>`).join('');
+    body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); }));
+  }
+  function renderRefBlock() {
+    const el = document.getElementById('cfgRefBlock'); if (!el) return;
+    el.innerHTML = `<div class="cfg-ref">
+      <table><thead><tr><th>Level band</th><th>Ashby L-scale</th></tr></thead><tbody>${LEVEL_BANDS.map(([b, l]) => `<tr><td>${b}</td><td style="color:var(--muted)">${l}</td></tr>`).join('')}</tbody></table>
+      <table><thead><tr><th>Complexity (Ashby)</th></tr></thead><tbody><tr><td>Normal</td></tr><tr><td>Complex</td></tr><tr><td>Uber Complex</td></tr></tbody></table>
+      <table><thead><tr><th>Leadership override</th></tr></thead><tbody><tr><td>L7–L8 → Leadership (60)</td></tr><tr><td>L9 &amp; above → Senior Leadership (120)</td></tr><tr><td style="color:var(--muted);font-size:11px">Any family; overrides Family/Complexity by level.</td></tr></tbody></table>
+    </div>`;
+  }
+  function renderMetricConfig() {
+    if (!cfgInited) {
+      cfgInited = true;
+      const qSel = document.getElementById('cfgQuarter');
+      if (qSel) {
+        const cy = new Date().getFullYear(); const qs = [];
+        for (let y = cy; y >= cy - 1; y--) for (let q = 4; q >= 1; q--) qs.push(qKey(y, q));
+        qSel.innerHTML = qs.map(q => `<option value="${q}">${q.replace('-', ' ')}</option>`).join('');
+        qSel.value = currentQuarter();
+        qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); });
+      }
+    }
+    renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock();
+  }
+
   function showTab(name) {
     activeTab = name;
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
+    if (name === 'config') renderMetricConfig();
     renderActiveChart();
   }
   document.querySelectorAll('.rec-subtab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
-  // Global filters (apply to all sub-tabs)
-  document.getElementById('recNameFilter')?.addEventListener('input', renderAll);
+  // Global filters (apply to all sub-tabs) — Pod / Recruiter / Job are multi-select
+  msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_ORDER, renderAll);
+  msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);
+  const jobNames = [...new Set((data.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, renderAll);
+  document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
   document.getElementById('recHideZero')?.addEventListener('change', renderAll);
-  document.getElementById('recPod')?.addEventListener('change', renderAll);
+  document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
   // Date filter — drives Submission Velocity's 30-day window
   ['recVelFrom', 'recVelTo'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', () => { renderVelocity(); renderActiveChart(); }));
+  // Year/Quarter also picks the quarter for pod grouping + capacity, so re-render everything
   ['recVelYear', 'recVelQuarter'].forEach(id =>
-    document.getElementById(id)?.addEventListener('change', () => { applyVelYearQuarter(); renderVelocity(); renderActiveChart(); }));
+    document.getElementById(id)?.addEventListener('change', () => { applyVelYearQuarter(); renderAll(); }));
   // default the velocity date filter to current year + current quarter
   const vy = document.getElementById('recVelYear'), vq = document.getElementById('recVelQuarter');
   if (vy) { const nowY = String(new Date().getFullYear()); vy.value = [...vy.options].some(o => o.value === nowY) ? nowY : (vy.options[1] ? vy.options[1].value : ''); }
