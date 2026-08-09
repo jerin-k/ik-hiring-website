@@ -223,7 +223,7 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Submission Velocity (LIVE — per-stage/day cells from recruiters[].daily) -->
     <div class="rec-panel" data-panel="velocity">
-      <p class="sub-note">Pod → Recruiter → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Cells count candidates active at each stage per day. <span style="color:var(--muted)">Bucketed by last-activity date (a snapshot approximation); a bulk stage-sync can spike a single day.</span></p>
+      <p class="sub-note">Pod → Recruiter → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Cells count candidates who <strong>entered</strong> each stage per day, from real stage history (no bulk-update spikes).</p>
       <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
@@ -550,7 +550,10 @@ export function initRecruiterFilters(data) {
       head.innerHTML = h;
     }
     const ncol = dates.length + 2;
-    const stageDay = (r, sk) => (r.daily && r.daily[sk]) || {};
+    // Prefer the stage-history rollups (bucketed by true enteredStageAt → no bulk-update spike); fall back to
+    // the snapshot `daily` only if the rollups file isn't present yet.
+    const roll = data.stageRollups && data.stageRollups.velocityByRecruiter;
+    const stageDay = (r, sk) => roll ? ((roll[r.name] && roll[r.name][sk]) || {}) : ((r.daily && r.daily[sk]) || {});
     // number row: total cell + one cell per date. zero → faint dot to keep 30 cols readable.
     const numRow = (total, perDay, boldTotal) =>
       `<td${boldTotal ? ' style="font-weight:600"' : ''}>${total > 0 ? total : '<span class="zero">0</span>'}</td>`
