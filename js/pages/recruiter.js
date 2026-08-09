@@ -186,7 +186,7 @@ export function renderRecruiter(data) {
       .rec-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
 
       /* consolidated filter block (matches HM) */
-      .rec-filters { background:#d7e5fb; border:1px solid #b0ccf2; border-radius:12px; padding:14px 18px; margin-bottom:18px;
+      .rec-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
         display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
       .rec-filters select, .rec-filters input[type=date], .rec-filters input[type=text] {
         appearance:none; -webkit-appearance:none; height:34px; padding:0 11px; border:1px solid var(--border);
@@ -195,7 +195,7 @@ export function renderRecruiter(data) {
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
         background-repeat:no-repeat; background-position:right 10px center; }
       .rec-filters select:hover, .rec-filters input:hover { border-color:var(--muted); }
-      .rec-filters select:focus, .rec-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.12); }
+      .rec-filters select:focus, .rec-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
       .rec-filters .fchip { display:flex; align-items:center; gap:7px; }
       .rec-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
       .rec-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text) }
@@ -338,7 +338,7 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="config" style="display:none">
       <p class="sub-note">The whole scoring &amp; capacity model lives here — the pipeline just reads it. Everything is saved to this browser (export to bake into the committed files).</p>
 
-      <div class="cfg-card" style="display:flex;align-items:center;gap:12px;background:#d7e5fb;border-color:#b0ccf2">
+      <div class="cfg-card" style="display:flex;align-items:center;gap:12px;background:#e4eaf4;border-color:#c3d0e8">
         <span class="lbl" style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em">Quarter</span>
         <select id="cfgQuarter"></select>
         <span style="font-size:11px;color:var(--muted)">Drives Pod, Capacity &amp; Score Grid below — each stored per quarter, inheriting the previous quarter (copy-forward); edit to override.</span>
@@ -625,7 +625,7 @@ export function initRecruiterFilters(data) {
   }
 
   // ===== charts (standard palette + square legends) =====
-  const C = { blue: '#2563eb', green: '#0f766e', cyan: '#0891b2', amber: '#b45309', slate: '#64748b' };
+  const C = { blue: '#4E6BA6', green: '#398AA2', cyan: '#1E7590', amber: '#D8B5BE', slate: '#938FB8' };
   const legendSquare = () => ({ position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 16, font: { size: 12 } } });
   const gridY = { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } };
   const gridX = { grid: { display: false }, ticks: { font: { size: 11 } } };
@@ -694,8 +694,8 @@ export function initRecruiterFilters(data) {
     };
     recScreenChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        seg('HM Screening', clHM, C.blue, 'HM'), seg('_hmRem', remHM, '#bfdbfe', 'HM'),
-        seg('Online Assessment', clOA, C.cyan, 'OA'), seg('_oaRem', remOA, '#a5f3fc', 'OA'),
+        seg('HM Screening', clHM, C.blue, 'HM'), seg('_hmRem', remHM, '#C5CFE5', 'HM'),
+        seg('Online Assessment', clOA, C.cyan, 'OA'), seg('_oaRem', remOA, '#A9CAD6', 'OA'),
         seg('R1 (reached)', A.r1, C.green, 'R1')] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 28 } },
         plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, filter: (item, data) => !(data.datasets[item.datasetIndex].label || '').startsWith('_') } } },
@@ -737,9 +737,9 @@ export function initRecruiterFilters(data) {
     recJoinChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
         { label: 'Hired', data: hired, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: '_rem', data: rem, backgroundColor: '#a7f3d0', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
+        { label: '_rem', data: rem, backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 34 } },
-        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, generateLabels: () => [{ text: 'Hired', fillStyle: C.green, strokeStyle: C.green, pointStyle: 'rect' }, { text: 'Offered (full bar)', fillStyle: '#a7f3d0', strokeStyle: '#a7f3d0', pointStyle: 'rect' }] } } },
+        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, generateLabels: () => [{ text: 'Hired', fillStyle: C.green, strokeStyle: C.green, pointStyle: 'rect' }, { text: 'Offered (full bar)', fillStyle: '#B4D3DC', strokeStyle: '#B4D3DC', pointStyle: 'rect' }] } } },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
@@ -781,7 +781,7 @@ export function initRecruiterFilters(data) {
     };
     recFulfilChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: '#a7f3d0', stack: 'f', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: '#B4D3DC', stack: 'f', borderRadius: 2, barPercentage: 0.72 },
         { label: 'Gap to Target (Score)', data: recs.map(r => r.gap), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 60 } },
         plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
