@@ -105,11 +105,11 @@ export function initHomeFilters() {
     const maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].open + deptArr[0][1].filled : 1;
 
     const pipelineStages = [
-      { label: 'Applied', value: f.applied || 0, color: '#3b82f6' },
-      { label: 'Screened', value: f.screened || 0, color: '#6366f1' },
-      { label: 'Interviewed', value: f.interviewed || 0, color: '#2563eb' },
-      { label: 'Offered', value: f.offered || 0, color: '#0891b2' },
-      { label: 'Hired', value: f.hired || 0, color: '#0f766e' },
+      { label: 'Applied', value: f.applied || 0, color: '#938FB8' },
+      { label: 'Screened', value: f.screened || 0, color: '#6E86B0' },
+      { label: 'Interviewed', value: f.interviewed || 0, color: '#4E6BA6' },
+      { label: 'Offered', value: f.offered || 0, color: '#398AA2' },
+      { label: 'Hired', value: f.hired || 0, color: '#1E7590' },
     ];
     const maxPipeline = Math.max(...pipelineStages.map(s => s.value), 1);
 
