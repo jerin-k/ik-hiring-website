@@ -414,7 +414,7 @@ export function initEfficiencyFilters(data) {
     if (rows.length === 0) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `No pod capacities set for ${q.replace('-', ' ')} — set them in Recruiter Efficiency → Metric Configuration.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = `No pod capacities set for ${q.replace('-', ' ')} — set them in Admin → Metric Configuration.`; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
