@@ -1,21 +1,21 @@
 :root {
-  --bg: #f6f8fa;
+  --bg: #f4f6fb;
   --card: #ffffff;
-  --border: #e1e4e8;
-  --border-light: #eef0f3;
+  --border: #dbe1ec;
+  --border-light: #eaeef6;
   --text: #0f172a;
   --text-secondary: #334155;
-  --muted: #64748b;
-  --accent: #2563eb;
-  --accent-light: #eff6ff;
-  --green: #0f766e;
-  --green-light: #f0fdfa;
-  --red: #be123c;
-  --red-light: #fff1f2;
+  --muted: #6b7391;
+  --accent: #4E6BA6;
+  --accent-light: #eaeef6;
+  --green: #398AA2;
+  --green-light: #eaf2f4;
+  --red: #b45a72;
+  --red-light: #f7edf0;
   --orange: #a16207;
   --orange-light: #fffbeb;
-  --blue: #2563eb;
-  --blue-light: #eff6ff;
+  --blue: #4E6BA6;
+  --blue-light: #eaeef6;
   --yellow: #a16207;
 }
 
@@ -28,7 +28,10 @@ body {
   line-height: 1.6;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
+  accent-color: var(--accent);
 }
+
+input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 
 .hidden { display: none !important; }
 
@@ -316,7 +319,7 @@ td.stage-first { border-left: 1px solid var(--border); }
 .filter-bar select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(37,99,235,.1);
+  box-shadow: 0 0 0 2px rgba(78,107,166,.14);
 }
 
 /* ===== Headings (legacy) ===== */
@@ -491,7 +494,7 @@ hr.section-divider { border: none; border-top: 1px solid var(--border); margin: 
   transition: background .15s;
 }
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #1e50c9; }
+.btn-primary:hover { background: #3e5a92; }
 .btn-danger { background: var(--red); color: #fff; }
 .btn-sm { padding: 3px 8px; font-size: 11px; }
 
