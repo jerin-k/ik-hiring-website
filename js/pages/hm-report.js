@@ -153,7 +153,7 @@ export function renderHmReport(data) {
         background-repeat:no-repeat; background-position:right 11px center;
       }
       .hm-filters select:hover, .hm-filters input[type=date]:hover { border-color:var(--muted); }
-      .hm-filters select:focus, .hm-filters input[type=date]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.12); }
+      .hm-filters select:focus, .hm-filters input[type=date]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
       .hm-filters .fchip { display:flex; align-items:center; gap:7px; }
       .hm-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
       .hm-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; }
@@ -181,7 +181,7 @@ export function renderHmReport(data) {
 
     <div class="hm-report">
     <!-- ===== GLOBAL PAGE FILTERS ===== -->
-    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:#d7e5fb;border:1px solid #b0ccf2;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.06)">
+    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:#e4eaf4;border:1px solid #c3d0e8;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.06)">
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">Status</span>
@@ -424,9 +424,9 @@ export function initHmFilters(data) {
         data: {
           labels: cDepts,
           datasets: [
-            { label: 'Joined', data: cDepts.map(d => groups[d].filled), backgroundColor: '#0f766e', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Joining Pending', data: cDepts.map(d => groups[d].jp), backgroundColor: '#0891b2', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#2563eb', borderRadius: 4, barPercentage: 0.7 }
+            { label: 'Joined', data: cDepts.map(d => groups[d].filled), backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Joining Pending', data: cDepts.map(d => groups[d].jp), backgroundColor: '#1E7590', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.7 }
           ]
         },
         options: {
@@ -524,8 +524,8 @@ export function initHmFilters(data) {
       hm2ChartInstance = new Chart(ctx2, {
         type: 'bar',
         data: { labels: chartLabels, datasets: [
-          { label: 'In', data: chartIn, backgroundColor: '#2563eb', borderRadius: 4, barPercentage: 0.75 },
-          { label: 'Out', data: chartOut, backgroundColor: '#0f766e', borderRadius: 4, barPercentage: 0.75 }
+          { label: 'In', data: chartIn, backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.75 },
+          { label: 'Out', data: chartOut, backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.75 }
         ] },
         options: {
           responsive: true, maintainAspectRatio: false,
@@ -547,7 +547,7 @@ export function initHmFilters(data) {
         type: 'bar',
         data: { labels: funnel.map(f => f.label), datasets: [{
           label: 'Reached', data: funnel.map(f => [-f.value / 2, f.value / 2]),
-          backgroundColor: '#0f766e', borderRadius: 3, barPercentage: 0.85
+          backgroundColor: '#4E6BA6', borderRadius: 3, barPercentage: 0.85
         }] },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
