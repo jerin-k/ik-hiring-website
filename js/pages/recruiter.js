@@ -1,4 +1,5 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
+import { scoreForRole } from '../score-model.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -220,9 +221,9 @@ export function renderRecruiter(data) {
       <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
     </div>
 
-    <!-- PANEL: Submission Velocity (scaffold — filters/chart live, per-day/stage cells pending pipeline) -->
+    <!-- PANEL: Submission Velocity (LIVE — per-stage/day cells from recruiters[].daily) -->
     <div class="rec-panel" data-panel="velocity">
-      <p class="sub-note" style="color:var(--orange)">Structure preview — Pod → Recruiter → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Filters, layout, and the chart's submission totals are live; the per-day / per-stage cells need the recruiter×job×stage×date rollup (pipeline redesign).</p>
+      <p class="sub-note">Pod → Recruiter → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Cells count candidates active at each stage per day. <span style="color:var(--muted)">Bucketed by last-activity date (a snapshot approximation); a bulk stage-sync can spike a single day.</span></p>
       <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
@@ -258,7 +259,7 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = min(Capacity, Assigned Score)</strong> — Capacity is set in <strong>Metric Configuration</strong> (per quarter).</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
-      <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = sum of role scores. Offered/Hired <strong>HC is live</strong>; Assigned, Score, Target and Gap need the recruiter×job rollup + score engine (pipeline) — shown as <span class="zero">—</span> for now.</p>
+      <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>). Assigned / Offered / Hired HC &amp; Score are <strong>live</strong>. <strong>Target = min(Capacity, Assigned Score)</strong> and <strong>Gap</strong> populate once you set per-recruiter <strong>Capacities</strong> for the quarter (0 until then). Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table>
@@ -281,10 +282,10 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note"><strong>Pod → Recruiter → Source Category → Source Name.</strong> Category = Ashby <code>source_type</code> (Sourced / Referral / Inbound / Internal). Per-recruiter values need the pipeline (recruiter×source rollup) — shown as <span class="zero">—</span> until then. Org-wide / pod totals will live in <strong>Overall Efficiency</strong>.</p>
+      <p class="sub-note"><strong>Pod → Recruiter → Source.</strong> Source = Ashby <code>source_type</code> (the finest grain Ashby exposes here). Count = candidates credited to that source; % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:320px">Pod / Recruiter / Category / Source</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:320px">Pod / Recruiter / Source</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
     </div>
@@ -295,6 +296,12 @@ export function initRecruiterFilters(data) {
   if (!data || !data.recruiters) return;
   const allRecs = data.recruiters;
   const nDate = 7;
+
+  // jobs[] is keyed by an 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
+  // jobMeta() yields {department,title,level,complexity} for the scoring engine (falls back to byJob's own
+  // title/department when the job isn't in jobs[] — e.g. archived with no current apps).
+  const jobById = {}; (data.jobs || []).forEach(j => { jobById[j.id] = j; });
+  const jobMeta = (bj) => { const j = jobById[(bj.jobId || '').slice(0, 8)]; return { department: (j && j.department) || bj.department, title: (j && j.title) || bj.title, level: j && j.level, complexity: j && j.complexity }; };
   let lastGroups = [], lastRecs = [], activeTab = 'velocity';
 
   let msPod = null, msRec = null, msJob = null;
@@ -396,35 +403,55 @@ export function initRecruiterFilters(data) {
 
     // Funnel columns. Non-Sales (mode 'offer'): Assigned(HC|Score) · Target Score · Offered(HC|Score) ·
     // Joining Pending(HC|Score) · Gap Score. Sales (mode 'hire') adds Hired(HC|Score) before Gap.
-    // Offered HC (both) and Hired HC (Sales) are LIVE; Assigned / all Score / Target / Joining Pending / Gap
-    // need the recruiter×job rollup + score engine + stage detail (pipeline). Tree = Pod → Recruiter → Job.
+    // Assigned/Offered/Hired HC+Score are LIVE from recruiters[].byJob × the score engine. Target = min(Capacity,
+    // Assigned Score) (Capacity per quarter from Metric Config; 0 until set). Gap = max(0, Target − Achieved),
+    // Achieved = Offered Score (Non-Sales) / Hired Score (Sales). Joining Pending is recruiter-level only (offer
+    // pass gives a count, not per-job) → HC at recruiter/pod rows, Score unattributable (—). Tree = Pod → Recruiter → Job.
     function fulfilRows(gs, mode) {
+      const q = selQuarter();
       const isSales = mode === 'hire';
       const ncol = isSales ? 11 : 9;
-      const jobDash = `<td>${DASH}</td>`.repeat(ncol - 1);
-      // metric cells for a row given live Offered HC + (Sales) Hired HC; everything else pending.
-      const cells = (offHC, hireHC, bold) => {
+      const c = x => (x == null ? DASH : x);
+      // v = {aHC,aSc,tSc,oHC,oSc,jpHC,jpSc,hHC,hSc,gSc}; null → dash
+      const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
-        let c = `<td>${DASH}</td><td>${DASH}</td>`      // Assigned HC/Score
-          + `<td>${DASH}</td>`                          // Target Score
-          + `<td${w}>${offHC}</td><td>${DASH}</td>`      // Offered HC/Score (HC live)
-          + `<td>${DASH}</td><td>${DASH}</td>`;          // Joining Pending HC/Score (pending)
-        if (isSales) c += `<td${w}>${hireHC}</td><td>${DASH}</td>`; // Hired HC/Score (HC live)
-        c += `<td>${DASH}</td>`;                         // Gap Score
-        return c;
+        let s = `<td${w}>${c(v.aHC)}</td><td>${c(v.aSc)}</td>`   // Assigned HC/Score
+          + `<td>${c(v.tSc)}</td>`                                // Target Score
+          + `<td${w}>${c(v.oHC)}</td><td>${c(v.oSc)}</td>`        // Offered HC/Score
+          + `<td>${c(v.jpHC)}</td><td>${c(v.jpSc)}</td>`;         // Joining Pending HC/Score
+        if (isSales) s += `<td${w}>${c(v.hHC)}</td><td>${c(v.hSc)}</td>`; // Hired HC/Score
+        s += `<td>${c(v.gSc)}</td>`;                              // Gap Score
+        return s;
+      };
+      const recFulfil = (r) => {
+        let aHC = 0, aSc = 0, oHC = 0, oSc = 0, hHC = 0, hSc = 0;
+        (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); aHC += 1; aSc += sc; oHC += (bj.offer || 0); oSc += (bj.offer || 0) * sc; hHC += (bj.hired || 0); hSc += (bj.hired || 0) * sc; });
+        const tSc = Math.min(capacityOf(r.name, q) || 0, aSc);
+        const gSc = Math.max(0, tSc - (isSales ? hSc : oSc));
+        return { aHC, aSc, tSc, oHC, oSc, jpHC: (r.joiningPending || 0), jpSc: null, hHC, hSc, gSc };
       };
       let html = '';
       gs.forEach((G, pi) => {
-        const offSum = G.recs.reduce((s, r) => s + (r.offer || 0), 0);
-        const hireSum = G.recs.reduce((s, r) => s + (r.hired || 0), 0);
+        const podAgg = { aHC: 0, aSc: 0, tSc: 0, oHC: 0, oSc: 0, hHC: 0, hSc: 0, jpHC: 0, jpSc: null, gSc: 0 };
+        const recVals = G.recs.map(r => { const a = recFulfil(r); ['aHC', 'aSc', 'tSc', 'oHC', 'oSc', 'hHC', 'hSc', 'jpHC', 'gSc'].forEach(k => podAgg[k] += a[k]); return a; });
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${cells(offSum, hireSum, true)}</tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${cells(podAgg, true)}</tr>`;
         G.recs.forEach((r, ri) => {
           const rk = `${mode}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${cells(r.offer || 0, r.hired || 0, false)}</tr>`;
-          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — pending recruiter×job rollup</td>${jobDash}</tr>`;
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${cells(recVals[ri], false)}</tr>`;
+          const jobs = (r.byJob || []).slice().sort((a, b) => (b[isSales ? 'hired' : 'offer'] || 0) - (a[isSales ? 'hired' : 'offer'] || 0) || (b.total || 0) - (a.total || 0));
+          if (jobs.length) {
+            jobs.forEach(bj => {
+              const m = jobMeta(bj), sc = scoreForRole(m, q);
+              const jv = { aHC: 1, aSc: sc, tSc: null, oHC: (bj.offer || 0), oSc: (bj.offer || 0) * sc, jpHC: null, jpSc: null, hHC: (bj.hired || 0), hSc: (bj.hired || 0) * sc, gSc: null };
+              html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+                <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
+            });
+          } else {
+            html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+              <td style="padding-left:52px;color:var(--muted);font-style:italic">No jobs attributed</td>${`<td>${DASH}</td>`.repeat(ncol - 1)}</tr>`;
+          }
         });
       });
       return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters in this group.</td></tr>`;
@@ -435,25 +462,35 @@ export function initRecruiterFilters(data) {
     if (offerBody) { offerBody.innerHTML = fulfilRows(nonSalesGroups, 'offer'); wireVelTree(offerBody); }
     if (hireBody) { hireBody.innerHTML = fulfilRows(salesGroups, 'hire'); wireVelTree(hireBody); }
 
-    // ===== Sourcing Mix — Pod → Recruiter → Category → Source (per-recruiter; pending pipeline) =====
-    // Totals (grand + pod) intentionally dropped — those live in Overall Efficiency. Category = Ashby
-    // source_type (Sourced/Referral/Inbound/Internal); values need the recruiter×source rollup.
+    // ===== Sourcing Mix — Pod → Recruiter → Source (LIVE from recruiters[].sources) =====
+    // recruiters[].sources = { sourceType: count }. Ashby only exposes source_type here (no finer
+    // source-name), so that's the leaf. % = share within the parent. Org-wide totals live in Overall Efficiency.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
-      const CATS = ['Sourced', 'Referral', 'Inbound', 'Internal'];
+      const recSrcTotal = r => Object.values(r.sources || {}).reduce((s, v) => s + v, 0);
+      const grand = recs.reduce((s, r) => s + recSrcTotal(r), 0) || 1;
       let html = '';
       groups.forEach((G, pi) => {
+        const podTotal = G.recs.reduce((s, r) => s + recSrcTotal(r), 0);
         html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td><td>${DASH}</td><td>${DASH}</td></tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>
+          <td style="font-weight:600">${podTotal || '<span class="zero">0</span>'}</td><td>${pct(podTotal, grand)}%</td></tr>`;
         G.recs.forEach((r, ri) => {
+          const rt = recSrcTotal(r);
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
-          CATS.forEach((cat, ci) => {
-            html += `<tr data-path="${pi}-${ri}-${ci}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-              <td style="padding-left:52px;color:var(--muted)">${CARET}${cat}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
-            html += `<tr data-path="${pi}-${ri}-${ci}-0" style="display:none">
-              <td style="padding-left:82px;color:var(--muted);font-style:italic">Source names — pending recruiter×source rollup</td><td>${DASH}</td><td>${DASH}</td></tr>`;
-          });
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>
+            <td>${rt || '<span class="zero">0</span>'}</td><td>${rt ? pct(rt, podTotal) + '%' : DASH}</td></tr>`;
+          const entries = Object.entries(r.sources || {}).sort((a, b) => b[1] - a[1]);
+          if (entries.length) {
+            entries.forEach(([src, cnt], si) => {
+              html += `<tr data-path="${pi}-${ri}-${si}" style="display:none">
+                <td style="padding-left:52px;color:var(--muted)">${src}</td>
+                <td>${cnt}</td><td class="${pctClass(pct(cnt, rt))}">${pct(cnt, rt)}%</td></tr>`;
+            });
+          } else {
+            html += `<tr data-path="${pi}-${ri}-0" style="display:none">
+              <td style="padding-left:52px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+          }
         });
       });
       srcBody.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
@@ -493,6 +530,10 @@ export function initRecruiterFilters(data) {
       toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
     } else { fromEl.value = `${yr}-01-01`; toEl.value = `${yr}-12-31`; }
   }
+  // recruiters[].daily is keyed by pipeline stage-key ({stageKey:{'YYYY-MM-DD':count}}), bucketed by
+  // last-activity day. Map the 3 displayed stages to those keys.
+  const VEL_STAGES = [['oa', 'Online Assessment'], ['hmReview', 'HM Screening'], ['r1', 'R1']];
+  function dkey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function renderVelocity() {
     const head = document.getElementById('recVelHead');
     const body = document.getElementById('recVelBody');
@@ -500,27 +541,41 @@ export function initRecruiterFilters(data) {
     const recs = getFilteredRecs();
     const groups = groupByPod(recs, selQuarter());
     const dates = velDates();
-    const STAGES = [['oa', 'Online Assessment'], ['hm', 'HM Screening'], ['r1', 'R1']];
+    const dkeys = dates.map(dkey);
 
     if (head) {
-      let h = '<tr><th style="min-width:240px">Pod / Recruiter / Stage</th><th>Total - 30 days</th>';
+      let h = `<tr><th style="min-width:240px">Pod / Recruiter / Stage</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       h += '</tr>';
       head.innerHTML = h;
     }
-    const dashCells = `<td>${DASH}</td>`.repeat(dates.length + 1); // Total-30 + dates
     const ncol = dates.length + 2;
+    const stageDay = (r, sk) => (r.daily && r.daily[sk]) || {};
+    // number row: total cell + one cell per date. zero → faint dot to keep 30 cols readable.
+    const numRow = (total, perDay, boldTotal) =>
+      `<td${boldTotal ? ' style="font-weight:600"' : ''}>${total > 0 ? total : '<span class="zero">0</span>'}</td>`
+      + perDay.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
+    // sum a recruiter's displayed stages into a per-day array (+ total)
+    const recDaily = (r) => {
+      const arr = new Array(dkeys.length).fill(0); let total = 0;
+      VEL_STAGES.forEach(([sk]) => { const m = stageDay(r, sk); dkeys.forEach((dk, i) => { const v = m[dk] || 0; arr[i] += v; total += v; }); });
+      return { arr, total };
+    };
+
     let html = '';
     groups.forEach((G, pi) => {
+      const podArr = new Array(dkeys.length).fill(0); let podTotal = 0;
+      const recCache = G.recs.map(r => { const d = recDaily(r); d.arr.forEach((v, i) => podArr[i] += v); podTotal += d.total; return d; });
       html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${dashCells}</tr>`;
+        <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${numRow(podTotal, podArr, true)}</tr>`;
       G.recs.forEach((r, ri) => {
         const rk = `${pi}-${ri}`;
         html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${dashCells}</tr>`;
-        STAGES.forEach(([k, label]) => {
+          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${numRow(recCache[ri].total, recCache[ri].arr, false)}</tr>`;
+        VEL_STAGES.forEach(([sk, label]) => {
+          const m = stageDay(r, sk); let t = 0; const per = dkeys.map(dk => { const v = m[dk] || 0; t += v; return v; });
           html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted)">${label}</td>${dashCells}</tr>`;
+            <td style="padding-left:52px;color:var(--muted)">${label}</td>${numRow(t, per, false)}</tr>`;
         });
       });
     });
@@ -653,8 +708,14 @@ export function initRecruiterFilters(data) {
     // Y = recruiter, X = Score. Target = Capacity (interim, until Assigned Score lands → then min(Cap,Assigned)).
     // Bar = Target; the Gap (shortfall to target) is the dark segment, Achieved the light. Labels on all.
     const q = selQuarter();
-    const recs = lastRecs.map(r => { const target = capacityOf(r.name, q); const achieved = 0; return { name: r.name, target, achieved, gap: Math.max(0, target - achieved) }; })
-      .filter(r => r.target > 0).sort((a, b) => b.target - a.target);
+    const recs = lastRecs.map(r => {
+      const sales = isSalesPod(podOf(r.name, q));
+      let oSc = 0, hSc = 0;
+      (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); oSc += (bj.offer || 0) * sc; hSc += (bj.hired || 0) * sc; });
+      const achieved = sales ? hSc : oSc;
+      const target = capacityOf(r.name, q);
+      return { name: r.name, target, achieved, gap: Math.max(0, target - achieved) };
+    }).filter(r => r.target > 0).sort((a, b) => b.target - a.target);
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     if (recs.length === 0) {
@@ -694,15 +755,36 @@ export function initRecruiterFilters(data) {
   }
   function buildSourceChart() {
     const ctx = document.getElementById('recSourceChart'); if (!ctx) return;
-    // Recruiter-centric: Y = recruiter names, one bar per source category, each bar split by source name.
-    // Needs recruiter×source + source_type from the pipeline — empty-state until then (org-wide totals move
-    // to Overall Efficiency).
     if (recSourceChart) { recSourceChart.destroy(); recSourceChart = null; }
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    ctx.style.display = 'none';
-    if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-    if (emptyMsg) { emptyMsg.innerHTML = 'Recruiter-centric source mix — one bar per recruiter, grouped by <strong>source category</strong> with the <strong>source-name split</strong> inside — pending the recruiter×source rollup + <code>source_type</code> from the pipeline.'; emptyMsg.style.display = 'flex'; }
+    // Recruiter-centric stacked bar: Y = recruiter (top 20 by sourced volume), stacked by source_type.
+    const srcTotal = r => Object.values(r.sources || {}).reduce((s, v) => s + v, 0);
+    const withSrc = [...lastRecs].filter(r => srcTotal(r) > 0).sort((a, b) => srcTotal(b) - srcTotal(a)).slice(0, 20);
+    if (withSrc.length === 0) {
+      ctx.style.display = 'none';
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (emptyMsg) { emptyMsg.textContent = 'No sourced applications for the current filter.'; emptyMsg.style.display = 'flex'; }
+      return;
+    }
+    ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
+    // aggregate source_types by volume; keep top 6 + roll the rest into "Other"
+    const agg = {}; withSrc.forEach(r => Object.entries(r.sources).forEach(([s, v]) => agg[s] = (agg[s] || 0) + v));
+    const ordered = Object.entries(agg).sort((a, b) => b[1] - a[1]).map(e => e[0]);
+    const topTypes = ordered.slice(0, 6); const rest = ordered.slice(6);
+    const cats = rest.length ? [...topTypes, 'Other'] : topTypes;
+    const palette = [C.blue, C.green, C.cyan, C.slate, C.amber, '#C5CFE5', '#94a3b8'];
+    const datasets = cats.map((cat, ci) => ({
+      label: cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, barPercentage: 0.8,
+      data: withSrc.map(r => cat === 'Other' ? rest.reduce((s, t) => s + (r.sources[t] || 0), 0) : (r.sources[cat] || 0))
+    }));
+    const h = Math.max(240, withSrc.length * 30 + 90);
+    if (wrap) wrap.style.height = h + 'px'; ctx.style.maxHeight = h + 'px';
+    recSourceChart = new Chart(ctx, { type: 'bar',
+      data: { labels: withSrc.map(r => r.name), datasets },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 11 } } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
   }
   function renderActiveChart() {
     if (activeTab === 'velocity') buildVelChart();
