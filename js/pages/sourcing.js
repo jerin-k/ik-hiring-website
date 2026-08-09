@@ -91,8 +91,8 @@ export function initSourcingChart(data) {
     chartLabels.push('Uncategorized');
     chartData.push(uncategorized);
   }
-  const colorMap = { Referral: '#4f46e5', Inbound: '#2563eb', Sourced: '#ea580c', Internal: '#64748b' };
-  const chartColors = chartLabels.map(l => colorMap[l] || '#cbd5e1');
+  const colorMap = { Referral: '#4E6BA6', Inbound: '#398AA2', Sourced: '#D8B5BE', Internal: '#938FB8' };
+  const chartColors = chartLabels.map(l => colorMap[l] || '#A9CAD6');
 
   if (sourceChartInstance) sourceChartInstance.destroy();
   const ctx = document.getElementById('sourceChart');
