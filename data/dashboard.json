@@ -1,10 +1,10 @@
 {
-  "lastUpdated": "2026-08-09T13:53:06.862Z",
+  "lastUpdated": "2026-08-09T16:12:17.723Z",
   "schemaVersion": 4,
   "scopeYear": 2026,
   "velocityDays": 35,
   "funnel": {
-    "applied": 53145,
+    "applied": 53160,
     "screened": 1788,
     "interviewed": 1117,
     "offered": 419,
@@ -573,15 +573,15 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 6780,
-      "applied": 6780,
+      "total": 6788,
+      "applied": 6788,
       "screen": 5,
       "interview": 3,
       "offer": 3,
       "hired": 3,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 6677,
+        "appReview": 6685,
         "taScreen": 5,
         "hmReview": 0,
         "oa": 0,
@@ -847,15 +847,15 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 1952,
-      "applied": 1952,
+      "total": 1955,
+      "applied": 1955,
       "screen": 224,
       "interview": 277,
       "offer": 94,
       "hired": 85,
       "joiningPending": 10,
       "pipeline": {
-        "appReview": 589,
+        "appReview": 592,
         "taScreen": 224,
         "hmReview": 0,
         "oa": 0,
@@ -1234,15 +1234,15 @@
       "level": "L5",
       "complexity": "Normal",
       "status": "Open",
-      "total": 759,
-      "applied": 759,
+      "total": 760,
+      "applied": 760,
       "screen": 2,
       "interview": 0,
       "offer": 1,
       "hired": 1,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 709,
+        "appReview": 710,
         "taScreen": 2,
         "hmReview": 0,
         "oa": 0,
@@ -1309,15 +1309,15 @@
       "level": "L4",
       "complexity": "Normal",
       "status": "Open",
-      "total": 669,
-      "applied": 669,
+      "total": 672,
+      "applied": 672,
       "screen": 18,
       "interview": 25,
       "offer": 2,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 571,
+        "appReview": 574,
         "taScreen": 18,
         "hmReview": 0,
         "oa": 0,
@@ -3425,6 +3425,7 @@
       "recruiters": [
         "Ankita Kabra",
         "Sanghamitra Moulik",
+        "Mashika De Almeida",
         "Oshin Verma"
       ]
     },
@@ -4498,7 +4499,7 @@
   "recruiters": [
     {
       "name": "Deepti Leslie",
-      "total": 14365,
+      "total": 14366,
       "byJob": [
         {
           "jobId": "fc369c2c-ba64-44c8-98ff-cf000594947f",
@@ -4576,7 +4577,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 263,
+          "total": 264,
           "offer": 0,
           "hired": 0
         },
@@ -4584,7 +4585,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 5675,
+          "total": 5674,
           "offer": 2,
           "hired": 2
         },
@@ -4656,7 +4657,7 @@
           "jobId": "6b881aaa-d107-4a8d-bc28-18b6a13a3d54",
           "title": "Senior Manager - Performance Marketing",
           "department": "Marketing",
-          "total": 723,
+          "total": 724,
           "offer": 0,
           "hired": 0
         },
@@ -4684,28 +4685,28 @@
         "MyGreenhouse": 112,
         "Other": 5,
         "Referral": 518,
-        "Inbound": 534,
+        "Inbound": 535,
         "Job Portal": 19
       },
       "daily": {
         "appReview": {
-          "2026-07-30": 11227,
-          "2026-08-04": 890,
-          "2026-08-05": 165,
+          "2026-07-30": 11225,
+          "2026-08-04": 887,
+          "2026-08-05": 166,
           "2026-08-01": 1,
+          "2026-08-09": 38,
           "2026-08-06": 63,
-          "2026-08-07": 53,
-          "2026-08-08": 33,
-          "2026-08-09": 27,
+          "2026-08-07": 52,
+          "2026-08-08": 32,
           "2026-07-17": 1,
           "2026-07-18": 4,
           "2026-07-28": 5,
           "2026-07-19": 1,
-          "2026-07-25": 4,
           "2026-07-24": 2,
           "2026-07-21": 3,
           "2026-07-22": 5,
           "2026-07-23": 5,
+          "2026-07-25": 3,
           "2026-07-26": 1,
           "2026-07-27": 4,
           "2026-07-29": 2,
@@ -5603,7 +5604,7 @@
     },
     {
       "name": "Oshin Verma",
-      "total": 1594,
+      "total": 1588,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -5697,16 +5698,8 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Assistant Manager - US HR and Payroll",
           "department": "Human Resource",
-          "total": 681,
+          "total": 678,
           "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 11,
-          "offer": 1,
           "hired": 0
         },
         {
@@ -5724,21 +5717,29 @@
           "total": 6,
           "offer": 5,
           "hired": 3
+        },
+        {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 8,
+          "offer": 1,
+          "hired": 0
         }
       ],
       "sources": {
-        "Company marketing": 231,
-        "Third-party boards": 1277,
+        "Company marketing": 230,
+        "Third-party boards": 1271,
         "Agencies": 29,
-        "Referral": 7,
+        "Referral": 6,
         "MyGreenhouse": 27,
         "Prospecting": 1,
-        "Job Portal": 21
+        "Job Portal": 23
       },
       "daily": {
         "appReview": {
           "2026-07-30": 100,
-          "2026-08-07": 606
+          "2026-08-07": 595
         },
         "r3": {
           "2026-07-31": 2,
@@ -5748,7 +5749,8 @@
         },
         "r2": {
           "2026-07-30": 4,
-          "2026-07-31": 1
+          "2026-07-31": 1,
+          "2026-08-07": 1
         },
         "docSub": {
           "2026-07-31": 6
@@ -5756,13 +5758,13 @@
         "r1": {
           "2026-07-31": 11,
           "2026-07-30": 4,
-          "2026-08-05": 3,
+          "2026-08-05": 2,
           "2026-08-08": 1,
-          "2026-08-07": 6
+          "2026-08-07": 4
         },
         "taScreen": {
           "2026-07-31": 2,
-          "2026-08-07": 25,
+          "2026-08-07": 26,
           "2026-07-30": 3
         },
         "offer": {
@@ -5774,8 +5776,7 @@
           "2026-08-06": 1
         },
         "r4": {
-          "2026-07-30": 1,
-          "2026-08-05": 2
+          "2026-07-30": 1
         },
         "r5": {
           "2026-07-31": 8
@@ -5785,13 +5786,13 @@
           "2026-08-07": 2
         }
       },
-      "ta": 30,
+      "ta": 31,
       "hm": 6,
       "oa": 0,
-      "r1": 25,
-      "r2": 5,
+      "r1": 22,
+      "r2": 6,
       "r3": 6,
-      "r4": 3,
+      "r4": 1,
       "r5": 8,
       "offer": 56,
       "hired": 24,
@@ -5801,7 +5802,7 @@
     },
     {
       "name": "V Pooja",
-      "total": 1313,
+      "total": 1321,
       "byJob": [
         {
           "jobId": "2b670683-2870-44e5-862a-c399766d383c",
@@ -5815,7 +5816,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 674,
+          "total": 682,
           "offer": 1,
           "hired": 1
         },
@@ -5954,7 +5955,7 @@
         "Referral": 16,
         "Other": 1,
         "MyGreenhouse": 4,
-        "Inbound": 70,
+        "Inbound": 78,
         "Career Site": 1,
         "Job Portal": 3
       },
@@ -5976,18 +5977,20 @@
         },
         "appReview": {
           "2026-07-30": 879,
-          "2026-08-05": 15,
+          "2026-08-05": 18,
           "2026-08-02": 8,
-          "2026-08-08": 5,
-          "2026-08-06": 7,
-          "2026-07-23": 1,
+          "2026-08-08": 4,
+          "2026-08-06": 9,
+          "2026-07-25": 1,
           "2026-07-27": 10,
           "2026-07-28": 10,
           "2026-07-29": 1,
           "2026-07-31": 1,
           "2026-08-01": 2,
           "2026-08-03": 2,
-          "2026-08-04": 4
+          "2026-08-04": 4,
+          "2026-08-07": 1,
+          "2026-08-09": 1
         },
         "r5": {
           "2026-07-30": 1
@@ -6020,13 +6023,13 @@
     },
     {
       "name": "G Darshan",
-      "total": 1289,
+      "total": 1292,
       "byJob": [
         {
           "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "total": 1289,
+          "total": 1292,
           "offer": 18,
           "hired": 9
         }
@@ -6039,7 +6042,7 @@
         "Referral": 41,
         "Prospecting": 2,
         "Job Portal": 124,
-        "Inbound": 138,
+        "Inbound": 141,
         "Recruiter Networking": 4
       },
       "daily": {
@@ -6050,7 +6053,7 @@
         "appReview": {
           "2026-08-07": 549,
           "2026-08-08": 28,
-          "2026-08-09": 12
+          "2026-08-09": 15
         },
         "taScreen": {
           "2026-08-07": 224
@@ -6086,7 +6089,7 @@
     },
     {
       "name": "Ankita Kabra",
-      "total": 864,
+      "total": 863,
       "byJob": [
         {
           "jobId": "fc3105d6-731f-4653-a0b5-16a8ac8efda2",
@@ -6148,7 +6151,7 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 3,
+          "total": 2,
           "offer": 0,
           "hired": 0
         },
@@ -6235,7 +6238,7 @@
       ],
       "sources": {
         "Company marketing": 646,
-        "Third-party boards": 186,
+        "Third-party boards": 185,
         "Referral": 13,
         "MyGreenhouse": 6,
         "Agencies": 6,
@@ -6252,7 +6255,7 @@
         },
         "r1": {
           "2026-07-30": 17,
-          "2026-08-05": 3
+          "2026-08-05": 2
         },
         "docSub": {
           "2026-07-30": 2
@@ -6267,7 +6270,7 @@
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 20,
+      "r1": 19,
       "r2": 0,
       "r3": 2,
       "r4": 0,
@@ -6280,14 +6283,14 @@
     },
     {
       "name": "Aditya Singh",
-      "total": 534,
+      "total": 535,
       "byJob": [
         {
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
           "total": 409,
-          "offer": 34,
+          "offer": 33,
           "hired": 15
         },
         {
@@ -6358,9 +6361,9 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 2,
-          "offer": 1,
-          "hired": 0
+          "total": 3,
+          "offer": 2,
+          "hired": 1
         }
       ],
       "sources": {
@@ -6369,24 +6372,25 @@
         "Third-party boards": 173,
         "Prospecting": 23,
         "MyGreenhouse": 5,
-        "Inbound": 1,
-        "Juicebox": 2
+        "Inbound": 2,
+        "Job Portal": 1,
+        "Juicebox": 1
       },
       "daily": {
         "appReview": {
           "2026-08-01": 261,
-          "2026-07-30": 15
+          "2026-07-30": 15,
+          "2026-08-05": 1
         },
         "offer": {
-          "2026-07-30": 27,
-          "2026-08-07": 1
+          "2026-07-30": 27
         },
         "r1": {
           "2026-07-30": 4
         },
         "taScreen": {
           "2026-07-30": 26,
-          "2026-08-04": 1
+          "2026-07-28": 1
         }
       },
       "ta": 27,
@@ -6398,7 +6402,7 @@
       "r4": 0,
       "r5": 0,
       "offer": 46,
-      "hired": 18,
+      "hired": 19,
       "offeredReal": 20,
       "joiningPending": 0,
       "accepted": 19
@@ -7045,13 +7049,13 @@
     },
     {
       "name": "Gopu Nair V",
-      "total": 245,
+      "total": 248,
       "byJob": [
         {
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Assistant Manager - US HR and Payroll",
           "department": "Human Resource",
-          "total": 218,
+          "total": 221,
           "offer": 0,
           "hired": 0
         },
@@ -7065,10 +7069,10 @@
         }
       ],
       "sources": {
-        "Company marketing": 53,
-        "Third-party boards": 149,
+        "Company marketing": 54,
+        "Third-party boards": 152,
         "MyGreenhouse": 3,
-        "Job Portal": 22,
+        "Job Portal": 21,
         "Inbound": 6,
         "Juicebox": 1,
         "Referral": 3,
@@ -7077,11 +7081,11 @@
       },
       "daily": {
         "appReview": {
-          "2026-08-07": 180,
+          "2026-08-07": 191,
           "2026-07-30": 5
         },
         "taScreen": {
-          "2026-08-07": 5,
+          "2026-08-07": 4,
           "2026-07-30": 2,
           "2026-07-31": 1
         },
@@ -7095,15 +7099,17 @@
           "2026-07-30": 1
         },
         "r2": {
-          "2026-08-07": 1,
           "2026-08-03": 1
+        },
+        "r1": {
+          "2026-08-07": 2
         }
       },
-      "ta": 8,
+      "ta": 7,
       "hm": 0,
       "oa": 0,
-      "r1": 0,
-      "r2": 2,
+      "r1": 2,
+      "r2": 1,
       "r3": 1,
       "r4": 0,
       "r5": 1,
@@ -7215,7 +7221,7 @@
     },
     {
       "name": "Astha Thakur",
-      "total": 239,
+      "total": 240,
       "byJob": [
         {
           "jobId": "39b328eb-b0b2-434c-89fd-2a75de973ba0",
@@ -7253,7 +7259,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 31,
+          "total": 32,
           "offer": 0,
           "hired": 0
         }
@@ -7261,7 +7267,7 @@
       "sources": {
         "Referral": 4,
         "Third-party boards": 204,
-        "Inbound": 31
+        "Inbound": 32
       },
       "daily": {
         "taScreen": {
@@ -7269,10 +7275,12 @@
         },
         "appReview": {
           "2026-07-30": 1,
+          "2026-08-04": 3,
+          "2026-07-23": 1,
           "2026-08-01": 1,
-          "2026-08-05": 20,
-          "2026-08-06": 7,
-          "2026-08-08": 1,
+          "2026-08-05": 16,
+          "2026-08-06": 5,
+          "2026-08-08": 3,
           "2026-08-09": 2
         }
       },
@@ -7292,7 +7300,7 @@
     },
     {
       "name": "Ritika Bhasin",
-      "total": 210,
+      "total": 209,
       "byJob": [
         {
           "jobId": "7cecc40d-8ee8-4aab-b540-3cec0481dfb4",
@@ -7307,7 +7315,7 @@
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
           "total": 93,
-          "offer": 23,
+          "offer": 24,
           "hired": 7
         },
         {
@@ -7394,9 +7402,9 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 15,
-          "offer": 9,
-          "hired": 1
+          "total": 14,
+          "offer": 8,
+          "hired": 0
         }
       ],
       "sources": {
@@ -7405,9 +7413,9 @@
         "MyGreenhouse": 2,
         "Referral": 1,
         "Prospecting": 2,
-        "Juicebox": 9,
-        "Inbound": 26,
-        "Job Portal": 14
+        "Juicebox": 10,
+        "Inbound": 25,
+        "Job Portal": 13
       },
       "daily": {
         "appReview": {
@@ -7416,7 +7424,6 @@
           "2026-08-01": 7,
           "2026-08-06": 1,
           "2026-08-04": 1,
-          "2026-08-05": 1,
           "2026-08-07": 1
         },
         "r1": {
@@ -7428,7 +7435,7 @@
         },
         "offer": {
           "2026-07-30": 14,
-          "2026-08-07": 2,
+          "2026-08-07": 3,
           "2026-07-29": 2,
           "2026-08-06": 1,
           "2026-07-25": 1,
@@ -7439,9 +7446,9 @@
         },
         "taScreen": {
           "2026-07-30": 23,
-          "2026-07-28": 1,
           "2026-08-03": 1,
           "2026-08-07": 4,
+          "2026-08-04": 1,
           "2026-08-05": 1,
           "2026-08-08": 1
         },
@@ -7459,7 +7466,7 @@
       "r4": 0,
       "r5": 0,
       "offer": 44,
-      "hired": 19,
+      "hired": 18,
       "offeredReal": 26,
       "joiningPending": 0,
       "accepted": 26
@@ -7680,7 +7687,7 @@
     },
     {
       "name": "Mashika De Almeida",
-      "total": 76,
+      "total": 79,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -7710,7 +7717,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 2,
+          "total": 1,
           "offer": 0,
           "hired": 0
         },
@@ -7761,35 +7768,43 @@
           "total": 1,
           "offer": 1,
           "hired": 1
+        },
+        {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 4,
+          "offer": 0,
+          "hired": 0
         }
       ],
       "sources": {
-        "Third-party boards": 40,
+        "Third-party boards": 43,
         "Agencies": 8,
         "Other": 2,
         "MyGreenhouse": 4,
         "Company marketing": 20,
-        "Referral": 1,
-        "Inbound": 1
+        "Referral": 2
       },
       "daily": {
         "r2": {
           "2026-07-30": 1
         },
         "r1": {
-          "2026-07-30": 1
+          "2026-07-30": 1,
+          "2026-08-05": 2
         },
-        "appReview": {
-          "2026-07-30": 1
+        "r4": {
+          "2026-08-05": 2
         }
       },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 1,
+      "r1": 3,
       "r2": 1,
       "r3": 0,
-      "r4": 0,
+      "r4": 2,
       "r5": 0,
       "offer": 1,
       "hired": 1,
@@ -7827,9 +7842,9 @@
         }
       ],
       "sources": {
-        "Third-party boards": 31,
+        "Third-party boards": 32,
         "Referral": 1,
-        "Job Portal": 2
+        "Job Portal": 1
       },
       "daily": {
         "docSub": {
@@ -9206,7 +9221,7 @@
     {
       "name": "Inbound",
       "type": "Inbound",
-      "candidates": 996,
+      "candidates": 1011,
       "hires": 0
     },
     {
@@ -9549,7 +9564,7 @@
     },
     "2026-Q3": {
       "funnel": {
-        "applied": 1867,
+        "applied": 1882,
         "screened": 278,
         "interviewed": 227,
         "offered": 73,
@@ -9559,26 +9574,26 @@
         {
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "applied": 844,
+          "applied": 852,
           "hired": 0
         },
         {
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "applied": 325,
+          "applied": 328,
           "hired": 3
+        },
+        {
+          "title": "Manager - Sales (US)",
+          "department": "US Business",
+          "applied": 109,
+          "hired": 0
         },
         {
           "title": "Program Advisor - India",
           "department": "Business - India",
           "applied": 106,
           "hired": 10
-        },
-        {
-          "title": "Manager - Sales (US)",
-          "department": "US Business",
-          "applied": 106,
-          "hired": 0
         },
         {
           "title": "Intern, Talent Acquisition",
@@ -9601,7 +9616,7 @@
         {
           "title": "Senior Manager - Performance Marketing",
           "department": "Marketing",
-          "applied": 36,
+          "applied": 37,
           "hired": 0
         },
         {
@@ -9620,7 +9635,7 @@
       "sources": [
         {
           "name": "Inbound",
-          "candidates": 993,
+          "candidates": 1008,
           "hires": 0
         },
         {
