@@ -154,7 +154,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="eff-panel" data-panel="screening" style="display:none">
-      <p class="sub-note"><strong>Pod-level</strong> Added = reached the stage; Cleared = transitioned out (reached the next stage), summed across pod members. HM &amp; OA are live (interim clear-rate); R1-cleared and the per-Department/Job split need a job×stage rollup (pipeline).</p>
+      <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Pod → Department → Job</strong> for HM / OA / R1. Falls back to a pod-level snapshot until the accumulator has run.</p>
       <div class="eff-podcharts" id="effScreenPodCharts"></div>
       <div class="scroll-table"><table>
         <thead>
@@ -359,29 +359,38 @@ export function initEfficiencyFilters(data) {
     if (body) { body.innerHTML = html || `<tr><td colspan="${ncol + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods in this group.</td></tr>`; wireTreePath(body, expandAll()); }
   }
 
-  // Pod-level Added/Cleared per stage (summed pod members; snapshot approximation like the Recruiter tab).
-  // Dept/Job per-stage detail needs a job×stage rollup the pipeline doesn't emit → pending child row.
+  // Screening Added(reached)/Cleared(left)/% for HM / OA / R1. LIVE Pod→Dept→Job from throughputByJob when
+  // present; else pod-level current-stage approximation (R1-cleared unknown).
   function renderScreening() {
     const q = selQuarter();
     const pods = visiblePods();
     const body = document.getElementById('effScreenBody'); if (!body) return;
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
     const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
-    const scells = (hm, oa, r1) => {
-      const hmC = Math.min(hm, oa), oaC = Math.min(oa, r1);
-      return `<td>${hm}</td><td>${hmC}</td><td class="${cls(pc(hmC, hm))}">${pc(hmC, hm)}%</td>`
-        + `<td>${oa}</td><td>${oaC}</td><td class="${cls(pc(oaC, oa))}">${pc(oaC, oa)}%</td>`
-        + `<td>${r1}</td><td>${DASH}</td><td>${DASH}</td>`;
-    };
+    const SK = ['hmReview', 'oa', 'r1'];
     let html = '';
-    pods.forEach((pod, pi) => {
-      const mem = podMembers(pod, q);
-      const hm = mem.reduce((s, r) => s + (r.hm || 0), 0), oa = mem.reduce((s, r) => s + (r.oa || 0), 0), r1 = mem.reduce((s, r) => s + (r.r1 || 0), 0);
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}</td>${scells(hm, oa, r1)}</tr>`;
-      html += `<tr data-path="${pi}-0" style="display:none">
-        <td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job — per-stage detail needs the job×stage rollup (pipeline)</td>${dashTds(9)}</tr>`;
-    });
+    if (tpByJob) {
+      const jobTriple = (jid) => { const t = tpByJob[jid] || {}; return SK.map(k => { const c = t[k] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; }); };
+      const cells = (tr) => tr.map(s => `<td>${s.r}</td><td>${s.c}</td><td class="${cls(pc(s.c, s.r))}">${pc(s.c, s.r)}%</td>`).join('');
+      const sumTr = (arrs) => SK.map((_, i) => arrs.reduce((a, t) => ({ r: a.r + t[i].r, c: a.c + t[i].c }), { r: 0, c: 0 }));
+      pods.forEach((pod, pi) => {
+        const podArrs = [];
+        const deptRows = podDeptJobs(pod, q).map(({ dept, jobs: js }) => { const jtr = js.map(j => jobTriple(j.jid)); jtr.forEach(a => podArrs.push(a)); return { dept, js, jtr, deptSum: sumTr(jtr) }; });
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${cells(sumTr(podArrs))}</tr>`;
+        deptRows.forEach(({ dept, js, jtr, deptSum }, di) => {
+          html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(deptSum)}</tr>`;
+          js.forEach((j, ji) => { html += `<tr data-path="${pi}-${di}-${ji}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${j.title}</td>${cells(jtr[ji])}</tr>`; });
+        });
+      });
+    } else {
+      const scells = (hm, oa, r1) => { const hmC = Math.min(hm, oa), oaC = Math.min(oa, r1); return `<td>${hm}</td><td>${hmC}</td><td class="${cls(pc(hmC, hm))}">${pc(hmC, hm)}%</td><td>${oa}</td><td>${oaC}</td><td class="${cls(pc(oaC, oa))}">${pc(oaC, oa)}%</td><td>${r1}</td><td>${DASH}</td><td>${DASH}</td>`; };
+      pods.forEach((pod, pi) => {
+        const mem = podMembers(pod, q);
+        const hm = mem.reduce((s, r) => s + (r.hm || 0), 0), oa = mem.reduce((s, r) => s + (r.oa || 0), 0), r1 = mem.reduce((s, r) => s + (r.r1 || 0), 0);
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${scells(hm, oa, r1)}</tr>`;
+        html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job — awaiting the stage-history accumulator</td>${dashTds(9)}</tr>`;
+      });
+    }
     body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
   }
@@ -615,12 +624,22 @@ export function initEfficiencyFilters(data) {
     return { _h: 140, type: 'bar', data: { labels, datasets: [{ label: 'Submissions', data: per.slice().reverse(), backgroundColor: C.blue, borderRadius: 2, barPercentage: 0.9 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }, y: { ...gridY } } } };
   };
   const screenPodCfg = (pod) => {
-    const q = selQuarter(), mem = podMembers(pod, q);
-    const hm = mem.reduce((s, r) => s + (r.hm || 0), 0), oa = mem.reduce((s, r) => s + (r.oa || 0), 0), r1 = mem.reduce((s, r) => s + (r.r1 || 0), 0);
-    if (hm + oa + r1 === 0) return null;
+    const q = selQuarter();
+    let hmR, hmC, oaR, oaC, r1R, r1C;
+    if (tpByJob) {
+      const jids = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => j.jid);
+      const agg = (k) => jids.reduce((a, jid) => { const c = (tpByJob[jid] || {})[k] || { reached: 0, cleared: 0 }; return { r: a.r + c.reached, c: a.c + c.cleared }; }, { r: 0, c: 0 });
+      const hm = agg('hmReview'), oa = agg('oa'), r1 = agg('r1');
+      hmR = hm.r; hmC = hm.c; oaR = oa.r; oaC = oa.c; r1R = r1.r; r1C = r1.c;
+    } else {
+      const mem = podMembers(pod, q);
+      hmR = mem.reduce((s, r) => s + (r.hm || 0), 0); oaR = mem.reduce((s, r) => s + (r.oa || 0), 0); r1R = mem.reduce((s, r) => s + (r.r1 || 0), 0);
+      hmC = Math.min(hmR, oaR); oaC = Math.min(oaR, r1R); r1C = 0;
+    }
+    if (hmR + oaR + r1R === 0) return null;
     return { _h: 150, type: 'bar', data: { labels: ['HM', 'OA', 'R1'], datasets: [
-      { label: 'Added', data: [hm, oa, r1], backgroundColor: C.blue, borderRadius: 2 },
-      { label: 'Cleared', data: [Math.min(hm, oa), Math.min(oa, r1), 0], backgroundColor: C.green, borderRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { ...gridY } } } };
+      { label: 'Added', data: [hmR, oaR, r1R], backgroundColor: C.blue, borderRadius: 2 },
+      { label: 'Cleared', data: [hmC, oaC, r1C], backgroundColor: C.green, borderRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { ...gridY } } } };
   };
 
   function renderFulfilCharts(pods, q) {
