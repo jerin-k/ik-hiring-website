@@ -17,7 +17,6 @@ const NAV_ITEMS = [
   { id: 'hm-report', title: 'Hiring Manager' },
   { id: 'recruiter', title: 'Recruiter Efficiency' },
   { id: 'efficiency', title: 'Overall Efficiency' },
-  { id: 'sourcing', title: 'Sourcing Mix' },
   { id: 'interviewer', title: 'Interviewer Efficiency' },
   { id: 'admin', title: 'Admin' },
 ];
