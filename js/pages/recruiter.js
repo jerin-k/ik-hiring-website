@@ -233,7 +233,7 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="rec-panel" data-panel="screening" style="display:none">
-      <p class="sub-note">Added = reached the stage. Cleared = transitioned <em>out</em> (reached the next stage). HM &amp; OA are live from the aggregate; <strong>R1 cleared = reached R2</strong> and the Job-level branch need the recruiter×job×stage rollup (pipeline redesign).</p>
+      <p class="sub-note">Added = reached the stage, Cleared = transitioned <em>out</em> (reached the next stage) — from real stage history. HM / OA / R1 are all live; the per-job branch needs per-recruiter×job stage history.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recScreenChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead>
@@ -302,6 +302,14 @@ export function initRecruiterFilters(data) {
   // title/department when the job isn't in jobs[] — e.g. archived with no current apps).
   const jobById = {}; (data.jobs || []).forEach(j => { jobById[j.id] = j; });
   const jobMeta = (bj) => { const j = jobById[(bj.jobId || '').slice(0, 8)]; return { department: (j && j.department) || bj.department, title: (j && j.title) || bj.title, level: j && j.level, complexity: j && j.complexity }; };
+
+  // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
+  // else the current-stage approximation (R1-cleared unknown → null).
+  const screenTriple = (r) => {
+    const tp = data.stageRollups && data.stageRollups.throughputByRecruiter;
+    if (tp) { const t = tp[r.name] || {}; return { hm: t.hmReview || { reached: 0, cleared: 0 }, oa: t.oa || { reached: 0, cleared: 0 }, r1: t.r1 || { reached: 0, cleared: 0 } }; }
+    return { hm: { reached: r.hm || 0, cleared: Math.min(r.hm || 0, r.oa || 0) }, oa: { reached: r.oa || 0, cleared: Math.min(r.oa || 0, r.r1 || 0) }, r1: { reached: r.r1 || 0, cleared: null } };
+  };
   let lastGroups = [], lastRecs = [], activeTab = 'velocity';
 
   let msPod = null, msRec = null, msJob = null;
@@ -350,28 +358,28 @@ export function initRecruiterFilters(data) {
     // ===== Submission Velocity (scaffold — own POD/date filters; values pending pipeline) =====
     renderVelocity();
 
-    // ===== Screening Efficiency =====
-    // Added = reached stage; Cleared = reached next stage. HM->OA, OA->R1 live; R1->R2 pending (no r2 per recruiter).
-    const screenCells = (o) => {
-      const hmA = o.hm || 0, hmC = o.oa || 0, oaA = o.oa || 0, oaC = o.r1 || 0, r1A = o.r1 || 0;
-      return `<td>${hmA}</td><td>${hmC}</td><td class="${pctClass(pct(hmC, hmA))}">${pct(hmC, hmA)}%</td>
-        <td>${oaA}</td><td>${oaC}</td><td class="${pctClass(pct(oaC, oaA))}">${pct(oaC, oaA)}%</td>
-        <td>${r1A}</td><td>${DASH}</td><td>${DASH}</td>`;
+    // ===== Screening Efficiency — Added = reached the stage, Cleared = left it (reached next stage) =====
+    const cell3 = (s) => { const a = s.reached, c = s.cleared; return `<td>${a}</td><td>${c == null ? DASH : c}</td><td class="${c == null ? 'zero' : pctClass(pct(c, a))}">${c == null ? DASH : pct(c, a) + '%'}</td>`; };
+    const screenCells = (t) => cell3(t.hm) + cell3(t.oa) + cell3(t.r1);
+    const hasTp = !!(data.stageRollups && data.stageRollups.throughputByRecruiter);
+    const sumTriple = (list) => {
+      const acc = { hm: { reached: 0, cleared: 0 }, oa: { reached: 0, cleared: 0 }, r1: { reached: 0, cleared: hasTp ? 0 : null } };
+      list.forEach(r => { const t = screenTriple(r); ['hm', 'oa', 'r1'].forEach(k => { acc[k].reached += t[k].reached; if (t[k].cleared != null && acc[k].cleared != null) acc[k].cleared += t[k].cleared; }); });
+      return acc;
     };
-    const sumStages = (list) => list.reduce((a, r) => ({ hm: a.hm + (r.hm || 0), oa: a.oa + (r.oa || 0), r1: a.r1 + (r.r1 || 0) }), { hm: 0, oa: 0, r1: 0 });
     const dashScreen = `<td>${DASH}</td>`.repeat(9);
     const screenBody = document.getElementById('recScreenBody');
     if (screenBody) {
       let html = '';
       groups.forEach((G, pi) => {
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${screenCells(sumStages(G.recs))}</tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${screenCells(sumTriple(G.recs))}</tr>`;
         G.recs.forEach((r, ri) => {
           const rk = `s${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${screenCells(r)}</tr>`;
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${screenCells(screenTriple(r))}</tr>`;
           html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — pending recruiter×job rollup</td>${dashScreen}</tr>`;
+            <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — needs per-recruiter×job stage history</td>${dashScreen}</tr>`;
         });
       });
       screenBody.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
@@ -610,16 +618,17 @@ export function initRecruiterFilters(data) {
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
     if (recScreenChart) recScreenChart.destroy();
-    // Y = recruiter, X = candidate count. One bar per stage (HM / OA / R1): full length = Added (in),
-    // dark segment = Cleared (out), light remainder = didn't clear. Roles enter at different first
-    // stages, so Added is a real reached-count; Cleared uses the interim approximation and R1-Cleared
-    // is pending until the recruiter×job×stage rollup. Data labels: total at bar end, Cleared on the dark part.
-    const recs = [...lastRecs].sort((a, b) => ((b.hm || 0) + (b.oa || 0) + (b.r1 || 0)) - ((a.hm || 0) + (a.oa || 0) + (a.r1 || 0)));
-    const A = { hm: recs.map(r => r.hm || 0), oa: recs.map(r => r.oa || 0), r1: recs.map(r => r.r1 || 0) };
-    const clHM = recs.map(r => Math.min(r.hm || 0, r.oa || 0));           // cleared HM ≈ reached OA (clamped)
-    const remHM = recs.map((r, i) => Math.max(0, (r.hm || 0) - clHM[i]));
-    const clOA = recs.map(r => Math.min(r.oa || 0, r.r1 || 0));           // cleared OA ≈ reached R1 (clamped)
-    const remOA = recs.map((r, i) => Math.max(0, (r.oa || 0) - clOA[i]));
+    // Y = recruiter, X = candidate count. One bar per stage (HM / OA / R1): full length = Added (reached),
+    // dark segment = Cleared (left the stage), light remainder = still there. Real reached/cleared from the
+    // stage-history rollups (falls back to the current-stage approximation with unknown R1-cleared).
+    const T = r => screenTriple(r);
+    const sumR = r => T(r).hm.reached + T(r).oa.reached + T(r).r1.reached;
+    const recs = [...lastRecs].sort((a, b) => sumR(b) - sumR(a));
+    const A = { hm: recs.map(r => T(r).hm.reached), oa: recs.map(r => T(r).oa.reached), r1: recs.map(r => T(r).r1.reached) };
+    const clHM = recs.map(r => T(r).hm.cleared || 0);
+    const remHM = recs.map((r, i) => Math.max(0, A.hm[i] - clHM[i]));
+    const clOA = recs.map(r => T(r).oa.cleared || 0);
+    const remOA = recs.map((r, i) => Math.max(0, A.oa[i] - clOA[i]));
     const h = Math.max(240, recs.length * 48 + 80);
     if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
