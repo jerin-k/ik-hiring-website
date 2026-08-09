@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { resolveDeptTeam } from '../dept-map.js';
+import { scoreForRole } from '../score-model.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Pod → Department → Job; charts are one-per-pod with Y = Job. Pods map to
@@ -92,7 +93,7 @@ export function renderEfficiency(data) {
     </style>
 
     <h2 class="section-title">Overall Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>, charts are one per pod (Y = Job). Year/Quarter drives the quarter (pod grouping + capacity). Attributing jobs to a pod needs the recruiter×job rollup (pipeline), so metric cells show <span class="zero">—</span> until then; Fulfilment pod targets and the org-wide Sourcing chart are live.</p>
+    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong> and <strong>Joining Conversion</strong> are live to the job level; <strong>Velocity / Screening / Sourcing</strong> are live at pod level (per-job detail needs a job×stage rollup). Year/Quarter drives pod grouping + capacity.</p>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Pod</span><div class="ms" id="effMsPod"></div></div>
@@ -117,7 +118,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
-      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>, the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = summed pod capacity</strong> (per quarter, from Metric Configuration) — this pod total is live; per-job Assigned/Offered/Hired/Gap need the pipeline.</p>
+      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>, the <strong>Sales</strong> pod on <strong>Hires</strong>. Assigned / Offered / Hired HC &amp; <strong>Score</strong> are live to the job level (attributed via the recruiters who worked each job). <strong>Target = summed pod capacity</strong> (per quarter, Metric Config); <strong>Gap = max(0, Target − Achieved)</strong> — 0 until capacities are set. Joining Pending is a pod-level count.</p>
       <div class="eff-podcharts" id="effFulfilPodCharts"></div>
       <div class="chart-wrap" style="max-width:520px;margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
 
@@ -142,7 +143,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Submission Velocity -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
-      <p class="sub-note" style="color:var(--orange)">Structure preview — Pod → Department → Job → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Per-day / per-stage cells need the job×stage×date rollup (pipeline redesign).</p>
+      <p class="sub-note"><strong>Pod-level</strong> daily submissions (OA / HM Screening / R1) across the last 30 days of the selected range, summed across pod members. <span style="color:var(--muted)">Bucketed by last-activity date (snapshot approximation). Department → Job → Stage detail needs a job×stage×date rollup the pipeline doesn't emit.</span></p>
       <div class="eff-podcharts" id="effVelPodCharts"></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
@@ -152,7 +153,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="eff-panel" data-panel="screening" style="display:none">
-      <p class="sub-note">Added = reached the stage; Cleared = transitioned out (reached the next stage). Per Department/Job values need the job×stage rollup (pipeline).</p>
+      <p class="sub-note"><strong>Pod-level</strong> Added = reached the stage; Cleared = transitioned out (reached the next stage), summed across pod members. HM &amp; OA are live (interim clear-rate); R1-cleared and the per-Department/Job split need a job×stage rollup (pipeline).</p>
       <div class="eff-podcharts" id="effScreenPodCharts"></div>
       <div class="scroll-table"><table>
         <thead>
@@ -179,7 +180,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Joining Conversion -->
     <div class="eff-panel" data-panel="joining" style="display:none">
-      <p class="sub-note">Offered → Hired, by pod. Per Department/Job values need the job×stage rollup (pipeline).</p>
+      <p class="sub-note"><strong>Offered → Hired</strong>, live to the job level (Pod → Department → Job), attributed via the recruiters who worked each job.</p>
       <div class="eff-podcharts" id="effJoinPodCharts"></div>
       <div class="scroll-table"><table>
         <thead><tr><th style="min-width:260px">Pod / Department / Job</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
@@ -189,11 +190,11 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note"><strong>Pod → Department → Category → Source.</strong> Category = Ashby <code>source_type</code> (Sourced / Referral / Inbound / Internal). The <strong>org-wide channel mix below is live</strong> (from the source rollup); the per-pod / per-department split needs the pipeline.</p>
+      <p class="sub-note"><strong>Pod → Source</strong> (Ashby <code>source_type</code>), summed across pod members — sources are a recruiter attribute, so the org-wide chart plus the pod→source table are the honest grain; a department split needs per-job source from the pipeline.</p>
       <h3 class="subsection-title">Org-wide Channel Mix</h3>
       <div class="chart-wrap" style="max-width:400px;margin:0 auto 20px"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:340px">Pod / Department / Category / Source</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:340px">Pod / Source</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
     </div>
@@ -218,6 +219,46 @@ export function initEfficiencyFilters(data) {
   // Recruiters mapped to a pod for the selected quarter — used only for the live capacity sums.
   function podMembers(pod, q) { return recruiters.filter(r => podOf(r.name, q) === pod); }
   function podCapacity(pod, q) { return podMembers(pod, q).reduce((s, r) => s + (capacityOf(r.name, q) || 0), 0); }
+
+  // jobs[] keyed by 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
+  const jobById = {}; jobs.forEach(j => { jobById[j.id] = j; });
+  const jobMeta = (bj) => { const j = jobById[(bj.jobId || '').slice(0, 8)]; return { department: (j && j.department) || bj.department, title: (j && j.title) || bj.title, level: j && j.level, complexity: j && j.complexity }; };
+
+  // Attribute every recruiter's byJob activity to their Pod → (parent) Department → Job for the quarter.
+  // A job worked by recruiters across pods is split by each recruiter's own contribution (their offers/hires
+  // land in their pod). Memoised per quarter. This is the backbone that makes the pod→dept→job cells real.
+  let _treeQ = null, _tree = null;
+  function getTree(q) {
+    if (_treeQ === q && _tree) return _tree;
+    const tree = {};
+    recruiters.forEach(r => {
+      const pod = podOf(r.name, q);
+      (r.byJob || []).forEach(bj => {
+        const m = jobMeta(bj);
+        const dept = resolveDeptTeam(m.department || '').dept || (m.department || 'Unknown');
+        const jid = ((bj.jobId || '').slice(0, 8)) || (m.title || '?');
+        const P = tree[pod] || (tree[pod] = { depts: {} });
+        const D = P.depts[dept] || (P.depts[dept] = { jobs: {} });
+        const J = D.jobs[jid] || (D.jobs[jid] = { title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: scoreForRole(m, q) });
+        J.total += bj.total || 0; J.offer += bj.offer || 0; J.hired += bj.hired || 0;
+      });
+    });
+    _treeQ = q; _tree = tree;
+    return tree;
+  }
+  const selDepts = () => (msDept ? msDept.getSelected() : []);
+  const selJobs = () => (msJob ? msJob.getSelected() : []);
+  // Filtered [{dept, jobs:[...]}] for a pod (honours Department/Job multi-selects), sorted.
+  function podDeptJobs(pod, q) {
+    const P = getTree(q)[pod]; if (!P) return [];
+    const dsel = selDepts(), jsel = selJobs(); const out = [];
+    Object.keys(P.depts).sort((a, b) => a.localeCompare(b)).forEach(dept => {
+      if (dsel.length && !dsel.includes(dept)) return;
+      const arr = Object.values(P.depts[dept].jobs).filter(j => !jsel.length || jsel.includes(j.title)).sort((a, b) => (b.total || 0) - (a.total || 0));
+      if (arr.length) out.push({ dept, jobs: arr });
+    });
+    return out;
+  }
 
   // Which pods are visible given the Pod multi-select ([] = all).
   function visiblePods() {
@@ -263,51 +304,106 @@ export function initEfficiencyFilters(data) {
   function renderFulfilment() {
     const q = selQuarter();
     const pods = visiblePods();
-    // Non-Sales (offers, 8 metric cols) and Sales (hires, 10 metric cols).
-    const offerCells = (pod) => {
-      const cap = podCapacity(pod, q);
-      return `<td>${DASH}</td><td>${DASH}</td><td style="font-weight:600">${cap || DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td>`;
-    };
-    const hireCells = (pod) => {
-      const cap = podCapacity(pod, q);
-      return `<td>${DASH}</td><td>${DASH}</td><td style="font-weight:600">${cap || DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td><td>${DASH}</td>`;
-    };
-    const nonSales = pods.filter(p => !isSalesPod(p));
-    const sales = pods.filter(p => isSalesPod(p));
-    const grand = (list, cols, targetCol) => {
-      const total = list.reduce((s, p) => s + podCapacity(p, q), 0);
-      const before = targetCol - 1; // metric cells before Target
-      return `<tr style="background:var(--accent-light);font-weight:700"><td>Overall Total needed</td>${dashTds(before)}<td>${total || DASH}</td>${dashTds(cols - targetCol)}</tr>`;
-    };
-    // Non-Sales table
-    renderPodTable('effFulfilOfferBody', 8, offerCells, nonSales, grand(nonSales, 8, 3));
-    // Sales table
-    renderPodTable('effFulfilHireBody', 10, hireCells, sales, grand(sales, 10, 3));
+    fulfilTree(pods.filter(p => !isSalesPod(p)), 'offer');
+    fulfilTree(pods.filter(p => isSalesPod(p)), 'hire');
     renderFulfilCharts(pods, q);
   }
 
-  // Variant of podSkeletonBody scoped to a specific pod list (Fulfilment splits Sales/Non-Sales).
-  function renderPodTable(tbodyId, metricCols, cellsFn, podList, grandRow) {
-    const body = document.getElementById(tbodyId);
-    if (!body) return;
-    let html = '';
+  // Pod → Department → Job fulfilment table (LIVE). Assigned/Offered/Hired HC+Score from the attribution tree
+  // × the score engine; Target = summed pod capacity (per quarter, Metric Config); Gap = max(0, Target −
+  // Achieved), Achieved = Offered Score (Non-Sales) / Hired Score (Sales). Joining Pending is a pod-level count
+  // (from the offer pass, per pod member) — per-dept/job Score is unattributable → —.
+  function fulfilTree(podList, mode) {
+    const q = selQuarter();
+    const isSales = mode === 'hire';
+    const ncol = isSales ? 10 : 8;
+    const c = x => (x == null ? DASH : x);
+    const cells = (v, bold) => {
+      const w = bold ? ' style="font-weight:600"' : '';
+      let s = `<td${w}>${c(v.aHC)}</td><td>${c(v.aSc)}</td><td>${c(v.tSc)}</td><td${w}>${c(v.oHC)}</td><td>${c(v.oSc)}</td><td>${c(v.jpHC)}</td><td>${c(v.jpSc)}</td>`;
+      if (isSales) s += `<td${w}>${c(v.hHC)}</td><td>${c(v.hSc)}</td>`;
+      s += `<td>${c(v.gSc)}</td>`;
+      return s;
+    };
+    const agg = (jobs) => jobs.reduce((a, j) => { a.aHC += 1; a.aSc += j.score; a.oHC += j.offer; a.oSc += j.offer * j.score; a.hHC += j.hired; a.hSc += j.hired * j.score; return a; }, { aHC: 0, aSc: 0, oHC: 0, oSc: 0, hHC: 0, hSc: 0 });
+    let html = '', grandTarget = 0;
     podList.forEach((pod, pi) => {
+      const djs = podDeptJobs(pod, q);
+      const pa = agg(djs.flatMap(d => d.jobs));
+      const cap = podCapacity(pod, q); grandTarget += cap;
+      const jp = podMembers(pod, q).reduce((s, r) => s + (r.joiningPending || 0), 0);
+      const ach = isSales ? pa.hSc : pa.oSc;
+      const podRow = { aHC: pa.aHC, aSc: pa.aSc, tSc: cap, oHC: pa.oHC, oSc: pa.oSc, jpHC: jp, jpSc: null, hHC: pa.hHC, hSc: pa.hSc, gSc: Math.max(0, cap - ach) };
       html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">Total of Pod</span></td>${cellsFn(pod)}</tr>`;
-      html += `<tr data-path="${pi}-0" style="display:none">
-        <td style="padding-left:32px;color:var(--muted);font-style:italic">${PENDING}</td>${dashTds(metricCols)}</tr>`;
+        <td style="font-weight:600">${CARET}${pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">Total of Pod</span></td>${cells(podRow, true)}</tr>`;
+      djs.forEach(({ dept, jobs }, di) => {
+        const da = agg(jobs);
+        const deptRow = { aHC: da.aHC, aSc: da.aSc, tSc: null, oHC: da.oHC, oSc: da.oSc, jpHC: null, jpSc: null, hHC: da.hHC, hSc: da.hSc, gSc: null };
+        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+          <td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length}</span></td>${cells(deptRow, false)}</tr>`;
+        jobs.forEach((j, ji) => {
+          const jv = { aHC: 1, aSc: j.score, tSc: null, oHC: j.offer, oSc: j.offer * j.score, jpHC: null, jpSc: null, hHC: j.hired, hSc: j.hired * j.score, gSc: null };
+          html += `<tr data-path="${pi}-${di}-${ji}" style="display:none">
+            <td style="padding-left:56px;color:var(--muted)">${j.title}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span></td>${cells(jv, false)}</tr>`;
+        });
+      });
     });
-    if (grandRow) html += grandRow;
-    body.innerHTML = html || `<tr><td colspan="${metricCols + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods in this group.</td></tr>`;
+    html += `<tr style="background:var(--accent-light);font-weight:700"><td>Overall Total needed</td>${dashTds(2)}<td>${grandTarget || DASH}</td>${dashTds(ncol - 3)}</tr>`;
+    const body = document.getElementById(isSales ? 'effFulfilHireBody' : 'effFulfilOfferBody');
+    if (body) { body.innerHTML = html || `<tr><td colspan="${ncol + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods in this group.</td></tr>`; wireTreePath(body, expandAll()); }
+  }
+
+  // Pod-level Added/Cleared per stage (summed pod members; snapshot approximation like the Recruiter tab).
+  // Dept/Job per-stage detail needs a job×stage rollup the pipeline doesn't emit → pending child row.
+  function renderScreening() {
+    const q = selQuarter();
+    const pods = visiblePods();
+    const body = document.getElementById('effScreenBody'); if (!body) return;
+    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
+    const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
+    const scells = (hm, oa, r1) => {
+      const hmC = Math.min(hm, oa), oaC = Math.min(oa, r1);
+      return `<td>${hm}</td><td>${hmC}</td><td class="${cls(pc(hmC, hm))}">${pc(hmC, hm)}%</td>`
+        + `<td>${oa}</td><td>${oaC}</td><td class="${cls(pc(oaC, oa))}">${pc(oaC, oa)}%</td>`
+        + `<td>${r1}</td><td>${DASH}</td><td>${DASH}</td>`;
+    };
+    let html = '';
+    pods.forEach((pod, pi) => {
+      const mem = podMembers(pod, q);
+      const hm = mem.reduce((s, r) => s + (r.hm || 0), 0), oa = mem.reduce((s, r) => s + (r.oa || 0), 0), r1 = mem.reduce((s, r) => s + (r.r1 || 0), 0);
+      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${pod}</td>${scells(hm, oa, r1)}</tr>`;
+      html += `<tr data-path="${pi}-0" style="display:none">
+        <td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job — per-stage detail needs the job×stage rollup (pipeline)</td>${dashTds(9)}</tr>`;
+    });
+    body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
-  function renderScreening() {
-    podSkeletonBody('effScreenBody', 9, () => dashTds(9));
-  }
-
   function renderJoining() {
-    podSkeletonBody('effJoinBody', 3, () => dashTds(3));
+    const q = selQuarter();
+    const pods = visiblePods();
+    const body = document.getElementById('effJoinBody'); if (!body) return;
+    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
+    let html = '';
+    pods.forEach((pod, pi) => {
+      const djs = podDeptJobs(pod, q);
+      const po = djs.reduce((s, d) => s + d.jobs.reduce((a, j) => a + j.offer, 0), 0);
+      const ph = djs.reduce((s, d) => s + d.jobs.reduce((a, j) => a + j.hired, 0), 0);
+      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${pod}</td><td style="font-weight:600">${po || '<span class="zero">0</span>'}</td><td class="${ph > 0 ? 'good' : 'zero'}" style="font-weight:600">${ph}</td><td>${pc(ph, po)}%</td></tr>`;
+      djs.forEach(({ dept, jobs }, di) => {
+        const dpo = jobs.reduce((a, j) => a + j.offer, 0), dph = jobs.reduce((a, j) => a + j.hired, 0);
+        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+          <td style="padding-left:30px;font-weight:500">${CARET}${dept}</td><td>${dpo}</td><td class="${dph > 0 ? 'good' : 'zero'}">${dph}</td><td>${pc(dph, dpo)}%</td></tr>`;
+        jobs.forEach((j, ji) => {
+          html += `<tr data-path="${pi}-${di}-${ji}" style="display:none">
+            <td style="padding-left:56px;color:var(--muted)">${j.title}</td><td>${j.offer}</td><td class="${j.hired > 0 ? 'good' : 'zero'}">${j.hired}</td><td>${pc(j.hired, j.offer)}%</td></tr>`;
+        });
+      });
+    });
+    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    wireTreePath(body, expandAll());
   }
 
   function renderThroughput() {
@@ -349,43 +445,60 @@ export function initEfficiencyFilters(data) {
       toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
     } else { fromEl.value = `${yr}-01-01`; toEl.value = `${yr}-12-31`; }
   }
+  function dkeyEff(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  // Pod-level daily submissions (OA/HM/R1), summed across pod members from recruiters[].daily. Dept/Job
+  // per-day detail needs a job×stage×date rollup the pipeline doesn't emit → pending child row.
   function renderVelocity() {
     const head = document.getElementById('effVelHead');
     const body = document.getElementById('effVelBody');
     if (!body) return;
+    const q = selQuarter();
     const pods = visiblePods();
     const dates = velDates();
+    const dkeys = dates.map(dkeyEff);
     if (head) {
-      let h = '<tr><th style="min-width:260px">Pod / Department / Job / Stage</th><th>Total - 30 days</th>';
+      let h = `<tr><th style="min-width:260px">Pod / Department / Job / Stage</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
-      h += '</tr>';
-      head.innerHTML = h;
+      head.innerHTML = h + '</tr>';
     }
-    const cols = dates.length + 1; // Total-30 + dates
+    const VEL = ['oa', 'hmReview', 'r1'];
+    const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
     let html = '';
     pods.forEach((pod, pi) => {
+      const mem = podMembers(pod, q); const arr = new Array(dkeys.length).fill(0); let tot = 0;
+      mem.forEach(r => VEL.forEach(sk => { const m = (r.daily && r.daily[sk]) || {}; dkeys.forEach((dk, i) => { const v = m[dk] || 0; arr[i] += v; tot += v; }); }));
       html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}</td>${dashTds(cols)}</tr>`;
+        <td style="font-weight:600">${CARET}${pod}</td>${numRow(tot, arr, true)}</tr>`;
       html += `<tr data-path="${pi}-0" style="display:none">
-        <td style="padding-left:32px;color:var(--muted);font-style:italic">${PENDING} → Stage</td>${dashTds(cols)}</tr>`;
+        <td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job → Stage — per-job daily needs the job×stage×date rollup (pipeline)</td>${`<td>${DASH}</td>`.repeat(dkeys.length + 1)}</tr>`;
     });
-    body.innerHTML = html || `<tr><td colspan="${cols + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
-    renderPodChartCards('effVelPodCharts', pods, 'day-wise submissions stacked by day');
+    renderPodCharts('effVelPodCharts', pods, velPodCfg, 'No submissions in range.');
   }
 
   // ===== Sourcing Mix — Pod → Department → Category → Source; org-wide chart is live =====
+  // Pod → Source (source_type), summed across pod members from recruiters[].sources. Sources are a recruiter
+  // attribute (not per-job), so the department split isn't available — Pod → Source is the honest grain here.
   function renderSourcing() {
+    const q = selQuarter();
     const pods = visiblePods();
     const body = document.getElementById('effSourceBody');
     if (body) {
-      const CATS = ['Sourced', 'Referral', 'Inbound', 'Internal'];
+      const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
+      const podSources = (pod) => { const agg = {}; podMembers(pod, q).forEach(r => Object.entries(r.sources || {}).forEach(([s, v]) => agg[s] = (agg[s] || 0) + v)); return agg; };
+      const grand = pods.reduce((s, p) => s + Object.values(podSources(p)).reduce((a, v) => a + v, 0), 0) || 1;
       let html = '';
       pods.forEach((pod, pi) => {
+        const agg = podSources(pod); const ptot = Object.values(agg).reduce((a, v) => a + v, 0);
         html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${pod}</td><td>${DASH}</td><td>${DASH}</td></tr>`;
-        html += `<tr data-path="${pi}-0" style="display:none">
-          <td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Category → Source — pending job→pod attribution (pipeline)</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+          <td style="font-weight:600">${CARET}${pod}</td><td style="font-weight:600">${ptot || '<span class="zero">0</span>'}</td><td>${pc(ptot, grand)}%</td></tr>`;
+        const entries = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+        if (entries.length) {
+          entries.forEach(([src, cnt], si) => { html += `<tr data-path="${pi}-${si}" style="display:none"><td style="padding-left:32px;color:var(--muted)">${src}</td><td>${cnt}</td><td>${pc(cnt, ptot)}%</td></tr>`; });
+        } else {
+          html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+        }
       });
       body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
       wireTreePath(body, expandAll());
@@ -398,14 +511,60 @@ export function initEfficiencyFilters(data) {
   const gridY = { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } };
 
   // Per-pod chart placeholders (Y=Job lights up with the pipeline).
-  function renderPodChartCards(containerId, pods, what) {
+  let podCharts = {};
+  const hbarOpts = (stacked, xtitle) => ({ indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: stacked ? { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } : { display: false } },
+    scales: { x: { ...gridY, stacked, ticks: { font: { size: 10 } }, title: xtitle ? { display: true, text: xtitle, font: { size: 10 }, color: '#64748b' } : undefined }, y: { stacked, grid: { display: false }, ticks: { font: { size: 10 } } } } });
+
+  // One small chart per pod. buildCfg(pod) → a Chart.js config (optional _h = fixed height px) or null (empty).
+  function renderPodCharts(containerId, pods, buildCfg, emptyText) {
     const el = document.getElementById(containerId); if (!el) return;
-    el.innerHTML = pods.map(p => `<div class="eff-podchart"><h5>${p}</h5><p>Y = Job · ${what} — pending job→pod attribution (pipeline).</p></div>`).join('');
+    (podCharts[containerId] || []).forEach(c => { try { c.destroy(); } catch (e) {} }); podCharts[containerId] = [];
+    el.innerHTML = pods.map((p, i) => `<div class="eff-podchart"><h5>${p}</h5><div class="eff-podchart-body" id="${containerId}_b${i}" style="position:relative"><canvas id="${containerId}_${i}"></canvas></div></div>`).join('');
+    pods.forEach((p, i) => {
+      const cfg = buildCfg(p);
+      const body = document.getElementById(`${containerId}_b${i}`), ctx = document.getElementById(`${containerId}_${i}`);
+      if (!body || !ctx) return;
+      if (!cfg) { body.innerHTML = `<p style="font-size:11px;color:var(--muted);margin:6px 0 0;line-height:1.5">${emptyText}</p>`; return; }
+      body.style.height = (cfg._h || Math.max(90, cfg.data.labels.length * 22 + 34)) + 'px';
+      delete cfg._h;
+      podCharts[containerId].push(new Chart(ctx, cfg));
+    });
   }
 
+  // Per-tab per-pod chart builders (Y = Job where a job grain exists; else pod-level).
+  const fulfilPodCfg = (pod) => {
+    const q = selQuarter(), isSales = isSalesPod(pod);
+    const jobs = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => ({ t: j.title, v: isSales ? j.hired * j.score : j.offer * j.score })).filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, 10);
+    if (!jobs.length) return null;
+    return { type: 'bar', data: { labels: jobs.map(j => j.t), datasets: [{ label: isSales ? 'Hired Score' : 'Offered Score', data: jobs.map(j => j.v), backgroundColor: C.blue, borderRadius: 3, barPercentage: 0.75 }] }, options: hbarOpts(false, isSales ? 'Hired Score' : 'Offered Score') };
+  };
+  const joinPodCfg = (pod) => {
+    const jobs = podDeptJobs(pod, selQuarter()).flatMap(d => d.jobs).filter(j => j.offer > 0).sort((a, b) => b.offer - a.offer).slice(0, 10);
+    if (!jobs.length) return null;
+    return { type: 'bar', data: { labels: jobs.map(j => j.title), datasets: [
+      { label: 'Hired', data: jobs.map(j => j.hired), backgroundColor: C.green, stack: 'j', borderRadius: 2 },
+      { label: 'Offered', data: jobs.map(j => Math.max(0, j.offer - j.hired)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
+  };
+  const velPodCfg = (pod) => {
+    const q = selQuarter(), mem = podMembers(pod, q), dates = velDates(), dk = dates.map(dkeyEff);
+    const per = dk.map(k => mem.reduce((s, r) => ['oa', 'hmReview', 'r1'].reduce((ss, sk) => ss + ((((r.daily && r.daily[sk]) || {})[k]) || 0), s), 0));
+    if (per.every(v => v === 0)) return null;
+    const labels = dates.map(d => `${MON[d.getMonth()]} ${d.getDate()}`).reverse();
+    return { _h: 140, type: 'bar', data: { labels, datasets: [{ label: 'Submissions', data: per.slice().reverse(), backgroundColor: C.blue, borderRadius: 2, barPercentage: 0.9 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }, y: { ...gridY } } } };
+  };
+  const screenPodCfg = (pod) => {
+    const q = selQuarter(), mem = podMembers(pod, q);
+    const hm = mem.reduce((s, r) => s + (r.hm || 0), 0), oa = mem.reduce((s, r) => s + (r.oa || 0), 0), r1 = mem.reduce((s, r) => s + (r.r1 || 0), 0);
+    if (hm + oa + r1 === 0) return null;
+    return { _h: 150, type: 'bar', data: { labels: ['HM', 'OA', 'R1'], datasets: [
+      { label: 'Added', data: [hm, oa, r1], backgroundColor: C.blue, borderRadius: 2 },
+      { label: 'Cleared', data: [Math.min(hm, oa), Math.min(oa, r1), 0], backgroundColor: C.green, borderRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { ...gridY } } } };
+  };
+
   function renderFulfilCharts(pods, q) {
-    // Per-pod placeholder cards (Y=Job) + a live combined chart of pod Target (summed capacity).
-    renderPodChartCards('effFulfilPodCharts', pods, 'Target vs Gap (Score)');
+    // Per-pod chart (Y=Job, Offered/Hired Score) + a combined chart of pod Target (summed capacity).
+    renderPodCharts('effFulfilPodCharts', pods, fulfilPodCfg, 'No offers/hires yet for this pod.');
     const ctx = document.getElementById('effFulfilCombined'); if (!ctx) return;
     if (effFulfilCombined) effFulfilCombined.destroy();
     const rows = pods.map(p => ({ pod: p, cap: podCapacity(p, q) })).filter(r => r.cap > 0);
@@ -446,9 +605,9 @@ export function initEfficiencyFilters(data) {
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
-    else if (activeTab === 'screening') { renderScreening(); renderPodChartCards('effScreenPodCharts', visiblePods(), 'Added vs Cleared per stage'); }
-    else if (activeTab === 'throughput') { renderThroughput(); renderPodChartCards('effTpPodCharts', visiblePods(), 'In vs Out per stage'); }
-    else if (activeTab === 'joining') { renderJoining(); renderPodChartCards('effJoinPodCharts', visiblePods(), 'Offered vs Hired'); }
+    else if (activeTab === 'screening') { renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.'); }
+    else if (activeTab === 'throughput') { renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), () => null, 'Per-stage throughput chart — pending job×stage rollup (pipeline).'); }
+    else if (activeTab === 'joining') { renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.'); }
     else if (activeTab === 'sourcing') renderSourcing();
   }
 
@@ -456,9 +615,9 @@ export function initEfficiencyFilters(data) {
     // Re-render every panel so switching tabs shows current filters immediately.
     renderFulfilment();
     renderVelocity();
-    renderScreening(); renderPodChartCards('effScreenPodCharts', visiblePods(), 'Added vs Cleared per stage');
-    renderThroughput(); renderPodChartCards('effTpPodCharts', visiblePods(), 'In vs Out per stage');
-    renderJoining(); renderPodChartCards('effJoinPodCharts', visiblePods(), 'Offered vs Hired');
+    renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.');
+    renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), () => null, 'Per-stage throughput chart — pending job×stage rollup (pipeline).');
+    renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.');
     renderSourcing();
   }
 
