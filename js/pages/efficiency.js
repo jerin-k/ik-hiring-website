@@ -80,7 +80,7 @@ export function initEfficiencyFilters(data) {
       type: 'bar',
       data: {
         labels: weeklyVelocity.map(w => w.week),
-        datasets: [{ label: 'Applications', data: weeklyVelocity.map(w => w.count), backgroundColor: 'rgba(79,70,229,0.7)', borderRadius: 4 }]
+        datasets: [{ label: 'Applications', data: weeklyVelocity.map(w => w.count), backgroundColor: 'rgba(78,107,166,0.75)', borderRadius: 4 }]
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
     });
@@ -168,13 +168,13 @@ export function initEfficiencyFilters(data) {
     const funnelEl = document.getElementById('effFunnel');
     if (funnelEl) {
       const stages = [
-        { label: 'Applied', value: totalApplied, color: '#4f46e5' },
-        { label: 'TA Screen', value: r.taScreen, color: '#6366f1' },
-        { label: 'HM Review', value: r.hmReview, color: '#7c3aed' },
-        { label: 'OA', value: r.oa, color: '#0891b2' },
-        { label: 'R1', value: r.r1, color: '#2563eb' },
-        { label: 'Offer', value: r.offer, color: '#3b82f6' },
-        { label: 'Hired', value: totalHired, color: '#16a34a' },
+        { label: 'Applied', value: totalApplied, color: '#938FB8' },
+        { label: 'TA Screen', value: r.taScreen, color: '#7E86B5' },
+        { label: 'HM Review', value: r.hmReview, color: '#4E6BA6' },
+        { label: 'OA', value: r.oa, color: '#3D80A6' },
+        { label: 'R1', value: r.r1, color: '#398AA2' },
+        { label: 'Offer', value: r.offer, color: '#2A7E96' },
+        { label: 'Hired', value: totalHired, color: '#1E7590' },
       ];
       const max = stages[0].value || 1;
       funnelEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
@@ -202,7 +202,7 @@ export function initEfficiencyFilters(data) {
         data: {
           labels: ['TA Screen', 'HM Review', 'OA', 'R1', 'Offer', 'Hired'],
           datasets: [{ label: 'Reached', data: [r.taScreen, r.hmReview, r.oa, r.r1, r.offer, totalHired],
-            backgroundColor: ['#4f46e5', '#4f46e5', '#4f46e5', '#4f46e5', '#2563eb', '#16a34a'], borderRadius: 4 }]
+            backgroundColor: ['#4E6BA6', '#4E6BA6', '#4E6BA6', '#398AA2', '#2A7E96', '#1E7590'], borderRadius: 4 }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { grid: { display: false } } } }
       });
