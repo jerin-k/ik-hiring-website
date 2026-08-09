@@ -16,6 +16,7 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 // Throughput stages (mirrors the HM tab)
 const TP_KEYS = ['app','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
 const TP_LABELS = { app:'Application', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
+const TP_TO_SK = { app:'appReview', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' };
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 
@@ -93,7 +94,7 @@ export function renderEfficiency(data) {
     </style>
 
     <h2 class="section-title">Overall Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong> and <strong>Joining Conversion</strong> are live to the job level; <strong>Velocity / Screening / Sourcing</strong> are live at pod level (per-job detail needs a job×stage rollup). Year/Quarter drives pod grouping + capacity.</p>
+    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Velocity</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (velocity/throughput from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Pod</span><div class="ms" id="effMsPod"></div></div>
@@ -143,7 +144,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Submission Velocity -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
-      <p class="sub-note"><strong>Pod-level</strong> daily submissions (OA / HM Screening / R1) across the last 30 days of the selected range, summed across pod members. <span style="color:var(--muted)">Bucketed by last-activity date (snapshot approximation). Department → Job → Stage detail needs a job×stage×date rollup the pipeline doesn't emit.</span></p>
+      <p class="sub-note"><strong>Pod → Department → Job → Stage</strong> (OA / HM Screening / R1), daily over the last 30 days of the range — counted by true <strong>stage-entry date</strong> from stage history (no bulk-update spikes). Falls back to a pod-level snapshot until the history accumulator has run.</p>
       <div class="eff-podcharts" id="effVelPodCharts"></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
@@ -166,7 +167,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Throughput (mirrors HM) -->
     <div class="eff-panel" data-panel="throughput" style="display:none">
-      <p class="sub-note">In = candidates who entered the stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Per Department/Job values need the job×stage rollup (pipeline).</p>
+      <p class="sub-note"><strong>In</strong> = candidates who entered the stage, <strong>Out</strong> = candidates who moved past it, Throughput = Out/In % — from real stage history, live at <strong>Pod → Department → Job</strong>. Falls back to pending until the history accumulator has run.</p>
       <div style="display:flex;flex-wrap:wrap;gap:12px 16px;margin-bottom:12px;font-size:12px;align-items:center">
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
         ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
@@ -205,6 +206,11 @@ export function initEfficiencyFilters(data) {
   if (!data || !data.funnel) return;
   const jobs = data.jobs || [];
   const recruiters = data.recruiters || [];
+  // Stage-history rollups (true daily velocity by enteredStageAt + reached/cleared throughput). null until
+  // the accumulator has run — the velocity/throughput panels fall back to pod-level snapshots when absent.
+  const rollups = data.stageRollups || {};
+  const velByJob = rollups.velocityByJob || null;
+  const tpByJob = rollups.throughputByJob || null;
   let activeTab = 'fulfilment';
   let msPod = null, msDept = null, msJob = null;
 
@@ -239,7 +245,7 @@ export function initEfficiencyFilters(data) {
         const jid = ((bj.jobId || '').slice(0, 8)) || (m.title || '?');
         const P = tree[pod] || (tree[pod] = { depts: {} });
         const D = P.depts[dept] || (P.depts[dept] = { jobs: {} });
-        const J = D.jobs[jid] || (D.jobs[jid] = { title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: scoreForRole(m, q) });
+        const J = D.jobs[jid] || (D.jobs[jid] = { jid: jid, title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: scoreForRole(m, q) });
         J.total += bj.total || 0; J.offer += bj.offer || 0; J.hired += bj.hired || 0;
       });
     });
@@ -414,10 +420,32 @@ export function initEfficiencyFilters(data) {
       vis.forEach(k => { r1 += `<th colspan="3" class="stage-hdr">${TP_LABELS[k]}</th>`; });
       r1 += '</tr><tr>';
       vis.forEach(() => { r1 += '<th class="stage-sub">In</th><th class="stage-sub">Out</th><th class="stage-sub">%</th>'; });
-      r1 += '</tr>';
-      head.innerHTML = r1;
+      head.innerHTML = r1 + '</tr>';
     }
-    podSkeletonBody('effTpBody', vis.length * 3, () => dashTds(vis.length * 3));
+    const body = document.getElementById('effTpBody'); if (!body) return;
+    if (!tpByJob) { podSkeletonBody('effTpBody', vis.length * 3, () => dashTds(vis.length * 3)); return; }
+    // LIVE: In = reached (entered the stage), Out = cleared (left it) — from stage history, Pod → Dept → Job.
+    const q = selQuarter(), pods = visiblePods();
+    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
+    const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
+    const jobRC = (jid) => { const t = tpByJob[jid] || {}; return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; }); };
+    const cells = (rc) => rc.map(x => `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
+    const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
+    let html = '';
+    pods.forEach((pod, pi) => {
+      const podArrs = [];
+      const deptRows = podDeptJobs(pod, q).map(({ dept, jobs: js }) => {
+        const jrc = js.map(j => jobRC(j.jid)); jrc.forEach(a => podArrs.push(a));
+        return { dept, js, jrc, deptSum: sumRC(jrc) };
+      });
+      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${cells(sumRC(podArrs))}</tr>`;
+      deptRows.forEach(({ dept, js, jrc, deptSum }, di) => {
+        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(deptSum)}</tr>`;
+        js.forEach((j, ji) => { html += `<tr data-path="${pi}-${di}-${ji}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${j.title}</td>${cells(jrc[ji])}</tr>`; });
+      });
+    });
+    body.innerHTML = html || `<tr><td colspan="${vis.length * 3 + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    wireTreePath(body, expandAll());
   }
 
   // ===== Submission Velocity (Pod → Department → Job → Stage; last 30 days of range, descending) =====
@@ -461,17 +489,43 @@ export function initEfficiencyFilters(data) {
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       head.innerHTML = h + '</tr>';
     }
-    const VEL = ['oa', 'hmReview', 'r1'];
+    const VELS = [['oa', 'OA'], ['hmReview', 'HM Screening'], ['r1', 'R1']];
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
+    const add = (dst, src) => { for (let i = 0; i < dst.length; i++) dst[i] += src[i]; };
     let html = '';
-    pods.forEach((pod, pi) => {
-      const mem = podMembers(pod, q); const arr = new Array(dkeys.length).fill(0); let tot = 0;
-      mem.forEach(r => VEL.forEach(sk => { const m = (r.daily && r.daily[sk]) || {}; dkeys.forEach((dk, i) => { const v = m[dk] || 0; arr[i] += v; tot += v; }); }));
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}</td>${numRow(tot, arr, true)}</tr>`;
-      html += `<tr data-path="${pi}-0" style="display:none">
-        <td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job → Stage — per-job daily needs the job×stage×date rollup (pipeline)</td>${`<td>${DASH}</td>`.repeat(dkeys.length + 1)}</tr>`;
-    });
+    if (velByJob) {
+      // Full Pod → Department → Job → Stage from true stage-entry rollups (velocityByJob[job][stage][day]).
+      pods.forEach((pod, pi) => {
+        const podArr = new Array(dkeys.length).fill(0); let podTot = 0;
+        const depts = podDeptJobs(pod, q).map(({ dept, jobs: js }) => {
+          const dArr = new Array(dkeys.length).fill(0); let dTot = 0;
+          const jd = js.map(j => {
+            const jm = velByJob[j.jid] || {}; const jArr = new Array(dkeys.length).fill(0); let jTot = 0;
+            const sd = VELS.map(([sk, label]) => { const m = jm[sk] || {}; let sTot = 0; const sArr = dkeys.map(dk => { const v = m[dk] || 0; sTot += v; return v; }); add(jArr, sArr); jTot += sTot; return { label, sArr, sTot }; });
+            add(dArr, jArr); dTot += jTot; return { j, jArr, jTot, sd };
+          });
+          add(podArr, dArr); podTot += dTot; return { dept, jd, dArr, dTot };
+        });
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${numRow(podTot, podArr, true)}</tr>`;
+        depts.forEach(({ dept, jd, dArr, dTot }, di) => {
+          html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, false)}</tr>`;
+          jd.forEach(({ j, jArr, jTot, sd }, ji) => {
+            html += `<tr data-path="${pi}-${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:56px;color:var(--text)">${CARET}${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
+            sd.forEach(({ label, sArr, sTot }, si) => {
+              html += `<tr data-path="${pi}-${di}-${ji}-${si}" style="display:none"><td style="padding-left:82px;color:var(--muted)">${label}</td>${numRow(sTot, sArr, false)}</tr>`;
+            });
+          });
+        });
+      });
+    } else {
+      // fallback: pod-level from recruiters[].daily (snapshot) until the accumulator has run
+      pods.forEach((pod, pi) => {
+        const mem = podMembers(pod, q); const arr = new Array(dkeys.length).fill(0); let tot = 0;
+        mem.forEach(r => VELS.forEach(([sk]) => { const m = (r.daily && r.daily[sk]) || {}; dkeys.forEach((dk, i) => { const v = m[dk] || 0; arr[i] += v; tot += v; }); }));
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${numRow(tot, arr, true)}</tr>`;
+        html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job → Stage — awaiting the stage-history accumulator</td>${`<td>${DASH}</td>`.repeat(dkeys.length + 1)}</tr>`;
+      });
+    }
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
     renderPodCharts('effVelPodCharts', pods, velPodCfg, 'No submissions in range.');
@@ -547,8 +601,15 @@ export function initEfficiencyFilters(data) {
       { label: 'Offered', data: jobs.map(j => Math.max(0, j.offer - j.hired)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
   };
   const velPodCfg = (pod) => {
-    const q = selQuarter(), mem = podMembers(pod, q), dates = velDates(), dk = dates.map(dkeyEff);
-    const per = dk.map(k => mem.reduce((s, r) => ['oa', 'hmReview', 'r1'].reduce((ss, sk) => ss + ((((r.daily && r.daily[sk]) || {})[k]) || 0), s), 0));
+    const q = selQuarter(), dates = velDates(), dk = dates.map(dkeyEff);
+    let per;
+    if (velByJob) {
+      const jids = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => j.jid);
+      per = dk.map(k => jids.reduce((s, jid) => { const jm = velByJob[jid] || {}; return ['oa', 'hmReview', 'r1'].reduce((ss, sk) => ss + (((jm[sk] || {})[k]) || 0), s); }, 0));
+    } else {
+      const mem = podMembers(pod, q);
+      per = dk.map(k => mem.reduce((s, r) => ['oa', 'hmReview', 'r1'].reduce((ss, sk) => ss + ((((r.daily && r.daily[sk]) || {})[k]) || 0), s), 0));
+    }
     if (per.every(v => v === 0)) return null;
     const labels = dates.map(d => `${MON[d.getMonth()]} ${d.getDate()}`).reverse();
     return { _h: 140, type: 'bar', data: { labels, datasets: [{ label: 'Submissions', data: per.slice().reverse(), backgroundColor: C.blue, borderRadius: 2, barPercentage: 0.9 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }, y: { ...gridY } } } };
