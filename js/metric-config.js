@@ -70,19 +70,34 @@ function sameConfig(a, b) {
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
-// Publish to team: open the Apps Script web app in an AUTHENTICATED popup (the config rides in the URL,
-// gzip+base64url), which writes metric_config.json server-side as the signed-in admin. We then CONFIRM-BY-READ
-// (poll the published file until it matches) — no dependency on the popup messaging back, no CORS. Returns { ok, reason }.
+// Publish to team: submit the config to the Apps Script web app via an AUTHENTICATED popup using a top-level
+// form POST (config in the request BODY, gzip+base64url — no URL-length limit, unlike a GET). The popup is a real
+// navigation so the admin's IK login applies, and the server (doPost → publishConfigPage_) writes metric_config.json
+// as the signed-in admin. We then CONFIRM-BY-READ (poll the published file until it matches) — no dependency on the
+// popup messaging back, no CORS. Returns { ok, reason }.
 export async function publishConfig() {
   const payload = collectConfig();
   const base = (getMeta() || {}).updatedAt || '';
   let cParam;
   try { cParam = await gzipB64url(JSON.stringify(payload)); }
   catch (e) { return { ok: false, reason: "This browser can't compress the config — use Download and commit metric_config.json." }; }
-  const url = WEBAPP_URL + '?page=doPublish&base=' + encodeURIComponent(base) + '&c=' + cParam;
-  if (url.length > 7500) return { ok: false, reason: 'Config is too large for the one-click path (' + url.length + ' chars) — use Download and commit metric_config.json.' };
-  const w = window.open(url, 'mcPublish', 'width=460,height=340');
+
+  const w = window.open('', 'mcPublish', 'width=460,height=360');
   if (!w) return { ok: false, reason: 'Popup blocked — allow pop-ups for this site and retry, or use Download.' };
+
+  // Top-level form POST into the popup: carries login (like a GET navigation) but sends config in the body.
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = WEBAPP_URL + '?page=doPublish&base=' + encodeURIComponent(base);
+  form.target = 'mcPublish';
+  form.style.display = 'none';
+  const inp = document.createElement('input');
+  inp.type = 'hidden'; inp.name = 'c'; inp.value = cParam;
+  form.appendChild(inp);
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(() => { try { form.remove(); } catch (e) { } }, 2000);
+
   // Confirm-by-read: poll until the published file matches what we sent (or time out ~40s).
   for (let i = 0; i < 16; i++) {
     await new Promise(r => setTimeout(r, 2500));
@@ -96,7 +111,7 @@ export async function publishConfig() {
       return { ok: true };
     }
   }
-  return { ok: false, reason: "Couldn't confirm the publish — check the popup window for an error (not-authorized/size), or use Download. Your edits are kept locally." };
+  return { ok: false, reason: "Couldn't confirm the publish — check the popup window for an error (sign-in/not-authorized), or use Download. Your edits are kept locally." };
 }
 
 // gzip a string and return URL-safe base64 (matched by Apps Script Utilities.ungzip on the server).
