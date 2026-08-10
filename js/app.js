@@ -1,6 +1,7 @@
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
 import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
 import { loadDashboardData, getFilteredData, getLastUpdated } from './data.js';
+import { loadMetricConfig } from './metric-config.js';
 import { renderHome, initHomeFilters } from './pages/home.js';
 import { renderHmReport, initHmFilters } from './pages/hm-report.js';
 import { renderRecruiter, initRecruiterFilters } from './pages/recruiter.js';
@@ -49,6 +50,7 @@ async function onAuthSuccess(user) {
 
   accessConfig = await loadAccessConfig();
   await loadDashboardData();
+  await loadMetricConfig();   // hydrate team-wide pods/capacity/score-grid/dept-family before tabs read them
 
   currentAccess = getUserAccess(user.email);
 
