@@ -138,7 +138,7 @@ export function renderHmReport(data) {
 
   const allDepts = [...new Set([...(data.openings || []), ...(data.jobs || [])].map(x => deptOf(x.department)))].filter(Boolean).sort();
   const years = [...new Set((data.openings || []).map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
-  const jpMonths = [...new Set((data.joiningPendingCases || []).map(c => monthOf(c.doj)).filter(m => m && m !== '—'))];
+  const jpMonths = [...new Set((data.joiningPendingCases || []).map(c => monthOf(c.startDate)).filter(m => m && m !== '—'))];
 
   return `
     <style>
@@ -231,7 +231,7 @@ export function renderHmReport(data) {
         <input type="date" id="hmJPTo" title="DOJ to">
       </div>
       <div class="scroll-table"><table>
-        <thead><tr><th>Position Opened Quarter</th><th>Department</th><th>Job</th><th>Candidate</th><th>Month</th><th>DOJ</th></tr></thead>
+        <thead><tr><th>Recruiter</th><th>Department</th><th>Job</th><th>Candidate</th><th>Month</th><th>DOJ</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
     </div>
@@ -306,7 +306,7 @@ export function initHmFilters(data) {
 
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
   let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null;
-  const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
   function makeMultiSelect(container, label, options, onChange) {
     if (!container) return null;
     const selected = new Set();
@@ -600,7 +600,7 @@ export function initHmFilters(data) {
     const dojFrom = document.getElementById('hmJPFrom')?.value || '';
     const dojTo = document.getElementById('hmJPTo')?.value || '';
 
-    let list = (data.joiningPendingCases || []).map(c => ({ ...c, _dept: deptOf(c.department || '') }));
+    let list = (data.joiningPendingCases || []).map(c => ({ ...c, name: c.candidate, job: c.jobTitle, doj: c.startDate, _dept: deptOf(c.department || '') }));
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(c.job)) return false;
@@ -615,7 +615,7 @@ export function initHmFilters(data) {
     }
     list.sort((a, b) => (a._dept || '').localeCompare(b._dept || '') || (a.doj || '').localeCompare(b.doj || ''));
     body.innerHTML = list.map(c => `<tr>
-      <td>${quarterOf(c.openedAt || c.positionOpenedAt || '')}</td>
+      <td>${c.recruiter || '—'}</td>
       <td style="font-weight:500">${c._dept || ''}</td>
       <td style="max-width:300px">${c.job || ''}</td>
       <td style="font-weight:500">${c.name || ''}</td>
