@@ -132,7 +132,7 @@ export function renderRecruiter(data) {
 
   const cy = new Date().getFullYear();
   const years = [];
-  for (let y = Math.max(cy, 2026); y >= 2024; y--) years.push(y);
+  for (let y = Math.max(cy, 2026); y >= 2026; y--) years.push(y);
 
   return `
     <style>
