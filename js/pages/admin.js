@@ -321,7 +321,7 @@ export function initAdminMetricConfig(data) {
   const qSel = document.getElementById('cfgQuarter');
   if (qSel) {
     const cy = new Date().getFullYear(); const qs = [];
-    for (let y = cy; y >= cy - 1; y--) for (let q = 4; q >= 1; q--) qs.push(qKey(y, q));
+    for (let y = Math.max(cy, 2026); y >= 2026; y--) for (let q = 4; q >= 1; q--) qs.push(qKey(y, q));
     qSel.innerHTML = qs.map(q => `<option value="${q}">${q.replace('-', ' ')}</option>`).join('');
     qSel.value = currentQuarter();
     qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); });
