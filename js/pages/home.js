@@ -5,7 +5,7 @@ export function renderHome(access) {
   if (!data) return '<p>Loading...</p>';
 
   const currentYear = new Date().getFullYear();
-  const startYear = 2024;
+  const startYear = 2026;
   const endYear = Math.max(currentYear, 2026);
   const sortedYears = [];
   for (let y = endYear; y >= startYear; y--) sortedYears.push(String(y));
