@@ -94,10 +94,12 @@ export async function publishConfig() {
   if (!w) return { ok: false, reason: 'Popup blocked — allow pop-ups for this site and retry, or use Download.' };
 
   // Drive the popup through each chunk in order (top-level GET = carries login). base rides on the LAST chunk.
+  // NOTE: param names MUST be mc-prefixed — Apps Script silently 404s ("Page Not Found") on reserved short names
+  // like c / i / n. mcsid / mcidx / mctot / mcdata / mcbase are safe. This (not length or POST) was the whole bug.
   for (let i = 0; i < parts.length; i++) {
     const last = i === parts.length - 1;
-    const url = WEBAPP_URL + '?page=doPublish&sid=' + sid + '&i=' + i + '&n=' + parts.length
-      + (last ? '&base=' + encodeURIComponent(base) : '') + '&c=' + parts[i];
+    const url = WEBAPP_URL + '?page=doPublish&mcsid=' + sid + '&mcidx=' + i + '&mctot=' + parts.length
+      + (last ? '&mcbase=' + encodeURIComponent(base) : '') + '&mcdata=' + parts[i];
     try { w.location = url; } catch (e) { }
     await new Promise(r => setTimeout(r, 2200));   // let each GET reach the server before the next nav
   }
