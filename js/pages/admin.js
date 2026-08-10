@@ -1,5 +1,7 @@
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
+import { markDirty, isDirty, getMeta, publishConfig, configFileText } from '../metric-config.js';
+import { getCurrentUser } from '../auth.js';
 
 // ===== Metric Configuration model (moved here from Recruiter Efficiency 2026-08-09) =====
 // See memory project_recruiter-score-model. A role's Score = Family + Level + Complexity → grid → points.
@@ -123,10 +125,21 @@ export function renderAdmin(accessConfig, data) {
     <div class="admin-section">
       <h3>Metric Configuration</h3>
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-        The scoring &amp; capacity model that drives Recruiter Efficiency and Overall Efficiency — the pipeline just reads it.
-        Everything is stored <strong>per quarter</strong> (copy-forward) and saved to this browser; team-wide server-side
-        persistence is a pending pipeline step. A role's Score = Family + Level + Complexity → grid → points.
+        The scoring &amp; capacity model that drives Recruiter Efficiency and Overall Efficiency. Stored <strong>per quarter</strong>
+        (copy-forward). Edit below, then <strong>Publish to team</strong> to make it the shared config everyone sees.
+        A role's Score = Family + Level + Complexity → grid → points.
       </p>
+
+      <div class="cfg-card" id="mcPublishCard" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
+        <div style="font-size:12px;line-height:1.6">
+          <div id="mcStatus" style="font-weight:700"></div>
+          <div id="mcProvenance" style="color:var(--muted)"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="mcPublishBtn" class="btn btn-primary">Publish to team</button>
+          <button id="mcDownloadBtn" class="btn-secondary" style="padding:8px 12px" title="Download metric_config.json — fallback if publish is unavailable">Download</button>
+        </div>
+      </div>
 
       <div class="cfg-card" style="display:flex;align-items:center;gap:12px;background:var(--accent-light);border-color:var(--border)">
         <span class="lbl">Quarter</span>
@@ -238,8 +251,8 @@ export function initAdminMetricConfig(data) {
       <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
       <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td></tr>`).join('')
       || `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px">No recruiters in the data yet.</td></tr>`;
-    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); updatePodSummary(); }));
-    body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => setCapacity(inp.dataset.name, inp.value, cfgQ())));
+    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
+    body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
     updatePodSummary();
   }
   function renderScoreGrid() {
@@ -254,8 +267,8 @@ export function initAdminMetricConfig(data) {
       html += `<tr><td>${cls}</td>${SCORE_TIERS.map(([n]) => `<td><input type="radio" name="${rname}" class="grid-radio" data-cls="${cls}" data-tier="${n}"${n === grid.rowTier[cls] ? ' checked' : ''}></td>`).join('')}</tr>`;
     });
     document.getElementById('cfgGridBody').innerHTML = html;
-    document.querySelectorAll('#cfgGridBody .grid-radio').forEach(r => r.addEventListener('change', () => { if (r.checked) setGridTier(cfgQ(), r.dataset.cls, r.dataset.tier); }));
-    document.querySelectorAll('#cfgGridHead .tier-pts').forEach(inp => inp.addEventListener('input', () => setGridPoints(cfgQ(), inp.dataset.tier, parseInt(inp.value, 10) || 0)));
+    document.querySelectorAll('#cfgGridBody .grid-radio').forEach(r => r.addEventListener('change', () => { if (r.checked) { setGridTier(cfgQ(), r.dataset.cls, r.dataset.tier); touched(); } }));
+    document.querySelectorAll('#cfgGridHead .tier-pts').forEach(inp => inp.addEventListener('input', () => { setGridPoints(cfgQ(), inp.dataset.tier, parseInt(inp.value, 10) || 0); touched(); }));
     const note = document.getElementById('cfgGridNote');
     if (note) note.textContent = ` — ${loadGridStore()[q] ? 'edited for ' + q.replace('-', ' ') : 'inherited (copy-forward)'}`;
   }
@@ -265,7 +278,7 @@ export function initAdminMetricConfig(data) {
       <td style="font-weight:500">${dept}</td>
       <td><select class="cfg-fam" data-dept="${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select></td>
       <td style="color:var(--muted);font-size:11px">${note || ''}</td></tr>`).join('');
-    body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); }));
+    body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); touched(); }));
   }
   function renderRefBlock() {
     const el = document.getElementById('cfgRefBlock'); if (!el) return;
@@ -276,6 +289,35 @@ export function initAdminMetricConfig(data) {
     </div>`;
   }
 
+  // ===== team-wide publish (antifragile: dirty tracking + confirm-by-read + download fallback) =====
+  function touched() { markDirty(); refreshPublishUI(); }
+  function refreshPublishUI() {
+    const status = document.getElementById('mcStatus'), prov = document.getElementById('mcProvenance');
+    if (!status) return;
+    const dirty = isDirty(), meta = getMeta();
+    status.textContent = dirty ? '● Unpublished changes on this browser' : '✓ In sync with the team';
+    status.style.color = dirty ? 'var(--orange)' : 'var(--green)';
+    prov.innerHTML = (meta && meta.updatedAt)
+      ? `Team config published ${new Date(meta.updatedAt).toLocaleString()}${meta.updatedBy ? ' · by ' + meta.updatedBy : ''}`
+      : 'No team config published yet — Publish to set the shared baseline.';
+  }
+  const pubBtn = document.getElementById('mcPublishBtn');
+  if (pubBtn) pubBtn.addEventListener('click', async () => {
+    const status = document.getElementById('mcStatus');
+    pubBtn.disabled = true; const label = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
+    status.textContent = 'A sign-in popup will open — approve it, then this verifies automatically…'; status.style.color = 'var(--muted)';
+    let res; try { res = await publishConfig(); } catch (e) { res = { ok: false, reason: e.message }; }
+    pubBtn.textContent = label; pubBtn.disabled = false;
+    if (res.ok) { status.textContent = '✓ Published — the whole team now sees this config.'; status.style.color = 'var(--green)'; refreshPublishUI(); }
+    else { status.textContent = '✗ ' + res.reason; status.style.color = 'var(--red)'; }
+  });
+  const dlBtn = document.getElementById('mcDownloadBtn');
+  if (dlBtn) dlBtn.addEventListener('click', () => {
+    const user = getCurrentUser();
+    const blob = new Blob([configFileText(user && user.email)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metric_config.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  });
+
   const qSel = document.getElementById('cfgQuarter');
   if (qSel) {
     const cy = new Date().getFullYear(); const qs = [];
@@ -284,5 +326,5 @@ export function initAdminMetricConfig(data) {
     qSel.value = currentQuarter();
     qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); });
   }
-  renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock();
+  renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock(); refreshPublishUI();
 }
