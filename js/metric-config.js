@@ -70,11 +70,15 @@ function sameConfig(a, b) {
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
-// Publish to team: submit the config to the Apps Script web app via an AUTHENTICATED popup using a top-level
-// form POST (config in the request BODY, gzip+base64url — no URL-length limit, unlike a GET). The popup is a real
-// navigation so the admin's IK login applies, and the server (doPost → publishConfigPage_) writes metric_config.json
-// as the signed-in admin. We then CONFIRM-BY-READ (poll the published file until it matches) — no dependency on the
-// popup messaging back, no CORS. Returns { ok, reason }.
+// Publish to team: send the config to the Apps Script web app through an AUTHENTICATED popup, driven as a sequence
+// of small GET navigations. A top-level GET carries the admin's IK login (a cross-site POST does NOT — Google's
+// SameSite cookies block it), but a GET URL is length-limited, so we split the gzip+base64url config into small
+// chunks (?sid&i&n&c=<chunk>) and navigate the same popup through them in order; the server accumulates the chunks
+// in its script cache and, on the final chunk, reassembles + ungzips + writes metric_config.json as the signed-in
+// admin. We then CONFIRM-BY-READ (poll the published file until it matches) — no reliance on the popup messaging
+// back, no CORS, no POST. Returns { ok, reason }.
+const PUBLISH_CHUNK = 1500;   // chars of base64url per GET (URL stays well under any length limit)
+
 export async function publishConfig() {
   const payload = collectConfig();
   const base = (getMeta() || {}).updatedAt || '';
@@ -82,21 +86,21 @@ export async function publishConfig() {
   try { cParam = await gzipB64url(JSON.stringify(payload)); }
   catch (e) { return { ok: false, reason: "This browser can't compress the config — use Download and commit metric_config.json." }; }
 
+  const parts = [];
+  for (let i = 0; i < cParam.length; i += PUBLISH_CHUNK) parts.push(cParam.slice(i, i + PUBLISH_CHUNK));
+  const sid = 'mc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
   const w = window.open('', 'mcPublish', 'width=460,height=360');
   if (!w) return { ok: false, reason: 'Popup blocked — allow pop-ups for this site and retry, or use Download.' };
 
-  // Top-level form POST into the popup: carries login (like a GET navigation) but sends config in the body.
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = WEBAPP_URL + '?page=doPublish&base=' + encodeURIComponent(base);
-  form.target = 'mcPublish';
-  form.style.display = 'none';
-  const inp = document.createElement('input');
-  inp.type = 'hidden'; inp.name = 'c'; inp.value = cParam;
-  form.appendChild(inp);
-  document.body.appendChild(form);
-  form.submit();
-  setTimeout(() => { try { form.remove(); } catch (e) { } }, 2000);
+  // Drive the popup through each chunk in order (top-level GET = carries login). base rides on the LAST chunk.
+  for (let i = 0; i < parts.length; i++) {
+    const last = i === parts.length - 1;
+    const url = WEBAPP_URL + '?page=doPublish&sid=' + sid + '&i=' + i + '&n=' + parts.length
+      + (last ? '&base=' + encodeURIComponent(base) : '') + '&c=' + parts[i];
+    try { w.location = url; } catch (e) { }
+    await new Promise(r => setTimeout(r, 2200));   // let each GET reach the server before the next nav
+  }
 
   // Confirm-by-read: poll until the published file matches what we sent (or time out ~40s).
   for (let i = 0; i < 16; i++) {
