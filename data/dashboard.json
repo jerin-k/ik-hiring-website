@@ -1,10 +1,10 @@
 {
-  "lastUpdated": "2026-08-10T20:53:31.622Z",
+  "lastUpdated": "2026-08-11T03:55:20.188Z",
   "schemaVersion": 4,
   "scopeYear": 2026,
   "velocityDays": 35,
   "funnel": {
-    "applied": 53405,
+    "applied": 53417,
     "screened": 1810,
     "interviewed": 1119,
     "offered": 425,
@@ -18,7 +18,7 @@
       "total": 281,
       "filled": 260,
       "open": 21,
-      "joiningPending": 10,
+      "joiningPending": 0,
       "openedAt": "2026-05-13",
       "jobId": "22fcd2e7",
       "status": "Open"
@@ -821,15 +821,15 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 2106,
-      "applied": 2106,
+      "total": 2113,
+      "applied": 2113,
       "screen": 241,
       "interview": 278,
       "offer": 97,
       "hired": 85,
-      "joiningPending": 10,
+      "joiningPending": 0,
       "pipeline": {
-        "appReview": 685,
+        "appReview": 692,
         "taScreen": 241,
         "hmReview": 0,
         "oa": 0,
@@ -1259,15 +1259,15 @@
       "level": "L4",
       "complexity": "Normal",
       "status": "Open",
-      "total": 683,
-      "applied": 683,
+      "total": 684,
+      "applied": 684,
       "screen": 18,
       "interview": 26,
       "offer": 2,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 584,
+        "appReview": 585,
         "taScreen": 18,
         "hmReview": 0,
         "oa": 0,
@@ -1367,15 +1367,15 @@
       "level": "NA",
       "complexity": null,
       "status": "Open",
-      "total": 515,
-      "applied": 515,
+      "total": 516,
+      "applied": 516,
       "screen": 50,
       "interview": 18,
       "offer": 58,
       "hired": 22,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 270,
+        "appReview": 271,
         "taScreen": 50,
         "hmReview": 0,
         "oa": 0,
@@ -2322,15 +2322,15 @@
       "level": "L0",
       "complexity": "Complex",
       "status": "Open",
-      "total": 119,
-      "applied": 119,
+      "total": 122,
+      "applied": 122,
       "screen": 1,
       "interview": 1,
       "offer": 4,
       "hired": 3,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 64,
+        "appReview": 67,
         "taScreen": 1,
         "hmReview": 0,
         "oa": 0,
@@ -3328,9 +3328,9 @@
         "hired": 0
       },
       "recruiters": [
-        "Ankita Kabra",
         "Sanghamitra Moulik",
-        "Oshin Verma"
+        "Oshin Verma",
+        "Mashika De Almeida"
       ]
     },
     {
@@ -4462,7 +4462,7 @@
   "recruiters": [
     {
       "name": "Unassigned",
-      "total": 19616,
+      "total": 19620,
       "byJob": [
         {
           "jobId": "ad7e4c29-7a4e-49c2-a315-b03e8d8d464c",
@@ -4508,7 +4508,7 @@
           "jobId": "e8867563-290d-4508-93be-2d9195e8406c",
           "title": "Intern, Talent Acquisition",
           "department": "Talent Acquisition",
-          "total": 93,
+          "total": 96,
           "offer": 2,
           "hired": 2
         },
@@ -4596,7 +4596,7 @@
           "jobId": "3d31c20f-35df-4a46-b505-8dd5aea49978",
           "title": "Manager - Sales (US)",
           "department": "US Business",
-          "total": 614,
+          "total": 615,
           "offer": 0,
           "hired": 0
         },
@@ -4889,7 +4889,7 @@
         "Referral": 77,
         "Other": 11,
         "Prospecting": 3,
-        "Inbound": 223,
+        "Inbound": 227,
         "Job Portal": 78,
         "Career Site": 1,
         "Juicebox": 1
@@ -4915,7 +4915,8 @@
           "2026-08-02": 1,
           "2026-08-03": 1,
           "2026-08-07": 26,
-          "2026-08-09": 12
+          "2026-08-09": 12,
+          "2026-08-11": 4
         },
         "taScreen": {
           "2026-07-30": 149,
@@ -4936,13 +4937,13 @@
           "2026-07-22": 1,
           "2026-07-29": 1,
           "2026-08-08": 1,
-          "2026-08-07": 1,
+          "2026-08-11": 1,
           "2026-08-10": 5
         },
         "r3": {
           "2026-07-30": 8,
-          "2026-08-06": 2,
-          "2026-08-05": 1
+          "2026-08-11": 2,
+          "2026-08-06": 1
         },
         "docSub": {
           "2026-07-30": 1
@@ -4979,7 +4980,7 @@
     },
     {
       "name": "Deepti Leslie",
-      "total": 14359,
+      "total": 14362,
       "byJob": [
         {
           "jobId": "fc369c2c-ba64-44c8-98ff-cf000594947f",
@@ -5057,7 +5058,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 262,
+          "total": 263,
           "offer": 0,
           "hired": 0
         },
@@ -5065,7 +5066,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 5695,
+          "total": 5697,
           "offer": 2,
           "hired": 2
         },
@@ -5133,34 +5134,34 @@
         "MyGreenhouse": 112,
         "Other": 5,
         "Referral": 518,
-        "Inbound": 566,
+        "Inbound": 569,
         "Job Portal": 17
       },
       "daily": {
         "appReview": {
           "2026-07-30": 11212,
-          "2026-08-04": 884,
-          "2026-08-09": 43,
-          "2026-08-05": 162,
+          "2026-08-04": 886,
+          "2026-08-09": 41,
+          "2026-08-05": 161,
           "2026-08-10": 43,
-          "2026-08-01": 2,
-          "2026-08-06": 60,
-          "2026-08-07": 50,
-          "2026-08-08": 29,
+          "2026-08-01": 1,
+          "2026-08-06": 58,
+          "2026-08-07": 51,
+          "2026-08-08": 31,
           "2026-07-17": 1,
           "2026-07-18": 4,
+          "2026-07-28": 5,
           "2026-07-19": 1,
           "2026-07-25": 4,
           "2026-07-24": 2,
           "2026-07-21": 3,
           "2026-07-22": 5,
-          "2026-07-23": 5,
+          "2026-07-23": 6,
           "2026-07-26": 1,
           "2026-07-27": 4,
-          "2026-07-28": 4,
           "2026-07-29": 2,
           "2026-08-03": 2,
-          "2026-08-11": 3
+          "2026-08-11": 4
         },
         "r5": {
           "2026-07-30": 1
@@ -5205,9 +5206,9 @@
       "r5": 1,
       "offer": 5,
       "hired": 4,
-      "offeredReal": 5,
+      "offeredReal": 8,
       "joiningPending": 0,
-      "accepted": 4,
+      "accepted": 6,
       "isActive": true
     },
     {
@@ -5425,9 +5426,9 @@
       "r5": 0,
       "offer": 7,
       "hired": 5,
-      "offeredReal": 7,
+      "offeredReal": 18,
       "joiningPending": 0,
-      "accepted": 5,
+      "accepted": 9,
       "isActive": true
     },
     {
@@ -5631,20 +5632,20 @@
       "r5": 0,
       "offer": 5,
       "hired": 2,
-      "offeredReal": 7,
+      "offeredReal": 14,
       "joiningPending": 0,
-      "accepted": 2,
+      "accepted": 7,
       "isActive": true
     },
     {
       "name": "G Darshan",
-      "total": 1442,
+      "total": 1449,
       "byJob": [
         {
           "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "total": 1442,
+          "total": 1449,
           "offer": 20,
           "hired": 9
         }
@@ -5655,24 +5656,24 @@
         "Company marketing": 118,
         "Other": 29,
         "Referral": 40,
-        "Job Portal": 237,
+        "Job Portal": 239,
         "Prospecting": 2,
-        "Inbound": 179,
+        "Inbound": 184,
         "Recruiter Networking": 5
       },
       "daily": {
         "r1": {
           "2026-08-07": 259,
-          "2026-08-10": 12,
-          "2026-08-11": 6,
+          "2026-08-10": 11,
+          "2026-08-11": 7,
           "2026-08-08": 1
         },
         "appReview": {
           "2026-08-07": 541,
           "2026-08-08": 25,
-          "2026-08-10": 90,
+          "2026-08-10": 89,
           "2026-08-09": 25,
-          "2026-08-11": 4
+          "2026-08-11": 12
         },
         "taScreen": {
           "2026-08-07": 221,
@@ -5706,14 +5707,14 @@
       "r5": 0,
       "offer": 20,
       "hired": 9,
-      "offeredReal": 18,
-      "joiningPending": 9,
-      "accepted": 18,
+      "offeredReal": 22,
+      "joiningPending": 0,
+      "accepted": 22,
       "isActive": true
     },
     {
       "name": "V Pooja",
-      "total": 1321,
+      "total": 1316,
       "byJob": [
         {
           "jobId": "2b670683-2870-44e5-862a-c399766d383c",
@@ -5727,7 +5728,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 691,
+          "total": 686,
           "offer": 1,
           "hired": 1
         },
@@ -5850,8 +5851,8 @@
         "Referral": 16,
         "Other": 1,
         "MyGreenhouse": 4,
-        "Inbound": 85,
-        "Job Portal": 3
+        "Job Portal": 3,
+        "Inbound": 80
       },
       "daily": {
         "r1": {
@@ -5868,21 +5869,22 @@
           "2026-08-10": 1
         },
         "appReview": {
-          "2026-07-30": 878,
-          "2026-08-05": 19,
+          "2026-07-30": 877,
+          "2026-08-05": 16,
           "2026-08-02": 8,
-          "2026-08-08": 7,
-          "2026-08-06": 10,
-          "2026-08-10": 3,
-          "2026-08-04": 5,
+          "2026-08-11": 1,
+          "2026-08-08": 4,
+          "2026-08-06": 11,
+          "2026-08-10": 4,
           "2026-07-27": 10,
           "2026-07-28": 10,
           "2026-07-29": 1,
           "2026-07-31": 1,
           "2026-08-01": 2,
           "2026-08-03": 2,
-          "2026-08-07": 2,
-          "2026-08-09": 1
+          "2026-08-04": 4,
+          "2026-08-07": 1,
+          "2026-08-09": 2
         },
         "r5": {
           "2026-07-30": 1
@@ -5908,14 +5910,14 @@
       "r5": 1,
       "offer": 5,
       "hired": 4,
-      "offeredReal": 4,
+      "offeredReal": 5,
       "joiningPending": 0,
-      "accepted": 4,
+      "accepted": 5,
       "isActive": true
     },
     {
       "name": "Oshin Verma",
-      "total": 940,
+      "total": 1018,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -5985,15 +5987,7 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Assistant Manager - US HR and Payroll",
           "department": "Human Resource",
-          "total": 679,
-          "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 10,
+          "total": 757,
           "offer": 0,
           "hired": 0
         },
@@ -6002,6 +5996,14 @@
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
           "total": 12,
+          "offer": 0,
+          "hired": 0
+        },
+        {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 10,
           "offer": 0,
           "hired": 0
         },
@@ -6023,17 +6025,17 @@
         }
       ],
       "sources": {
-        "Company marketing": 236,
-        "Third-party boards": 648,
-        "Referral": 8,
-        "MyGreenhouse": 27,
+        "Company marketing": 252,
+        "Third-party boards": 707,
+        "Referral": 7,
+        "MyGreenhouse": 29,
         "Prospecting": 1,
-        "Job Portal": 19
+        "Job Portal": 21
       },
       "daily": {
         "appReview": {
           "2026-07-30": 98,
-          "2026-08-07": 606
+          "2026-08-07": 673
         },
         "r3": {
           "2026-07-31": 2,
@@ -6053,11 +6055,12 @@
           "2026-07-31": 11,
           "2026-07-30": 3,
           "2026-08-05": 3,
+          "2026-08-07": 1,
           "2026-08-10": 3
         },
         "taScreen": {
           "2026-07-31": 2,
-          "2026-08-07": 21,
+          "2026-08-07": 29,
           "2026-07-30": 3
         },
         "offer": {
@@ -6070,7 +6073,7 @@
         },
         "r4": {
           "2026-07-30": 1,
-          "2026-08-05": 3
+          "2026-08-05": 2
         },
         "r5": {
           "2026-07-31": 8
@@ -6080,24 +6083,24 @@
           "2026-08-07": 1
         }
       },
-      "ta": 26,
+      "ta": 34,
       "hm": 5,
       "oa": 0,
-      "r1": 20,
+      "r1": 21,
       "r2": 4,
       "r3": 6,
-      "r4": 4,
+      "r4": 3,
       "r5": 8,
       "offer": 54,
       "hired": 23,
-      "offeredReal": 30,
+      "offeredReal": 41,
       "joiningPending": 2,
-      "accepted": 30,
+      "accepted": 39,
       "isActive": true
     },
     {
       "name": "Ankita Kabra",
-      "total": 863,
+      "total": 862,
       "byJob": [
         {
           "jobId": "fc3105d6-731f-4653-a0b5-16a8ac8efda2",
@@ -6154,14 +6157,6 @@
           "total": 11,
           "offer": 4,
           "hired": 4
-        },
-        {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 1,
-          "offer": 0,
-          "hired": 0
         },
         {
           "jobId": "95b6ca87-2fe2-467f-8924-472338112487",
@@ -6246,7 +6241,7 @@
       ],
       "sources": {
         "Company marketing": 646,
-        "Third-party boards": 184,
+        "Third-party boards": 183,
         "Referral": 13,
         "MyGreenhouse": 6,
         "Agencies": 6,
@@ -6257,15 +6252,14 @@
       "daily": {
         "appReview": {
           "2026-07-30": 648,
-          "2026-07-28": 1
+          "2026-08-08": 1
         },
         "offer": {
           "2026-07-30": 7,
           "2026-08-10": 1
         },
         "r1": {
-          "2026-07-30": 17,
-          "2026-08-05": 1
+          "2026-07-30": 17
         },
         "docSub": {
           "2026-07-30": 2
@@ -6280,27 +6274,27 @@
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 18,
+      "r1": 17,
       "r2": 0,
       "r3": 2,
       "r4": 0,
       "r5": 2,
       "offer": 16,
       "hired": 8,
-      "offeredReal": 9,
+      "offeredReal": 18,
       "joiningPending": 1,
-      "accepted": 9,
+      "accepted": 18,
       "isActive": true
     },
     {
       "name": "Aditya Singh",
-      "total": 533,
+      "total": 532,
       "byJob": [
         {
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 409,
+          "total": 410,
           "offer": 34,
           "hired": 15
         },
@@ -6372,7 +6366,7 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 3,
+          "total": 1,
           "offer": 1,
           "hired": 0
         }
@@ -6384,7 +6378,7 @@
         "Prospecting": 23,
         "MyGreenhouse": 5,
         "Inbound": 1,
-        "Juicebox": 3
+        "Juicebox": 1
       },
       "daily": {
         "appReview": {
@@ -6401,11 +6395,10 @@
         },
         "taScreen": {
           "2026-07-30": 26,
-          "2026-07-28": 1,
-          "2026-08-04": 1
+          "2026-08-10": 1
         }
       },
-      "ta": 28,
+      "ta": 27,
       "hm": 0,
       "oa": 0,
       "r1": 4,
@@ -6415,9 +6408,9 @@
       "r5": 0,
       "offer": 46,
       "hired": 18,
-      "offeredReal": 20,
+      "offeredReal": 23,
       "joiningPending": 0,
-      "accepted": 19,
+      "accepted": 20,
       "isActive": true
     },
     {
@@ -6584,9 +6577,9 @@
       "r5": 0,
       "offer": 15,
       "hired": 14,
-      "offeredReal": 16,
+      "offeredReal": 28,
       "joiningPending": 0,
-      "accepted": 14,
+      "accepted": 23,
       "isActive": true
     },
     {
@@ -6684,9 +6677,9 @@
       "r5": 0,
       "offer": 21,
       "hired": 19,
-      "offeredReal": 25,
+      "offeredReal": 31,
       "joiningPending": 0,
-      "accepted": 19,
+      "accepted": 25,
       "isActive": true
     },
     {
@@ -6826,9 +6819,9 @@
       "r5": 0,
       "offer": 7,
       "hired": 7,
-      "offeredReal": 9,
+      "offeredReal": 16,
       "joiningPending": 0,
-      "accepted": 7,
+      "accepted": 10,
       "isActive": true
     },
     {
@@ -6994,9 +6987,9 @@
       "r5": 0,
       "offer": 19,
       "hired": 10,
-      "offeredReal": 12,
+      "offeredReal": 29,
       "joiningPending": 0,
-      "accepted": 10,
+      "accepted": 23,
       "isActive": true
     },
     {
@@ -7050,85 +7043,14 @@
       "r5": 0,
       "offer": 36,
       "hired": 36,
-      "offeredReal": 40,
+      "offeredReal": 54,
       "joiningPending": 0,
-      "accepted": 36,
-      "isActive": true
-    },
-    {
-      "name": "Gopu Nair V",
-      "total": 247,
-      "byJob": [
-        {
-          "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
-          "title": "Assistant Manager - US HR and Payroll",
-          "department": "Human Resource",
-          "total": 220,
-          "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f",
-          "title": "Test",
-          "department": "Test",
-          "total": 27,
-          "offer": 12,
-          "hired": 0
-        }
-      ],
-      "sources": {
-        "Company marketing": 48,
-        "Third-party boards": 154,
-        "MyGreenhouse": 3,
-        "Job Portal": 24,
-        "Inbound": 6,
-        "Juicebox": 1,
-        "Referral": 3,
-        "Agencies": 1,
-        "Sourced": 1
-      },
-      "daily": {
-        "appReview": {
-          "2026-08-07": 180,
-          "2026-07-30": 5
-        },
-        "taScreen": {
-          "2026-08-07": 9,
-          "2026-07-30": 1,
-          "2026-07-31": 1
-        },
-        "offer": {
-          "2026-07-30": 11,
-          "2026-08-10": 1
-        },
-        "r5": {
-          "2026-08-06": 1
-        },
-        "r3": {
-          "2026-07-30": 1
-        },
-        "r1": {
-          "2026-08-07": 1
-        }
-      },
-      "ta": 11,
-      "hm": 0,
-      "oa": 0,
-      "r1": 1,
-      "r2": 0,
-      "r3": 1,
-      "r4": 0,
-      "r5": 1,
-      "offer": 12,
-      "hired": 0,
-      "offeredReal": 5,
-      "joiningPending": 0,
-      "accepted": 4,
+      "accepted": 45,
       "isActive": true
     },
     {
       "name": "Astha Thakur",
-      "total": 241,
+      "total": 244,
       "byJob": [
         {
           "jobId": "39b328eb-b0b2-434c-89fd-2a75de973ba0",
@@ -7166,7 +7088,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 33,
+          "total": 36,
           "offer": 0,
           "hired": 0
         }
@@ -7174,7 +7096,7 @@
       "sources": {
         "Referral": 4,
         "Third-party boards": 204,
-        "Inbound": 33
+        "Inbound": 36
       },
       "daily": {
         "taScreen": {
@@ -7182,13 +7104,13 @@
         },
         "appReview": {
           "2026-07-30": 1,
-          "2026-07-23": 1,
-          "2026-08-04": 3,
-          "2026-08-05": 17,
-          "2026-08-06": 6,
-          "2026-08-10": 2,
-          "2026-08-08": 2,
-          "2026-08-09": 1
+          "2026-08-04": 1,
+          "2026-08-01": 1,
+          "2026-08-05": 21,
+          "2026-08-06": 7,
+          "2026-08-08": 3,
+          "2026-08-09": 2,
+          "2026-08-10": 1
         }
       },
       "ta": 15,
@@ -7201,14 +7123,14 @@
       "r5": 0,
       "offer": 1,
       "hired": 1,
-      "offeredReal": 1,
+      "offeredReal": 3,
       "joiningPending": 0,
-      "accepted": 1,
+      "accepted": 2,
       "isActive": true
     },
     {
       "name": "Ritika Bhasin",
-      "total": 212,
+      "total": 214,
       "byJob": [
         {
           "jobId": "7cecc40d-8ee8-4aab-b540-3cec0481dfb4",
@@ -7302,7 +7224,7 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 14,
+          "total": 16,
           "offer": 9,
           "hired": 1
         }
@@ -7313,8 +7235,8 @@
         "MyGreenhouse": 2,
         "Referral": 1,
         "Prospecting": 2,
-        "Juicebox": 9,
-        "Inbound": 27,
+        "Juicebox": 11,
+        "Inbound": 28,
         "Job Portal": 14
       },
       "daily": {
@@ -7326,7 +7248,7 @@
           "2026-08-04": 1,
           "2026-08-05": 1,
           "2026-08-07": 1,
-          "2026-08-11": 1
+          "2026-08-11": 2
         },
         "r1": {
           "2026-08-03": 1,
@@ -7349,17 +7271,19 @@
         },
         "taScreen": {
           "2026-07-30": 23,
+          "2026-07-28": 1,
           "2026-08-03": 1,
           "2026-08-07": 2,
+          "2026-08-04": 1,
           "2026-08-05": 1,
-          "2026-08-10": 5
+          "2026-08-10": 4
         },
         "docSub": {
           "2026-07-24": 1,
           "2026-08-06": 2
         }
       },
-      "ta": 32,
+      "ta": 33,
       "hm": 0,
       "oa": 0,
       "r1": 11,
@@ -7369,9 +7293,9 @@
       "r5": 0,
       "offer": 44,
       "hired": 19,
-      "offeredReal": 26,
+      "offeredReal": 29,
       "joiningPending": 0,
-      "accepted": 26,
+      "accepted": 27,
       "isActive": true
     },
     {
@@ -7470,9 +7394,77 @@
       "r5": 0,
       "offer": 25,
       "hired": 25,
-      "offeredReal": 25,
+      "offeredReal": 27,
       "joiningPending": 0,
-      "accepted": 25,
+      "accepted": 27,
+      "isActive": true
+    },
+    {
+      "name": "Gopu Nair V",
+      "total": 169,
+      "byJob": [
+        {
+          "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
+          "title": "Assistant Manager - US HR and Payroll",
+          "department": "Human Resource",
+          "total": 142,
+          "offer": 0,
+          "hired": 0
+        },
+        {
+          "jobId": "e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f",
+          "title": "Test",
+          "department": "Test",
+          "total": 27,
+          "offer": 12,
+          "hired": 0
+        }
+      ],
+      "sources": {
+        "Company marketing": 32,
+        "Third-party boards": 95,
+        "MyGreenhouse": 1,
+        "Job Portal": 23,
+        "Inbound": 6,
+        "Juicebox": 1,
+        "Referral": 3,
+        "Agencies": 1,
+        "Sourced": 1
+      },
+      "daily": {
+        "appReview": {
+          "2026-08-07": 113,
+          "2026-07-30": 5
+        },
+        "taScreen": {
+          "2026-08-07": 1,
+          "2026-07-30": 1,
+          "2026-07-31": 1
+        },
+        "offer": {
+          "2026-07-30": 11,
+          "2026-08-10": 1
+        },
+        "r5": {
+          "2026-08-06": 1
+        },
+        "r3": {
+          "2026-07-30": 1
+        }
+      },
+      "ta": 3,
+      "hm": 0,
+      "oa": 0,
+      "r1": 0,
+      "r2": 0,
+      "r3": 1,
+      "r4": 0,
+      "r5": 1,
+      "offer": 12,
+      "hired": 0,
+      "offeredReal": 5,
+      "joiningPending": 0,
+      "accepted": 4,
       "isActive": true
     },
     {
@@ -7580,9 +7572,9 @@
       "r5": 0,
       "offer": 10,
       "hired": 10,
-      "offeredReal": 11,
+      "offeredReal": 21,
       "joiningPending": 0,
-      "accepted": 10,
+      "accepted": 14,
       "isActive": true
     },
     {
@@ -7723,7 +7715,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 2,
+          "total": 1,
           "offer": 0,
           "hired": 0
         },
@@ -7774,39 +7766,44 @@
           "total": 1,
           "offer": 1,
           "hired": 1
+        },
+        {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 1,
+          "offer": 0,
+          "hired": 0
         }
       ],
       "sources": {
-        "Third-party boards": 40,
+        "Third-party boards": 41,
         "Agencies": 7,
         "Other": 2,
         "MyGreenhouse": 4,
         "Company marketing": 20,
-        "Referral": 1,
-        "Inbound": 1
+        "Referral": 1
       },
       "daily": {
         "r2": {
           "2026-07-30": 1
         },
         "r1": {
-          "2026-07-30": 1
-        },
-        "appReview": {
-          "2026-08-08": 1
+          "2026-07-30": 1,
+          "2026-08-05": 1
         }
       },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 1,
+      "r1": 2,
       "r2": 1,
       "r3": 0,
       "r4": 0,
       "r5": 0,
       "offer": 1,
       "hired": 1,
-      "offeredReal": 1,
+      "offeredReal": 3,
       "joiningPending": 0,
       "accepted": 1,
       "isActive": true
@@ -7912,9 +7909,9 @@
       "r5": 0,
       "offer": 32,
       "hired": 32,
-      "offeredReal": 36,
+      "offeredReal": 39,
       "joiningPending": 0,
-      "accepted": 32,
+      "accepted": 34,
       "isActive": true
     },
     {
@@ -7948,7 +7945,8 @@
       ],
       "sources": {
         "Third-party boards": 26,
-        "Job Portal": 3
+        "Referral": 1,
+        "Job Portal": 2
       },
       "daily": {
         "docSub": {
@@ -7957,6 +7955,9 @@
         "r1": {
           "2026-08-05": 5,
           "2026-07-30": 2
+        },
+        "r4": {
+          "2026-08-05": 1
         },
         "offer": {
           "2026-08-06": 1
@@ -7968,13 +7969,13 @@
       "r1": 7,
       "r2": 0,
       "r3": 0,
-      "r4": 0,
+      "r4": 1,
       "r5": 0,
       "offer": 6,
       "hired": 5,
-      "offeredReal": 6,
+      "offeredReal": 7,
       "joiningPending": 0,
-      "accepted": 6,
+      "accepted": 7,
       "isActive": true
     },
     {
@@ -8024,6 +8025,9 @@
       "r5": 0,
       "offer": 0,
       "hired": 0,
+      "offeredReal": 1,
+      "joiningPending": 0,
+      "accepted": 1,
       "isActive": true
     },
     {
@@ -8157,7 +8161,7 @@
       "offer": 1,
       "hired": 0,
       "offeredReal": 1,
-      "joiningPending": 1,
+      "joiningPending": 0,
       "accepted": 1,
       "isActive": true
     }
@@ -8178,7 +8182,7 @@
     {
       "name": "Inbound",
       "type": "Inbound",
-      "candidates": 1122,
+      "candidates": 1132,
       "hires": 0
     },
     {
@@ -8202,7 +8206,7 @@
     {
       "name": "Job Portal",
       "type": "Job Portal",
-      "candidates": 395,
+      "candidates": 397,
       "hires": 12
     },
     {
@@ -8526,7 +8530,7 @@
     },
     "2026-Q3": {
       "funnel": {
-        "applied": 2127,
+        "applied": 2139,
         "screened": 299,
         "interviewed": 228,
         "offered": 79,
@@ -8542,13 +8546,13 @@
         {
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "applied": 478,
+          "applied": 485,
           "hired": 3
         },
         {
           "title": "Manager - Sales (US)",
           "department": "US Business",
-          "applied": 121,
+          "applied": 122,
           "hired": 0
         },
         {
@@ -8560,13 +8564,13 @@
         {
           "title": "Intern, Talent Acquisition",
           "department": "Talent Acquisition",
-          "applied": 96,
+          "applied": 99,
           "hired": 2
         },
         {
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "applied": 66,
+          "applied": 67,
           "hired": 1
         },
         {
@@ -8597,12 +8601,12 @@
       "sources": [
         {
           "name": "Inbound",
-          "candidates": 1119,
+          "candidates": 1129,
           "hires": 0
         },
         {
           "name": "Job Portal",
-          "candidates": 393,
+          "candidates": 395,
           "hires": 12
         },
         {
@@ -8666,1708 +8670,1708 @@
   "avgTimeToHire": 0,
   "offerEvents": [
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Lovely Kumari",
       "decidedAt": "2026-04-16",
       "startDate": "2025-05-12",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "e9f03fb1",
+      "jobTitle": "Sr. Data Analyst",
+      "department": "Marketing",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shashank Rajput",
       "decidedAt": "2026-01-13",
       "startDate": "2025-09-03",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "G Darshan",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Nida Shahid",
       "decidedAt": "2026-08-07",
       "startDate": "2025-09-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ishaan Ishitawa",
       "decidedAt": "2026-03-02",
       "startDate": "2025-09-17",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "G Darshan",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shvetank Hasal",
       "decidedAt": "2026-08-07",
       "startDate": "2025-09-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "3d31c20f",
+      "jobTitle": "Manager - Sales (US)",
+      "department": "US Business",
+      "level": "L4",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Mrigank Sharma",
       "decidedAt": "2026-02-17",
       "startDate": "2025-09-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "G Darshan",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Payal Dubey",
       "decidedAt": "2026-08-07",
       "startDate": "2025-09-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "G Darshan",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Lavanya Ambrish",
       "decidedAt": "2026-08-07",
       "startDate": "2025-09-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "9e8a216c",
+      "jobTitle": "Assistant Manager - Video Editing",
+      "department": "Marketing",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Jayesh Chandak",
       "decidedAt": "2026-06-02",
       "startDate": "2025-09-24",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "aaaaced8",
+      "jobTitle": "Manager - Content Marketing",
+      "department": "Marketing",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shuchi Prasad",
       "decidedAt": "2026-04-05",
       "startDate": "2025-10-22",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "2478eb32",
+      "jobTitle": "Content Writer",
+      "department": "Marketing",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shashi Kadapa",
       "decidedAt": "2026-01-13",
       "startDate": "2025-09-24",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "6073a805",
+      "jobTitle": "Senior Manager - Design",
+      "department": "Marketing",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Karan Vikas Patil",
       "decidedAt": "2026-01-14",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "8e698484",
+      "jobTitle": "Manager, Career Transformation",
+      "department": "Operations",
+      "level": "L4",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sadaf Tahir",
       "decidedAt": "2026-01-14",
       "startDate": "2025-10-15",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "71601113",
+      "jobTitle": "Manager, Sales",
+      "department": "US Business",
+      "level": "L4",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sandy Rajput",
       "decidedAt": "2026-01-15",
       "startDate": "2025-09-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "e2c99efa",
+      "jobTitle": "SME India : MERN Curriculum",
+      "department": "SME - India",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Sanghamitra Moulik",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Vagish Jain",
       "decidedAt": "2026-01-14",
       "startDate": "2025-09-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "1cef9cfe",
+      "jobTitle": "Assistant Manager/Manager - Sales Operations",
+      "department": "Business - India",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "N Nithyakiran",
       "decidedAt": "2026-01-21",
       "startDate": "2025-10-29",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "2478eb32",
+      "jobTitle": "Content Writer",
+      "department": "Marketing",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Kuldeep Pant",
       "decidedAt": "2026-01-13",
       "startDate": "2025-09-29",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "e8867563",
+      "jobTitle": "Intern, Talent Acquisition",
+      "department": "Talent Acquisition",
+      "level": "L0",
+      "complexity": "Complex",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Surovika Paul",
       "decidedAt": "2026-01-14",
       "startDate": "2025-09-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Jothika Vanjicko",
       "decidedAt": "2026-01-19",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "3a6f0d49",
+      "jobTitle": "Intern - Data Analyst",
+      "department": "US Business",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sree Bhairavi",
       "decidedAt": "2026-01-14",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "afadca71",
+      "jobTitle": "Assistant Manager - Social Media",
+      "department": "Marketing",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Rupali Sable",
       "decidedAt": "2026-01-13",
       "startDate": "2025-10-08",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shahnawaz Syed",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shamali Jaiswal",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Akash Verma",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Pradeep Kumar",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "8a77f151",
+      "jobTitle": "Associate Director - University Partnerships",
+      "department": "Business - India",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Moin Subair",
       "decidedAt": "2026-01-14",
       "startDate": "2025-10-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "745a9578",
+      "jobTitle": "Part Time Instructor - Cyber Security Engineering (US)",
+      "department": "SME - US",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Aditya Singh",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Tiffany Lewis",
       "decidedAt": "2026-06-02",
       "startDate": "2025-10-13",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Surovika Tushar Paul",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ashwin Kumar M",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-15",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "578af099",
+      "jobTitle": "Sr. Executive/ AM - Performance Marketing",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Aman Gupta",
       "decidedAt": "2026-01-14",
       "startDate": "2025-10-22",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "G Aryan",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Amrit Raj",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Priyanka Chanda",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Simran Kedia",
       "decidedAt": "2026-02-18",
       "startDate": "2025-10-29",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Pallavi Rath",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Amith Ram R",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Simron Hussain",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Vishali Soni",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Jikey Sukumar",
       "decidedAt": "2026-03-02",
       "startDate": "2025-10-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "f7925a3f",
+      "jobTitle": "Intern, Payroll & HR Operations (US)",
+      "department": "Human Resource",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Rahul S Preetham",
       "decidedAt": "2026-01-13",
       "startDate": "2025-11-05",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Surendra Goutham",
       "decidedAt": "2026-04-09",
       "startDate": "2025-11-03",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "fc3105d6",
+      "jobTitle": "SME India : Machine Learning (Instructor)",
+      "department": "SME - India",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Divyam Arora",
       "decidedAt": "2026-01-14",
       "startDate": "2025-11-03",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "9783f817",
+      "jobTitle": "Customer Success Associate (US)",
+      "department": "Operations",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Disha Sharma",
       "decidedAt": "2026-01-14",
       "startDate": "2025-11-05",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Vinil Suresh Vamanjoor",
       "decidedAt": "2026-01-27",
       "startDate": "2025-11-12",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "a9747a0f",
+      "jobTitle": "Software Engineer 1 , Applied AI",
+      "department": "Engineering",
+      "level": "L1",
+      "complexity": "Complex",
+      "recruiter": "Deepti Leslie",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Amey Deshpande",
       "decidedAt": "2026-01-14",
       "startDate": "2025-12-17",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Nitish .",
       "decidedAt": "2026-02-19",
       "startDate": "2025-11-19",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shivangi Mishra",
       "decidedAt": "2026-02-19",
       "startDate": "2025-11-19",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "745a9578",
+      "jobTitle": "Part Time Instructor - Cyber Security Engineering (US)",
+      "department": "SME - US",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Aditya Singh",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "H Matthew",
       "decidedAt": "2026-06-02",
       "startDate": "2025-11-13",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "63fe03bc",
+      "jobTitle": "Manager Sales",
+      "department": "Business - India",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Tina Anisha Bibeiro",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sneha Daga",
       "decidedAt": "2026-02-19",
       "startDate": "2025-11-19",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Abhishek M",
       "decidedAt": "2026-01-12",
       "startDate": "2025-11-19",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "9600cd31",
+      "jobTitle": "Assistant Manager, Sales Enablement",
+      "department": "Business - India",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "S Kalil Ahmad",
       "decidedAt": "2026-01-15",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "K Bhargavi",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Balendra Dageendran",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Soumya Kallur",
       "decidedAt": "2026-01-02",
       "startDate": "2025-11-19",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Satyendra Mishra",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sakthi Priya. R",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Siddharth Arora",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "dffaaa08",
+      "jobTitle": "Teaching Assistant : Data Structures & Python",
+      "department": "SME - India",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Harshita Tanwar",
       "decidedAt": "2026-01-14",
       "startDate": "2025-11-20",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Jitendra Pradhan",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Nikita Bhattacharya",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Jatin Kumar",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
-      "decidedAt": "2026-03-02",
-      "startDate": "2025-11-26",
-      "accepted": false,
-      "joiningPending": false
-    },
-    {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
-      "sourcer": null,
-      "candidate": null,
-      "decidedAt": "2026-01-14",
-      "startDate": "2025-11-26",
-      "accepted": true,
-      "joiningPending": false
-    },
-    {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
-      "sourcer": null,
-      "candidate": null,
-      "decidedAt": "2026-01-14",
-      "startDate": "2025-11-26",
-      "accepted": true,
-      "joiningPending": false
-    },
-    {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
-      "sourcer": null,
-      "candidate": null,
-      "decidedAt": "2026-03-02",
-      "startDate": "2025-11-26",
-      "accepted": true,
-      "joiningPending": false
-    },
-    {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
-      "sourcer": null,
-      "candidate": null,
+      "candidate": "Nikhil Koushik Yerramilli",
       "decidedAt": "2026-03-02",
       "startDate": "2025-11-26",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "9783f817",
+      "jobTitle": "Customer Success Associate (US)",
+      "department": "Operations",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Manish Pandey",
+      "decidedAt": "2026-01-14",
+      "startDate": "2025-11-26",
+      "accepted": true,
+      "joiningPending": false
+    },
+    {
+      "jobId8": "9783f817",
+      "jobTitle": "Customer Success Associate (US)",
+      "department": "Operations",
+      "level": "NA",
+      "complexity": null,
+      "recruiter": null,
+      "sourcer": null,
+      "candidate": "Arshia Shahi",
+      "decidedAt": "2026-01-14",
+      "startDate": "2025-11-26",
+      "accepted": true,
+      "joiningPending": false
+    },
+    {
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
+      "sourcer": null,
+      "candidate": "Rohit Patil",
+      "decidedAt": "2026-03-02",
+      "startDate": "2025-11-26",
+      "accepted": true,
+      "joiningPending": false
+    },
+    {
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
+      "sourcer": null,
+      "candidate": "Upasana Bhardwaj",
+      "decidedAt": "2026-03-02",
+      "startDate": "2025-11-26",
+      "accepted": false,
+      "joiningPending": false
+    },
+    {
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
+      "sourcer": null,
+      "candidate": "Gaurav Kumar Rai",
       "decidedAt": "2026-04-09",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Suhas Arora",
       "decidedAt": "2026-01-27",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "fc3105d6",
+      "jobTitle": "SME India : Machine Learning (Instructor)",
+      "department": "SME - India",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Himanshi Khandelwal",
       "decidedAt": "2026-01-14",
       "startDate": "2025-11-28",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sasmita Panigrahi",
       "decidedAt": "2026-02-19",
       "startDate": "2025-11-28",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "1cef9cfe",
+      "jobTitle": "Assistant Manager/Manager - Sales Operations",
+      "department": "Business - India",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Hemanth Krishna",
       "decidedAt": "2026-01-21",
       "startDate": "2025-12-10",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Yadhu Krishnan Mundayodan",
       "decidedAt": "2026-02-19",
       "startDate": "2025-12-03",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Apurv Saxena",
       "decidedAt": "2026-01-14",
       "startDate": "2025-12-08",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
+      "jobId8": "52b44276",
+      "jobTitle": "Video Editor (Freelancer)",
+      "department": "Marketing",
+      "level": "L0",
+      "complexity": "Normal",
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Mohit Sajwan",
       "decidedAt": "2026-01-14",
       "startDate": "2025-12-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ritika Srivastava",
       "decidedAt": "2026-01-27",
       "startDate": "2025-12-10",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "39b328eb",
+      "jobTitle": "Software Development Engineer 2 - Frontend",
+      "department": "Engineering",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Astha Thakur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Kartik Kumar Chauhan",
       "decidedAt": "2026-03-12",
       "startDate": "2026-02-11",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "ad7e4c29",
+      "jobTitle": "Customer Success Associate - Referrals",
+      "department": "Operations",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Kunal Paul",
       "decidedAt": "2026-01-07",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Lalit .",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sathyamoorthy V",
       "decidedAt": "2026-02-19",
       "startDate": "2025-12-12",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Subhankar Roy",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "2970acb5",
+      "jobTitle": "Executive Assistant",
+      "department": "Founder's Office",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Kamal Sonia Bangar",
       "decidedAt": "2026-01-13",
       "startDate": "2026-01-07",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "7cecc40d",
+      "jobTitle": "Part-time Instructor - Product Management (US)",
+      "department": "SME - US",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Ritika Bhasin",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Manish Sharma",
       "decidedAt": "2026-04-13",
       "startDate": "2025-12-12",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "TV Srinath",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "e3e0997b",
+      "jobTitle": "Junior Program Advisor - US Sales (Freshers)",
+      "department": "US Business",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Kaashvika Kashyap",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Harsh Batra",
       "decidedAt": "2026-01-16",
       "startDate": "2025-12-17",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Rishabh Agarwal",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Arun Kumar Narayanan",
       "decidedAt": "2026-02-19",
       "startDate": "2025-12-18",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Seelam Ganesh Ram",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "63fe03bc",
+      "jobTitle": "Manager Sales",
+      "department": "Business - India",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Kunal Singh Chouhan",
       "decidedAt": "2026-01-16",
       "startDate": "2025-11-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "63fe03bc",
+      "jobTitle": "Manager Sales",
+      "department": "Business - India",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Amrita Mohapatra",
       "decidedAt": "2026-01-16",
       "startDate": "2025-12-10",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "fc369c2c",
+      "jobTitle": "Senior Software Engineer - React Native",
+      "department": "Engineering",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Astha Thakur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Amritash Kumar Ojha",
       "decidedAt": "2026-02-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "4078cca1",
+      "jobTitle": "Software Engineer 2, Machine Learning",
+      "department": "Engineering",
+      "level": "L2",
+      "complexity": "Complex",
+      "recruiter": "Deepti Leslie",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Gummadipudi Venkata Ranjith Rayalu",
       "decidedAt": "2026-03-12",
       "startDate": "2026-02-18",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "6bdaf5b0",
+      "jobTitle": "Part time Instructor - Full Stack Engineering (US)",
+      "department": "SME - US",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Ritika Bhasin",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Daniel Grundel",
       "decidedAt": "2026-06-02",
       "startDate": "2025-12-17",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "8e698484",
+      "jobTitle": "Manager, Career Transformation",
+      "department": "Operations",
+      "level": "L4",
+      "complexity": "Complex",
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Narinder Kaur",
       "decidedAt": "2026-06-02",
       "startDate": "2026-01-07",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Neina Gewali",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Bhargav Viharee P",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shreyas M R",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tabitha Anceline E",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Deepak Jain",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Kaashvika Kashyap",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sayoni Raha",
       "decidedAt": "2026-03-02",
       "startDate": "2025-12-24",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "e9f03fb1",
+      "jobTitle": "Sr. Data Analyst",
+      "department": "Marketing",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Naman Jain",
       "decidedAt": "2026-01-13",
       "startDate": "2025-12-24",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Prashun Dalmia",
       "decidedAt": "2026-01-15",
       "startDate": "2025-12-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Premanku Chakraborty",
       "decidedAt": "2026-02-19",
       "startDate": "2025-12-26",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "afadca71",
+      "jobTitle": "Assistant Manager - Social Media",
+      "department": "Marketing",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Mashika De Almeida",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "V Shiva Kumar",
       "decidedAt": "2026-03-09",
       "startDate": "2026-01-28",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ishaan Sutaria",
       "decidedAt": "2026-01-15",
       "startDate": "2025-12-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Karan Valecha",
       "decidedAt": "2026-01-15",
       "startDate": "2025-12-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "710daef7",
+      "jobTitle": "Intern - HR( HRops, India)",
+      "department": "Human Resource",
+      "level": "L0",
+      "complexity": "Complex",
+      "recruiter": "Kaashvika Kashyap",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sneha Bhat",
       "decidedAt": "2026-01-13",
       "startDate": "2026-01-05",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "2955c700",
+      "jobTitle": "Consultant - IT Engineer",
+      "department": "IT",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Tina Anisha Bibeiro",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Devaiah I C",
       "decidedAt": "2026-01-05",
       "startDate": "2025-12-29",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Chakravaram Venkat Raju",
       "decidedAt": "2026-01-23",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Sai Sashankh D",
       "decidedAt": "2026-01-15",
       "startDate": "2025-12-31",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shayan Bhattacharya",
       "decidedAt": "2026-01-27",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "7c1706f1",
+      "jobTitle": "SME India : Agentic AI Instructor",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Lakshay Tutlani",
       "decidedAt": "2026-02-19",
       "startDate": "2026-01-02",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "d04de9c5",
+      "jobTitle": "Intern, Talent Acquisition (US - SME)",
+      "department": "Talent Acquisition",
+      "level": "L0",
+      "complexity": "Complex",
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Aaron Collins",
       "decidedAt": "2026-01-07",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Harshit Laddha",
       "decidedAt": "2026-01-15",
       "startDate": "2026-01-02",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "52b44276",
+      "jobTitle": "Video Editor (Freelancer)",
+      "department": "Marketing",
+      "level": "L0",
+      "complexity": "Normal",
+      "recruiter": "Satinder Kaur",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Divyansh Makhija",
       "decidedAt": "2026-01-16",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "f5a2063d",
+      "jobTitle": "Assistant Manager, Program Management",
+      "department": "Business - India",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Dakshita Sudeep",
       "decidedAt": "2026-01-15",
       "startDate": "2026-01-14",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "ad340e02",
+      "jobTitle": "Talent Acquisition Consultant (US - SME)",
+      "department": "Talent Acquisition",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Neha Vivekanand Pattar",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "SHWETANK  ASIT SRIVASTAVA",
       "decidedAt": "2026-01-07",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shruti Thakur",
       "decidedAt": "2026-01-12",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shivani Singh",
       "decidedAt": "2026-01-12",
       "startDate": "2026-01-07",
       "accepted": false,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Siva Sruthi V S",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Pratiksha Manik",
       "decidedAt": "2026-01-27",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "63fe03bc",
+      "jobTitle": "Manager Sales",
+      "department": "Business - India",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ashish Yadav",
       "decidedAt": "2026-01-16",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Kaashvika Kashyap",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Muhammed Fahin",
       "decidedAt": "2026-01-07",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Kaashvika Kashyap",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Bhavani Singh",
       "decidedAt": "2026-01-07",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "df29da2f",
+      "jobTitle": "Program Advisor (Pre sales)",
+      "department": "Business - India",
+      "level": "L1",
+      "complexity": "Normal",
+      "recruiter": "Kaashvika Kashyap",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Navaneeth Poojary",
       "decidedAt": "2026-01-07",
       "startDate": "2026-01-07",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Vanshika Shukla",
       "decidedAt": "2026-01-27",
       "startDate": "2026-02-04",
       "accepted": false,
@@ -10402,28 +10406,28 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "79ed124d",
+      "jobTitle": "Senior Associate/ AM - HR Operations",
+      "department": "Human Resource",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Yashita Agrawal",
       "decidedAt": "2026-01-14",
       "startDate": "2026-01-14",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "c856f068",
+      "jobTitle": "Associate Director - University Partnerships (India)",
+      "department": "Business - India",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Debjani Mukherji",
       "decidedAt": "2026-01-14",
       "startDate": "2025-09-10",
       "accepted": true,
@@ -10486,14 +10490,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Praveen B Suragimath",
       "decidedAt": "2026-03-02",
       "startDate": "2026-01-27",
       "accepted": true,
@@ -10542,28 +10546,28 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "3d31c20f",
+      "jobTitle": "Manager - Sales (US)",
+      "department": "US Business",
+      "level": "L4",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Davinder Pal Kaur",
       "decidedAt": "2026-04-05",
       "startDate": "2026-01-27",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shashank Sharma",
       "decidedAt": "2026-01-27",
       "startDate": "2026-01-27",
       "accepted": true,
@@ -10584,14 +10588,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Alokita Dhumne",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Yuvaraj Singh",
       "decidedAt": "2026-01-27",
       "startDate": "2026-01-27",
       "accepted": true,
@@ -10766,14 +10770,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Smriti Das",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Presidh Macaden",
       "decidedAt": "2026-01-27",
       "startDate": "2026-01-27",
       "accepted": true,
@@ -10850,14 +10854,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "ff07fc66",
+      "jobTitle": "Wordpress Developer",
+      "department": "Engineering",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Deepti Leslie",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Patel Janvi",
       "decidedAt": "2026-03-12",
       "startDate": "2026-01-27",
       "accepted": true,
@@ -10878,28 +10882,28 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "M Navya",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ranjana Karmakar",
       "decidedAt": "2026-01-27",
       "startDate": "2026-01-27",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "838cfbb0",
+      "jobTitle": "Assistant Manager, Sales Trainer",
+      "department": "Business - India",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "M Navya",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Shreya Pillai",
       "decidedAt": "2026-02-04",
       "startDate": "2026-02-04",
       "accepted": true,
@@ -10948,14 +10952,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "b6f031b3",
+      "jobTitle": "SME India : Applied Agentic AI",
+      "department": "SME - India",
+      "level": "NA",
+      "complexity": "Complex",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Bhavik Sankesara",
       "decidedAt": "2026-02-19",
       "startDate": "2026-01-28",
       "accepted": true,
@@ -11102,14 +11106,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "01c3e3bc",
+      "jobTitle": "Part Time Instructor - SRE (US)",
+      "department": "SME - US",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Aditya Singh",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Nishit Dalal",
       "decidedAt": "2026-02-12",
       "startDate": "2026-01-27",
       "accepted": true,
@@ -11130,14 +11134,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "cac9b029",
+      "jobTitle": "Manager, Sales Training & Enablement (US)",
+      "department": "US Business",
+      "level": "L4",
+      "complexity": "Complex",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Ankan Chakrabarti",
       "decidedAt": "2026-02-18",
       "startDate": "2026-02-18",
       "accepted": true,
@@ -11312,14 +11316,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "afadca71",
+      "jobTitle": "Assistant Manager - Social Media",
+      "department": "Marketing",
+      "level": "L3",
+      "complexity": "Normal",
+      "recruiter": "Mashika De Almeida",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Jayanth Kumar",
       "decidedAt": "2026-03-09",
       "startDate": "2026-02-11",
       "accepted": false,
@@ -11354,14 +11358,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Subham Sharma",
       "decidedAt": "2026-02-11",
       "startDate": "2026-02-11",
       "accepted": true,
@@ -11494,14 +11498,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Rijo John",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Rakesh Adhikary",
       "decidedAt": "2026-02-18",
       "startDate": "2026-02-18",
       "accepted": true,
@@ -11816,14 +11820,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "3c1dbb02",
+      "jobTitle": "Part Time Instructor - Agentic AI (US)",
+      "department": "SME - US",
+      "level": "NA",
       "complexity": null,
-      "recruiter": null,
+      "recruiter": "Ritika Bhasin",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "David Lee",
       "decidedAt": "2026-04-09",
       "startDate": "2026-02-23",
       "accepted": true,
@@ -12138,28 +12142,28 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Abhivyanjana Singh",
       "decidedAt": "2026-03-11",
       "startDate": "2026-03-11",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Vinod Kumar Singh",
       "decidedAt": "2026-03-11",
       "startDate": "2026-03-11",
       "accepted": true,
@@ -12278,28 +12282,28 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "3ea2b9d0",
+      "jobTitle": "Associate Product Manager",
+      "department": "Engineering",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "V Pooja",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Aman Jain",
       "decidedAt": "2026-04-05",
       "startDate": "2026-03-11",
       "accepted": true,
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "19982198",
+      "jobTitle": "SDET 2",
+      "department": "Engineering",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Ankita Kabra",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Abishek Kumar",
       "decidedAt": "2026-04-07",
       "startDate": "2026-03-25",
       "accepted": true,
@@ -13286,14 +13290,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "092e9d9b",
+      "jobTitle": "Program Advisor - India",
+      "department": "Business - India",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Tina Anisha Bibeiro",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Kalaiarasan .",
       "decidedAt": "2026-04-22",
       "startDate": "2026-04-22",
       "accepted": true,
@@ -13692,14 +13696,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "recruiter": null,
+      "jobId8": "22fcd2e7",
+      "jobTitle": "Program Advisor - US (AI Programs)",
+      "department": "US Business",
+      "level": "L2",
+      "complexity": "Normal",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Gagandeep Singh",
       "decidedAt": "2026-05-13",
       "startDate": "2026-05-13",
       "accepted": true,
@@ -15036,14 +15040,14 @@
       "joiningPending": false
     },
     {
-      "jobId8": "",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
+      "jobId8": "2e7a56c6",
+      "jobTitle": "Talent Acquisition",
+      "department": "Talent Acquisition",
+      "level": "NA",
       "complexity": null,
       "recruiter": null,
       "sourcer": null,
-      "candidate": null,
+      "candidate": "Deepti Leslie",
       "decidedAt": "2026-07-27",
       "startDate": "2026-07-27",
       "accepted": true,
@@ -15341,7 +15345,7 @@
       "decidedAt": "2026-08-05",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "00833127",
@@ -15397,7 +15401,7 @@
       "decidedAt": "2026-08-06",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15411,7 +15415,7 @@
       "decidedAt": "2026-08-07",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15425,7 +15429,7 @@
       "decidedAt": "2026-08-08",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15439,7 +15443,7 @@
       "decidedAt": "2026-08-07",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "3c1dbb02",
@@ -15467,7 +15471,7 @@
       "decidedAt": "2026-08-07",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15481,7 +15485,7 @@
       "decidedAt": "2026-08-07",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15495,7 +15499,7 @@
       "decidedAt": "2026-08-07",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15509,7 +15513,7 @@
       "decidedAt": "2026-08-08",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "22fcd2e7",
@@ -15523,7 +15527,7 @@
       "decidedAt": "2026-08-10",
       "startDate": "2026-08-11",
       "accepted": true,
-      "joiningPending": true
+      "joiningPending": false
     },
     {
       "jobId8": "7c1706f1",
@@ -15575,76 +15579,6 @@
       "department": "Marketing",
       "recruiter": "Ankita Kabra",
       "startDate": "2026-08-12"
-    },
-    {
-      "candidate": "Vishal Kumar Sharma",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "Jerin Kesavan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Akshit Gaur",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Arpit Gupta",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Mokshika Kashyap",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Nikhil Kumar",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Akash Chaurasia",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Shyam Singh",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Aarushi Upadhyay",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Mohammad Yusuf",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
-    },
-    {
-      "candidate": "Shaina Sharma",
-      "jobTitle": "Program Advisor - US (AI Programs)",
-      "department": "US Business",
-      "recruiter": "G Darshan",
-      "startDate": "2026-08-11"
     },
     {
       "candidate": "Sakshi Anand",
@@ -17673,16 +17607,16 @@
         "createdAt": "2026-08-10"
       }
     ],
-    "unassignedTotal": 19616,
+    "unassignedTotal": 19620,
     "multiRecruiter": [
       {
         "app": "649f6f8e-4229-4426-9301-8319a4873d2f",
         "job8": "538f7111",
         "names": [
+          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma",
-          "Sanghamitra Moulik"
+          "Oshin Verma"
         ]
       },
       {
@@ -17761,16 +17695,16 @@
         "app": "54f6aa99-a9ee-4807-af1c-a021766f0d54",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "8a5ffeee-6333-4c31-8257-f6d51b883cb2",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17785,8 +17719,8 @@
         "app": "3e303648-13a2-4202-8223-21a9f5e9c491",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17841,8 +17775,8 @@
         "app": "9ac02879-516d-4630-9744-4d025e31ea82",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17905,8 +17839,8 @@
         "app": "684b03b8-fb41-4dd3-b763-06ce15f07cc2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17921,8 +17855,8 @@
         "app": "e85a9570-dd0c-4bfc-9bb2-597f99b5b0f1",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17961,8 +17895,8 @@
         "app": "130bed7b-a343-41d4-9365-e082e3ba9647",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18009,8 +17943,8 @@
         "app": "5635a6a0-3f04-41fd-91e5-a95d06efd06d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18025,8 +17959,8 @@
         "app": "11abe852-4b09-48b0-996a-1f57518a2ae3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18065,8 +17999,8 @@
         "app": "553bfb69-3673-4fe6-b663-4f156a89eb06",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18089,8 +18023,8 @@
         "app": "0b15beac-d2bf-4387-880a-9dd49a3f19dd",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18129,16 +18063,16 @@
         "app": "4512dac4-8c35-499f-a417-2fae5c1a3216",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "3eaaa533-948e-430b-8a35-e85411caa26f",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18201,16 +18135,16 @@
         "app": "038491df-9346-4651-9d3b-6f5f9333f318",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "8316371e-5521-459d-8e36-2c6e0806a57a",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18305,8 +18239,8 @@
         "app": "d8c57a52-cb7e-40d7-90a5-4b4ab595d9f2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18329,8 +18263,8 @@
         "app": "09801407-b4ea-4b04-8bca-adfcbe3587eb",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18345,8 +18279,8 @@
         "app": "ca42a903-9ce3-4fa4-ac11-ed3edda251b5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18393,8 +18327,8 @@
         "app": "e956737d-b717-4982-a583-8392ba1e32d2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18449,8 +18383,8 @@
         "app": "d580a20f-3004-48ff-87ae-4c4085fc2b94",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18489,8 +18423,8 @@
         "app": "fe943be0-934e-41c0-8c6b-57913f3607e7",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18505,8 +18439,8 @@
         "app": "2dc35893-f598-47b1-9464-312c5cc18371",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18553,8 +18487,8 @@
         "app": "6cb373ed-f799-480f-ac0c-87ac278f5ede",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18609,8 +18543,8 @@
         "app": "3cbf56bd-1f21-437e-9d4a-0e49722d7fe6",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18649,8 +18583,8 @@
         "app": "6f6cd712-1cc6-461f-a4ef-e98bd07dfc7d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18753,8 +18687,8 @@
         "app": "5355e45c-4f96-408a-849a-0b928a8b4fb9",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18777,16 +18711,16 @@
         "app": "0ea2d323-a5ee-42db-8cc8-4b9f9a009268",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "9dad6e59-4b53-4373-b9b2-b9df0d8c510d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18817,16 +18751,16 @@
         "app": "47490824-a899-4bed-8502-ef4484ca92f7",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "f89e128e-c472-4cae-848b-b3cbb78cc717",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18849,8 +18783,8 @@
         "app": "2f3af780-9cdc-4754-8477-3b571e5707c5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18873,8 +18807,8 @@
         "app": "894c6fae-afb5-4696-824e-d4e19257471f",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18913,8 +18847,8 @@
         "app": "99888f4e-ddac-414e-9429-bd483242b8b5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18929,8 +18863,8 @@
         "app": "25a5ab77-b13e-4de3-adbf-ea3100f11145",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19017,16 +18951,16 @@
         "app": "318df207-1050-45b1-b18e-05674d0fd2d5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "5571e6a9-f6e3-4cbf-a315-7d2c816f2f9e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19041,8 +18975,8 @@
         "app": "c0c008cf-4418-4a61-a197-f32eb6a140bc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19089,16 +19023,16 @@
         "app": "af93ef81-2ec2-472e-852d-a1a21a36084d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "ddb225db-3325-4ba8-9bf0-704e9c36ff30",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -19113,16 +19047,16 @@
         "app": "60168961-81cb-42c9-bd57-b10c138e3850",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "62abcbe8-8be9-437c-8cdf-12f0807647db",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19137,8 +19071,8 @@
         "app": "b79bfa9e-8850-4adf-81fb-4233b3ff0588",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -19153,8 +19087,8 @@
         "app": "522d079b-e88a-43f2-abc6-24766fee8048",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -19217,8 +19151,8 @@
         "app": "4c825903-b690-452c-949c-458682bd77d2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19257,8 +19191,8 @@
         "app": "0a648f0d-ce97-4c00-a3a9-872f837004dd",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
