@@ -219,6 +219,7 @@ export function renderRecruiter(data) {
       <button class="rec-subtab" data-tab="joining">Joining Conversion</button>
       <button class="rec-subtab" data-tab="fulfilment">Fulfilment</button>
       <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
+      <button class="rec-subtab" data-tab="hygiene">Data Hygiene</button>
     </div>
 
     <!-- PANEL: Submission Velocity (LIVE — per-stage/day cells from recruiters[].daily) -->
@@ -289,6 +290,40 @@ export function renderRecruiter(data) {
         <tbody id="recSourceBody"></tbody>
       </table></div>
     </div>
+
+    <!-- PANEL: Data Hygiene (LIVE — surfaces data.dataQuality from the attribution pass) -->
+    <div class="rec-panel" data-panel="hygiene" style="display:none">
+      <p class="sub-note"><strong>Compliance view.</strong> These are candidates &amp; applications the pipeline could not attribute cleanly. The team fixes them <strong>in Ashby</strong> (tag a Recruiter on the hiring team, or remove duplicate Recruiter/Sourcer tags); the next refresh clears the fixed rows. 2026-onward only.</p>
+      <div class="cards" id="hygCards" style="margin-bottom:18px"></div>
+
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Unassigned — reached TA Screen or later, no Recruiter tagged</h4>
+      <p class="sub-note">The actionable backlog: these candidates are in active screening but nobody is credited. Grouped by job. (Applications still in App Review are excluded — those aren't worked yet.)</p>
+      <div class="scroll-table"><table>
+        <thead><tr><th style="min-width:280px">Job / Candidate</th><th>Stage</th><th>Applied</th><th>Application ID</th></tr></thead>
+        <tbody id="hygUnassignedBody"></tbody>
+      </table></div>
+
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Multiple Recruiters on one application</h4>
+      <p class="sub-note">More than one hiring-team member tagged <strong>Recruiter</strong>. Scoring currently credits the first — the team should leave a single Recruiter of record (the one who ran the transition).</p>
+      <div class="scroll-table"><table>
+        <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Recruiters tagged</th><th>Application ID</th></tr></thead>
+        <tbody id="hygMultiRecBody"></tbody>
+      </table></div>
+
+      <h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Multiple Sourcers on one application — data error</h4>
+      <p class="sub-note">A single application should never have more than one <strong>Sourcer</strong>. Any row here is a data anomaly to correct in Ashby.</p>
+      <div class="scroll-table"><table>
+        <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Sourcers tagged</th><th>Application ID</th></tr></thead>
+        <tbody id="hygMultiSrcBody"></tbody>
+      </table></div>
+
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Recruiter roster — Active / Inactive</h4>
+      <p class="sub-note"><strong>Active</strong> = current Ashby account enabled. <strong>Inactive</strong> = account disabled (departed) but retained so their historical offers/hires still score. Derived from Ashby <code>user.list</code> <code>isEnabled</code>.</p>
+      <div class="scroll-table"><table>
+        <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
+        <tbody id="hygRosterBody"></tbody>
+      </table></div>
+    </div>
   `;
 }
 
@@ -296,6 +331,8 @@ export function initRecruiterFilters(data) {
   if (!data || !data.recruiters) return;
   const allRecs = data.recruiters;
   const nDate = 7;
+  // Departed recruiters (Ashby account disabled) are retained so historical offers still score — flag them.
+  const inactiveTag = (r) => r && r.isActive === false ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>' : '';
 
   // jobs[] is keyed by an 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
   // jobMeta() yields {department,title,level,complexity} for the scoring engine (falls back to byJob's own
@@ -377,7 +414,7 @@ export function initRecruiterFilters(data) {
         G.recs.forEach((r, ri) => {
           const rk = `s${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${screenCells(screenTriple(r))}</tr>`;
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${screenCells(screenTriple(r))}</tr>`;
           html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
             <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — needs per-recruiter×job stage history</td>${dashScreen}</tr>`;
         });
@@ -397,7 +434,7 @@ export function initRecruiterFilters(data) {
           <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>
           <td style="font-weight:600">${po}</td><td class="${ph > 0 ? 'good' : 'zero'}" style="font-weight:600">${ph}</td><td class="${pctClass(pct(ph, po))}">${pct(ph, po)}%</td></tr>`;
         G.recs.forEach(r => {
-          html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}</td>
+          html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}${inactiveTag(r)}</td>
             <td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td><td class="${pctClass(pct(r.hired || 0, r.offer || 0))}">${pct(r.hired || 0, r.offer || 0)}%</td></tr>`;
         });
       });
@@ -447,7 +484,7 @@ export function initRecruiterFilters(data) {
         G.recs.forEach((r, ri) => {
           const rk = `${mode}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${cells(recVals[ri], false)}</tr>`;
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(recVals[ri], false)}</tr>`;
           const jobs = (r.byJob || []).slice().sort((a, b) => (b[isSales ? 'hired' : 'offer'] || 0) - (a[isSales ? 'hired' : 'offer'] || 0) || (b.total || 0) - (a.total || 0));
           if (jobs.length) {
             jobs.forEach(bj => {
@@ -486,7 +523,7 @@ export function initRecruiterFilters(data) {
         G.recs.forEach((r, ri) => {
           const rt = recSrcTotal(r);
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>
             <td>${rt || '<span class="zero">0</span>'}</td><td>${rt ? pct(rt, podTotal) + '%' : DASH}</td></tr>`;
           const entries = Object.entries(r.sources || {}).sort((a, b) => b[1] - a[1]);
           if (entries.length) {
@@ -505,8 +542,81 @@ export function initRecruiterFilters(data) {
       wireTreePath(srcBody);
     }
 
+    // ===== Data Hygiene — org-wide compliance (independent of Pod/Recruiter filters) =====
+    renderHygiene();
+
     lastGroups = groups; lastRecs = recs;
     renderActiveChart();
+  }
+
+  // Surfaces data.dataQuality (the attribution pass's compliance payload) + the Active/Inactive roster.
+  function renderHygiene() {
+    const dq = data.dataQuality || {};
+    const q = selQuarter();
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const mono = s => `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted)">${esc(s)}</span>`;
+    const unassigned = dq.unassigned || [];
+    const multiRec = dq.multiRecruiter || [];
+    const multiSrc = dq.multiSourcer || [];
+    const inactiveCount = allRecs.filter(r => r.isActive === false).length;
+
+    // --- summary cards ---
+    const cards = document.getElementById('hygCards');
+    if (cards) {
+      cards.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:12px';
+      const card = (label, value, sub, color) => `<div class="card"><div class="label">${label}</div><div class="value"${color ? ` style="color:${color}"` : ''}>${value}</div><div class="sub">${sub}</div></div>`;
+      cards.innerHTML =
+        card('Unassigned (screening+)', unassigned.length, 'need a Recruiter tag', unassigned.length ? 'var(--orange)' : 'var(--green)') +
+        card('Unassigned (all funnel)', (dq.unassignedTotal || 0).toLocaleString(), 'incl. App Review — not yet worked', 'var(--muted)') +
+        card('Multi-Recruiter apps', multiRec.length, 'first is credited', multiRec.length ? 'var(--orange)' : 'var(--green)') +
+        card('Multi-Sourcer apps', multiSrc.length, 'should be zero', multiSrc.length ? 'var(--red)' : 'var(--green)') +
+        card('Inactive recruiters', inactiveCount, 'departed, retained for history', 'var(--muted)');
+    }
+
+    // --- Unassigned: group by job, candidate rows ---
+    const uBody = document.getElementById('hygUnassignedBody');
+    if (uBody) {
+      const byJob = {};
+      unassigned.forEach(u => { const k = u.jobTitle || u.job8 || '(unknown job)'; (byJob[k] || (byJob[k] = [])).push(u); });
+      const jobs = Object.keys(byJob).sort((a, b) => byJob[b].length - byJob[a].length);
+      let html = '';
+      jobs.forEach((jt, ji) => {
+        const rows = byJob[jt];
+        html += `<tr class="pod-header" data-g="u${ji}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${rows.length}</span></td>
+          <td colspan="3" style="color:var(--muted);font-size:11px">${rows.length} candidate${rows.length === 1 ? '' : 's'} awaiting recruiter tag</td></tr>`;
+        rows.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || '')).forEach(u => {
+          html += `<tr class="leaf" data-g="u${ji}" style="display:none">
+            <td style="padding-left:30px">${esc(u.candidate || '(candidate name not captured)')}</td>
+            <td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
+        });
+      });
+      uBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">No unassigned candidates in active screening — the roster is clean. ✓</td></tr>`;
+      wirePodTree(uBody);
+    }
+
+    // --- Multi-Recruiter / Multi-Sourcer anomaly tables ---
+    const jobTitleBy8 = {}; (data.jobs || []).forEach(j => { jobTitleBy8[j.id] = j.title; });
+    const anomalyRows = (list) => list.map(m =>
+      `<tr><td>${esc(jobTitleBy8[m.job8] || m.job8 || '')}</td>
+        <td>${(m.names || []).map(esc).join(', ')}</td><td>${mono(m.app)}</td></tr>`).join('');
+    const mrBody = document.getElementById('hygMultiRecBody');
+    if (mrBody) mrBody.innerHTML = anomalyRows(multiRec) || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No multi-recruiter applications. ✓</td></tr>`;
+    const msBody = document.getElementById('hygMultiSrcBody');
+    if (msBody) msBody.innerHTML = anomalyRows(multiSrc) || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No multi-sourcer applications. ✓</td></tr>`;
+
+    // --- Active / Inactive roster ---
+    const rBody = document.getElementById('hygRosterBody');
+    if (rBody) {
+      const sorted = [...allRecs].filter(r => r.name && r.name !== 'Unassigned')
+        .sort((a, b) => (a.isActive === false) - (b.isActive === false) || a.name.localeCompare(b.name));
+      rBody.innerHTML = sorted.map(r => {
+        const active = r.isActive !== false;
+        return `<tr><td style="font-weight:500">${esc(r.name)}</td>
+          <td><span style="font-size:11px;font-weight:600;color:${active ? 'var(--green)' : 'var(--red)'}">${active ? 'Active' : 'Inactive'}</span></td>
+          <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
+      }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No recruiters.</td></tr>`;
+    }
   }
 
   // ===== Submission Velocity render (Pod -> Recruiter -> Stage; last 30 days of range, descending) =====
@@ -582,7 +692,7 @@ export function initRecruiterFilters(data) {
       G.recs.forEach((r, ri) => {
         const rk = `${pi}-${ri}`;
         html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}</td>${numRow(recCache[ri].total, recCache[ri].arr, false)}</tr>`;
+          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${numRow(recCache[ri].total, recCache[ri].arr, false)}</tr>`;
         VEL_STAGES.forEach(([sk, label]) => {
           const m = stageDay(r, sk); let t = 0; const per = dkeys.map(dk => { const v = m[dk] || 0; t += v; return v; });
           html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
