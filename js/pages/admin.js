@@ -48,6 +48,28 @@ function loadDeptFamily() { try { return JSON.parse(localStorage.getItem(DEPT_FA
 function saveDeptFamily(o) { localStorage.setItem(DEPT_FAM_LS, JSON.stringify(o)); }
 function familyOf(dept) { const o = loadDeptFamily(); const d = DEPT_FAMILY_DEFAULT.find(x => x[0] === dept); return o[dept] || (d ? d[1] : ''); }
 
+// Auto-capture the effective BASELINE for Publish. collectConfig() only snapshots explicit localStorage edits, so
+// the very first publish (fresh browser, no edits) would send an empty config. This resolves what the readers
+// ACTUALLY use — current-quarter pod assignments for the live roster + the effective score grid + the dept→family
+// defaults — and merges them on top of any explicit edits (edits always win; this only FILLS gaps). Preserves
+// every other quarter's edits untouched. See memory metric-config-serverside.
+const POD_LS = 'ik_recruiter_pods_q', CAP_LS = 'ik_recruiter_capacity_q';
+function buildEffectiveConfig(data) {
+  const q = currentQuarter();
+  const readLS = (k) => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } };
+  const pods = readLS(POD_LS), capacity = readLS(CAP_LS), scoreGrid = loadGridStore(), deptFamily = loadDeptFamily();
+  pods[q] = pods[q] || {}; capacity[q] = capacity[q] || {};
+  ((data && data.recruiters) || []).forEach(r => {
+    if (!r.name || r.name === 'Unassigned') return;
+    // Only freeze a real pod (skip Unassigned so future baseline/edits still resolve for unmapped recruiters).
+    if (pods[q][r.name] == null) { const p = podOf(r.name, q); if (p && p !== 'Unassigned') pods[q][r.name] = p; }
+    if (capacity[q][r.name] == null) capacity[q][r.name] = capacityOf(r.name, q);
+  });
+  if (!scoreGrid[q]) scoreGrid[q] = gridForQuarter(q);
+  DEPT_FAMILY_DEFAULT.forEach(([dept]) => { if (deptFamily[dept] == null) deptFamily[dept] = familyOf(dept); });
+  return { schemaVersion: 1, pods, capacity, scoreGrid, deptFamily };
+}
+
 export function renderAdmin(accessConfig, data) {
   const users = accessConfig?.users || [];
 
@@ -306,7 +328,7 @@ export function initAdminMetricConfig(data) {
     const status = document.getElementById('mcStatus');
     pubBtn.disabled = true; const label = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
     status.textContent = 'A sign-in popup will open — approve it, then this verifies automatically…'; status.style.color = 'var(--muted)';
-    let res; try { res = await publishConfig(); } catch (e) { res = { ok: false, reason: e.message }; }
+    let res; try { res = await publishConfig(buildEffectiveConfig(data)); } catch (e) { res = { ok: false, reason: e.message }; }
     pubBtn.textContent = label; pubBtn.disabled = false;
     if (res.ok) { status.textContent = '✓ Published — the whole team now sees this config.'; status.style.color = 'var(--green)'; refreshPublishUI(); }
     else { status.textContent = '✗ ' + res.reason; status.style.color = 'var(--red)'; }
