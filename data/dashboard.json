@@ -1,12 +1,12 @@
 {
-  "lastUpdated": "2026-08-11T03:55:20.188Z",
+  "lastUpdated": "2026-08-11T04:46:20.687Z",
   "schemaVersion": 4,
   "scopeYear": 2026,
   "velocityDays": 35,
   "funnel": {
-    "applied": 53417,
+    "applied": 53419,
     "screened": 1810,
-    "interviewed": 1119,
+    "interviewed": 1121,
     "offered": 425,
     "hired": 279
   },
@@ -573,15 +573,15 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 6826,
-      "applied": 6826,
+      "total": 6827,
+      "applied": 6827,
       "screen": 5,
       "interview": 1,
       "offer": 3,
       "hired": 3,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 6723,
+        "appReview": 6724,
         "taScreen": 5,
         "hmReview": 0,
         "oa": 0,
@@ -720,17 +720,17 @@
       "status": "Open",
       "total": 2783,
       "applied": 2783,
-      "screen": 4,
-      "interview": 4,
+      "screen": 2,
+      "interview": 6,
       "offer": 3,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
         "appReview": 0,
-        "taScreen": 4,
+        "taScreen": 2,
         "hmReview": 0,
         "oa": 0,
-        "r1": 4,
+        "r1": 6,
         "r2": 3,
         "r3": 1,
         "r4": 0,
@@ -821,15 +821,15 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 2113,
-      "applied": 2113,
+      "total": 2114,
+      "applied": 2114,
       "screen": 241,
       "interview": 278,
       "offer": 97,
       "hired": 85,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 692,
+        "appReview": 693,
         "taScreen": 241,
         "hmReview": 0,
         "oa": 0,
@@ -3329,8 +3329,8 @@
       },
       "recruiters": [
         "Sanghamitra Moulik",
-        "Oshin Verma",
-        "Mashika De Almeida"
+        "Ankita Kabra",
+        "Oshin Verma"
       ]
     },
     {
@@ -4894,82 +4894,10 @@
         "Career Site": 1,
         "Juicebox": 1
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 12896,
-          "2026-08-05": 42,
-          "2026-08-06": 18,
-          "2026-08-10": 34,
-          "2026-08-04": 28,
-          "2026-08-08": 38,
-          "2026-07-16": 1,
-          "2026-07-17": 1,
-          "2026-07-18": 4,
-          "2026-07-19": 1,
-          "2026-07-20": 3,
-          "2026-07-27": 5,
-          "2026-07-23": 3,
-          "2026-07-24": 3,
-          "2026-07-25": 1,
-          "2026-07-26": 1,
-          "2026-08-02": 1,
-          "2026-08-03": 1,
-          "2026-08-07": 26,
-          "2026-08-09": 12,
-          "2026-08-11": 4
-        },
-        "taScreen": {
-          "2026-07-30": 149,
-          "2026-08-02": 1,
-          "2026-08-10": 4
-        },
-        "r2": {
-          "2026-07-30": 7,
-          "2026-07-29": 1,
-          "2026-08-08": 1,
-          "2026-08-07": 1,
-          "2026-08-09": 1,
-          "2026-08-10": 1
-        },
-        "r1": {
-          "2026-07-30": 56,
-          "2026-07-31": 3,
-          "2026-07-22": 1,
-          "2026-07-29": 1,
-          "2026-08-08": 1,
-          "2026-08-11": 1,
-          "2026-08-10": 5
-        },
-        "r3": {
-          "2026-07-30": 8,
-          "2026-08-11": 2,
-          "2026-08-06": 1
-        },
-        "docSub": {
-          "2026-07-30": 1
-        },
-        "r4": {
-          "2026-07-30": 6
-        },
-        "hmReview": {
-          "2026-07-30": 6
-        },
-        "refCheck": {
-          "2026-07-30": 1
-        },
-        "offer": {
-          "2026-07-30": 3,
-          "2026-07-31": 3,
-          "2026-08-03": 1,
-          "2026-07-16": 1,
-          "2026-08-10": 1,
-          "2026-08-07": 1
-        }
-      },
-      "ta": 154,
+      "ta": 152,
       "hm": 6,
       "oa": 0,
-      "r1": 68,
+      "r1": 70,
       "r2": 12,
       "r3": 11,
       "r4": 6,
@@ -4980,7 +4908,7 @@
     },
     {
       "name": "Deepti Leslie",
-      "total": 14362,
+      "total": 14368,
       "byJob": [
         {
           "jobId": "fc369c2c-ba64-44c8-98ff-cf000594947f",
@@ -5058,7 +4986,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 263,
+          "total": 262,
           "offer": 0,
           "hired": 0
         },
@@ -5066,7 +4994,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 5697,
+          "total": 5704,
           "offer": 2,
           "hired": 2
         },
@@ -5134,67 +5062,8 @@
         "MyGreenhouse": 112,
         "Other": 5,
         "Referral": 518,
-        "Inbound": 569,
+        "Inbound": 575,
         "Job Portal": 17
-      },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 11212,
-          "2026-08-04": 886,
-          "2026-08-09": 41,
-          "2026-08-05": 161,
-          "2026-08-10": 43,
-          "2026-08-01": 1,
-          "2026-08-06": 58,
-          "2026-08-07": 51,
-          "2026-08-08": 31,
-          "2026-07-17": 1,
-          "2026-07-18": 4,
-          "2026-07-28": 5,
-          "2026-07-19": 1,
-          "2026-07-25": 4,
-          "2026-07-24": 2,
-          "2026-07-21": 3,
-          "2026-07-22": 5,
-          "2026-07-23": 6,
-          "2026-07-26": 1,
-          "2026-07-27": 4,
-          "2026-07-29": 2,
-          "2026-08-03": 2,
-          "2026-08-11": 4
-        },
-        "r5": {
-          "2026-07-30": 1
-        },
-        "taScreen": {
-          "2026-07-30": 10,
-          "2026-08-06": 2
-        },
-        "r3": {
-          "2026-08-10": 2,
-          "2026-07-30": 2
-        },
-        "r1": {
-          "2026-07-30": 7,
-          "2026-08-06": 2,
-          "2026-08-10": 3,
-          "2026-08-04": 1
-        },
-        "hmReview": {
-          "2026-07-30": 3
-        },
-        "r2": {
-          "2026-07-30": 2,
-          "2026-07-31": 1,
-          "2026-08-10": 4,
-          "2026-08-04": 1
-        },
-        "offer": {
-          "2026-07-30": 1
-        },
-        "r4": {
-          "2026-08-03": 1
-        }
       },
       "ta": 12,
       "hm": 3,
@@ -5384,38 +5253,6 @@
         "Other": 20,
         "Agencies": 1
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 7196,
-          "2026-08-10": 2,
-          "2026-08-06": 1,
-          "2026-08-04": 1
-        },
-        "taScreen": {
-          "2026-07-30": 53
-        },
-        "r2": {
-          "2026-07-30": 4
-        },
-        "hmReview": {
-          "2026-07-30": 2
-        },
-        "refCheck": {
-          "2026-07-30": 1
-        },
-        "r1": {
-          "2026-07-30": 16
-        },
-        "r4": {
-          "2026-07-30": 3
-        },
-        "offer": {
-          "2026-07-30": 2
-        },
-        "r3": {
-          "2026-07-30": 3
-        }
-      },
       "ta": 53,
       "hm": 2,
       "oa": 0,
@@ -5596,32 +5433,6 @@
         "Referral": 6,
         "Other": 2
       },
-      "daily": {
-        "offer": {
-          "2026-07-30": 3
-        },
-        "r2": {
-          "2026-07-30": 5
-        },
-        "appReview": {
-          "2026-07-30": 910
-        },
-        "r1": {
-          "2026-07-30": 24
-        },
-        "hmReview": {
-          "2026-07-30": 9
-        },
-        "r4": {
-          "2026-07-30": 1
-        },
-        "taScreen": {
-          "2026-07-30": 10
-        },
-        "docSub": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 10,
       "hm": 9,
       "oa": 0,
@@ -5639,13 +5450,13 @@
     },
     {
       "name": "G Darshan",
-      "total": 1449,
+      "total": 1450,
       "byJob": [
         {
           "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "total": 1449,
+          "total": 1450,
           "offer": 20,
           "hired": 9
         }
@@ -5656,46 +5467,10 @@
         "Company marketing": 118,
         "Other": 29,
         "Referral": 40,
-        "Job Portal": 239,
+        "Job Portal": 240,
         "Prospecting": 2,
         "Inbound": 184,
         "Recruiter Networking": 5
-      },
-      "daily": {
-        "r1": {
-          "2026-08-07": 259,
-          "2026-08-10": 11,
-          "2026-08-11": 7,
-          "2026-08-08": 1
-        },
-        "appReview": {
-          "2026-08-07": 541,
-          "2026-08-08": 25,
-          "2026-08-10": 89,
-          "2026-08-09": 25,
-          "2026-08-11": 12
-        },
-        "taScreen": {
-          "2026-08-07": 221,
-          "2026-08-10": 19,
-          "2026-08-11": 1
-        },
-        "r3": {
-          "2026-08-07": 35
-        },
-        "r2": {
-          "2026-08-07": 11,
-          "2026-08-10": 3,
-          "2026-08-11": 1
-        },
-        "docSub": {
-          "2026-08-07": 3
-        },
-        "offer": {
-          "2026-08-08": 3,
-          "2026-08-10": 3,
-          "2026-08-07": 5
-        }
       },
       "ta": 241,
       "hm": 0,
@@ -5854,52 +5629,6 @@
         "Job Portal": 3,
         "Inbound": 80
       },
-      "daily": {
-        "r1": {
-          "2026-07-30": 9,
-          "2026-08-04": 1
-        },
-        "r2": {
-          "2026-07-30": 1
-        },
-        "r3": {
-          "2026-07-30": 4,
-          "2026-07-27": 1,
-          "2026-08-03": 1,
-          "2026-08-10": 1
-        },
-        "appReview": {
-          "2026-07-30": 877,
-          "2026-08-05": 16,
-          "2026-08-02": 8,
-          "2026-08-11": 1,
-          "2026-08-08": 4,
-          "2026-08-06": 11,
-          "2026-08-10": 4,
-          "2026-07-27": 10,
-          "2026-07-28": 10,
-          "2026-07-29": 1,
-          "2026-07-31": 1,
-          "2026-08-01": 2,
-          "2026-08-03": 2,
-          "2026-08-04": 4,
-          "2026-08-07": 1,
-          "2026-08-09": 2
-        },
-        "r5": {
-          "2026-07-30": 1
-        },
-        "hmReview": {
-          "2026-07-30": 1
-        },
-        "r4": {
-          "2026-07-27": 1,
-          "2026-08-04": 1
-        },
-        "offer": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 0,
       "hm": 1,
       "oa": 0,
@@ -5917,7 +5646,7 @@
     },
     {
       "name": "Oshin Verma",
-      "total": 1018,
+      "total": 954,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -5987,15 +5716,7 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Assistant Manager - US HR and Payroll",
           "department": "Human Resource",
-          "total": 757,
-          "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
-          "title": "Curriculum Manager - APM / PM",
-          "department": "New Programs",
-          "total": 12,
+          "total": 691,
           "offer": 0,
           "hired": 0
         },
@@ -6003,7 +5724,15 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 10,
+          "total": 12,
+          "offer": 1,
+          "hired": 0
+        },
+        {
+          "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
+          "title": "Curriculum Manager - APM / PM",
+          "department": "New Programs",
+          "total": 12,
           "offer": 0,
           "hired": 0
         },
@@ -6025,82 +5754,31 @@
         }
       ],
       "sources": {
-        "Company marketing": 252,
-        "Third-party boards": 707,
-        "Referral": 7,
-        "MyGreenhouse": 29,
+        "Company marketing": 237,
+        "Third-party boards": 663,
+        "Referral": 8,
+        "MyGreenhouse": 25,
         "Prospecting": 1,
-        "Job Portal": 21
+        "Job Portal": 19
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 98,
-          "2026-08-07": 673
-        },
-        "r3": {
-          "2026-07-31": 2,
-          "2026-07-30": 1,
-          "2026-08-07": 2,
-          "2026-08-05": 1
-        },
-        "r2": {
-          "2026-07-31": 1,
-          "2026-07-30": 2,
-          "2026-08-07": 1
-        },
-        "docSub": {
-          "2026-07-31": 6
-        },
-        "r1": {
-          "2026-07-31": 11,
-          "2026-07-30": 3,
-          "2026-08-05": 3,
-          "2026-08-07": 1,
-          "2026-08-10": 3
-        },
-        "taScreen": {
-          "2026-07-31": 2,
-          "2026-08-07": 29,
-          "2026-07-30": 3
-        },
-        "offer": {
-          "2026-07-31": 24,
-          "2026-07-30": 2,
-          "2026-08-07": 1,
-          "2026-08-05": 1,
-          "2026-08-04": 1,
-          "2026-08-10": 2
-        },
-        "r4": {
-          "2026-07-30": 1,
-          "2026-08-05": 2
-        },
-        "r5": {
-          "2026-07-31": 8
-        },
-        "hmReview": {
-          "2026-07-30": 4,
-          "2026-08-07": 1
-        }
-      },
-      "ta": 34,
+      "ta": 32,
       "hm": 5,
       "oa": 0,
-      "r1": 21,
-      "r2": 4,
+      "r1": 22,
+      "r2": 3,
       "r3": 6,
       "r4": 3,
       "r5": 8,
-      "offer": 54,
+      "offer": 55,
       "hired": 23,
-      "offeredReal": 41,
+      "offeredReal": 42,
       "joiningPending": 2,
-      "accepted": 39,
+      "accepted": 40,
       "isActive": true
     },
     {
       "name": "Ankita Kabra",
-      "total": 862,
+      "total": 864,
       "byJob": [
         {
           "jobId": "fc3105d6-731f-4653-a0b5-16a8ac8efda2",
@@ -6183,6 +5861,14 @@
           "hired": 1
         },
         {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 2,
+          "offer": 0,
+          "hired": 0
+        },
+        {
           "jobId": "02934d02-b322-40f5-ad94-cfe12f7b0373",
           "title": "Agentic Ai Engineer",
           "department": "Engineering",
@@ -6241,7 +5927,7 @@
       ],
       "sources": {
         "Company marketing": 646,
-        "Third-party boards": 183,
+        "Third-party boards": 185,
         "Referral": 13,
         "MyGreenhouse": 6,
         "Agencies": 6,
@@ -6249,35 +5935,13 @@
         "Prospecting": 3,
         "Inbound": 1
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 648,
-          "2026-08-08": 1
-        },
-        "offer": {
-          "2026-07-30": 7,
-          "2026-08-10": 1
-        },
-        "r1": {
-          "2026-07-30": 17
-        },
-        "docSub": {
-          "2026-07-30": 2
-        },
-        "r5": {
-          "2026-07-30": 2
-        },
-        "r3": {
-          "2026-07-30": 2
-        }
-      },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 17,
+      "r1": 18,
       "r2": 0,
       "r3": 2,
-      "r4": 0,
+      "r4": 1,
       "r5": 2,
       "offer": 16,
       "hired": 8,
@@ -6294,8 +5958,8 @@
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 410,
-          "offer": 34,
+          "total": 408,
+          "offer": 33,
           "hired": 15
         },
         {
@@ -6366,8 +6030,8 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 1,
-          "offer": 1,
+          "total": 3,
+          "offer": 2,
           "hired": 0
         }
       ],
@@ -6375,42 +6039,24 @@
         "Company marketing": 322,
         "Agencies": 8,
         "Third-party boards": 171,
-        "Prospecting": 23,
+        "Prospecting": 24,
         "MyGreenhouse": 5,
-        "Inbound": 1,
-        "Juicebox": 1
-      },
-      "daily": {
-        "appReview": {
-          "2026-08-01": 261,
-          "2026-07-30": 15
-        },
-        "offer": {
-          "2026-07-30": 26,
-          "2026-08-11": 1,
-          "2026-08-07": 1
-        },
-        "r1": {
-          "2026-07-30": 4
-        },
-        "taScreen": {
-          "2026-07-30": 26,
-          "2026-08-10": 1
-        }
+        "Juicebox": 1,
+        "Job Portal": 1
       },
       "ta": 27,
       "hm": 0,
       "oa": 0,
-      "r1": 4,
+      "r1": 5,
       "r2": 0,
       "r3": 0,
       "r4": 0,
       "r5": 0,
       "offer": 46,
       "hired": 18,
-      "offeredReal": 23,
+      "offeredReal": 22,
       "joiningPending": 0,
-      "accepted": 20,
+      "accepted": 19,
       "isActive": true
     },
     {
@@ -6547,26 +6193,6 @@
         "Agencies": 9,
         "Prospecting": 2
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 20
-        },
-        "r1": {
-          "2026-07-30": 23
-        },
-        "taScreen": {
-          "2026-07-30": 17
-        },
-        "r3": {
-          "2026-07-30": 3
-        },
-        "hmReview": {
-          "2026-07-30": 3
-        },
-        "offer": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 17,
       "hm": 3,
       "oa": 0,
@@ -6649,23 +6275,6 @@
         "Company marketing": 3,
         "Other": 7,
         "Prospecting": 2
-      },
-      "daily": {
-        "r1": {
-          "2026-07-30": 4
-        },
-        "taScreen": {
-          "2026-07-30": 23
-        },
-        "r4": {
-          "2026-07-30": 1
-        },
-        "appReview": {
-          "2026-07-30": 6
-        },
-        "offer": {
-          "2026-07-30": 2
-        }
       },
       "ta": 23,
       "hm": 0,
@@ -6797,17 +6406,6 @@
         "Referral": 2,
         "Company marketing": 1,
         "Other": 1
-      },
-      "daily": {
-        "taScreen": {
-          "2026-07-30": 10
-        },
-        "appReview": {
-          "2026-07-30": 3
-        },
-        "r1": {
-          "2026-07-30": 4
-        }
       },
       "ta": 10,
       "hm": 0,
@@ -6948,35 +6546,6 @@
         "Agencies": 9,
         "MyGreenhouse": 3
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 246
-        },
-        "taScreen": {
-          "2026-07-30": 14
-        },
-        "r1": {
-          "2026-07-30": 5
-        },
-        "offer": {
-          "2026-07-30": 9
-        },
-        "docSub": {
-          "2026-07-30": 1
-        },
-        "hmReview": {
-          "2026-07-30": 6
-        },
-        "refCheck": {
-          "2026-07-30": 2
-        },
-        "r4": {
-          "2026-07-30": 1
-        },
-        "r3": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 14,
       "hm": 6,
       "oa": 0,
@@ -7028,11 +6597,6 @@
         "Company marketing": 3,
         "Agencies": 5
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -7050,7 +6614,7 @@
     },
     {
       "name": "Astha Thakur",
-      "total": 244,
+      "total": 238,
       "byJob": [
         {
           "jobId": "39b328eb-b0b2-434c-89fd-2a75de973ba0",
@@ -7088,7 +6652,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 36,
+          "total": 30,
           "offer": 0,
           "hired": 0
         }
@@ -7096,22 +6660,7 @@
       "sources": {
         "Referral": 4,
         "Third-party boards": 204,
-        "Inbound": 36
-      },
-      "daily": {
-        "taScreen": {
-          "2026-07-30": 15
-        },
-        "appReview": {
-          "2026-07-30": 1,
-          "2026-08-04": 1,
-          "2026-08-01": 1,
-          "2026-08-05": 21,
-          "2026-08-06": 7,
-          "2026-08-08": 3,
-          "2026-08-09": 2,
-          "2026-08-10": 1
-        }
+        "Inbound": 30
       },
       "ta": 15,
       "hm": 0,
@@ -7126,6 +6675,53 @@
       "offeredReal": 3,
       "joiningPending": 0,
       "accepted": 2,
+      "isActive": true
+    },
+    {
+      "name": "Gopu Nair V",
+      "total": 235,
+      "byJob": [
+        {
+          "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
+          "title": "Assistant Manager - US HR and Payroll",
+          "department": "Human Resource",
+          "total": 208,
+          "offer": 0,
+          "hired": 0
+        },
+        {
+          "jobId": "e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f",
+          "title": "Test",
+          "department": "Test",
+          "total": 27,
+          "offer": 12,
+          "hired": 0
+        }
+      ],
+      "sources": {
+        "Company marketing": 47,
+        "Third-party boards": 139,
+        "MyGreenhouse": 5,
+        "Job Portal": 26,
+        "Inbound": 6,
+        "Juicebox": 1,
+        "Referral": 3,
+        "Agencies": 1,
+        "Sourced": 1
+      },
+      "ta": 5,
+      "hm": 0,
+      "oa": 0,
+      "r1": 0,
+      "r2": 1,
+      "r3": 1,
+      "r4": 0,
+      "r5": 1,
+      "offer": 12,
+      "hired": 0,
+      "offeredReal": 5,
+      "joiningPending": 0,
+      "accepted": 4,
       "isActive": true
     },
     {
@@ -7144,8 +6740,8 @@
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 97,
-          "offer": 24,
+          "total": 99,
+          "offer": 25,
           "hired": 7
         },
         {
@@ -7224,8 +6820,8 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 16,
-          "offer": 9,
+          "total": 14,
+          "offer": 8,
           "hired": 1
         }
       ],
@@ -7234,68 +6830,24 @@
         "Third-party boards": 98,
         "MyGreenhouse": 2,
         "Referral": 1,
-        "Prospecting": 2,
+        "Prospecting": 1,
         "Juicebox": 11,
-        "Inbound": 28,
-        "Job Portal": 14
-      },
-      "daily": {
-        "appReview": {
-          "2026-08-03": 77,
-          "2026-07-30": 1,
-          "2026-08-01": 7,
-          "2026-08-06": 1,
-          "2026-08-04": 1,
-          "2026-08-05": 1,
-          "2026-08-07": 1,
-          "2026-08-11": 2
-        },
-        "r1": {
-          "2026-08-03": 1,
-          "2026-07-30": 1,
-          "2026-08-06": 5,
-          "2026-08-07": 2,
-          "2026-08-08": 1,
-          "2026-08-09": 1
-        },
-        "offer": {
-          "2026-07-30": 13,
-          "2026-08-07": 2,
-          "2026-07-29": 2,
-          "2026-08-06": 1,
-          "2026-07-25": 1,
-          "2026-07-23": 2,
-          "2026-08-08": 1,
-          "2026-08-11": 2,
-          "2026-08-10": 1
-        },
-        "taScreen": {
-          "2026-07-30": 23,
-          "2026-07-28": 1,
-          "2026-08-03": 1,
-          "2026-08-07": 2,
-          "2026-08-04": 1,
-          "2026-08-05": 1,
-          "2026-08-10": 4
-        },
-        "docSub": {
-          "2026-07-24": 1,
-          "2026-08-06": 2
-        }
+        "Inbound": 29,
+        "Job Portal": 13
       },
       "ta": 33,
       "hm": 0,
       "oa": 0,
-      "r1": 11,
+      "r1": 10,
       "r2": 0,
       "r3": 0,
       "r4": 0,
       "r5": 0,
       "offer": 44,
       "hired": 19,
-      "offeredReal": 29,
+      "offeredReal": 30,
       "joiningPending": 0,
-      "accepted": 27,
+      "accepted": 28,
       "isActive": true
     },
     {
@@ -7373,17 +6925,6 @@
         "Other": 28,
         "Company marketing": 5
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 1
-        },
-        "taScreen": {
-          "2026-07-30": 3
-        },
-        "r1": {
-          "2026-07-30": 3
-        }
-      },
       "ta": 3,
       "hm": 0,
       "oa": 0,
@@ -7397,74 +6938,6 @@
       "offeredReal": 27,
       "joiningPending": 0,
       "accepted": 27,
-      "isActive": true
-    },
-    {
-      "name": "Gopu Nair V",
-      "total": 169,
-      "byJob": [
-        {
-          "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
-          "title": "Assistant Manager - US HR and Payroll",
-          "department": "Human Resource",
-          "total": 142,
-          "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f",
-          "title": "Test",
-          "department": "Test",
-          "total": 27,
-          "offer": 12,
-          "hired": 0
-        }
-      ],
-      "sources": {
-        "Company marketing": 32,
-        "Third-party boards": 95,
-        "MyGreenhouse": 1,
-        "Job Portal": 23,
-        "Inbound": 6,
-        "Juicebox": 1,
-        "Referral": 3,
-        "Agencies": 1,
-        "Sourced": 1
-      },
-      "daily": {
-        "appReview": {
-          "2026-08-07": 113,
-          "2026-07-30": 5
-        },
-        "taScreen": {
-          "2026-08-07": 1,
-          "2026-07-30": 1,
-          "2026-07-31": 1
-        },
-        "offer": {
-          "2026-07-30": 11,
-          "2026-08-10": 1
-        },
-        "r5": {
-          "2026-08-06": 1
-        },
-        "r3": {
-          "2026-07-30": 1
-        }
-      },
-      "ta": 3,
-      "hm": 0,
-      "oa": 0,
-      "r1": 0,
-      "r2": 0,
-      "r3": 1,
-      "r4": 0,
-      "r5": 1,
-      "offer": 12,
-      "hired": 0,
-      "offeredReal": 5,
-      "joiningPending": 0,
-      "accepted": 4,
       "isActive": true
     },
     {
@@ -7550,17 +7023,6 @@
         "Agencies": 5,
         "Company marketing": 6,
         "Referral": 5
-      },
-      "daily": {
-        "taScreen": {
-          "2026-07-30": 1
-        },
-        "appReview": {
-          "2026-07-30": 4
-        },
-        "r1": {
-          "2026-07-30": 2
-        }
       },
       "ta": 1,
       "hm": 0,
@@ -7654,20 +7116,6 @@
         "Referral": 1,
         "In person event": 20
       },
-      "daily": {
-        "taScreen": {
-          "2026-07-30": 4
-        },
-        "appReview": {
-          "2026-07-30": 4
-        },
-        "r1": {
-          "2026-07-30": 1
-        },
-        "r3": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 4,
       "hm": 0,
       "oa": 0,
@@ -7715,7 +7163,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 1,
+          "total": 2,
           "offer": 0,
           "hired": 0
         },
@@ -7766,37 +7214,21 @@
           "total": 1,
           "offer": 1,
           "hired": 1
-        },
-        {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 1,
-          "offer": 0,
-          "hired": 0
         }
       ],
       "sources": {
-        "Third-party boards": 41,
+        "Third-party boards": 40,
         "Agencies": 7,
         "Other": 2,
         "MyGreenhouse": 4,
         "Company marketing": 20,
-        "Referral": 1
-      },
-      "daily": {
-        "r2": {
-          "2026-07-30": 1
-        },
-        "r1": {
-          "2026-07-30": 1,
-          "2026-08-05": 1
-        }
+        "Referral": 1,
+        "Inbound": 1
       },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 2,
+      "r1": 1,
       "r2": 1,
       "r3": 0,
       "r4": 0,
@@ -7891,14 +7323,6 @@
         "Third-party boards": 53,
         "Company marketing": 2
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 2
-        },
-        "taScreen": {
-          "2026-07-30": 2
-        }
-      },
       "ta": 2,
       "hm": 0,
       "oa": 0,
@@ -7916,7 +7340,7 @@
     },
     {
       "name": "Sanghamitra Moulik",
-      "total": 29,
+      "total": 26,
       "byJob": [
         {
           "jobId": "b6f031b3-3350-4aab-8296-da542fed4a0f",
@@ -7938,44 +7362,28 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 8,
-          "offer": 1,
+          "total": 5,
+          "offer": 0,
           "hired": 0
         }
       ],
       "sources": {
-        "Third-party boards": 26,
-        "Referral": 1,
-        "Job Portal": 2
-      },
-      "daily": {
-        "docSub": {
-          "2026-07-30": 2
-        },
-        "r1": {
-          "2026-08-05": 5,
-          "2026-07-30": 2
-        },
-        "r4": {
-          "2026-08-05": 1
-        },
-        "offer": {
-          "2026-08-06": 1
-        }
+        "Third-party boards": 25,
+        "Job Portal": 1
       },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 7,
+      "r1": 6,
       "r2": 0,
       "r3": 0,
-      "r4": 1,
+      "r4": 0,
       "r5": 0,
-      "offer": 6,
+      "offer": 5,
       "hired": 5,
-      "offeredReal": 7,
+      "offeredReal": 6,
       "joiningPending": 0,
-      "accepted": 7,
+      "accepted": 6,
       "isActive": true
     },
     {
@@ -8010,11 +7418,6 @@
       "sources": {
         "Third-party boards": 15
       },
-      "daily": {
-        "r1": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -8046,11 +7449,6 @@
       "sources": {
         "Referral": 1
       },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -8078,11 +7476,6 @@
       ],
       "sources": {
         "Third-party boards": 1
-      },
-      "daily": {
-        "appReview": {
-          "2026-07-30": 1
-        }
       },
       "ta": 0,
       "hm": 0,
@@ -8112,11 +7505,6 @@
       "sources": {
         "Referral": 1
       },
-      "daily": {
-        "r2": {
-          "2026-07-30": 1
-        }
-      },
       "ta": 0,
       "hm": 0,
       "oa": 0,
@@ -8144,11 +7532,6 @@
       ],
       "sources": {
         "Referral": 1
-      },
-      "daily": {
-        "offer": {
-          "2026-08-10": 1
-        }
       },
       "ta": 0,
       "hm": 0,
@@ -8182,7 +7565,7 @@
     {
       "name": "Inbound",
       "type": "Inbound",
-      "candidates": 1132,
+      "candidates": 1133,
       "hires": 0
     },
     {
@@ -8206,7 +7589,7 @@
     {
       "name": "Job Portal",
       "type": "Job Portal",
-      "candidates": 397,
+      "candidates": 398,
       "hires": 12
     },
     {
@@ -8530,9 +7913,9 @@
     },
     "2026-Q3": {
       "funnel": {
-        "applied": 2139,
+        "applied": 2141,
         "screened": 299,
-        "interviewed": 228,
+        "interviewed": 230,
         "offered": 79,
         "hired": 25
       },
@@ -8540,13 +7923,13 @@
         {
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "applied": 890,
+          "applied": 891,
           "hired": 0
         },
         {
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "applied": 485,
+          "applied": 486,
           "hired": 3
         },
         {
@@ -8601,12 +7984,12 @@
       "sources": [
         {
           "name": "Inbound",
-          "candidates": 1129,
+          "candidates": 1130,
           "hires": 0
         },
         {
           "name": "Job Portal",
-          "candidates": 395,
+          "candidates": 396,
           "hires": 12
         },
         {
@@ -15381,7 +14764,7 @@
       "department": "SME - India",
       "level": "NA",
       "complexity": "Complex",
-      "recruiter": "Sanghamitra Moulik",
+      "recruiter": "Oshin Verma",
       "sourcer": null,
       "candidate": "Nitish Nanda",
       "decidedAt": "2026-08-06",
@@ -15451,7 +14834,7 @@
       "department": "SME - US",
       "level": "NA",
       "complexity": null,
-      "recruiter": "Aditya Singh",
+      "recruiter": "Ritika Bhasin",
       "sourcer": null,
       "candidate": "Raghavan Muthuregunathan",
       "decidedAt": "2026-08-07",
@@ -15601,6 +14984,7 @@
         "applicationId": "fdb64d61-b9c5-48e8-90bd-50b2d583c408",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Muhammad Bilal",
         "stage": "TA Screen",
         "createdAt": "2026-01-02"
       },
@@ -15608,6 +14992,7 @@
         "applicationId": "89bb9815-a7b7-46ad-be3c-d96d363cbc5d",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Kedar Shelke",
         "stage": "TA Screen",
         "createdAt": "2026-01-03"
       },
@@ -15615,6 +15000,7 @@
         "applicationId": "1643fc65-ff9e-4b97-9334-4bfa3c16a831",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Shashank Iyer",
         "stage": "R2",
         "createdAt": "2026-01-03"
       },
@@ -15622,6 +15008,7 @@
         "applicationId": "a6731c36-0a57-43c9-92c3-dc23d57f5cec",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Ayan Chakraborty",
         "stage": "TA Screen",
         "createdAt": "2026-01-05"
       },
@@ -15629,6 +15016,7 @@
         "applicationId": "9d52a108-223c-4415-bec2-d9acc710ef96",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Gauri Tripathi",
         "stage": "R1",
         "createdAt": "2026-01-05"
       },
@@ -15636,6 +15024,7 @@
         "applicationId": "144b8f59-c360-4968-b0d6-9ea79244af93",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Ayesha Ayub",
         "stage": "TA Screen",
         "createdAt": "2026-01-05"
       },
@@ -15643,6 +15032,7 @@
         "applicationId": "7550ec7a-ad50-431b-b36e-a3ea0644dfd7",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Suhrud Pendse",
         "stage": "R1",
         "createdAt": "2026-01-06"
       },
@@ -15650,6 +15040,7 @@
         "applicationId": "86cb795a-bc46-49aa-8844-a08d2d6c2cb3",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ayesha Ayub",
         "stage": "R3",
         "createdAt": "2026-01-07"
       },
@@ -15657,6 +15048,7 @@
         "applicationId": "fb61d6e9-5555-4ff4-a26e-da07e57fc7c2",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Rudranil Bhattacharjee",
         "stage": "TA Screen",
         "createdAt": "2026-01-10"
       },
@@ -15664,6 +15056,7 @@
         "applicationId": "53160b96-4aa7-4b66-a54b-3ed035295571",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Urvashi Rawat",
         "stage": "R1",
         "createdAt": "2026-01-12"
       },
@@ -15671,6 +15064,7 @@
         "applicationId": "918a37ff-91f0-4cf9-9ca6-0e6044ec45bf",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Rashmit Singh",
         "stage": "TA Screen",
         "createdAt": "2026-01-13"
       },
@@ -15678,6 +15072,7 @@
         "applicationId": "e0060770-6a57-4c46-80bd-79e92500b1d3",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Gaurav Bhansali",
         "stage": "TA Screen",
         "createdAt": "2026-01-13"
       },
@@ -15685,6 +15080,7 @@
         "applicationId": "17da4ae9-9c3b-4ffb-b9e2-5b4b7f8346c9",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Suchi Tripathi",
         "stage": "R1",
         "createdAt": "2026-01-13"
       },
@@ -15692,6 +15088,7 @@
         "applicationId": "6cdf51f3-ff8c-44f1-9cda-3b123e4f00a6",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Yash Seth",
         "stage": "TA Screen",
         "createdAt": "2026-01-13"
       },
@@ -15699,6 +15096,7 @@
         "applicationId": "b6ee71dd-0dea-42d7-a57f-e17af4d08990",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "P Vijayvargiya",
         "stage": "TA Screen",
         "createdAt": "2026-01-13"
       },
@@ -15706,6 +15104,7 @@
         "applicationId": "0b2d8a32-9a1f-4576-b239-ed19c1c5b1c2",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "T Ameira",
         "stage": "TA Screen",
         "createdAt": "2026-01-13"
       },
@@ -15713,6 +15112,7 @@
         "applicationId": "843bf0e4-d967-4d7b-9712-9ef19824e030",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Salil S",
         "stage": "R1",
         "createdAt": "2026-01-13"
       },
@@ -15720,6 +15120,7 @@
         "applicationId": "79b8449b-621a-4d3c-937f-812d56b4b90c",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Urvashi Bhardwaj",
         "stage": "R1",
         "createdAt": "2026-01-13"
       },
@@ -15727,6 +15128,7 @@
         "applicationId": "294c87bd-87c4-4a87-b72f-1c8cea494294",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Durga prasad vadlamuri",
         "stage": "TA Screen",
         "createdAt": "2026-01-15"
       },
@@ -15734,6 +15136,7 @@
         "applicationId": "6ac2e06e-e564-425d-a15c-0323eb0971d5",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ayush Singh",
         "stage": "R3",
         "createdAt": "2026-01-15"
       },
@@ -15741,6 +15144,7 @@
         "applicationId": "520c3039-a7d5-4c33-8f4d-f7f35ce5dd16",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Kajol Kochar",
         "stage": "R1",
         "createdAt": "2026-01-15"
       },
@@ -15748,6 +15152,7 @@
         "applicationId": "75e503bd-a386-441c-bdbc-eee01ee33ad9",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Mohit Rajput",
         "stage": "R2",
         "createdAt": "2026-01-15"
       },
@@ -15755,6 +15160,7 @@
         "applicationId": "ebeead2b-70a7-46b2-bb89-7c171872b7ac",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Arpit Bhatnagar",
         "stage": "R1",
         "createdAt": "2026-01-16"
       },
@@ -15762,6 +15168,7 @@
         "applicationId": "7e31b91e-8145-4c1a-ba61-5279b23b2b4e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Komal S",
         "stage": "R1",
         "createdAt": "2026-01-16"
       },
@@ -15769,6 +15176,7 @@
         "applicationId": "3a470d2d-3ec2-4936-90f2-97f6edb53a75",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Gutta Durga Sai Pratap",
         "stage": "R1",
         "createdAt": "2026-01-16"
       },
@@ -15776,6 +15184,7 @@
         "applicationId": "847b976e-ac62-4ec3-ade1-c04d6a21e9b4",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Faraaz Khan",
         "stage": "R1",
         "createdAt": "2026-01-16"
       },
@@ -15783,6 +15192,7 @@
         "applicationId": "a33fa9b1-d5d9-43eb-bb2a-19fd25fbb3fa",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Sachin Bhatia",
         "stage": "R2",
         "createdAt": "2026-01-19"
       },
@@ -15790,6 +15200,7 @@
         "applicationId": "7af568c3-9918-43e6-b368-9d3e16141429",
         "job8": "61313567",
         "jobTitle": "Freelancer- Performance Marketing",
+        "candidate": "Aditi Sarkar",
         "stage": "Hired",
         "createdAt": "2026-01-19"
       },
@@ -15797,6 +15208,7 @@
         "applicationId": "47568ae2-46c3-452c-a734-5440855e982e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Dilpreet Singh",
         "stage": "R1",
         "createdAt": "2026-01-20"
       },
@@ -15804,6 +15216,7 @@
         "applicationId": "82449cc5-a436-4bdb-89a4-d9fd1f3acf6e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Rishab Kumar Choudhury",
         "stage": "TA Screen",
         "createdAt": "2026-01-20"
       },
@@ -15811,6 +15224,7 @@
         "applicationId": "5753d3dd-9d5c-4c84-88aa-7cc1fe3d9719",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ayush Dixit",
         "stage": "R1",
         "createdAt": "2026-01-20"
       },
@@ -15818,6 +15232,7 @@
         "applicationId": "1a27daa0-00ac-4bb3-8c56-fb9152926851",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Subhajeet Mazumder",
         "stage": "R1",
         "createdAt": "2026-01-20"
       },
@@ -15825,6 +15240,7 @@
         "applicationId": "b1e28af7-a37b-463d-9a3c-7b1e555da696",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Ramamurthy Srinivas",
         "stage": "TA Screen",
         "createdAt": "2026-01-21"
       },
@@ -15832,6 +15248,7 @@
         "applicationId": "8958f87c-4264-4744-91f5-71d7b2fd6e88",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Abhigyan Shivam",
         "stage": "Document Submission",
         "createdAt": "2026-01-21"
       },
@@ -15839,6 +15256,7 @@
         "applicationId": "39335195-f758-4378-8037-469ea0fed6eb",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Shubham Agrahari",
         "stage": "R1",
         "createdAt": "2026-01-22"
       },
@@ -15846,6 +15264,7 @@
         "applicationId": "e5be1311-42c7-4a24-9320-57ca83dcee44",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Sameer Mohammed Shaikh",
         "stage": "R1",
         "createdAt": "2026-01-22"
       },
@@ -15853,6 +15272,7 @@
         "applicationId": "72e439ec-cb06-4a60-b14a-afefea07ef3d",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Akansha Singh",
         "stage": "R1",
         "createdAt": "2026-01-22"
       },
@@ -15860,6 +15280,7 @@
         "applicationId": "5ddd0e8e-46c3-452e-b0d5-ee725a3297b6",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Sindhuraj Singh",
         "stage": "R1",
         "createdAt": "2026-01-22"
       },
@@ -15867,6 +15288,7 @@
         "applicationId": "de8b9bdf-52c1-4907-a79f-cd731e639ebd",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ejaz Rizvi",
         "stage": "R1",
         "createdAt": "2026-01-22"
       },
@@ -15874,6 +15296,7 @@
         "applicationId": "93da5941-933f-466c-a879-c5457977e909",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Shilpi Singh",
         "stage": "TA Screen",
         "createdAt": "2026-01-25"
       },
@@ -15881,6 +15304,7 @@
         "applicationId": "2d4f58ac-7c10-4fd5-85cc-8616abec66f8",
         "job8": "9c9f091d",
         "jobTitle": "AVP - Growth Marketing",
+        "candidate": "Saurabh Singh",
         "stage": "R2",
         "createdAt": "2026-01-27"
       },
@@ -15888,6 +15312,7 @@
         "applicationId": "823a2c31-e862-4b8b-a2fd-a28b668d6f79",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Joshita Bisht",
         "stage": "R4",
         "createdAt": "2026-01-27"
       },
@@ -15895,6 +15320,7 @@
         "applicationId": "785c70cc-83dd-4a30-af20-51ce2a26dee3",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Piyal Dutta",
         "stage": "R1",
         "createdAt": "2026-01-27"
       },
@@ -15902,6 +15328,7 @@
         "applicationId": "5528d8d0-c6f6-4b15-9137-e001f95c3684",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Shadab Alam",
         "stage": "R1",
         "createdAt": "2026-01-27"
       },
@@ -15909,6 +15336,7 @@
         "applicationId": "87b817bb-5f89-4860-b5f7-4599ae341b53",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Sonika Bisht",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15916,6 +15344,7 @@
         "applicationId": "c7460bdf-3fa6-4454-996d-a43586a5be84",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "umaiz farooqui",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15923,6 +15352,7 @@
         "applicationId": "78ec8721-9d58-44cb-b78e-b3e73980b97a",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Nikhil Gupta",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15930,6 +15360,7 @@
         "applicationId": "62ffaaba-897a-4da1-9276-c9610867d707",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Giriraj Singh",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15937,6 +15368,7 @@
         "applicationId": "0bf5e50b-9ab2-46ca-8ea0-0ed53a789985",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Karan Rafaliya",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15944,6 +15376,7 @@
         "applicationId": "8700abb6-91b2-4e9d-8749-51bfd74ac5e3",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Riya Srivastava",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15951,6 +15384,7 @@
         "applicationId": "fea179d0-499c-499a-adb3-8b378abc03cb",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Srishti Yadav",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15958,6 +15392,7 @@
         "applicationId": "67848a66-e07d-4d84-862f-696604e79795",
         "job8": "52b44276",
         "jobTitle": "Video Editor (Freelancer)",
+        "candidate": "Shubham Dalvi",
         "stage": "TA Screen",
         "createdAt": "2026-01-28"
       },
@@ -15965,6 +15400,7 @@
         "applicationId": "576f7218-e4b4-4f47-9a9f-0bdad1b421b2",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ramana Rajesh K",
         "stage": "R1",
         "createdAt": "2026-01-28"
       },
@@ -15972,6 +15408,7 @@
         "applicationId": "a19bf199-0c17-4233-af1c-98cd99b67384",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Mohd Tabish",
         "stage": "R1",
         "createdAt": "2026-01-28"
       },
@@ -15979,6 +15416,7 @@
         "applicationId": "fedcae61-cfe4-43b4-965d-bd21330b2f8c",
         "job8": "6b881aaa",
         "jobTitle": "Senior Manager - Performance Marketing",
+        "candidate": "Pranav Gupta",
         "stage": "Hired",
         "createdAt": "2026-01-29"
       },
@@ -15986,6 +15424,7 @@
         "applicationId": "10a3dcbc-24d5-4e6f-a42f-f1478de01493",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Ravi Shankar",
         "stage": "R1",
         "createdAt": "2026-01-29"
       },
@@ -15993,6 +15432,7 @@
         "applicationId": "000f32a9-dacb-427c-9af4-3b5759ae161b",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Praney Thapa",
         "stage": "HM Review",
         "createdAt": "2026-01-30"
       },
@@ -16000,6 +15440,7 @@
         "applicationId": "b525cc4d-428e-4c3e-8d97-be9295435aa7",
         "job8": "9c9f091d",
         "jobTitle": "AVP - Growth Marketing",
+        "candidate": "Vamshidhar Bandi",
         "stage": "R2",
         "createdAt": "2026-01-30"
       },
@@ -16007,6 +15448,7 @@
         "applicationId": "0e262340-a816-4ed1-a5e7-bca3f30bc254",
         "job8": "9c9f091d",
         "jobTitle": "AVP - Growth Marketing",
+        "candidate": "Anand Chandran",
         "stage": "R2",
         "createdAt": "2026-01-30"
       },
@@ -16014,6 +15456,7 @@
         "applicationId": "a974ecc1-a3d8-4649-8819-f3e9d6fe853e",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Anshul Garg",
         "stage": "R1",
         "createdAt": "2026-02-02"
       },
@@ -16021,6 +15464,7 @@
         "applicationId": "0d6e673a-2dc7-4fec-9fb8-dd5b0f4868e0",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Shaheen Banu",
         "stage": "R1",
         "createdAt": "2026-02-02"
       },
@@ -16028,6 +15472,7 @@
         "applicationId": "b8d4d357-8963-43bd-9ce3-3bd731e125ae",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Amrita Singha",
         "stage": "TA Screen",
         "createdAt": "2026-02-03"
       },
@@ -16035,6 +15480,7 @@
         "applicationId": "6d9e2518-d334-4579-b630-6477b1afe538",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Shourya Singh",
         "stage": "TA Screen",
         "createdAt": "2026-02-03"
       },
@@ -16042,6 +15488,7 @@
         "applicationId": "729a8478-be90-467b-b0dc-3f59335c0183",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Masoom Sahoo",
         "stage": "HM Review",
         "createdAt": "2026-02-03"
       },
@@ -16049,6 +15496,7 @@
         "applicationId": "4ceded10-b2b8-4deb-81d9-09ef9ff8b506",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Archisman Basak",
         "stage": "TA Screen",
         "createdAt": "2026-02-03"
       },
@@ -16056,6 +15504,7 @@
         "applicationId": "d76ce76d-007a-4809-a5a8-9ce823fb424a",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Abhishek Sharma",
         "stage": "TA Screen",
         "createdAt": "2026-02-03"
       },
@@ -16063,6 +15512,7 @@
         "applicationId": "1749e2bd-2f09-490a-94a0-aef1a69a469c",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Ashish Dubey",
         "stage": "R2",
         "createdAt": "2026-02-04"
       },
@@ -16070,6 +15520,7 @@
         "applicationId": "d21596e6-5e3d-41f8-be37-a513481f55fe",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Anurag Goyal",
         "stage": "HM Review",
         "createdAt": "2026-02-04"
       },
@@ -16077,6 +15528,7 @@
         "applicationId": "c7e627ed-6cd0-4bbf-b8ff-4e104eada667",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Sushmita Bordoloi",
         "stage": "TA Screen",
         "createdAt": "2026-02-04"
       },
@@ -16084,6 +15536,7 @@
         "applicationId": "ca90268f-5ab3-449d-bea6-558bd8729061",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Evisha Soneja",
         "stage": "TA Screen",
         "createdAt": "2026-02-05"
       },
@@ -16091,6 +15544,7 @@
         "applicationId": "276da787-5617-49ed-9a5a-b532eeddda97",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Raja Ram",
         "stage": "TA Screen",
         "createdAt": "2026-02-05"
       },
@@ -16098,6 +15552,7 @@
         "applicationId": "5475f5aa-cefd-4813-93bc-40a04aef96f2",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Rizwan Ahmad",
         "stage": "R4",
         "createdAt": "2026-02-05"
       },
@@ -16105,6 +15560,7 @@
         "applicationId": "d1fd3f19-928e-441c-9849-6e4e8df38f6f",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Reeshma S",
         "stage": "TA Screen",
         "createdAt": "2026-02-05"
       },
@@ -16112,6 +15568,7 @@
         "applicationId": "2a62093c-62c6-48b0-9bf8-a11a8a83c84e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ashish Michael",
         "stage": "R1",
         "createdAt": "2026-02-05"
       },
@@ -16119,6 +15576,7 @@
         "applicationId": "8badef73-1299-44e2-a85c-0f9418018e1c",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Rajiv Mesta",
         "stage": "TA Screen",
         "createdAt": "2026-02-05"
       },
@@ -16126,6 +15584,7 @@
         "applicationId": "c4f2d215-901e-49df-9c12-85137a0df0a6",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Zakriya Ahmed Tappa",
         "stage": "R1",
         "createdAt": "2026-02-05"
       },
@@ -16133,6 +15592,7 @@
         "applicationId": "34db9663-4967-4d93-8665-607fb014b6bc",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Rishi Raj Mazumdar",
         "stage": "R1",
         "createdAt": "2026-02-05"
       },
@@ -16140,6 +15600,7 @@
         "applicationId": "aa6124d1-9d47-4652-aa65-89269c9fd76d",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "prasanth kumar",
         "stage": "R1",
         "createdAt": "2026-02-05"
       },
@@ -16147,6 +15608,7 @@
         "applicationId": "94d50246-25bb-4c89-8c1d-8217753ae6fa",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Abuzar Mohammed",
         "stage": "TA Screen",
         "createdAt": "2026-02-06"
       },
@@ -16154,6 +15616,7 @@
         "applicationId": "7480166c-ca0d-4639-8168-30e3f85cf913",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Sumaiya Taj",
         "stage": "TA Screen",
         "createdAt": "2026-02-09"
       },
@@ -16161,6 +15624,7 @@
         "applicationId": "d259088b-acc8-4de1-91a7-83567e615b57",
         "job8": "df4244d0",
         "jobTitle": "Senior Manager, Revenue Management",
+        "candidate": "Jibson Chalil",
         "stage": "R1",
         "createdAt": "2026-02-09"
       },
@@ -16168,6 +15632,7 @@
         "applicationId": "98a084a2-702c-4733-bcf3-b925b933f438",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Himanshi Sharma",
         "stage": "R1",
         "createdAt": "2026-02-10"
       },
@@ -16175,6 +15640,7 @@
         "applicationId": "8b614ae2-22e0-49b1-b3c2-5860c1706c5d",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Srinjoy Mitter",
         "stage": "R3",
         "createdAt": "2026-02-10"
       },
@@ -16182,6 +15648,7 @@
         "applicationId": "e9ba53c0-4ce3-44ae-92bd-5d1b0a62a41a",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Kanwardeep Singh",
         "stage": "R4",
         "createdAt": "2026-02-10"
       },
@@ -16189,6 +15656,7 @@
         "applicationId": "58923127-2856-49cf-84ab-9609213471de",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "BASUKANT KUMAR",
         "stage": "TA Screen",
         "createdAt": "2026-02-11"
       },
@@ -16196,6 +15664,7 @@
         "applicationId": "ac7cd9a2-965a-4ff5-b6b4-0d9cb7ca405d",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Mohamed S",
         "stage": "TA Screen",
         "createdAt": "2026-02-12"
       },
@@ -16203,6 +15672,7 @@
         "applicationId": "7f9e62c7-1fd9-40e3-9f9e-d66d0b96bc26",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "TEJASWI PRIYADARSHI",
         "stage": "TA Screen",
         "createdAt": "2026-02-13"
       },
@@ -16210,6 +15680,7 @@
         "applicationId": "e96b7f47-226a-47c1-8089-5c4bf9bd1911",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Joel Varkey Saji",
         "stage": "R1",
         "createdAt": "2026-02-13"
       },
@@ -16217,6 +15688,7 @@
         "applicationId": "9696035a-a547-43ae-8847-91ec9e2c96e7",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "Shadaf aman",
         "stage": "TA Screen",
         "createdAt": "2026-02-14"
       },
@@ -16224,6 +15696,7 @@
         "applicationId": "05209a3e-629a-42b7-becf-28bf11dcb001",
         "job8": "6b76d9ff",
         "jobTitle": "Associate Director- Sales",
+        "candidate": "Aayush Prakash",
         "stage": "TA Screen",
         "createdAt": "2026-02-16"
       },
@@ -16231,6 +15704,7 @@
         "applicationId": "803cb919-01fa-40bb-8860-bcc987fab76f",
         "job8": "ad7e4c29",
         "jobTitle": "Customer Success Associate - Referrals",
+        "candidate": "sushmitha R",
         "stage": "R1",
         "createdAt": "2026-02-16"
       },
@@ -16238,6 +15712,7 @@
         "applicationId": "14fab772-3db6-4cc4-b801-90dea282e8b2",
         "job8": "8d981f3d",
         "jobTitle": "Associate Director, Performance Marketing",
+        "candidate": "Aveesh Bhatia",
         "stage": "HM Review",
         "createdAt": "2026-02-16"
       },
@@ -16245,6 +15720,7 @@
         "applicationId": "7ecaaaab-aed3-45c6-901f-22de4a9e5eb3",
         "job8": "71601113",
         "jobTitle": "Manager, Sales",
+        "candidate": "Sourabh Shetti",
         "stage": "Reference Check",
         "createdAt": "2026-02-17"
       },
@@ -16252,6 +15728,7 @@
         "applicationId": "57da4cf7-0148-4be3-a6f0-94c6125ea9b9",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Jhilam Chatterjee",
         "stage": "TA Screen",
         "createdAt": "2026-02-17"
       },
@@ -16259,6 +15736,7 @@
         "applicationId": "9a3899ae-991a-4f01-a45f-eba0515ca5b9",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "VARUN M A R",
         "stage": "TA Screen",
         "createdAt": "2026-02-17"
       },
@@ -16266,6 +15744,7 @@
         "applicationId": "5035ba11-8de3-44f4-9567-fdd66297a238",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Anshula Ghill",
         "stage": "TA Screen",
         "createdAt": "2026-02-18"
       },
@@ -16273,6 +15752,7 @@
         "applicationId": "aaa6b9a9-720c-4011-9b66-d9530d311fef",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Pavan Vobhilineni",
         "stage": "R1",
         "createdAt": "2026-02-18"
       },
@@ -16280,6 +15760,7 @@
         "applicationId": "36d1b80c-242b-4b7e-b5e5-ffd2f677c00f",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Shivangi Yadav",
         "stage": "R1",
         "createdAt": "2026-02-18"
       },
@@ -16287,6 +15768,7 @@
         "applicationId": "80c65eec-13b9-4400-8fdb-528bc3f1f193",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Gokul G M",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16294,6 +15776,7 @@
         "applicationId": "bd9f16a7-27ab-41f7-a8f5-d4b762ab270c",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Hafis Muhammed H",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16301,6 +15784,7 @@
         "applicationId": "6067c8d3-474d-4ad3-bbd4-7c2c958473e0",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Subham Pathak",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16308,6 +15792,7 @@
         "applicationId": "586b7a2c-068d-4b3b-9b80-ff1b8358e7fb",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Argha Ghosh",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16315,6 +15800,7 @@
         "applicationId": "99dc09d3-6131-4ba6-b87a-56b101f01b90",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Monika S",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16322,6 +15808,7 @@
         "applicationId": "f3c1b160-0f96-4ea4-b926-71ddc569f4ed",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Sowmyashree N",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16329,6 +15816,7 @@
         "applicationId": "2cc0a452-bb88-44fe-8424-79d631a346cb",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "K Usman",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16336,6 +15824,7 @@
         "applicationId": "968b8b67-0c63-46d8-a4fa-cbaa39096798",
         "job8": "71601113",
         "jobTitle": "Manager, Sales",
+        "candidate": "Bhaswardeep Saha",
         "stage": "R1",
         "createdAt": "2026-02-19"
       },
@@ -16343,6 +15832,7 @@
         "applicationId": "c7caf312-c872-42dc-96ff-14d8177ae0e5",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ramandeep Kataria",
         "stage": "TA Screen",
         "createdAt": "2026-02-19"
       },
@@ -16350,6 +15840,7 @@
         "applicationId": "7a171820-9ad1-4ff1-b1ff-d4a20cd86d26",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Vidhi Singh",
         "stage": "TA Screen",
         "createdAt": "2026-02-20"
       },
@@ -16357,6 +15848,7 @@
         "applicationId": "c963127e-1fe5-4af7-9efc-4a8a270e77f4",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Kazim Bhat",
         "stage": "TA Screen",
         "createdAt": "2026-02-20"
       },
@@ -16364,6 +15856,7 @@
         "applicationId": "9b0f1bd5-75a8-444f-b1df-06265ede59b4",
         "job8": "71601113",
         "jobTitle": "Manager, Sales",
+        "candidate": "Dintakurthy Leela Krishna",
         "stage": "TA Screen",
         "createdAt": "2026-02-20"
       },
@@ -16371,6 +15864,7 @@
         "applicationId": "24df0063-4af9-425a-b8de-08084f10463b",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Anurag Singh",
         "stage": "TA Screen",
         "createdAt": "2026-02-23"
       },
@@ -16378,6 +15872,7 @@
         "applicationId": "ef53be9c-8a43-4046-98c7-6a6ca452fbc7",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Bhaswardeep Saha",
         "stage": "R3",
         "createdAt": "2026-02-23"
       },
@@ -16385,6 +15880,7 @@
         "applicationId": "2162f168-00b3-46b4-ab51-7af1fc1952b9",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Ankit Jha",
         "stage": "R1",
         "createdAt": "2026-02-23"
       },
@@ -16392,6 +15888,7 @@
         "applicationId": "17f20fe7-7ba3-4a16-b28f-18a257048f32",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Gagandeep Singh",
         "stage": "TA Screen",
         "createdAt": "2026-02-23"
       },
@@ -16399,6 +15896,7 @@
         "applicationId": "716c3ecb-c8d7-46c4-a088-29d73a697721",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Kartikey Mishra",
         "stage": "TA Screen",
         "createdAt": "2026-02-23"
       },
@@ -16406,6 +15904,7 @@
         "applicationId": "0bf84479-769c-4813-945d-feac89fa088a",
         "job8": "71601113",
         "jobTitle": "Manager, Sales",
+        "candidate": "Vineet Tiwari",
         "stage": "TA Screen",
         "createdAt": "2026-02-23"
       },
@@ -16413,6 +15912,7 @@
         "applicationId": "051304eb-90df-410b-b032-f3311fb6198c",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Akash Patel",
         "stage": "TA Screen",
         "createdAt": "2026-02-24"
       },
@@ -16420,6 +15920,7 @@
         "applicationId": "4f47444e-4648-442c-8574-218fcf48034b",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Aman Lavaniya",
         "stage": "TA Screen",
         "createdAt": "2026-02-24"
       },
@@ -16427,6 +15928,7 @@
         "applicationId": "b76a7aea-462a-4632-b20c-23b64c5df53c",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "Sam Abhilash",
         "stage": "TA Screen",
         "createdAt": "2026-02-24"
       },
@@ -16434,6 +15936,7 @@
         "applicationId": "a73cac44-f7aa-4b67-aafb-bc7b94d44365",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Sidharth NS",
         "stage": "TA Screen",
         "createdAt": "2026-02-25"
       },
@@ -16441,6 +15944,7 @@
         "applicationId": "5a3bb6de-2614-4a6f-81e3-6ff3e8e1313e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Timnana Mohit Kumar",
         "stage": "TA Screen",
         "createdAt": "2026-02-25"
       },
@@ -16448,6 +15952,7 @@
         "applicationId": "433b1e7b-f7de-4020-bb68-c406326b830c",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Mohammad Tayab Ali",
         "stage": "TA Screen",
         "createdAt": "2026-02-25"
       },
@@ -16455,6 +15960,7 @@
         "applicationId": "3468b071-e0c9-4b82-8465-3bbf14ccef6a",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "C Prabhavathi",
         "stage": "TA Screen",
         "createdAt": "2026-02-25"
       },
@@ -16462,6 +15968,7 @@
         "applicationId": "a893591f-f3e9-4ee3-bd67-357af02c6877",
         "job8": "6b76d9ff",
         "jobTitle": "Associate Director- Sales",
+        "candidate": "Ankit Goyal",
         "stage": "TA Screen",
         "createdAt": "2026-02-26"
       },
@@ -16469,6 +15976,7 @@
         "applicationId": "54edd7e0-22d4-40cd-93b3-df49cd27c905",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Rutuparn Kakad",
         "stage": "TA Screen",
         "createdAt": "2026-02-26"
       },
@@ -16476,6 +15984,7 @@
         "applicationId": "6f41482e-3389-4502-93ad-ebe89d90c9e3",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Garima Kulshrestha",
         "stage": "TA Screen",
         "createdAt": "2026-02-26"
       },
@@ -16483,6 +15992,7 @@
         "applicationId": "a4cff154-85b8-4a32-bd6e-91422ddf423e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Amit Lathar",
         "stage": "TA Screen",
         "createdAt": "2026-02-26"
       },
@@ -16490,6 +16000,7 @@
         "applicationId": "09b073d7-515e-4b1c-92ed-889399382614",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Simran Kedia",
         "stage": "TA Screen",
         "createdAt": "2026-02-26"
       },
@@ -16497,6 +16008,7 @@
         "applicationId": "555febae-16ea-4b06-9315-821d88faaef5",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Dhanish Afride Shaik",
         "stage": "TA Screen",
         "createdAt": "2026-02-27"
       },
@@ -16504,6 +16016,7 @@
         "applicationId": "d01727fd-ed93-4848-9fbd-162ac196afc2",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Shivani Shardey",
         "stage": "TA Screen",
         "createdAt": "2026-03-01"
       },
@@ -16511,6 +16024,7 @@
         "applicationId": "ade6f033-6c41-4bb9-b19a-dedff1fa4d37",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Vishakha Sarvaiya",
         "stage": "TA Screen",
         "createdAt": "2026-03-01"
       },
@@ -16518,6 +16032,7 @@
         "applicationId": "e1d52c89-a15f-4fcb-bc7f-a67338445a03",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Ashish Ranjan",
         "stage": "TA Screen",
         "createdAt": "2026-03-02"
       },
@@ -16525,6 +16040,7 @@
         "applicationId": "045463d2-4cb4-4fe7-b7e6-269c5ed1391e",
         "job8": "c3aa8a7f",
         "jobTitle": "Program Advisor - US (Interview Preparation)",
+        "candidate": "Vinay Surwade",
         "stage": "TA Screen",
         "createdAt": "2026-03-02"
       },
@@ -16532,6 +16048,7 @@
         "applicationId": "adbaae70-2107-4015-bcf1-b18b40006dfa",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Rahul Bhandari",
         "stage": "TA Screen",
         "createdAt": "2026-03-02"
       },
@@ -16539,6 +16056,7 @@
         "applicationId": "8dd7d39e-5420-4031-98d0-a3ee0e6aff32",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "R Keerthana",
         "stage": "HM Review",
         "createdAt": "2026-03-05"
       },
@@ -16546,6 +16064,7 @@
         "applicationId": "afa50ef7-2602-48c4-9465-abef60d3eddd",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "Prateek Verma",
         "stage": "HM Review",
         "createdAt": "2026-03-05"
       },
@@ -16553,6 +16072,7 @@
         "applicationId": "d2307f37-8b57-41f2-a051-12635ecb265f",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "Kavya AP",
         "stage": "TA Screen",
         "createdAt": "2026-03-06"
       },
@@ -16560,6 +16080,7 @@
         "applicationId": "f8bca033-c0be-4154-9f25-2b206547456e",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Vivek B",
         "stage": "TA Screen",
         "createdAt": "2026-03-07"
       },
@@ -16567,6 +16088,7 @@
         "applicationId": "35f8f075-eb2a-4ea0-9b70-50c97825047d",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Ganesh S",
         "stage": "TA Screen",
         "createdAt": "2026-03-07"
       },
@@ -16574,6 +16096,7 @@
         "applicationId": "061fdb68-4898-462c-b882-4cfd1e4ab40c",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Sahil Ganju",
         "stage": "TA Screen",
         "createdAt": "2026-03-07"
       },
@@ -16581,6 +16104,7 @@
         "applicationId": "ca5df358-37d6-46d4-abde-91a3599807e4",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "vaishnav premanandan",
         "stage": "TA Screen",
         "createdAt": "2026-03-07"
       },
@@ -16588,6 +16112,7 @@
         "applicationId": "338e328a-070f-4f8a-b702-2475cc4448bc",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "Subbaiah K U",
         "stage": "TA Screen",
         "createdAt": "2026-03-08"
       },
@@ -16595,6 +16120,7 @@
         "applicationId": "df9e4280-3129-4589-8190-a5f0e876b535",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Akanksha Chaudhary",
         "stage": "TA Screen",
         "createdAt": "2026-03-08"
       },
@@ -16602,6 +16128,7 @@
         "applicationId": "4832fc1f-a741-438b-806e-dd4ac5440abe",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "Dhruv Sharma",
         "stage": "TA Screen",
         "createdAt": "2026-03-08"
       },
@@ -16609,6 +16136,7 @@
         "applicationId": "513cca9d-72f1-43b6-9ad4-f7d96ce43dcd",
         "job8": "ad340e02",
         "jobTitle": "Talent Acquisition Consultant (US - SME)",
+        "candidate": "Roma Dhameja",
         "stage": "TA Screen",
         "createdAt": "2026-03-09"
       },
@@ -16616,6 +16144,7 @@
         "applicationId": "0237e7b4-eb50-4b6f-9750-12bb154e062e",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Pooja Pandey",
         "stage": "TA Screen",
         "createdAt": "2026-03-10"
       },
@@ -16623,6 +16152,7 @@
         "applicationId": "8b273595-2731-46a2-98d8-c71527760ca0",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Kriahnaveni R",
         "stage": "TA Screen",
         "createdAt": "2026-03-11"
       },
@@ -16630,6 +16160,7 @@
         "applicationId": "8c244822-9ee0-46c4-8f23-f1c1292963e6",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Grandhi Sai Swaroop",
         "stage": "TA Screen",
         "createdAt": "2026-03-11"
       },
@@ -16637,6 +16168,7 @@
         "applicationId": "7f63f49f-5134-4e43-b899-240f120a51f1",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Rushabh Khandare",
         "stage": "R1",
         "createdAt": "2026-03-13"
       },
@@ -16644,6 +16176,7 @@
         "applicationId": "f4e5087f-3c50-402b-8e3f-9ad049db3f35",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Sundaram Jegatheesan",
         "stage": "TA Screen",
         "createdAt": "2026-03-16"
       },
@@ -16651,6 +16184,7 @@
         "applicationId": "870f1405-5bae-418f-a64a-7c3c37ffac23",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Adharsh Ramanathan",
         "stage": "TA Screen",
         "createdAt": "2026-03-16"
       },
@@ -16658,6 +16192,7 @@
         "applicationId": "197d2922-c536-4e1a-9a5e-76eb9848b1a2",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Abhinav Upadhyay",
         "stage": "TA Screen",
         "createdAt": "2026-03-20"
       },
@@ -16665,6 +16200,7 @@
         "applicationId": "79b27972-1887-4698-a2b2-3634f7c40511",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "BEEBEK KAR",
         "stage": "TA Screen",
         "createdAt": "2026-03-24"
       },
@@ -16672,6 +16208,7 @@
         "applicationId": "b3ad0205-bf77-45ee-98ec-5c7550404939",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Sumit Pandey",
         "stage": "R1",
         "createdAt": "2026-03-25"
       },
@@ -16679,6 +16216,7 @@
         "applicationId": "568ec097-5238-4c74-9bce-84f4ac0a3ec8",
         "job8": "52845468",
         "jobTitle": "SME India - Microsoft Certified Trainer",
+        "candidate": "Asra Anjum",
         "stage": "R1",
         "createdAt": "2026-03-26"
       },
@@ -16686,6 +16224,7 @@
         "applicationId": "acc93208-eb8f-44af-9b52-ebada5ed713e",
         "job8": "52845468",
         "jobTitle": "SME India - Microsoft Certified Trainer",
+        "candidate": "Ahad Sanji",
         "stage": "R1",
         "createdAt": "2026-03-26"
       },
@@ -16693,6 +16232,7 @@
         "applicationId": "61750520-08b0-4eda-8ce7-cb4fafe89a20",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Pulkit Kansal",
         "stage": "R1",
         "createdAt": "2026-03-26"
       },
@@ -16700,6 +16240,7 @@
         "applicationId": "f827be06-1b82-40cf-810e-36ea2580fb64",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Akash Kamal",
         "stage": "TA Screen",
         "createdAt": "2026-03-31"
       },
@@ -16707,6 +16248,7 @@
         "applicationId": "eda8c9bc-af85-489e-ad5f-7d0e6b334287",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Avnoor Singh",
         "stage": "TA Screen",
         "createdAt": "2026-04-01"
       },
@@ -16714,6 +16256,7 @@
         "applicationId": "de2dbaec-8d06-4469-a6b8-df9ffad3dd83",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Reehana Begum Pathan",
         "stage": "TA Screen",
         "createdAt": "2026-04-01"
       },
@@ -16721,6 +16264,7 @@
         "applicationId": "96ed619b-9f8c-46eb-b457-d5d63c70c763",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Sneha Chawla",
         "stage": "R3",
         "createdAt": "2026-04-01"
       },
@@ -16728,6 +16272,7 @@
         "applicationId": "4eb2b0ed-1f8a-468d-956b-3e95cf6d2c22",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "sangu Bhuvaneswari",
         "stage": "TA Screen",
         "createdAt": "2026-04-01"
       },
@@ -16735,6 +16280,7 @@
         "applicationId": "ce43325d-8db9-4749-8cba-a8917b41920d",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Purva Patre",
         "stage": "TA Screen",
         "createdAt": "2026-04-01"
       },
@@ -16742,6 +16288,7 @@
         "applicationId": "2d7bd7e3-af90-4cca-b584-b605a73f4f2b",
         "job8": "e2b1a6be",
         "jobTitle": "Manager, Performance Marketing",
+        "candidate": "Yash Karanjia",
         "stage": "TA Screen",
         "createdAt": "2026-04-01"
       },
@@ -16749,6 +16296,7 @@
         "applicationId": "e082dce8-59b2-46b9-b67a-901b6a4debdf",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Khushboo Kaushal",
         "stage": "TA Screen",
         "createdAt": "2026-04-02"
       },
@@ -16756,6 +16304,7 @@
         "applicationId": "a370874b-9cf2-40ab-b112-9ffb2baaa015",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Avnoor Singh",
         "stage": "TA Screen",
         "createdAt": "2026-04-02"
       },
@@ -16763,6 +16312,7 @@
         "applicationId": "2aec490d-e744-4d91-9e6e-f2bfa9d49767",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Jeet sharma",
         "stage": "TA Screen",
         "createdAt": "2026-04-02"
       },
@@ -16770,6 +16320,7 @@
         "applicationId": "8109de20-48c8-46fe-8be8-e4bcf53453b7",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Avinash Kumar",
         "stage": "TA Screen",
         "createdAt": "2026-04-02"
       },
@@ -16777,6 +16328,7 @@
         "applicationId": "a70554f6-05fc-44b6-bf10-1213d61943b2",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Nasreen Khatoon",
         "stage": "R3",
         "createdAt": "2026-04-03"
       },
@@ -16784,6 +16336,7 @@
         "applicationId": "e7d08e4c-1a62-4ab0-bf30-5e5943390670",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Pingali TirumalaDatta Sai Parasuram",
         "stage": "TA Screen",
         "createdAt": "2026-04-03"
       },
@@ -16791,6 +16344,7 @@
         "applicationId": "a50b9e1b-5e2d-4b90-aebd-d188c5957a86",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Sanchayita Bear",
         "stage": "TA Screen",
         "createdAt": "2026-04-03"
       },
@@ -16798,6 +16352,7 @@
         "applicationId": "eaf2037d-3289-422c-bd99-19c73eae849f",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Akashkumar Jha",
         "stage": "TA Screen",
         "createdAt": "2026-04-03"
       },
@@ -16805,6 +16360,7 @@
         "applicationId": "518af0d0-04cd-45d1-8ea7-e7c2870c0bc6",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Santosh Mundik",
         "stage": "TA Screen",
         "createdAt": "2026-04-04"
       },
@@ -16812,6 +16368,7 @@
         "applicationId": "204b3c52-e497-4860-b41c-6077d74ed7b8",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "SURAJ ALADAKATTI",
         "stage": "TA Screen",
         "createdAt": "2026-04-04"
       },
@@ -16819,6 +16376,7 @@
         "applicationId": "524ddbdd-3a0d-4de5-87c3-13f30e18484d",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Yashika Sabnani",
         "stage": "TA Screen",
         "createdAt": "2026-04-05"
       },
@@ -16826,6 +16384,7 @@
         "applicationId": "40edb651-9dec-40d2-9100-ff3f9a8815a4",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Vaahi Dutta",
         "stage": "TA Screen",
         "createdAt": "2026-04-05"
       },
@@ -16833,6 +16392,7 @@
         "applicationId": "9fe50962-a809-44c4-b9db-0c79dc6612c6",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Snehanka Das",
         "stage": "TA Screen",
         "createdAt": "2026-04-05"
       },
@@ -16840,6 +16400,7 @@
         "applicationId": "f49c58ab-3b00-421e-bc78-6adc3e1b5095",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Jalismita Patel",
         "stage": "TA Screen",
         "createdAt": "2026-04-06"
       },
@@ -16847,6 +16408,7 @@
         "applicationId": "25e83982-cc08-4937-9de0-0ea037f257c9",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Chitransh Mathur",
         "stage": "R3",
         "createdAt": "2026-04-06"
       },
@@ -16854,6 +16416,7 @@
         "applicationId": "7566f8e9-c085-410d-88ff-5ab6a986e7ad",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Anavil Pandir",
         "stage": "TA Screen",
         "createdAt": "2026-04-06"
       },
@@ -16861,6 +16424,7 @@
         "applicationId": "c054bca2-aa00-4cd6-8207-223aecd4875d",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Anshika Kaintura",
         "stage": "TA Screen",
         "createdAt": "2026-04-06"
       },
@@ -16868,6 +16432,7 @@
         "applicationId": "2ed346e9-945f-45dc-a35f-27235e961403",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Ishita Sharma",
         "stage": "TA Screen",
         "createdAt": "2026-04-06"
       },
@@ -16875,6 +16440,7 @@
         "applicationId": "a362273c-f21e-4491-a2f9-54236db2b328",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Anjali Asawa",
         "stage": "TA Screen",
         "createdAt": "2026-04-06"
       },
@@ -16882,6 +16448,7 @@
         "applicationId": "260e5715-ed40-4749-8a9d-33a2aba8ea7c",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "ADRIJA NATH",
         "stage": "TA Screen",
         "createdAt": "2026-04-06"
       },
@@ -16889,6 +16456,7 @@
         "applicationId": "43813074-7c84-40b5-8055-81eb63c74839",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Dipanjali Bihari",
         "stage": "TA Screen",
         "createdAt": "2026-04-07"
       },
@@ -16896,6 +16464,7 @@
         "applicationId": "3b6f0eeb-1b85-4ce6-9382-931b08f51d27",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Ankita Basu",
         "stage": "TA Screen",
         "createdAt": "2026-04-07"
       },
@@ -16903,6 +16472,7 @@
         "applicationId": "3d7b2e24-8da3-4ddb-b80b-aad36a3b6a8a",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Harshita Pandey",
         "stage": "TA Screen",
         "createdAt": "2026-04-07"
       },
@@ -16910,6 +16480,7 @@
         "applicationId": "a6fba0ec-c67c-4f3f-839c-2687305ae728",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Shivam Seth",
         "stage": "TA Screen",
         "createdAt": "2026-04-08"
       },
@@ -16917,6 +16488,7 @@
         "applicationId": "108b19f2-899a-421f-8437-cc7fdf37d0ed",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Alex George",
         "stage": "TA Screen",
         "createdAt": "2026-04-08"
       },
@@ -16924,6 +16496,7 @@
         "applicationId": "48ff119c-6da6-411b-a6b2-9b5d5256c571",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Richa Bhatia",
         "stage": "TA Screen",
         "createdAt": "2026-04-08"
       },
@@ -16931,6 +16504,7 @@
         "applicationId": "647d56ec-3163-4795-9089-a27ba6d1aff0",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Aditi Kuthiala",
         "stage": "TA Screen",
         "createdAt": "2026-04-12"
       },
@@ -16938,6 +16512,7 @@
         "applicationId": "0e99269e-1812-43f1-8dc0-3ddf0ce8297f",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Shaik Jakeer Hussain",
         "stage": "R4",
         "createdAt": "2026-04-13"
       },
@@ -16945,6 +16520,7 @@
         "applicationId": "5971df17-f882-468c-a116-c6ec0f8073a5",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Prashansa Helaskar",
         "stage": "TA Screen",
         "createdAt": "2026-04-13"
       },
@@ -16952,6 +16528,7 @@
         "applicationId": "7ad38a3f-0a61-434e-b9db-c9d6fd92c117",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Prashant Shringi",
         "stage": "TA Screen",
         "createdAt": "2026-04-14"
       },
@@ -16959,6 +16536,7 @@
         "applicationId": "f70cf802-906e-4eff-9270-cfcb190db8d8",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Aditya Kedia",
         "stage": "TA Screen",
         "createdAt": "2026-04-15"
       },
@@ -16966,6 +16544,7 @@
         "applicationId": "1e6ec2e2-c897-4481-836b-f83446b7d1cf",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Siddharth shankhdhar",
         "stage": "TA Screen",
         "createdAt": "2026-04-17"
       },
@@ -16973,6 +16552,7 @@
         "applicationId": "11002012-0320-4324-b6be-11bdb76fc7b7",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Sidharth Sachdev",
         "stage": "TA Screen",
         "createdAt": "2026-04-18"
       },
@@ -16980,6 +16560,7 @@
         "applicationId": "82ce839b-a734-4435-98b4-d031cd07e353",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Ayush kumar",
         "stage": "TA Screen",
         "createdAt": "2026-04-18"
       },
@@ -16987,6 +16568,7 @@
         "applicationId": "a60af44c-653a-47e2-9ffd-7feb5f7b561b",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Harshit Sanghi",
         "stage": "TA Screen",
         "createdAt": "2026-04-19"
       },
@@ -16994,6 +16576,7 @@
         "applicationId": "7dd12c4d-e4f1-4ecb-90b5-40ea20558879",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Karishma Sayed",
         "stage": "TA Screen",
         "createdAt": "2026-04-20"
       },
@@ -17001,6 +16584,7 @@
         "applicationId": "086a5210-ae9d-4a0a-854e-a82418993196",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Karthik Reddy",
         "stage": "R4",
         "createdAt": "2026-04-20"
       },
@@ -17008,6 +16592,7 @@
         "applicationId": "1b0041cc-777b-40c2-910b-4706556588d0",
         "job8": "23285eb9",
         "jobTitle": "Lead Instructor - Agentic AI",
+        "candidate": "Matthew Ho",
         "stage": "TA Screen",
         "createdAt": "2026-04-22"
       },
@@ -17015,6 +16600,7 @@
         "applicationId": "907a2621-c9f4-44cd-89a0-26f5395bd8f6",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Aparna Surollia",
         "stage": "TA Screen",
         "createdAt": "2026-04-23"
       },
@@ -17022,6 +16608,7 @@
         "applicationId": "82659711-5921-4615-83a4-ac7953ae5fd7",
         "job8": "23285eb9",
         "jobTitle": "Lead Instructor - Agentic AI",
+        "candidate": "Weilun Yuan",
         "stage": "TA Screen",
         "createdAt": "2026-04-23"
       },
@@ -17029,6 +16616,7 @@
         "applicationId": "7d5fa15a-9c1b-4fe2-be96-7616bad6377b",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Pranjal Pagaria",
         "stage": "TA Screen",
         "createdAt": "2026-04-27"
       },
@@ -17036,6 +16624,7 @@
         "applicationId": "6493fa33-245f-4bfa-ae99-c9a0cc7a6666",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Labeed Mokatrin",
         "stage": "Offer",
         "createdAt": "2026-04-27"
       },
@@ -17043,6 +16632,7 @@
         "applicationId": "c84a0378-458c-4e93-b540-63c3403a9038",
         "job8": "23285eb9",
         "jobTitle": "Lead Instructor - Agentic AI",
+        "candidate": "Mahipal Singh",
         "stage": "TA Screen",
         "createdAt": "2026-04-27"
       },
@@ -17050,6 +16640,7 @@
         "applicationId": "0b3a875c-a25b-4903-8173-8a95862b7581",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Swati Punia",
         "stage": "TA Screen",
         "createdAt": "2026-04-28"
       },
@@ -17057,6 +16648,7 @@
         "applicationId": "7f4e1362-375e-4d42-8c87-536bc7b65f92",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Suraj Rajendran",
         "stage": "TA Screen",
         "createdAt": "2026-04-30"
       },
@@ -17064,6 +16656,7 @@
         "applicationId": "7c6d93ad-3e47-4366-8383-ec23d791ee6b",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Alisha Uppal",
         "stage": "TA Screen",
         "createdAt": "2026-04-30"
       },
@@ -17071,6 +16664,7 @@
         "applicationId": "93a2e1ae-bbcb-452f-972c-e6368a8887e7",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Raghav Sandhu",
         "stage": "R1",
         "createdAt": "2026-04-30"
       },
@@ -17078,6 +16672,7 @@
         "applicationId": "4bd49230-962f-4fe4-8ad7-303d66b64cb9",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Rudhri Pandey",
         "stage": "R3",
         "createdAt": "2026-05-03"
       },
@@ -17085,6 +16680,7 @@
         "applicationId": "09857cce-b737-47b6-8260-5bd23150a488",
         "job8": "24a83640",
         "jobTitle": "SME India : Data Science Instructor",
+        "candidate": "Shreyanth Srikanth",
         "stage": "R1",
         "createdAt": "2026-05-04"
       },
@@ -17092,6 +16688,7 @@
         "applicationId": "260c9697-7ce5-408a-9b02-653bc4b57c2b",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Kasia Rachuta",
         "stage": "Offer",
         "createdAt": "2026-05-04"
       },
@@ -17099,6 +16696,7 @@
         "applicationId": "77734edf-2510-46d4-8683-5ef3fafd2504",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Deepthi A",
         "stage": "TA Screen",
         "createdAt": "2026-05-05"
       },
@@ -17106,6 +16704,7 @@
         "applicationId": "8685bdcf-3f0e-4ba2-9b3d-232ca0fabf28",
         "job8": "24a83640",
         "jobTitle": "SME India : Data Science Instructor",
+        "candidate": "Manivannan Senthurpandian",
         "stage": "R1",
         "createdAt": "2026-05-06"
       },
@@ -17113,6 +16712,7 @@
         "applicationId": "01b93049-3999-4449-b206-936af865fb09",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Riya Bothra",
         "stage": "TA Screen",
         "createdAt": "2026-05-06"
       },
@@ -17120,6 +16720,7 @@
         "applicationId": "bcdf2bd8-44fe-4f6e-9664-b369c17aff1d",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Vidhi Gaur",
         "stage": "TA Screen",
         "createdAt": "2026-05-07"
       },
@@ -17127,6 +16728,7 @@
         "applicationId": "126e510e-66d5-4165-b21f-ad49cca3a49e",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "SHREYA GUPTA",
         "stage": "TA Screen",
         "createdAt": "2026-05-07"
       },
@@ -17134,6 +16736,7 @@
         "applicationId": "9cb6db87-9c93-4303-b7ef-41573bb97879",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Anju Rajpoot",
         "stage": "TA Screen",
         "createdAt": "2026-05-07"
       },
@@ -17141,6 +16744,7 @@
         "applicationId": "7d6a5270-61ca-41cc-aec3-fc3608cf5788",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Anandita Mohan",
         "stage": "R1",
         "createdAt": "2026-05-11"
       },
@@ -17148,6 +16752,7 @@
         "applicationId": "a4cf7970-d412-4a12-8168-ac213d01d14d",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Marina Ma",
         "stage": "TA Screen",
         "createdAt": "2026-05-11"
       },
@@ -17155,6 +16760,7 @@
         "applicationId": "16966b4c-2526-4554-9f6b-b96aaa6cc10d",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Edward Fensholt",
         "stage": "TA Screen",
         "createdAt": "2026-05-13"
       },
@@ -17162,6 +16768,7 @@
         "applicationId": "f1be8e02-a28c-4e78-9924-f97db40283ec",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Aniket M Mehta",
         "stage": "R1",
         "createdAt": "2026-05-13"
       },
@@ -17169,6 +16776,7 @@
         "applicationId": "4b3cbf47-dd81-4ddc-bc40-e2360c7ea1ce",
         "job8": "a6729ee8",
         "jobTitle": "Software Engineer 1 , Backend",
+        "candidate": "Ayush Kumar",
         "stage": "R1",
         "createdAt": "2026-05-13"
       },
@@ -17176,6 +16784,7 @@
         "applicationId": "b2c3362e-7743-40ac-856c-0faa8c8f3b9a",
         "job8": "c4110553",
         "jobTitle": "Freshers/Interns",
+        "candidate": "Akshada Bhor",
         "stage": "R4",
         "createdAt": "2026-05-13"
       },
@@ -17183,6 +16792,7 @@
         "applicationId": "3b24966e-fb2b-4ed3-a6a2-074d08691a07",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Abhinav Bajpai",
         "stage": "TA Screen",
         "createdAt": "2026-05-13"
       },
@@ -17190,6 +16800,7 @@
         "applicationId": "4a8c6027-c3cd-46aa-ab93-48335f961592",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Himanshi Jain",
         "stage": "Offer",
         "createdAt": "2026-05-15"
       },
@@ -17197,6 +16808,7 @@
         "applicationId": "47c4c044-a9e7-4371-b2e7-c3fde1694e3e",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Shweta Singh",
         "stage": "TA Screen",
         "createdAt": "2026-05-18"
       },
@@ -17204,6 +16816,7 @@
         "applicationId": "abb539f9-7c2c-4708-91de-1b4844ddeb63",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Ayushi Gupta",
         "stage": "R1",
         "createdAt": "2026-05-20"
       },
@@ -17211,6 +16824,7 @@
         "applicationId": "8d8feac7-6c5e-49d3-9cfd-373e3b8a94d4",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Sisie Nong",
         "stage": "TA Screen",
         "createdAt": "2026-05-22"
       },
@@ -17218,6 +16832,7 @@
         "applicationId": "7e4b0625-3249-4b38-b332-c960e48d2e5d",
         "job8": "b6f031b3",
         "jobTitle": "SME India : Applied Agentic AI",
+        "candidate": "Kalyan R Vemuru",
         "stage": "R1",
         "createdAt": "2026-05-25"
       },
@@ -17225,6 +16840,7 @@
         "applicationId": "8b8adf5c-8ef5-425a-876e-998123d2b46e",
         "job8": "b9a5a189",
         "jobTitle": "Manager - Placement Partnerships (US)",
+        "candidate": "Monika Khatri",
         "stage": "R1",
         "createdAt": "2026-05-25"
       },
@@ -17232,6 +16848,7 @@
         "applicationId": "b8962e35-534e-477a-ad24-c43f60ce4a3c",
         "job8": "52845468",
         "jobTitle": "SME India - Microsoft Certified Trainer",
+        "candidate": "Pauroosh Kaushal",
         "stage": "Hired",
         "createdAt": "2026-05-28"
       },
@@ -17239,6 +16856,7 @@
         "applicationId": "5316b8ea-aa03-4307-8ddd-0bb64d2177f2",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Jerin Judy Pereira",
         "stage": "R1",
         "createdAt": "2026-05-28"
       },
@@ -17246,6 +16864,7 @@
         "applicationId": "aaeade4c-9da0-43cc-8e51-254c542e1dbe",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Fareed Haque",
         "stage": "R1",
         "createdAt": "2026-05-28"
       },
@@ -17253,6 +16872,7 @@
         "applicationId": "f5d60d36-2033-40cd-a723-923264bd5504",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Jana Gopi",
         "stage": "Offer",
         "createdAt": "2026-06-01"
       },
@@ -17260,6 +16880,7 @@
         "applicationId": "3a449638-51fd-45eb-a2b5-d32712f31ea4",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Syed Ibrahim M S",
         "stage": "Hired",
         "createdAt": "2026-06-11"
       },
@@ -17267,6 +16888,7 @@
         "applicationId": "14cb3cea-b9ce-444b-990b-42e0dbaccccd",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Shaikh Alif Hassam",
         "stage": "TA Screen",
         "createdAt": "2026-06-23"
       },
@@ -17274,6 +16896,7 @@
         "applicationId": "36f9ab50-4e93-4af6-9b89-77e75542302c",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Shashank Bangera",
         "stage": "Offer",
         "createdAt": "2026-06-24"
       },
@@ -17281,6 +16904,7 @@
         "applicationId": "096e18b7-7917-480c-b454-660b1ace732c",
         "job8": "240c47d1",
         "jobTitle": "Part Time Instructor - Data Analyst / Business Analyst",
+        "candidate": "Santhi Krishna",
         "stage": "TA Screen",
         "createdAt": "2026-06-26"
       },
@@ -17288,6 +16912,7 @@
         "applicationId": "0d78f265-a931-4cd8-9137-733b417ee9de",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Sanskriti Kumari",
         "stage": "Hired",
         "createdAt": "2026-07-07"
       },
@@ -17295,6 +16920,7 @@
         "applicationId": "5ee0459b-2b44-46ca-b0ea-8eb410507c0d",
         "job8": "e8867563",
         "jobTitle": "Intern, Talent Acquisition",
+        "candidate": "Leenita Joseph Albert",
         "stage": "Hired",
         "createdAt": "2026-07-08"
       },
@@ -17302,6 +16928,7 @@
         "applicationId": "ab919161-b448-4180-8e54-2b3c9611d193",
         "job8": "60a32504",
         "jobTitle": "SME India : FDE",
+        "candidate": "Prabal Deb",
         "stage": "Offer",
         "createdAt": "2026-07-08"
       },
@@ -17309,6 +16936,7 @@
         "applicationId": "04dea122-da2e-46fb-8285-3f1d20e2ce1e",
         "job8": "60a32504",
         "jobTitle": "SME India : FDE",
+        "candidate": "Deepak Sharma",
         "stage": "Offer",
         "createdAt": "2026-07-13"
       },
@@ -17316,6 +16944,7 @@
         "applicationId": "28e45c35-2532-4bbb-975b-de9f150019ae",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Namisha Modi",
         "stage": "R1",
         "createdAt": "2026-07-13"
       },
@@ -17323,6 +16952,7 @@
         "applicationId": "98a06605-a7a1-4563-a0b3-78da56f1924f",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Archi Srivastava",
         "stage": "Hired",
         "createdAt": "2026-07-14"
       },
@@ -17330,6 +16960,7 @@
         "applicationId": "052c78f7-0595-42e4-8228-d6c7e831d05f",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Zeeshan Niyaz Shah",
         "stage": "Hired",
         "createdAt": "2026-07-14"
       },
@@ -17337,6 +16968,7 @@
         "applicationId": "db7133b9-7f3b-462e-9170-8368e3dca8b0",
         "job8": "60a32504",
         "jobTitle": "SME India : FDE",
+        "candidate": "Mohammad Rashid",
         "stage": "R1",
         "createdAt": "2026-07-15"
       },
@@ -17344,6 +16976,7 @@
         "applicationId": "6935ef61-4fd9-4c90-91a5-e53ce92ac402",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Harsha Theja V",
         "stage": "R1",
         "createdAt": "2026-07-16"
       },
@@ -17351,6 +16984,7 @@
         "applicationId": "4291921a-89b5-4f9a-9871-58cc31fb67cf",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Mritunjay Kumar Pandey",
         "stage": "Hired",
         "createdAt": "2026-07-16"
       },
@@ -17358,6 +16992,7 @@
         "applicationId": "1101fc16-4313-4ce3-b12e-58567391dfef",
         "job8": "eeafa14a",
         "jobTitle": "Career Coach (India - Part time)",
+        "candidate": "Jerin Kesavan",
         "stage": "Offer",
         "createdAt": "2026-07-16"
       },
@@ -17365,6 +17000,7 @@
         "applicationId": "9e6697f0-85c7-4708-95d3-d2ad12a8be67",
         "job8": "e8867563",
         "jobTitle": "Intern, Talent Acquisition",
+        "candidate": "Praveetha A",
         "stage": "Hired",
         "createdAt": "2026-07-16"
       },
@@ -17372,6 +17008,7 @@
         "applicationId": "e442fc1b-f65a-478f-b6ef-444314db552d",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Sunny Patel",
         "stage": "Offer",
         "createdAt": "2026-07-16"
       },
@@ -17379,6 +17016,7 @@
         "applicationId": "442dad5d-3c5d-4b2d-b374-c42bf7ec0abd",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Nanditha S",
         "stage": "Hired",
         "createdAt": "2026-07-17"
       },
@@ -17386,6 +17024,7 @@
         "applicationId": "4fdde4b3-8da5-47c4-accb-720709daa094",
         "job8": "bb447e3d",
         "jobTitle": "Assistant Manager, Finance",
+        "candidate": "Yatisha M",
         "stage": "Offer",
         "createdAt": "2026-07-20"
       },
@@ -17393,6 +17032,7 @@
         "applicationId": "26c3e1e7-aa93-4704-94ae-423335b00114",
         "job8": "df29da2f",
         "jobTitle": "Program Advisor (Pre sales)",
+        "candidate": "Viswanadharao Hima Satya Sree",
         "stage": "Hired",
         "createdAt": "2026-07-20"
       },
@@ -17400,6 +17040,7 @@
         "applicationId": "9e958474-f9ed-4bfd-b170-0e0d290d0408",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Ankit Goyal",
         "stage": "R2",
         "createdAt": "2026-07-20"
       },
@@ -17407,6 +17048,7 @@
         "applicationId": "c39a9a91-2aee-4ab2-b49c-fa58768bddd4",
         "job8": "60a32504",
         "jobTitle": "SME India : FDE",
+        "candidate": "Rohan Singh",
         "stage": "Hired",
         "createdAt": "2026-07-20"
       },
@@ -17414,6 +17056,7 @@
         "applicationId": "f7fa2fb2-f5a8-4a75-9720-9856abbfd43c",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Pratik Kumar Dev",
         "stage": "Hired",
         "createdAt": "2026-07-21"
       },
@@ -17421,6 +17064,7 @@
         "applicationId": "d2c2b5e0-29ce-49f8-9f45-33095801bcf3",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Kratagya Sengar",
         "stage": "R3",
         "createdAt": "2026-07-21"
       },
@@ -17428,6 +17072,7 @@
         "applicationId": "642c6333-2492-4f1a-b480-47c43dc5f863",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Aashish Kumar Dubey",
         "stage": "Hired",
         "createdAt": "2026-07-22"
       },
@@ -17435,6 +17080,7 @@
         "applicationId": "d2d5e7fa-58da-4a85-9112-14cfa38e3742",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Biswajit Biswas",
         "stage": "Hired",
         "createdAt": "2026-07-22"
       },
@@ -17442,6 +17088,7 @@
         "applicationId": "251bb95c-e6d9-43b6-9d78-0a2b2985dd3d",
         "job8": "092e9d9b",
         "jobTitle": "Program Advisor - India",
+        "candidate": "Nishant Sondhi",
         "stage": "Hired",
         "createdAt": "2026-07-22"
       },
@@ -17449,6 +17096,7 @@
         "applicationId": "4fa7e25b-cc1a-4435-bb04-4ed7d1cdf30d",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Shantanu Bayaskar",
         "stage": "R1",
         "createdAt": "2026-07-23"
       },
@@ -17456,6 +17104,7 @@
         "applicationId": "a50ddcf0-c0f8-4828-a1ca-b5e63b1ab3ad",
         "job8": "df29da2f",
         "jobTitle": "Program Advisor (Pre sales)",
+        "candidate": "Sarthak Kumar",
         "stage": "Hired",
         "createdAt": "2026-07-23"
       },
@@ -17463,6 +17112,7 @@
         "applicationId": "28cbde9b-849a-4859-85c0-10012a43179f",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Raghul Elanseran",
         "stage": "R3",
         "createdAt": "2026-07-24"
       },
@@ -17470,6 +17120,7 @@
         "applicationId": "4c0406f3-203d-4513-bf32-e0ab98dbc776",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Sumit Kumar Sharma",
         "stage": "R1",
         "createdAt": "2026-07-27"
       },
@@ -17477,6 +17128,7 @@
         "applicationId": "2840a0cc-5c00-4e5e-b25e-08c33bf6c92d",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Saumya Madan",
         "stage": "R3",
         "createdAt": "2026-07-30"
       },
@@ -17484,6 +17136,7 @@
         "applicationId": "3de016d7-f958-4c7c-86a7-2ca272d42f76",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Manish Vaswani",
         "stage": "R1",
         "createdAt": "2026-07-30"
       },
@@ -17491,6 +17144,7 @@
         "applicationId": "822bed19-a4f3-4227-91dc-79109b88880b",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Dhanush R",
         "stage": "TA Screen",
         "createdAt": "2026-07-31"
       },
@@ -17498,6 +17152,7 @@
         "applicationId": "a88aa696-3126-48c6-9955-42a631203fc9",
         "job8": "cac9b029",
         "jobTitle": "Manager, Sales Training & Enablement (US)",
+        "candidate": "Akshay Singh",
         "stage": "R1",
         "createdAt": "2026-07-31"
       },
@@ -17505,6 +17160,7 @@
         "applicationId": "9431d5b6-9083-45b1-bd9d-020cd0eb2986",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Garima Mehta",
         "stage": "R2",
         "createdAt": "2026-08-04"
       },
@@ -17512,6 +17168,7 @@
         "applicationId": "0a0e9aa0-6f3b-4894-a953-a11188940f21",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Soumyajit Mukherjee",
         "stage": "R2",
         "createdAt": "2026-08-04"
       },
@@ -17519,6 +17176,7 @@
         "applicationId": "626b198f-dc34-4894-9cee-b57de5246096",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Jerin Judy Pereira",
         "stage": "R1",
         "createdAt": "2026-08-04"
       },
@@ -17526,6 +17184,7 @@
         "applicationId": "72752b14-e392-41f6-99a6-2bfc24364681",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Pravarsha Vallam",
         "stage": "R2",
         "createdAt": "2026-08-06"
       },
@@ -17533,6 +17192,7 @@
         "applicationId": "c71cc2b7-c25f-4e39-89d2-b14903e2587b",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Sankara Rao K",
         "stage": "R2",
         "createdAt": "2026-08-07"
       },
@@ -17540,6 +17200,7 @@
         "applicationId": "2daf35cf-8431-40c0-a3a2-7d7897a4aeb9",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Arpan Gulati",
         "stage": "R1",
         "createdAt": "2026-08-07"
       },
@@ -17547,6 +17208,7 @@
         "applicationId": "e9195262-7346-4278-8b1d-7809c4196fcb",
         "job8": "e8867563",
         "jobTitle": "Intern, Talent Acquisition",
+        "candidate": "Kartik Revankar",
         "stage": "R1",
         "createdAt": "2026-08-07"
       },
@@ -17554,6 +17216,7 @@
         "applicationId": "eb215a9b-9abb-4109-a084-926990339500",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Payel Biswas",
         "stage": "R1",
         "createdAt": "2026-08-10"
       },
@@ -17561,6 +17224,7 @@
         "applicationId": "08a4fd45-c527-4f01-9bb4-0cf364536b5c",
         "job8": "e8867563",
         "jobTitle": "Intern, Talent Acquisition",
+        "candidate": "Annie Elsa Mathew",
         "stage": "TA Screen",
         "createdAt": "2026-08-10"
       },
@@ -17568,6 +17232,7 @@
         "applicationId": "8c578560-8137-4dd6-a5c0-9b82e7374a4c",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Mradula Verma",
         "stage": "R1",
         "createdAt": "2026-08-10"
       },
@@ -17575,6 +17240,7 @@
         "applicationId": "c58f73b2-6a7a-4872-b6db-44c61f522c97",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
+        "candidate": "Tejasvini B",
         "stage": "R1",
         "createdAt": "2026-08-10"
       },
@@ -17582,13 +17248,15 @@
         "applicationId": "232713b7-45c5-46b2-bfed-3288455cb44c",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
-        "stage": "TA Screen",
+        "candidate": "Siva Sai Vamsi",
+        "stage": "R1",
         "createdAt": "2026-08-10"
       },
       {
         "applicationId": "97322ab8-f030-44ae-a36c-d82a7c7fd5e6",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Omkar Naik",
         "stage": "TA Screen",
         "createdAt": "2026-08-10"
       },
@@ -17596,13 +17264,15 @@
         "applicationId": "a6f933c3-fdbd-429a-9905-d2ec14b32350",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
-        "stage": "TA Screen",
+        "candidate": "Amal Krishna",
+        "stage": "R1",
         "createdAt": "2026-08-10"
       },
       {
         "applicationId": "2107591f-4bb3-46b9-959b-5574d8e90aef",
         "job8": "60a32504",
         "jobTitle": "SME India : FDE",
+        "candidate": "Kousick Kadambi",
         "stage": "R1",
         "createdAt": "2026-08-10"
       }
@@ -17624,9 +17294,9 @@
         "job8": "538f7111",
         "names": [
           "Sanghamitra Moulik",
-          "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Ankita Kabra"
         ]
       },
       {
@@ -17653,10 +17323,10 @@
         "app": "59fd67b3-b601-46dd-8f8c-26ff3fead39b",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Sanghamitra Moulik"
         ]
       },
       {
@@ -17687,8 +17357,8 @@
         "app": "70891119-9665-4131-b2df-c5bd45fdf526",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17783,8 +17453,8 @@
         "app": "5db08b36-f53f-4bdb-868d-14ff8f0d6edc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17799,8 +17469,8 @@
         "app": "18719e3d-f2c8-4976-95f4-6714cf66b237",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17847,8 +17517,8 @@
         "app": "7299b099-71f5-482e-9350-45ee72f24a7b",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17887,8 +17557,8 @@
         "app": "549ffb78-6441-40e0-ae17-e7737f02164e",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17959,8 +17629,8 @@
         "app": "11abe852-4b09-48b0-996a-1f57518a2ae3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17975,8 +17645,8 @@
         "app": "21b03ba4-5583-4ab6-b5ea-10454e50b621",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18007,8 +17677,8 @@
         "app": "ee5b68f0-ffba-41f6-8fae-279de8da6687",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18023,16 +17693,16 @@
         "app": "0b15beac-d2bf-4387-880a-9dd49a3f19dd",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "7080aeee-0576-4de8-9c55-a6e3e7cd1c7b",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18047,8 +17717,8 @@
         "app": "7de1b3e1-a74f-40c0-af5f-3f66228a385a",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18071,16 +17741,16 @@
         "app": "3eaaa533-948e-430b-8a35-e85411caa26f",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "dc43a956-39a0-47ea-bde3-cabaf8ea009a",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18103,8 +17773,8 @@
         "app": "fcd2f0b1-de74-491c-8917-cc9e396df542",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18199,8 +17869,8 @@
         "app": "a3163593-3101-474f-9ca7-820bba834d17",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18215,24 +17885,24 @@
         "app": "c509a002-aa68-4038-bccd-6831e315f3b3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "7b01588b-0513-40db-a6ae-59d9b6cee20f",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "c8c55921-c6c1-4ff7-a7cf-856e16a3c6dd",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18247,8 +17917,8 @@
         "app": "e7ecf2ad-dec7-494f-8ec7-2dc362beae9a",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18263,16 +17933,16 @@
         "app": "09801407-b4ea-4b04-8bca-adfcbe3587eb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "0b3e04a0-68b1-4f57-ad60-baeae940ae24",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18359,8 +18029,8 @@
         "app": "5f3b9020-faa9-47d6-8b1a-f1bac64064f7",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18447,8 +18117,8 @@
         "app": "5388706e-8908-489e-abb5-a3041801d030",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18535,16 +18205,16 @@
         "app": "f78d1b1d-efa2-448e-bc92-ae7b069b5b8e",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "3cbf56bd-1f21-437e-9d4a-0e49722d7fe6",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18631,8 +18301,8 @@
         "app": "e929c608-3f9c-4c0b-8225-4cccbbd9f2eb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18671,8 +18341,8 @@
         "app": "9386732d-80b3-4819-82e8-5820d707bd56",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18687,8 +18357,8 @@
         "app": "5355e45c-4f96-408a-849a-0b928a8b4fb9",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18719,8 +18389,8 @@
         "app": "9dad6e59-4b53-4373-b9b2-b9df0d8c510d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18759,8 +18429,8 @@
         "app": "f89e128e-c472-4cae-848b-b3cbb78cc717",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18815,8 +18485,8 @@
         "app": "5c784ebc-40f8-4915-b9bb-32108e16f7bc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18847,8 +18517,8 @@
         "app": "99888f4e-ddac-414e-9429-bd483242b8b5",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18863,8 +18533,8 @@
         "app": "25a5ab77-b13e-4de3-adbf-ea3100f11145",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18903,8 +18573,8 @@
         "app": "aaaf600e-a2e5-466c-a211-6158279418cb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18935,8 +18605,8 @@
         "app": "43d548c1-e67e-4e6a-817b-35fb1fd1b026",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18951,16 +18621,16 @@
         "app": "318df207-1050-45b1-b18e-05674d0fd2d5",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "5571e6a9-f6e3-4cbf-a315-7d2c816f2f9e",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18991,16 +18661,16 @@
         "app": "c1949300-f053-48fb-9aa4-e6b64165183d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "75ee231c-acfb-4ad3-a46a-dec236b85898",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -19031,8 +18701,8 @@
         "app": "ddb225db-3325-4ba8-9bf0-704e9c36ff30",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19063,16 +18733,16 @@
         "app": "51decdfb-91d6-4c27-bbbe-6c8c3631f5b3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "b79bfa9e-8850-4adf-81fb-4233b3ff0588",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19087,8 +18757,8 @@
         "app": "522d079b-e88a-43f2-abc6-24766fee8048",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19111,8 +18781,8 @@
         "app": "ee736c66-8e8a-41ac-bea0-c5786da8aba3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
