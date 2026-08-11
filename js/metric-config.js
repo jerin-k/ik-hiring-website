@@ -79,8 +79,11 @@ function sameConfig(a, b) {
 // back, no CORS, no POST. Returns { ok, reason }.
 const PUBLISH_CHUNK = 1500;   // chars of base64url per GET (URL stays well under any length limit)
 
-export async function publishConfig() {
-  const payload = collectConfig();
+// payloadOverride (optional): a full config object to publish instead of the raw localStorage snapshot — used by
+// admin.js buildEffectiveConfig(data) so the FIRST publish captures the effective baseline (roster pods + grid +
+// dept-family defaults) rather than an empty object, even before the admin has made any explicit edits.
+export async function publishConfig(payloadOverride) {
+  const payload = payloadOverride || collectConfig();
   const base = (getMeta() || {}).updatedAt || '';
   let cParam;
   try { cParam = await gzipB64url(JSON.stringify(payload)); }
