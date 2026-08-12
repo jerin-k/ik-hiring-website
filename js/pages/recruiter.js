@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { scoreForRole } from '../score-model.js';
+import { TIS_STAGES, poolHists, tisCell } from '../stage-time.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -219,6 +220,7 @@ export function renderRecruiter(data) {
       <button class="rec-subtab" data-tab="joining">Joining Conversion</button>
       <button class="rec-subtab" data-tab="fulfilment">Fulfilment</button>
       <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
+      <button class="rec-subtab" data-tab="timeinprocess">Time in Process</button>
       <button class="rec-subtab" data-tab="hygiene">Data Hygiene</button>
     </div>
 
@@ -291,6 +293,15 @@ export function renderRecruiter(data) {
       </table></div>
     </div>
 
+    <!-- PANEL: Time in Process (Pod → Recruiter → Job; median days parked per stage, red > 5) -->
+    <div class="rec-panel" data-panel="timeinprocess" style="display:none">
+      <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Pod → Recruiter → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked (today − applied date, full coverage); <strong>TA Screen → Offer</strong> from real stage history. Job rows are job-level (all recruiters on the job). Median (not mean) so App-Review outliers don't skew a stage.</p>
+      <div class="scroll-table"><table class="vel-table">
+        <thead id="recTisHead"></thead>
+        <tbody id="recTisBody"></tbody>
+      </table></div>
+    </div>
+
     <!-- PANEL: Data Hygiene (LIVE — surfaces data.dataQuality from the attribution pass) -->
     <div class="rec-panel" data-panel="hygiene" style="display:none">
       <p class="sub-note"><strong>Compliance view.</strong> These are candidates &amp; applications the pipeline could not attribute cleanly. The team fixes them <strong>in Ashby</strong> (tag a Recruiter on the hiring team, or remove duplicate Recruiter/Sourcer tags); the next refresh clears the fixed rows. 2026-onward only.</p>
@@ -333,6 +344,10 @@ export function initRecruiterFilters(data) {
   const nDate = 7;
   // Departed recruiters (Ashby account disabled) are retained so historical offers still score — flag them.
   const inactiveTag = (r) => r && r.isActive === false ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>' : '';
+  // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
+  const _sr = data.stageRollups || {};
+  const tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
+  const arDwellRec = data.appReviewDwellByRecruiter || null, arDwellJob = data.appReviewDwellByJob || null;
 
   // jobs[] is keyed by an 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
   // jobMeta() yields {department,title,level,complexity} for the scoring engine (falls back to byJob's own
@@ -542,11 +557,44 @@ export function initRecruiterFilters(data) {
       wireTreePath(srcBody);
     }
 
+    // ===== Time in Process — Pod → Recruiter → Job, median days parked per stage =====
+    renderTimeInProcess();
+
     // ===== Data Hygiene — org-wide compliance (independent of Pod/Recruiter filters) =====
     renderHygiene();
 
     lastGroups = groups; lastRecs = recs;
     renderActiveChart();
+  }
+
+  // Pod → Recruiter → Job, median days a candidate is parked per stage (red > 5). App Review = still-parked
+  // dwell (main pull); TA Screen → Offer from stage history. Job rows are job-level (all recruiters on the job).
+  function renderTimeInProcess() {
+    const body = document.getElementById('recTisBody'); if (!body) return;
+    const head = document.getElementById('recTisHead');
+    if (head) { let h = '<tr><th style="min-width:230px">Pod / Recruiter / Job</th>'; TIS_STAGES.forEach(([, lbl]) => { h += `<th>${lbl}</th>`; }); head.innerHTML = h + '</tr>'; }
+    if (!tisRec && !arDwellRec) { body.innerHTML = `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">Time-in-stage data pending the next stage-history refresh.</td></tr>`; return; }
+    const q = selQuarter();
+    const groups = groupByPod(getFilteredRecs(), q);
+    const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellRec && arDwellRec[r.name]) || {}) : ((tisRec && tisRec[r.name] && tisRec[r.name][sk]) || {}));
+    const jobHists = (j8) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellJob && arDwellJob[j8]) || {}) : ((tisJob && tisJob[j8] && tisJob[j8][sk]) || {}));
+    const rowCells = (arr) => arr.map(hh => tisCell(hh, 5)).join('');
+    const poolCells = (arrs) => TIS_STAGES.map((_, i) => tisCell(poolHists(arrs.map(a => a[i])), 5)).join('');
+    let html = '';
+    groups.forEach((G, pi) => {
+      html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${poolCells(G.recs.map(recHists))}</tr>`;
+      G.recs.forEach((r, ri) => {
+        const rk = `t${pi}-${ri}`;
+        html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${rowCells(recHists(r))}</tr>`;
+        const jobs = (r.byJob || []).slice().sort((a, b) => (b.total || 0) - (a.total || 0));
+        if (jobs.length) jobs.forEach(bj => {
+          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(jobHists((bj.jobId || '').slice(0, 8)))}</tr>`;
+        });
+        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted);font-style:italic">No jobs attributed</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
+      });
+    });
+    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+    wireVelTree(body);
   }
 
   // Surfaces data.dataQuality (the attribution pass's compliance payload) + the Active/Inactive roster.
