@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { resolveDeptTeam } from '../dept-map.js';
+import { TIS_STAGES, poolHists, tisCell } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
@@ -113,6 +114,7 @@ export function renderEfficiency(data) {
       <button class="eff-subtab" data-tab="velocity">Submission Velocity</button>
       <button class="eff-subtab" data-tab="screening">Screening Efficiency</button>
       <button class="eff-subtab" data-tab="throughput">Throughput</button>
+      <button class="eff-subtab" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab" data-tab="sourcing">Sourcing Mix</button>
     </div>
@@ -179,6 +181,15 @@ export function renderEfficiency(data) {
       </table></div>
     </div>
 
+    <!-- PANEL: Time in Process -->
+    <div class="eff-panel" data-panel="timeinprocess" style="display:none">
+      <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Pod → Department → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked there (today − applied date, full coverage); <strong>TA Screen → Offer</strong> come from real stage-transition history. Median is used (not mean) so a few candidates stuck 150+ days in App Review don't skew the stage.</p>
+      <div class="scroll-table"><table>
+        <thead id="effTisHead"></thead>
+        <tbody id="effTisBody"></tbody>
+      </table></div>
+    </div>
+
     <!-- PANEL: Joining Conversion -->
     <div class="eff-panel" data-panel="joining" style="display:none">
       <p class="sub-note"><strong>Offered → Hired</strong>, live to the job level (Pod → Department → Job), attributed via the recruiters who worked each job.</p>
@@ -211,6 +222,8 @@ export function initEfficiencyFilters(data) {
   const rollups = data.stageRollups || {};
   const velByJob = rollups.velocityByJob || null;
   const tpByJob = rollups.throughputByJob || null;
+  const tisByJob = rollups.timeInStageByJob || null;         // {job8:{stage:{days:count}}} — TA Screen → Offer dwell
+  const arDwellJob = data.appReviewDwellByJob || null;       // {job8:{days:count}} — App Review dwell (still-parked candidates)
   let activeTab = 'fulfilment';
   let msPod = null, msDept = null, msJob = null;
 
@@ -457,6 +470,40 @@ export function initEfficiencyFilters(data) {
     wireTreePath(body, expandAll());
   }
 
+  // ===== Time in Process (Pod → Department → Job; median days parked per stage, red > 5) =====
+  function renderTimeInProcess() {
+    const head = document.getElementById('effTisHead');
+    if (head) {
+      let h = '<tr><th style="min-width:260px">Pod / Department / Job</th>';
+      TIS_STAGES.forEach(([, lbl]) => { h += `<th class="stage-sub" style="min-width:48px">${lbl}</th>`; });
+      head.innerHTML = h + '</tr>';
+    }
+    const body = document.getElementById('effTisBody'); if (!body) return;
+    if (!tisByJob && !arDwellJob) { podSkeletonBody('effTisBody', TIS_STAGES.length, () => dashTds(TIS_STAGES.length)); return; }
+    const q = selQuarter(), pods = visiblePods();
+    // Per job: one histogram per stage column. App Review from the main-pull dwell, other stages from stage history.
+    const jobHists = (jid) => TIS_STAGES.map(([sk]) => sk === 'appReview'
+      ? ((arDwellJob && arDwellJob[jid]) || {})
+      : ((tisByJob && tisByJob[jid] && tisByJob[jid][sk]) || {}));
+    const rowCells = (histArr) => histArr.map(hh => tisCell(hh, 5)).join('');
+    const poolCells = (arrs) => TIS_STAGES.map((_, i) => tisCell(poolHists(arrs.map(a => a[i])), 5)).join('');
+    let html = '';
+    pods.forEach((pod, pi) => {
+      const podArrs = [];
+      const deptRows = podDeptJobs(pod, q).map(({ dept, jobs: js }) => {
+        const jh = js.map(j => jobHists(j.jid)); jh.forEach(a => podArrs.push(a));
+        return { dept, js, jh };
+      });
+      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${poolCells(podArrs)}</tr>`;
+      deptRows.forEach(({ dept, js, jh }, di) => {
+        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${poolCells(jh)}</tr>`;
+        js.forEach((j, ji) => { html += `<tr data-path="${pi}-${di}-${ji}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
+      });
+    });
+    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    wireTreePath(body, expandAll());
+  }
+
   // ===== Submission Velocity (Pod → Department → Job → Stage; last 30 days of range, descending) =====
   function velDates() {
     const toV = document.getElementById('effVelTo')?.value;
@@ -687,6 +734,7 @@ export function initEfficiencyFilters(data) {
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') { renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.'); }
     else if (activeTab === 'throughput') { renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), () => null, 'Per-stage throughput chart — pending job×stage rollup (pipeline).'); }
+    else if (activeTab === 'timeinprocess') renderTimeInProcess();
     else if (activeTab === 'joining') { renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.'); }
     else if (activeTab === 'sourcing') renderSourcing();
   }
