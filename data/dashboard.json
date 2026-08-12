@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-08-12T00:48:07.897Z",
+  "lastUpdated": "2026-08-12T13:03:36.904Z",
   "schemaVersion": 4,
   "scopeYear": 2026,
   "velocityDays": 35,
   "funnel": {
-    "applied": 53551,
-    "screened": 1848,
-    "interviewed": 1144,
-    "offered": 425,
+    "applied": 53610,
+    "screened": 1844,
+    "interviewed": 1150,
+    "offered": 426,
     "hired": 292
   },
   "openings": [
@@ -609,22 +609,22 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 6849,
-      "applied": 6849,
+      "total": 6862,
+      "applied": 6862,
       "screen": 5,
       "interview": 0,
       "offer": 3,
       "hired": 3,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 6746,
+        "appReview": 6759,
         "taScreen": 5,
         "hmReview": 0,
         "oa": 0,
         "r1": 0,
         "r2": 2,
-        "r3": 1,
-        "r4": 1,
+        "r3": 0,
+        "r4": 2,
         "r5": 0,
         "refCheck": 0,
         "docSub": 0,
@@ -754,21 +754,21 @@
       "level": "NA",
       "complexity": null,
       "status": "Open",
-      "total": 2796,
-      "applied": 2796,
-      "screen": 4,
-      "interview": 10,
+      "total": 2803,
+      "applied": 2803,
+      "screen": 2,
+      "interview": 13,
       "offer": 3,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
         "appReview": 0,
-        "taScreen": 4,
-        "hmReview": 3,
+        "taScreen": 2,
+        "hmReview": 2,
         "oa": 0,
-        "r1": 10,
-        "r2": 1,
-        "r3": 3,
+        "r1": 13,
+        "r2": 4,
+        "r3": 2,
         "r4": 0,
         "r5": 0,
         "refCheck": 0,
@@ -857,25 +857,25 @@
       "level": "L2",
       "complexity": "Normal",
       "status": "Open",
-      "total": 2160,
-      "applied": 2160,
-      "screen": 239,
-      "interview": 287,
+      "total": 2174,
+      "applied": 2174,
+      "screen": 237,
+      "interview": 283,
       "offer": 97,
       "hired": 95,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 705,
-        "taScreen": 239,
+        "appReview": 717,
+        "taScreen": 237,
         "hmReview": 0,
         "oa": 0,
-        "r1": 287,
+        "r1": 283,
         "r2": 16,
         "r3": 34,
         "r4": 0,
         "r5": 0,
         "refCheck": 0,
-        "docSub": 5,
+        "docSub": 7,
         "offer": 2,
         "hired": 95
       },
@@ -889,8 +889,7 @@
         "Tina Anisha Bibeiro",
         "Chhavi Rana",
         "Alokita Dhumne",
-        "V Pooja",
-        "Jerin Kesavan"
+        "V Pooja"
       ]
     },
     {
@@ -903,14 +902,14 @@
       "status": "Open",
       "total": 1849,
       "applied": 1849,
-      "screen": 5,
+      "screen": 1,
       "interview": 0,
       "offer": 2,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
         "appReview": 1687,
-        "taScreen": 5,
+        "taScreen": 1,
         "hmReview": 0,
         "oa": 0,
         "r1": 0,
@@ -1229,7 +1228,7 @@
       "total": 770,
       "applied": 770,
       "screen": 2,
-      "interview": 1,
+      "interview": 0,
       "offer": 1,
       "hired": 1,
       "joiningPending": 0,
@@ -1238,9 +1237,9 @@
         "taScreen": 2,
         "hmReview": 0,
         "oa": 0,
-        "r1": 1,
-        "r2": 2,
-        "r3": 1,
+        "r1": 0,
+        "r2": 0,
+        "r3": 3,
         "r4": 0,
         "r5": 0,
         "refCheck": 0,
@@ -1295,15 +1294,15 @@
       "level": "L4",
       "complexity": "Normal",
       "status": "Open",
-      "total": 692,
-      "applied": 692,
+      "total": 697,
+      "applied": 697,
       "screen": 19,
       "interview": 24,
       "offer": 2,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 591,
+        "appReview": 595,
         "taScreen": 19,
         "hmReview": 0,
         "oa": 0,
@@ -1407,7 +1406,7 @@
       "applied": 519,
       "screen": 47,
       "interview": 22,
-      "offer": 58,
+      "offer": 59,
       "hired": 22,
       "joiningPending": 0,
       "pipeline": {
@@ -1421,8 +1420,8 @@
         "r4": 0,
         "r5": 0,
         "refCheck": 0,
-        "docSub": 2,
-        "offer": 36,
+        "docSub": 1,
+        "offer": 37,
         "hired": 22
       },
       "recruiters": [
@@ -1864,15 +1863,15 @@
       "level": "L4",
       "complexity": "Complex",
       "status": "Open",
-      "total": 247,
-      "applied": 247,
+      "total": 248,
+      "applied": 248,
       "screen": 12,
       "interview": 15,
       "offer": 0,
       "hired": 0,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 165,
+        "appReview": 166,
         "taScreen": 12,
         "hmReview": 0,
         "oa": 0,
@@ -2277,6 +2276,44 @@
       ]
     },
     {
+      "id": "e8867563",
+      "title": "Intern, Talent Acquisition",
+      "department": "Talent Acquisition",
+      "team": "Talent Acquisition",
+      "level": "L0",
+      "complexity": "Complex",
+      "status": "Open",
+      "total": 143,
+      "applied": 143,
+      "screen": 7,
+      "interview": 1,
+      "offer": 4,
+      "hired": 3,
+      "joiningPending": 0,
+      "pipeline": {
+        "appReview": 75,
+        "taScreen": 7,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 1,
+        "r2": 0,
+        "r3": 0,
+        "r4": 1,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 1,
+        "hired": 3
+      },
+      "recruiters": [
+        "Alokita Dhumne",
+        "Kaashvika Kashyap",
+        "Tabitha Anceline E",
+        "Chhavi Rana",
+        "Rijo John"
+      ]
+    },
+    {
       "id": "fc369c2c",
       "title": "Senior Software Engineer - React Native",
       "department": "Engineering",
@@ -2347,44 +2384,6 @@
         "Neha Vivekanand Pattar",
         "Chhavi Rana",
         "Alokita Dhumne",
-        "Rijo John"
-      ]
-    },
-    {
-      "id": "e8867563",
-      "title": "Intern, Talent Acquisition",
-      "department": "Talent Acquisition",
-      "team": "Talent Acquisition",
-      "level": "L0",
-      "complexity": "Complex",
-      "status": "Open",
-      "total": 130,
-      "applied": 130,
-      "screen": 7,
-      "interview": 1,
-      "offer": 4,
-      "hired": 3,
-      "joiningPending": 0,
-      "pipeline": {
-        "appReview": 65,
-        "taScreen": 7,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 1,
-        "r2": 0,
-        "r3": 0,
-        "r4": 1,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 1,
-        "hired": 3
-      },
-      "recruiters": [
-        "Alokita Dhumne",
-        "Kaashvika Kashyap",
-        "Tabitha Anceline E",
-        "Chhavi Rana",
         "Rijo John"
       ]
     },
@@ -3098,14 +3097,14 @@
       "status": "Open",
       "total": 27,
       "applied": 27,
-      "screen": 2,
+      "screen": 1,
       "interview": 0,
-      "offer": 12,
+      "offer": 11,
       "hired": 0,
       "joiningPending": 0,
       "pipeline": {
         "appReview": 5,
-        "taScreen": 2,
+        "taScreen": 1,
         "hmReview": 0,
         "oa": 0,
         "r1": 0,
@@ -3115,7 +3114,7 @@
         "r5": 1,
         "refCheck": 0,
         "docSub": 0,
-        "offer": 12,
+        "offer": 11,
         "hired": 0
       },
       "recruiters": [
@@ -3364,9 +3363,8 @@
         "hired": 1
       },
       "recruiters": [
-        "Sanghamitra Moulik",
         "Ankita Kabra",
-        "Mashika De Almeida",
+        "Sanghamitra Moulik",
         "Oshin Verma"
       ]
     },
@@ -3417,7 +3415,7 @@
       "applied": 18,
       "screen": 4,
       "interview": 2,
-      "offer": 10,
+      "offer": 11,
       "hired": 1,
       "joiningPending": 0,
       "pipeline": {
@@ -3431,13 +3429,12 @@
         "r4": 0,
         "r5": 0,
         "refCheck": 0,
-        "docSub": 2,
-        "offer": 9,
+        "docSub": 1,
+        "offer": 10,
         "hired": 1
       },
       "recruiters": [
-        "Ritika Bhasin",
-        "Aditya Singh"
+        "Ritika Bhasin"
       ]
     },
     {
@@ -3919,6 +3916,40 @@
       ]
     },
     {
+      "id": "ad3f0984",
+      "title": "Customer Success Associate (IND)",
+      "department": "Operations",
+      "team": "Customer Success Management",
+      "level": null,
+      "complexity": null,
+      "status": "Open",
+      "total": 7,
+      "applied": 7,
+      "screen": 0,
+      "interview": 4,
+      "offer": 0,
+      "hired": 0,
+      "joiningPending": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 0,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 4,
+        "r2": 1,
+        "r3": 0,
+        "r4": 2,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 0
+      },
+      "recruiters": [
+        "V Pooja"
+      ]
+    },
+    {
       "id": "1cef9cfe",
       "title": "Assistant Manager/Manager - Sales Operations",
       "department": "Business - India",
@@ -3951,6 +3982,40 @@
       "recruiters": [
         "Smriti Das",
         "Neha Vivekanand Pattar"
+      ]
+    },
+    {
+      "id": "cdfc5562",
+      "title": "Part Time Instructor - Career Coach (US)",
+      "department": "SME - US",
+      "team": "SME - US",
+      "level": "NA",
+      "complexity": null,
+      "status": "Open",
+      "total": 5,
+      "applied": 5,
+      "screen": 2,
+      "interview": 1,
+      "offer": 2,
+      "hired": 2,
+      "joiningPending": 0,
+      "pipeline": {
+        "appReview": 0,
+        "taScreen": 2,
+        "hmReview": 0,
+        "oa": 0,
+        "r1": 1,
+        "r2": 0,
+        "r3": 0,
+        "r4": 0,
+        "r5": 0,
+        "refCheck": 0,
+        "docSub": 0,
+        "offer": 0,
+        "hired": 2
+      },
+      "recruiters": [
+        "Aditya Singh"
       ]
     },
     {
@@ -4039,7 +4104,7 @@
       "pipeline": {
         "appReview": 0,
         "taScreen": 0,
-        "hmReview": 2,
+        "hmReview": 1,
         "oa": 0,
         "r1": 3,
         "r2": 0,
@@ -4053,40 +4118,6 @@
       },
       "recruiters": [
         "Oshin Verma"
-      ]
-    },
-    {
-      "id": "cdfc5562",
-      "title": "Part Time Instructor - Career Coach (US)",
-      "department": "SME - US",
-      "team": "SME - US",
-      "level": "NA",
-      "complexity": null,
-      "status": "Open",
-      "total": 4,
-      "applied": 4,
-      "screen": 1,
-      "interview": 1,
-      "offer": 2,
-      "hired": 2,
-      "joiningPending": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 1,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 1,
-        "r2": 0,
-        "r3": 0,
-        "r4": 0,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 2
-      },
-      "recruiters": [
-        "Aditya Singh"
       ]
     },
     {
@@ -4293,40 +4324,6 @@
       "recruiters": [
         "Ankita Kabra",
         "Oshin Verma"
-      ]
-    },
-    {
-      "id": "ad3f0984",
-      "title": "Customer Success Associate (IND)",
-      "department": "Operations",
-      "team": "Customer Success Management",
-      "level": null,
-      "complexity": null,
-      "status": "Open",
-      "total": 2,
-      "applied": 2,
-      "screen": 0,
-      "interview": 1,
-      "offer": 0,
-      "hired": 0,
-      "joiningPending": 0,
-      "pipeline": {
-        "appReview": 0,
-        "taScreen": 0,
-        "hmReview": 0,
-        "oa": 0,
-        "r1": 1,
-        "r2": 0,
-        "r3": 0,
-        "r4": 1,
-        "r5": 0,
-        "refCheck": 0,
-        "docSub": 0,
-        "offer": 0,
-        "hired": 0
-      },
-      "recruiters": [
-        "V Pooja"
       ]
     },
     {
@@ -4597,7 +4594,7 @@
   "recruiters": [
     {
       "name": "Unassigned",
-      "total": 19658,
+      "total": 19684,
       "byJob": [
         {
           "jobId": "ad7e4c29-7a4e-49c2-a315-b03e8d8d464c",
@@ -4643,7 +4640,7 @@
           "jobId": "e8867563-290d-4508-93be-2d9195e8406c",
           "title": "Intern, Talent Acquisition",
           "department": "Talent Acquisition",
-          "total": 104,
+          "total": 117,
           "offer": 2,
           "hired": 2
         },
@@ -4651,7 +4648,7 @@
           "jobId": "cac9b029-d42f-4663-9222-0241d9d3341d",
           "title": "Manager, Sales Training & Enablement (US)",
           "department": "US Business",
-          "total": 188,
+          "total": 189,
           "offer": 0,
           "hired": 0
         },
@@ -4731,7 +4728,7 @@
           "jobId": "3d31c20f-35df-4a46-b505-8dd5aea49978",
           "title": "Manager - Sales (US)",
           "department": "US Business",
-          "total": 623,
+          "total": 628,
           "offer": 0,
           "hired": 0
         },
@@ -4947,7 +4944,7 @@
           "jobId": "9783f817-e58a-4f35-aa83-e85422f14c86",
           "title": "Customer Success Associate (US)",
           "department": "Operations",
-          "total": 2796,
+          "total": 2803,
           "offer": 3,
           "hired": 2
         },
@@ -5040,18 +5037,18 @@
         "Referral": 79,
         "Other": 11,
         "Prospecting": 3,
-        "Inbound": 245,
-        "Job Portal": 92,
+        "Inbound": 264,
+        "Job Portal": 100,
         "Career Site": 1,
         "Juicebox": 1,
         "Recruiter Networking": 3
       },
-      "ta": 161,
-      "hm": 9,
+      "ta": 159,
+      "hm": 8,
       "oa": 0,
-      "r1": 74,
-      "r2": 12,
-      "r3": 11,
+      "r1": 77,
+      "r2": 15,
+      "r3": 10,
       "r4": 6,
       "r5": 0,
       "offer": 28,
@@ -5060,7 +5057,7 @@
     },
     {
       "name": "Deepti Leslie",
-      "total": 14392,
+      "total": 14411,
       "byJob": [
         {
           "jobId": "fc369c2c-ba64-44c8-98ff-cf000594947f",
@@ -5138,7 +5135,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 262,
+          "total": 263,
           "offer": 0,
           "hired": 0
         },
@@ -5146,7 +5143,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 5715,
+          "total": 5733,
           "offer": 2,
           "hired": 2
         },
@@ -5214,16 +5211,16 @@
         "MyGreenhouse": 112,
         "Other": 5,
         "Referral": 518,
-        "Inbound": 591,
+        "Inbound": 611,
         "Job Portal": 27
       },
-      "ta": 17,
+      "ta": 13,
       "hm": 3,
       "oa": 0,
-      "r1": 13,
-      "r2": 6,
-      "r3": 4,
-      "r4": 0,
+      "r1": 12,
+      "r2": 4,
+      "r3": 5,
+      "r4": 1,
       "r5": 1,
       "offer": 5,
       "hired": 4,
@@ -5602,15 +5599,15 @@
     },
     {
       "name": "G Darshan",
-      "total": 1496,
+      "total": 1511,
       "byJob": [
         {
           "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "total": 1496,
-          "offer": 20,
-          "hired": 18
+          "total": 1511,
+          "offer": 21,
+          "hired": 19
         }
       ],
       "sources": {
@@ -5618,30 +5615,30 @@
         "Agencies": 349,
         "Company marketing": 118,
         "Other": 29,
-        "Referral": 40,
-        "Job Portal": 259,
+        "Referral": 41,
+        "Job Portal": 268,
         "Prospecting": 2,
-        "Inbound": 211,
-        "Recruiter Networking": 5
+        "Inbound": 215,
+        "Recruiter Networking": 6
       },
-      "ta": 239,
+      "ta": 237,
       "hm": 0,
       "oa": 0,
-      "r1": 287,
+      "r1": 283,
       "r2": 16,
       "r3": 34,
       "r4": 0,
       "r5": 0,
-      "offer": 20,
-      "hired": 18,
-      "offeredReal": 22,
+      "offer": 21,
+      "hired": 19,
+      "offeredReal": 23,
       "joiningPending": 0,
-      "accepted": 22,
+      "accepted": 23,
       "isActive": true
     },
     {
       "name": "V Pooja",
-      "total": 1326,
+      "total": 1321,
       "byJob": [
         {
           "jobId": "2b670683-2870-44e5-862a-c399766d383c",
@@ -5655,7 +5652,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 695,
+          "total": 685,
           "offer": 1,
           "hired": 1
         },
@@ -5767,7 +5764,7 @@
           "jobId": "ad3f0984-eabb-4790-be83-465f447ffec8",
           "title": "Customer Success Associate (IND)",
           "department": "Operations",
-          "total": 2,
+          "total": 7,
           "offer": 0,
           "hired": 0
         }
@@ -5778,16 +5775,16 @@
         "Referral": 16,
         "Other": 1,
         "MyGreenhouse": 4,
-        "Inbound": 88,
+        "Inbound": 77,
         "Job Portal": 3
       },
       "ta": 0,
       "hm": 1,
       "oa": 0,
-      "r1": 11,
-      "r2": 1,
+      "r1": 14,
+      "r2": 2,
       "r3": 6,
-      "r4": 3,
+      "r4": 4,
       "r5": 1,
       "offer": 5,
       "hired": 4,
@@ -5798,7 +5795,7 @@
     },
     {
       "name": "Oshin Verma",
-      "total": 955,
+      "total": 959,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -5868,15 +5865,7 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Assistant Manager - US HR and Payroll",
           "department": "Human Resource",
-          "total": 691,
-          "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
-          "title": "Curriculum Manager - APM / PM",
-          "department": "New Programs",
-          "total": 12,
+          "total": 695,
           "offer": 0,
           "hired": 0
         },
@@ -5885,6 +5874,14 @@
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
           "total": 10,
+          "offer": 0,
+          "hired": 0
+        },
+        {
+          "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
+          "title": "Curriculum Manager - APM / PM",
+          "department": "New Programs",
+          "total": 12,
           "offer": 0,
           "hired": 0
         },
@@ -5906,20 +5903,20 @@
         }
       ],
       "sources": {
-        "Company marketing": 228,
-        "Third-party boards": 668,
-        "Referral": 7,
-        "MyGreenhouse": 28,
+        "Company marketing": 242,
+        "Third-party boards": 658,
+        "Referral": 8,
+        "MyGreenhouse": 27,
         "Prospecting": 1,
         "Job Portal": 21
       },
-      "ta": 29,
-      "hm": 7,
+      "ta": 26,
+      "hm": 6,
       "oa": 0,
-      "r1": 22,
-      "r2": 3,
+      "r1": 21,
+      "r2": 4,
       "r3": 5,
-      "r4": 3,
+      "r4": 4,
       "r5": 8,
       "offer": 54,
       "hired": 23,
@@ -5930,7 +5927,7 @@
     },
     {
       "name": "Ankita Kabra",
-      "total": 866,
+      "total": 865,
       "byJob": [
         {
           "jobId": "fc3105d6-731f-4653-a0b5-16a8ac8efda2",
@@ -5944,7 +5941,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 43,
+          "total": 42,
           "offer": 4,
           "hired": 0
         },
@@ -6085,7 +6082,7 @@
         "Agencies": 6,
         "Other": 4,
         "Prospecting": 3,
-        "Inbound": 3
+        "Inbound": 2
       },
       "ta": 0,
       "hm": 0,
@@ -6174,29 +6171,21 @@
           "jobId": "cdfc5562-31e8-4d50-aa55-c8ace8d271e4",
           "title": "Part Time Instructor - Career Coach (US)",
           "department": "SME - US",
-          "total": 4,
+          "total": 5,
           "offer": 2,
           "hired": 2
-        },
-        {
-          "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
-          "title": "Part Time Instructor - FDE (US)",
-          "department": "SME - US",
-          "total": 1,
-          "offer": 1,
-          "hired": 0
         }
       ],
       "sources": {
         "Company marketing": 322,
         "Agencies": 8,
         "Third-party boards": 170,
-        "Prospecting": 24,
+        "Prospecting": 23,
         "MyGreenhouse": 5,
         "Inbound": 1,
         "Job Portal": 1
       },
-      "ta": 27,
+      "ta": 28,
       "hm": 0,
       "oa": 0,
       "r1": 5,
@@ -6204,7 +6193,7 @@
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 45,
+      "offer": 44,
       "hired": 18,
       "offeredReal": 22,
       "joiningPending": 0,
@@ -6766,7 +6755,7 @@
     },
     {
       "name": "Astha Thakur",
-      "total": 240,
+      "total": 245,
       "byJob": [
         {
           "jobId": "39b328eb-b0b2-434c-89fd-2a75de973ba0",
@@ -6804,7 +6793,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 32,
+          "total": 37,
           "offer": 0,
           "hired": 0
         }
@@ -6812,7 +6801,7 @@
       "sources": {
         "Referral": 4,
         "Third-party boards": 204,
-        "Inbound": 30,
+        "Inbound": 35,
         "Job Portal": 1
       },
       "ta": 15,
@@ -6832,13 +6821,13 @@
     },
     {
       "name": "Gopu Nair V",
-      "total": 237,
+      "total": 233,
       "byJob": [
         {
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Assistant Manager - US HR and Payroll",
           "department": "Human Resource",
-          "total": 210,
+          "total": 206,
           "offer": 0,
           "hired": 0
         },
@@ -6847,14 +6836,14 @@
           "title": "Test",
           "department": "Test",
           "total": 27,
-          "offer": 12,
+          "offer": 11,
           "hired": 0
         }
       ],
       "sources": {
-        "Company marketing": 56,
-        "Third-party boards": 135,
-        "MyGreenhouse": 2,
+        "Company marketing": 42,
+        "Third-party boards": 144,
+        "MyGreenhouse": 3,
         "Job Portal": 25,
         "Inbound": 6,
         "Juicebox": 1,
@@ -6862,15 +6851,15 @@
         "Agencies": 1,
         "Sourced": 1
       },
-      "ta": 8,
+      "ta": 10,
       "hm": 0,
       "oa": 0,
       "r1": 1,
-      "r2": 1,
+      "r2": 0,
       "r3": 1,
       "r4": 0,
       "r5": 1,
-      "offer": 12,
+      "offer": 11,
       "hired": 0,
       "offeredReal": 5,
       "joiningPending": 0,
@@ -6879,7 +6868,7 @@
     },
     {
       "name": "Ritika Bhasin",
-      "total": 220,
+      "total": 221,
       "byJob": [
         {
           "jobId": "7cecc40d-8ee8-4aab-b540-3cec0481dfb4",
@@ -6894,7 +6883,7 @@
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
           "total": 101,
-          "offer": 25,
+          "offer": 26,
           "hired": 7
         },
         {
@@ -6973,8 +6962,8 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 17,
-          "offer": 9,
+          "total": 18,
+          "offer": 11,
           "hired": 1
         }
       ],
@@ -6983,7 +6972,7 @@
         "Third-party boards": 99,
         "MyGreenhouse": 2,
         "Referral": 1,
-        "Prospecting": 1,
+        "Prospecting": 2,
         "Juicebox": 13,
         "Inbound": 30,
         "Job Portal": 15
@@ -6996,7 +6985,7 @@
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 45,
+      "offer": 48,
       "hired": 19,
       "offeredReal": 30,
       "joiningPending": 0,
@@ -7286,7 +7275,7 @@
     },
     {
       "name": "Mashika De Almeida",
-      "total": 75,
+      "total": 74,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -7367,14 +7356,6 @@
           "total": 1,
           "offer": 1,
           "hired": 1
-        },
-        {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 1,
-          "offer": 0,
-          "hired": 0
         }
       ],
       "sources": {
@@ -7383,7 +7364,7 @@
         "Other": 2,
         "MyGreenhouse": 4,
         "Company marketing": 20,
-        "Referral": 2
+        "Referral": 1
       },
       "ta": 0,
       "hm": 0,
@@ -7391,7 +7372,7 @@
       "r1": 1,
       "r2": 1,
       "r3": 0,
-      "r4": 1,
+      "r4": 0,
       "r5": 0,
       "offer": 1,
       "hired": 1,
@@ -7500,7 +7481,7 @@
     },
     {
       "name": "Sanghamitra Moulik",
-      "total": 27,
+      "total": 28,
       "byJob": [
         {
           "jobId": "b6f031b3-3350-4aab-8296-da542fed4a0f",
@@ -7522,19 +7503,19 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 6,
+          "total": 7,
           "offer": 1,
           "hired": 1
         }
       ],
       "sources": {
-        "Third-party boards": 25,
+        "Third-party boards": 26,
         "Job Portal": 2
       },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 6,
+      "r1": 7,
       "r2": 0,
       "r3": 0,
       "r4": 0,
@@ -7676,37 +7657,6 @@
       "offer": 0,
       "hired": 0,
       "isActive": true
-    },
-    {
-      "name": "Jerin Kesavan",
-      "total": 1,
-      "byJob": [
-        {
-          "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
-          "title": "Program Advisor - US (AI Programs)",
-          "department": "US Business",
-          "total": 1,
-          "offer": 1,
-          "hired": 1
-        }
-      ],
-      "sources": {
-        "Referral": 1
-      },
-      "ta": 0,
-      "hm": 0,
-      "oa": 0,
-      "r1": 0,
-      "r2": 0,
-      "r3": 0,
-      "r4": 0,
-      "r5": 0,
-      "offer": 1,
-      "hired": 1,
-      "offeredReal": 1,
-      "joiningPending": 0,
-      "accepted": 1,
-      "isActive": true
     }
   ],
   "sources": [
@@ -7725,7 +7675,7 @@
     {
       "name": "Inbound",
       "type": "Inbound",
-      "candidates": 1205,
+      "candidates": 1241,
       "hires": 0
     },
     {
@@ -7743,7 +7693,7 @@
     {
       "name": "Job Portal",
       "type": "Job Portal",
-      "candidates": 446,
+      "candidates": 463,
       "hires": 18
     },
     {
@@ -7779,7 +7729,7 @@
     {
       "name": "Recruiter Networking",
       "type": "Recruiter Networking",
-      "candidates": 8,
+      "candidates": 9,
       "hires": 1
     },
     {
@@ -8073,42 +8023,42 @@
     },
     "2026-Q3": {
       "funnel": {
-        "applied": 2273,
-        "screened": 337,
-        "interviewed": 253,
-        "offered": 79,
+        "applied": 2332,
+        "screened": 333,
+        "interviewed": 259,
+        "offered": 80,
         "hired": 36
       },
       "topJobs": [
         {
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "applied": 913,
+          "applied": 926,
           "hired": 0
         },
         {
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "applied": 532,
+          "applied": 546,
           "hired": 12
         },
         {
           "title": "Manager - Sales (US)",
           "department": "US Business",
-          "applied": 130,
+          "applied": 135,
           "hired": 0
+        },
+        {
+          "title": "Intern, Talent Acquisition",
+          "department": "Talent Acquisition",
+          "applied": 120,
+          "hired": 2
         },
         {
           "title": "Program Advisor - India",
           "department": "Business - India",
           "applied": 110,
           "hired": 11
-        },
-        {
-          "title": "Intern, Talent Acquisition",
-          "department": "Talent Acquisition",
-          "applied": 107,
-          "hired": 2
         },
         {
           "title": "Part Time Instructor - Agentic AI (US)",
@@ -8131,25 +8081,25 @@
         {
           "title": "Manager, Sales Training & Enablement (US)",
           "department": "US Business",
-          "applied": 40,
+          "applied": 41,
           "hired": 0
         },
         {
-          "title": "Assistant Manager - US HR and Payroll",
-          "department": "Human Resource",
-          "applied": 34,
-          "hired": 0
+          "title": "Customer Success Associate (US)",
+          "department": "Operations",
+          "applied": 37,
+          "hired": 2
         }
       ],
       "sources": [
         {
           "name": "Inbound",
-          "candidates": 1202,
+          "candidates": 1238,
           "hires": 0
         },
         {
           "name": "Job Portal",
-          "candidates": 444,
+          "candidates": 461,
           "hires": 18
         },
         {
@@ -8174,7 +8124,7 @@
         },
         {
           "name": "Recruiter Networking",
-          "candidates": 8,
+          "candidates": 9,
           "hires": 1
         },
         {
@@ -14882,7 +14832,7 @@
       "department": "US Business",
       "level": "L2",
       "complexity": "Normal",
-      "recruiter": "Jerin Kesavan",
+      "recruiter": "G Darshan",
       "sourcer": null,
       "candidate": "Vishal Kumar Sharma",
       "decidedAt": "2026-08-05",
@@ -17263,14 +17213,6 @@
         "createdAt": "2026-07-27"
       },
       {
-        "applicationId": "2840a0cc-5c00-4e5e-b25e-08c33bf6c92d",
-        "job8": "9783f817",
-        "jobTitle": "Customer Success Associate (US)",
-        "candidate": "Saumya Madan",
-        "stage": "R3",
-        "createdAt": "2026-07-30"
-      },
-      {
         "applicationId": "3de016d7-f958-4c7c-86a7-2ca272d42f76",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
@@ -17309,6 +17251,14 @@
         "candidate": "Soumyajit Mukherjee",
         "stage": "R2",
         "createdAt": "2026-08-04"
+      },
+      {
+        "applicationId": "c53e48f7-0cef-457c-a82c-6801dcbdd391",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Sneha Lata",
+        "stage": "R1",
+        "createdAt": "2026-08-05"
       },
       {
         "applicationId": "72752b14-e392-41f6-99a6-2bfc24364681",
@@ -17351,22 +17301,6 @@
         "createdAt": "2026-08-08"
       },
       {
-        "applicationId": "eb215a9b-9abb-4109-a084-926990339500",
-        "job8": "9783f817",
-        "jobTitle": "Customer Success Associate (US)",
-        "candidate": "Payel Biswas",
-        "stage": "R1",
-        "createdAt": "2026-08-10"
-      },
-      {
-        "applicationId": "8c578560-8137-4dd6-a5c0-9b82e7374a4c",
-        "job8": "9783f817",
-        "jobTitle": "Customer Success Associate (US)",
-        "candidate": "Mradula Verma",
-        "stage": "R1",
-        "createdAt": "2026-08-10"
-      },
-      {
         "applicationId": "c58f73b2-6a7a-4872-b6db-44c61f522c97",
         "job8": "3d31c20f",
         "jobTitle": "Manager - Sales (US)",
@@ -17387,7 +17321,7 @@
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
         "candidate": "Siva Sai Vamsi",
-        "stage": "R1",
+        "stage": "R2",
         "createdAt": "2026-08-10"
       },
       {
@@ -17395,7 +17329,7 @@
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
         "candidate": "Amal Krishna",
-        "stage": "R1",
+        "stage": "R2",
         "createdAt": "2026-08-10"
       },
       {
@@ -17435,7 +17369,7 @@
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
         "candidate": "Shri Lakshmi",
-        "stage": "R1",
+        "stage": "R2",
         "createdAt": "2026-08-11"
       },
       {
@@ -17487,14 +17421,6 @@
         "createdAt": "2026-08-11"
       },
       {
-        "applicationId": "00b19b5c-7064-4289-88dd-dcfa3718387a",
-        "job8": "9783f817",
-        "jobTitle": "Customer Success Associate (US)",
-        "candidate": "Sreeju S Nair",
-        "stage": "TA Screen",
-        "createdAt": "2026-08-11"
-      },
-      {
         "applicationId": "4fc65b34-1ac5-4cb3-9602-1abfd45cc872",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
@@ -17515,7 +17441,7 @@
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
         "candidate": "Dibya Gourav Parida",
-        "stage": "TA Screen",
+        "stage": "R1",
         "createdAt": "2026-08-11"
       },
       {
@@ -17524,14 +17450,6 @@
         "jobTitle": "Intern, Talent Acquisition",
         "candidate": "Devika Ramesh",
         "stage": "TA Screen",
-        "createdAt": "2026-08-11"
-      },
-      {
-        "applicationId": "3aaf5e94-8a7c-42fc-bb52-2c7dc2c5d484",
-        "job8": "9783f817",
-        "jobTitle": "Customer Success Associate (US)",
-        "candidate": "Vinesh R",
-        "stage": "HM Review",
         "createdAt": "2026-08-11"
       },
       {
@@ -17549,16 +17467,64 @@
         "candidate": "Shinjini Mondal",
         "stage": "R1",
         "createdAt": "2026-08-11"
+      },
+      {
+        "applicationId": "d962a179-fd97-40dc-86f8-1429ac46519b",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Neha Siddiqui",
+        "stage": "R1",
+        "createdAt": "2026-08-12"
+      },
+      {
+        "applicationId": "9498e0fa-0b71-48e7-b27a-0dc68729137c",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Subham Gahir",
+        "stage": "R1",
+        "createdAt": "2026-08-12"
+      },
+      {
+        "applicationId": "42c726c0-5b87-4480-a2b3-44e6e86d090a",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "G Sravani Reddy",
+        "stage": "R1",
+        "createdAt": "2026-08-12"
+      },
+      {
+        "applicationId": "89efc36a-f4a2-492c-a8c7-0c6330e27611",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Bhhavin Arora",
+        "stage": "R1",
+        "createdAt": "2026-08-12"
+      },
+      {
+        "applicationId": "74c57333-654d-4669-b0ef-e838b78b47ea",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Abha Kiran",
+        "stage": "R1",
+        "createdAt": "2026-08-12"
+      },
+      {
+        "applicationId": "2d6b96b7-2edf-4b7a-9c7d-cc6eeb66e811",
+        "job8": "9783f817",
+        "jobTitle": "Customer Success Associate (US)",
+        "candidate": "Bicky Pathak",
+        "stage": "R1",
+        "createdAt": "2026-08-12"
       }
     ],
-    "unassignedTotal": 19658,
+    "unassignedTotal": 19684,
     "multiRecruiter": [
       {
         "app": "649f6f8e-4229-4426-9301-8319a4873d2f",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
+          "Sanghamitra Moulik",
           "Mashika De Almeida",
           "Oshin Verma"
         ]
@@ -17567,10 +17533,10 @@
         "app": "c783c116-672f-4d9b-9805-c5ad64ca99a1",
         "job8": "538f7111",
         "names": [
-          "Ankita Kabra",
           "Sanghamitra Moulik",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Ankita Kabra"
         ]
       },
       {
@@ -17647,8 +17613,8 @@
         "app": "8a5ffeee-6333-4c31-8257-f6d51b883cb2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17687,8 +17653,8 @@
         "app": "6df21dc1-55c1-4a55-b99a-2d73be4451ea",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17727,8 +17693,8 @@
         "app": "5db08b36-f53f-4bdb-868d-14ff8f0d6edc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17791,24 +17757,24 @@
         "app": "7299b099-71f5-482e-9350-45ee72f24a7b",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "e85a9570-dd0c-4bfc-9bb2-597f99b5b0f1",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "e46691b1-3571-43cc-be15-abfb45fca259",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17831,8 +17797,8 @@
         "app": "549ffb78-6441-40e0-ae17-e7737f02164e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -17895,16 +17861,16 @@
         "app": "786b295a-74ab-4a16-93d4-4618b21c47ac",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "11abe852-4b09-48b0-996a-1f57518a2ae3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17919,8 +17885,8 @@
         "app": "21b03ba4-5583-4ab6-b5ea-10454e50b621",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -17943,16 +17909,16 @@
         "app": "553bfb69-3673-4fe6-b663-4f156a89eb06",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "ee5b68f0-ffba-41f6-8fae-279de8da6687",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18007,8 +17973,8 @@
         "app": "4512dac4-8c35-499f-a417-2fae5c1a3216",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18023,8 +17989,8 @@
         "app": "dc43a956-39a0-47ea-bde3-cabaf8ea009a",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18047,8 +18013,8 @@
         "app": "fcd2f0b1-de74-491c-8917-cc9e396df542",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18079,8 +18045,8 @@
         "app": "038491df-9346-4651-9d3b-6f5f9333f318",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18135,16 +18101,16 @@
         "app": "8952728d-8f86-406e-a492-19a581cc9f4d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "a3163593-3101-474f-9ca7-820bba834d17",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18183,8 +18149,8 @@
         "app": "d8c57a52-cb7e-40d7-90a5-4b4ab595d9f2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18199,8 +18165,8 @@
         "app": "27a74319-c963-4b42-8677-6f7a3995d059",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18215,16 +18181,16 @@
         "app": "0b3e04a0-68b1-4f57-ad60-baeae940ae24",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "ca42a903-9ce3-4fa4-ac11-ed3edda251b5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18279,16 +18245,16 @@
         "app": "19e2c8ac-e1cf-4be6-bc2c-e1ab0f6ff28e",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "94650521-cc87-45ce-9bdb-a417a0cc3b46",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18327,8 +18293,8 @@
         "app": "d580a20f-3004-48ff-87ae-4c4085fc2b94",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18359,8 +18325,8 @@
         "app": "a6e74b14-1d5b-4442-8545-1a4130a050c3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18375,24 +18341,24 @@
         "app": "f7d596ba-6542-4c13-97ea-2a1343fa1ea0",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "2dc35893-f598-47b1-9464-312c5cc18371",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "5388706e-8908-489e-abb5-a3041801d030",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18479,16 +18445,16 @@
         "app": "f78d1b1d-efa2-448e-bc92-ae7b069b5b8e",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "3cbf56bd-1f21-437e-9d4a-0e49722d7fe6",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18527,16 +18493,16 @@
         "app": "6f6cd712-1cc6-461f-a4ef-e98bd07dfc7d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "59d67c45-ff51-40f0-b8ec-3cead018c391",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18551,8 +18517,8 @@
         "app": "ea422c1c-8dde-4634-ab7e-77f2ad741ea9",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18599,8 +18565,8 @@
         "app": "6f335ade-ced2-45fa-8597-7445b63ef41e",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18679,16 +18645,16 @@
         "app": "58ad7de3-3204-4fec-b5f8-3c940805b3b6",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "a6c7457a-ec07-492d-acb6-4f7bc8bae13c",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18703,8 +18669,8 @@
         "app": "f89e128e-c472-4cae-848b-b3cbb78cc717",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18759,8 +18725,8 @@
         "app": "5c784ebc-40f8-4915-b9bb-32108e16f7bc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18783,16 +18749,16 @@
         "app": "e66054d1-757e-4f97-a72d-d69c587baf78",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "99888f4e-ddac-414e-9429-bd483242b8b5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18839,8 +18805,8 @@
         "app": "e73eb319-75a6-4e3c-ba22-4e62e6c19ea7",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18879,16 +18845,16 @@
         "app": "43d548c1-e67e-4e6a-817b-35fb1fd1b026",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "57fca414-5106-4f6c-9a44-79d0afc268cf",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18927,16 +18893,16 @@
         "app": "21926a82-d12d-43ef-8dbf-c9cd74843d2b",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "c1949300-f053-48fb-9aa4-e6b64165183d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -18975,8 +18941,8 @@
         "app": "ddb225db-3325-4ba8-9bf0-704e9c36ff30",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -18991,16 +18957,16 @@
         "app": "60168961-81cb-42c9-bd57-b10c138e3850",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "62abcbe8-8be9-437c-8cdf-12f0807647db",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19111,8 +19077,8 @@
         "app": "8e71bba0-1050-4ac7-b94b-89cd81a1f9f3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -19135,8 +19101,8 @@
         "app": "0a648f0d-ce97-4c00-a3a9-872f837004dd",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
