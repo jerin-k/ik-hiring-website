@@ -156,7 +156,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="eff-panel" data-panel="screening" style="display:none">
-      <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Pod → Department → Job</strong> for HM / OA / R1. Falls back to a pod-level snapshot until the accumulator has run.</p>
+      <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Pod → Department → Job</strong> across the funnel; the per-pod charts show Added vs Cleared per stage. Falls back to a pod-level snapshot until the accumulator has run.</p>
       <div class="eff-podcharts" id="effScreenPodCharts"></div>
       <div class="scroll-table"><table>
         <thead>
@@ -701,6 +701,28 @@ export function initEfficiencyFilters(data) {
       { label: 'Cleared', data: [hmC, oaC, r1C], backgroundColor: C.green, borderRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { ...gridY } } } };
   };
 
+  // Per-pod Throughput chart: Added (reached) vs Cleared per stage, from throughputByJob over the pod's jobs.
+  // Respects the stage toggle; shows only stages with any activity. Horizontal grouped bars. Null → placeholder.
+  const tpPodCfg = (pod) => {
+    if (!tpByJob) return null;
+    const q = selQuarter();
+    const jids = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => j.jid);
+    if (!jids.length) return null;
+    const visKeys = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
+    const rows = visKeys.map(k => {
+      const t = jids.reduce((a, jid) => { const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: a.r + c.reached, c: a.c + c.cleared }; }, { r: 0, c: 0 });
+      return { label: TP_LABELS[k], r: t.r, c: t.c };
+    }).filter(x => x.r || x.c);
+    if (!rows.length) return null;
+    return { _h: Math.max(120, rows.length * 28 + 44), type: 'bar',
+      data: { labels: rows.map(x => x.label), datasets: [
+        { label: 'Added', data: rows.map(x => x.r), backgroundColor: C.blue, borderRadius: 2 },
+        { label: 'Cleared', data: rows.map(x => x.c), backgroundColor: C.green, borderRadius: 2 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } },
+        scales: { x: { ...gridY, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } } };
+  };
+
   function renderFulfilCharts(pods, q) {
     // Per-pod chart (Y=Job, Offered/Hired Score) + a combined chart of pod Target (summed capacity).
     renderPodCharts('effFulfilPodCharts', pods, fulfilPodCfg, 'No offers/hires yet for this pod.');
@@ -776,7 +798,7 @@ export function initEfficiencyFilters(data) {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') { renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.'); }
-    else if (activeTab === 'throughput') { renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), () => null, 'Per-stage throughput chart — pending job×stage rollup (pipeline).'); }
+    else if (activeTab === 'throughput') { renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), tpPodCfg, 'No stage-transition activity yet for this pod.'); }
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
     else if (activeTab === 'joining') { renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.'); }
     else if (activeTab === 'sourcing') renderSourcing();
@@ -787,7 +809,7 @@ export function initEfficiencyFilters(data) {
     renderFulfilment();
     renderVelocity();
     renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.');
-    renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), () => null, 'Per-stage throughput chart — pending job×stage rollup (pipeline).');
+    renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), tpPodCfg, 'No stage-transition activity yet for this pod.');
     renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.');
     renderSourcing();
   }
