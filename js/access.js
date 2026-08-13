@@ -43,25 +43,21 @@ function buildAccess(user) {
         filters: null,
       };
 
-    case 'restricted':
-      const pages = ['home', 'hm-report'];
+    case 'restricted': {
+      // Per-user tab grants (Overview always on; Admin never grantable). Legacy configs without `tabs`
+      // fall back to hm-report + (recruiter if the old isRecruiter flag was set). Dept/Team scope the data.
+      const RESTRICTABLE = ['hm-report', 'recruiter', 'efficiency', 'interviewer'];
+      const tabs = (user.tabs && user.tabs.length) ? user.tabs
+        : ['hm-report'].concat(user.isRecruiter ? ['recruiter'] : []);
+      const pages = ['home'];
+      tabs.forEach(t => { if (RESTRICTABLE.includes(t) && !pages.includes(t)) pages.push(t); });
+
       const filters = {};
-
-      if (user.departments && user.departments.length > 0) {
-        filters.departments = user.departments;
-      }
-
-      if (user.teams && user.teams.length > 0) {
-        filters.teams = user.teams;
-      }
-
-      // isRecruiter now purely grants the Recruiter Efficiency tab (dept/team-scoped view; they see ALL
-      // recruiters, not just their own row — no recruiter-centric self-filter). Identity stays the email.
-      if (user.isRecruiter) {
-        pages.push('recruiter');
-      }
+      if (user.departments && user.departments.length > 0) filters.departments = user.departments;
+      if (user.teams && user.teams.length > 0) filters.teams = user.teams;
 
       return { role: 'restricted', pages, filters };
+    }
 
     default:
       return { role: 'none', pages: [] };
