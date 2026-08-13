@@ -1,6 +1,7 @@
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
 import { markDirty, isDirty, getMeta, publishConfig, configFileText } from '../metric-config.js';
+import { publishAccess, accessFileText } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
 
 // ===== Metric Configuration model (moved here from Recruiter Efficiency 2026-08-09) =====
@@ -94,7 +95,34 @@ export function renderAdmin(accessConfig, data) {
       .cfg-ref table { width:100%; font-size:12px; }
       .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
       .cfg-scroll { overflow-x:auto; }
+      .adm-subtabs { display:flex; gap:2px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin-bottom:22px; }
+      .adm-subtab { appearance:none; background:none; border:none; padding:9px 16px; font-size:13px; font-weight:500;
+        color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+      .adm-subtab:hover { color:var(--text); }
+      .adm-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
     </style>
+
+    <div class="adm-subtabs">
+      <button class="adm-subtab active" data-atab="access">Access Management</button>
+      <button class="adm-subtab" data-atab="metric">Metric Configuration</button>
+    </div>
+
+    <div class="adm-panel" data-apanel="access">
+    <div class="admin-section">
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin:0 0 1rem;">
+        Controls who can sign in and what they see. Edits apply immediately in this browser; click <strong>Publish access</strong> to make them live for everyone.
+      </p>
+      <div class="cfg-card" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
+        <div style="font-size:12px;line-height:1.6">
+          <div id="acStatus" style="font-weight:700"></div>
+          <div id="acProvenance" style="color:var(--muted)"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="acPublishBtn" class="btn btn-primary">Publish access</button>
+          <button id="acDownloadBtn" class="btn-secondary" style="padding:8px 12px" title="Download access.json — fallback if publish is unavailable">Download</button>
+        </div>
+      </div>
+    </div>
 
     <div class="admin-section">
       <h3>Default Access</h3>
@@ -105,12 +133,11 @@ export function renderAdmin(accessConfig, data) {
         <div class="form-group">
           <label>Default Role</label>
           <select id="default-role">
-            <option value="none" ${accessConfig?.defaultRole === 'none' ? 'selected' : ''}>None (denied)</option>
-            <option value="full_access" ${accessConfig?.defaultRole === 'full_access' ? 'selected' : ''}>Full Access</option>
-            <option value="restricted" ${accessConfig?.defaultRole === 'restricted' ? 'selected' : ''}>Restricted</option>
+            <option value="none">None (denied)</option>
+            <option value="full_access">Full Access</option>
+            <option value="restricted">Restricted</option>
           </select>
         </div>
-        <button class="btn btn-primary" id="save-default-btn">Save</button>
       </div>
     </div>
 
@@ -127,6 +154,7 @@ export function renderAdmin(accessConfig, data) {
             <option value="admin">Admin</option>
             <option value="full_access">Full Access</option>
             <option value="restricted">Restricted</option>
+            <option value="none">None (denied)</option>
           </select>
         </div>
         <button class="btn btn-primary" id="add-user-btn">Add User</button>
@@ -136,20 +164,23 @@ export function renderAdmin(accessConfig, data) {
         <table>
           <thead>
             <tr>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Filters</th>
-              <th>Actions</th>
+              <th style="min-width:220px">Email</th>
+              <th style="width:150px">Role</th>
+              <th>Restricted filters</th>
+              <th style="width:90px">Actions</th>
             </tr>
           </thead>
-          <tbody id="users-table-body">
-            ${users.map(u => renderUserRow(u)).join('')}
-            ${users.length === 0 ? '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No users configured</td></tr>' : ''}
-          </tbody>
+          <tbody id="users-table-body"></tbody>
         </table>
       </div>
+      <p style="color:var(--text-muted);font-size:11px;margin-top:8px">
+        <strong>Restricted</strong> users see only Overview + Hiring Manager (filtered to their Departments/Teams), plus Recruiter Efficiency when <em>Is recruiter</em> is on. Departments/Teams are comma-separated and must match the names in <em>Metric Configuration → Departments &amp; Teams</em>.
+      </p>
     </div>
 
+    </div><!-- /access panel -->
+
+    <div class="adm-panel" data-apanel="metric" style="display:none">
     <div class="admin-section">
       <h3>Metric Configuration</h3>
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
@@ -233,35 +264,101 @@ export function renderAdmin(accessConfig, data) {
         </table>
       </div>
     </div>
+    </div><!-- /metric panel -->
   `;
 }
 
-function renderUserRow(user) {
-  const roleBadge = {
-    admin: 'badge-danger',
-    full_access: 'badge-info',
-    restricted: 'badge-warning',
-  }[user.role] || 'badge-info';
+// ===== Access Management (functional; edits a working copy, publishes access.json team-wide) =====
+const AC_ROLE_OPTS = [['admin', 'Admin'], ['full_access', 'Full Access'], ['restricted', 'Restricted'], ['none', 'None (denied)']];
+const AC_DIRTY_LS = 'ik_access_dirty';
+const acEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const acSplit = (s) => s.split(',').map(x => x.trim()).filter(Boolean);
 
-  let filters = '—';
-  if (user.departments?.length) filters = `Depts: ${user.departments.join(', ')}`;
-  if (user.teams?.length) filters = `Teams: ${user.teams.join(', ')}`;
-  if (user.isRecruiter) filters += (filters === '—' ? '' : ' | ') + 'Recruiter';
+// app.js calls this alongside initAdminMetricConfig. accessConfig = the loaded data/access.json.
+export function initAdminAccess(accessConfig) {
+  const work = JSON.parse(JSON.stringify(accessConfig || { defaultRole: 'none', users: [] }));
+  if (!Array.isArray(work.users)) work.users = [];
+  if (!work.defaultRole) work.defaultRole = 'none';
 
-  return `
-    <tr>
-      <td>${user.email}</td>
-      <td><span class="badge ${roleBadge}">${user.role}</span></td>
-      <td style="font-size: 0.8rem;">${filters}</td>
-      <td><button class="btn btn-danger btn-sm" data-delete="${user.email}">Remove</button></td>
-    </tr>
-  `;
+  const isDirtyAc = () => localStorage.getItem(AC_DIRTY_LS) === '1';
+  const setDirtyAc = (v) => { if (v) localStorage.setItem(AC_DIRTY_LS, '1'); else localStorage.removeItem(AC_DIRTY_LS); refreshUI(); };
+
+  function refreshUI() {
+    const st = document.getElementById('acStatus'), pv = document.getElementById('acProvenance');
+    if (st) { st.textContent = isDirtyAc() ? '● Unpublished access changes on this browser' : '✓ In sync with the team'; st.style.color = isDirtyAc() ? 'var(--orange)' : 'var(--green)'; }
+    if (pv) pv.innerHTML = (accessConfig && accessConfig.updatedAt)
+      ? `Access published ${new Date(accessConfig.updatedAt).toLocaleString()}${accessConfig.updatedBy ? ' · by ' + accessConfig.updatedBy : ''}`
+      : 'Live access config — publish to update the shared file.';
+  }
+
+  const dr = document.getElementById('default-role');
+  if (dr) { dr.value = work.defaultRole; dr.addEventListener('change', () => { work.defaultRole = dr.value; setDirtyAc(true); }); }
+
+  function renderRows() {
+    const body = document.getElementById('users-table-body'); if (!body) return;
+    if (!work.users.length) { body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:14px">No users configured</td></tr>'; return; }
+    body.innerHTML = work.users.map((u, i) => {
+      const restricted = u.role === 'restricted';
+      return `<tr>
+        <td style="font-weight:500">${acEsc(u.email)}</td>
+        <td><select class="ac-role" data-i="${i}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
+        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:4px;max-width:340px">
+              <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" class="ac-rec" data-i="${i}"${u.isRecruiter ? ' checked' : ''}> Is recruiter</label>
+              <input class="ac-depts" data-i="${i}" placeholder="Departments (comma-sep)" value="${acEsc((u.departments || []).join(', '))}" style="width:100%;height:28px;font-size:11px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+              <input class="ac-teams" data-i="${i}" placeholder="Teams (comma-sep)" value="${acEsc((u.teams || []).join(', '))}" style="width:100%;height:28px;font-size:11px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+            </div>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
+        <td><button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></td>
+      </tr>`;
+    }).join('');
+    body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
+    body.querySelectorAll('.ac-rec').forEach(c => c.addEventListener('change', () => { work.users[+c.dataset.i].isRecruiter = c.checked; setDirtyAc(true); }));
+    body.querySelectorAll('.ac-depts').forEach(inp => inp.addEventListener('input', () => { work.users[+inp.dataset.i].departments = acSplit(inp.value); setDirtyAc(true); }));
+    body.querySelectorAll('.ac-teams').forEach(inp => inp.addEventListener('input', () => { work.users[+inp.dataset.i].teams = acSplit(inp.value); setDirtyAc(true); }));
+    body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
+  }
+  renderRows();
+
+  const addBtn = document.getElementById('add-user-btn');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    const emailEl = document.getElementById('new-email'), roleEl = document.getElementById('new-role');
+    const email = (emailEl.value || '').trim().toLowerCase(), role = roleEl.value;
+    if (!email || email.indexOf('@') < 0) { emailEl.focus(); emailEl.style.borderColor = 'var(--red)'; return; }
+    if (work.users.some(u => (u.email || '').toLowerCase() === email)) { emailEl.style.borderColor = 'var(--red)'; return; }
+    const u = { email, role }; if (role === 'restricted') { u.isRecruiter = false; u.departments = []; u.teams = []; }
+    work.users.push(u); emailEl.value = ''; emailEl.style.borderColor = ''; setDirtyAc(true); renderRows();
+  });
+
+  const pubBtn = document.getElementById('acPublishBtn');
+  if (pubBtn) pubBtn.addEventListener('click', async () => {
+    const st = document.getElementById('acStatus');
+    pubBtn.disabled = true; const lbl = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
+    if (st) { st.textContent = 'A sign-in popup will open — approve it, then this verifies automatically…'; st.style.color = 'var(--muted)'; }
+    const payload = { schemaVersion: 1, defaultRole: work.defaultRole, users: work.users };
+    let res; try { res = await publishAccess(payload); } catch (e) { res = { ok: false, reason: e.message }; }
+    pubBtn.textContent = lbl; pubBtn.disabled = false;
+    if (res.ok) { setDirtyAc(false); if (st) { st.textContent = '✓ Published — access is live for the whole team.'; st.style.color = 'var(--green)'; } }
+    else if (st) { st.textContent = '✗ ' + res.reason; st.style.color = 'var(--red)'; }
+  });
+  const dlBtn = document.getElementById('acDownloadBtn');
+  if (dlBtn) dlBtn.addEventListener('click', () => {
+    const user = getCurrentUser();
+    const blob = new Blob([accessFileText({ schemaVersion: 1, defaultRole: work.defaultRole, users: work.users }, user && user.email)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'access.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  });
+
+  refreshUI();
 }
 
 // ===== Metric Configuration interactivity (called by app.js after renderAdmin) =====
 export function initAdminMetricConfig(data) {
   const recs = (data && data.recruiters) || [];
   const cfgQ = () => document.getElementById('cfgQuarter')?.value || currentQuarter();
+
+  // ===== Admin sub-tabs (Access Management | Metric Configuration) =====
+  document.querySelectorAll('.adm-subtab').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.adm-subtab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.adm-panel').forEach(p => { p.style.display = p.dataset.apanel === btn.dataset.atab ? '' : 'none'; });
+  }));
 
   function updatePodSummary() {
     const el = document.getElementById('cfgPodSummary'); if (!el) return;
