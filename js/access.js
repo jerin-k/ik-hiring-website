@@ -55,9 +55,10 @@ function buildAccess(user) {
         filters.teams = user.teams;
       }
 
+      // isRecruiter now purely grants the Recruiter Efficiency tab (dept/team-scoped view; they see ALL
+      // recruiters, not just their own row — no recruiter-centric self-filter). Identity stays the email.
       if (user.isRecruiter) {
         pages.push('recruiter');
-        filters.recruiterEmail = user.email;
       }
 
       return { role: 'restricted', pages, filters };
