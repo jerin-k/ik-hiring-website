@@ -1,4 +1,7 @@
 {
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-13T05:17:20.070Z",
+  "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
     {
@@ -20,8 +23,12 @@
       "email": "hm@interviewkickstart.com",
       "role": "restricted",
       "isRecruiter": false,
-      "departments": ["Engineering"],
-      "teams": ["Software Development"]
+      "departments": [
+        "Engineering"
+      ],
+      "teams": [
+        "Software Development"
+      ]
     }
   ]
 }
