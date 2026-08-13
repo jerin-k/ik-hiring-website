@@ -285,10 +285,10 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note"><strong>Pod → Recruiter → Source.</strong> Source = Ashby <code>source_type</code> (the finest grain Ashby exposes here). Count = candidates credited to that source; % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
+      <p class="sub-note"><strong>Pod → Recruiter → Source type → Source name.</strong> Expand a source type to see the specific <code>source</code> (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>). Count = candidates credited; % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:320px">Pod / Recruiter / Source</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
     </div>
@@ -342,8 +342,11 @@ export function initRecruiterFilters(data) {
   if (!data || !data.recruiters) return;
   const allRecs = data.recruiters;
   const nDate = 7;
-  // Departed recruiters (Ashby account disabled) are retained so historical offers still score — flag them.
-  const inactiveTag = (r) => r && r.isActive === false ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>' : '';
+  // Inactive = Ashby account disabled (isActive===false) OR manually marked inactive in Admin (the manual
+  // override handles "lost the recruiter role", which has no clean Ashby signal). Historical offers still score.
+  const manualInactive = (() => { try { return JSON.parse(localStorage.getItem('ik_recruiter_inactive') || '{}'); } catch (e) { return {}; } })();
+  const isRecInactive = (r) => !!(r && (r.isActive === false || manualInactive[r.name]));
+  const inactiveTag = (r) => isRecInactive(r) ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>' : '';
   // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
   const _sr = data.stageRollups || {};
   const tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
@@ -522,9 +525,9 @@ export function initRecruiterFilters(data) {
     if (offerBody) { offerBody.innerHTML = fulfilRows(nonSalesGroups, 'offer'); wireVelTree(offerBody); }
     if (hireBody) { hireBody.innerHTML = fulfilRows(salesGroups, 'hire'); wireVelTree(hireBody); }
 
-    // ===== Sourcing Mix — Pod → Recruiter → Source (LIVE from recruiters[].sources) =====
-    // recruiters[].sources = { sourceType: count }. Ashby only exposes source_type here (no finer
-    // source-name), so that's the leaf. % = share within the parent. Org-wide totals live in Overall Efficiency.
+    // ===== Sourcing Mix — Pod → Recruiter → Source type → Source name (LIVE) =====
+    // recruiters[].sources = { sourceType: count }; recruiters[].srcNested = { sourceType: { sourceName: count } }
+    // (the finer Ashby `source` name). % = share within the parent. Org-wide totals live in Overall Efficiency.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
       const recSrcTotal = r => Object.values(r.sources || {}).reduce((s, v) => s + v, 0);
@@ -540,12 +543,22 @@ export function initRecruiterFilters(data) {
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>
             <td>${rt || '<span class="zero">0</span>'}</td><td>${rt ? pct(rt, podTotal) + '%' : DASH}</td></tr>`;
-          const entries = Object.entries(r.sources || {}).sort((a, b) => b[1] - a[1]);
-          if (entries.length) {
-            entries.forEach(([src, cnt], si) => {
-              html += `<tr data-path="${pi}-${ri}-${si}" style="display:none">
-                <td style="padding-left:52px;color:var(--muted)">${src}</td>
-                <td>${cnt}</td><td class="${pctClass(pct(cnt, rt))}">${pct(cnt, rt)}%</td></tr>`;
+          // Source type → source name (from srcNested). Falls back to type-only (r.sources) until the refresh
+          // that emits srcNested has run.
+          const nst = r.srcNested || {};
+          let types = Object.entries(nst).map(([t, names]) => [t, Object.values(names).reduce((a, v) => a + v, 0), names]).sort((a, b) => b[1] - a[1]);
+          if (!types.length) types = Object.entries(r.sources || {}).sort((a, b) => b[1] - a[1]).map(([t, cnt]) => [t, cnt, null]);
+          if (types.length) {
+            types.forEach(([t, tcnt, names], ti) => {
+              const hasNames = names && Object.keys(names).length;
+              html += `<tr data-path="${pi}-${ri}-${ti}"${hasNames ? ' data-haschild data-exp="0"' : ''} style="display:none${hasNames ? ';cursor:pointer' : ''}">
+                <td style="padding-left:52px;font-weight:500">${hasNames ? CARET : ''}${t}</td>
+                <td>${tcnt}</td><td class="${pctClass(pct(tcnt, rt))}">${pct(tcnt, rt)}%</td></tr>`;
+              if (hasNames) Object.entries(names).sort((a, b) => b[1] - a[1]).forEach(([nm, cnt], ni) => {
+                html += `<tr data-path="${pi}-${ri}-${ti}-${ni}" style="display:none">
+                  <td style="padding-left:78px;color:var(--muted)">${nm}</td>
+                  <td>${cnt}</td><td class="${pctClass(pct(cnt, tcnt))}">${pct(cnt, tcnt)}%</td></tr>`;
+              });
             });
           } else {
             html += `<tr data-path="${pi}-${ri}-0" style="display:none">
@@ -606,7 +619,7 @@ export function initRecruiterFilters(data) {
     const unassigned = dq.unassigned || [];
     const multiRec = dq.multiRecruiter || [];
     const multiSrc = dq.multiSourcer || [];
-    const inactiveCount = allRecs.filter(r => r.isActive === false).length;
+    const inactiveCount = allRecs.filter(r => isRecInactive(r)).length;
 
     // --- summary cards ---
     const cards = document.getElementById('hygCards');
@@ -657,9 +670,9 @@ export function initRecruiterFilters(data) {
     const rBody = document.getElementById('hygRosterBody');
     if (rBody) {
       const sorted = [...allRecs].filter(r => r.name && r.name !== 'Unassigned')
-        .sort((a, b) => (a.isActive === false) - (b.isActive === false) || a.name.localeCompare(b.name));
+        .sort((a, b) => (isRecInactive(a) - isRecInactive(b)) || a.name.localeCompare(b.name));
       rBody.innerHTML = sorted.map(r => {
-        const active = r.isActive !== false;
+        const active = !isRecInactive(r);
         return `<tr><td style="font-weight:500">${esc(r.name)}</td>
           <td><span style="font-size:11px;font-weight:600;color:${active ? 'var(--green)' : 'var(--red)'}">${active ? 'Active' : 'Inactive'}</span></td>
           <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
