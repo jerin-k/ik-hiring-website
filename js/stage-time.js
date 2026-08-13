@@ -34,6 +34,6 @@ export function tisCell(hist, threshold) {
   if (!s.n) return '<td class="zero" style="text-align:right">·</td>';
   threshold = threshold == null ? 5 : threshold;
   const red = s.median > threshold;
-  const style = 'text-align:right;white-space:nowrap' + (red ? ';color:var(--red);font-weight:700;background:#fef2f2' : '');
+  const style = 'text-align:right;white-space:nowrap' + (red ? ';color:var(--red);font-weight:700' : '');
   return `<td style="${style}" title="median ${fmt(s.median)}d · mean ${s.mean.toFixed(1)}d · n=${s.n}">${fmt(s.median)}</td>`;
 }
