@@ -202,9 +202,9 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note"><strong>Pod → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members. Sources are a recruiter attribute, so the org-wide chart plus this pod tree are the honest grain; a department split needs per-job source from the pipeline.</p>
-      <h3 class="subsection-title">Org-wide Channel Mix</h3>
-      <div class="chart-wrap" style="max-width:400px;margin:0 auto 20px"><canvas id="effSourceChart"></canvas></div>
+      <p class="sub-note"><strong>Pod → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members. Sources are a recruiter attribute, so the channel-mix chart plus this pod tree are the honest grain; a department split needs per-job source from the pipeline.</p>
+      <h3 class="subsection-title">Channel Mix — source names within each type</h3>
+      <div class="chart-wrap" style="max-width:840px;margin:0 auto 20px;height:460px;position:relative"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead><tr><th style="min-width:340px">Pod / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
@@ -722,23 +722,54 @@ export function initEfficiencyFilters(data) {
         scales: { x: { ...gridY, title: { display: true, text: 'Target Score', font: { size: 11 }, color: '#64748b' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
   }
 
+  // Horizontal STACKED bar: one bar per source TYPE, segmented by the source NAMES within it (top ~12 names
+  // globally + "Other"). Each source name belongs to one type, so the legend of real names maps cleanly and each
+  // type-bar shows only its own sources. Aggregated from recruiters[].srcNested over the visible pods (filter-aware),
+  // falling back to type-only data.sources when srcNested is absent.
+  const SRC_PALETTE = ['#4E6BA6', '#398AA2', '#1E7590', '#D8B5BE', '#938FB8', '#7BA7C7', '#A9CAD6', '#C4A6B8', '#6B8E9F', '#B5C8D8', '#8FB0A8', '#D0B8A0'];
   function buildSourceChart() {
     const ctx = document.getElementById('effSourceChart'); if (!ctx) return;
     if (effSourceChart) effSourceChart.destroy();
-    const sources = (data.sources || []).filter(s => (s.candidates || 0) > 0);
-    const wrap = ctx.parentElement;
-    let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    if (sources.length === 0) {
+    const q = selQuarter();
+    const agg = {};   // type -> { name: count }
+    visiblePods().forEach(pod => podMembers(pod, q).forEach(r => {
+      const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
+      if (sn) { for (const t in sn) { const at = agg[t] || (agg[t] = {}); for (const nm in sn[t]) at[nm] = (at[nm] || 0) + sn[t][nm]; } }
+      else { for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; } }
+    }));
+    const types = Object.keys(agg);
+    const totalAll = types.reduce((s, t) => s + Object.values(agg[t]).reduce((a, v) => a + v, 0), 0);
+    const wrap = ctx.parentElement; let emptyMsg = wrap && wrap.querySelector('.chart-empty');
+    if (!types.length || !totalAll) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = 'No source data available yet.'; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = 'No source data for the current filter.'; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
-    const colorMap = { Referral: '#4E6BA6', Inbound: '#398AA2', Sourced: '#D8B5BE', Internal: '#938FB8' };
-    effSourceChart = new Chart(ctx, { type: 'doughnut',
-      data: { labels: sources.map(s => s.name), datasets: [{ data: sources.map(s => s.candidates), backgroundColor: sources.map(s => colorMap[s.name] || '#A9CAD6') }] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
+    // types sorted by total (desc); global top-12 names + Other
+    const typeLabels = types.map(t => [t, Object.values(agg[t]).reduce((a, v) => a + v, 0)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+    const nameTotals = {}; types.forEach(t => { for (const nm in agg[t]) nameTotals[nm] = (nameTotals[nm] || 0) + agg[t][nm]; });
+    const topNames = Object.entries(nameTotals).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]);
+    const topSet = new Set(topNames);
+    const datasets = topNames.map((nm, i) => ({ label: nm, data: typeLabels.map(t => (agg[t] && agg[t][nm]) || 0), backgroundColor: SRC_PALETTE[i % SRC_PALETTE.length], stack: 's', borderWidth: 0 }));
+    const otherData = typeLabels.map(t => Object.entries(agg[t]).reduce((s, [nm, c]) => s + (topSet.has(nm) ? 0 : c), 0));
+    if (otherData.some(v => v > 0)) datasets.push({ label: 'Other', data: otherData, backgroundColor: '#cbd5e1', stack: 's', borderWidth: 0 });
+    effSourceChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: typeLabels, datasets },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 10 }, padding: 6 } },
+          tooltip: { callbacks: { label: (c) => (c.dataset.label || '') + ': ' + c.parsed.x } }
+        },
+        scales: {
+          x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
   }
 
   function renderActive() {
