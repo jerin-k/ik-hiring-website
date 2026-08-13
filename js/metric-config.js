@@ -16,7 +16,7 @@ const DIRTY_LS = 'ik_metric_config_dirty';   // '1' when this browser has unpubl
 const META_LS = 'ik_metric_config_meta';     // { updatedAt, updatedBy } of the loaded server config
 
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
-const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family' };
+const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', inactive: 'ik_recruiter_inactive' };
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
@@ -53,6 +53,7 @@ function hydrate(cfg) {
   if (cfg.capacity) localStorage.setItem(KEYS.capacity, JSON.stringify(cfg.capacity));
   if (cfg.scoreGrid) localStorage.setItem(KEYS.scoreGrid, JSON.stringify(cfg.scoreGrid));
   if (cfg.deptFamily) localStorage.setItem(KEYS.deptFamily, JSON.stringify(cfg.deptFamily));
+  if (cfg.inactive) localStorage.setItem(KEYS.inactive, JSON.stringify(cfg.inactive));
 }
 
 export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); }
@@ -61,12 +62,12 @@ export function getMeta() { return readLS(META_LS, null); }
 
 // Snapshot the runtime config into a publishable object.
 export function collectConfig() {
-  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}) };
+  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), inactive: readLS(KEYS.inactive, {}) };
 }
 
 // Deep-equal of the meaningful config fields (for confirm-by-read).
 function sameConfig(a, b) {
-  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily'];
+  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'inactive'];
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
