@@ -10,6 +10,11 @@ import { renderSourcing, initSourcingChart } from './pages/sourcing.js';
 import { renderInterviewer } from './pages/interviewer.js';
 import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
+import { valueLabelsPlugin } from './chart-datalabels.js';
+
+// Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
+// every tab then shows data labels; individual charts can opt out via options.plugins.valueLabels = false.
+if (window.Chart && !window.Chart.registry.plugins.get('valueLabels')) window.Chart.register(valueLabelsPlugin);
 
 let currentAccess = null;
 let accessConfig = null;
