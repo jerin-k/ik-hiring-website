@@ -1,10 +1,15 @@
-const ACCESS_CONFIG_URL = '/data/access.json';
+// Live source of truth = data/access.json on GitHub (CDN-fast, picks up admin publishes immediately),
+// falling back to the Vercel-served local copy if the fetch fails.
+const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/access.json';
+const LOCAL_URL = '/data/access.json';
 
 let accessConfig = null;
 
 export async function loadAccessConfig() {
-  const res = await fetch(ACCESS_CONFIG_URL);
-  accessConfig = await res.json();
+  let cfg = null;
+  try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
+  if (!cfg) { try { const r = await fetch(LOCAL_URL + '?t=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { } }
+  accessConfig = cfg || { defaultRole: 'none', users: [] };
   return accessConfig;
 }
 
