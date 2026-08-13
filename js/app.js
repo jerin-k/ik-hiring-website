@@ -7,7 +7,7 @@ import { renderHmReport, initHmFilters } from './pages/hm-report.js';
 import { renderRecruiter, initRecruiterFilters } from './pages/recruiter.js';
 import { renderEfficiency, initEfficiencyFilters } from './pages/efficiency.js';
 import { renderSourcing, initSourcingChart } from './pages/sourcing.js';
-import { renderInterviewer } from './pages/interviewer.js';
+import { renderInterviewer, initInterviewer } from './pages/interviewer.js';
 import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
 import { valueLabelsPlugin } from './chart-datalabels.js';
@@ -176,6 +176,7 @@ function navigateTo(page) {
       break;
     case 'interviewer':
       content.innerHTML = renderInterviewer(data);
+      initInterviewer(data);
       break;
     case 'admin':
       content.innerHTML = renderAdmin(accessConfig, data);
