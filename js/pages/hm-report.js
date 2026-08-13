@@ -564,24 +564,25 @@ export function initHmFilters(data) {
     const body = document.getElementById('hmPanelBody');
     if (!body) return;
     const deptG = gDept();
-    let list = (data.panelists || []).map(p => ({ ...p, _dept: deptOf(p.department || '') }));
+    const fmtTurn = (hrs) => hrs == null ? '—' : (hrs >= 24 ? (hrs / 24).toFixed(1) + 'd' : hrs.toFixed(1) + 'h');
+    let list = (data.panelists || []).map(p => ({ ...p, _dept: deptOf(p.dept || p.department || '') }));
     list = list.filter(p => !deptG || p._dept === deptG);
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — needs per-interview panelist data (interview counts + feedback turnaround) from the pipeline redesign.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — the interviewer/panelist pipeline pass appears here after the next data refresh.</td></tr>`;
       return;
     }
     const groups = {};
     list.forEach(p => { if (!groups[p._dept]) groups[p._dept] = []; groups[p._dept].push(p); });
     let html = '';
     Object.keys(groups).sort().forEach((dept, gi) => {
-      const arr = groups[dept];
-      const deptCount = arr.reduce((a, p) => a + (p.interviewCount || 0), 0);
+      const arr = groups[dept].sort((a, b) => (b.interviews || 0) - (a.interviews || 0));
+      const deptCount = arr.reduce((a, p) => a + (p.interviews || 0), 0);
       html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${dept}${cnt(arr.length)}</td><td></td><td style="font-weight:600">${deptCount}</td><td></td></tr>`;
       arr.forEach(p => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:30px;font-weight:500">${p.panelist || p.name || ''}</td>
-          <td style="max-width:300px">${p.job || ''}</td><td>${p.interviewCount || 0}</td><td>${p.avgFeedbackTime || p.avgFeedback || '—'}</td></tr>`;
+          <td style="padding-left:30px;font-weight:500">${p.name || p.panelist || ''}</td>
+          <td style="max-width:300px">${p.jobTitle || p.job || ''}</td><td>${p.interviews || 0}</td><td>${fmtTurn(p.avgTurnaroundHrs)}</td></tr>`;
       });
     });
     body.innerHTML = html;
