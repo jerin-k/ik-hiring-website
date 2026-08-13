@@ -11,7 +11,8 @@ const PUBLISH_CHUNK = 1500;
 
 function normUsers(users) {
   return (users || []).map(u => ({
-    email: (u.email || '').toLowerCase(), role: u.role || 'none', isRecruiter: !!u.isRecruiter,
+    email: (u.email || '').toLowerCase(), role: u.role || 'none',
+    tabs: (u.tabs || []).slice().sort(),
     departments: (u.departments || []).slice().sort(), teams: (u.teams || []).slice().sort()
   })).sort((x, y) => x.email.localeCompare(y.email));
 }
