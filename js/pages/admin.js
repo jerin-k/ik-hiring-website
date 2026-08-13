@@ -84,9 +84,20 @@ export function renderAdmin(accessConfig, data) {
     <style>
       .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }
       .cfg-card .lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
-      .cfg-card select, .cfg-card input[type=number] {
+      .cfg-card select, .cfg-card input[type=number], .cfg-card input[type=email], .cfg-card input[type=text] {
         appearance:none; -webkit-appearance:none; height:32px; padding:0 10px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--bg); color:var(--text); }
+      .ac-addrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+      .ac-addrow #new-email { flex:1; min-width:240px; }
+      .ac-table { width:100%; border-collapse:collapse; }
+      .ac-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); font-weight:600; padding:7px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+      .ac-table td { padding:9px 10px; border-bottom:1px solid var(--border-light); vertical-align:top; font-size:13px; }
+      .ac-table tbody tr:last-child td { border-bottom:none; }
+      .ac-table tbody tr:hover { background:var(--border-light); }
+      .ac-ms { border:1px solid var(--border); border-radius:7px; background:var(--bg); }
+      .ac-ms summary::-webkit-details-marker { display:none; }
+      .ac-del { background:none; border:1px solid var(--border); color:var(--red); font-size:11px; font-weight:600; padding:4px 10px; border-radius:6px; cursor:pointer; }
+      .ac-del:hover { background:var(--red); color:#fff; border-color:var(--red); }
       .cfg-grid td, .cfg-grid th { text-align:center; white-space:nowrap; }
       .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:210px; white-space:normal; }
       .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); text-align:left; }
@@ -108,10 +119,10 @@ export function renderAdmin(accessConfig, data) {
     </div>
 
     <div class="adm-panel" data-apanel="access">
-    <div class="admin-section">
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin:0 0 1rem;">
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin:0 0 14px;">
         Controls who can sign in and what they see. Edits apply immediately in this browser; click <strong>Publish access</strong> to make them live for everyone.
       </p>
+
       <div class="cfg-card" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
         <div style="font-size:12px;line-height:1.6">
           <div id="acStatus" style="font-weight:700"></div>
@@ -122,61 +133,42 @@ export function renderAdmin(accessConfig, data) {
           <button id="acDownloadBtn" class="btn-secondary" style="padding:8px 12px" title="Download access.json — fallback if publish is unavailable">Download</button>
         </div>
       </div>
-    </div>
 
-    <div class="admin-section">
-      <h3>Default Access</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-        What unlisted @interviewkickstart.com users see when they sign in.
-      </p>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Default Role</label>
-          <select id="default-role">
-            <option value="none">None (denied)</option>
-            <option value="full_access">Full Access</option>
-            <option value="restricted">Restricted</option>
-          </select>
-        </div>
+      <div class="cfg-card" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <span class="lbl">Default access</span>
+        <select id="default-role">
+          <option value="none">None (denied)</option>
+          <option value="full_access">Full Access</option>
+          <option value="restricted">Restricted</option>
+        </select>
+        <span style="font-size:11px;color:var(--muted)">What unlisted @interviewkickstart.com users see when they first sign in.</span>
       </div>
-    </div>
 
-    <div class="admin-section">
-      <h3>Users</h3>
-      <div class="form-row" style="margin-bottom: 1.5rem;">
-        <div class="form-group" style="flex: 1;">
-          <label>Email</label>
+      <div class="cfg-card">
+        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 4px">Users</h4>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 12px">Sign-in identity is the GSuite <strong>email</strong>. <strong>Restricted</strong> users see only the <strong>Tabs</strong> you grant (Overview is always on); Hiring Manager / Overview data is scoped to the <strong>Departments/Teams</strong> you pick (empty = all).</p>
+
+        <div class="ac-addrow">
           <input type="email" id="new-email" placeholder="name@interviewkickstart.com">
-        </div>
-        <div class="form-group">
-          <label>Role</label>
           <select id="new-role">
-            <option value="admin">Admin</option>
-            <option value="full_access">Full Access</option>
             <option value="restricted">Restricted</option>
+            <option value="full_access">Full Access</option>
+            <option value="admin">Admin</option>
             <option value="none">None (denied)</option>
           </select>
+          <button class="btn btn-primary" id="add-user-btn">Add user</button>
         </div>
-        <button class="btn btn-primary" id="add-user-btn">Add User</button>
-      </div>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th style="min-width:220px">Email</th>
-              <th style="width:150px">Role</th>
-              <th>Restricted filters</th>
-              <th style="width:90px">Actions</th>
-            </tr>
-          </thead>
+        <div class="cfg-scroll" style="margin-top:14px"><table class="ac-table">
+          <thead><tr>
+            <th style="min-width:210px">Email</th>
+            <th style="width:140px">Role</th>
+            <th>Restricted access (tabs + scope)</th>
+            <th style="width:70px"></th>
+          </tr></thead>
           <tbody id="users-table-body"></tbody>
-        </table>
+        </table></div>
       </div>
-      <p style="color:var(--text-muted);font-size:11px;margin-top:8px">
-        <strong>Restricted</strong> users see only Overview + Hiring Manager, scoped to the <strong>Departments/Teams</strong> you pick (leave a picker empty = all). Tick <em>Recruiter tab access</em> to also give them the Recruiter Efficiency tab — they see every recruiter there, not just themselves. Identity is the GSuite <strong>email</strong>; Department/Team are org-unit scopes.
-      </p>
-    </div>
 
     </div><!-- /access panel -->
 
@@ -274,14 +266,18 @@ const AC_DIRTY_LS = 'ik_access_dirty';
 const acEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const AC_DEPTS = Object.keys(DEPT_TREE).sort();
 const AC_TEAMS = [...new Set(Object.values(DEPT_TREE).flat())].sort();
-// Compact multi-select (native <details> + checkboxes) for a restricted user's Department/Team scope.
+// Tabs a restricted user can be granted (Overview is always on; Admin is admin-only, never offered here).
+const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency'], ['interviewer', 'Interviewer Efficiency']];
+// Compact multi-select (native <details> + checkboxes). options = array of strings OR [value, label] pairs.
 function acMs(cls, i, selected, options, labelWord) {
+  const opts = options.map(o => Array.isArray(o) ? o : [o, o]);
   const sel = new Set(selected || []);
-  const summary = (selected && selected.length) ? selected.join(', ') : 'Any';
-  return `<details class="ac-ms" style="border:1px solid var(--border);border-radius:6px;background:var(--bg)">
+  const selLabels = opts.filter(([v]) => sel.has(v)).map(([, l]) => l);
+  const summary = selLabels.length ? selLabels.join(', ') : 'Any';
+  return `<details class="ac-ms">
     <summary style="list-style:none;cursor:pointer;padding:5px 8px;font-size:11px;color:${sel.size ? 'var(--text)' : 'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelWord}: ${acEsc(summary)}</summary>
     <div style="max-height:160px;overflow:auto;padding:4px 8px;border-top:1px solid var(--border)">
-      ${options.map(o => `<label style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;white-space:nowrap"><input type="checkbox" class="${cls}" data-i="${i}" value="${acEsc(o)}"${sel.has(o) ? ' checked' : ''}> ${acEsc(o)}</label>`).join('')}
+      ${opts.map(([v, l]) => `<label style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;white-space:nowrap"><input type="checkbox" class="${cls}" data-i="${i}" value="${acEsc(v)}"${sel.has(v) ? ' checked' : ''}> ${acEsc(l)}</label>`).join('')}
     </div>
   </details>`;
 }
@@ -291,6 +287,8 @@ export function initAdminAccess(accessConfig) {
   const work = JSON.parse(JSON.stringify(accessConfig || { defaultRole: 'none', users: [] }));
   if (!Array.isArray(work.users)) work.users = [];
   if (!work.defaultRole) work.defaultRole = 'none';
+  // Migrate legacy restricted users (old isRecruiter flag) to the explicit per-user Tabs model.
+  work.users.forEach(u => { if (u.role === 'restricted' && !Array.isArray(u.tabs)) { u.tabs = ['hm-report']; if (u.isRecruiter) u.tabs.push('recruiter'); } });
 
   const isDirtyAc = () => localStorage.getItem(AC_DIRTY_LS) === '1';
   const setDirtyAc = (v) => { if (v) localStorage.setItem(AC_DIRTY_LS, '1'); else localStorage.removeItem(AC_DIRTY_LS); refreshUI(); };
@@ -314,26 +312,28 @@ export function initAdminAccess(accessConfig) {
       return `<tr>
         <td style="font-weight:500">${acEsc(u.email)}</td>
         <td><select class="ac-role" data-i="${i}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
-        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:4px;max-width:340px">
-              <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px" title="Also grants the Recruiter Efficiency tab (they see all recruiters, not just themselves)"><input type="checkbox" class="ac-rec" data-i="${i}"${u.isRecruiter ? ' checked' : ''}> Recruiter tab access</label>
+        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:5px;max-width:330px">
+              ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
               ${acMs('ac-teams', i, u.teams, AC_TEAMS, 'Teams')}
-            </div>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
+            </div>` : `<span style="color:var(--text-muted);font-size:12px">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
         <td><button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></td>
       </tr>`;
     }).join('');
     body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
-    body.querySelectorAll('.ac-rec').forEach(c => c.addEventListener('change', () => { work.users[+c.dataset.i].isRecruiter = c.checked; setDirtyAc(true); }));
-    const wireMs = (cls, key, word) => body.querySelectorAll('.' + cls).forEach(cb => cb.addEventListener('change', () => {
+    const wireMs = (cls, key, word, opts) => body.querySelectorAll('.' + cls).forEach(cb => cb.addEventListener('change', () => {
       const i = +cb.dataset.i;
       const vals = [...body.querySelectorAll('.' + cls + '[data-i="' + i + '"]:checked')].map(x => x.value);
       work.users[i][key] = vals;
+      const lm = new Map((opts || []).map(o => Array.isArray(o) ? o : [o, o]));
+      const disp = vals.map(v => lm.get(v) || v);
       const sum = cb.closest('details').querySelector('summary');
-      if (sum) sum.textContent = word + ': ' + (vals.length ? vals.join(', ') : 'Any');
+      if (sum) sum.textContent = word + ': ' + (disp.length ? disp.join(', ') : 'Any');
       setDirtyAc(true);
     }));
-    wireMs('ac-depts', 'departments', 'Depts');
-    wireMs('ac-teams', 'teams', 'Teams');
+    wireMs('ac-tabs', 'tabs', 'Tabs', AC_TABS);
+    wireMs('ac-depts', 'departments', 'Depts', AC_DEPTS);
+    wireMs('ac-teams', 'teams', 'Teams', AC_TEAMS);
     body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
   }
   renderRows();
@@ -344,7 +344,7 @@ export function initAdminAccess(accessConfig) {
     const email = (emailEl.value || '').trim().toLowerCase(), role = roleEl.value;
     if (!email || email.indexOf('@') < 0) { emailEl.focus(); emailEl.style.borderColor = 'var(--red)'; return; }
     if (work.users.some(u => (u.email || '').toLowerCase() === email)) { emailEl.style.borderColor = 'var(--red)'; return; }
-    const u = { email, role }; if (role === 'restricted') { u.isRecruiter = false; u.departments = []; u.teams = []; }
+    const u = { email, role }; if (role === 'restricted') { u.tabs = ['hm-report']; u.departments = []; u.teams = []; }
     work.users.push(u); emailEl.value = ''; emailEl.style.borderColor = ''; setDirtyAc(true); renderRows();
   });
 
