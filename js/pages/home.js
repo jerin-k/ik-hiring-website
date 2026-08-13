@@ -129,8 +129,8 @@ export function initHomeFilters() {
           </div>
           <div class="card">
             <div class="label">Total Interviews Managed</div>
-            <div class="value" style="color:var(--muted)">—</div>
-            <div class="sub">Pending pipeline redesign</div>
+            <div class="value">${(data.totalInterviews || 0).toLocaleString()}</div>
+            <div class="sub">${(data.interviewers || []).length} panelists</div>
           </div>
           <div class="card">
             <div class="label">Total Hired</div>
@@ -234,8 +234,29 @@ export function initHomeFilters() {
 
         <div style="min-width:0;">
           <h3 class="subsection-title" style="margin-top:0;">Top Panelists by Interview Count</h3>
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px 16px;text-align:center;color:var(--muted);font-size:12px;">
-            Data not yet available — pending pipeline redesign
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            ${(() => {
+              const tp = [...(data.interviewers || [])].sort((a, b) => (b.interviews || 0) - (a.interviews || 0)).slice(0, 5);
+              if (!tp.length || !tp[0].interviews) return '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No interview data yet</div>';
+              return tp.map((p, i) => {
+                const pct = tp[0].interviews > 0 ? Math.max(Math.round((p.interviews / tp[0].interviews) * 100), 3) : 0;
+                return `
+                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;${i === tp.length - 1 ? 'border:none;' : ''}">
+                    <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;">${i + 1}</span>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
+                      <div style="margin-top:4px;background:var(--border-light);border-radius:3px;height:6px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
+                      </div>
+                    </div>
+                    <div style="text-align:right;white-space:nowrap;">
+                      <div style="font-weight:700;font-size:13px;">${(p.interviews || 0).toLocaleString()}</div>
+                      <div style="font-size:10px;color:var(--muted);font-weight:600;">${p.feedbackSubmitted || 0} fb</div>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+            })()}
           </div>
         </div>
       </div>
