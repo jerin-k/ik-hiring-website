@@ -202,11 +202,11 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note"><strong>Pod → Source</strong> (Ashby <code>source_type</code>), summed across pod members — sources are a recruiter attribute, so the org-wide chart plus the pod→source table are the honest grain; a department split needs per-job source from the pipeline.</p>
+      <p class="sub-note"><strong>Pod → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members. Sources are a recruiter attribute, so the org-wide chart plus this pod tree are the honest grain; a department split needs per-job source from the pipeline.</p>
       <h3 class="subsection-title">Org-wide Channel Mix</h3>
       <div class="chart-wrap" style="max-width:400px;margin:0 auto 20px"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:340px">Pod / Source</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:340px">Pod / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
     </div>
@@ -596,16 +596,28 @@ export function initEfficiencyFilters(data) {
     const body = document.getElementById('effSourceBody');
     if (body) {
       const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
-      const podSources = (pod) => { const agg = {}; podMembers(pod, q).forEach(r => Object.entries(r.sources || {}).forEach(([s, v]) => agg[s] = (agg[s] || 0) + v)); return agg; };
-      const grand = pods.reduce((s, p) => s + Object.values(podSources(p)).reduce((a, v) => a + v, 0), 0) || 1;
+      // Pod → Source type → Source name, from recruiters[].srcNested { type: { name: count } }.
+      const podNested = (pod) => { const agg = {}; podMembers(pod, q).forEach(r => {
+        const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
+        if (sn) { for (const t in sn) { const at = agg[t] || (agg[t] = {}); for (const nm in sn[t]) at[nm] = (at[nm] || 0) + sn[t][nm]; } }
+        else { for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; } }   // fallback until srcNested refresh
+      }); return agg; };
+      const sumNames = (names) => Object.values(names).reduce((a, v) => a + v, 0);
+      const sumNested = (nst) => Object.values(nst).reduce((s, names) => s + sumNames(names), 0);
+      const grand = pods.reduce((s, p) => s + sumNested(podNested(p)), 0) || 1;
       let html = '';
       pods.forEach((pod, pi) => {
-        const agg = podSources(pod); const ptot = Object.values(agg).reduce((a, v) => a + v, 0);
+        const nst = podNested(pod); const ptot = sumNested(nst);
         html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${pod}</td><td style="font-weight:600">${ptot || '<span class="zero">0</span>'}</td><td>${pc(ptot, grand)}%</td></tr>`;
-        const entries = Object.entries(agg).sort((a, b) => b[1] - a[1]);
-        if (entries.length) {
-          entries.forEach(([src, cnt], si) => { html += `<tr data-path="${pi}-${si}" style="display:none"><td style="padding-left:32px;color:var(--muted)">${src}</td><td>${cnt}</td><td>${pc(cnt, ptot)}%</td></tr>`; });
+        const types = Object.entries(nst).map(([t, names]) => [t, sumNames(names), names]).sort((a, b) => b[1] - a[1]);
+        if (types.length) {
+          types.forEach(([t, tcnt, names], ti) => {
+            html += `<tr data-path="${pi}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:32px;font-weight:500">${CARET}${t}</td><td>${tcnt}</td><td>${pc(tcnt, ptot)}%</td></tr>`;
+            Object.entries(names).sort((a, b) => b[1] - a[1]).forEach(([nm, cnt], ni) => {
+              html += `<tr data-path="${pi}-${ti}-${ni}" style="display:none"><td style="padding-left:58px;color:var(--muted)">${nm}</td><td>${cnt}</td><td>${pc(cnt, tcnt)}%</td></tr>`;
+            });
+          });
         } else {
           html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
         }
