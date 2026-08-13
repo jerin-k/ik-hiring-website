@@ -53,7 +53,13 @@ function familyOf(dept) { const o = loadDeptFamily(); const d = DEPT_FAMILY_DEFA
 // ACTUALLY use — current-quarter pod assignments for the live roster + the effective score grid + the dept→family
 // defaults — and merges them on top of any explicit edits (edits always win; this only FILLS gaps). Preserves
 // every other quarter's edits untouched. See memory metric-config-serverside.
-const POD_LS = 'ik_recruiter_pods_q', CAP_LS = 'ik_recruiter_capacity_q';
+const POD_LS = 'ik_recruiter_pods_q', CAP_LS = 'ik_recruiter_capacity_q', INACTIVE_LS = 'ik_recruiter_inactive';
+// Manual Active/Inactive override (NOT per-quarter — a current status). {name:true} = manually Inactive.
+// Needed because "losing the recruiter role" has no clean Ashby signal (all recruiters are globalRole "Limited
+// Access"); Ashby's isEnabled only flips when the whole account is disabled. Historical offers still score.
+function loadInactive() { try { return JSON.parse(localStorage.getItem(INACTIVE_LS) || '{}'); } catch (e) { return {}; } }
+function isRecInactive(name) { return !!loadInactive()[name]; }
+function setRecInactive(name, inactive) { const o = loadInactive(); if (inactive) o[name] = true; else delete o[name]; localStorage.setItem(INACTIVE_LS, JSON.stringify(o)); }
 function buildEffectiveConfig(data) {
   const q = currentQuarter();
   const readLS = (k) => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } };
@@ -67,7 +73,7 @@ function buildEffectiveConfig(data) {
   });
   if (!scoreGrid[q]) scoreGrid[q] = gridForQuarter(q);
   DEPT_FAMILY_DEFAULT.forEach(([dept]) => { if (deptFamily[dept] == null) deptFamily[dept] = familyOf(dept); });
-  return { schemaVersion: 1, pods, capacity, scoreGrid, deptFamily };
+  return { schemaVersion: 1, pods, capacity, scoreGrid, deptFamily, inactive: loadInactive() };
 }
 
 export function renderAdmin(accessConfig, data) {
@@ -171,9 +177,9 @@ export function renderAdmin(accessConfig, data) {
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 8px">Recruiter → Pod &amp; Capacity</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target. Set <strong>Status → Inactive</strong> when someone loses the recruiter role — they move to the Inactive group but their historical offers/hires still score. (Pod &amp; Capacity are per-quarter; Status is a current flag.) Remember to <strong>Publish to team</strong> to share.</p>
         <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th></tr></thead>
+          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px">Status</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
         <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span><span style="margin-left:6px">· edits auto-save to this browser (team-wide sync is pending the pipeline).</span></div>
@@ -266,15 +272,17 @@ export function initAdminMetricConfig(data) {
   function renderPodCapacity() {
     const body = document.getElementById('cfgPodBody'); if (!body) return;
     const q = cfgQ();
-    const names = recs.map(r => r.name).sort((a, b) => a.localeCompare(b));
+    const sorted = [...recs].filter(r => r.name && r.name !== 'Unassigned').sort((a, b) => a.name.localeCompare(b.name));
     const podOpts = [...POD_OPTIONS, 'Unassigned'];
-    body.innerHTML = names.map(name => `<tr>
+    body.innerHTML = sorted.map(r => { const name = r.name; const acctOff = r.isActive === false; const inact = isRecInactive(name); return `<tr>
       <td style="font-weight:500">${name}</td>
       <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
-      <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td></tr>`).join('')
-      || `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px">No recruiters in the data yet.</td></tr>`;
+      <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td>
+      <td><select class="cfg-active" data-name="${name}"><option value="active"${!inact ? ' selected' : ''}>Active</option><option value="inactive"${inact ? ' selected' : ''}>Inactive</option></select>${acctOff ? ' <span title="Ashby account disabled" style="font-size:9px;color:var(--muted)">acct off</span>' : ''}</td></tr>`; }).join('')
+      || `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">No recruiters in the data yet.</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
+    body.querySelectorAll('.cfg-active').forEach(sel => sel.addEventListener('change', () => { setRecInactive(sel.dataset.name, sel.value === 'inactive'); touched(); }));
     updatePodSummary();
   }
   function renderScoreGrid() {
