@@ -174,7 +174,7 @@ export function renderAdmin(accessConfig, data) {
         </table>
       </div>
       <p style="color:var(--text-muted);font-size:11px;margin-top:8px">
-        <strong>Restricted</strong> users see only Overview + Hiring Manager (filtered to their Departments/Teams), plus Recruiter Efficiency when <em>Is recruiter</em> is on. Departments/Teams are comma-separated and must match the names in <em>Metric Configuration → Departments &amp; Teams</em>.
+        <strong>Restricted</strong> users see only Overview + Hiring Manager, scoped to the <strong>Departments/Teams</strong> you pick (leave a picker empty = all). Tick <em>Recruiter tab access</em> to also give them the Recruiter Efficiency tab — they see every recruiter there, not just themselves. Identity is the GSuite <strong>email</strong>; Department/Team are org-unit scopes.
       </p>
     </div>
 
@@ -272,7 +272,19 @@ export function renderAdmin(accessConfig, data) {
 const AC_ROLE_OPTS = [['admin', 'Admin'], ['full_access', 'Full Access'], ['restricted', 'Restricted'], ['none', 'None (denied)']];
 const AC_DIRTY_LS = 'ik_access_dirty';
 const acEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const acSplit = (s) => s.split(',').map(x => x.trim()).filter(Boolean);
+const AC_DEPTS = Object.keys(DEPT_TREE).sort();
+const AC_TEAMS = [...new Set(Object.values(DEPT_TREE).flat())].sort();
+// Compact multi-select (native <details> + checkboxes) for a restricted user's Department/Team scope.
+function acMs(cls, i, selected, options, labelWord) {
+  const sel = new Set(selected || []);
+  const summary = (selected && selected.length) ? selected.join(', ') : 'Any';
+  return `<details class="ac-ms" style="border:1px solid var(--border);border-radius:6px;background:var(--bg)">
+    <summary style="list-style:none;cursor:pointer;padding:5px 8px;font-size:11px;color:${sel.size ? 'var(--text)' : 'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelWord}: ${acEsc(summary)}</summary>
+    <div style="max-height:160px;overflow:auto;padding:4px 8px;border-top:1px solid var(--border)">
+      ${options.map(o => `<label style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;white-space:nowrap"><input type="checkbox" class="${cls}" data-i="${i}" value="${acEsc(o)}"${sel.has(o) ? ' checked' : ''}> ${acEsc(o)}</label>`).join('')}
+    </div>
+  </details>`;
+}
 
 // app.js calls this alongside initAdminMetricConfig. accessConfig = the loaded data/access.json.
 export function initAdminAccess(accessConfig) {
@@ -303,17 +315,25 @@ export function initAdminAccess(accessConfig) {
         <td style="font-weight:500">${acEsc(u.email)}</td>
         <td><select class="ac-role" data-i="${i}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
         <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:4px;max-width:340px">
-              <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" class="ac-rec" data-i="${i}"${u.isRecruiter ? ' checked' : ''}> Is recruiter</label>
-              <input class="ac-depts" data-i="${i}" placeholder="Departments (comma-sep)" value="${acEsc((u.departments || []).join(', '))}" style="width:100%;height:28px;font-size:11px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
-              <input class="ac-teams" data-i="${i}" placeholder="Teams (comma-sep)" value="${acEsc((u.teams || []).join(', '))}" style="width:100%;height:28px;font-size:11px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+              <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px" title="Also grants the Recruiter Efficiency tab (they see all recruiters, not just themselves)"><input type="checkbox" class="ac-rec" data-i="${i}"${u.isRecruiter ? ' checked' : ''}> Recruiter tab access</label>
+              ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
+              ${acMs('ac-teams', i, u.teams, AC_TEAMS, 'Teams')}
             </div>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
         <td><button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></td>
       </tr>`;
     }).join('');
     body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
     body.querySelectorAll('.ac-rec').forEach(c => c.addEventListener('change', () => { work.users[+c.dataset.i].isRecruiter = c.checked; setDirtyAc(true); }));
-    body.querySelectorAll('.ac-depts').forEach(inp => inp.addEventListener('input', () => { work.users[+inp.dataset.i].departments = acSplit(inp.value); setDirtyAc(true); }));
-    body.querySelectorAll('.ac-teams').forEach(inp => inp.addEventListener('input', () => { work.users[+inp.dataset.i].teams = acSplit(inp.value); setDirtyAc(true); }));
+    const wireMs = (cls, key, word) => body.querySelectorAll('.' + cls).forEach(cb => cb.addEventListener('change', () => {
+      const i = +cb.dataset.i;
+      const vals = [...body.querySelectorAll('.' + cls + '[data-i="' + i + '"]:checked')].map(x => x.value);
+      work.users[i][key] = vals;
+      const sum = cb.closest('details').querySelector('summary');
+      if (sum) sum.textContent = word + ': ' + (vals.length ? vals.join(', ') : 'Any');
+      setDirtyAc(true);
+    }));
+    wireMs('ac-depts', 'departments', 'Depts');
+    wireMs('ac-teams', 'teams', 'Teams');
     body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
   }
   renderRows();
