@@ -56,11 +56,8 @@ export function getFilteredData(access) {
     );
   }
 
-  if (access.filters.recruiterEmail) {
-    filtered.recruiters = dashboardData.recruiters.filter(r =>
-      r.email.toLowerCase() === access.filters.recruiterEmail.toLowerCase()
-    );
-  }
+  // (Recruiter-centric self-filtering removed 2026-08-13 — restricted recruiters are Department/Team scoped and
+  // see all recruiter rows. dashboard.json keys recruiters by name, not email, so the old r.email filter was dead.)
 
   return filtered;
 }
