@@ -1,11 +1,11 @@
 {
-  "lastUpdated": "2026-08-20T11:59:26.048Z",
+  "lastUpdated": "2026-08-20T12:14:51.225Z",
   "schemaVersion": 4,
   "scopeYear": 2026,
   "velocityDays": 35,
   "funnel": {
     "applied": 54251,
-    "screened": 1924,
+    "screened": 1923,
     "interviewed": 1184,
     "offered": 444,
     "hired": 307
@@ -25,10 +25,10 @@
           "missed": 0
         },
         "2026-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 0,
           "open": 1,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -55,10 +55,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -126,17 +126,17 @@
       "team": "SME - US",
       "status": "Open",
       "quarters": {
-        "2025-Q3": {
-          "total": 86,
-          "joined": 17,
-          "open": 1,
-          "missed": 68
-        },
         "2026-Q1": {
           "total": 2,
           "joined": 1,
           "open": 0,
           "missed": 1
+        },
+        "2025-Q3": {
+          "total": 18,
+          "joined": 17,
+          "open": 1,
+          "missed": 0
         },
         "2026-Q2": {
           "total": 1,
@@ -169,10 +169,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -184,10 +184,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -199,10 +199,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -214,10 +214,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -235,10 +235,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -250,10 +250,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -265,10 +265,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -280,10 +280,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -301,10 +301,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -316,10 +316,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -337,40 +337,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
-        }
-      }
-    },
-    "0cd940a8": {
-      "jobId8": "0cd940a8",
-      "title": "Assistant Manager - Customer Success",
-      "department": "Operations",
-      "team": "Customer Success Management",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        }
-      }
-    },
-    "3f553d9b": {
-      "jobId8": "3f553d9b",
-      "title": "Assistant Manager - Finance",
-      "department": "Finance",
-      "team": "General Finance Management",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -382,10 +352,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -397,10 +367,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -412,10 +382,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -463,10 +433,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -499,10 +469,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -544,10 +514,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -559,10 +529,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -574,10 +544,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -589,10 +559,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -604,10 +574,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -625,10 +595,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -685,10 +655,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -700,10 +670,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -721,10 +691,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -790,10 +760,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -820,10 +790,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -835,10 +805,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -850,40 +820,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
-        }
-      }
-    },
-    "aa4a8ebb": {
-      "jobId8": "aa4a8ebb",
-      "title": "Consultant - UI / UX Designer",
-      "department": "Engineering",
-      "team": "User Interface (UI) Design",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 2,
-          "joined": 0,
-          "open": 0,
-          "missed": 2
-        }
-      }
-    },
-    "8e765fe5": {
-      "jobId8": "8e765fe5",
-      "title": "Consultants",
-      "department": "Operations",
-      "team": "Operations",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 2,
-          "joined": 0,
-          "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -895,10 +835,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 7,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 6
+          "missed": 0
         },
         "2025-Q4": {
           "total": 2,
@@ -915,16 +855,16 @@
       "team": "Product Management (Curriculum)",
       "status": "Open",
       "quarters": {
-        "2025-Q3": {
-          "total": 14,
-          "joined": 1,
-          "open": 0,
-          "missed": 13
-        },
         "2026-Q1": {
           "total": 1,
           "joined": 0,
           "open": 1,
+          "missed": 0
+        },
+        "2025-Q3": {
+          "total": 1,
+          "joined": 1,
+          "open": 0,
           "missed": 0
         }
       }
@@ -949,10 +889,10 @@
           "missed": 0
         },
         "2026-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 0,
           "open": 1,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -964,10 +904,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         },
         "2026-Q1": {
           "total": 1,
@@ -985,10 +925,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 8,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 7
+          "missed": 0
         }
       }
     },
@@ -1000,10 +940,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1015,10 +955,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1030,10 +970,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1045,10 +985,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q1": {
           "total": 1,
@@ -1066,10 +1006,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1081,10 +1021,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1096,10 +1036,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1111,10 +1051,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -1132,10 +1072,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -1153,10 +1093,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1181,21 +1121,6 @@
         }
       }
     },
-    "4dd15d3b": {
-      "jobId8": "4dd15d3b",
-      "title": "Director- Revenue",
-      "department": "US Business",
-      "team": "US Business",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        }
-      }
-    },
     "50c7c938": {
       "jobId8": "50c7c938",
       "title": "Engineering Manager",
@@ -1204,10 +1129,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 2,
           "joined": 2,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q1": {
           "total": 1,
@@ -1240,10 +1165,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1255,10 +1180,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1270,10 +1195,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1285,10 +1210,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 8,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 7
+          "missed": 0
         }
       }
     },
@@ -1300,10 +1225,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 14,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 13
+          "missed": 0
         }
       }
     },
@@ -1315,10 +1240,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1330,10 +1255,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1345,10 +1270,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1381,10 +1306,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1396,10 +1321,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1426,10 +1351,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1441,10 +1366,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -1462,10 +1387,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1477,10 +1402,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 8,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 7
+          "missed": 0
         }
       }
     },
@@ -1492,10 +1417,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1507,25 +1432,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
-        }
-      }
-    },
-    "99ad4937": {
-      "jobId8": "99ad4937",
-      "title": "Intern - Operations (Night Shift role)",
-      "department": "Operations",
-      "team": "Delivery Operations",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 4,
-          "joined": 0,
-          "open": 0,
-          "missed": 4
+          "missed": 0
         }
       }
     },
@@ -1537,10 +1447,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1552,10 +1462,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1567,10 +1477,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1582,10 +1492,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1615,10 +1525,10 @@
           "missed": 0
         },
         "2026-Q3": {
-          "total": 3,
+          "total": 2,
           "joined": 1,
           "open": 1,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1630,10 +1540,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1657,10 +1567,10 @@
           "missed": 0
         },
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -1672,10 +1582,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1702,25 +1612,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
-        }
-      }
-    },
-    "4078cca1": {
-      "jobId8": "4078cca1",
-      "title": "Software Engineer 2, Machine Learning",
-      "department": "Engineering",
-      "team": "Machine Learning",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1765,10 +1660,10 @@
           "missed": 0
         },
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1795,10 +1690,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -1809,16 +1704,16 @@
       "team": "Corporate Partnerships",
       "status": "Open",
       "quarters": {
-        "2025-Q3": {
-          "total": 5,
-          "joined": 1,
-          "open": 0,
-          "missed": 4
-        },
         "2026-Q2": {
           "total": 1,
           "joined": 0,
           "open": 1,
+          "missed": 0
+        },
+        "2025-Q3": {
+          "total": 1,
+          "joined": 1,
+          "open": 0,
           "missed": 0
         }
       }
@@ -1831,10 +1726,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1894,10 +1789,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -1915,10 +1810,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2025-Q4": {
           "total": 3,
@@ -1969,10 +1864,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -1999,10 +1894,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -2029,10 +1924,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 12,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 11
+          "missed": 0
         }
       }
     },
@@ -2044,10 +1939,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -2059,10 +1954,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         }
       }
     },
@@ -2074,10 +1969,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         }
       }
     },
@@ -2089,25 +1984,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
-        }
-      }
-    },
-    "d03f6fe2": {
-      "jobId8": "d03f6fe2",
-      "title": "",
-      "department": "",
-      "team": "",
-      "status": "",
-      "quarters": {
-        "2025-Q3": {
-          "total": 13,
-          "joined": 0,
-          "open": 0,
-          "missed": 13
+          "missed": 0
         }
       }
     },
@@ -2137,10 +2017,10 @@
           "missed": 0
         },
         "2026-Q3": {
-          "total": 15,
+          "total": 9,
           "joined": 0,
           "open": 9,
-          "missed": 6
+          "missed": 0
         }
       }
     },
@@ -2152,25 +2032,10 @@
       "status": "",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
-        }
-      }
-    },
-    "4dee16ed": {
-      "jobId8": "4dee16ed",
-      "title": "",
-      "department": "",
-      "team": "",
-      "status": "",
-      "quarters": {
-        "2025-Q3": {
-          "total": 20,
-          "joined": 0,
-          "open": 0,
-          "missed": 20
+          "missed": 0
         }
       }
     },
@@ -2182,10 +2047,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 8,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 7
+          "missed": 0
         }
       }
     },
@@ -2223,12 +2088,6 @@
       "team": "SME - US",
       "status": "Closed",
       "quarters": {
-        "2025-Q3": {
-          "total": 4,
-          "joined": 0,
-          "open": 0,
-          "missed": 4
-        },
         "2026-Q2": {
           "total": 1,
           "joined": 1,
@@ -2245,10 +2104,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 27,
+          "total": 1,
           "joined": 0,
           "open": 1,
-          "missed": 26
+          "missed": 0
         }
       }
     },
@@ -2260,10 +2119,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 8,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 7
+          "missed": 0
         }
       }
     },
@@ -2275,10 +2134,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 7,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 6
+          "missed": 0
         }
       }
     },
@@ -2290,10 +2149,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 0,
           "open": 1,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -2305,10 +2164,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -2320,10 +2179,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 10,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 9
+          "missed": 0
         }
       }
     },
@@ -2350,10 +2209,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 14,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 13
+          "missed": 0
         }
       }
     },
@@ -2434,10 +2293,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -2449,10 +2308,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -2464,10 +2323,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 10,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 9
+          "missed": 0
         }
       }
     },
@@ -2479,10 +2338,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 12,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 11
+          "missed": 0
         },
         "2026-Q1": {
           "total": 1,
@@ -2506,10 +2365,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         },
         "2025-Q4": {
           "total": 1,
@@ -2563,10 +2422,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -2578,10 +2437,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -2593,10 +2452,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 11,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 10
+          "missed": 0
         }
       }
     },
@@ -2632,10 +2491,10 @@
           "missed": 0
         },
         "2026-Q3": {
-          "total": 6,
+          "total": 1,
           "joined": 0,
           "open": 1,
-          "missed": 5
+          "missed": 0
         }
       }
     },
@@ -2646,15 +2505,15 @@
       "team": "SME - India",
       "status": "Closed",
       "quarters": {
-        "2025-Q3": {
-          "total": 42,
-          "joined": 1,
-          "open": 0,
-          "missed": 41
-        },
         "2025-Q4": {
           "total": 2,
           "joined": 2,
+          "open": 0,
+          "missed": 0
+        },
+        "2025-Q3": {
+          "total": 1,
+          "joined": 1,
           "open": 0,
           "missed": 0
         }
@@ -2698,10 +2557,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -2734,10 +2593,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -2785,10 +2644,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         }
       }
     },
@@ -2815,10 +2674,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -2830,10 +2689,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -2860,10 +2719,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -2890,10 +2749,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 7,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 6
+          "missed": 0
         }
       }
     },
@@ -2905,10 +2764,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 97,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 96
+          "missed": 0
         },
         "2026-Q1": {
           "total": 1,
@@ -2926,10 +2785,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 6,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 5
+          "missed": 0
         }
       }
     },
@@ -2947,10 +2806,10 @@
           "missed": 0
         },
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         }
       }
     },
@@ -2962,10 +2821,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         },
         "2026-Q3": {
           "total": 2,
@@ -2983,10 +2842,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -2998,10 +2857,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -3028,10 +2887,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         }
       }
     },
@@ -3043,10 +2902,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -3065,21 +2924,6 @@
         }
       }
     },
-    "fb038e26": {
-      "jobId8": "fb038e26",
-      "title": "",
-      "department": "",
-      "team": "",
-      "status": "",
-      "quarters": {
-        "2025-Q3": {
-          "total": 5,
-          "joined": 0,
-          "open": 0,
-          "missed": 5
-        }
-      }
-    },
     "132fa05a": {
       "jobId8": "132fa05a",
       "title": "Product Analyst",
@@ -3088,10 +2932,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3118,10 +2962,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -3133,10 +2977,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 35,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 34
+          "missed": 0
         }
       }
     },
@@ -3166,16 +3010,16 @@
           "missed": 0
         },
         "2026-Q2": {
-          "total": 30,
+          "total": 29,
           "joined": 29,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
-          "total": 13,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 12
+          "missed": 0
         }
       }
     },
@@ -3186,12 +3030,6 @@
       "team": "US Business (Sales)",
       "status": "Open",
       "quarters": {
-        "2025-Q3": {
-          "total": 141,
-          "joined": 41,
-          "open": 0,
-          "missed": 100
-        },
         "2025-Q4": {
           "total": 26,
           "joined": 26,
@@ -3210,11 +3048,17 @@
           "open": 1,
           "missed": 0
         },
+        "2025-Q3": {
+          "total": 41,
+          "joined": 41,
+          "open": 0,
+          "missed": 0
+        },
         "2026-Q3": {
-          "total": 35,
+          "total": 16,
           "joined": 6,
           "open": 10,
-          "missed": 19
+          "missed": 0
         }
       }
     },
@@ -3225,12 +3069,6 @@
       "team": "US Business (Sales)",
       "status": "Closed",
       "quarters": {
-        "2025-Q3": {
-          "total": 124,
-          "joined": 4,
-          "open": 0,
-          "missed": 120
-        },
         "2025-Q4": {
           "total": 21,
           "joined": 21,
@@ -3240,6 +3078,12 @@
         "2026-Q1": {
           "total": 13,
           "joined": 13,
+          "open": 0,
+          "missed": 0
+        },
+        "2025-Q3": {
+          "total": 4,
+          "joined": 4,
           "open": 0,
           "missed": 0
         },
@@ -3259,46 +3103,16 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
           "joined": 0,
           "open": 1,
           "missed": 0
-        }
-      }
-    },
-    "f5fe1708": {
-      "jobId8": "f5fe1708",
-      "title": "SEO Consultant",
-      "department": "Marketing",
-      "team": "Marketing",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 2,
-          "joined": 0,
-          "open": 0,
-          "missed": 2
-        }
-      }
-    },
-    "f00bdeba": {
-      "jobId8": "f00bdeba",
-      "title": "Sales Associate - AI Programs (Junior Program Advisor)",
-      "department": "US Business",
-      "team": "US Business (Sales)",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 74,
-          "joined": 0,
-          "open": 0,
-          "missed": 74
         }
       }
     },
@@ -3317,42 +3131,6 @@
         }
       }
     },
-    "f1cdbf9b": {
-      "jobId8": "f1cdbf9b",
-      "title": "Sales Operations Specialist",
-      "department": "US Business",
-      "team": "US Business (Sales Operations)",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        },
-        "2026-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 1,
-          "missed": 0
-        }
-      }
-    },
-    "de1662d8": {
-      "jobId8": "de1662d8",
-      "title": "Sales Trainer",
-      "department": "US Business",
-      "team": "US Business",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 3,
-          "joined": 0,
-          "open": 0,
-          "missed": 3
-        }
-      }
-    },
     "7680ba9f": {
       "jobId8": "7680ba9f",
       "title": "Sales, Intern",
@@ -3361,10 +3139,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3376,10 +3154,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 2,
           "joined": 2,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -3397,10 +3175,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -3418,10 +3196,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3433,10 +3211,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 5,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 4
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -3454,10 +3232,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -3469,10 +3247,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -3484,10 +3262,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3529,10 +3307,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -3592,25 +3370,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
-        }
-      }
-    },
-    "544be6de": {
-      "jobId8": "544be6de",
-      "title": "Senior Manager - Sales",
-      "department": "Business - India",
-      "team": "Business - India",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3622,10 +3385,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -3643,10 +3406,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3658,10 +3421,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -3673,10 +3436,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 6,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 5
+          "missed": 0
         }
       }
     },
@@ -3710,21 +3473,6 @@
         }
       }
     },
-    "e2b1a6be": {
-      "jobId8": "e2b1a6be",
-      "title": "Manager, Performance Marketing",
-      "department": "Business - India",
-      "team": "Business - India",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        }
-      }
-    },
     "b62f546a": {
       "jobId8": "b62f546a",
       "title": "Senior Manager/Associate Director -Delivery Operations (Night Shift)",
@@ -3733,25 +3481,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
-        }
-      }
-    },
-    "9eb766a1": {
-      "jobId8": "9eb766a1",
-      "title": "Senior Product Manager",
-      "department": "New Programs",
-      "team": "Product Management (Curriculum)",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 2,
-          "joined": 0,
-          "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -3784,10 +3517,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3799,10 +3532,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q3": {
           "total": 1,
@@ -3850,10 +3583,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -3880,10 +3613,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q3": {
-          "total": 19,
+          "total": 18,
           "joined": 18,
           "open": 0,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q2": {
           "total": 2,
@@ -3964,10 +3697,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 7,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 6
+          "missed": 0
         }
       }
     },
@@ -3979,10 +3712,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -3994,10 +3727,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -4054,10 +3787,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4069,10 +3802,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4126,10 +3859,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 4,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 3
+          "missed": 0
         }
       }
     },
@@ -4156,10 +3889,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4186,10 +3919,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 16,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 15
+          "missed": 0
         }
       }
     },
@@ -4201,16 +3934,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
-        },
-        "2026-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4222,10 +3949,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 14,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 13
+          "missed": 0
         },
         "2025-Q4": {
           "total": 1,
@@ -4243,10 +3970,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -4258,10 +3985,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4273,10 +4000,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 40,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 39
+          "missed": 0
         }
       }
     },
@@ -4288,10 +4015,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 12,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 11
+          "missed": 0
         }
       }
     },
@@ -4325,21 +4052,6 @@
         }
       }
     },
-    "90a70a22": {
-      "jobId8": "90a70a22",
-      "title": "UX Designer",
-      "department": "Engineering",
-      "team": "User Interface (UI) Design",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        }
-      }
-    },
     "8a7003c6": {
       "jobId8": "8a7003c6",
       "title": "VP Of Engineering",
@@ -4348,10 +4060,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4363,10 +4075,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -4384,10 +4096,10 @@
           "missed": 0
         },
         "2025-Q3": {
-          "total": 3,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -4399,10 +4111,10 @@
       "status": "Closed",
       "quarters": {
         "2025-Q3": {
-          "total": 2,
+          "total": 1,
           "joined": 1,
           "open": 0,
-          "missed": 1
+          "missed": 0
         }
       }
     },
@@ -4544,21 +4256,6 @@
         }
       }
     },
-    "6df7741d": {
-      "jobId8": "6df7741d",
-      "title": "Leadership Recruiter",
-      "department": "Talent Acquisition",
-      "team": "Talent Acquisition (Delivery)",
-      "status": "Closed",
-      "quarters": {
-        "2025-Q3": {
-          "total": 4,
-          "joined": 0,
-          "open": 0,
-          "missed": 4
-        }
-      }
-    },
     "a9747a0f": {
       "jobId8": "a9747a0f",
       "title": "Software Engineer 1 , Applied AI",
@@ -4618,10 +4315,10 @@
       "status": "Open",
       "quarters": {
         "2025-Q4": {
-          "total": 11,
+          "total": 9,
           "joined": 1,
           "open": 8,
-          "missed": 2
+          "missed": 0
         }
       }
     },
@@ -4757,12 +4454,6 @@
           "joined": 4,
           "open": 0,
           "missed": 0
-        },
-        "2026-Q3": {
-          "total": 2,
-          "joined": 0,
-          "open": 0,
-          "missed": 2
         }
       }
     },
@@ -4927,10 +4618,10 @@
       "status": "Open",
       "quarters": {
         "2026-Q2": {
-          "total": 3,
+          "total": 2,
           "joined": 1,
           "open": 1,
-          "missed": 1
+          "missed": 0
         },
         "2026-Q1": {
           "total": 3,
@@ -5099,27 +4790,6 @@
         }
       }
     },
-    "4f2a45c9": {
-      "jobId8": "4f2a45c9",
-      "title": "Test Job ",
-      "department": "Test",
-      "team": "Test",
-      "status": "Closed",
-      "quarters": {
-        "2026-Q2": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        },
-        "2026-Q3": {
-          "total": 1,
-          "joined": 0,
-          "open": 1,
-          "missed": 0
-        }
-      }
-    },
     "e38f7d54": {
       "jobId8": "e38f7d54",
       "title": "",
@@ -5127,32 +4797,11 @@
       "team": "",
       "status": "",
       "quarters": {
-        "2026-Q2": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
-        },
         "2026-Q3": {
           "total": 2,
           "joined": 0,
           "open": 2,
           "missed": 0
-        }
-      }
-    },
-    "a4e38b4f": {
-      "jobId8": "a4e38b4f",
-      "title": "Manager – Content (Brand Team)",
-      "department": "Marketing",
-      "team": "Content",
-      "status": "Open",
-      "quarters": {
-        "2026-Q2": {
-          "total": 1,
-          "joined": 0,
-          "open": 0,
-          "missed": 1
         }
       }
     },
@@ -5164,25 +4813,40 @@
       "status": "Open",
       "quarters": {
         "2026-Q3": {
-          "total": 10,
+          "total": 8,
           "joined": 1,
           "open": 7,
-          "missed": 2
+          "missed": 0
         }
       }
     },
-    "00833127": {
-      "jobId8": "00833127",
-      "title": "Part Time Instructor - FDE (US)",
-      "department": "SME - US",
-      "team": "SME - US",
-      "status": "Open",
+    "4f2a45c9": {
+      "jobId8": "4f2a45c9",
+      "title": "Test Job ",
+      "department": "Test",
+      "team": "Test",
+      "status": "Closed",
       "quarters": {
         "2026-Q3": {
-          "total": 6,
+          "total": 1,
           "joined": 0,
-          "open": 3,
-          "missed": 3
+          "open": 1,
+          "missed": 0
+        }
+      }
+    },
+    "f1cdbf9b": {
+      "jobId8": "f1cdbf9b",
+      "title": "Sales Operations Specialist",
+      "department": "US Business",
+      "team": "US Business (Sales Operations)",
+      "status": "Closed",
+      "quarters": {
+        "2026-Q3": {
+          "total": 1,
+          "joined": 0,
+          "open": 1,
+          "missed": 0
         }
       }
     },
@@ -5246,18 +4910,18 @@
         }
       }
     },
-    "378e5361": {
-      "jobId8": "378e5361",
-      "title": "Intern - Software Development Engineer",
-      "department": "Engineering",
-      "team": "Engineering",
+    "00833127": {
+      "jobId8": "00833127",
+      "title": "Part Time Instructor - FDE (US)",
+      "department": "SME - US",
+      "team": "SME - US",
       "status": "Open",
       "quarters": {
         "2026-Q3": {
-          "total": 1,
+          "total": 3,
           "joined": 0,
-          "open": 0,
-          "missed": 1
+          "open": 3,
+          "missed": 0
         }
       }
     },
@@ -6104,17 +5768,17 @@
       "status": "Open",
       "total": 2905,
       "applied": 2905,
-      "screen": 6,
-      "interview": 9,
+      "screen": 5,
+      "interview": 10,
       "offer": 3,
       "hired": 2,
       "joiningPending": 0,
       "pipeline": {
-        "appReview": 41,
-        "taScreen": 6,
+        "appReview": 40,
+        "taScreen": 5,
         "hmReview": 1,
         "oa": 0,
-        "r1": 9,
+        "r1": 10,
         "r2": 6,
         "r3": 7,
         "r4": 0,
@@ -6526,8 +6190,8 @@
         "hired": 0
       },
       "recruiters": [
-        "Gopu Nair V",
-        "Oshin Verma"
+        "Oshin Verma",
+        "Gopu Nair V"
       ]
     },
     {
@@ -8709,10 +8373,10 @@
         "hired": 2
       },
       "recruiters": [
-        "Ankita Kabra",
         "Sanghamitra Moulik",
-        "Mashika De Almeida",
-        "Oshin Verma"
+        "Ankita Kabra",
+        "Oshin Verma",
+        "Mashika De Almeida"
       ]
     },
     {
@@ -9748,7 +9412,7 @@
       "total": 1,
       "applied": 1,
       "screen": 0,
-      "interview": 1,
+      "interview": 0,
       "offer": 0,
       "hired": 0,
       "joiningPending": 0,
@@ -9757,7 +9421,7 @@
         "taScreen": 0,
         "hmReview": 0,
         "oa": 0,
-        "r1": 1,
+        "r1": 0,
         "r2": 0,
         "r3": 0,
         "r4": 0,
@@ -10509,7 +10173,7 @@
           "Pre-identified": 2
         }
       },
-      "ta": 168,
+      "ta": 167,
       "hm": 7,
       "oa": 0,
       "r1": 81,
@@ -10523,7 +10187,7 @@
     },
     {
       "name": "Deepti Leslie",
-      "total": 14481,
+      "total": 14503,
       "byJob": [
         {
           "jobId": "fc369c2c-ba64-44c8-98ff-cf000594947f",
@@ -10601,7 +10265,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 264,
+          "total": 262,
           "offer": 0,
           "hired": 0
         },
@@ -10609,7 +10273,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 5768,
+          "total": 5790,
           "offer": 2,
           "hired": 2
         },
@@ -10641,7 +10305,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 103,
+          "total": 105,
           "offer": 1,
           "hired": 1
         },
@@ -10677,8 +10341,8 @@
         "MyGreenhouse": 112,
         "Other": 5,
         "Referral": 519,
-        "Inbound": 671,
-        "Job Portal": 37
+        "Inbound": 690,
+        "Job Portal": 39
       },
       "srcNested": {
         "Company marketing": {
@@ -10707,12 +10371,12 @@
           "Referral": 519
         },
         "Inbound": {
-          "Applied": 671
+          "Applied": 690
         },
         "Job Portal": {
           "Naukri Inbound": 1,
           "Linkedin Outreach": 11,
-          "Naukri Outreach": 24,
+          "Naukri Outreach": 26,
           "Linkedin Inbound": 1
         }
       },
@@ -11219,7 +10883,7 @@
     },
     {
       "name": "V Pooja",
-      "total": 1476,
+      "total": 1477,
       "byJob": [
         {
           "jobId": "2b670683-2870-44e5-862a-c399766d383c",
@@ -11233,7 +10897,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 685,
+          "total": 686,
           "offer": 1,
           "hired": 1
         },
@@ -11356,8 +11020,8 @@
         "Referral": 16,
         "Other": 1,
         "MyGreenhouse": 4,
-        "Job Portal": 13,
-        "Inbound": 215
+        "Inbound": 217,
+        "Job Portal": 13
       },
       "srcNested": {
         "Third-party boards": {
@@ -11379,14 +11043,14 @@
         "MyGreenhouse": {
           "MyGreenhouse Jobs": 4
         },
+        "Inbound": {
+          "Applied": 217
+        },
         "Job Portal": {
           "Naukri Inbound": 1,
           "Linkedin Inbound": 9,
           "InstaHyre": 2,
           "Naukri Outreach": 1
-        },
-        "Inbound": {
-          "Applied": 215
         }
       },
       "ta": 0,
@@ -11406,7 +11070,7 @@
     },
     {
       "name": "Oshin Verma",
-      "total": 956,
+      "total": 969,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -11468,7 +11132,15 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Senior Associate, US HR Operations",
           "department": "Human Resource",
-          "total": 689,
+          "total": 703,
+          "offer": 0,
+          "hired": 0
+        },
+        {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 8,
           "offer": 0,
           "hired": 0
         },
@@ -11477,14 +11149,6 @@
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
           "total": 12,
-          "offer": 0,
-          "hired": 0
-        },
-        {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 9,
           "offer": 0,
           "hired": 0
         },
@@ -11506,38 +11170,38 @@
         }
       ],
       "sources": {
-        "Company marketing": 230,
-        "Third-party boards": 663,
+        "Company marketing": 240,
+        "Third-party boards": 669,
         "Referral": 7,
-        "MyGreenhouse": 28,
+        "MyGreenhouse": 26,
         "Prospecting": 1,
-        "Job Portal": 25
+        "Job Portal": 24
       },
       "srcNested": {
         "Company marketing": {
-          "Jobs page on your website": 229,
+          "Jobs page on your website": 239,
           "Internal Applicant": 1
         },
         "Third-party boards": {
-          "LinkedIn": 654,
-          "Naukri": 8,
+          "LinkedIn": 661,
+          "Naukri": 7,
           "LinkedIn Limited Listing": 1
         },
         "Referral": {
           "Referral": 7
         },
         "MyGreenhouse": {
-          "MyGreenhouse Jobs": 28
+          "MyGreenhouse Jobs": 26
         },
         "Prospecting": {
           "Juicebox": 1
         },
         "Job Portal": {
-          "Linkedin Outreach": 24,
+          "Linkedin Outreach": 23,
           "Naukri Inbound": 1
         }
       },
-      "ta": 28,
+      "ta": 29,
       "hm": 7,
       "oa": 0,
       "r1": 24,
@@ -11568,7 +11232,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 41,
+          "total": 42,
           "offer": 4,
           "hired": 0
         },
@@ -11584,7 +11248,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 671,
+          "total": 670,
           "offer": 0,
           "hired": 0
         },
@@ -11613,14 +11277,6 @@
           "hired": 4
         },
         {
-          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
-          "title": "Executive Technical Mentor - AI",
-          "department": "SME - India",
-          "total": 1,
-          "offer": 0,
-          "hired": 0
-        },
-        {
           "jobId": "95b6ca87-2fe2-467f-8924-472338112487",
           "title": "SME India : Teaching Assistant",
           "department": "SME - India",
@@ -11643,6 +11299,14 @@
           "total": 1,
           "offer": 1,
           "hired": 1
+        },
+        {
+          "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
+          "title": "Executive Technical Mentor - AI",
+          "department": "SME - India",
+          "total": 1,
+          "offer": 0,
+          "hired": 0
         },
         {
           "jobId": "02934d02-b322-40f5-ad94-cfe12f7b0373",
@@ -11709,8 +11373,8 @@
         "Agencies": 6,
         "Other": 4,
         "Prospecting": 3,
-        "Inbound": 1,
-        "Job Portal": 2
+        "Inbound": 2,
+        "Job Portal": 1
       },
       "srcNested": {
         "Company marketing": {
@@ -11738,10 +11402,10 @@
           "Other": 3
         },
         "Inbound": {
-          "Applied": 1
+          "Applied": 2
         },
         "Job Portal": {
-          "Naukri Outreach": 2
+          "Naukri Outreach": 1
         }
       },
       "ta": 0,
@@ -11767,8 +11431,8 @@
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 410,
-          "offer": 33,
+          "total": 409,
+          "offer": 34,
           "hired": 16
         },
         {
@@ -11839,8 +11503,8 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 1,
-          "offer": 1,
+          "total": 2,
+          "offer": 2,
           "hired": 0
         }
       ],
@@ -11848,10 +11512,10 @@
         "Company marketing": 322,
         "Agencies": 8,
         "Third-party boards": 171,
-        "Prospecting": 23,
+        "Prospecting": 24,
         "MyGreenhouse": 5,
-        "Inbound": 3,
-        "Job Portal": 1
+        "Inbound": 1,
+        "Job Portal": 2
       },
       "srcNested": {
         "Company marketing": {
@@ -11865,16 +11529,16 @@
         },
         "Prospecting": {
           "Other": 1,
-          "Juicebox": 22
+          "Juicebox": 23
         },
         "MyGreenhouse": {
           "MyGreenhouse Jobs": 5
         },
         "Inbound": {
-          "Applied": 3
+          "Applied": 1
         },
         "Job Portal": {
-          "Linkedin Outreach": 1
+          "Linkedin Outreach": 2
         }
       },
       "ta": 28,
@@ -11885,7 +11549,7 @@
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 45,
+      "offer": 47,
       "hired": 19,
       "offeredReal": 24,
       "joiningPending": 0,
@@ -12169,7 +11833,7 @@
     },
     {
       "name": "Alokita Dhumne",
-      "total": 369,
+      "total": 368,
       "byJob": [
         {
           "jobId": "092e9d9b-886b-4853-a476-c85896f42871",
@@ -12199,7 +11863,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 14,
+          "total": 13,
           "offer": 0,
           "hired": 0
         },
@@ -12282,7 +11946,7 @@
         "Referral": 2,
         "Company marketing": 1,
         "Other": 1,
-        "Job Portal": 3
+        "Job Portal": 2
       },
       "srcNested": {
         "Third-party boards": {
@@ -12304,7 +11968,7 @@
           "Recruiter Networking": 1
         },
         "Job Portal": {
-          "Naukri Outreach": 3
+          "Naukri Outreach": 2
         }
       },
       "ta": 10,
@@ -12551,7 +12215,7 @@
     },
     {
       "name": "Astha Thakur",
-      "total": 261,
+      "total": 238,
       "byJob": [
         {
           "jobId": "39b328eb-b0b2-434c-89fd-2a75de973ba0",
@@ -12589,7 +12253,7 @@
           "jobId": "3ea2b9d0-bb3e-4cb6-8dac-42d88091bab6",
           "title": "Associate Product Manager",
           "department": "Engineering",
-          "total": 53,
+          "total": 30,
           "offer": 0,
           "hired": 0
         }
@@ -12597,7 +12261,7 @@
       "sources": {
         "Referral": 4,
         "Third-party boards": 204,
-        "Inbound": 52
+        "Inbound": 29
       },
       "srcNested": {
         "Referral": {
@@ -12609,7 +12273,7 @@
           "Naukri": 32
         },
         "Inbound": {
-          "Applied": 52
+          "Applied": 29
         }
       },
       "ta": 15,
@@ -12628,85 +12292,6 @@
       "isActive": true
     },
     {
-      "name": "Gopu Nair V",
-      "total": 239,
-      "byJob": [
-        {
-          "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
-          "title": "Senior Associate, US HR Operations",
-          "department": "Human Resource",
-          "total": 212,
-          "offer": 1,
-          "hired": 0
-        },
-        {
-          "jobId": "e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f",
-          "title": "",
-          "department": "",
-          "total": 27,
-          "offer": 10,
-          "hired": 1
-        }
-      ],
-      "sources": {
-        "Company marketing": 54,
-        "Third-party boards": 139,
-        "MyGreenhouse": 2,
-        "Job Portal": 25,
-        "Inbound": 6,
-        "Juicebox": 1,
-        "Referral": 3,
-        "Agencies": 1,
-        "Sourced": 1
-      },
-      "srcNested": {
-        "Company marketing": {
-          "Jobs page on your website": 54
-        },
-        "Third-party boards": {
-          "LinkedIn": 138,
-          "Naukri": 1
-        },
-        "MyGreenhouse": {
-          "MyGreenhouse Jobs": 2
-        },
-        "Job Portal": {
-          "Linkedin Outreach": 22,
-          "Linkedin Inbound": 3
-        },
-        "Inbound": {
-          "Applied": 2,
-          "Naukri": 4
-        },
-        "Juicebox": {
-          "Juicebox Sourced": 1
-        },
-        "Referral": {
-          "Referral": 3
-        },
-        "Agencies": {
-          "Jerin Test Agency": 1
-        },
-        "Sourced": {
-          "Ashby Chrome Extension": 1
-        }
-      },
-      "ta": 7,
-      "hm": 3,
-      "oa": 0,
-      "r1": 1,
-      "r2": 0,
-      "r3": 0,
-      "r4": 0,
-      "r5": 0,
-      "offer": 11,
-      "hired": 1,
-      "offeredReal": 5,
-      "joiningPending": 0,
-      "accepted": 5,
-      "isActive": true
-    },
-    {
       "name": "Ritika Bhasin",
       "total": 238,
       "byJob": [
@@ -12722,8 +12307,8 @@
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 118,
-          "offer": 30,
+          "total": 119,
+          "offer": 29,
           "hired": 11
         },
         {
@@ -12802,8 +12387,8 @@
           "jobId": "00833127-d9fe-4261-aea6-0afb2f70251d",
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
-          "total": 17,
-          "offer": 11,
+          "total": 16,
+          "offer": 10,
           "hired": 3
         }
       ],
@@ -12812,10 +12397,10 @@
         "Third-party boards": 98,
         "MyGreenhouse": 2,
         "Referral": 1,
-        "Prospecting": 2,
+        "Prospecting": 1,
         "Juicebox": 15,
-        "Inbound": 33,
-        "Job Portal": 18
+        "Inbound": 35,
+        "Job Portal": 17
       },
       "srcNested": {
         "Company marketing": {
@@ -12831,17 +12416,17 @@
           "Referral": 1
         },
         "Prospecting": {
-          "Juicebox": 2
+          "Juicebox": 1
         },
         "Juicebox": {
           "Juicebox Sourced": 1,
           "Juicebox Agent": 14
         },
         "Inbound": {
-          "Applied": 33
+          "Applied": 35
         },
         "Job Portal": {
-          "Linkedin Outreach": 17,
+          "Linkedin Outreach": 16,
           "Linkedin Inbound": 1
         }
       },
@@ -12853,11 +12438,90 @@
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 52,
+      "offer": 50,
       "hired": 25,
       "offeredReal": 36,
       "joiningPending": 0,
       "accepted": 34,
+      "isActive": true
+    },
+    {
+      "name": "Gopu Nair V",
+      "total": 225,
+      "byJob": [
+        {
+          "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
+          "title": "Senior Associate, US HR Operations",
+          "department": "Human Resource",
+          "total": 198,
+          "offer": 1,
+          "hired": 0
+        },
+        {
+          "jobId": "e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f",
+          "title": "",
+          "department": "",
+          "total": 27,
+          "offer": 10,
+          "hired": 1
+        }
+      ],
+      "sources": {
+        "Company marketing": 44,
+        "Third-party boards": 133,
+        "MyGreenhouse": 4,
+        "Job Portal": 25,
+        "Inbound": 6,
+        "Juicebox": 1,
+        "Referral": 3,
+        "Agencies": 1,
+        "Sourced": 1
+      },
+      "srcNested": {
+        "Company marketing": {
+          "Jobs page on your website": 44
+        },
+        "Third-party boards": {
+          "LinkedIn": 131,
+          "Naukri": 2
+        },
+        "MyGreenhouse": {
+          "MyGreenhouse Jobs": 4
+        },
+        "Job Portal": {
+          "Linkedin Outreach": 22,
+          "Linkedin Inbound": 3
+        },
+        "Inbound": {
+          "Applied": 2,
+          "Naukri": 4
+        },
+        "Juicebox": {
+          "Juicebox Sourced": 1
+        },
+        "Referral": {
+          "Referral": 3
+        },
+        "Agencies": {
+          "Jerin Test Agency": 1
+        },
+        "Sourced": {
+          "Ashby Chrome Extension": 1
+        }
+      },
+      "ta": 6,
+      "hm": 3,
+      "oa": 0,
+      "r1": 0,
+      "r2": 0,
+      "r3": 0,
+      "r4": 0,
+      "r5": 0,
+      "offer": 11,
+      "hired": 1,
+      "offeredReal": 5,
+      "joiningPending": 0,
+      "accepted": 5,
       "isActive": true
     },
     {
@@ -13200,7 +12864,7 @@
     },
     {
       "name": "Mashika De Almeida",
-      "total": 75,
+      "total": 76,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -13230,7 +12894,7 @@
           "jobId": "db365cc9-6063-4873-bc38-38c1e6a36369",
           "title": "Curriculum Manager - APM / PM",
           "department": "New Programs",
-          "total": 1,
+          "total": 2,
           "offer": 0,
           "hired": 0
         },
@@ -13297,7 +12961,8 @@
         "Other": 2,
         "MyGreenhouse": 4,
         "Company marketing": 20,
-        "Referral": 2
+        "Referral": 2,
+        "Inbound": 1
       },
       "srcNested": {
         "Third-party boards": {
@@ -13319,6 +12984,9 @@
         },
         "Referral": {
           "Referral": 2
+        },
+        "Inbound": {
+          "Applied": 1
         }
       },
       "ta": 0,
@@ -13451,7 +13119,7 @@
     },
     {
       "name": "Sanghamitra Moulik",
-      "total": 29,
+      "total": 30,
       "byJob": [
         {
           "jobId": "b6f031b3-3350-4aab-8296-da542fed4a0f",
@@ -13473,27 +13141,27 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 8,
+          "total": 9,
           "offer": 2,
           "hired": 2
         }
       ],
       "sources": {
         "Third-party boards": 26,
-        "Job Portal": 3
+        "Job Portal": 4
       },
       "srcNested": {
         "Third-party boards": {
           "LinkedIn": 26
         },
         "Job Portal": {
-          "Linkedin Outreach": 3
+          "Linkedin Outreach": 4
         }
       },
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 7,
+      "r1": 8,
       "r2": 0,
       "r3": 0,
       "r4": 0,
@@ -14029,7 +13697,7 @@
     "2026-Q3": {
       "funnel": {
         "applied": 2973,
-        "screened": 417,
+        "screened": 416,
         "interviewed": 295,
         "offered": 97,
         "hired": 49
@@ -23627,14 +23295,6 @@
         "createdAt": "2026-08-11"
       },
       {
-        "applicationId": "0a3ac144-7268-4bf1-b26b-2022974b6987",
-        "job8": "1029e5bf",
-        "jobTitle": "SME India : Systems Design Instructor",
-        "candidate": "Smruti Ranjan Barik",
-        "stage": "R1",
-        "createdAt": "2026-08-11"
-      },
-      {
         "applicationId": "d962a179-fd97-40dc-86f8-1429ac46519b",
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
@@ -23959,7 +23619,7 @@
         "job8": "9783f817",
         "jobTitle": "Customer Success Associate (US)",
         "candidate": "Usha H R",
-        "stage": "TA Screen",
+        "stage": "R1",
         "createdAt": "2026-08-20"
       }
     ],
@@ -23969,10 +23629,10 @@
         "app": "649f6f8e-4229-4426-9301-8319a4873d2f",
         "job8": "538f7111",
         "names": [
+          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma",
-          "Sanghamitra Moulik"
+          "Oshin Verma"
         ]
       },
       {
@@ -23980,9 +23640,9 @@
         "job8": "538f7111",
         "names": [
           "Sanghamitra Moulik",
+          "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma",
-          "Ankita Kabra"
+          "Oshin Verma"
         ]
       },
       {
@@ -24009,18 +23669,18 @@
         "app": "59fd67b3-b601-46dd-8f8c-26ff3fead39b",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Sanghamitra Moulik"
         ]
       },
       {
         "app": "356e20a5-b360-477e-99ca-9eb0dc1fe384",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24043,8 +23703,8 @@
         "app": "70891119-9665-4131-b2df-c5bd45fdf526",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24075,8 +23735,8 @@
         "app": "3e303648-13a2-4202-8223-21a9f5e9c491",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24155,16 +23815,16 @@
         "app": "18719e3d-f2c8-4976-95f4-6714cf66b237",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "594d844e-1f68-4731-a9b2-f8fedeafbc64",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24179,8 +23839,8 @@
         "app": "e6d42849-b2f1-4e78-8288-79bc451c4e60",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24299,8 +23959,8 @@
         "app": "5635a6a0-3f04-41fd-91e5-a95d06efd06d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24315,8 +23975,8 @@
         "app": "11abe852-4b09-48b0-996a-1f57518a2ae3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24331,8 +23991,8 @@
         "app": "21b03ba4-5583-4ab6-b5ea-10454e50b621",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24355,16 +24015,16 @@
         "app": "553bfb69-3673-4fe6-b663-4f156a89eb06",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "ee5b68f0-ffba-41f6-8fae-279de8da6687",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24435,8 +24095,8 @@
         "app": "dc43a956-39a0-47ea-bde3-cabaf8ea009a",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24507,8 +24167,8 @@
         "app": "50e37ef8-4375-4cc0-8206-4c609d56cbb7",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24539,24 +24199,24 @@
         "app": "93014b53-1102-4a34-b7d4-dfd808ac0180",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "8952728d-8f86-406e-a492-19a581cc9f4d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "a3163593-3101-474f-9ca7-820bba834d17",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24571,8 +24231,8 @@
         "app": "c509a002-aa68-4038-bccd-6831e315f3b3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24595,8 +24255,8 @@
         "app": "d8c57a52-cb7e-40d7-90a5-4b4ab595d9f2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24611,16 +24271,16 @@
         "app": "27a74319-c963-4b42-8677-6f7a3995d059",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "09801407-b4ea-4b04-8bca-adfcbe3587eb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24635,8 +24295,8 @@
         "app": "ca42a903-9ce3-4fa4-ac11-ed3edda251b5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24715,8 +24375,8 @@
         "app": "5f3b9020-faa9-47d6-8b1a-f1bac64064f7",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24771,28 +24431,20 @@
         "app": "a6e74b14-1d5b-4442-8545-1a4130a050c3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "fe943be0-934e-41c0-8c6b-57913f3607e7",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "f7d596ba-6542-4c13-97ea-2a1343fa1ea0",
-        "job8": "d8a917ae",
-        "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
-        ]
-      },
-      {
-        "app": "2dc35893-f598-47b1-9464-312c5cc18371",
         "job8": "d8a917ae",
         "names": [
           "Oshin Verma",
@@ -24800,11 +24452,19 @@
         ]
       },
       {
-        "app": "5388706e-8908-489e-abb5-a3041801d030",
+        "app": "2dc35893-f598-47b1-9464-312c5cc18371",
         "job8": "d8a917ae",
         "names": [
           "Gopu Nair V",
           "Oshin Verma"
+        ]
+      },
+      {
+        "app": "5388706e-8908-489e-abb5-a3041801d030",
+        "job8": "d8a917ae",
+        "names": [
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24843,8 +24503,8 @@
         "app": "6cb373ed-f799-480f-ac0c-87ac278f5ede",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24859,8 +24519,8 @@
         "app": "75377ab5-fb7e-4ad3-a8c1-1440a00694a3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24899,8 +24559,8 @@
         "app": "3cbf56bd-1f21-437e-9d4a-0e49722d7fe6",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -24939,8 +24599,8 @@
         "app": "6f6cd712-1cc6-461f-a4ef-e98bd07dfc7d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -24987,8 +24647,8 @@
         "app": "e929c608-3f9c-4c0b-8225-4cccbbd9f2eb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25003,8 +24663,8 @@
         "app": "8bc65cbb-7516-49a3-bd5e-8ffdeeb5aea8",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25027,8 +24687,8 @@
         "app": "9386732d-80b3-4819-82e8-5820d707bd56",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25051,8 +24711,8 @@
         "app": "3c4d1527-384a-40bd-a1b9-5428365eaf59",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25067,16 +24727,16 @@
         "app": "0ea2d323-a5ee-42db-8cc8-4b9f9a009268",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "9dad6e59-4b53-4373-b9b2-b9df0d8c510d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25099,8 +24759,8 @@
         "app": "a6c7457a-ec07-492d-acb6-4f7bc8bae13c",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25147,8 +24807,8 @@
         "app": "2aed3f92-78ed-4dc2-a358-0bd6f24928bb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25163,16 +24823,16 @@
         "app": "894c6fae-afb5-4696-824e-d4e19257471f",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "5c784ebc-40f8-4915-b9bb-32108e16f7bc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25203,8 +24863,8 @@
         "app": "99888f4e-ddac-414e-9429-bd483242b8b5",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25259,16 +24919,16 @@
         "app": "aaaf600e-a2e5-466c-a211-6158279418cb",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "57d33c9a-3fe3-4c67-86bb-ccadee53089e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25299,24 +24959,24 @@
         "app": "57fca414-5106-4f6c-9a44-79d0afc268cf",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "318df207-1050-45b1-b18e-05674d0fd2d5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "5571e6a9-f6e3-4cbf-a315-7d2c816f2f9e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25331,8 +24991,8 @@
         "app": "c0c008cf-4418-4a61-a197-f32eb6a140bc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25355,8 +25015,8 @@
         "app": "75ee231c-acfb-4ad3-a46a-dec236b85898",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25387,8 +25047,8 @@
         "app": "ddb225db-3325-4ba8-9bf0-704e9c36ff30",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25403,8 +25063,8 @@
         "app": "60168961-81cb-42c9-bd57-b10c138e3850",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25443,8 +25103,8 @@
         "app": "522d079b-e88a-43f2-abc6-24766fee8048",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -25531,8 +25191,8 @@
         "app": "4403d314-ae52-48cf-ad44-886f245fc968",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -25584,25 +25244,25 @@
       "80": 8,
       "81": 3,
       "82": 4,
-      "83": 10,
-      "84": 19,
-      "85": 64,
-      "86": 144,
+      "83": 9,
+      "84": 20,
+      "85": 63,
+      "86": 145,
       "87": 18,
       "88": 4,
       "89": 8,
       "90": 9,
-      "91": 13,
-      "92": 15,
+      "91": 12,
+      "92": 16,
       "93": 19,
       "94": 7,
       "95": 9,
       "96": 31,
-      "97": 24,
-      "98": 50,
-      "99": 97,
-      "100": 400,
-      "101": 51,
+      "97": 22,
+      "98": 52,
+      "99": 96,
+      "100": 398,
+      "101": 54,
       "169": 1,
       "173": 2,
       "174": 1,
@@ -25613,8 +25273,8 @@
       "179": 1,
       "180": 2,
       "181": 3,
-      "182": 8,
-      "183": 5,
+      "182": 7,
+      "183": 6,
       "184": 7,
       "185": 9,
       "188": 6,
@@ -25626,9 +25286,9 @@
       "194": 9,
       "195": 17,
       "196": 15,
-      "197": 25,
+      "197": 24,
       "198": 55,
-      "199": 100,
+      "199": 101,
       "200": 29,
       "201": 2,
       "202": 3,
@@ -25646,8 +25306,8 @@
       "215": 3,
       "216": 71,
       "217": 58,
-      "218": 93,
-      "219": 37
+      "218": 92,
+      "219": 38
     },
     "52845468": {
       "14": 1,
@@ -25718,40 +25378,40 @@
       "204": 2
     },
     "dd785a22": {
-      "198": 157,
-      "199": 97,
-      "200": 59,
+      "198": 155,
+      "199": 99,
+      "200": 58,
       "201": 88,
       "202": 138,
-      "203": 145,
+      "203": 144,
       "204": 130,
-      "205": 125,
-      "206": 91,
-      "207": 71,
+      "205": 127,
+      "206": 89,
+      "207": 72,
       "208": 94,
-      "209": 136,
-      "210": 106,
+      "209": 137,
+      "210": 105,
       "211": 110,
-      "212": 118,
-      "213": 104,
-      "214": 113,
-      "215": 114,
+      "212": 115,
+      "213": 107,
+      "214": 114,
+      "215": 113,
       "216": 129,
-      "217": 108,
-      "218": 130,
-      "219": 198,
-      "220": 246,
-      "221": 161,
-      "222": 259,
-      "223": 347,
+      "217": 105,
+      "218": 131,
+      "219": 196,
+      "220": 244,
+      "221": 164,
+      "222": 257,
+      "223": 349,
       "224": 250,
-      "225": 381,
-      "226": 580,
-      "227": 295,
-      "228": 39,
-      "229": 134,
-      "230": 78,
-      "231": 9
+      "225": 374,
+      "226": 582,
+      "227": 304,
+      "228": 38,
+      "229": 133,
+      "230": 79,
+      "231": 10
     },
     "ad7e4c29": {
       "161": 4,
@@ -25774,37 +25434,37 @@
       "180": 12,
       "181": 27,
       "182": 30,
-      "183": 37,
-      "184": 29,
-      "185": 23,
-      "186": 15,
+      "183": 36,
+      "184": 30,
+      "185": 22,
+      "186": 16,
       "187": 18,
-      "188": 19,
-      "189": 14,
+      "188": 18,
+      "189": 15,
       "190": 31,
-      "191": 18,
-      "192": 24,
-      "193": 14,
+      "191": 15,
+      "192": 26,
+      "193": 15,
       "194": 17,
       "195": 26,
-      "196": 37,
-      "197": 37,
-      "198": 44,
-      "199": 37,
+      "196": 35,
+      "197": 39,
+      "198": 43,
+      "199": 38,
       "200": 19,
       "201": 30,
       "202": 24,
-      "203": 17,
-      "204": 29,
+      "203": 16,
+      "204": 30,
       "205": 22,
       "206": 26,
       "207": 28,
-      "225": 43,
-      "226": 31,
-      "227": 51,
+      "225": 41,
+      "226": 32,
+      "227": 52,
       "228": 94,
-      "229": 28,
-      "230": 20,
+      "229": 27,
+      "230": 21,
       "231": 5
     },
     "39b328eb": {
@@ -25812,15 +25472,15 @@
       "137": 5,
       "138": 12,
       "139": 24,
-      "140": 25,
-      "141": 9,
+      "140": 24,
+      "141": 10,
       "142": 17,
       "143": 10,
       "144": 7,
-      "145": 25,
+      "145": 24,
       "146": 22,
       "147": 18,
-      "148": 18,
+      "148": 19,
       "149": 23,
       "150": 9,
       "151": 16,
@@ -25833,8 +25493,8 @@
       "158": 1,
       "159": 5,
       "160": 6,
-      "161": 9,
-      "162": 5,
+      "161": 8,
+      "162": 6,
       "163": 1,
       "164": 4,
       "165": 2,
@@ -25856,15 +25516,15 @@
       "181": 12,
       "182": 5,
       "183": 11,
-      "184": 46,
-      "185": 15,
-      "186": 2,
+      "184": 44,
+      "185": 16,
+      "186": 3,
       "187": 3,
       "188": 3,
       "189": 7,
       "190": 1,
-      "191": 7,
-      "192": 1,
+      "191": 6,
+      "192": 2,
       "193": 2,
       "194": 4,
       "195": 2,
@@ -25881,14 +25541,14 @@
       "206": 4,
       "207": 1,
       "208": 2,
-      "209": 6,
-      "210": 4,
-      "211": 4,
-      "212": 5,
+      "209": 5,
+      "210": 5,
+      "211": 3,
+      "212": 6,
       "213": 8,
       "214": 1,
-      "215": 4,
-      "216": 5,
+      "215": 3,
+      "216": 6,
       "217": 6,
       "218": 3,
       "219": 6,
@@ -25936,17 +25596,17 @@
       "59": 2,
       "60": 1,
       "64": 1,
-      "65": 2,
-      "66": 2,
-      "67": 3,
+      "65": 1,
+      "66": 3,
+      "67": 2,
       "68": 3,
-      "69": 1,
+      "69": 2,
       "70": 2,
       "72": 3,
       "74": 1,
       "75": 1,
-      "76": 2,
-      "77": 2,
+      "76": 1,
+      "77": 3,
       "78": 1,
       "79": 2,
       "81": 1,
@@ -26036,7 +25696,7 @@
       "195": 3,
       "196": 4,
       "197": 1,
-      "200": 1,
+      "201": 1,
       "202": 4,
       "205": 1,
       "207": 1,
@@ -26047,8 +25707,8 @@
       "214": 1,
       "215": 2,
       "216": 1,
-      "217": 3,
-      "218": 1,
+      "217": 2,
+      "218": 2,
       "219": 2,
       "223": 2,
       "224": 1,
@@ -26079,39 +25739,39 @@
       "12": 23,
       "13": 4,
       "14": 26,
-      "15": 39,
-      "16": 1,
+      "15": 38,
+      "16": 2,
       "66": 1,
       "73": 1,
       "75": 1,
       "76": 2,
       "82": 2,
-      "83": 4,
-      "84": 5,
+      "83": 3,
+      "84": 6,
       "85": 9,
       "86": 12,
       "87": 7,
-      "89": 1,
+      "90": 1,
       "91": 1,
       "92": 2,
-      "93": 7,
-      "94": 9,
+      "93": 6,
+      "94": 10,
       "95": 1,
-      "97": 2,
+      "97": 1,
       "98": 6,
-      "99": 14,
-      "100": 21,
-      "101": 4,
+      "99": 15,
+      "100": 17,
+      "101": 8,
       "103": 1,
       "104": 3,
       "105": 3,
       "106": 6,
-      "107": 21,
-      "108": 7,
+      "107": 19,
+      "108": 9,
       "112": 7,
       "113": 24,
-      "114": 4,
-      "115": 3,
+      "114": 3,
+      "115": 4,
       "116": 1,
       "118": 1,
       "119": 1,
@@ -26150,13 +25810,12 @@
       "164": 2,
       "166": 1,
       "167": 2,
-      "175": 1,
-      "176": 2,
-      "184": 6,
-      "185": 2,
+      "176": 3,
+      "184": 5,
+      "185": 3,
       "187": 4,
-      "188": 3,
-      "189": 7,
+      "188": 2,
+      "189": 8,
       "190": 1,
       "191": 6,
       "192": 6,
@@ -26173,8 +25832,8 @@
       "204": 3,
       "205": 6,
       "206": 1,
-      "207": 5,
-      "208": 1,
+      "207": 4,
+      "208": 2,
       "209": 6,
       "210": 9,
       "211": 10,
@@ -26186,8 +25845,8 @@
       "217": 1,
       "218": 3,
       "219": 2,
-      "220": 2,
-      "221": 1,
+      "220": 1,
+      "221": 2,
       "222": 1,
       "223": 2,
       "224": 3,
@@ -26274,8 +25933,8 @@
       "213": 1,
       "214": 1,
       "215": 2,
-      "216": 3,
-      "217": 4,
+      "216": 2,
+      "217": 5,
       "218": 3,
       "219": 3,
       "224": 1,
@@ -26285,34 +25944,34 @@
       "230": 1
     },
     "a6729ee8": {
-      "79": 15,
-      "80": 21,
+      "79": 14,
+      "80": 22,
       "81": 22,
       "82": 25,
       "83": 40,
-      "84": 65,
-      "85": 156,
-      "86": 343,
-      "87": 489,
-      "88": 12,
+      "84": 63,
+      "85": 157,
+      "86": 341,
+      "87": 491,
+      "88": 13,
       "89": 16,
       "90": 26,
-      "91": 19,
-      "92": 37,
+      "91": 18,
+      "92": 38,
       "93": 72,
       "94": 84,
-      "95": 72,
+      "95": 71,
       "96": 460,
-      "97": 35,
-      "98": 39,
-      "99": 56,
+      "97": 36,
+      "98": 34,
+      "99": 61,
       "101": 2,
       "135": 40,
       "136": 30,
       "137": 18,
-      "138": 102,
-      "139": 778,
-      "140": 70,
+      "138": 101,
+      "139": 769,
+      "140": 80,
       "169": 5,
       "170": 4,
       "171": 3,
@@ -26327,27 +25986,27 @@
       "180": 22,
       "181": 16,
       "182": 23,
-      "183": 77,
+      "183": 76,
       "184": 162,
-      "185": 32,
+      "185": 33,
       "186": 5,
       "187": 6,
       "188": 7,
       "189": 15,
       "190": 8,
       "191": 10,
-      "192": 7,
-      "193": 11,
-      "194": 9,
-      "195": 20,
-      "196": 22,
-      "197": 69,
+      "192": 6,
+      "193": 12,
+      "194": 8,
+      "195": 21,
+      "196": 21,
+      "197": 70,
       "198": 234,
       "199": 21,
       "200": 6,
       "201": 5,
-      "202": 11,
-      "203": 7,
+      "202": 10,
+      "203": 8,
       "204": 10,
       "205": 6,
       "206": 10,
@@ -26357,8 +26016,8 @@
       "210": 3,
       "211": 11,
       "212": 13,
-      "213": 7,
-      "214": 3,
+      "213": 6,
+      "214": 4,
       "215": 15,
       "216": 7,
       "217": 4,
@@ -26368,24 +26027,24 @@
       "221": 8,
       "222": 9,
       "223": 23,
-      "224": 23,
+      "224": 22,
       "225": 67,
-      "226": 44,
+      "226": 45,
       "227": 32,
       "228": 18,
-      "229": 35,
-      "230": 22
+      "229": 34,
+      "230": 23
     },
     "dbd73b6f": {
       "135": 6,
-      "137": 1,
-      "138": 5,
+      "138": 6,
       "139": 5,
       "141": 2,
       "142": 1,
       "143": 3,
       "144": 1,
-      "145": 3,
+      "145": 1,
+      "146": 2,
       "147": 1,
       "148": 5,
       "149": 1,
@@ -26439,8 +26098,8 @@
       "220": 7,
       "223": 8,
       "224": 3,
-      "225": 3,
-      "226": 9,
+      "225": 2,
+      "226": 10,
       "227": 5,
       "228": 5,
       "229": 4,
@@ -26463,8 +26122,7 @@
       "1": 1,
       "3": 4,
       "5": 1,
-      "8": 1,
-      "9": 2,
+      "9": 3,
       "10": 1,
       "12": 3,
       "14": 1,
@@ -26477,8 +26135,8 @@
       "26": 1,
       "27": 1,
       "28": 2,
-      "30": 2,
-      "31": 1,
+      "30": 1,
+      "31": 2,
       "34": 2,
       "37": 2,
       "39": 2,
@@ -26539,10 +26197,11 @@
       "163": 1,
       "206": 1,
       "207": 1,
-      "208": 1,
+      "209": 1,
       "210": 1,
       "216": 1,
-      "217": 3,
+      "217": 2,
+      "218": 1,
       "219": 2,
       "220": 4,
       "225": 1,
@@ -26685,34 +26344,33 @@
       "171": 12,
       "172": 9,
       "173": 15,
-      "174": 20,
-      "175": 11,
+      "174": 19,
+      "175": 12,
       "176": 16,
-      "177": 20,
-      "178": 16,
+      "177": 19,
+      "178": 17,
       "179": 14,
       "180": 20,
-      "181": 11,
-      "182": 36,
+      "181": 9,
+      "182": 37,
       "183": 24,
-      "184": 1,
+      "184": 2,
       "187": 1,
-      "188": 4,
-      "189": 1,
+      "188": 3,
+      "189": 2,
       "191": 5,
       "192": 1,
       "193": 1,
       "194": 1,
-      "195": 2,
-      "196": 4,
+      "196": 6,
       "197": 1,
-      "198": 8,
-      "199": 6,
+      "198": 7,
+      "199": 7,
       "200": 2,
       "201": 1,
       "202": 2,
-      "203": 12,
-      "204": 5,
+      "203": 10,
+      "204": 7,
       "211": 1,
       "212": 1,
       "213": 3,
@@ -26755,9 +26413,9 @@
       "118": 4,
       "119": 5,
       "120": 5,
-      "121": 6,
+      "121": 5,
       "122": 32,
-      "123": 1,
+      "123": 2,
       "127": 1,
       "128": 1,
       "130": 1,
@@ -26779,12 +26437,12 @@
       "151": 2,
       "154": 4,
       "155": 1,
-      "156": 4,
-      "157": 5,
+      "156": 3,
+      "157": 6,
       "158": 3,
       "159": 1,
-      "160": 3,
-      "161": 9,
+      "160": 2,
+      "161": 10,
       "162": 2,
       "163": 13,
       "164": 2,
@@ -26885,7 +26543,7 @@
       "14": 1,
       "20": 1,
       "29": 1,
-      "32": 1,
+      "33": 1,
       "36": 2,
       "37": 3,
       "38": 1,
@@ -26915,17 +26573,16 @@
       "79": 2,
       "80": 2,
       "81": 2,
-      "82": 2,
-      "83": 3,
+      "82": 1,
+      "83": 4,
       "84": 1,
-      "86": 1,
-      "87": 1,
+      "87": 2,
       "89": 1,
       "90": 1,
       "91": 2,
       "92": 2,
-      "93": 2,
-      "94": 2,
+      "93": 1,
+      "94": 3,
       "96": 2,
       "97": 1,
       "98": 1,
@@ -26934,7 +26591,8 @@
       "103": 2,
       "105": 1,
       "108": 2,
-      "109": 2,
+      "109": 1,
+      "110": 1,
       "111": 2,
       "113": 1,
       "117": 1,
@@ -26952,12 +26610,11 @@
       "134": 3,
       "136": 1,
       "137": 3,
-      "138": 1,
-      "139": 1,
+      "139": 2,
       "140": 5,
       "141": 2,
-      "143": 2,
-      "144": 2,
+      "143": 1,
+      "144": 3,
       "146": 1,
       "149": 2,
       "150": 1,
@@ -26987,14 +26644,15 @@
       "192": 2,
       "193": 3,
       "194": 4,
-      "195": 4,
-      "196": 9,
+      "195": 3,
+      "196": 10,
       "197": 15,
-      "198": 36,
-      "199": 7,
+      "198": 34,
+      "199": 9,
       "200": 1,
       "202": 1,
-      "204": 3,
+      "204": 2,
+      "205": 1,
       "207": 1,
       "208": 2,
       "210": 3,
@@ -27038,8 +26696,8 @@
       "190": 7,
       "191": 11,
       "192": 11,
-      "193": 6,
-      "194": 9,
+      "193": 5,
+      "194": 10,
       "195": 11,
       "196": 10,
       "197": 16,
@@ -27072,40 +26730,40 @@
       "164": 27,
       "165": 16,
       "166": 29,
-      "167": 27,
-      "168": 37,
+      "167": 26,
+      "168": 38,
       "169": 42,
       "170": 33,
       "171": 26,
       "172": 20,
       "173": 30,
       "174": 33,
-      "175": 50,
-      "176": 47,
-      "177": 32,
+      "175": 49,
+      "176": 48,
+      "177": 31,
       "178": 41,
-      "179": 21,
+      "179": 22,
       "180": 33,
-      "181": 56,
+      "181": 55,
       "182": 51,
-      "183": 114,
-      "184": 126,
+      "183": 111,
+      "184": 130,
       "185": 45,
       "186": 20,
       "187": 26,
-      "188": 83,
-      "189": 326,
-      "190": 27,
-      "191": 16,
+      "188": 80,
+      "189": 318,
+      "190": 37,
+      "191": 17,
       "193": 3,
-      "194": 10,
-      "195": 17,
+      "194": 9,
+      "195": 18,
       "196": 11,
-      "197": 28,
-      "198": 81,
-      "199": 63,
-      "200": 19,
-      "201": 4,
+      "197": 27,
+      "198": 79,
+      "199": 66,
+      "200": 18,
+      "201": 5,
       "202": 7,
       "203": 4,
       "204": 4,
@@ -27122,32 +26780,32 @@
       "215": 11,
       "216": 19,
       "217": 31,
-      "218": 38,
-      "219": 43,
+      "218": 36,
+      "219": 45,
       "220": 45,
       "221": 33,
       "222": 60,
-      "223": 101,
-      "224": 96
+      "223": 96,
+      "224": 101
     },
     "3ea2b9d0": {
       "0": 2,
       "1": 5,
       "2": 3,
-      "3": 2,
-      "4": 2,
+      "3": 1,
+      "4": 3,
       "5": 4,
       "6": 7,
       "7": 23,
       "8": 22,
       "9": 26,
-      "10": 39,
+      "10": 38,
       "11": 29,
-      "12": 28,
+      "12": 29,
       "13": 56,
-      "14": 64,
-      "15": 270,
-      "16": 55,
+      "14": 61,
+      "15": 265,
+      "16": 63,
       "17": 2,
       "19": 1,
       "20": 1,
@@ -27163,20 +26821,20 @@
       "30": 4,
       "31": 3,
       "33": 5,
-      "35": 6,
-      "36": 68,
-      "37": 197,
-      "38": 4,
+      "35": 5,
+      "36": 67,
+      "37": 198,
+      "38": 5,
       "79": 18,
       "80": 11,
       "81": 9,
-      "82": 21,
-      "83": 31,
-      "84": 24,
+      "82": 20,
+      "83": 30,
+      "84": 26,
       "85": 38,
-      "86": 92,
+      "86": 91,
       "87": 32,
-      "88": 7,
+      "88": 8,
       "89": 13,
       "90": 20,
       "91": 23,
@@ -27187,27 +26845,27 @@
       "96": 58,
       "97": 23,
       "98": 21,
-      "99": 28,
-      "100": 25,
+      "99": 26,
+      "100": 27,
       "101": 16,
       "102": 3,
       "103": 14,
-      "104": 21,
-      "105": 15,
+      "104": 20,
+      "105": 16,
       "106": 14,
       "107": 11,
       "108": 9,
       "109": 7,
-      "110": 9,
-      "111": 14,
+      "110": 7,
+      "111": 16,
       "112": 15,
       "113": 16,
       "114": 11,
       "115": 9,
       "116": 11,
-      "117": 15,
-      "118": 30,
-      "119": 23,
+      "117": 14,
+      "118": 28,
+      "119": 26,
       "120": 19,
       "121": 20,
       "122": 7,
@@ -27226,9 +26884,9 @@
       "135": 25,
       "136": 17,
       "137": 12,
-      "138": 15,
+      "138": 14,
       "139": 28,
-      "140": 16,
+      "140": 17,
       "141": 15,
       "142": 14,
       "143": 15,
@@ -27246,72 +26904,72 @@
       "156": 10,
       "157": 15,
       "158": 6,
-      "159": 7,
-      "160": 12,
+      "159": 6,
+      "160": 13,
       "161": 10,
       "162": 13,
       "163": 8,
       "164": 11,
       "165": 9,
-      "166": 15,
-      "167": 8,
+      "166": 14,
+      "167": 9,
       "168": 23,
       "169": 10,
-      "170": 11,
-      "171": 19,
+      "170": 10,
+      "171": 20,
       "172": 6,
-      "173": 7,
-      "174": 19,
+      "173": 6,
+      "174": 20,
       "175": 12,
       "176": 15,
-      "177": 23,
-      "178": 16,
+      "177": 21,
+      "178": 18,
       "179": 12,
       "180": 13,
-      "181": 21,
-      "182": 28,
+      "181": 20,
+      "182": 29,
       "183": 25,
       "184": 48,
       "185": 24,
       "186": 7,
-      "187": 11,
-      "188": 24,
+      "187": 10,
+      "188": 25,
       "189": 17,
-      "190": 22,
-      "191": 23,
+      "190": 21,
+      "191": 24,
       "192": 32,
       "193": 29,
-      "194": 28,
-      "195": 60,
-      "196": 78,
+      "194": 26,
+      "195": 61,
+      "196": 77,
       "197": 79,
-      "198": 93,
-      "199": 108,
+      "198": 92,
+      "199": 111,
       "200": 52,
-      "201": 25,
-      "202": 25,
-      "203": 46,
+      "201": 24,
+      "202": 26,
+      "203": 45,
       "204": 34,
-      "205": 29,
+      "205": 30,
       "206": 16,
       "207": 20,
       "208": 15,
       "209": 33,
-      "210": 30,
-      "211": 37,
-      "212": 46,
-      "213": 38,
+      "210": 29,
+      "211": 38,
+      "212": 45,
+      "213": 39,
       "214": 25,
       "215": 44,
       "216": 80,
-      "217": 104,
-      "218": 147,
-      "219": 234,
-      "220": 266,
-      "221": 227,
-      "222": 286,
-      "223": 1271,
-      "224": 333
+      "217": 103,
+      "218": 146,
+      "219": 232,
+      "220": 269,
+      "221": 225,
+      "222": 285,
+      "223": 1237,
+      "224": 371
     },
     "50c7c938": {
       "79": 3,
@@ -27319,8 +26977,8 @@
       "81": 1,
       "82": 1,
       "83": 2,
-      "84": 7,
-      "85": 2,
+      "84": 6,
+      "85": 3,
       "86": 2,
       "87": 1,
       "88": 1,
@@ -27355,8 +27013,8 @@
       "130": 2,
       "131": 2,
       "132": 4,
-      "133": 2,
-      "134": 7,
+      "133": 1,
+      "134": 8,
       "135": 3,
       "136": 2,
       "137": 1,
@@ -27383,7 +27041,8 @@
       "164": 1,
       "168": 1,
       "169": 2,
-      "171": 2,
+      "171": 1,
+      "172": 1,
       "173": 2,
       "174": 2,
       "175": 1,
@@ -27407,7 +27066,7 @@
       "198": 18,
       "199": 10,
       "200": 1,
-      "201": 1,
+      "202": 1,
       "203": 1,
       "210": 5,
       "214": 1,
@@ -27419,8 +27078,8 @@
       "220": 6,
       "221": 4,
       "222": 12,
-      "223": 8,
-      "224": 11
+      "223": 7,
+      "224": 12
     },
     "aea9c7ef": {
       "163": 2,
@@ -27432,8 +27091,8 @@
       "177": 1,
       "178": 1,
       "179": 1,
-      "182": 4,
-      "183": 7,
+      "182": 3,
+      "183": 8,
       "184": 3,
       "185": 3,
       "186": 1,
@@ -27444,15 +27103,15 @@
       "192": 10,
       "193": 6,
       "194": 6,
-      "195": 15,
-      "196": 14,
+      "195": 14,
+      "196": 15,
       "197": 7,
       "198": 6,
       "199": 7,
       "200": 2,
       "201": 2,
-      "202": 4,
-      "203": 3,
+      "202": 3,
+      "203": 4,
       "204": 4,
       "205": 4,
       "206": 3,
@@ -27460,8 +27119,8 @@
       "208": 8,
       "209": 9,
       "210": 8,
-      "211": 21,
-      "212": 58,
+      "211": 20,
+      "212": 59,
       "217": 1
     },
     "8d981f3d": {
@@ -27495,9 +27154,9 @@
       "195": 3,
       "196": 5,
       "197": 8,
-      "198": 15,
+      "198": 14,
       "199": 15,
-      "200": 10,
+      "200": 11,
       "202": 3,
       "203": 3,
       "204": 1,
@@ -27506,8 +27165,7 @@
     "6b881aaa": {
       "0": 4,
       "1": 7,
-      "2": 1,
-      "3": 4,
+      "3": 5,
       "5": 2,
       "6": 2,
       "7": 3,
@@ -27524,26 +27182,26 @@
       "80": 18,
       "81": 10,
       "82": 13,
-      "83": 22,
-      "84": 28,
+      "83": 21,
+      "84": 29,
       "85": 16,
-      "86": 28,
-      "87": 26,
+      "86": 27,
+      "87": 27,
       "88": 12,
       "89": 9,
       "90": 15,
-      "91": 22,
+      "91": 21,
       "92": 27,
       "93": 48,
-      "94": 42,
-      "95": 19,
-      "96": 25,
+      "94": 43,
+      "95": 18,
+      "96": 26,
       "97": 104,
       "151": 1,
       "153": 2,
       "154": 3,
-      "155": 4,
-      "156": 2,
+      "155": 3,
+      "156": 3,
       "157": 2,
       "158": 2,
       "159": 1,
@@ -27558,8 +27216,7 @@
       "172": 1,
       "174": 1,
       "175": 1,
-      "176": 1,
-      "177": 7,
+      "177": 8,
       "178": 3,
       "181": 2,
       "183": 1,
@@ -27567,37 +27224,39 @@
       "185": 1,
       "186": 2,
       "187": 2,
-      "188": 3,
-      "189": 6,
+      "188": 2,
+      "189": 7,
       "190": 2,
-      "191": 12,
+      "191": 11,
+      "192": 1,
       "194": 3,
       "195": 6,
       "196": 16,
       "197": 13,
       "198": 19,
-      "199": 18,
-      "200": 4,
+      "199": 17,
+      "200": 5,
       "202": 3,
       "203": 2,
       "204": 7,
       "206": 3,
-      "209": 2,
-      "210": 1
+      "209": 1,
+      "210": 2
     },
     "df4244d0": {
       "162": 2,
       "164": 1,
       "170": 1,
       "171": 1,
-      "175": 2,
+      "175": 1,
+      "176": 1,
       "178": 5,
       "179": 2,
       "180": 2,
       "181": 2,
       "182": 1,
-      "183": 5,
-      "184": 2,
+      "183": 4,
+      "184": 3,
       "185": 5,
       "186": 2,
       "187": 4,
@@ -27607,19 +27266,19 @@
       "192": 5,
       "194": 3,
       "195": 5,
-      "196": 3,
-      "197": 11,
+      "196": 2,
+      "197": 12,
       "198": 12,
       "199": 15,
-      "200": 4,
-      "201": 4,
+      "200": 3,
+      "201": 5,
       "202": 8,
-      "203": 12,
+      "203": 11,
       "204": 15,
-      "205": 12,
+      "205": 13,
       "206": 17,
-      "207": 14,
-      "208": 5
+      "207": 12,
+      "208": 7
     },
     "07b86580": {
       "162": 2,
@@ -27641,25 +27300,25 @@
       "187": 5,
       "188": 10,
       "189": 10,
-      "190": 16,
+      "190": 15,
       "191": 11,
-      "192": 9,
+      "192": 10,
       "193": 10,
       "194": 8,
       "195": 16,
       "196": 10,
       "197": 14,
-      "198": 24,
-      "199": 13,
+      "198": 23,
+      "199": 14,
       "200": 5,
       "201": 15,
       "202": 16,
-      "203": 22,
+      "203": 21,
       "204": 13,
-      "205": 5,
+      "205": 6,
       "206": 8,
-      "207": 21,
-      "208": 6
+      "207": 20,
+      "208": 7
     },
     "578af099": {
       "206": 1
@@ -27677,8 +27336,8 @@
       "202": 1
     },
     "bab6a29f": {
-      "97": 3,
-      "98": 3,
+      "97": 2,
+      "98": 4,
       "99": 2,
       "100": 14,
       "101": 2,
@@ -27738,44 +27397,43 @@
       "158": 2,
       "159": 1,
       "160": 1,
-      "161": 3,
-      "162": 4,
+      "161": 2,
+      "162": 5,
       "163": 4,
       "164": 2,
       "165": 2,
       "166": 1,
       "167": 5,
       "168": 4,
-      "169": 1,
-      "170": 2,
-      "171": 2,
-      "172": 2,
+      "170": 3,
+      "171": 1,
+      "172": 3,
       "173": 9,
-      "174": 21,
-      "175": 18,
-      "176": 18,
-      "177": 31,
-      "178": 18,
+      "174": 20,
+      "175": 19,
+      "176": 17,
+      "177": 30,
+      "178": 20,
       "179": 7,
       "180": 13,
       "181": 20,
       "182": 9,
       "186": 1,
       "187": 10,
-      "188": 21,
-      "189": 20,
+      "188": 20,
+      "189": 21,
       "190": 28,
       "191": 19,
       "192": 25,
       "193": 16,
       "194": 15,
       "195": 36,
-      "196": 16,
-      "197": 49,
-      "198": 74,
+      "196": 14,
+      "197": 51,
+      "198": 72,
       "199": 74,
-      "200": 30,
-      "201": 46,
+      "200": 31,
+      "201": 47,
       "202": 24
     },
     "9c9f091d": {
@@ -27788,13 +27446,13 @@
     "eeafa14a": {
       "161": 4,
       "162": 6,
-      "163": 8,
-      "164": 1,
+      "163": 7,
+      "164": 2,
       "165": 3,
       "166": 7,
       "167": 1,
-      "168": 9,
-      "169": 8,
+      "168": 8,
+      "169": 9,
       "170": 6,
       "171": 6,
       "172": 1,
@@ -27802,15 +27460,15 @@
       "174": 11,
       "175": 6,
       "176": 2,
-      "177": 6,
-      "178": 3,
+      "177": 5,
+      "178": 4,
       "179": 2,
       "180": 5,
       "181": 6,
       "182": 4,
-      "183": 4,
+      "183": 3,
       "184": 7,
-      "185": 3,
+      "185": 4,
       "186": 2,
       "187": 2,
       "188": 5,
@@ -27836,50 +27494,50 @@
       "95": 8,
       "96": 4,
       "97": 5,
-      "98": 6,
+      "98": 5,
       "99": 16,
-      "100": 6,
+      "100": 7,
       "101": 3,
       "102": 1,
       "103": 7,
-      "104": 65,
-      "105": 161,
-      "106": 13,
+      "104": 63,
+      "105": 160,
+      "106": 16,
       "107": 7,
       "108": 7,
       "109": 3,
       "110": 3,
       "111": 43,
-      "112": 37,
+      "112": 35,
       "113": 63,
       "114": 80,
-      "115": 76,
+      "115": 78,
       "116": 58,
-      "117": 52,
+      "117": 51,
       "118": 70,
-      "119": 50,
+      "119": 51,
       "120": 44,
       "121": 40,
       "122": 53,
       "123": 41,
-      "124": 46,
-      "125": 53,
-      "126": 61,
+      "124": 45,
+      "125": 52,
+      "126": 62,
       "127": 73,
       "128": 75,
-      "129": 76,
+      "129": 77,
       "130": 47,
-      "131": 75,
-      "132": 62,
-      "133": 83,
-      "134": 103,
-      "135": 131,
-      "136": 151,
-      "137": 147,
-      "138": 269,
-      "139": 381,
-      "140": 103,
-      "141": 47
+      "131": 73,
+      "132": 64,
+      "133": 81,
+      "134": 104,
+      "135": 129,
+      "136": 153,
+      "137": 145,
+      "138": 262,
+      "139": 391,
+      "140": 101,
+      "141": 49
     },
     "b9a5a189": {
       "2": 1,
@@ -27905,7 +27563,8 @@
       "68": 1,
       "70": 1,
       "72": 2,
-      "75": 2,
+      "75": 1,
+      "76": 1,
       "78": 4,
       "82": 2,
       "84": 1,
@@ -27942,8 +27601,8 @@
       "120": 10,
       "121": 10,
       "122": 11,
-      "123": 5,
-      "124": 7,
+      "123": 4,
+      "124": 8,
       "125": 6,
       "126": 11,
       "127": 11,
@@ -27977,22 +27636,22 @@
       "95": 2,
       "96": 3,
       "97": 2,
-      "98": 12,
+      "98": 11,
       "99": 19,
-      "100": 26,
+      "100": 27,
       "101": 17,
       "102": 11,
       "103": 16,
       "104": 13,
-      "105": 17,
-      "106": 24,
-      "107": 18,
-      "108": 28,
+      "105": 16,
+      "106": 25,
+      "107": 17,
+      "108": 29,
       "109": 5,
-      "110": 18,
-      "111": 20,
-      "112": 36,
-      "113": 25,
+      "110": 16,
+      "111": 22,
+      "112": 35,
+      "113": 26,
       "114": 58,
       "115": 29,
       "116": 16,
@@ -28000,8 +27659,8 @@
       "118": 28,
       "119": 27,
       "120": 15,
-      "121": 34,
-      "122": 28,
+      "121": 33,
+      "122": 29,
       "123": 18,
       "124": 15,
       "125": 27,
@@ -28033,22 +27692,22 @@
       "81": 9,
       "82": 13,
       "83": 17,
-      "84": 17,
-      "85": 19,
+      "84": 16,
+      "85": 20,
       "86": 12,
       "87": 15,
       "88": 15,
       "89": 15,
       "90": 16,
-      "91": 15,
+      "91": 14,
       "92": 19,
-      "93": 10,
+      "93": 11,
       "94": 12,
       "95": 8,
       "96": 12,
-      "97": 12,
+      "97": 11,
       "98": 27,
-      "99": 21,
+      "99": 22,
       "100": 23,
       "101": 13,
       "102": 15,
@@ -28056,10 +27715,10 @@
       "104": 15,
       "105": 25,
       "106": 23,
-      "107": 41,
-      "108": 77,
+      "107": 37,
+      "108": 79,
       "109": 80,
-      "110": 122,
+      "110": 124,
       "111": 22,
       "112": 1
     },
@@ -28090,13 +27749,13 @@
       "112": 1
     },
     "6307e77b": {
-      "79": 4,
-      "80": 6,
+      "79": 3,
+      "80": 7,
       "81": 4,
       "82": 7,
       "83": 16,
-      "84": 16,
-      "85": 27,
+      "84": 15,
+      "85": 28,
       "86": 12,
       "87": 8,
       "88": 6,
@@ -28112,16 +27771,16 @@
       "98": 5,
       "99": 11,
       "100": 16,
-      "101": 6,
-      "102": 4,
-      "103": 9,
-      "104": 5,
+      "101": 5,
+      "102": 5,
+      "103": 8,
+      "104": 6,
       "105": 16,
       "106": 28,
       "107": 37,
       "108": 29,
-      "109": 21,
-      "110": 42
+      "109": 20,
+      "110": 43
     },
     "23285eb9": {
       "15": 2,
@@ -28138,10 +27797,9 @@
       "50": 1,
       "56": 2,
       "58": 1,
-      "59": 1,
-      "60": 1,
+      "60": 2,
       "61": 1,
-      "67": 1,
+      "68": 1,
       "69": 1,
       "70": 2,
       "72": 2,
@@ -28152,8 +27810,7 @@
       "84": 5,
       "85": 1,
       "90": 1,
-      "91": 1,
-      "92": 3,
+      "92": 4,
       "93": 3,
       "95": 2,
       "96": 1,
@@ -28163,14 +27820,14 @@
       "100": 1,
       "101": 3,
       "102": 2,
-      "103": 3,
-      "104": 1,
+      "103": 2,
+      "104": 2,
       "105": 1
     },
     "2b670683": {
       "80": 1,
-      "100": 596,
-      "101": 78
+      "100": 586,
+      "101": 88
     },
     "ec941888": {
       "79": 11,
@@ -28179,23 +27836,23 @@
       "82": 16,
       "83": 14,
       "84": 14,
-      "85": 23,
-      "86": 24,
-      "87": 15,
-      "88": 9,
-      "89": 11,
+      "85": 21,
+      "86": 26,
+      "87": 14,
+      "88": 8,
+      "89": 13,
       "90": 23,
       "91": 30,
-      "92": 25,
+      "92": 23,
       "93": 29,
-      "94": 30,
+      "94": 32,
       "95": 25,
-      "96": 83,
-      "97": 98,
-      "98": 191,
-      "99": 423,
-      "100": 1285,
-      "101": 99
+      "96": 82,
+      "97": 97,
+      "98": 187,
+      "99": 427,
+      "100": 1275,
+      "101": 111
     },
     "e38f7d54": {
       "32": 1,
@@ -28212,8 +27869,8 @@
       "19": 2,
       "20": 2,
       "22": 4,
-      "23": 12,
-      "24": 5
+      "23": 11,
+      "24": 6
     },
     "22780c8d": {
       "15": 2,
@@ -28224,14 +27881,14 @@
       "2": 1,
       "3": 10,
       "4": 1,
-      "5": 9,
+      "5": 8,
       "6": 11,
-      "7": 12,
+      "7": 13,
       "8": 13,
       "9": 5,
       "10": 8,
-      "11": 8,
-      "12": 41
+      "11": 7,
+      "12": 42
     },
     "ad3f0984": {
       "0": 6,
@@ -28239,29 +27896,29 @@
       "2": 11,
       "3": 16,
       "4": 7,
-      "5": 9,
+      "5": 8,
       "6": 21,
-      "7": 68
+      "7": 69
     },
     "9783f817": {
       "0": 2,
       "1": 2,
       "2": 3,
-      "3": 5,
+      "3": 4,
       "5": 8,
-      "6": 20,
-      "7": 1
+      "6": 19,
+      "7": 2
     }
   },
   "appReviewDwellByRecruiter": {
     "Satinder Kaur": {
-      "79": 5,
-      "80": 8,
+      "79": 4,
+      "80": 9,
       "81": 4,
       "82": 7,
       "83": 17,
-      "84": 20,
-      "85": 29,
+      "84": 19,
+      "85": 30,
       "86": 14,
       "87": 11,
       "88": 7,
@@ -28274,22 +27931,22 @@
       "95": 11,
       "96": 11,
       "97": 9,
-      "98": 17,
+      "98": 16,
       "99": 30,
-      "100": 42,
-      "101": 23,
-      "102": 15,
-      "103": 25,
-      "104": 19,
-      "105": 33,
-      "106": 52,
-      "107": 55,
-      "108": 57,
-      "109": 26,
-      "110": 60,
-      "111": 20,
-      "112": 36,
-      "113": 25,
+      "100": 43,
+      "101": 22,
+      "102": 16,
+      "103": 24,
+      "104": 20,
+      "105": 32,
+      "106": 53,
+      "107": 54,
+      "108": 58,
+      "109": 25,
+      "110": 59,
+      "111": 22,
+      "112": 35,
+      "113": 26,
       "114": 58,
       "115": 29,
       "116": 16,
@@ -28297,8 +27954,8 @@
       "118": 28,
       "119": 27,
       "120": 15,
-      "121": 34,
-      "122": 28,
+      "121": 33,
+      "122": 29,
       "123": 18,
       "124": 15,
       "125": 27,
@@ -28322,71 +27979,71 @@
       "179": 6,
       "180": 5,
       "181": 17,
-      "182": 14,
-      "183": 13,
+      "182": 13,
+      "183": 14,
       "184": 11,
       "185": 13,
       "186": 5,
       "187": 5,
       "188": 12,
       "189": 13,
-      "190": 19,
+      "190": 18,
       "191": 21,
-      "192": 19,
+      "192": 20,
       "193": 16,
       "194": 14,
-      "195": 31,
-      "196": 24,
+      "195": 30,
+      "196": 25,
       "197": 21,
-      "198": 187,
-      "199": 117,
-      "200": 66,
+      "198": 184,
+      "199": 120,
+      "200": 65,
       "201": 105,
-      "202": 158,
-      "203": 170,
+      "202": 157,
+      "203": 169,
       "204": 147,
-      "205": 134,
-      "206": 102,
+      "205": 137,
+      "206": 100,
       "207": 95,
-      "208": 108,
-      "209": 145,
-      "210": 114,
-      "211": 131,
-      "212": 176,
-      "213": 104,
-      "214": 113,
-      "215": 114,
+      "208": 109,
+      "209": 146,
+      "210": 113,
+      "211": 130,
+      "212": 174,
+      "213": 107,
+      "214": 114,
+      "215": 113,
       "216": 129,
-      "217": 109,
-      "218": 130,
-      "219": 198,
-      "220": 246,
-      "221": 161,
-      "222": 259,
-      "223": 349,
+      "217": 106,
+      "218": 131,
+      "219": 196,
+      "220": 244,
+      "221": 164,
+      "222": 257,
+      "223": 351,
       "224": 250,
-      "225": 382,
-      "226": 580,
-      "227": 295,
-      "228": 39,
-      "229": 134,
-      "230": 78,
-      "231": 10
+      "225": 375,
+      "226": 582,
+      "227": 304,
+      "228": 38,
+      "229": 133,
+      "230": 79,
+      "231": 11
     },
     "Unassigned": {
       "0": 10,
       "1": 7,
       "2": 8,
-      "3": 23,
+      "3": 22,
       "4": 6,
-      "5": 21,
-      "6": 34,
-      "7": 20,
-      "8": 24,
-      "9": 15,
+      "5": 20,
+      "6": 33,
+      "7": 22,
+      "8": 23,
+      "9": 16,
       "10": 28,
-      "11": 13,
-      "12": 50,
+      "11": 12,
+      "12": 51,
       "13": 8,
       "14": 23,
       "15": 47,
@@ -28401,8 +28058,8 @@
       "26": 2,
       "27": 1,
       "28": 5,
-      "30": 3,
-      "31": 2,
+      "30": 2,
+      "31": 3,
       "33": 4,
       "34": 2,
       "36": 4,
@@ -28427,88 +28084,87 @@
       "56": 9,
       "57": 2,
       "58": 8,
-      "59": 3,
-      "60": 2,
+      "59": 2,
+      "60": 3,
       "61": 1,
       "62": 1,
       "63": 2,
       "65": 1,
       "66": 5,
-      "67": 1,
-      "68": 4,
+      "68": 5,
       "69": 2,
       "70": 3,
       "71": 2,
       "72": 5,
       "73": 2,
       "74": 2,
-      "75": 3,
-      "76": 4,
+      "75": 2,
+      "76": 5,
       "77": 3,
       "78": 10,
-      "79": 34,
-      "80": 32,
+      "79": 33,
+      "80": 33,
       "81": 31,
-      "82": 37,
+      "82": 36,
       "83": 61,
-      "84": 98,
-      "85": 224,
-      "86": 489,
-      "87": 510,
-      "88": 17,
+      "84": 96,
+      "85": 225,
+      "86": 488,
+      "87": 512,
+      "88": 18,
       "89": 27,
       "90": 42,
-      "91": 40,
-      "92": 64,
-      "93": 156,
-      "94": 161,
-      "95": 138,
-      "96": 640,
-      "97": 193,
-      "98": 313,
-      "99": 628,
-      "100": 2317,
-      "101": 254,
+      "91": 37,
+      "92": 67,
+      "93": 153,
+      "94": 164,
+      "95": 137,
+      "96": 639,
+      "97": 191,
+      "98": 305,
+      "99": 634,
+      "100": 2298,
+      "101": 279,
       "102": 7,
-      "103": 29,
-      "104": 92,
+      "103": 28,
+      "104": 90,
       "105": 186,
-      "106": 31,
+      "106": 34,
       "107": 20,
       "108": 24,
-      "109": 13,
-      "110": 16,
-      "111": 70,
-      "112": 62,
+      "109": 12,
+      "110": 15,
+      "111": 72,
+      "112": 60,
       "113": 95,
       "114": 108,
-      "115": 97,
+      "115": 99,
       "116": 62,
-      "117": 57,
+      "117": 56,
       "118": 84,
-      "119": 61,
+      "119": 62,
       "120": 56,
       "121": 50,
       "122": 67,
-      "123": 47,
+      "123": 46,
       "124": 53,
-      "125": 60,
-      "126": 73,
+      "125": 59,
+      "126": 74,
       "127": 89,
       "128": 100,
-      "129": 99,
+      "129": 100,
       "130": 55,
-      "131": 80,
-      "132": 66,
-      "133": 95,
-      "134": 125,
-      "135": 160,
-      "136": 179,
-      "137": 154,
-      "138": 290,
-      "139": 414,
-      "140": 115,
-      "141": 50,
+      "131": 78,
+      "132": 68,
+      "133": 93,
+      "134": 126,
+      "135": 158,
+      "136": 181,
+      "137": 152,
+      "138": 283,
+      "139": 424,
+      "140": 113,
+      "141": 52,
       "142": 3,
       "143": 3,
       "144": 2,
@@ -28523,102 +28179,103 @@
       "153": 1,
       "154": 5,
       "155": 1,
-      "156": 7,
-      "157": 7,
+      "156": 6,
+      "157": 8,
       "158": 4,
       "159": 3,
-      "160": 4,
-      "161": 19,
+      "160": 3,
+      "161": 20,
       "162": 44,
-      "163": 48,
-      "164": 28,
+      "163": 47,
+      "164": 29,
       "165": 21,
       "166": 39,
       "167": 35,
-      "168": 28,
-      "169": 35,
+      "168": 27,
+      "169": 36,
       "170": 42,
       "171": 27,
       "172": 16,
       "173": 31,
-      "174": 45,
+      "174": 44,
       "175": 45,
-      "176": 32,
-      "177": 48,
-      "178": 42,
+      "176": 33,
+      "177": 46,
+      "178": 44,
       "179": 28,
       "180": 43,
       "181": 48,
-      "182": 76,
-      "183": 88,
-      "184": 50,
+      "182": 75,
+      "183": 85,
+      "184": 53,
       "185": 39,
-      "186": 28,
+      "186": 29,
       "187": 37,
-      "188": 44,
-      "189": 36,
+      "188": 42,
+      "189": 38,
       "190": 55,
-      "191": 41,
-      "192": 41,
+      "191": 38,
+      "192": 43,
       "193": 23,
-      "194": 33,
-      "195": 47,
-      "196": 60,
-      "197": 74,
-      "198": 96,
-      "199": 94,
+      "194": 34,
+      "195": 45,
+      "196": 59,
+      "197": 77,
+      "198": 93,
+      "199": 96,
       "200": 42,
-      "201": 51,
+      "201": 52,
       "202": 60,
-      "203": 112,
-      "204": 66,
-      "205": 36,
+      "203": 108,
+      "204": 69,
+      "205": 37,
       "206": 44,
-      "207": 44,
-      "208": 9,
-      "209": 5,
+      "207": 42,
+      "208": 10,
+      "209": 6,
       "210": 1,
       "211": 10,
       "212": 4,
       "213": 5,
       "214": 4,
       "215": 7,
-      "216": 7,
+      "216": 6,
       "217": 12,
-      "218": 2,
+      "218": 3,
       "219": 5,
       "220": 8,
       "221": 2,
       "222": 6,
       "223": 5,
       "224": 8,
-      "225": 54,
-      "226": 37,
-      "227": 55,
+      "225": 52,
+      "226": 38,
+      "227": 56,
       "228": 100,
-      "229": 33,
-      "230": 27,
+      "229": 32,
+      "230": 28,
       "231": 5
     },
     "Deepti Leslie": {
       "0": 6,
-      "1": 9,
-      "2": 4,
+      "1": 10,
+      "2": 3,
       "3": 6,
-      "4": 2,
+      "4": 3,
       "5": 6,
       "6": 9,
-      "7": 22,
-      "8": 21,
+      "7": 23,
+      "8": 22,
       "9": 29,
-      "10": 37,
-      "11": 28,
-      "12": 27,
-      "13": 49,
-      "14": 65,
-      "15": 242,
-      "16": 59,
+      "10": 36,
+      "11": 31,
+      "12": 30,
+      "13": 55,
+      "14": 62,
+      "15": 246,
+      "16": 67,
       "17": 2,
+      "19": 1,
       "20": 1,
       "21": 2,
       "22": 4,
@@ -28630,33 +28287,32 @@
       "28": 5,
       "29": 4,
       "30": 4,
-      "31": 3,
-      "32": 1,
+      "31": 1,
       "33": 5,
       "79": 24,
       "80": 18,
       "81": 10,
       "82": 13,
-      "83": 22,
-      "84": 28,
+      "83": 21,
+      "84": 29,
       "85": 16,
-      "86": 28,
-      "87": 26,
+      "86": 27,
+      "87": 27,
       "88": 12,
       "89": 9,
       "90": 15,
-      "91": 22,
+      "91": 21,
       "92": 27,
       "93": 48,
-      "94": 42,
-      "95": 19,
-      "96": 25,
+      "94": 43,
+      "95": 18,
+      "96": 26,
       "97": 104,
       "115": 4,
       "116": 11,
-      "117": 18,
-      "118": 37,
-      "119": 28,
+      "117": 17,
+      "118": 35,
+      "119": 31,
       "120": 25,
       "121": 27,
       "122": 8,
@@ -28670,109 +28326,107 @@
       "130": 9,
       "131": 19,
       "132": 22,
-      "133": 28,
-      "134": 25,
+      "133": 27,
+      "134": 26,
       "135": 74,
       "136": 51,
-      "137": 40,
-      "138": 138,
-      "139": 846,
-      "140": 118,
-      "141": 29,
+      "137": 39,
+      "138": 136,
+      "139": 838,
+      "140": 128,
+      "141": 30,
       "142": 34,
-      "143": 30,
-      "144": 10,
-      "145": 33,
-      "146": 34,
+      "143": 29,
+      "144": 11,
+      "145": 30,
+      "146": 36,
       "147": 29,
-      "148": 36,
+      "148": 37,
       "149": 44,
       "150": 19,
       "151": 30,
       "152": 34,
       "153": 20,
       "154": 27,
-      "155": 28,
-      "156": 26,
+      "155": 27,
+      "156": 27,
       "157": 22,
       "158": 12,
-      "159": 14,
-      "160": 24,
-      "161": 54,
-      "162": 74,
+      "159": 13,
+      "160": 25,
+      "161": 53,
+      "162": 75,
       "163": 51,
       "164": 45,
       "165": 32,
-      "166": 48,
+      "166": 47,
       "167": 37,
-      "168": 64,
+      "168": 65,
       "169": 63,
-      "170": 56,
+      "170": 55,
       "171": 54,
-      "172": 30,
-      "173": 57,
-      "174": 74,
-      "175": 82,
+      "172": 31,
+      "173": 56,
+      "174": 75,
+      "175": 81,
       "176": 91,
-      "177": 94,
-      "178": 88,
-      "179": 46,
+      "177": 92,
+      "178": 90,
+      "179": 47,
       "180": 78,
-      "181": 113,
+      "181": 111,
       "182": 122,
-      "183": 240,
-      "184": 393,
-      "185": 118,
-      "186": 37,
-      "187": 50,
-      "188": 127,
-      "189": 375,
-      "190": 66,
+      "183": 237,
+      "184": 395,
+      "185": 120,
+      "186": 38,
+      "187": 49,
+      "188": 124,
+      "189": 368,
+      "190": 75,
       "191": 72,
-      "192": 42,
-      "193": 51,
-      "194": 62,
-      "195": 114,
-      "196": 147,
+      "192": 43,
+      "193": 52,
+      "194": 58,
+      "195": 116,
+      "196": 146,
       "197": 220,
-      "198": 488,
-      "199": 232,
+      "198": 483,
+      "199": 239,
       "200": 86,
-      "201": 40,
-      "202": 65,
+      "201": 39,
+      "202": 66,
       "203": 74,
-      "204": 63,
-      "205": 44,
+      "204": 62,
+      "205": 46,
       "206": 36,
       "207": 26,
       "208": 28,
-      "209": 56,
-      "210": 56,
+      "209": 54,
+      "210": 57,
       "211": 69,
       "212": 74,
       "213": 61,
-      "214": 36,
-      "215": 75,
-      "216": 118,
-      "217": 154,
-      "218": 208,
+      "214": 37,
+      "215": 74,
+      "216": 119,
+      "217": 153,
+      "218": 205,
       "219": 303,
-      "220": 346,
-      "221": 274,
-      "222": 377,
-      "223": 1435,
-      "224": 502,
-      "225": 103,
-      "226": 78,
+      "220": 349,
+      "221": 272,
+      "222": 376,
+      "223": 1395,
+      "224": 545,
+      "225": 102,
+      "226": 80,
       "227": 66,
       "228": 34,
-      "229": 59,
-      "230": 49,
+      "229": 58,
+      "230": 50,
       "231": 1
     },
     "Aditya Singh": {
-      "6": 1,
-      "15": 1,
       "28": 1,
       "37": 1,
       "38": 4,
@@ -28795,17 +28449,17 @@
       "59": 2,
       "60": 1,
       "64": 1,
-      "65": 2,
-      "66": 2,
-      "67": 3,
+      "65": 1,
+      "66": 3,
+      "67": 2,
       "68": 3,
-      "69": 1,
+      "69": 2,
       "70": 2,
       "72": 3,
       "74": 1,
       "75": 1,
-      "76": 2,
-      "77": 2,
+      "76": 1,
+      "77": 3,
       "78": 1,
       "79": 2,
       "81": 1,
@@ -28895,7 +28549,7 @@
       "195": 4,
       "196": 4,
       "197": 1,
-      "200": 1,
+      "201": 1,
       "202": 4,
       "205": 1,
       "207": 1,
@@ -28906,8 +28560,8 @@
       "214": 1,
       "215": 2,
       "216": 1,
-      "217": 3,
-      "218": 1,
+      "217": 2,
+      "218": 2,
       "219": 2,
       "223": 2,
       "224": 1,
@@ -28934,39 +28588,39 @@
       "12": 23,
       "13": 4,
       "14": 26,
-      "15": 39,
-      "16": 1,
+      "15": 38,
+      "16": 2,
       "66": 1,
       "73": 1,
       "75": 1,
       "76": 2,
       "82": 2,
-      "83": 4,
-      "84": 5,
+      "83": 3,
+      "84": 6,
       "85": 9,
       "86": 12,
       "87": 7,
-      "89": 1,
+      "90": 1,
       "91": 1,
       "92": 2,
-      "93": 7,
-      "94": 9,
+      "93": 6,
+      "94": 10,
       "95": 1,
-      "97": 2,
+      "97": 1,
       "98": 6,
-      "99": 14,
-      "100": 21,
-      "101": 4,
+      "99": 15,
+      "100": 17,
+      "101": 8,
       "103": 1,
       "104": 3,
       "105": 3,
       "106": 6,
-      "107": 21,
-      "108": 7,
+      "107": 19,
+      "108": 9,
       "112": 7,
       "113": 24,
-      "114": 4,
-      "115": 3,
+      "114": 3,
+      "115": 4,
       "116": 1,
       "118": 1,
       "119": 1,
@@ -29005,13 +28659,12 @@
       "164": 2,
       "166": 1,
       "167": 2,
-      "175": 1,
-      "176": 2,
-      "184": 6,
-      "185": 2,
+      "176": 3,
+      "184": 5,
+      "185": 3,
       "187": 4,
-      "188": 3,
-      "189": 7,
+      "188": 2,
+      "189": 8,
       "190": 1,
       "191": 6,
       "192": 6,
@@ -29028,8 +28681,8 @@
       "204": 3,
       "205": 6,
       "206": 1,
-      "207": 5,
-      "208": 1,
+      "207": 4,
+      "208": 2,
       "209": 6,
       "210": 9,
       "211": 10,
@@ -29041,8 +28694,8 @@
       "217": 1,
       "218": 3,
       "219": 2,
-      "220": 2,
-      "221": 1,
+      "220": 1,
+      "221": 2,
       "222": 1,
       "223": 2,
       "224": 3,
@@ -29053,49 +28706,46 @@
       "230": 7
     },
     "Oshin Verma": {
-      "64": 2,
-      "67": 1,
+      "64": 1,
       "69": 1,
-      "70": 1,
-      "71": 1,
-      "72": 1,
+      "71": 2,
       "75": 3,
       "76": 1,
-      "77": 3,
-      "78": 4,
+      "77": 2,
+      "78": 5,
       "79": 1,
-      "80": 1,
-      "81": 8,
+      "81": 7,
       "82": 8,
-      "83": 11,
-      "84": 14,
-      "85": 15,
-      "86": 10,
+      "83": 13,
+      "84": 15,
+      "85": 14,
+      "86": 9,
       "87": 15,
       "88": 14,
-      "89": 13,
-      "90": 13,
+      "89": 11,
+      "90": 16,
       "91": 11,
-      "92": 16,
-      "93": 9,
-      "94": 10,
-      "95": 6,
-      "96": 11,
-      "97": 8,
-      "98": 24,
-      "99": 18,
+      "92": 14,
+      "93": 10,
+      "94": 8,
+      "95": 4,
+      "96": 9,
+      "97": 9,
+      "98": 22,
+      "99": 21,
       "100": 24,
-      "101": 11,
-      "102": 9,
+      "101": 13,
+      "102": 10,
       "103": 18,
-      "104": 11,
+      "104": 10,
       "105": 21,
-      "106": 17,
-      "107": 38,
-      "108": 61,
-      "109": 59,
-      "110": 87,
-      "111": 15,
+      "106": 20,
+      "107": 34,
+      "108": 62,
+      "109": 63,
+      "110": 98,
+      "111": 16,
+      "112": 1,
       "113": 2,
       "114": 1,
       "115": 1,
@@ -29159,6 +28809,7 @@
     },
     "Ankita Kabra": {
       "20": 1,
+      "33": 1,
       "36": 2,
       "37": 3,
       "38": 1,
@@ -29177,9 +28828,9 @@
       "194": 9,
       "195": 17,
       "196": 15,
-      "197": 25,
+      "197": 24,
       "198": 55,
-      "199": 100,
+      "199": 101,
       "200": 29,
       "201": 2,
       "202": 3,
@@ -29197,8 +28848,8 @@
       "215": 3,
       "216": 71,
       "217": 58,
-      "218": 93,
-      "219": 36,
+      "218": 92,
+      "219": 37,
       "223": 2,
       "226": 2,
       "228": 1
@@ -29206,10 +28857,12 @@
     "Ritika Bhasin": {
       "1": 2,
       "5": 1,
+      "6": 1,
       "7": 1,
       "8": 2,
       "9": 2,
       "13": 1,
+      "15": 1,
       "16": 1,
       "17": 2,
       "19": 1,
@@ -29295,24 +28948,23 @@
       "223": 1
     },
     "Astha Thakur": {
-      "1": 3,
-      "7": 2,
-      "8": 2,
+      "1": 2,
+      "7": 1,
+      "8": 1,
       "9": 1,
-      "10": 2,
-      "11": 4,
-      "12": 2,
-      "13": 4,
+      "10": 1,
+      "11": 2,
+      "12": 1,
+      "13": 3,
       "14": 4,
-      "15": 24,
+      "15": 11,
       "16": 1,
-      "19": 1,
-      "28": 1,
+      "31": 1,
       "215": 1
     },
     "Neha Vivekanand Pattar": {
-      "97": 3,
-      "98": 3,
+      "97": 2,
+      "98": 4,
       "99": 2,
       "100": 14,
       "101": 2,
@@ -29372,44 +29024,43 @@
       "158": 2,
       "159": 1,
       "160": 1,
-      "161": 3,
-      "162": 4,
+      "161": 2,
+      "162": 5,
       "163": 4,
       "164": 2,
       "165": 2,
       "166": 1,
       "167": 5,
       "168": 4,
-      "169": 1,
-      "170": 2,
-      "171": 2,
-      "172": 2,
+      "170": 3,
+      "171": 1,
+      "172": 3,
       "173": 9,
-      "174": 21,
-      "175": 18,
-      "176": 19,
-      "177": 31,
-      "178": 18,
+      "174": 20,
+      "175": 19,
+      "176": 18,
+      "177": 30,
+      "178": 20,
       "179": 7,
       "180": 13,
       "181": 20,
       "182": 9,
       "186": 1,
       "187": 10,
-      "188": 21,
-      "189": 20,
+      "188": 20,
+      "189": 21,
       "190": 28,
       "191": 19,
       "192": 25,
       "193": 16,
       "194": 15,
       "195": 36,
-      "196": 16,
-      "197": 49,
-      "198": 74,
+      "196": 14,
+      "197": 51,
+      "198": 72,
       "199": 74,
-      "200": 30,
-      "201": 46,
+      "200": 31,
+      "201": 47,
       "202": 24,
       "204": 1,
       "206": 1
@@ -29467,9 +29118,9 @@
       "118": 4,
       "119": 5,
       "120": 5,
-      "121": 6,
+      "121": 5,
       "122": 32,
-      "123": 1,
+      "123": 2,
       "191": 1,
       "201": 1
     },
@@ -29482,50 +29133,51 @@
       "2": 11,
       "3": 16,
       "4": 7,
-      "5": 9,
+      "5": 8,
       "6": 21,
-      "7": 70,
-      "10": 2,
-      "11": 1,
-      "12": 3,
-      "13": 6,
+      "7": 71,
+      "10": 3,
+      "12": 1,
+      "13": 1,
       "14": 2,
-      "15": 13,
+      "15": 17,
       "16": 2,
       "17": 6,
       "18": 3,
       "19": 2,
       "20": 2,
       "22": 4,
-      "23": 12,
-      "24": 5,
-      "35": 6,
-      "36": 68,
-      "37": 197,
-      "38": 4,
+      "23": 11,
+      "24": 6,
+      "28": 1,
+      "31": 1,
+      "35": 5,
+      "36": 67,
+      "37": 198,
+      "38": 5,
       "69": 1,
       "79": 29,
       "80": 24,
       "81": 22,
-      "82": 37,
-      "83": 45,
-      "84": 38,
-      "85": 61,
-      "86": 116,
-      "87": 47,
+      "82": 36,
+      "83": 44,
+      "84": 40,
+      "85": 59,
+      "86": 117,
+      "87": 46,
       "88": 16,
-      "89": 24,
+      "89": 26,
       "90": 43,
       "91": 53,
-      "92": 41,
-      "93": 8,
+      "92": 39,
+      "93": 10,
       "100": 1,
       "118": 1,
       "185": 1
     },
     "Alokita Dhumne": {
       "178": 1,
-      "181": 2
+      "182": 2
     },
     "Tabitha Anceline E": {
       "147": 1,
@@ -29539,42 +29191,48 @@
     "Gopu Nair V": {
       "32": 1,
       "37": 4,
-      "71": 1,
+      "64": 1,
+      "67": 1,
+      "70": 1,
+      "72": 1,
       "73": 1,
       "74": 1,
-      "78": 1,
+      "77": 1,
       "79": 1,
-      "81": 1,
+      "80": 1,
+      "81": 2,
       "82": 5,
-      "83": 6,
-      "84": 3,
-      "85": 4,
+      "83": 4,
+      "84": 1,
+      "85": 6,
       "86": 3,
+      "87": 1,
       "88": 1,
-      "89": 2,
-      "90": 3,
-      "91": 4,
-      "92": 3,
+      "89": 4,
+      "91": 3,
+      "92": 5,
       "93": 1,
-      "94": 2,
-      "95": 2,
-      "96": 1,
-      "97": 4,
-      "98": 3,
-      "99": 5,
+      "94": 4,
+      "95": 4,
+      "96": 3,
+      "97": 2,
+      "98": 5,
+      "99": 3,
       "100": 1,
-      "101": 3,
-      "102": 6,
+      "101": 1,
+      "102": 5,
       "103": 3,
-      "104": 4,
+      "104": 5,
       "105": 4,
-      "106": 6,
+      "106": 3,
       "107": 5,
-      "108": 18,
-      "109": 21,
-      "110": 37,
-      "111": 7,
-      "112": 1
+      "108": 19,
+      "109": 17,
+      "110": 28,
+      "111": 6
+    },
+    "Mashika De Almeida": {
+      "12": 1
     }
   },
   "interviewers": [
@@ -29830,7 +29488,7 @@
       "name": "Gopu Nair V",
       "userId": "4165dd14-a187-4cc8-ba64-eda2782cdf7c",
       "interviews": 32,
-      "feedbackSubmitted": 14,
+      "feedbackSubmitted": 15,
       "pendingFeedback": 18,
       "avgTurnaroundHrs": 5.9
     },
@@ -30027,20 +29685,20 @@
       "avgTurnaroundHrs": 0.6
     },
     {
+      "name": "Nishtha Nagrani",
+      "userId": "d5f13b2b-ddcc-4e0f-bf37-ef6753ba3a93",
+      "interviews": 14,
+      "feedbackSubmitted": 11,
+      "pendingFeedback": 3,
+      "avgTurnaroundHrs": 0.6
+    },
+    {
       "name": "kalindi .",
       "userId": "32ddb506-e999-4e92-a691-98a49160523d",
       "interviews": 13,
       "feedbackSubmitted": 15,
       "pendingFeedback": 1,
       "avgTurnaroundHrs": 16
-    },
-    {
-      "name": "Nishtha Nagrani",
-      "userId": "d5f13b2b-ddcc-4e0f-bf37-ef6753ba3a93",
-      "interviews": 13,
-      "feedbackSubmitted": 11,
-      "pendingFeedback": 2,
-      "avgTurnaroundHrs": 0.6
     },
     {
       "name": "V Pooja",
@@ -34093,7 +33751,7 @@
       "name": "Gopu Nair V",
       "userId": "4165dd14-a187-4cc8-ba64-eda2782cdf7c",
       "interviews": 4,
-      "feedbackSubmitted": 6,
+      "feedbackSubmitted": 7,
       "avgTurnaroundHrs": null
     },
     {
@@ -34731,7 +34389,7 @@
       "jobTitle": "Customer Success Associate (US)",
       "name": "Nishtha Nagrani",
       "userId": "d5f13b2b-ddcc-4e0f-bf37-ef6753ba3a93",
-      "interviews": 13,
+      "interviews": 14,
       "feedbackSubmitted": 11,
       "avgTurnaroundHrs": 0.6
     },
@@ -35699,5 +35357,5 @@
       "avgTurnaroundHrs": null
     }
   ],
-  "totalInterviews": 2615
+  "totalInterviews": 2616
 }
