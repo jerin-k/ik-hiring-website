@@ -219,6 +219,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
+      <div class="fchip"><label class="opt"><input type="checkbox" id="recInclInactive"> Include inactive</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll"> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
@@ -228,17 +229,17 @@ export function renderRecruiter(data) {
     </div>
 
     <div class="rec-subtabs">
-      <button class="rec-subtab active" data-tab="velocity">Submission Velocity</button>
+      <button class="rec-subtab active" data-tab="fulfilment">Fulfilment</button>
+      <button class="rec-subtab" data-tab="velocity">Submission Velocity</button>
       <button class="rec-subtab" data-tab="screening">Screening Efficiency</button>
       <button class="rec-subtab" data-tab="joining">Joining Conversion</button>
-      <button class="rec-subtab" data-tab="fulfilment">Fulfilment</button>
       <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
       <button class="rec-subtab" data-tab="timeinprocess">Time in Process</button>
       <button class="rec-subtab" data-tab="hygiene">Data Hygiene</button>
     </div>
 
     <!-- PANEL: Submission Velocity (LIVE — per-stage/day cells from recruiters[].daily) -->
-    <div class="rec-panel" data-panel="velocity">
+    <div class="rec-panel" data-panel="velocity" style="display:none">
       <p class="sub-note">Pod → Recruiter → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Cells count candidates who <strong>entered</strong> each stage per day, from real stage history (no bulk-update spikes).</p>
       <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
       <div class="scroll-table"><table class="vel-table">
@@ -271,7 +272,7 @@ export function renderRecruiter(data) {
     </div>
 
     <!-- PANEL: Position Fulfilment -->
-    <div class="rec-panel" data-panel="fulfilment" style="display:none">
+    <div class="rec-panel" data-panel="fulfilment">
       <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = min(Capacity, Assigned Score)</strong> — Capacity is set in <strong>Metric Configuration</strong> (per quarter).</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
@@ -444,7 +445,7 @@ export function initRecruiterFilters(data) {
     if (tp) { const t = tp[r.name] || {}; return { hm: t.hmReview || { reached: 0, cleared: 0 }, oa: t.oa || { reached: 0, cleared: 0 }, r1: t.r1 || { reached: 0, cleared: 0 } }; }
     return { hm: { reached: r.hm || 0, cleared: Math.min(r.hm || 0, r.oa || 0) }, oa: { reached: r.oa || 0, cleared: Math.min(r.oa || 0, r.r1 || 0) }, r1: { reached: r.r1 || 0, cleared: null } };
   };
-  let lastGroups = [], lastRecs = [], activeTab = 'velocity';
+  let lastGroups = [], lastRecs = [], activeTab = 'fulfilment';
 
   let msPod = null, msRec = null, msJob = null;
 
@@ -512,8 +513,13 @@ export function initRecruiterFilters(data) {
     const names = msRec ? msRec.getSelected() : [];
     // Job multi-select (msJob) is present but pending — recruiter×job attribution needs the pipeline,
     // so it can't scope the recruiter list yet; wired for when that data lands.
+    // Departed recruiters are hidden by default — their historical numbers are still in the
+    // data (and still score), they just clutter the working view. The Data Hygiene roster
+    // deliberately ignores this and always lists everyone; that tab exists to show the split.
+    const inclInactive = document.getElementById('recInclInactive')?.checked;
     return allRecs.filter(r => {
       if (hideZero && (r.total || 0) === 0) return false;
+      if (!inclInactive && isRecInactive(r)) return false;
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(podOf(r.name, q))) return false;
       return true;
@@ -1199,6 +1205,7 @@ export function initRecruiterFilters(data) {
   msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, renderAll);
   document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
   document.getElementById('recHideZero')?.addEventListener('change', renderAll);
+  document.getElementById('recInclInactive')?.addEventListener('change', renderAll);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
   // Date filter — drives Submission Velocity's 30-day window
@@ -1214,5 +1221,5 @@ export function initRecruiterFilters(data) {
   applyVelYearQuarter();
 
   renderAll();
-  showTab('velocity');
+  showTab('fulfilment');
 }
