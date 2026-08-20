@@ -143,6 +143,19 @@ export function renderRecruiter(data) {
       .rec-subtab:hover { color:var(--text); }
       .rec-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
 
+      /* nested tab strip INSIDE Data Hygiene — pill style, deliberately distinct from the
+         outer underline tabs so two levels of tabs don't read as one row */
+      .hyg-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 16px; }
+      .hyg-tab { appearance:none; background:var(--card); border:1px solid var(--border); border-radius:999px;
+        padding:6px 14px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; }
+      .hyg-tab:hover { color:var(--text); border-color:#cbd5e1; }
+      .hyg-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+      .hyg-tab .n { font-weight:700; margin-left:6px; }
+      .hyg-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin:0 0 6px; }
+      .hyg-dl { appearance:none; background:var(--card); border:1px solid var(--border); border-radius:6px;
+        padding:5px 12px; font-size:11px; font-weight:600; color:var(--muted); cursor:pointer; white-space:nowrap; }
+      .hyg-dl:hover { color:var(--text); border-color:#cbd5e1; }
+
       /* consolidated filter block (matches HM) */
       .rec-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
         display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
@@ -307,33 +320,99 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>Compliance view.</strong> These are candidates &amp; applications the pipeline could not attribute cleanly. The team fixes them <strong>in Ashby</strong> (tag a Recruiter on the hiring team, or remove duplicate Recruiter/Sourcer tags); the next refresh clears the fixed rows. 2026-onward only.</p>
       <div class="cards" id="hygCards" style="margin-bottom:18px"></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Unassigned — reached TA Screen or later, no Recruiter tagged</h4>
-      <p class="sub-note">The actionable backlog: these candidates are in active screening but nobody is credited. Grouped by job. (Applications still in App Review are excluded — those aren't worked yet.)</p>
-      <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:280px">Job / Candidate</th><th>Stage</th><th>Applied</th><th>Application ID</th></tr></thead>
-        <tbody id="hygUnassignedBody"></tbody>
-      </table></div>
+      <div class="hyg-tabs" id="hygTabs">
+        <button class="hyg-tab active" data-h="unassigned">Unassigned<span class="n" id="hygNUnassigned"></span></button>
+        <button class="hyg-tab" data-h="multirec">Multiple Recruiters<span class="n" id="hygNMultiRec"></span></button>
+        <button class="hyg-tab" data-h="multisrc">Multiple Sourcers<span class="n" id="hygNMultiSrc"></span></button>
+        <button class="hyg-tab" data-h="roster">Recruiter Roster<span class="n" id="hygNRoster"></span></button>
+        <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
+        <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
+        <button class="hyg-tab" data-h="anomalies">Other Anomalies<span class="n" id="hygNAnom"></span></button>
+      </div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Multiple Recruiters on one application</h4>
-      <p class="sub-note">More than one hiring-team member tagged <strong>Recruiter</strong>. Scoring currently credits the first — the team should leave a single Recruiter of record (the one who ran the transition).</p>
-      <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Recruiters tagged</th><th>Application ID</th></tr></thead>
-        <tbody id="hygMultiRecBody"></tbody>
-      </table></div>
+      <div class="hyg-panel" data-h="unassigned">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Unassigned — reached TA Screen or later, no Recruiter tagged</h4>
+          <p class="sub-note" style="margin:0">The actionable backlog: these candidates are in active screening but nobody is credited. Grouped by job. (Applications still in App Review are excluded — those aren't worked yet.)</p></div>
+          <button class="hyg-dl" data-dl="unassigned">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:280px">Job / Candidate</th><th>Stage</th><th>Applied</th><th>Application ID</th></tr></thead>
+          <tbody id="hygUnassignedBody"></tbody>
+        </table></div>
+      </div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Multiple Sourcers on one application — data error</h4>
-      <p class="sub-note">A single application should never have more than one <strong>Sourcer</strong>. Any row here is a data anomaly to correct in Ashby.</p>
-      <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Sourcers tagged</th><th>Application ID</th></tr></thead>
-        <tbody id="hygMultiSrcBody"></tbody>
-      </table></div>
+      <div class="hyg-panel" data-h="multirec" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Recruiters on one application</h4>
+          <p class="sub-note" style="margin:0">More than one hiring-team member tagged <strong>Recruiter</strong>. Scoring currently credits the first — the team should leave a single Recruiter of record (the one who ran the transition).</p></div>
+          <button class="hyg-dl" data-dl="multirec">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Recruiters tagged</th><th>Application ID</th></tr></thead>
+          <tbody id="hygMultiRecBody"></tbody>
+        </table></div>
+      </div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Recruiter roster — Active / Inactive</h4>
-      <p class="sub-note"><strong>Active</strong> = current Ashby account enabled. <strong>Inactive</strong> = account disabled (departed) but retained so their historical offers/hires still score. Derived from Ashby <code>user.list</code> <code>isEnabled</code>.</p>
-      <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
-        <tbody id="hygRosterBody"></tbody>
-      </table></div>
+      <div class="hyg-panel" data-h="multisrc" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Sourcers on one application — data error</h4>
+          <p class="sub-note" style="margin:0">A single application should never have more than one <strong>Sourcer</strong>. Any row here is a data anomaly to correct in Ashby.</p></div>
+          <button class="hyg-dl" data-dl="multisrc">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Sourcers tagged</th><th>Application ID</th></tr></thead>
+          <tbody id="hygMultiSrcBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="roster" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter roster — Active / Inactive</h4>
+          <p class="sub-note" style="margin:0"><strong>Active</strong> = current Ashby account enabled. <strong>Inactive</strong> = account disabled (departed) but retained so their historical offers/hires still score. Derived from Ashby <code>user.list</code> <code>isEnabled</code>.</p></div>
+          <button class="hyg-dl" data-dl="roster">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
+          <tbody id="hygRosterBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="offergap" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Offers missing an opening link — still in play</h4>
+          <p class="sub-note" style="margin:0">These candidates have a live offer but no opening attached, so they are missing from Joining Pending. <strong>This is the list to fix</strong> — attach the opening in Ashby and the next refresh clears the row.</p></div>
+          <button class="hyg-dl" data-dl="offergap">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+          <tbody id="hygOfferGapBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="hiredgap" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Hired / closed, missing an opening link</h4>
+          <p class="sub-note" style="margin:0">Offers with no opening attached where the candidate has already joined or the application is closed. <strong>Reference only</strong> — fixing these changes no number on this site, because joins are counted from the opening being closed as hired, not from this link.</p></div>
+          <button class="hyg-dl" data-dl="hiredgap">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+          <tbody id="hygHiredGapBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="anomalies" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Other anomalies</h4>
+          <p class="sub-note" style="margin:0">One-off attribution problems that need correcting at source in Ashby.</p></div>
+          <button class="hyg-dl" data-dl="anomalies">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:280px">Anomaly</th><th style="min-width:240px">Detail</th><th>What to do</th></tr></thead>
+          <tbody id="hygAnomBody"></tbody>
+        </table></div>
+      </div>
     </div>
   `;
 }
@@ -678,6 +757,84 @@ export function initRecruiterFilters(data) {
           <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
       }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No recruiters.</td></tr>`;
     }
+
+    // --- Opening-link gaps: one array from the pipeline, split by whether it is still
+    // actionable. Both tabs read the same rows so the tab counts can never disagree. ---
+    const gaps = data.offerLinkGaps || [];
+    const gapLive = gaps.filter(g => g.needsFix);
+    const gapDone = gaps.filter(g => !g.needsFix);
+
+    const ogBody = document.getElementById('hygOfferGapBody');
+    if (ogBody) {
+      ogBody.innerHTML = gapLive.map(g => `<tr>
+        <td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td>
+        <td>${esc(g.subStage)}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every live offer has an opening attached. ✓</td></tr>`;
+    }
+    const hgBody = document.getElementById('hygHiredGapBody');
+    if (hgBody) {
+      hgBody.innerHTML = gapDone.map(g => `<tr>
+        <td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td>
+        <td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nothing here.</td></tr>`;
+    }
+
+    // --- Other anomalies ---
+    const anomList = [];
+    (dq.excludedAsRecruiter || []).forEach(n => anomList.push({
+      what: 'Excluded interviewer credited as a Recruiter',
+      detail: n,
+      fix: 'Correct the recruiter attribution in Ashby — this person is a dedicated interviewer, not a recruiter.'
+    }));
+    const anBody = document.getElementById('hygAnomBody');
+    if (anBody) {
+      anBody.innerHTML = anomList.map(a => `<tr><td style="font-weight:500">${esc(a.what)}</td><td>${esc(a.detail)}</td><td style="color:var(--muted)">${esc(a.fix)}</td></tr>`).join('')
+        || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No anomalies. ✓</td></tr>`;
+    }
+
+    // --- tab counts ---
+    const setN = (id, n, warn) => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = n; el.style.color = el.closest('.hyg-tab').classList.contains('active') ? '' : (warn && n > 0 ? 'var(--red)' : ''); }
+    };
+    setN('hygNUnassigned', unassigned.length, true);
+    setN('hygNMultiRec', multiRec.length, true);
+    setN('hygNMultiSrc', multiSrc.length, true);
+    setN('hygNRoster', allRecs.filter(r => r.name && r.name !== 'Unassigned').length, false);
+    setN('hygNOfferGap', gapLive.length, true);
+    setN('hygNHiredGap', gapDone.length, false);
+    setN('hygNAnom', anomList.length, true);
+
+    // --- CSV export per tab (client-side; no backend) ---
+    hygCsv = {
+      unassigned: () => [['Job', 'Candidate', 'Stage', 'Applied', 'Application ID'],
+        ...unassigned.map(u => [u.jobTitle || u.job8 || '', u.candidate || '', u.stage || '', u.createdAt || '', u.applicationId || ''])],
+      multirec: () => [['Job', 'Recruiters tagged', 'Application ID'],
+        ...multiRec.map(m => [jobTitleBy8[m.job8] || m.job8 || '', (m.names || []).join(' | '), m.app || ''])],
+      multisrc: () => [['Job', 'Sourcers tagged', 'Application ID'],
+        ...multiSrc.map(m => [jobTitleBy8[m.job8] || m.job8 || '', (m.names || []).join(' | '), m.app || ''])],
+      roster: () => [['Recruiter', 'Status', 'Pod', 'Offers', 'Hired'],
+        ...[...allRecs].filter(r => r.name && r.name !== 'Unassigned')
+          .sort((a, b) => (isRecInactive(a) - isRecInactive(b)) || a.name.localeCompare(b.name))
+          .map(r => [r.name, isRecInactive(r) ? 'Inactive' : 'Active', podOf(r.name, q), r.offer || 0, r.hired || 0])],
+      offergap: () => [['Candidate', 'Job', 'Department', 'Stage', 'DOJ', 'Recruiter'],
+        ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.doj || '', g.recruiter || ''])],
+      hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'DOJ', 'Recruiter'],
+        ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.doj || '', g.recruiter || ''])],
+      anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
+    };
+  }
+
+  // Turns a row array into a downloaded CSV. Quotes every field so commas, quotes and
+  // newlines in job titles or candidate names can't break the columns.
+  let hygCsv = {};
+  function downloadCsv(rows, filename) {
+    const body = rows.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['﻿' + body], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // ===== Submission Velocity render (Pod -> Recruiter -> Stage; last 30 days of range, descending) =====
@@ -984,6 +1141,21 @@ export function initRecruiterFilters(data) {
     renderActiveChart();
   }
   document.querySelectorAll('.rec-subtab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+  // Nested tabs inside Data Hygiene — one data point per tab, each with its own export.
+  document.querySelectorAll('.hyg-tab').forEach(b => b.addEventListener('click', () => {
+    const h = b.dataset.h;
+    document.querySelectorAll('.hyg-tab').forEach(t => t.classList.toggle('active', t.dataset.h === h));
+    document.querySelectorAll('.hyg-panel').forEach(p => { p.style.display = p.dataset.h === h ? '' : 'none'; });
+  }));
+  document.querySelectorAll('.hyg-dl').forEach(b => b.addEventListener('click', () => {
+    const key = b.dataset.dl;
+    const build = hygCsv[key];
+    if (!build) return;
+    const rows = build();
+    if (rows.length <= 1) { b.textContent = 'Nothing to export'; setTimeout(() => { b.textContent = 'Download CSV'; }, 1600); return; }
+    downloadCsv(rows, `data-hygiene-${key}-${new Date().toISOString().slice(0, 10)}.csv`);
+  }));
 
   // Global filters (apply to all sub-tabs) — Pod / Recruiter / Job are multi-select
   msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_ORDER, renderAll);

@@ -86,23 +86,57 @@ export function initHomeFilters() {
       periodLabel = year;
     }
 
-    const totalOpen = openingsArr.reduce((s, o) => s + o.open, 0);
-    const totalFilled = isQuarter ? (f.hired || 0) : (f.hired || 0);
-    const totalPositions = isQuarter ? (f.hired || 0) + totalOpen : (f.hired || 0) + totalOpen;
+    // Openings are counted per DISTINCT opening, bucketed by the quarter the opening
+    // itself was opened: Total = Joined + Open + Missed (On Hold / Shelved are excluded
+    // from Total entirely). Replaces the old "openedAt falls inside From-To" filter.
+    const buckets = aggregateOpenings(data, val, isQuarter, year);
+    const hasBuckets = buckets !== null;
+
+    let totalPositions, totalFilled, totalOpen, totalMissed, totalPending, deptArr, maxDeptTotal;
+    if (hasBuckets) {
+      totalPositions = buckets.tot.total;
+      totalFilled = buckets.tot.joined;
+      totalOpen = buckets.tot.open;
+      totalMissed = buckets.tot.missed;
+      totalPending = buckets.tot.pending;
+      deptArr = Object.entries(buckets.byDept)
+        .filter(([, v]) => v.total > 0)
+        .sort((a, b) => b[1].total - a[1].total);
+      maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].total : 1;
+    } else {
+      // Fallback for older dashboard.json without openingBuckets
+      totalOpen = openingsArr.reduce((s, o) => s + o.open, 0);
+      totalFilled = f.hired || 0;
+      totalPositions = totalFilled + totalOpen;
+      totalMissed = 0;
+      totalPending = 0;
+      const deptMap = {};
+      openingsArr.forEach(o => {
+        if (!deptMap[o.department]) deptMap[o.department] = { total: 0, joined: 0, open: 0 };
+        deptMap[o.department].open += o.open;
+        deptMap[o.department].joined += o.filled;
+        deptMap[o.department].total += o.open + o.filled;
+      });
+      deptArr = Object.entries(deptMap).sort((a, b) => b[1].total - a[1].total);
+      maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].total : 1;
+    }
+    const openVacant = Math.max(totalOpen - totalPending, 0);
+
     const fillRate = totalPositions > 0 ? ((totalFilled / totalPositions) * 100).toFixed(1) : '0.0';
     const convRate = f.applied > 0 ? ((f.hired / f.applied) * 100).toFixed(1) : '0.0';
     const displayJobs = topJobs.slice(0, 5);
     const allJobs = isQuarter ? topJobs : (data.jobs || []).filter(j => j.hired > 0);
     const hiredJobs = [...allJobs].sort((a, b) => b.hired - a.hired).slice(0, 5);
 
-    const deptMap = {};
-    openingsArr.forEach(o => {
-      if (!deptMap[o.department]) deptMap[o.department] = { open: 0, filled: 0 };
-      deptMap[o.department].open += o.open;
-      deptMap[o.department].filled += o.filled;
-    });
-    const deptArr = Object.entries(deptMap).sort((a, b) => (b[1].open + b[1].filled) - (a[1].open + a[1].filled));
-    const maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].open + deptArr[0][1].filled : 1;
+    // Interviews are period-aware when the pipeline supplies interviewsByQuarter;
+    // otherwise fall back to the all-time total rather than showing nothing.
+    const iq = data.interviewsByQuarter || {};
+    const hasIq = Object.keys(iq).length > 0;
+    const interviewCount = !hasIq
+      ? (data.totalInterviews || 0)
+      : (isQuarter
+          ? (iq[val] || 0)
+          : Object.entries(iq).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0));
 
     const pipelineStages = [
       { label: 'Applied', value: f.applied || 0, color: '#938FB8' },
@@ -120,7 +154,7 @@ export function initHomeFilters() {
           <div class="card">
             <div class="label">Total Positions</div>
             <div class="value">${totalPositions}</div>
-            <div class="sub">${totalOpen} open · ${totalFilled} filled</div>
+            <div class="sub">${totalFilled} joined · ${totalOpen} open${totalMissed > 0 ? ` · ${totalMissed} missed` : ''}</div>
           </div>
           <div class="card">
             <div class="label">Applications</div>
@@ -129,8 +163,8 @@ export function initHomeFilters() {
           </div>
           <div class="card">
             <div class="label">Total Interviews Managed</div>
-            <div class="value">${(data.totalInterviews || 0).toLocaleString()}</div>
-            <div class="sub">${(data.interviewers || []).length} panelists</div>
+            <div class="value">${interviewCount.toLocaleString()}</div>
+            <div class="sub">${(data.interviewers || []).length} panelists${hasIq ? '' : ' · all time'}</div>
           </div>
           <div class="card">
             <div class="label">Total Hired</div>
@@ -140,7 +174,7 @@ export function initHomeFilters() {
           <div class="card">
             <div class="label">Fill Rate</div>
             <div class="value" style="color:var(--green)">${fillRate}%</div>
-            <div class="sub">${totalFilled} of ${totalPositions} filled</div>
+            <div class="sub">${totalFilled} of ${totalPositions} joined</div>
           </div>
         </div>
       </div>
@@ -164,17 +198,22 @@ export function initHomeFilters() {
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             ${deptArr.length === 0 ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No opening data for this period</div>' :
               deptArr.slice(0, 6).map(([ dept, v ], i) => {
-                const filledPct = Math.round((v.filled / maxDeptTotal) * 100);
+                const joinedPct = Math.round((v.joined / maxDeptTotal) * 100);
                 const openPct = Math.round((v.open / maxDeptTotal) * 100);
+                const missedPct = Math.round(((v.missed || 0) / maxDeptTotal) * 100);
                 return `
                   <div style="padding:8px 12px;border-bottom:1px solid var(--border);${i === Math.min(deptArr.length, 6) - 1 ? 'border:none;' : ''}">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                      <span style="font-weight:500;font-size:12px;">${dept}</span>
-                      <span style="font-size:12px;"><span class="good">${v.filled}</span> <span style="color:var(--muted)">/ ${v.open + v.filled}</span></span>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:10px;">
+                      <span style="display:flex;gap:10px;min-width:0;">
+                        <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;flex-shrink:0;">${i + 1}</span>
+                        <span style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${dept}</span>
+                      </span>
+                      <span style="font-size:12px;white-space:nowrap;"><span class="good">${v.joined}</span> <span style="color:var(--muted)">/ ${v.total}</span></span>
                     </div>
-                    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border-light);">
-                      <div style="width:${filledPct}%;background:var(--green);"></div>
+                    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border-light);margin-left:26px;">
+                      <div style="width:${joinedPct}%;background:var(--green);"></div>
                       <div style="width:${openPct}%;background:var(--blue);"></div>
+                      <div style="width:${missedPct}%;background:var(--red);"></div>
                     </div>
                   </div>
                 `;
@@ -265,6 +304,33 @@ export function initHomeFilters() {
 
   sel.addEventListener('change', renderData);
   renderData();
+}
+
+// Sums openingBuckets over the selected period. Each opening is counted once, in the
+// quarter it was opened, so a role opened in Q2 still counts toward Q2 while it stays
+// open. Returns null when the data file predates openingBuckets so callers can fall back.
+function aggregateOpenings(data, val, isQuarter, year) {
+  const ob = data.openingBuckets;
+  if (!ob || Object.keys(ob).length === 0) return null;
+  const pendingByJobQ = data.openingPendingByJobQ || {};
+  const tot = { total: 0, joined: 0, open: 0, missed: 0, pending: 0 };
+  const byDept = {};
+  Object.entries(ob).forEach(([job8, rec]) => {
+    const dept = rec.department || 'Unknown';
+    Object.entries(rec.quarters || {}).forEach(([q, b]) => {
+      const inPeriod = isQuarter ? q === val : q.indexOf(year + '-') === 0;
+      if (!inPeriod) return;
+      const pending = (pendingByJobQ[job8] && pendingByJobQ[job8][q]) || 0;
+      if (!byDept[dept]) byDept[dept] = { total: 0, joined: 0, open: 0, missed: 0, pending: 0 };
+      ['total', 'joined', 'open', 'missed'].forEach(k => {
+        tot[k] += b[k] || 0;
+        byDept[dept][k] += b[k] || 0;
+      });
+      tot.pending += pending;
+      byDept[dept].pending += pending;
+    });
+  });
+  return { tot, byDept };
 }
 
 function getQuarterFromDate(dateStr) {
