@@ -308,16 +308,51 @@ export function initHmFilters(data) {
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
   let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null;
   const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
+  // Kept identical across the HM / Recruiter / Overall-Efficiency tabs on purpose.
   function makeMultiSelect(container, label, options, onChange) {
     if (!container) return null;
     const selected = new Set();
     const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+    const esc = s => String(s).replace(/"/g, '&quot;');
     container.classList.add('ms');
-    container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">${options.map(o => `<label class="ms-opt"><input type="checkbox" value="${String(o).replace(/"/g, '&quot;')}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No jobs yet</span>'}</div>`;
+    container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
+      + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+      + `<div class="ms-list">`
+      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No options yet</span>')
+      + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
+    const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
+    const opts = [...container.querySelectorAll('.ms-opt')];
+    const emptyMsg = container.querySelector('.ms-empty');
     btn.textContent = labelText();
-    btn.addEventListener('click', (e) => { e.stopPropagation(); const open = panel.style.display !== 'none'; document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'); panel.style.display = open ? 'none' : 'block'; });
+    function applyFilter(q) {
+      const needle = q.trim().toLowerCase();
+      let shown = 0;
+      opts.forEach(o => {
+        const hit = !needle || o.textContent.toLowerCase().indexOf(needle) >= 0;
+        o.style.display = hit ? '' : 'none';
+        if (hit) shown++;
+      });
+      if (emptyMsg) emptyMsg.style.display = shown ? 'none' : 'block';
+    }
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = panel.style.display !== 'none';
+      document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
+      panel.style.display = open ? 'none' : 'block';
+      // Reopening always starts from the full list, so a stale filter can never hide options.
+      if (!open && search) { search.value = ''; applyFilter(''); search.focus(); }
+    });
     panel.addEventListener('click', e => e.stopPropagation());
+    if (search) search.addEventListener('input', () => applyFilter(search.value));
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      if (selected.size === 0) return;
+      selected.clear();
+      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+      btn.textContent = labelText();
+      onChange();
+    });
     container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
     return { getSelected: () => [...selected] };
   }
