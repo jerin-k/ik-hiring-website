@@ -138,7 +138,7 @@ export function renderHmReport(data) {
 
   const allDepts = [...new Set([...(data.openings || []), ...(data.jobs || [])].map(x => deptOf(x.department)))].filter(Boolean).sort();
   const years = [...new Set((data.openings || []).map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
-  const jpMonths = [...new Set((data.joiningPendingCases || []).map(c => monthOf(c.startDate)).filter(m => m && m !== '—'))];
+  const jpMonths = [...new Set((data.joiningPendingCases || []).map(c => monthOf(c.doj || c.startDate)).filter(m => m && m !== '—'))];
 
   return `
     <style>
@@ -214,7 +214,7 @@ export function renderHmReport(data) {
         <div class="ms" id="msHm1Job"></div>
       </div>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total Positions</th><th>Joined</th><th>Joining Pending</th><th>Open</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total Positions</th><th>Joined</th><th>Open</th><th>Missed</th><th>Joining Pending</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
 
@@ -230,8 +230,9 @@ export function renderHmReport(data) {
         <span style="font-size:11px;color:var(--muted)">to</span>
         <input type="date" id="hmJPTo" title="DOJ to">
       </div>
+      <p class="sub-note" id="hmJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
-        <thead><tr><th>Recruiter</th><th>Department</th><th>Job</th><th>Candidate</th><th>Month</th><th>DOJ</th></tr></thead>
+        <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
     </div>
@@ -306,7 +307,7 @@ export function initHmFilters(data) {
 
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
   let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null;
-  const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
   function makeMultiSelect(container, label, options, onChange) {
     if (!container) return null;
     const selected = new Set();
@@ -353,6 +354,20 @@ export function initHmFilters(data) {
     }
   }
 
+  // A quarter counts as inside the report window when the quarter itself starts inside it.
+  // The Year/Quarter presets set From/To to exact quarter or year boundaries, so this picks
+  // out precisely the quarters the user asked for.
+  function quarterInRange(q, from, to) {
+    if (!q) return false;
+    const y = parseInt(q.slice(0, 4), 10);
+    const qi = parseInt(q.slice(6), 10);
+    if (!y || !qi) return false;
+    const start = `${y}-${String((qi - 1) * 3 + 1).padStart(2, '0')}-01`;
+    if (from && start < from) return false;
+    if (to && start > to) return false;
+    return true;
+  }
+
   // ===== Section 1: Positions (Department -> Job tree) =====
   function getSelectedStatuses() {
     const checked = [];
@@ -364,48 +379,56 @@ export function initHmFilters(data) {
     const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept();
     const statuses = getSelectedStatuses();
     const jobSel = msHm1Job ? msHm1Job.getSelected() : [];
+    const ob = data.openingBuckets || {};
+    const pendingByJobQ = data.openingPendingByJobQ || {};
 
-    const filtered = openings.filter(o => {
-      if (dateFrom && (o.openedAt || '') < dateFrom) return false;
-      if (dateTo && (o.openedAt || '') > dateTo) return false;
-      if (statuses.length > 0 && statuses.indexOf(o.status || 'Open') === -1) return false;
-      if (deptG && o._dept !== deptG) return false;
-      if (jobSel.length && !jobSel.includes(o.title)) return false;
-      return true;
-    });
-
+    // Each DISTINCT opening is counted once, in the quarter it was opened, and
+    // Total = Joined + Open + Missed. A role opened in Q2 therefore still counts
+    // toward Q2 while it stays open — the old filter dropped it the moment the
+    // report window moved past its opened date.
     const groups = {};
-    filtered.forEach(o => {
-      if (!groups[o._dept]) groups[o._dept] = { dept: o._dept, total: 0, filled: 0, open: 0, jp: 0, jobs: [] };
-      const G = groups[o._dept];
-      const jp = jpOf(o);
-      G.total += o.total; G.filled += o.filled; G.open += o.open; G.jp += jp;
-      G.jobs.push(o);
+    Object.entries(ob).forEach(([job8, rec]) => {
+      const dept = deptOf(rec.department || '') || 'Unknown';
+      if (deptG && dept !== deptG) return;
+      if (statuses.length > 0 && statuses.indexOf(rec.status || 'Open') === -1) return;
+      if (jobSel.length && !jobSel.includes(rec.title)) return;
+      let t = 0, jn = 0, op = 0, ms = 0, jp = 0;
+      Object.entries(rec.quarters || {}).forEach(([q, b]) => {
+        if (!quarterInRange(q, dateFrom, dateTo)) return;
+        t += b.total || 0; jn += b.joined || 0; op += b.open || 0; ms += b.missed || 0;
+        jp += (pendingByJobQ[job8] && pendingByJobQ[job8][q]) || 0;
+      });
+      if (!t && !jn && !op && !ms) return;
+      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jobs: [] };
+      const G = groups[dept];
+      G.total += t; G.joined += jn; G.open += op; G.missed += ms; G.jp += jp;
+      G.jobs.push({ title: rec.title, total: t, joined: jn, open: op, missed: ms, jp });
     });
     const deptArr = Object.values(groups).sort((a, b) => a.dept.localeCompare(b.dept));
 
-    const totals = { total: 0, filled: 0, open: 0, jp: 0 };
-    deptArr.forEach(t => { totals.total += t.total; totals.filled += t.filled; totals.open += t.open; totals.jp += t.jp; });
+    const totals = { total: 0, joined: 0, open: 0, missed: 0, jp: 0 };
+    deptArr.forEach(t => { totals.total += t.total; totals.joined += t.joined; totals.open += t.open; totals.missed += t.missed; totals.jp += t.jp; });
 
     document.getElementById('hm1Cards').innerHTML = `
-      <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div></div>
-      <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.filled}</div></div>
-      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jp}</div><div class="sub">Ref Check + Doc + Offer</div></div>
-      <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div></div>
+      <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div><div class="sub">opened in this period</div></div>
+      <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.joined}</div><div class="sub">closed as hired</div></div>
+      <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div><div class="sub">still to fill</div></div>
+      <div class="card"><div class="label">Missed</div><div class="value" style="color:var(--red)">${totals.missed}</div><div class="sub">carried to next quarter</div></div>
+      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jp}</div><div class="sub">offer out, opening linked</div></div>
     `;
 
-    const metrics = (t, f, jp, op) => `<td style="font-weight:600">${t}</td><td class="good">${f}</td><td style="color:var(--orange)">${jp}</td><td style="color:var(--blue)">${op}</td>`;
+    const metrics = (t, jn, op, ms, jp) => `<td style="font-weight:600">${t}</td><td class="good">${jn}</td><td style="color:var(--blue)">${op}</td><td style="color:var(--red)">${ms}</td><td style="color:var(--orange)">${jp}</td>`;
     let html = '';
     deptArr.forEach((D, gi) => {
-      const jobs2 = [...D.jobs].sort(byDept);
+      const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
       html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D.total, D.filled, D.jp, D.open)}</tr>`;
+        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D.total, D.joined, D.open, D.missed, D.jp)}</tr>`;
       jobs2.forEach(o => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:30px;font-weight:500;max-width:360px">${o.title}</td>${metrics(o.total, o.filled, jpOf(o), o.open)}</tr>`;
+          <td style="padding-left:30px;font-weight:500;max-width:360px">${o.title}</td>${metrics(o.total, o.joined, o.open, o.missed, o.jp)}</tr>`;
       });
     });
-    html += `<tr class="totals-row"><td>Total</td>${metrics(totals.total, totals.filled, totals.jp, totals.open)}</tr>`;
+    html += `<tr class="totals-row"><td>Total</td>${metrics(totals.total, totals.joined, totals.open, totals.missed, totals.jp)}</tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
     wireTree(body);
@@ -424,9 +447,9 @@ export function initHmFilters(data) {
         data: {
           labels: cDepts,
           datasets: [
-            { label: 'Joined', data: cDepts.map(d => groups[d].filled), backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Joining Pending', data: cDepts.map(d => groups[d].jp), backgroundColor: '#1E7590', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.7 }
+            { label: 'Joined', data: cDepts.map(d => groups[d].joined), backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Missed', data: cDepts.map(d => groups[d].missed), backgroundColor: '#be123c', borderRadius: 4, barPercentage: 0.7 }
           ]
         },
         options: {
@@ -601,7 +624,18 @@ export function initHmFilters(data) {
     const dojFrom = document.getElementById('hmJPFrom')?.value || '';
     const dojTo = document.getElementById('hmJPTo')?.value || '';
 
-    let list = (data.joiningPendingCases || []).map(c => ({ ...c, name: c.candidate, job: c.jobTitle, doj: c.startDate, _dept: deptOf(c.department || '') }));
+    // Deliberately BROAD: everyone currently in closing (Ref Check / Documentation / Offer),
+    // with or without an opening linked. The unlinked ones show with a blank Opening Quarter
+    // so they are easy to spot and fix — that is the point of the list.
+    // Note this is a wider population than the "Joining Pending" metric, which counts only
+    // the linked ones. The caption spells the difference out.
+    let list = (data.joiningPendingCases || []).map(c => ({
+      ...c,
+      // job/doj were renamed from jobTitle/startDate when the cases table went broad
+      job: c.job || c.jobTitle || '',
+      doj: c.doj || c.startDate || '',
+      _dept: deptOf(c.department || '')
+    }));
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(c.job)) return false;
@@ -610,17 +644,34 @@ export function initHmFilters(data) {
       if (dojTo && (c.doj || '') > dojTo) return false;
       return true;
     });
+
+    const capEl = document.getElementById('hmJPCaption');
+    if (capEl) {
+      const linked = list.filter(c => c.linked).length;
+      capEl.innerHTML = list.length
+        ? `Everyone currently in closing: <strong>${list.length}</strong> — <strong>${linked}</strong> with an opening attached, <strong>${list.length - linked}</strong> still to attach.`
+        : '';
+    }
+
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — needs candidate-level joining data (Name + DOJ) from the pipeline redesign.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
       return;
     }
-    list.sort((a, b) => (a._dept || '').localeCompare(b._dept || '') || (a.doj || '').localeCompare(b.doj || ''));
+    // Newest opening quarter first, unlinked rows last (they have no quarter to sort on).
+    list.sort((a, b) => {
+      const qa = a.openingQuarter || '', qb = b.openingQuarter || '';
+      if (qa !== qb) { if (!qa) return 1; if (!qb) return -1; return qa > qb ? -1 : 1; }
+      return (a.candidate || '').localeCompare(b.candidate || '');
+    });
     body.innerHTML = list.map(c => `<tr>
-      <td>${c.recruiter || '—'}</td>
+      <td>${c.openingQuarter || '<span style="color:var(--red);font-size:11px">Not linked</span>'}</td>
+      <td>${c.month || monthOf(c.doj)}</td>
+      <td>${c.doj || '—'}</td>
       <td style="font-weight:500">${c._dept || ''}</td>
-      <td style="max-width:300px">${c.job || ''}</td>
-      <td style="font-weight:500">${c.name || ''}</td>
-      <td>${monthOf(c.doj)}</td><td>${c.doj || '—'}</td>
+      <td style="max-width:280px">${c.job || ''}</td>
+      <td style="font-weight:500">${c.candidate || ''}</td>
+      <td>${c.subStage || '—'}</td>
+      <td>${c.recruiter || '—'}</td>
     </tr>`).join('');
   }
 
