@@ -138,6 +138,21 @@ export function initHomeFilters() {
           ? (iq[val] || 0)
           : Object.entries(iq).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0));
 
+    // Panelists for the selected period. Each panelist carries a per-quarter breakdown,
+    // so the list matches the Total Interviews figure above it instead of always showing
+    // lifetime totals (which made a future quarter look busy while the total read zero).
+    const periodInterviews = (p) => {
+      const bq = p.byQuarter;
+      if (!bq) return p.interviews || 0;           // pre-byQuarter data: fall back to lifetime
+      if (isQuarter) return bq[val] || 0;
+      return Object.entries(bq).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0);
+    };
+    const panelistsInPeriod = (data.interviewers || [])
+      .map(p => ({ name: p.name, interviews: periodInterviews(p) }))
+      .filter(p => p.interviews > 0)
+      .sort((a, b) => b.interviews - a.interviews);
+    const anyByQuarter = (data.interviewers || []).some(p => p.byQuarter);
+
     const pipelineStages = [
       { label: 'Applied', value: f.applied || 0, color: '#938FB8' },
       { label: 'Screened', value: f.screened || 0, color: '#6E86B0' },
@@ -164,7 +179,7 @@ export function initHomeFilters() {
           <div class="card">
             <div class="label">Total Interviews Managed</div>
             <div class="value">${interviewCount.toLocaleString()}</div>
-            <div class="sub">${(data.interviewers || []).length} panelists${hasIq ? '' : ' · all time'}</div>
+            <div class="sub">${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}</div>
           </div>
           <div class="card">
             <div class="label">Total Hired</div>
@@ -275,8 +290,8 @@ export function initHomeFilters() {
           <h3 class="subsection-title" style="margin-top:0;">Top Panelists by Interview Count</h3>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             ${(() => {
-              const tp = [...(data.interviewers || [])].sort((a, b) => (b.interviews || 0) - (a.interviews || 0)).slice(0, 5);
-              if (!tp.length || !tp[0].interviews) return '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No interview data yet</div>';
+              const tp = panelistsInPeriod.slice(0, 5);
+              if (!tp.length || !tp[0].interviews) return '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No interview data for this period</div>';
               return tp.map((p, i) => {
                 const pct = tp[0].interviews > 0 ? Math.max(Math.round((p.interviews / tp[0].interviews) * 100), 3) : 0;
                 return `
@@ -290,7 +305,6 @@ export function initHomeFilters() {
                     </div>
                     <div style="text-align:right;white-space:nowrap;">
                       <div style="font-weight:700;font-size:13px;">${(p.interviews || 0).toLocaleString()}</div>
-                      <div style="font-size:10px;color:var(--muted);font-weight:600;">${p.feedbackSubmitted || 0} fb</div>
                     </div>
                   </div>
                 `;

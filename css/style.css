@@ -293,9 +293,20 @@ td.stage-first { border-left: 1px solid var(--border); }
   background: var(--card); color: var(--text); cursor: pointer; min-width: 120px; text-align: left; white-space: nowrap; }
 .ms-btn:hover { border-color: var(--muted); }
 .ms-panel { position: absolute; top: 38px; left: 0; z-index: 20; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-  padding: 6px; min-width: 200px; max-height: 280px; overflow: auto; box-shadow: 0 6px 20px rgba(15,23,42,0.12); }
+  padding: 6px; min-width: 220px; max-height: 320px; overflow: hidden; box-shadow: 0 6px 20px rgba(15,23,42,0.12);
+  display: flex; flex-direction: column; }
 .ms-opt { display: flex; align-items: center; gap: 7px; padding: 5px 8px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 .ms-opt:hover { background: var(--border-light); }
+/* type-to-filter + reset row, pinned above the scrolling option list */
+.ms-tools { display: flex; gap: 6px; align-items: center; padding: 2px 2px 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 4px; flex-shrink: 0; }
+.ms-search { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; background: var(--card); color: var(--text); }
+.ms-search:focus { outline: none; border-color: var(--accent); }
+.ms-clear { appearance: none; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0 9px; height: 28px;
+  font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.ms-clear:hover { color: var(--text); border-color: var(--muted); }
+.ms-list { overflow: auto; flex: 1; min-height: 0; }
+.ms-empty { padding: 8px; font-size: 11px; color: var(--muted); text-align: center; }
 
 .filter-bar {
   display: flex;
