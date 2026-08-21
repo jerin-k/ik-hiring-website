@@ -250,7 +250,7 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="rec-panel" data-panel="screening" style="display:none">
-      <p class="sub-note">Added = reached the stage, Cleared = transitioned <em>out</em> (reached the next stage) — from real stage history. HM / OA / R1 are all live; the per-job branch needs per-recruiter×job stage history.</p>
+      <p class="sub-note">Added = reached the stage, Cleared = transitioned <em>out</em> (reached the next stage) — from real stage history, scoped to the selected quarter. Click a pod to see its recruiters, and a recruiter to see the jobs behind their numbers.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recScreenChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead>
@@ -440,10 +440,50 @@ export function initRecruiterFilters(data) {
 
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
   // else the current-stage approximation (R1-cleared unknown → null).
+  // Pulls one stage's {reached,cleared} for the selected quarter. throughputByRecruiterQ is
+  // keyed stage -> quarter; when it's absent (older rollups) we fall back to the lifetime
+  // figure so nothing breaks, but then the number genuinely IS lifetime.
+  const ZERO = () => ({ reached: 0, cleared: 0 });
+  const stageForQuarter = (byStageQ, byStageLifetime, stage, q) => {
+    if (byStageQ) { const s = byStageQ[stage]; return (s && s[q]) ? s[q] : ZERO(); }
+    const t = byStageLifetime && byStageLifetime[stage];
+    return t || ZERO();
+  };
   const screenTriple = (r) => {
-    const tp = data.stageRollups && data.stageRollups.throughputByRecruiter;
-    if (tp) { const t = tp[r.name] || {}; return { hm: t.hmReview || { reached: 0, cleared: 0 }, oa: t.oa || { reached: 0, cleared: 0 }, r1: t.r1 || { reached: 0, cleared: 0 } }; }
+    const sr = data.stageRollups || {};
+    const q = selQuarter();
+    const perQ = sr.throughputByRecruiterQ && sr.throughputByRecruiterQ[r.name];
+    const life = sr.throughputByRecruiter && sr.throughputByRecruiter[r.name];
+    if (perQ || life) {
+      return {
+        hm: stageForQuarter(perQ, life, 'hmReview', q),
+        oa: stageForQuarter(perQ, life, 'oa', q),
+        r1: stageForQuarter(perQ, life, 'r1', q)
+      };
+    }
     return { hm: { reached: r.hm || 0, cleared: Math.min(r.hm || 0, r.oa || 0) }, oa: { reached: r.oa || 0, cleared: Math.min(r.oa || 0, r.r1 || 0) }, r1: { reached: r.r1 || 0, cleared: null } };
+  };
+  // Per-job screening for one recruiter — the branch that used to render as em-dashes with
+  // "needs per-recruiter×job stage history". Quarter-keyed like the recruiter row above it,
+  // so an expanded recruiter's job rows add up to the recruiter's own numbers instead of
+  // mixing a quarter total with all-time children.
+  const screenTripleByJob = (recName, job8) => {
+    const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
+    const t = (rj && rj[recName] && rj[recName][job8]) || null;
+    if (!t) return null;
+    const q = selQuarter();
+    const pick = (stage) => {
+      const s = t[stage];
+      if (!s) return ZERO();
+      // quarter-keyed shape {stage:{quarter:{reached,cleared}}}; older rollups were flat
+      if (typeof s.reached === 'number') return s;
+      return s[q] || ZERO();
+    };
+    return { hm: pick('hmReview'), oa: pick('oa'), r1: pick('r1') };
+  };
+  const jobsForRecruiter = (recName) => {
+    const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
+    return (rj && rj[recName]) ? Object.keys(rj[recName]) : [];
   };
   let lastGroups = [], lastRecs = [], activeTab = 'fulfilment';
 
@@ -553,8 +593,22 @@ export function initRecruiterFilters(data) {
           const rk = `s${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${screenCells(screenTriple(r))}</tr>`;
-          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted);font-style:italic">Per-job breakdown — needs per-recruiter×job stage history</td>${dashScreen}</tr>`;
+          // Per-job breakdown, now backed by throughputByRecruiterJob. Sorted by volume so the
+          // jobs a recruiter actually worked come first.
+          const jobRows = jobsForRecruiter(r.name)
+            .map(j8 => ({ j8, t: screenTripleByJob(r.name, j8) }))
+            .filter(x => x.t)
+            .sort((a, b) => (b.t.hm.reached + b.t.oa.reached + b.t.r1.reached) - (a.t.hm.reached + a.t.oa.reached + a.t.r1.reached));
+          if (jobRows.length) {
+            jobRows.forEach(({ j8, t }) => {
+              const jm = jobById[j8];
+              html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+                <td style="padding-left:52px;color:var(--muted)">${(jm && jm.title) || j8}</td>${screenCells(t)}</tr>`;
+            });
+          } else {
+            html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+              <td style="padding-left:52px;color:var(--muted);font-style:italic">No stage history for this recruiter</td>${dashScreen}</tr>`;
+          }
         });
       });
       screenBody.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
