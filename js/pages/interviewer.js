@@ -1,17 +1,38 @@
 // Interviewer Efficiency — per-panelist interview load + feedback turnaround, from data.interviewers[]
 // (interviewSchedule.list + applicationFeedback.list pipeline pass). data.panelists[] feeds the HM tab.
+//
+// FILTERS (added 2026-08-21, backlog #15): Year/Quarter period + Panelist multi-select.
+// GRAIN WARNING 1 — only `interviews` has a per-quarter breakdown (`byQuarter`). `feedbackSubmitted`,
+// `pendingFeedback` and `avgTurnaroundHrs` are LIFETIME in the pipeline, with no quarter dimension.
+// So the period selector moves the interview counts ONLY; every feedback column stays all-time and is
+// labelled as such.
+//
+// GRAIN WARNING 2 — `feedbackSubmitted` counts every feedback FORM the person submitted, which is not the
+// same population as their panel interviews: 73 of 138 panelists have more forms than interviews (one has
+// 440 forms against 2 interviews). So feedbackSubmitted / interviews is NOT a completion rate and must
+// never be shown as one. The coherent measure is `pendingFeedback` - interviews with no feedback attached -
+// so coverage = (interviews - pending) / interviews. The raw form count is still shown, but as its own
+// column labelled "Feedback Forms", never as a percentage of interviews.
+//
+// GRAIN WARNING 3 — data.totalInterviews / data.interviewsByQuarter count DISTINCT interview events
+// (2,623); summing interviewers[].interviews counts panelist SLOTS (2,938), because a panel of two counts
+// twice. The org card uses the distinct count; the table column is per-panelist load. Never mix them.
 
 let ivChart = null;
+let msIvPanel = null;
 
 const fmtTurn = (hrs) => hrs == null ? '—' : (hrs >= 24 ? (hrs / 24).toFixed(1) + 'd' : hrs.toFixed(1) + 'h');
 const pct = (n, d) => d ? Math.round((n / d) * 100) : 0;
 
+// Union of every quarter key present in the data, newest last ("2026-Q1" sorts naturally).
+function allQuarterKeys(data) {
+  const set = new Set(Object.keys((data && data.interviewsByQuarter) || {}));
+  ((data && data.interviewers) || []).forEach(r => Object.keys(r.byQuarter || {}).forEach(k => set.add(k)));
+  return [...set].sort();
+}
+
 export function renderInterviewer(data) {
   const ivs = (data && data.interviewers) || [];
-  const totalInterviews = (data && data.totalInterviews) || ivs.reduce((s, r) => s + (r.interviews || 0), 0);
-  const totalFeedback = ivs.reduce((s, r) => s + (r.feedbackSubmitted || 0), 0);
-  const turnRows = ivs.filter(r => r.avgTurnaroundHrs != null);
-  const avgTurn = turnRows.length ? turnRows.reduce((s, r) => s + r.avgTurnaroundHrs, 0) / turnRows.length : null;
 
   if (!ivs.length) {
     return `
@@ -23,54 +44,239 @@ export function renderInterviewer(data) {
       </div>`;
   }
 
-  return `
-    <div class="section-title">Interviewer Efficiency</div>
-    <p class="sub-note">Interview load and feedback turnaround per panelist. <strong>Turnaround</strong> = time from the interview ending to feedback being submitted; <strong>completion</strong> = feedback submitted ÷ interviews.</p>
+  const qkeys = allQuarterKeys(data);
+  const years = [...new Set(qkeys.map(k => k.slice(0, 4)))].sort().reverse();
+  const names = [...new Set(ivs.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
-    <div class="cards" style="margin-bottom:20px">
-      <div class="card"><div class="card-label">Total Interviews</div><div class="card-value">${totalInterviews.toLocaleString()}</div></div>
-      <div class="card"><div class="card-label">Panelists</div><div class="card-value">${ivs.length}</div></div>
-      <div class="card"><div class="card-label">Feedback Submitted</div><div class="card-value">${totalFeedback.toLocaleString()} <span style="font-size:12px;color:var(--muted)">(${pct(totalFeedback, totalInterviews)}%)</span></div></div>
-      <div class="card"><div class="card-label">Avg Turnaround</div><div class="card-value">${fmtTurn(avgTurn)}</div></div>
+  return `
+    <style>
+      .iv-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
+        display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
+      .iv-filters select { appearance:none; -webkit-appearance:none; height:34px; padding:0 28px 0 11px; border:1px solid var(--border);
+        border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); cursor:pointer;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat:no-repeat; background-position:right 10px center; }
+      .iv-filters select:hover { border-color:var(--muted); }
+      .iv-filters select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
+      .iv-filters .fchip { display:flex; align-items:center; gap:7px; }
+      .iv-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      .iv-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
+      .iv-grain { font-size:11px; color:var(--orange); margin:-8px 0 14px; }
+    </style>
+
+    <div class="section-title">Interviewer Efficiency</div>
+    <p class="sub-note">Interview load and feedback turnaround per panelist. <strong>Feedback Coverage</strong> = interviews that have feedback attached ÷ that panelist’s interviews. <strong>Turnaround</strong> = time from the interview ending to feedback being submitted. <em>Feedback Forms</em> is a raw count of every form the person submitted — it covers more than scheduled panel interviews, so it can exceed their interview count and is deliberately not shown as a percentage.</p>
+
+    <div class="iv-filters">
+      <div class="fchip"><span class="lbl">Year</span><select id="ivYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
+      <div class="fchip"><span class="lbl">Quarter</span><select id="ivQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+      <span class="fdiv"></span>
+      <div class="fchip"><span class="lbl">Panelist</span><div class="ms" id="ivMsPanel"></div></div>
     </div>
 
-    <h3 class="subsection-title">Top panelists by interview load</h3>
+    <p class="iv-grain" id="ivGrainNote" style="display:none"></p>
+
+    <div class="cards" style="margin-bottom:20px">
+      <div class="card"><div class="card-label" id="ivCardIntLabel">Total Interviews</div><div class="card-value" id="ivCardInterviews">—</div><div id="ivCardIntSub" style="font-size:11px;color:var(--muted);margin-top:2px"></div></div>
+      <div class="card"><div class="card-label" id="ivCardPanLabel">Panelists</div><div class="card-value" id="ivCardPanelists">—</div></div>
+      <div class="card"><div class="card-label">Feedback Coverage <span style="font-weight:400;text-transform:none;letter-spacing:0">(all-time)</span></div><div class="card-value" id="ivCardCoverage">—</div><div id="ivCardCoverageSub" style="font-size:11px;color:var(--muted);margin-top:2px"></div></div>
+      <div class="card"><div class="card-label">Avg Turnaround <span style="font-weight:400;text-transform:none;letter-spacing:0">(all-time)</span></div><div class="card-value" id="ivCardTurn">—</div></div>
+    </div>
+
+    <h3 class="subsection-title" id="ivChartTitle">Top panelists by interview load</h3>
     <div class="chart-wrap" style="max-width:820px;margin:0 auto 24px;height:${Math.max(160, Math.min(ivs.length, 15) * 24 + 40)}px;position:relative"><canvas id="ivTopChart"></canvas></div>
 
-    <h3 class="subsection-title">All panelists</h3>
+    <h3 class="subsection-title">All panelists <span id="ivRowCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></h3>
     <div class="scroll-table"><table>
       <thead><tr>
         <th style="min-width:200px">Panelist</th>
-        <th>Interviews</th><th>Feedback</th><th>Pending</th><th>Completion</th><th>Avg Turnaround</th>
+        <th id="ivThInterviews">Interviews</th>
+        <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Derived from Awaiting Feedback, not from the raw form count.">Feedback Coverage</th>
+        <th title="Interviews with no feedback attached yet (all-time).">Awaiting Feedback</th>
+        <th title="Time from an interview ending to feedback being submitted (all-time average).">Avg Turnaround</th>
+        <th title="Every feedback form this person submitted, including forms not tied to a scheduled panel interview. That is why it can exceed their interview count - it is a raw form count, not a completion measure.">Feedback Forms</th>
       </tr></thead>
-      <tbody>
-        ${ivs.map(r => `<tr>
-          <td style="font-weight:500">${esc(r.name)}</td>
-          <td>${r.interviews}</td>
-          <td>${r.feedbackSubmitted}</td>
-          <td>${r.pendingFeedback ? `<span style="color:var(--orange)">${r.pendingFeedback}</span>` : '0'}</td>
-          <td class="${cls(pct(r.feedbackSubmitted, r.interviews))}">${pct(r.feedbackSubmitted, r.interviews)}%</td>
-          <td class="${r.avgTurnaroundHrs != null && r.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(r.avgTurnaroundHrs)}</td>
-        </tr>`).join('')}
-      </tbody>
+      <tbody id="ivBody"></tbody>
     </table></div>`;
 }
 
 export function initInterviewer(data) {
   const ivs = (data && data.interviewers) || [];
-  const ctx = document.getElementById('ivTopChart');
-  if (!ctx || !window.Chart || !ivs.length) return;
-  if (ivChart) { try { ivChart.destroy(); } catch (e) {} }
-  const top = ivs.slice(0, 15);
-  ivChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: top.map(r => r.name), datasets: [{ label: 'Interviews', data: top.map(r => r.interviews), backgroundColor: '#4E6BA6', borderRadius: 2 }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+  if (!ivs.length) return;
+
+  const qkeys = allQuarterKeys(data);
+  const years = [...new Set(qkeys.map(k => k.slice(0, 4)))].sort().reverse();
+  const names = [...new Set(ivs.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  // Selected period as a list of quarter keys; null = all-time (use the lifetime `interviews` field).
+  function selQuarters() {
+    const y = document.getElementById('ivYear')?.value || '';
+    const q = document.getElementById('ivQuarter')?.value || '';
+    if (!y && !q) return null;
+    const yr = y || years[0] || String(new Date().getFullYear());
+    if (q) return [`${yr}-${q}`];
+    return qkeys.filter(k => k.slice(0, 4) === yr);
+  }
+
+  // Interview count for the selected period. Older data files without byQuarter fall back to the
+  // lifetime total rather than reporting a false zero.
+  function periodCount(r, quarters) {
+    if (!quarters) return r.interviews || 0;
+    if (!r.byQuarter) return r.interviews || 0;
+    return quarters.reduce((s, q) => s + (r.byQuarter[q] || 0), 0);
+  }
+
+  function periodLabel(quarters) {
+    if (!quarters) return '';
+    return quarters.length === 1 ? quarters[0] : (quarters[0] || '').slice(0, 4);
+  }
+
+  function render() {
+    const quarters = selQuarters();
+    const label = periodLabel(quarters);
+    const nameSel = msIvPanel ? msIvPanel.getSelected() : [];
+
+    let rows = ivs.map(r => ({ ...r, _count: periodCount(r, quarters) }));
+    if (nameSel.length) rows = rows.filter(r => nameSel.includes(r.name));
+    rows = rows.filter(r => r._count > 0).sort((a, b) => b._count - a._count);
+
+    const slotTotal = rows.reduce((s, r) => s + r._count, 0);        // panelist SLOTS (a 2-person panel counts twice)
+    const lifetimeInts = rows.reduce((s, r) => s + (r.interviews || 0), 0);
+    const lifetimePending = rows.reduce((s, r) => s + (r.pendingFeedback || 0), 0);
+    const covered = Math.max(0, lifetimeInts - lifetimePending);
+    const turnRows = rows.filter(r => r.avgTurnaroundHrs != null);
+    const avgTurn = turnRows.length ? turnRows.reduce((s, r) => s + r.avgTurnaroundHrs, 0) / turnRows.length : null;
+
+    // Distinct interview EVENTS org-wide for the period. Only meaningful with no panelist filter, since a
+    // filtered subset cannot be de-duplicated from per-panelist counts.
+    const byQ = (data && data.interviewsByQuarter) || null;
+    const distinct = !quarters ? ((data && data.totalInterviews) || null)
+      : (byQ ? quarters.reduce((s, q) => s + (byQ[q] || 0), 0) : null);
+
+    const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+    const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+    if (nameSel.length || distinct == null) {
+      setText('ivCardIntLabel', label ? `Panel Slots · ${label}` : 'Panel Slots');
+      setText('ivCardInterviews', slotTotal.toLocaleString());
+      setText('ivCardIntSub', `${rows.length} selected panelist${rows.length === 1 ? '' : 's'} — a panel of two counts twice`);
+    } else {
+      setText('ivCardIntLabel', label ? `Interviews · ${label}` : 'Total Interviews');
+      setText('ivCardInterviews', distinct.toLocaleString());
+      setText('ivCardIntSub', `${slotTotal.toLocaleString()} panel slots across ${rows.length} panelists`);
     }
+    setText('ivCardPanLabel', label ? `Panelists Active · ${label}` : 'Panelists');
+    setText('ivCardPanelists', String(rows.length));
+    setText('ivCardCoverage', `${pct(covered, lifetimeInts)}%`);
+    setText('ivCardCoverageSub', `${covered.toLocaleString()} of ${lifetimeInts.toLocaleString()} interviews have feedback`);
+    setText('ivCardTurn', fmtTurn(avgTurn));
+    setText('ivThInterviews', label ? `Interviews (${label})` : 'Interviews');
+    setText('ivChartTitle', label ? `Top panelists by interview load — ${label}` : 'Top panelists by interview load');
+    setText('ivRowCount', rows.length ? `${rows.length} of ${ivs.length}` : '');
+
+    // Say out loud that the feedback columns don't move with the period — the numbers next to a
+    // quarter heading would otherwise read as that quarter's.
+    const note = document.getElementById('ivGrainNote');
+    if (note) {
+      if (label) {
+        note.style.display = '';
+        note.textContent = `Only the interview count follows the ${label} filter. Feedback Coverage, Awaiting Feedback, Turnaround and Feedback Forms are all-time totals — the pipeline does not break feedback down by quarter.`;
+      } else {
+        note.style.display = 'none';
+      }
+    }
+
+    const body = document.getElementById('ivBody');
+    if (body) {
+      body.innerHTML = rows.length ? rows.map(r => {
+        const life = r.interviews || 0;
+        const pend = r.pendingFeedback || 0;
+        const cov = life ? pct(Math.max(0, life - pend), life) : 0;
+        return `<tr>
+        <td style="font-weight:500">${esc(r.name)}</td>
+        <td>${r._count}</td>
+        <td class="${cls(cov)}">${life ? cov + '%' : '—'}</td>
+        <td>${pend ? `<span style="color:var(--orange)">${pend}</span>` : '0'}</td>
+        <td class="${r.avgTurnaroundHrs != null && r.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(r.avgTurnaroundHrs)}</td>
+        <td style="color:var(--muted)">${r.feedbackSubmitted || 0}</td>
+      </tr>`; }).join('')
+        : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;font-size:12px">No panelist ran an interview in this period.</td></tr>`;
+    }
+
+    buildChart(rows);
+  }
+
+  function buildChart(rows) {
+    const ctx = document.getElementById('ivTopChart');
+    if (!ctx || !window.Chart) return;
+    if (ivChart) { try { ivChart.destroy(); } catch (e) {} ivChart = null; }
+    const top = rows.slice(0, 15);
+    if (!top.length) return;
+    ivChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: top.map(r => r.name), datasets: [{ label: 'Interviews', data: top.map(r => r._count), backgroundColor: '#4E6BA6', borderRadius: 2 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+      }
+    });
+  }
+
+  msIvPanel = makeMultiSelect(document.getElementById('ivMsPanel'), 'Panelist', names, render);
+  document.getElementById('ivYear')?.addEventListener('change', render);
+  document.getElementById('ivQuarter')?.addEventListener('change', render);
+  render();
+}
+
+// Styled multi-select checkbox dropdown. Returns { getSelected }; empty selection = "All".
+// Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
+// Kept identical across the HM / Recruiter / Overall-Efficiency / Interviewer tabs on purpose.
+function makeMultiSelect(container, label, options, onChange) {
+  if (!container) return null;
+  const selected = new Set();
+  const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+  const q = s => String(s).replace(/"/g, '&quot;');
+  container.classList.add('ms');
+  container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
+    + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+    + `<div class="ms-list">`
+    + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${q(o)}"> ${esc(o)}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No options yet</span>')
+    + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
+  const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
+  const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
+  const opts = [...container.querySelectorAll('.ms-opt')];
+  const emptyMsg = container.querySelector('.ms-empty');
+  btn.textContent = labelText();
+  function applyFilter(needleRaw) {
+    const needle = needleRaw.trim().toLowerCase();
+    let shown = 0;
+    opts.forEach(o => {
+      const hit = !needle || o.textContent.toLowerCase().indexOf(needle) >= 0;
+      o.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    if (emptyMsg) emptyMsg.style.display = shown ? 'none' : 'block';
+  }
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel.style.display !== 'none';
+    document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
+    panel.style.display = open ? 'none' : 'block';
+    // Reopening always starts from the full list, so a stale filter can never hide options.
+    if (!open && search) { search.value = ''; applyFilter(''); search.focus(); }
   });
+  panel.addEventListener('click', e => e.stopPropagation());
+  if (search) search.addEventListener('input', () => applyFilter(search.value));
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (selected.size === 0) return;
+    selected.clear();
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    btn.textContent = labelText();
+    onChange();
+  });
+  container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
+  return { getSelected: () => [...selected] };
 }
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

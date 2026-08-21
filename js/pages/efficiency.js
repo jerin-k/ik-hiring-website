@@ -202,11 +202,12 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
-      <p class="sub-note"><strong>Pod → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members. Sources are a recruiter attribute, so the channel-mix chart plus this pod tree are the honest grain; a department split needs per-job source from the pipeline.</p>
+      <p class="sub-note" id="effSourceNote"></p>
+      <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-6px"></p>
       <h3 class="subsection-title">Channel Mix — source names within each type</h3>
       <div class="chart-wrap" style="max-width:840px;margin:0 auto 20px;height:460px;position:relative"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:340px">Pod / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:340px" id="effSourceTh">Pod / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
     </div>
@@ -622,44 +623,127 @@ export function initEfficiencyFilters(data) {
     renderPodCharts('effVelPodCharts', pods, velPodCfg, 'No submissions in range.');
   }
 
-  // ===== Sourcing Mix — Pod → Department → Category → Source; org-wide chart is live =====
-  // Pod → Source (source_type), summed across pod members from recruiters[].sources. Sources are a recruiter
-  // attribute (not per-job), so the department split isn't available — Pod → Source is the honest grain here.
-  function renderSourcing() {
-    const q = selQuarter();
-    const pods = visiblePods();
-    const body = document.getElementById('effSourceBody');
-    if (body) {
-      const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
-      // Pod → Source type → Source name, from recruiters[].srcNested { type: { name: count } }.
-      const podNested = (pod) => { const agg = {}; podMembers(pod, q).forEach(r => {
-        const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
-        if (sn) { for (const t in sn) { const at = agg[t] || (agg[t] = {}); for (const nm in sn[t]) at[nm] = (at[nm] || 0) + sn[t][nm]; } }
-        else { for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; } }   // fallback until srcNested refresh
-      }); return agg; };
-      const sumNames = (names) => Object.values(names).reduce((a, v) => a + v, 0);
-      const sumNested = (nst) => Object.values(nst).reduce((s, names) => s + sumNames(names), 0);
-      const grand = pods.reduce((s, p) => s + sumNested(podNested(p)), 0) || 1;
-      let html = '';
-      pods.forEach((pod, pi) => {
-        const nst = podNested(pod); const ptot = sumNested(nst);
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${pod}</td><td style="font-weight:600">${ptot || '<span class="zero">0</span>'}</td><td>${pc(ptot, grand)}%</td></tr>`;
-        const types = Object.entries(nst).map(([t, names]) => [t, sumNames(names), names]).sort((a, b) => b[1] - a[1]);
-        if (types.length) {
-          types.forEach(([t, tcnt, names], ti) => {
-            html += `<tr data-path="${pi}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:32px;font-weight:500">${CARET}${t}</td><td>${tcnt}</td><td>${pc(tcnt, ptot)}%</td></tr>`;
-            Object.entries(names).sort((a, b) => b[1] - a[1]).forEach(([nm, cnt], ni) => {
-              html += `<tr data-path="${pi}-${ti}-${ni}" style="display:none"><td style="padding-left:58px;color:var(--muted)">${nm}</td><td>${cnt}</td><td>${pc(cnt, tcnt)}%</td></tr>`;
-            });
-          });
-        } else {
-          html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+  // ===== Sourcing Mix — Pod → Department → Job → Source type → Source name =====
+  // Sources are recorded per application, so the honest tree needs a per-(recruiter × job) source bucket:
+  // recruiters[].srcByJob { job8: { type: { name: count } } }. Pod attribution follows the recruiter, the
+  // Department/Job scope follows the job — which is what makes those two filters real on this tab.
+  // Until the pipeline emits srcByJob we fall back to the old recruiters[].srcNested tree (Pod → Type → Name),
+  // which has NO job dimension. In that mode Department/Job genuinely cannot be applied, and the panel says so
+  // instead of showing an unfiltered number under a filtered heading.
+  const hasSrcByJob = recruiters.some(r => r.srcByJob && Object.keys(r.srcByJob).length);
+
+  const mergeNested = (dst, src) => { for (const t in src) { const at = dst[t] || (dst[t] = {}); for (const nm in src[t]) at[nm] = (at[nm] || 0) + src[t][nm]; } return dst; };
+  const sumNames = (names) => Object.values(names).reduce((a, v) => a + v, 0);
+  const sumNested = (nst) => Object.values(nst).reduce((s, names) => s + sumNames(names), 0);
+
+  // Pod → Dept → Job, each carrying its merged {type:{name:count}}. Honours Department + Job multi-selects.
+  function sourceTree(q) {
+    return visiblePods().map(pod => {
+      const mem = podMembers(pod, q);
+      const depts = [];
+      podDeptJobs(pod, q).forEach(({ dept, jobs }) => {
+        const jarr = [];
+        jobs.forEach(j => {
+          const nst = {};
+          mem.forEach(r => { const s = r.srcByJob && r.srcByJob[j.jid]; if (s) mergeNested(nst, s); });
+          const tot = sumNested(nst);
+          if (tot) jarr.push({ title: j.title, nst, tot });
+        });
+        if (jarr.length) {
+          jarr.sort((a, b) => b.tot - a.tot);
+          const dn = jarr.reduce((d, j) => mergeNested(d, j.nst), {});
+          depts.push({ dept, jobs: jarr, nst: dn, tot: sumNested(dn) });
         }
       });
-      body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
-      wireTreePath(body, expandAll());
+      depts.sort((a, b) => b.tot - a.tot);
+      const pn = depts.reduce((d, x) => mergeNested(d, x.nst), {});
+      return { pod, depts, nst: pn, tot: sumNested(pn) };
+    });
+  }
+
+  // Fallback aggregate: pod → {type:{name:count}} from srcNested (or the coarse sources{} map). No job grain.
+  function podNestedFlat(pod, q) {
+    const agg = {};
+    podMembers(pod, q).forEach(r => {
+      const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
+      if (sn) mergeNested(agg, sn);
+      else for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; }
+    });
+    return agg;
+  }
+
+  // The {type:{name:count}} the chart draws — same scope as the table, so the two can never disagree.
+  function visibleSourceAgg(q) {
+    const agg = {};
+    if (hasSrcByJob) sourceTree(q).forEach(p => mergeNested(agg, p.nst));
+    else visiblePods().forEach(pod => mergeNested(agg, podNestedFlat(pod, q)));
+    return agg;
+  }
+
+  function renderSourcing() {
+    const q = selQuarter();
+    const body = document.getElementById('effSourceBody');
+    const note = document.getElementById('effSourceNote');
+    const warn = document.getElementById('effSourceWarn');
+    const th = document.getElementById('effSourceTh');
+    const scoped = selDepts().length || selJobs().length;
+
+    if (note) note.innerHTML = hasSrcByJob
+      ? '<strong>Pod → Department → Job → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>). Counts are applications, attributed to the pod of the recruiter who worked them.'
+      : '<strong>Pod → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members.';
+    if (th) th.textContent = hasSrcByJob ? 'Pod / Department / Job / Source type / Source name' : 'Pod / Source type / Source name';
+    if (warn) {
+      const show = !hasSrcByJob && scoped;
+      warn.style.display = show ? '' : 'none';
+      if (show) warn.textContent = 'Heads up: the Department and Job filters are NOT applied to these numbers. Sources are still stored per recruiter, not per job, in the current data file — the figures below are each pod\'s full book of work. They become filterable after the next pipeline refresh emits per-job sources.';
     }
+    if (!body) { buildSourceChart(); return; }
+
+    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
+    const typeRows = (nst, parentTot, path, pad) => {
+      let out = '';
+      Object.entries(nst).map(([t, names]) => [t, sumNames(names), names]).sort((a, b) => b[1] - a[1])
+        .forEach(([t, tcnt, names], ti) => {
+          out += `<tr data-path="${path}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:${pad}px;font-weight:500">${CARET}${t}</td><td>${tcnt}</td><td>${pc(tcnt, parentTot)}%</td></tr>`;
+          Object.entries(names).sort((a, b) => b[1] - a[1]).forEach(([nm, cnt], ni) => {
+            out += `<tr data-path="${path}-${ti}-${ni}" style="display:none"><td style="padding-left:${pad + 26}px;color:var(--muted)">${nm}</td><td>${cnt}</td><td>${pc(cnt, tcnt)}%</td></tr>`;
+          });
+        });
+      return out;
+    };
+
+    let html = '';
+    if (hasSrcByJob) {
+      const tree = sourceTree(q);
+      const grand = tree.reduce((s, p) => s + p.tot, 0) || 1;
+      tree.forEach((P, pi) => {
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${P.pod}</td><td style="font-weight:600">${P.tot || '<span class="zero">0</span>'}</td><td>${pc(P.tot, grand)}%</td></tr>`;
+        if (!P.depts.length) {
+          html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+          return;
+        }
+        P.depts.forEach((D, di) => {
+          html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${D.jobs.length}</span></td><td>${D.tot}</td><td>${pc(D.tot, P.tot)}%</td></tr>`;
+          D.jobs.forEach((J, ji) => {
+            html += `<tr data-path="${pi}-${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:56px">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
+            html += typeRows(J.nst, J.tot, `${pi}-${di}-${ji}`, 82);
+          });
+        });
+      });
+    } else {
+      const flats = visiblePods().map(pod => { const nst = podNestedFlat(pod, q); return { pod, nst, tot: sumNested(nst) }; });
+      const grand = flats.reduce((s, p) => s + p.tot, 0) || 1;
+      flats.forEach((P, pi) => {
+        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${P.pod}</td><td style="font-weight:600">${P.tot || '<span class="zero">0</span>'}</td><td>${pc(P.tot, grand)}%</td></tr>`;
+        if (P.tot) html += typeRows(P.nst, P.tot, String(pi), 32);
+        else html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+      });
+    }
+
+    body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    wireTreePath(body, expandAll());
     buildSourceChart();
   }
 
@@ -781,19 +865,14 @@ export function initEfficiencyFilters(data) {
 
   // Horizontal STACKED bar: one bar per source TYPE, segmented by the source NAMES within it (top ~12 names
   // globally + "Other"). Each source name belongs to one type, so the legend of real names maps cleanly and each
-  // type-bar shows only its own sources. Aggregated from recruiters[].srcNested over the visible pods (filter-aware),
-  // falling back to type-only data.sources when srcNested is absent.
+  // type-bar shows only its own sources. Aggregated over exactly the same scope as the table
+  // below (visibleSourceAgg), so the chart and the tree can never disagree under a filter.
   const SRC_PALETTE = ['#4E6BA6', '#398AA2', '#1E7590', '#D8B5BE', '#938FB8', '#7BA7C7', '#A9CAD6', '#C4A6B8', '#6B8E9F', '#B5C8D8', '#8FB0A8', '#D0B8A0'];
   function buildSourceChart() {
     const ctx = document.getElementById('effSourceChart'); if (!ctx) return;
     if (effSourceChart) effSourceChart.destroy();
     const q = selQuarter();
-    const agg = {};   // type -> { name: count }
-    visiblePods().forEach(pod => podMembers(pod, q).forEach(r => {
-      const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
-      if (sn) { for (const t in sn) { const at = agg[t] || (agg[t] = {}); for (const nm in sn[t]) at[nm] = (at[nm] || 0) + sn[t][nm]; } }
-      else { for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; } }
-    }));
+    const agg = visibleSourceAgg(q);   // type -> { name: count }, same scope as the table
     const types = Object.keys(agg);
     const totalAll = types.reduce((s, t) => s + Object.values(agg[t]).reduce((a, v) => a + v, 0), 0);
     const wrap = ctx.parentElement; let emptyMsg = wrap && wrap.querySelector('.chart-empty');
