@@ -17,6 +17,8 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 // Throughput stages (mirrors the HM tab)
 const TP_KEYS = ['app','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
 const TP_LABELS = { app:'Application', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
+// The three stages Momentum reports on, in work order. One definition for both the table and the chart.
+const VEL_STAGES_EFF = [['hmReview', 'HM Screening'], ['oa', 'OA'], ['r1', 'R1']];
 const TP_TO_SK = { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' };
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
@@ -169,7 +171,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="velocity" style="display:none">
       <p class="sub-note" id="effVelUntracked" style="display:none;color:var(--orange)"></p>
       <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Department → Job → Stage</strong> (HM Screening / OA / R1), daily over the last 30 days of the range. Falls back to pending until the history accumulator has run.</p>
-      <div class="eff-podcharts" id="effVelPodCharts"></div>
+      <div class="eff-podcharts eff-2col" id="effVelPodCharts"></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
         <tbody id="effVelBody"></tbody>
@@ -179,7 +181,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Screening Efficiency -->
     <div class="eff-panel" data-panel="screening" style="display:none">
       <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Department → Job</strong> across the funnel; the per-department charts show Added vs Cleared per stage. Falls back to pending until the accumulator has run.</p>
-      <div class="eff-podcharts" id="effScreenPodCharts"></div>
+      <div class="eff-podcharts eff-2col" id="effScreenPodCharts"></div>
       <div class="scroll-table"><table>
         <thead>
           <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="3" class="stage-hdr">HM Screening</th><th colspan="3" class="stage-hdr">Online Assessment</th><th colspan="3" class="stage-hdr">R1</th></tr>
@@ -196,7 +198,7 @@ export function renderEfficiency(data) {
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
         ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
       </div>
-      <div class="eff-podcharts" id="effTpPodCharts"></div>
+      <div class="eff-podcharts eff-2col" id="effTpPodCharts"></div>
       <div class="scroll-table"><table>
         <thead id="effTpHead"></thead>
         <tbody id="effTpBody"></tbody>
@@ -216,7 +218,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Joining Conversion -->
     <div class="eff-panel" data-panel="joining" style="display:none">
       <p class="sub-note"><strong>Offered → Hired</strong>, live to the job level (Department → Job), attributed via the recruiters who worked each job.</p>
-      <div class="eff-podcharts" id="effJoinPodCharts"></div>
+      <div class="eff-podcharts eff-2col" id="effJoinPodCharts"></div>
       <div class="scroll-table"><table>
         <thead><tr><th style="min-width:260px">Department / Job</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
         <tbody id="effJoinBody"></tbody>
@@ -691,8 +693,7 @@ export function initEfficiencyFilters(data) {
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       head.innerHTML = h + '</tr>';
     }
-    // HM Screening -> OA -> R1: the order the work actually happens in (locked with the user 2026-08-21).
-    const VELS = [['hmReview', 'HM Screening'], ['oa', 'OA'], ['r1', 'R1']];
+    const VELS = VEL_STAGES_EFF;
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
     const add = (dst, src) => { for (let i = 0; i < dst.length; i++) dst[i] += src[i]; };
     let html = '';
@@ -846,9 +847,16 @@ export function initEfficiencyFilters(data) {
 
   // Per-pod chart placeholders (Y=Job lights up with the pipeline).
   let podCharts = {};
+  // Shared chart defaults (#18 chart audit). Every Overall Efficiency chart gets a legend, readable ticks and
+  // data labels — several were rendering as unlabelled blocks of colour with the legend switched off, which
+  // told the reader nothing. The global valueLabelsPlugin draws the numbers; it skips segments too thin to
+  // fit, so it is left ON everywhere except where a custom total label does the job instead.
+  const LEGEND = { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 10 } };
+  const TICKS = { font: { size: 11 } };
   const hbarOpts = (stacked, xtitle) => ({ indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-    plugins: { legend: stacked ? { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } : { display: false } },
-    scales: { x: { ...gridY, stacked, ticks: { font: { size: 10 } }, title: xtitle ? { display: true, text: xtitle, font: { size: 10 }, color: '#64748b' } : undefined }, y: { stacked, grid: { display: false }, ticks: { font: { size: 10 } } } } });
+    layout: { padding: { right: 26 } },
+    plugins: { legend: LEGEND },
+    scales: { x: { ...gridY, stacked, ticks: TICKS, title: xtitle ? { display: true, text: xtitle, font: { size: 11 }, color: '#64748b' } : undefined }, y: { stacked, grid: { display: false }, ticks: TICKS } } });
 
   // One small chart per pod. buildCfg(pod) → a Chart.js config (optional _h = fixed height px) or null (empty).
   function renderPodCharts(containerId, pods, buildCfg, emptyText) {
@@ -875,14 +883,36 @@ export function initEfficiencyFilters(data) {
       { label: 'Hired', data: js.map(j => j.hired), backgroundColor: C.green, stack: 'j', borderRadius: 2 },
       { label: 'Offered', data: js.map(j => Math.max(0, j.offer - j.hired)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
   };
+  // Momentum per department: the three stages the tab is ABOUT, stacked per day. It used to merge all three
+  // into one unlabelled "Submissions" series with the legend switched off — which hid exactly the breakdown
+  // the tab exists to show.
+  const VEL_STAGE_COLORS = { hmReview: '#4E6BA6', oa: '#398AA2', r1: '#1E7590' };
   const velDeptCfg = ({ jobs }) => {
-    const dates = velDates(), dk = dates.map(dkeyEff);
     if (!velByJob) return null;
+    const dates = velDates(), dk = dates.map(dkeyEff);
     const jids = jobs.map(j => j.jid);
-    const per = dk.map(k => jids.reduce((s, jid) => { const jm = velByJob[jid] || {}; return ['hmReview', 'oa', 'r1'].reduce((ss, sk) => ss + (((jm[sk] || {})[k]) || 0), s); }, 0));
-    if (per.every(v => v === 0)) return null;
+    const series = VEL_STAGES_EFF.map(([sk, label]) => ({
+      sk, label,
+      data: dk.map(k => jids.reduce((s2, jid) => s2 + ((((velByJob[jid] || {})[sk] || {})[k]) || 0), 0)).reverse()
+    }));
+    if (series.every(x => x.data.every(v => v === 0))) return null;
     const labels = dates.map(d => `${MON[d.getMonth()]} ${d.getDate()}`).reverse();
-    return { _h: 140, type: 'bar', data: { labels, datasets: [{ label: 'Submissions', data: per.slice().reverse(), backgroundColor: C.blue, borderRadius: 2, barPercentage: 0.9 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }, y: { ...gridY } } } };
+    return {
+      _h: 230,
+      type: 'bar',
+      data: { labels, datasets: series.map(x => ({ label: x.label, data: x.data, backgroundColor: VEL_STAGE_COLORS[x.sk], stack: 's', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.9 })) },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: LEGEND,
+          tooltip: { callbacks: { footer: (its) => its.length ? `Total: ${its[0].chart.data.datasets.reduce((a, d) => a + (d.data[its[0].dataIndex] || 0), 0)}` : '' } }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+          y: { ...gridY, stacked: true, ticks: { ...TICKS, precision: 0 }, title: { display: true, text: 'Candidates entering', font: { size: 11 }, color: '#64748b' } }
+        }
+      }
+    };
   };
   const screenDeptCfg = ({ jobs }) => {
     if (!tpByJob) return null;
@@ -891,9 +921,12 @@ export function initEfficiencyFilters(data) {
     const hm = agg('hmReview'), oa = agg('oa'), r1 = agg('r1');
     const hmR = hm.r, hmC = hm.c, oaR = oa.r, oaC = oa.c, r1R = r1.r, r1C = r1.c;
     if (hmR + oaR + r1R === 0) return null;
-    return { _h: 150, type: 'bar', data: { labels: ['HM', 'OA', 'R1'], datasets: [
-      { label: 'Added', data: [hmR, oaR, r1R], backgroundColor: C.blue, borderRadius: 2 },
-      { label: 'Cleared', data: [hmC, oaC, r1C], backgroundColor: C.green, borderRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { ...gridY } } } };
+    return { _h: 220, type: 'bar', data: { labels: ['HM Screening', 'OA', 'R1'], datasets: [
+      { label: 'Added', data: [hmR, oaR, r1R], backgroundColor: C.blue, borderRadius: 3 },
+      { label: 'Cleared', data: [hmC, oaC, r1C], backgroundColor: C.green, borderRadius: 3 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: LEGEND },
+        scales: { x: { grid: { display: false }, ticks: TICKS }, y: { ...gridY, ticks: { ...TICKS, precision: 0 }, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } } } } };
   };
 
   // Per-pod Throughput chart: Added (reached) vs Cleared per stage, from throughputByJob over the pod's jobs.
@@ -908,13 +941,11 @@ export function initEfficiencyFilters(data) {
       return { label: TP_LABELS[k], r: t.r, c: t.c };
     }).filter(x => x.r || x.c);
     if (!rows.length) return null;
-    return { _h: Math.max(120, rows.length * 28 + 44), type: 'bar',
+    return { _h: Math.max(170, rows.length * 34 + 70), type: 'bar',
       data: { labels: rows.map(x => x.label), datasets: [
-        { label: 'Added', data: rows.map(x => x.r), backgroundColor: C.blue, borderRadius: 2 },
-        { label: 'Cleared', data: rows.map(x => x.c), backgroundColor: C.green, borderRadius: 2 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 9 }, padding: 6 } } },
-        scales: { x: { ...gridY, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } } };
+        { label: 'Added', data: rows.map(x => x.r), backgroundColor: C.blue, borderRadius: 3 },
+        { label: 'Cleared', data: rows.map(x => x.c), backgroundColor: C.green, borderRadius: 3 }] },
+      options: hbarOpts(false, 'Candidates') };
   };
 
   // Fulfilment charts: bars are STACKED Joined / Joining Pending / Gap, which add up to Total Positions —
