@@ -23,6 +23,22 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 
 // Generic N-level collapsible tree. Rows carry data-path ("0", "0-1", "0-1-2"…) + data-haschild for
 // expandable rows. Clicking shows only direct children; collapsing hides + resets all descendants.
+// A Momentum stage with no events ANYWHERE in the dataset is not "a quiet week" — it means the stage is
+// not used in this Ashby workspace at all, and a permanently blank row reads as "nobody did any". OA is
+// exactly that today: 0 in the pipeline snapshot, 0 lifetime in stage history, 0 on every recruiter.
+// Checked against the whole store rather than the visible 30-day window so a genuinely quiet week is
+// never mislabelled as untracked.
+function untrackedStages(store, stages) {
+  if (!store) return [];
+  return stages.filter(([sk]) => {
+    for (const key in store) {
+      const days = store[key] && store[key][sk];
+      if (days) { for (const d in days) { if (days[d] > 0) return false; } }
+    }
+    return true;
+  }).map(([, label]) => label);
+}
+
 function wireTreePath(tbody, expandAll) {
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
     row.addEventListener('click', () => {
@@ -95,7 +111,7 @@ export function renderEfficiency(data) {
     </style>
 
     <h2 class="section-title">Overall Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Velocity</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (velocity/throughput from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
+    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Momentum</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (both from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Pod</span><div class="ms" id="effMsPod"></div></div>
@@ -111,7 +127,7 @@ export function renderEfficiency(data) {
 
     <div class="eff-subtabs">
       <button class="eff-subtab active" data-tab="fulfilment">Fulfilment</button>
-      <button class="eff-subtab" data-tab="velocity">Submission Velocity</button>
+      <button class="eff-subtab" data-tab="velocity">Momentum</button>
       <button class="eff-subtab" data-tab="screening">Screening Efficiency</button>
       <button class="eff-subtab" data-tab="throughput">Throughput</button>
       <button class="eff-subtab" data-tab="timeinprocess">Time in Process</button>
@@ -144,9 +160,10 @@ export function renderEfficiency(data) {
       </table></div>
     </div>
 
-    <!-- PANEL: Submission Velocity -->
+    <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
-      <p class="sub-note"><strong>Pod → Department → Job → Stage</strong> (OA / HM Screening / R1), daily over the last 30 days of the range — counted by true <strong>stage-entry date</strong> from stage history (no bulk-update spikes). Falls back to a pod-level snapshot until the history accumulator has run.</p>
+      <p class="sub-note" id="effVelUntracked" style="display:none;color:var(--orange)"></p>
+      <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Pod → Department → Job → Stage</strong> (HM Screening / OA / R1), daily over the last 30 days of the range. Falls back to a pod-level snapshot until the history accumulator has run.</p>
       <div class="eff-podcharts" id="effVelPodCharts"></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
@@ -572,7 +589,7 @@ export function initEfficiencyFilters(data) {
     tisNote(per);
   }
 
-  // ===== Submission Velocity (Pod → Department → Job → Stage; last 30 days of range, descending) =====
+  // ===== Momentum (Pod → Department → Job → Stage; last 30 days of range, descending) =====
   function velDates() {
     const toV = document.getElementById('effVelTo')?.value;
     const fromV = document.getElementById('effVelFrom')?.value;
@@ -613,7 +630,8 @@ export function initEfficiencyFilters(data) {
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       head.innerHTML = h + '</tr>';
     }
-    const VELS = [['oa', 'OA'], ['hmReview', 'HM Screening'], ['r1', 'R1']];
+    // HM Screening -> OA -> R1: the order the work actually happens in (locked with the user 2026-08-21).
+    const VELS = [['hmReview', 'HM Screening'], ['oa', 'OA'], ['r1', 'R1']];
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
     const add = (dst, src) => { for (let i = 0; i < dst.length; i++) dst[i] += src[i]; };
     let html = '';
@@ -653,6 +671,12 @@ export function initEfficiencyFilters(data) {
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
     renderPodCharts('effVelPodCharts', pods, velPodCfg, 'No submissions in range.');
+    const untracked = untrackedStages(velByJob, VELS);
+    const un = document.getElementById('effVelUntracked');
+    if (un) {
+      un.style.display = untracked.length ? '' : 'none';
+      if (untracked.length) un.innerHTML = `<strong>${untracked.join(' and ')}</strong> ${untracked.length > 1 ? 'are' : 'is'} not tracked in this Ashby workspace — no candidate has ever been recorded entering ${untracked.length > 1 ? 'those stages' : 'that stage'}, so the row${untracked.length > 1 ? 's read' : ' reads'} zero for every day. That is a missing signal, not a lack of activity.`;
+    }
   }
 
   // ===== Sourcing Mix — Pod → Department → Job → Source type → Source name =====
