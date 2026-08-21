@@ -281,7 +281,10 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: PANELISTS ===== -->
     <div class="hm-panel" data-panel="panelists" style="display:none">
-      <p class="sub-note">Interview load and feedback turnaround per panelist. Click a department to expand.</p>
+      <p class="sub-note">Interview load per panelist for the selected period. Click a department to expand. Feedback turnaround is all-time — it isn't broken down by quarter.</p>
+      <div class="filter-bar">
+        <div class="ms" id="msHmPanel"></div>
+      </div>
       <div class="scroll-table"><table>
         <thead><tr><th>Department</th><th>Job</th><th>Interview Count</th><th>Avg Time for Feedback</th></tr></thead>
         <tbody id="hmPanelBody"></tbody>
@@ -306,7 +309,7 @@ export function initHmFilters(data) {
   jobs.forEach(j => { j._dept = deptOf(j.department); });
 
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
-  let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null;
+  let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null, msHmPanel = null;
   const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
   // Kept identical across the HM / Recruiter / Overall-Efficiency tabs on purpose.
@@ -653,8 +656,19 @@ export function initHmFilters(data) {
     if (!body) return;
     const deptG = gDept();
     const fmtTurn = (hrs) => hrs == null ? '—' : (hrs >= 24 ? (hrs / 24).toFixed(1) + 'd' : hrs.toFixed(1) + 'h');
-    let list = (data.panelists || []).map(p => ({ ...p, _dept: deptOf(p.dept || p.department || '') }));
+    const nameSel = msHmPanel ? msHmPanel.getSelected() : [];
+    // Interview counts come from the panelist's per-quarter breakdown so the table follows
+    // the period selector; older data files without byQuarter keep their lifetime total.
+    const quarters = quartersInWindow(gFrom(), gTo());
+    const periodCount = (p) => {
+      if (!p.byQuarter) return p.interviews || 0;
+      if (!quarters.length) return p.interviews || 0;
+      return quarters.reduce((s, q) => s + (p.byQuarter[q] || 0), 0);
+    };
+    let list = (data.panelists || []).map(p => ({ ...p, _dept: deptOf(p.dept || p.department || ''), _count: periodCount(p) }));
     list = list.filter(p => !deptG || p._dept === deptG);
+    if (nameSel.length) list = list.filter(p => nameSel.includes(p.name || p.panelist || ''));
+    list = list.filter(p => p._count > 0);
     if (!list.length) {
       body.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — the interviewer/panelist pipeline pass appears here after the next data refresh.</td></tr>`;
       return;
@@ -663,14 +677,14 @@ export function initHmFilters(data) {
     list.forEach(p => { if (!groups[p._dept]) groups[p._dept] = []; groups[p._dept].push(p); });
     let html = '';
     Object.keys(groups).sort().forEach((dept, gi) => {
-      const arr = groups[dept].sort((a, b) => (b.interviews || 0) - (a.interviews || 0));
-      const deptCount = arr.reduce((a, p) => a + (p.interviews || 0), 0);
+      const arr = groups[dept].sort((a, b) => b._count - a._count);
+      const deptCount = arr.reduce((a, p) => a + p._count, 0);
       html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${dept}${cnt(arr.length)}</td><td></td><td style="font-weight:600">${deptCount}</td><td></td></tr>`;
       arr.forEach(p => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
           <td style="padding-left:30px;font-weight:500">${p.name || p.panelist || ''}</td>
-          <td style="max-width:300px">${p.jobTitle || p.job || ''}</td><td>${p.interviews || 0}</td><td>${fmtTurn(p.avgTurnaroundHrs)}</td></tr>`;
+          <td style="max-width:300px">${p.jobTitle || p.job || ''}</td><td>${p._count}</td><td>${fmtTurn(p.avgTurnaroundHrs)}</td></tr>`;
       });
     });
     body.innerHTML = html;
@@ -831,6 +845,10 @@ export function initHmFilters(data) {
   // Job-title multi-selects (build + wire) — one per section
   msHm1Job = makeMultiSelect(document.getElementById('msHm1Job'), 'Job', jobTitles, renderSection1);
   msHmJP = makeMultiSelect(document.getElementById('msHmJP'), 'Job', jobTitles, renderJoiningPending);
+  // Panelist names are the long tail here (hundreds of rows) — the shared multi-select gives
+  // type-to-filter so nobody has to scroll to find a person.
+  const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  msHmPanel = makeMultiSelect(document.getElementById('msHmPanel'), 'Panelist', panelistNames, renderPanelist);
   msHm2Job = makeMultiSelect(document.getElementById('msHm2Job'), 'Job', jobTitles, renderThroughput);
   msHm3Job = makeMultiSelect(document.getElementById('msHm3Job'), 'Job', jobTitles, renderPipeline);
   document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));

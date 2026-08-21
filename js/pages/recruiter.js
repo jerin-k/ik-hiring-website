@@ -551,8 +551,20 @@ export function initRecruiterFilters(data) {
     const hideZero = document.getElementById('recHideZero')?.checked;
     const pods = msPod ? msPod.getSelected() : [];
     const names = msRec ? msRec.getSelected() : [];
-    // Job multi-select (msJob) is present but pending — recruiter×job attribution needs the pipeline,
-    // so it can't scope the recruiter list yet; wired for when that data lands.
+    // Job multi-select now works off throughputByRecruiterJob: a recruiter stays in the list
+    // only if they have stage history on one of the selected jobs. Until that data existed
+    // this filter was wired but inert — it looked functional and changed nothing.
+    const jobSel = msJob ? msJob.getSelected() : [];
+    const jobIdsSelected = jobSel.length
+      ? new Set((data.jobs || []).filter(j => jobSel.includes(j.title)).map(j => j.id))
+      : null;
+    const recWorkedSelectedJob = (name) => {
+      if (!jobIdsSelected) return true;
+      const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
+      const mine = rj && rj[name];
+      if (!mine) return false;
+      return Object.keys(mine).some(j8 => jobIdsSelected.has(j8));
+    };
     // Departed recruiters are hidden by default — their historical numbers are still in the
     // data (and still score), they just clutter the working view. The Data Hygiene roster
     // deliberately ignores this and always lists everyone; that tab exists to show the split.
@@ -562,6 +574,7 @@ export function initRecruiterFilters(data) {
       if (!inclInactive && isRecInactive(r)) return false;
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(podOf(r.name, q))) return false;
+      if (!recWorkedSelectedJob(r.name)) return false;
       return true;
     });
   }
