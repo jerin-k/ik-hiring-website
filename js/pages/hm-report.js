@@ -239,7 +239,7 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
-      <p class="sub-note" style="color:var(--orange)">Live snapshot — the <strong>Department</strong> filter applies here; the date/quarter filter does not (no per-stage dates in the data yet). Click a department to drill in.</p>
+      <p class="sub-note">In = candidates who entered the stage, Out = candidates who moved past it — counted from real stage transitions in the selected period. Click a department to drill in.</p>
       <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
       <div class="filter-bar">
         <div class="ms" id="msHm2Job"></div>
@@ -502,12 +502,42 @@ export function initHmFilters(data) {
   }
 
   // ===== Section 2: Throughput (Department -> Job tree) =====
+  // TP column keys -> stage keys used by the stage-history rollups.
+  const TP_TO_STAGE = { app: 'appReview', ta: 'taScreen', hm: 'hmReview', oa: 'oa', r1: 'r1', r2: 'r2', r3: 'r3', r4: 'r4', r5: 'r5', rc: 'refCheck', ds: 'docSub', offer: 'offer' };
+
+  // Which quarters the current From/To window covers, taken from whatever the rollups hold.
+  function quartersInWindow(from, to) {
+    const byQ = (data.stageRollups && data.stageRollups.throughputByJobQ) || {};
+    const seen = {};
+    Object.keys(byQ).forEach(j => Object.keys(byQ[j] || {}).forEach(st => Object.keys(byQ[j][st] || {}).forEach(q => { seen[q] = 1; })));
+    return Object.keys(seen).filter(q => quarterInRange(q, from, to));
+  }
+
+  // In/Out per stage for one job, summed over the quarters in the report window. Uses real
+  // stage transitions (reached / cleared) instead of the lifetime pipeline snapshot, which
+  // is what made this table ignore the period filter entirely.
+  function throughputFor(j, quarters) {
+    const byQ = data.stageRollups && data.stageRollups.throughputByJobQ && data.stageRollups.throughputByJobQ[j.id];
+    if (!byQ || !quarters.length) return computeThroughput(j.pipeline, j.total);
+    const out = {};
+    TP_KEYS.forEach(k => {
+      const st = byQ[TP_TO_STAGE[k]] || {};
+      let i = 0, o = 0;
+      quarters.forEach(q => { const v = st[q]; if (v) { i += v.reached || 0; o += v.cleared || 0; } });
+      out[k] = { i: i, o: o };
+    });
+    out.overall = out.r1.i > 0 ? out.ds.i / out.r1.i : null;
+    return out;
+  }
+
   function renderThroughput() {
     const deptG = gDept();
     const jobSel = msHm2Job ? msHm2Job.getSelected() : [];
     const hideEmpty = document.getElementById('hm2HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm2Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
+
+    const quarters = quartersInWindow(gFrom(), gTo());
 
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
@@ -531,7 +561,7 @@ export function initHmFilters(data) {
     TP_KEYS.forEach(k => { tpTotals[k] = { i: 0, o: 0 }; });
     const groups = {};
     filtered.forEach(j => {
-      const t = computeThroughput(j.pipeline, j.total);
+      const t = throughputFor(j, quarters);
       TP_KEYS.forEach(k => { tpTotals[k].i += t[k].i; tpTotals[k].o += t[k].o; });
       if (!groups[j._dept]) groups[j._dept] = [];
       groups[j._dept].push({ job: j, t });
