@@ -1067,7 +1067,8 @@ export function initRecruiterFilters(data) {
     const dkeys = dates.map(dkey);
 
     if (head) {
-      let h = `<tr><th style="min-width:240px">Pod / Recruiter / Stage</th><th>Total · ${dates.length}d</th>`;
+      const hasJob = !!(data.stageRollups && data.stageRollups.velocityByRecruiterJob);
+      let h = `<tr><th style="min-width:240px">Pod / Recruiter${hasJob ? ' / Job' : ''} / Stage</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       h += '</tr>';
       head.innerHTML = h;
@@ -1088,25 +1089,62 @@ export function initRecruiterFilters(data) {
       return { arr, total };
     };
 
+    // Pod -> Recruiter -> [Job ->] Stage. The Job level appears only when the pipeline has emitted the
+    // recruiter x job x day cross (velocityByRecruiterJob); without it the tree stays 3 deep exactly as before.
+    // Uses the generic data-path tree (arbitrary depth) rather than wireVelTree, which only wires 3 levels.
+    const velRJ = data.stageRollups && data.stageRollups.velocityByRecruiterJob;
+    const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
+    const spanN = (n) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`;
+    // days array + total for one {day:count} map
+    const series = (m) => { let t = 0; const per = dkeys.map(dk => { const v = (m && m[dk]) || 0; t += v; return v; }); return { per, t }; };
+    const addInto = (dst, src) => { src.forEach((v, i) => dst[i] += v); };
+
     let html = '';
     groups.forEach((G, pi) => {
       const podArr = new Array(dkeys.length).fill(0); let podTotal = 0;
-      const recCache = G.recs.map(r => { const d = recDaily(r); d.arr.forEach((v, i) => podArr[i] += v); podTotal += d.total; return d; });
-      html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${numRow(podTotal, podArr, true)}</tr>`;
+      const recCache = G.recs.map(r => { const d = recDaily(r); addInto(podArr, d.arr); podTotal += d.total; return d; });
+      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
       G.recs.forEach((r, ri) => {
-        const rk = `${pi}-${ri}`;
-        html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${numRow(recCache[ri].total, recCache[ri].arr, false)}</tr>`;
-        VEL_STAGES.forEach(([sk, label]) => {
-          const m = stageDay(r, sk); let t = 0; const per = dkeys.map(dk => { const v = m[dk] || 0; t += v; return v; });
-          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted)">${label}</td>${numRow(t, per, false)}</tr>`;
-        });
+        const rp = `${pi}-${ri}`;
+        // Jobs this recruiter actually moved someone through, in the window, for the displayed stages.
+        const jobs = [];
+        if (velRJ && velRJ[r.name]) {
+          Object.keys(velRJ[r.name]).forEach(j8 => {
+            const byStage = velRJ[r.name][j8] || {};
+            const arr = new Array(dkeys.length).fill(0); let tot = 0;
+            const stages = VEL_STAGES.map(([sk, label]) => {
+              const sres = series(byStage[sk]); addInto(arr, sres.per); tot += sres.t;
+              return { label, per: sres.per, t: sres.t };
+            });
+            if (tot) jobs.push({ j8, title: jobTitleOf[j8] || j8, arr, tot, stages });
+          });
+          jobs.sort((a, b) => b.tot - a.tot);
+        }
+        html += `<tr data-path="${rp}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recCache[ri].total, recCache[ri].arr, false)}</tr>`;
+        if (jobs.length) {
+          jobs.forEach((J, ji) => {
+            const jp = `${rp}-${ji}`;
+            html += `<tr data-path="${jp}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+              <td style="padding-left:52px">${CARET}${J.title}</td>${numRow(J.tot, J.arr, false)}</tr>`;
+            J.stages.forEach((st, si) => {
+              html += `<tr data-path="${jp}-${si}" style="display:none">
+                <td style="padding-left:78px;color:var(--muted)">${st.label}</td>${numRow(st.t, st.per, false)}</tr>`;
+            });
+          });
+        } else {
+          // No job cross available (or no job activity): keep the original Stage level directly under the recruiter.
+          VEL_STAGES.forEach(([sk, label], si) => {
+            const sres = series(stageDay(r, sk));
+            html += `<tr data-path="${rp}-${si}" style="display:none">
+              <td style="padding-left:52px;color:var(--muted)">${label}</td>${numRow(sres.t, sres.per, false)}</tr>`;
+          });
+        }
       });
     });
     body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
-    wireVelTree(body);
+    wireTreePath(body);
     const untracked = untrackedStages(roll, VEL_STAGES);
     const un = document.getElementById('recVelUntracked');
     if (un) {

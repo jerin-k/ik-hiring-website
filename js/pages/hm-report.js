@@ -1,19 +1,21 @@
 import { getData } from '../data.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 
-const STAGES_ORDER = ['appReview','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
+// 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
+// route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
+const STAGES_ORDER = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 const STAGE_LABELS = {
-  appReview:'App Review', taScreen:'TA Screen', hmReview:'HM Review', oa:'OA',
+  appReview:'App Review', helloChristy:'Hello Christy', taScreen:'TA Screen', hmReview:'HM Review', oa:'OA',
   r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
   refCheck:'Ref Check', docSub:'Doc Sub', offer:'Offer', hired:'Hired'
 };
-const TP_KEYS = ['app','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
+const TP_KEYS = ['app','hc','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
 const TP_LABELS = {
-  app:'Application', ta:'TA Screen', hm:'HM Review', oa:'OA',
+  app:'Application', hc:'Hello Christy', ta:'TA Screen', hm:'HM Review', oa:'OA',
   r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
   rc:'Ref Check', ds:'Doc Sub', offer:'Offer'
 };
-const FUNNEL_ORDER = ['taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
+const FUNNEL_ORDER = ['helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // The HM tab uses Department only (team is intentionally not a dimension here).
@@ -51,13 +53,19 @@ function zv(v) { return v > 0 ? v : '<span class="zero">0</span>'; }
 function cnt(n) { return `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`; }
 
 function computeThroughput(p, total) {
-  const stages = ['taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
+  const stages = ['helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
   const cum = {};
   let running = 0;
   for (let i = stages.length - 1; i >= 0; i--) { running += (p[stages[i]] || 0); cum[stages[i]] = running; }
   return {
-    app:   { i: total,              o: cum.taScreen || 0 },
-    ta:    { i: cum.taScreen || 0,  o: cum.hmReview || 0 },
+    // 'Out of App Review' means reached EITHER screening route, so it reads from the combined tier.
+    app:   { i: total,                    o: cum.helloChristy || 0 },
+    // Hello Christy and TA Screen are ALTERNATIVE routes at the same tier, so hc -> ta is not a real
+    // conversion — a bot-screened candidate advances to HM Review, not to TA Screen. `o` is therefore the
+    // count that went on to HM Review or beyond, the same denominator TA Screen uses, rather than a
+    // hc-to-ta step that would render as phantom drop-off.
+    hc:    { i: p.helloChristy || 0,      o: cum.hmReview || 0, altRoute: true },
+    ta:    { i: cum.taScreen || 0,        o: cum.hmReview || 0 },
     hm:    { i: cum.hmReview || 0,  o: cum.oa || 0 },
     oa:    { i: cum.oa || 0,        o: cum.r1 || 0 },
     r1:    { i: cum.r1 || 0,        o: cum.r2 || 0 },
@@ -506,7 +514,7 @@ export function initHmFilters(data) {
 
   // ===== Section 2: Throughput (Department -> Job tree) =====
   // TP column keys -> stage keys used by the stage-history rollups.
-  const TP_TO_STAGE = { app: 'appReview', ta: 'taScreen', hm: 'hmReview', oa: 'oa', r1: 'r1', r2: 'r2', r3: 'r3', r4: 'r4', r5: 'r5', rc: 'refCheck', ds: 'docSub', offer: 'offer' };
+  const TP_TO_STAGE = { app: 'appReview', hc: 'helloChristy', ta: 'taScreen', hm: 'hmReview', oa: 'oa', r1: 'r1', r2: 'r2', r3: 'r3', r4: 'r4', r5: 'r5', rc: 'refCheck', ds: 'docSub', offer: 'offer' };
 
   // Which quarters the current From/To window covers, taken from whatever the rollups hold.
   function quartersInWindow(from, to) {
