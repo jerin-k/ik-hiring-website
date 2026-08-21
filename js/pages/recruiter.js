@@ -46,7 +46,23 @@ function wirePodTree(tbody) {
   }
 }
 
-// Collapse/expand a 3-level Pod -> Recruiter -> Stage tree (Submission Velocity).
+// A Momentum stage with no events ANYWHERE in the dataset is not "a quiet week" — it means the stage is
+// not used in this Ashby workspace at all, and a permanently blank row reads as "nobody did any". OA is
+// exactly that today: 0 in the pipeline snapshot, 0 lifetime in stage history, 0 on every recruiter.
+// Checked against the whole store rather than the visible 30-day window so a genuinely quiet week is
+// never mislabelled as untracked.
+function untrackedStages(store, stages) {
+  if (!store) return [];
+  return stages.filter(([sk]) => {
+    for (const key in store) {
+      const days = store[key] && store[key][sk];
+      if (days) { for (const d in days) { if (days[d] > 0) return false; } }
+    }
+    return true;
+  }).map(([, label]) => label);
+}
+
+// Collapse/expand a 3-level Pod -> Recruiter -> Stage tree (Momentum).
 function wireVelTree(tbody) {
   tbody.querySelectorAll('tr.lvl-pod').forEach(h => {
     h.addEventListener('click', () => {
@@ -213,7 +229,7 @@ export function renderRecruiter(data) {
     </style>
 
     <h2 class="section-title">Recruiter Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives <strong>Submission Velocity</strong>.</p>
+    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives <strong>Momentum</strong>.</p>
     <div class="rec-filters">
       <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
@@ -230,7 +246,7 @@ export function renderRecruiter(data) {
 
     <div class="rec-subtabs">
       <button class="rec-subtab active" data-tab="fulfilment">Fulfilment</button>
-      <button class="rec-subtab" data-tab="velocity">Submission Velocity</button>
+      <button class="rec-subtab" data-tab="velocity">Momentum</button>
       <button class="rec-subtab" data-tab="screening">Screening Efficiency</button>
       <button class="rec-subtab" data-tab="joining">Joining Conversion</button>
       <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
@@ -238,9 +254,10 @@ export function renderRecruiter(data) {
       <button class="rec-subtab" data-tab="hygiene">Data Hygiene</button>
     </div>
 
-    <!-- PANEL: Submission Velocity (LIVE — per-stage/day cells from recruiters[].daily) -->
+    <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) — per-stage/day stage-entry counts -->
     <div class="rec-panel" data-panel="velocity" style="display:none">
-      <p class="sub-note">Pod → Recruiter → Stage (OA / HM Screening / R1) across the last 30 days of the selected range. Cells count candidates who <strong>entered</strong> each stage per day, from real stage history (no bulk-update spikes).</p>
+      <p class="sub-note" id="recVelUntracked" style="display:none;color:var(--orange)"></p>
+      <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Pod → Recruiter → Stage</strong> (HM Screening / OA / R1) across the last 30 days of the selected range.</p>
       <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
@@ -587,7 +604,7 @@ export function initRecruiterFilters(data) {
     const recs = getFilteredRecs();
     const groups = groupByPod(recs, selQuarter());
 
-    // ===== Submission Velocity (scaffold — own POD/date filters; values pending pipeline) =====
+    // ===== Momentum (own POD/date filters) =====
     renderVelocity();
 
     // ===== Screening Efficiency — Added = reached the stage, Cleared = left it (reached next stage) =====
@@ -980,7 +997,7 @@ export function initRecruiterFilters(data) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // ===== Submission Velocity render (Pod -> Recruiter -> Stage; last 30 days of range, descending) =====
+  // ===== Momentum render (Pod -> Recruiter -> Stage; last 30 days of range, descending) =====
   function velDates() {
     const toV = document.getElementById('recVelTo')?.value;
     const fromV = document.getElementById('recVelFrom')?.value;
@@ -1011,7 +1028,9 @@ export function initRecruiterFilters(data) {
   }
   // recruiters[].daily is keyed by pipeline stage-key ({stageKey:{'YYYY-MM-DD':count}}), bucketed by
   // last-activity day. Map the 3 displayed stages to those keys.
-  const VEL_STAGES = [['oa', 'Online Assessment'], ['hmReview', 'HM Screening'], ['r1', 'R1']];
+  // Stage order is HM Screening -> OA -> R1 everywhere: it is the order the work actually happens in,
+  // so a row reads left-to-right as a candidate's progression rather than jumping backwards.
+  const VEL_STAGES = [['hmReview', 'HM Screening'], ['oa', 'OA'], ['r1', 'R1']];
   function dkey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function renderVelocity() {
     const head = document.getElementById('recVelHead');
@@ -1063,6 +1082,12 @@ export function initRecruiterFilters(data) {
     });
     body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
     wireVelTree(body);
+    const untracked = untrackedStages(roll, VEL_STAGES);
+    const un = document.getElementById('recVelUntracked');
+    if (un) {
+      un.style.display = untracked.length ? '' : 'none';
+      if (untracked.length) un.innerHTML = `<strong>${untracked.join(' and ')}</strong> ${untracked.length > 1 ? 'are' : 'is'} not tracked in this Ashby workspace — no candidate has ever been recorded entering ${untracked.length > 1 ? 'those stages' : 'that stage'}, so the row${untracked.length > 1 ? 's read' : ' reads'} zero for every day. That is a missing signal, not a lack of activity.`;
+    }
   }
 
   // ===== charts (standard palette + square legends) =====
@@ -1310,7 +1335,7 @@ export function initRecruiterFilters(data) {
   document.getElementById('recInclInactive')?.addEventListener('change', renderAll);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
-  // Date filter — drives Submission Velocity's 30-day window
+  // Date filter — drives Momentum's 30-day window
   ['recVelFrom', 'recVelTo'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', () => { renderVelocity(); renderActiveChart(); }));
   // Year/Quarter also picks the quarter for pod grouping + capacity, so re-render everything
