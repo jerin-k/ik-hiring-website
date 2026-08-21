@@ -104,6 +104,9 @@ export function renderEfficiency(data) {
 
       /* per-department chart cards */
       .eff-podcharts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:18px; }
+      /* Fulfilment: two per row — five across made every bar unreadable. */
+      .eff-podcharts.eff-2col { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      @media (max-width:900px) { .eff-podcharts.eff-2col { grid-template-columns:1fr; } }
       .eff-podchart { border:1px solid var(--border); border-radius:10px; padding:14px 16px; background:var(--card); min-height:110px;
         display:flex; flex-direction:column; gap:6px; }
       .eff-podchart h5 { font-size:12px; font-weight:600; color:var(--text); margin:0; }
@@ -136,26 +139,29 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
-      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>, the <strong>Sales</strong> pod on <strong>Hires</strong>. Assigned / Offered / Hired HC &amp; <strong>Score</strong> are live to the job level (attributed via the recruiters who worked each job). <strong>Target = summed pod capacity</strong> (per quarter, Metric Config); <strong>Gap = max(0, Target − Achieved)</strong> — 0 until capacities are set. Joining Pending is a pod-level count.</p>
-      <div class="eff-podcharts" id="effFulfilPodCharts"></div>
-      <div class="chart-wrap" style="max-width:520px;margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
+      <p class="sub-note"><strong>Total Positions</strong> = distinct openings opened in the quarter. It splits three ways —
+        <strong>Joined</strong> (filled) + <strong>Joining Pending</strong> (offer out, start date ahead) + <strong>Gap</strong> (still to fill) —
+        so the bar and the table say the same thing. <strong>Score</strong> is the position count × the role's score
+        (Family + Level + Complexity → grid, per <strong>Admin → Metric Configuration</strong>). A role with no Level or
+        Complexity in Ashby scores nothing and is marked <span style="color:var(--orange)">unscored</span>; its headcount still counts.
+        See <strong>Recruiter Efficiency → Data Hygiene → Roles Missing Score Inputs</strong>.</p>
+      <div class="eff-podcharts eff-2col" id="effFulfilPodCharts"></div>
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">All departments</h4>
+      <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table>
         <thead>
-          <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
-        </thead>
-        <tbody id="effFulfilOfferBody"></tbody>
-      </table></div>
-
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
-      <div class="scroll-table"><table>
-        <thead>
-          <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Hired</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
+          <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
-        <tbody id="effFulfilHireBody"></tbody>
+        <tbody id="effFulfilBody"></tbody>
+      </table></div>
+
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:22px 0 6px">Joining Pending — Cases</h4>
+      <p class="sub-note" style="margin-top:0">Everyone with an offer in play: Reference Check, Documentation or Offer. Same list as the Hiring Manager tab, scoped to the Department/Job filters above. <strong>Unlinked</strong> rows have no opening attached in Ashby, so they are invisible to the position counts — fix those first.</p>
+      <div class="scroll-table"><table>
+        <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
+        <tbody id="effFulfilJPBody"></tbody>
       </table></div>
     </div>
 
@@ -431,73 +437,90 @@ export function initEfficiencyFilters(data) {
 
   function renderFulfilment() {
     const q = selQuarter();
-    fulfilTree('offer');
-    fulfilTree('hire');
+    fulfilTable(q);
     renderFulfilCharts(q);
+    renderFulfilJP(q);
   }
 
-  // Department → Job fulfilment (#18). Pods are gone: a job belongs to exactly one department, so there is
-  // no attribution to guess at any more.
-  //   Openings   = distinct openings for that job in the quarter (openingBuckets) — the seats to fill.
-  //   Target Sc  = Σ (role score × openings). The user's call: "total of the score of the roles". Capacity
-  //                drops out entirely — it was a per-RECRUITER workload number and never meant anything for
-  //                a department.
-  //   Gap        = max(0, Target − Achieved); Achieved = Offered Score (non-Sales) / Hired Score (Sales).
-  // A role missing Level or Complexity scores nothing, so it is EXCLUDED from Target and marked, rather than
-  // silently dragging the target down — see Data Hygiene → Roles Missing Score Inputs.
-  function fulfilTree(mode) {
-    const q = selQuarter();
-    const isSales = mode === 'hire';
-    const ncol = isSales ? 10 : 8;
-    const c = x => (x == null ? DASH : x);
-    const cells = (v, bold) => {
+  // Per-job position split for the quarter, from the openings model:
+  //   Total = Joined + Open + Missed  (openingBuckets), and Open splits into Pending + still-vacant.
+  //   Pending = open openings that already have a live linked offer (openingPendingByJobQ).
+  //   Gap = Total − Joined − Pending, i.e. everything still genuinely to fill.
+  // Score mirrors each headcount × the role score. A role with no Level/Complexity scores nothing but its
+  // HEADCOUNT still counts — the position is real even when Ashby cannot price it.
+  const pendByJobQ = data.openingPendingByJobQ || {};
+  function jobSplit(j, q) {
+    const b = openBuckets[j.jid], qq = b && b.quarters && b.quarters[q];
+    const total = qq ? (qq.total || 0) : 0;
+    const joined = qq ? (qq.joined || 0) : 0;
+    const pending = Math.min(Math.max(0, total - joined), ((pendByJobQ[j.jid] || {})[q]) || 0);
+    const gap = Math.max(0, total - joined - pending);
+    const sc = j.scoreable ? j.score : 0;
+    return { total, joined, pending, gap, sc, scoreable: j.scoreable,
+      tS: total * sc, jS: joined * sc, pS: pending * sc, gS: gap * sc };
+  }
+  const sumSplits = (arr) => arr.reduce((a, x) => ({
+    total: a.total + x.total, joined: a.joined + x.joined, pending: a.pending + x.pending, gap: a.gap + x.gap,
+    tS: a.tS + x.tS, jS: a.jS + x.jS, pS: a.pS + x.pS, gS: a.gS + x.gS,
+    unscored: a.unscored + (x.scoreable ? 0 : (x.total > 0 ? 1 : 0))
+  }), { total: 0, joined: 0, pending: 0, gap: 0, tS: 0, jS: 0, pS: 0, gS: 0, unscored: 0 });
+
+  // Departments with any positions this quarter. "Unknown" is excluded: it only ever held jobs missing from
+  // Ashby's job list, which cannot have real openings — the Data Hygiene tab is where those belong.
+  function fulfilRows(q) {
+    return deptJobs(q)
+      .filter(({ dept }) => dept !== 'Unknown')
+      .map(({ dept, jobs }) => {
+        const js = jobs.map(j => ({ j, sp: jobSplit(j, q) })).filter(x => x.sp.total > 0);
+        js.sort((a, b) => b.sp.total - a.sp.total);
+        return { dept, jobs: js, sum: sumSplits(js.map(x => x.sp)) };
+      })
+      .filter(d => d.jobs.length)
+      .sort((a, b) => b.sum.total - a.sum.total);
+  }
+
+  function fulfilTable(q) {
+    const body = document.getElementById('effFulfilBody'); if (!body) return;
+    const z = (n) => n > 0 ? n : '<span class="zero">0</span>';
+    const cells = (x, bold) => {
       const w = bold ? ' style="font-weight:600"' : '';
-      let s = `<td${w}>${c(v.aHC)}</td><td>${c(v.aSc)}</td><td>${c(v.tSc)}</td><td${w}>${c(v.oHC)}</td><td>${c(v.oSc)}</td><td>${c(v.jpHC)}</td><td>${c(v.jpSc)}</td>`;
-      if (isSales) s += `<td${w}>${c(v.hHC)}</td><td>${c(v.hSc)}</td>`;
-      s += `<td>${c(v.gSc)}</td>`;
-      return s;
+      return `<td${w}>${z(x.total)}</td><td>${z(x.tS)}</td><td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td>${z(x.jS)}</td>`
+        + `<td>${x.pending > 0 ? `<span style="color:var(--blue);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td>${z(x.pS)}</td>`
+        + `<td${w} class="${x.gap > 0 ? 'warn' : ''}">${z(x.gap)}</td><td>${z(x.gS)}</td>`;
     };
-    // Sales vs non-Sales was a pod split. With pods gone the same cut is made on the DEPARTMENT: the sales
-    // departments are the ones whose jobs the Sales pods carried, i.e. the business/revenue departments.
-    const SALES_DEPTS = ['US Business', 'Business - India'];
-    const inGroup = (dept) => isSales ? SALES_DEPTS.includes(dept) : !SALES_DEPTS.includes(dept);
-
-    const rows = deptJobs(q).filter(d => inGroup(d.dept));
-    const agg = (jobs) => jobs.reduce((a, j) => {
-      const seats = j.openings || 0;
-      a.aHC += seats;
-      if (j.scoreable) a.aSc += j.score * seats; else a.unscored += 1;
-      a.oHC += j.offer; a.oSc += (j.scoreable ? j.offer * j.score : 0);
-      a.hHC += j.hired; a.hSc += (j.scoreable ? j.hired * j.score : 0);
-      return a;
-    }, { aHC: 0, aSc: 0, oHC: 0, oSc: 0, hHC: 0, hSc: 0, unscored: 0 });
-
-    let html = '', grandTarget = 0, grandUnscored = 0;
-    rows.forEach(({ dept, jobs }, di) => {
-      const da = agg(jobs);
-      grandTarget += da.aSc; grandUnscored += da.unscored;
-      const ach = isSales ? da.hSc : da.oSc;
-      const flag = da.unscored ? `<span title="${da.unscored} role${da.unscored === 1 ? '' : 's'} here have no Level/Complexity in Ashby, so they score nothing and are excluded from Target. See Data Hygiene → Roles Missing Score Inputs." style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${da.unscored} unscored</span>` : '';
-      const deptRow = { aHC: da.aHC, aSc: da.aSc, tSc: da.aSc, oHC: da.oHC, oSc: da.oSc, jpHC: null, jpSc: null, hHC: da.hHC, hSc: da.hSc, gSc: Math.max(0, da.aSc - ach) };
+    const rows = fulfilRows(q);
+    let html = '';
+    rows.forEach(({ dept, jobs, sum }, di) => {
+      const flag = sum.unscored ? `<span title="${sum.unscored} role(s) here have no Level/Complexity in Ashby, so they score nothing. Headcount still counts." style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${sum.unscored} unscored</span>` : '';
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length} role${jobs.length === 1 ? '' : 's'}</span>${flag}</td>${cells(deptRow, true)}</tr>`;
-      jobs.forEach((j, ji) => {
-        const seats = j.openings || 0;
-        const sc = j.scoreable ? j.score : null;
-        const meta = j.scoreable
-          ? `<span style="font-size:10px;margin-left:6px;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt${seats ? ' × ' + seats : ''}</span>`
-          : `<span style="font-size:10px;margin-left:6px;color:var(--orange)">not scored — Level/Complexity missing in Ashby</span>`;
-        const jv = { aHC: seats, aSc: sc == null ? null : sc * seats, tSc: sc == null ? null : sc * seats,
-          oHC: j.offer, oSc: sc == null ? null : j.offer * sc, jpHC: null, jpSc: null,
-          hHC: j.hired, hSc: sc == null ? null : j.hired * sc, gSc: null };
-        html += `<tr data-path="${di}-${ji}" style="display:none">
-          <td style="padding-left:34px;color:${j.unknown ? 'var(--orange)' : 'var(--muted)'}">${j.title}${meta}</td>${cells(jv, false)}</tr>`;
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length}</span>${flag}</td>${cells(sum, true)}</tr>`;
+      jobs.forEach(({ j, sp }, ji) => {
+        const meta = sp.scoreable
+          ? `<span style="font-size:10px;margin-left:6px;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span>`
+          : `<span style="font-size:10px;margin-left:6px;color:var(--orange)">unscored</span>`;
+        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}${meta}</td>${cells(sp, false)}</tr>`;
       });
     });
-    const gFlag = grandUnscored ? ` <span style="color:var(--orange);font-weight:400;font-size:11px">(${grandUnscored} unscored role${grandUnscored === 1 ? '' : 's'} excluded)</span>` : '';
-    html += `<tr style="background:var(--accent-light);font-weight:700"><td>Overall Total needed${gFlag}</td>${dashTds(2)}<td>${grandTarget || DASH}</td>${dashTds(ncol - 3)}</tr>`;
-    const body = document.getElementById(isSales ? 'effFulfilHireBody' : 'effFulfilOfferBody');
-    if (body) { body.innerHTML = html || `<tr><td colspan="${ncol + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments in this group.</td></tr>`; wireTreePath(body, expandAll()); }
+    const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
+    html += `<tr style="background:var(--accent-light);font-weight:700"><td>All departments</td>${cells(g, true)}</tr>`;
+    body.innerHTML = html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No openings in this period.</td></tr>`;
+    wireTreePath(body, expandAll());
+  }
+
+  // Candidate-level joining-pending list, same source as the Hiring Manager tab (joiningPendingCases),
+  // scoped to the Department/Job filters. Unlinked rows carry no opening, so they are invisible to the
+  // position counts above — surfaced here rather than silently missing.
+  function renderFulfilJP(q) {
+    const body = document.getElementById('effFulfilJPBody'); if (!body) return;
+    const dsel = selDepts(), jsel = selJobs();
+    const rows = (data.joiningPendingCases || [])
+      .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
+      .filter(c => !jsel.length || jsel.includes(c.job));
+    body.innerHTML = rows.length ? rows.map(c => `<tr>
+      <td>${c.doj || DASH}</td><td style="font-weight:500">${c.candidate || DASH}</td><td>${c.department || DASH}</td>
+      <td style="max-width:260px">${c.job || DASH}</td><td>${c.subStage || DASH}</td><td>${c.recruiter || DASH}</td>
+      <td>${c.linked ? '<span style="color:var(--green)">Linked</span>' : '<span style="color:var(--orange);font-weight:600">Not linked</span>'}</td></tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No offers in play under these filters.</td></tr>`;
   }
 
   // Screening Added(reached)/Cleared(left)/% for HM / OA / R1. LIVE Pod→Dept→Job from throughputByJob when
@@ -894,55 +917,87 @@ export function initEfficiencyFilters(data) {
         scales: { x: { ...gridY, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } } };
   };
 
-  // #18 charts: one chart PER DEPARTMENT with its JOBS as bars, plus ONE overall chart whose bars are the
-  // departments. Same grid mechanism as the old per-pod charts — the list it iterates is departments now.
+  // Fulfilment charts: bars are STACKED Joined / Joining Pending / Gap, which add up to Total Positions —
+  // so the bar and the table carry the same three numbers. A label at the end of each bar gives the total,
+  // because a stacked bar hides it otherwise and the total is the number people are looking for.
+  const stackTotalLabel = {
+    id: 'stackTotal',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx, ds = chart.data.datasets;
+      if (!ds.length) return;
+      ctx.save();
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillStyle = '#334155'; ctx.textBaseline = 'middle';
+      const last = chart.getDatasetMeta(ds.length - 1);
+      last.data.forEach((bar, i) => {
+        const tot = ds.reduce((a, d) => a + (d.data[i] || 0), 0);
+        if (tot > 0) ctx.fillText(String(tot), bar.x + 6, bar.y);
+      });
+      ctx.restore();
+    }
+  };
+  const FULFIL_COLORS = { joined: '#0f766e', pending: '#4E6BA6', gap: '#D8B5BE' };
+  const fulfilStackOpts = (xTitle) => ({
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    layout: { padding: { right: 34 } },   // room for the total label
+    plugins: {
+      valueLabels: false,
+      legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 10 }, padding: 8 } },
+      tooltip: { callbacks: { footer: (items) => items.length ? `Total positions: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}` : '' } }
+    },
+    scales: {
+      x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, precision: 0 }, title: { display: true, text: xTitle, font: { size: 10 }, color: '#64748b' } },
+      y: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  });
+
   function renderFulfilCharts(q) {
-    const rows = deptJobs(q);
-    renderDeptCharts('effFulfilPodCharts', rows, fulfilDeptCfg, 'No offers or hires yet in this department.');
+    const rows = fulfilRows(q);
+    renderDeptCharts('effFulfilPodCharts', rows, fulfilDeptCfg, 'No openings in this department this period.');
 
     const ctx = document.getElementById('effFulfilCombined'); if (!ctx) return;
     if (effFulfilCombined) effFulfilCombined.destroy();
-    const bars = rows.map(({ dept, jobs }) => ({
-      dept,
-      target: jobs.reduce((a, j) => a + (j.scoreable ? j.score * (j.openings || 0) : 0), 0),
-      offered: jobs.reduce((a, j) => a + (j.scoreable ? j.offer * j.score : 0), 0)
-    })).filter(r => r.target > 0 || r.offered > 0).sort((a, b) => b.target - a.target);
-
-    const wrap = ctx.parentElement;
+    const wrap = document.getElementById('effFulfilCombinedWrap');
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    if (!bars.length) {
+    if (!rows.length) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `No scoreable openings in ${q.replace('-', ' ')}. Roles need Level and Complexity in Ashby — see Data Hygiene → Roles Missing Score Inputs.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = `No openings in ${q.replace('-', ' ')}.`; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
-    if (wrap) wrap.style.height = Math.max(240, bars.length * 34 + 80) + 'px';
-    effFulfilCombined = new Chart(ctx, { type: 'bar',
-      data: { labels: bars.map(r => r.dept), datasets: [
-        { label: 'Target Score', data: bars.map(r => r.target), backgroundColor: C.blue, borderRadius: 3, barPercentage: 0.8 },
-        { label: 'Offered Score', data: bars.map(r => r.offered), backgroundColor: C.green, borderRadius: 3, barPercentage: 0.8 }
+    if (wrap) wrap.style.height = Math.max(220, rows.length * 32 + 80) + 'px';
+    ctx.style.maxHeight = 'none';
+    effFulfilCombined = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: rows.map(r => r.dept), datasets: [
+        { label: 'Joined', data: rows.map(r => r.sum.joined), backgroundColor: FULFIL_COLORS.joined, stack: 'p', borderWidth: 0 },
+        { label: 'Joining Pending', data: rows.map(r => r.sum.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
+        { label: 'Gap', data: rows.map(r => r.sum.gap), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
       ] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, font: { size: 12 } } } },
-        scales: { x: { ...gridY, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
+      options: fulfilStackOpts('Positions'),
+      plugins: [stackTotalLabel]
+    });
   }
 
-  // Per-department chart: Y = job, bars = Offered / Hired score for that job.
+  // Per-department chart: Y = job, each bar stacked Joined / Pending / Gap to Total Positions.
   function fulfilDeptCfg({ jobs }) {
-    const js = jobs.filter(j => j.scoreable && (j.offer || j.hired)).sort((a, b) => (b.offer * b.score) - (a.offer * a.score));
-    if (!js.length) return null;
+    if (!jobs.length) return null;
+    const js = jobs.slice(0, 12);
     return {
-      _h: Math.max(120, js.length * 26 + 60),
+      _h: Math.max(130, js.length * 26 + 70),
       type: 'bar',
-      data: { labels: js.map(j => j.title), datasets: [
-        { label: 'Offered', data: js.map(j => j.offer * j.score), backgroundColor: C.blue, borderRadius: 2 },
-        { label: 'Hired', data: js.map(j => j.hired * j.score), backgroundColor: C.green, borderRadius: 2 }
+      data: { labels: js.map(x => x.j.title), datasets: [
+        { label: 'Joined', data: js.map(x => x.sp.joined), backgroundColor: FULFIL_COLORS.joined, stack: 'p', borderWidth: 0 },
+        { label: 'Joining Pending', data: js.map(x => x.sp.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
+        { label: 'Gap', data: js.map(x => x.sp.gap), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
       ] },
-      options: hbarOpts(false, 'Score')
+      options: fulfilStackOpts('Positions'),
+      plugins: [stackTotalLabel]
     };
   }
 
+  // Per-department chart: Y = job, bars = Offered / Hired score for that job.
   // One small chart per department (mirror of the old renderPodCharts, keyed on department).
   function renderDeptCharts(containerId, rows, buildCfg, emptyText) {
     const el = document.getElementById(containerId); if (!el) return;
@@ -954,7 +1009,7 @@ export function initEfficiencyFilters(data) {
       const cv = document.getElementById(`${containerId}_${i}`);
       if (!cfg) { if (host) host.innerHTML = `<p style="font-size:11px;color:var(--muted);margin:0">${emptyText}</p>`; return; }
       if (host) host.style.height = (cfg._h || 160) + 'px';
-      podCharts[containerId].push(new Chart(cv, { type: cfg.type, data: cfg.data, options: cfg.options }));
+      podCharts[containerId].push(new Chart(cv, { type: cfg.type, data: cfg.data, options: cfg.options, plugins: cfg.plugins || [] }));
     });
   }
 
