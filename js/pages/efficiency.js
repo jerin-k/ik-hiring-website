@@ -1,6 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { resolveDeptTeam } from '../dept-map.js';
-import { TIS_STAGES, poolHists, tisCell } from '../stage-time.js';
+import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
@@ -183,6 +183,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Time in Process -->
     <div class="eff-panel" data-panel="timeinprocess" style="display:none">
+      <p class="sub-note" id="effTisNote" style="display:none"></p>
       <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Pod → Department → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked there (today − applied date, full coverage); <strong>TA Screen → Offer</strong> come from real stage-transition history. Median is used (not mean) so a few candidates stuck 150+ days in App Review don't skew the stage.</p>
       <div class="scroll-table"><table>
         <thead id="effTisHead"></thead>
@@ -224,6 +225,8 @@ export function initEfficiencyFilters(data) {
   const velByJob = rollups.velocityByJob || null;
   const tpByJob = rollups.throughputByJob || null;
   const tisByJob = rollups.timeInStageByJob || null;         // {job8:{stage:{days:count}}} — TA Screen → Offer dwell
+  const tisByJobQ = rollups.timeInStageByJobQ || null;       // {job8:{stage:{quarter:{days:count}}}} — same, per quarter entered
+  const tisHasQ = hasQuarterTis(rollups);
   const arDwellJob = data.appReviewDwellByJob || null;       // {job8:{days:count}} — App Review dwell (still-parked candidates)
   let activeTab = 'fulfilment';
   let msPod = null, msDept = null, msJob = null;
@@ -506,21 +509,49 @@ export function initEfficiencyFilters(data) {
     wireTreePath(body, expandAll());
   }
 
+  // Quarter keys the Year/Quarter selector covers; null = all-time. Separate from selQuarter(), which
+  // always resolves to ONE quarter for pod grouping and capacity even when the selector reads "All".
+  function tisPeriod() {
+    const ySel = document.getElementById('effYear');
+    // `years` is local to renderEfficiency, so read the fallback year off the rendered select instead.
+    const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
+    return periodQuarters(ySel?.value || '', document.getElementById('effQuarter')?.value || '', yrs);
+  }
+
+  // Says which stages actually follow the period. Without this the panel would repeat the original bug in a
+  // new form — quarter-scoped columns sitting unlabelled next to a live one.
+  function tisNote(per) {
+    const el = document.getElementById('effTisNote'); if (!el) return;
+    if (!per) { el.style.display = 'none'; return; }
+    const label = per.length === 1 ? per[0] : per[0].slice(0, 4);
+    el.style.display = '';
+    el.style.color = tisHasQ ? 'var(--muted)' : 'var(--orange)';
+    el.innerHTML = tisHasQ
+      ? `Showing <strong>${label}</strong> — candidates who <strong>entered</strong> each stage in that period. <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`
+      : `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`;
+  }
+
   // ===== Time in Process (Pod → Department → Job; median days parked per stage, red > 5) =====
   function renderTimeInProcess() {
     const head = document.getElementById('effTisHead');
     if (head) {
+      const perH = tisPeriod();
       let h = '<tr><th style="min-width:260px">Pod / Department / Job</th>';
-      TIS_STAGES.forEach(([, lbl]) => { h += `<th class="stage-sub" style="min-width:48px">${lbl}</th>`; });
+      TIS_STAGES.forEach(([sk, lbl]) => {
+        const live = perH && sk === 'appReview';
+        h += `<th class="stage-sub" style="min-width:48px"${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
+      });
       head.innerHTML = h + '</tr>';
     }
     const body = document.getElementById('effTisBody'); if (!body) return;
     if (!tisByJob && !arDwellJob) { podSkeletonBody('effTisBody', TIS_STAGES.length, () => dashTds(TIS_STAGES.length)); return; }
     const q = selQuarter(), pods = visiblePods();
-    // Per job: one histogram per stage column. App Review from the main-pull dwell, other stages from stage history.
+    const per = tisPeriod();
+    // Per job: one histogram per stage column. App Review from the main-pull dwell (live, never period-scoped),
+    // other stages from stage history, scoped to the selected period when the rollups carry the quarter dimension.
     const jobHists = (jid) => TIS_STAGES.map(([sk]) => sk === 'appReview'
       ? ((arDwellJob && arDwellJob[jid]) || {})
-      : ((tisByJob && tisByJob[jid] && tisByJob[jid][sk]) || {}));
+      : tisHist(tisByJob, tisByJobQ, jid, sk, per));
     const rowCells = (histArr) => histArr.map(hh => tisCell(hh, 5)).join('');
     const poolCells = (arrs) => TIS_STAGES.map((_, i) => tisCell(poolHists(arrs.map(a => a[i])), 5)).join('');
     let html = '';
@@ -538,6 +569,7 @@ export function initEfficiencyFilters(data) {
     });
     body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
+    tisNote(per);
   }
 
   // ===== Submission Velocity (Pod → Department → Job → Stage; last 30 days of range, descending) =====
@@ -926,6 +958,10 @@ export function initEfficiencyFilters(data) {
     renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), tpPodCfg, 'No stage-transition activity yet for this pod.');
     renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.');
     renderSourcing();
+    // Time in Process was missing from this list, so the panel only ever rendered when its sub-tab was
+    // clicked — no filter of any kind reached it. That is why the audit saw it byte-identical across
+    // quarters: it was not re-rendering at all, let alone re-rendering with the wrong scope.
+    renderTimeInProcess();
   }
 
   function showTab(name) {
