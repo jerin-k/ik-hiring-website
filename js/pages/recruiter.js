@@ -946,10 +946,35 @@ export function initRecruiterFilters(data) {
       detail: n,
       fix: 'Correct the recruiter attribution in Ashby — this person is a dedicated interviewer, not a recruiter.'
     }));
+    // A stage title Ashby uses that the pipeline has no mapping for is dropped from EVERY count, silently.
+    // That is how "Online Assessment" reported zero for months while candidates sat in it — the map only
+    // knew the literal string 'OA'. Surfacing it here means the next stage rename shows up as a row instead
+    // of as a column that quietly stops counting.
+    // Two titles are unmapped BY DESIGN and must not be raised as anomalies: 'Hired' is counted from the
+    // application's status rather than its stage, and 'Archived' means rejected/withdrawn, correctly absent
+    // from live pipeline counts. They are also the two biggest (14,023 + 309) — left in, they would bury the
+    // real signal and train everyone to ignore this list.
+    const EXPECTED_UNMAPPED = { Hired: 'counted from application status, not stage', Archived: 'rejected/withdrawn — deliberately outside the live pipeline' };
+    const unmapped = Object.entries(dq.unmappedStages || {}).sort((a, b) => b[1] - a[1]);
+    unmapped.filter(([stage]) => !EXPECTED_UNMAPPED[stage]).forEach(([stage, n]) => anomList.push({
+      what: 'Ashby stage not recognised by the dashboard',
+      detail: `"${stage}" — ${n} application${n === 1 ? '' : 's'} currently in it, counted nowhere`,
+      fix: 'Either rename the stage in Ashby to match the pipeline, or add it to STAGE_KEY_MAP in DataRefresh.gs. Until then these candidates are invisible to every metric.'
+    }));
+    const expectedSeen = unmapped.filter(([stage]) => EXPECTED_UNMAPPED[stage]);
     const anBody = document.getElementById('hygAnomBody');
     if (anBody) {
-      anBody.innerHTML = anomList.map(a => `<tr><td style="font-weight:500">${esc(a.what)}</td><td>${esc(a.detail)}</td><td style="color:var(--muted)">${esc(a.fix)}</td></tr>`).join('')
+      let ah = anomList.map(a => `<tr><td style="font-weight:500">${esc(a.what)}</td><td>${esc(a.detail)}</td><td style="color:var(--muted)">${esc(a.fix)}</td></tr>`).join('')
         || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No anomalies. ✓</td></tr>`;
+      // Shown, but as a muted footnote rather than an alert — so it is on the record that these were seen
+      // and consciously excluded, not that the check missed them.
+      if (expectedSeen.length) {
+        ah += `<tr><td colspan="3" style="color:var(--muted);font-size:11px;padding-top:10px;border-top:1px solid var(--border-light)">`
+          + `Also outside the stage map, as expected: `
+          + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()} — ${esc(EXPECTED_UNMAPPED[st])})`).join(' · ')
+          + `. No action needed.</td></tr>`;
+      }
+      anBody.innerHTML = ah;
     }
 
     // --- tab counts ---
@@ -1098,18 +1123,111 @@ export function initRecruiterFilters(data) {
   const podLabels = () => lastGroups.map(G => G.pod);
   const sumBy = (G, key) => G.recs.reduce((s, r) => s + (r[key] || 0), 0);
 
+  // Momentum chart: THREE bars per recruiter (HM Screening / OA / R1), each bar stacked BY WEEK.
+  // Grouped-and-stacked in Chart.js comes from the `stack` property: datasets sharing a stack id pile up,
+  // different ids sit side by side. So stage = stack id, week = dataset within it. Hue carries the stage,
+  // lightness carries the week (older = paler), which keeps ~15 datasets readable as 3 colour families.
+  // Day-level stacking was tried and rejected as unreadable — 30 slivers per bar.
+  const VEL_HUE = { hmReview: [78, 107, 166], oa: [57, 138, 162], r1: [30, 117, 144] };
   function buildVelChart() {
     const ctx = document.getElementById('recVelChart'); if (!ctx) return;
-    if (recVelChart) recVelChart.destroy();
+    if (recVelChart) { recVelChart.destroy(); recVelChart = null; }
     const recs = [...getFilteredRecs()].sort((a, b) => (b.total || 0) - (a.total || 0));
-    const h = Math.max(220, recs.length * 30 + 70);
     const wrap = document.getElementById('recVelChartWrap');
+    if (!recs.length) { if (wrap) wrap.style.height = '160px'; return; }
+
+    // velDates() returns up to 30 days, most recent first. Chunk into 7-day weeks from the most recent
+    // day backwards, then reverse so the OLDEST week is the innermost stack segment and the bar reads
+    // left-to-right in time order.
+    const days = velDates();
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) {
+      const chunk = days.slice(i, i + 7);
+      weeks.push({ keys: chunk.map(dkey), end: chunk[0], start: chunk[chunk.length - 1] });
+    }
+    weeks.reverse();
+    const fmtD = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const roll = data.stageRollups && data.stageRollups.velocityByRecruiter;
+    const cell = (r, sk) => roll ? ((roll[r.name] && roll[r.name][sk]) || {}) : ((r.daily && r.daily[sk]) || {});
+
+    const datasets = [];
+    VEL_STAGES.forEach(([sk, label]) => {
+      const [rr, gg, bb] = VEL_HUE[sk] || [100, 116, 139];
+      weeks.forEach((w, wi) => {
+        // oldest week palest; mix toward white by up to ~55%
+        const t = weeks.length > 1 ? 0.55 * (1 - wi / (weeks.length - 1)) : 0;
+        const mix = (c) => Math.round(c + (255 - c) * t);
+        datasets.push({
+          label: `${label} · ${fmtD(w.start)}–${fmtD(w.end)}`,
+          stack: sk,
+          _stage: sk, _stageLabel: label,
+          data: recs.map(r => { const m = cell(r, sk); return w.keys.reduce((a, k) => a + (m[k] || 0), 0); }),
+          backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`,
+          borderWidth: 0, barPercentage: 0.92, categoryPercentage: 0.8
+        });
+      });
+    });
+
+    // 3 bars per recruiter, so the row needs roughly triple the height of a single-bar chart.
+    const h = Math.max(260, recs.length * 3 * 16 + 90);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';   // override .chart-wrap canvas { max-height:300px }
-    recVelChart = new Chart(ctx, { type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets: [{ label: 'Submissions', data: recs.map(r => r.total || 0), backgroundColor: C.blue, borderRadius: 4, barPercentage: 0.7 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: legendSquare() },
-        scales: { x: { ...gridY, title: { display: true, text: 'Count of Submissions', font: { size: 11 }, color: '#64748b' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
+
+    recVelChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: recs.map(r => r.name), datasets },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {
+          valueLabels: false,   // ~15 datasets: per-segment labels would be unreadable
+          legend: {
+            position: 'top', align: 'center',
+            labels: {
+              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 16, font: { size: 12 },
+              // One entry per STAGE, not one per dataset — 15 legend entries would be noise. Each swatch
+              // uses that stage's strongest (most recent) shade.
+              generateLabels: (chart) => VEL_STAGES.map(([sk, label]) => {
+                const idx = chart.data.datasets.findIndex(d => d._stage === sk);
+                const last = chart.data.datasets.map((d, i) => [d, i]).filter(([d]) => d._stage === sk).pop();
+                return {
+                  text: label,
+                  fillStyle: last ? last[0].backgroundColor : '#94a3b8',
+                  strokeStyle: 'transparent',
+                  hidden: idx >= 0 ? !chart.isDatasetVisible(idx) : false,
+                  datasetIndex: idx
+                };
+              })
+            },
+            // Clicking a stage toggles every week-segment in that stack together.
+            onClick: (e, item, legend) => {
+              const chart = legend.chart;
+              const sk = chart.data.datasets[item.datasetIndex]?._stage;
+              if (!sk) return;
+              const show = !chart.isDatasetVisible(item.datasetIndex);
+              chart.data.datasets.forEach((d, i) => { if (d._stage === sk) chart.setDatasetVisibility(i, show); });
+              chart.update();
+            }
+          },
+          tooltip: {
+            callbacks: {
+              title: (items) => items.length ? items[0].label : '',
+              label: (c) => `${c.dataset.label}: ${c.parsed.x}`,
+              // A stacked bar's total is the number people actually want; Chart.js won't show it by default.
+              footer: (items) => {
+                if (!items.length) return '';
+                const sk = items[0].dataset._stage, i = items[0].dataIndex;
+                const tot = items[0].chart.data.datasets.filter(d => d._stage === sk).reduce((a, d) => a + (d.data[i] || 0), 0);
+                return `${items[0].dataset._stageLabel} total: ${tot}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates entering the stage', font: { size: 11 }, color: '#64748b' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+        }
+      }
+    });
   }
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
