@@ -1,6 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { scoreForRole } from '../score-model.js';
-import { TIS_STAGES, poolHists, tisCell } from '../stage-time.js';
+import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -309,6 +309,7 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Time in Process (Pod → Recruiter → Job; median days parked per stage, red > 5) -->
     <div class="rec-panel" data-panel="timeinprocess" style="display:none">
+      <p class="sub-note" id="recTisNote" style="display:none"></p>
       <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Pod → Recruiter → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked (today − applied date, full coverage); <strong>TA Screen → Offer</strong> from real stage history. Job rows are job-level (all recruiters on the job). Median (not mean) so App-Review outliers don't skew a stage.</p>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recTisHead"></thead>
@@ -430,6 +431,9 @@ export function initRecruiterFilters(data) {
   // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
   const _sr = data.stageRollups || {};
   const tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
+  // Per-quarter dwell (bucketed by the quarter the candidate ENTERED the stage), added 2026-08-21.
+  const tisRecQ = _sr.timeInStageByRecruiterQ || null, tisJobQ = _sr.timeInStageByJobQ || null;
+  const tisHasQ = hasQuarterTis(_sr);
   const arDwellRec = data.appReviewDwellByRecruiter || null, arDwellJob = data.appReviewDwellByJob || null;
 
   // jobs[] is keyed by an 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
@@ -767,17 +771,47 @@ export function initRecruiterFilters(data) {
     renderActiveChart();
   }
 
+  // Quarter keys the Year/Quarter selector covers; null = all-time. Distinct from selQuarter(), which always
+  // resolves to ONE quarter for pod grouping and capacity even when the selector reads "All".
+  function tisPeriod() {
+    const ySel = document.getElementById('recVelYear');
+    const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
+    return periodQuarters(ySel?.value || '', document.getElementById('recVelQuarter')?.value || '', yrs);
+  }
+
+  // Spells out which stages actually follow the period, so quarter-scoped columns never sit unlabelled
+  // next to the live App Review one.
+  function tisNote(per) {
+    const el = document.getElementById('recTisNote'); if (!el) return;
+    if (!per) { el.style.display = 'none'; return; }
+    const label = per.length === 1 ? per[0] : per[0].slice(0, 4);
+    el.style.display = '';
+    el.style.color = tisHasQ ? 'var(--muted)' : 'var(--orange)';
+    el.innerHTML = tisHasQ
+      ? `Showing <strong>${label}</strong> — candidates who <strong>entered</strong> each stage in that period. <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`
+      : `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`;
+  }
+
   // Pod → Recruiter → Job, median days a candidate is parked per stage (red > 5). App Review = still-parked
   // dwell (main pull); TA Screen → Offer from stage history. Job rows are job-level (all recruiters on the job).
   function renderTimeInProcess() {
     const body = document.getElementById('recTisBody'); if (!body) return;
     const head = document.getElementById('recTisHead');
-    if (head) { let h = '<tr><th style="min-width:230px">Pod / Recruiter / Job</th>'; TIS_STAGES.forEach(([, lbl]) => { h += `<th>${lbl}</th>`; }); head.innerHTML = h + '</tr>'; }
+    const per = tisPeriod();
+    if (head) {
+      let h = '<tr><th style="min-width:230px">Pod / Recruiter / Job</th>';
+      TIS_STAGES.forEach(([sk, lbl]) => {
+        const live = per && sk === 'appReview';
+        h += `<th${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
+      });
+      head.innerHTML = h + '</tr>';
+    }
     if (!tisRec && !arDwellRec) { body.innerHTML = `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">Time-in-stage data pending the next stage-history refresh.</td></tr>`; return; }
     const q = selQuarter();
     const groups = groupByPod(getFilteredRecs(), q);
-    const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellRec && arDwellRec[r.name]) || {}) : ((tisRec && tisRec[r.name] && tisRec[r.name][sk]) || {}));
-    const jobHists = (j8) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellJob && arDwellJob[j8]) || {}) : ((tisJob && tisJob[j8] && tisJob[j8][sk]) || {}));
+    // App Review is a live snapshot with no historical dimension, so it never takes the period; the rest do.
+    const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellRec && arDwellRec[r.name]) || {}) : tisHist(tisRec, tisRecQ, r.name, sk, per));
+    const jobHists = (j8) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellJob && arDwellJob[j8]) || {}) : tisHist(tisJob, tisJobQ, j8, sk, per));
     const rowCells = (arr) => arr.map(hh => tisCell(hh, 5)).join('');
     const poolCells = (arrs) => TIS_STAGES.map((_, i) => tisCell(poolHists(arrs.map(a => a[i])), 5)).join('');
     let html = '';
@@ -795,6 +829,7 @@ export function initRecruiterFilters(data) {
     });
     body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
     wireVelTree(body);
+    tisNote(per);
   }
 
   // Surfaces data.dataQuality (the attribution pass's compliance payload) + the Active/Inactive roster.

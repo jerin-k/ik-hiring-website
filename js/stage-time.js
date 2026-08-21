@@ -37,3 +37,46 @@ export function tisCell(hist, threshold) {
   const style = 'text-align:right;white-space:nowrap' + (red ? ';color:var(--red);font-weight:700' : '');
   return `<td style="${style}" title="median ${fmt(s.median)}d · mean ${s.mean.toFixed(1)}d · n=${s.n}">${fmt(s.median)}</td>`;
 }
+
+// ===== Period scoping (added 2026-08-21, backlog #13) =====
+// The Year/Quarter selector used to change pod membership only, so these panels rendered LIFETIME medians
+// under a quarter heading — Q1 and Q2 came out byte-identical and nothing looked broken. The pipeline now
+// also emits timeInStageByJobQ / timeInStageByRecruiterQ, bucketed by the quarter the candidate ENTERED the
+// stage (same basis as throughputBy*Q), which is what these helpers read.
+
+// Quarter keys covered by a Year/Quarter selection. null = no period picked (all-time).
+// `years` is the page's own year list, used only to resolve "quarter but no year".
+export function periodQuarters(year, quarter, years) {
+  if (!year && !quarter) return null;
+  const yr = String(year || (years && years[0]) || new Date().getFullYear());
+  if (quarter) return [`${yr}-${quarter}`];
+  return ['Q1', 'Q2', 'Q3', 'Q4'].map(q => `${yr}-${q}`);
+}
+
+// Does this rollups file carry the per-quarter dwell histograms? Older files do not, and a caller that
+// silently fell back to lifetime numbers would recreate the exact bug this fixes — so pages check this
+// and say so on screen instead.
+export function hasQuarterTis(rollups) {
+  return !!(rollups && (rollups.timeInStageByJobQ || rollups.timeInStageByRecruiterQ));
+}
+
+// Dwell histogram for one key + stage, scoped to `quarters` when the data supports it.
+//   store  = lifetime  {key:{stage:{days:count}}}
+//   storeQ = quarterly {key:{stage:{quarter:{days:count}}}}
+// With a period selected and storeQ present, an absent entry means "nobody entered that stage that
+// quarter" — return {} rather than falling back to the lifetime figure.
+export function tisHist(store, storeQ, key, stage, quarters) {
+  if (quarters && quarters.length && storeQ) {
+    const byQ = storeQ[key] && storeQ[key][stage];
+    if (!byQ) return {};
+    const out = {};
+    quarters.forEach(q => mergeHist(out, byQ[q]));
+    return out;
+  }
+  return (store && store[key] && store[key][stage]) || {};
+}
+
+// App Review dwell is "today − applied date for everyone CURRENTLY parked there" — a live snapshot with no
+// historical dimension, so it cannot be quarter-scoped at all. Panels mark the column and say this rather
+// than letting a live number sit unlabelled beside quarter-scoped ones.
+export const APP_REVIEW_LIVE_NOTE = 'App Review is a live snapshot (everyone parked there today) and does not follow the period — the other stages do.';
