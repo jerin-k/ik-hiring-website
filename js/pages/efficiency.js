@@ -114,7 +114,6 @@ export function renderEfficiency(data) {
     <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Momentum</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (both from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
 
     <div class="eff-filters">
-      <div class="fchip"><span class="lbl">Pod</span><div class="ms" id="effMsPod"></div></div>
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="effMsJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll"> Expand all branches</label></div>
@@ -300,6 +299,61 @@ export function initEfficiencyFilters(data) {
     return out;
   }
 
+  // ===== #18: Department → Job, pods removed =====
+  // Overall Efficiency used to hang everything off Pod, which forced a fudge: getTree attributes each job to
+  // a pod via the recruiters who worked it, so a job worked from two pods was SPLIT across them. Every job
+  // belongs to exactly one department, so flattening pods away removes the split entirely — department
+  // totals become clean sums over jobs. Pods live on in Recruiter Efficiency, where they mean something.
+  let _dtQ = null, _dt = null;
+  function deptTree(q) {
+    if (_dtQ === q && _dt) return _dt;
+    const tree = getTree(q);
+    const byDept = {};
+    Object.values(tree).forEach(P => Object.entries(P.depts).forEach(([dept, D]) => {
+      const T = byDept[dept] || (byDept[dept] = {});
+      Object.values(D.jobs).forEach(j => {
+        // Merge the same job seen under several pods back into one row.
+        // A job id that applications reference but /job.list never returned arrives with a blank title —
+        // it was a DRAFT job (confirmed 2026-08-21). Name it explicitly so its candidates stay visible
+        // instead of collapsing into an anonymous "(untitled)" row nobody can act on.
+        const known = j.title && j.title !== '(untitled)';
+        const title = known ? j.title : `Unknown job (${j.jid}) — not in Ashby's job list`;
+        const e = T[j.jid] || (T[j.jid] = { jid: j.jid, title, unknown: !known, dept, level: j.level, complexity: j.complexity, score: j.score, total: 0, offer: 0, hired: 0 });
+        e.total += j.total || 0; e.offer += j.offer || 0; e.hired += j.hired || 0;
+      });
+    }));
+    _dtQ = q; _dt = byDept;
+    return byDept;
+  }
+
+  // Openings for a job in the selected quarter — the seat count the role score is multiplied by.
+  const openBuckets = data.openingBuckets || {};
+  function openingsOf(jid, q) {
+    const b = openBuckets[jid]; if (!b || !b.quarters) return 0;
+    const qq = b.quarters[q]; return qq ? (qq.total || 0) : 0;
+  }
+  // A role scores only when Ashby has BOTH Level and Complexity. Missing either and it scores nothing, so it
+  // is marked and excluded from Target rather than quietly contributing 0 — see Data Hygiene → Roles Missing
+  // Score Inputs. Level 'NA' is how Ashby represents unset here, so it counts as missing.
+  const isScoreable = (j) => !!(j.level && j.level !== 'NA' && j.complexity);
+
+  // [{dept, jobs:[...]}] honouring the Department/Job multi-selects, sorted by department load.
+  function deptJobs(q) {
+    const dsel = selDepts(), jsel = selJobs();
+    const t = deptTree(q);
+    const out = [];
+    Object.keys(t).forEach(dept => {
+      if (dsel.length && !dsel.includes(dept)) return;
+      const arr = Object.values(t[dept])
+        .filter(j => !jsel.length || jsel.includes(j.title))
+        .map(j => ({ ...j, openings: openingsOf(j.jid, q), scoreable: isScoreable(j) }))
+        .sort((a, b) => (b.total || 0) - (a.total || 0));
+      if (arr.length) out.push({ dept, jobs: arr });
+    });
+    out.sort((a, b) => b.jobs.reduce((s, j) => s + j.total, 0) - a.jobs.reduce((s, j) => s + j.total, 0));
+    return out;
+  }
+
   // Which pods are visible given the Pod multi-select ([] = all).
   function visiblePods() {
     const sel = msPod ? msPod.getSelected() : [];
@@ -378,17 +432,21 @@ export function initEfficiencyFilters(data) {
 
   function renderFulfilment() {
     const q = selQuarter();
-    const pods = visiblePods();
-    fulfilTree(pods.filter(p => !isSalesPod(p)), 'offer');
-    fulfilTree(pods.filter(p => isSalesPod(p)), 'hire');
-    renderFulfilCharts(pods, q);
+    fulfilTree('offer');
+    fulfilTree('hire');
+    renderFulfilCharts(q);
   }
 
-  // Pod → Department → Job fulfilment table (LIVE). Assigned/Offered/Hired HC+Score from the attribution tree
-  // × the score engine; Target = summed pod capacity (per quarter, Metric Config); Gap = max(0, Target −
-  // Achieved), Achieved = Offered Score (Non-Sales) / Hired Score (Sales). Joining Pending is a pod-level count
-  // (from the offer pass, per pod member) — per-dept/job Score is unattributable → —.
-  function fulfilTree(podList, mode) {
+  // Department → Job fulfilment (#18). Pods are gone: a job belongs to exactly one department, so there is
+  // no attribution to guess at any more.
+  //   Openings   = distinct openings for that job in the quarter (openingBuckets) — the seats to fill.
+  //   Target Sc  = Σ (role score × openings). The user's call: "total of the score of the roles". Capacity
+  //                drops out entirely — it was a per-RECRUITER workload number and never meant anything for
+  //                a department.
+  //   Gap        = max(0, Target − Achieved); Achieved = Offered Score (non-Sales) / Hired Score (Sales).
+  // A role missing Level or Complexity scores nothing, so it is EXCLUDED from Target and marked, rather than
+  // silently dragging the target down — see Data Hygiene → Roles Missing Score Inputs.
+  function fulfilTree(mode) {
     const q = selQuarter();
     const isSales = mode === 'hire';
     const ncol = isSales ? 10 : 8;
@@ -400,32 +458,47 @@ export function initEfficiencyFilters(data) {
       s += `<td>${c(v.gSc)}</td>`;
       return s;
     };
-    const agg = (jobs) => jobs.reduce((a, j) => { a.aHC += 1; a.aSc += j.score; a.oHC += j.offer; a.oSc += j.offer * j.score; a.hHC += j.hired; a.hSc += j.hired * j.score; return a; }, { aHC: 0, aSc: 0, oHC: 0, oSc: 0, hHC: 0, hSc: 0 });
-    let html = '', grandTarget = 0;
-    podList.forEach((pod, pi) => {
-      const djs = podDeptJobs(pod, q);
-      const pa = agg(djs.flatMap(d => d.jobs));
-      const cap = podCapacity(pod, q); grandTarget += cap;
-      const jp = podMembers(pod, q).reduce((s, r) => s + (r.joiningPending || 0), 0);
-      const ach = isSales ? pa.hSc : pa.oSc;
-      const podRow = { aHC: pa.aHC, aSc: pa.aSc, tSc: cap, oHC: pa.oHC, oSc: pa.oSc, jpHC: jp, jpSc: null, hHC: pa.hHC, hSc: pa.hSc, gSc: Math.max(0, cap - ach) };
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">Total of Pod</span></td>${cells(podRow, true)}</tr>`;
-      djs.forEach(({ dept, jobs }, di) => {
-        const da = agg(jobs);
-        const deptRow = { aHC: da.aHC, aSc: da.aSc, tSc: null, oHC: da.oHC, oSc: da.oSc, jpHC: null, jpSc: null, hHC: da.hHC, hSc: da.hSc, gSc: null };
-        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-          <td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length}</span></td>${cells(deptRow, false)}</tr>`;
-        jobs.forEach((j, ji) => {
-          const jv = { aHC: 1, aSc: j.score, tSc: null, oHC: j.offer, oSc: j.offer * j.score, jpHC: null, jpSc: null, hHC: j.hired, hSc: j.hired * j.score, gSc: null };
-          html += `<tr data-path="${pi}-${di}-${ji}" style="display:none">
-            <td style="padding-left:56px;color:var(--muted)">${j.title}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span></td>${cells(jv, false)}</tr>`;
-        });
+    // Sales vs non-Sales was a pod split. With pods gone the same cut is made on the DEPARTMENT: the sales
+    // departments are the ones whose jobs the Sales pods carried, i.e. the business/revenue departments.
+    const SALES_DEPTS = ['US Business', 'Business - India'];
+    const inGroup = (dept) => isSales ? SALES_DEPTS.includes(dept) : !SALES_DEPTS.includes(dept);
+
+    const rows = deptJobs(q).filter(d => inGroup(d.dept));
+    const agg = (jobs) => jobs.reduce((a, j) => {
+      const seats = j.openings || 0;
+      a.aHC += seats;
+      if (j.scoreable) a.aSc += j.score * seats; else a.unscored += 1;
+      a.oHC += j.offer; a.oSc += (j.scoreable ? j.offer * j.score : 0);
+      a.hHC += j.hired; a.hSc += (j.scoreable ? j.hired * j.score : 0);
+      return a;
+    }, { aHC: 0, aSc: 0, oHC: 0, oSc: 0, hHC: 0, hSc: 0, unscored: 0 });
+
+    let html = '', grandTarget = 0, grandUnscored = 0;
+    rows.forEach(({ dept, jobs }, di) => {
+      const da = agg(jobs);
+      grandTarget += da.aSc; grandUnscored += da.unscored;
+      const ach = isSales ? da.hSc : da.oSc;
+      const flag = da.unscored ? `<span title="${da.unscored} role${da.unscored === 1 ? '' : 's'} here have no Level/Complexity in Ashby, so they score nothing and are excluded from Target. See Data Hygiene → Roles Missing Score Inputs." style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${da.unscored} unscored</span>` : '';
+      const deptRow = { aHC: da.aHC, aSc: da.aSc, tSc: da.aSc, oHC: da.oHC, oSc: da.oSc, jpHC: null, jpSc: null, hHC: da.hHC, hSc: da.hSc, gSc: Math.max(0, da.aSc - ach) };
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length} role${jobs.length === 1 ? '' : 's'}</span>${flag}</td>${cells(deptRow, true)}</tr>`;
+      jobs.forEach((j, ji) => {
+        const seats = j.openings || 0;
+        const sc = j.scoreable ? j.score : null;
+        const meta = j.scoreable
+          ? `<span style="font-size:10px;margin-left:6px;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt${seats ? ' × ' + seats : ''}</span>`
+          : `<span style="font-size:10px;margin-left:6px;color:var(--orange)">not scored — Level/Complexity missing in Ashby</span>`;
+        const jv = { aHC: seats, aSc: sc == null ? null : sc * seats, tSc: sc == null ? null : sc * seats,
+          oHC: j.offer, oSc: sc == null ? null : j.offer * sc, jpHC: null, jpSc: null,
+          hHC: j.hired, hSc: sc == null ? null : j.hired * sc, gSc: null };
+        html += `<tr data-path="${di}-${ji}" style="display:none">
+          <td style="padding-left:34px;color:${j.unknown ? 'var(--orange)' : 'var(--muted)'}">${j.title}${meta}</td>${cells(jv, false)}</tr>`;
       });
     });
-    html += `<tr style="background:var(--accent-light);font-weight:700"><td>Overall Total needed</td>${dashTds(2)}<td>${grandTarget || DASH}</td>${dashTds(ncol - 3)}</tr>`;
+    const gFlag = grandUnscored ? ` <span style="color:var(--orange);font-weight:400;font-size:11px">(${grandUnscored} unscored role${grandUnscored === 1 ? '' : 's'} excluded)</span>` : '';
+    html += `<tr style="background:var(--accent-light);font-weight:700"><td>Overall Total needed${gFlag}</td>${dashTds(2)}<td>${grandTarget || DASH}</td>${dashTds(ncol - 3)}</tr>`;
     const body = document.getElementById(isSales ? 'effFulfilHireBody' : 'effFulfilOfferBody');
-    if (body) { body.innerHTML = html || `<tr><td colspan="${ncol + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods in this group.</td></tr>`; wireTreePath(body, expandAll()); }
+    if (body) { body.innerHTML = html || `<tr><td colspan="${ncol + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments in this group.</td></tr>`; wireTreePath(body, expandAll()); }
   }
 
   // Screening Added(reached)/Cleared(left)/% for HM / OA / R1. LIVE Pod→Dept→Job from throughputByJob when
@@ -898,25 +971,68 @@ export function initEfficiencyFilters(data) {
         scales: { x: { ...gridY, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } } };
   };
 
-  function renderFulfilCharts(pods, q) {
-    // Per-pod chart (Y=Job, Offered/Hired Score) + a combined chart of pod Target (summed capacity).
-    renderPodCharts('effFulfilPodCharts', pods, fulfilPodCfg, 'No offers/hires yet for this pod.');
+  // #18 charts: one chart PER DEPARTMENT with its JOBS as bars, plus ONE overall chart whose bars are the
+  // departments. Same grid mechanism as the old per-pod charts — the list it iterates is departments now.
+  function renderFulfilCharts(q) {
+    const rows = deptJobs(q);
+    renderDeptCharts('effFulfilPodCharts', rows, fulfilDeptCfg, 'No offers or hires yet in this department.');
+
     const ctx = document.getElementById('effFulfilCombined'); if (!ctx) return;
     if (effFulfilCombined) effFulfilCombined.destroy();
-    const rows = pods.map(p => ({ pod: p, cap: podCapacity(p, q) })).filter(r => r.cap > 0);
+    const bars = rows.map(({ dept, jobs }) => ({
+      dept,
+      target: jobs.reduce((a, j) => a + (j.scoreable ? j.score * (j.openings || 0) : 0), 0),
+      offered: jobs.reduce((a, j) => a + (j.scoreable ? j.offer * j.score : 0), 0)
+    })).filter(r => r.target > 0 || r.offered > 0).sort((a, b) => b.target - a.target);
+
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    if (rows.length === 0) {
+    if (!bars.length) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `No pod capacities set for ${q.replace('-', ' ')} — set them in Admin → Metric Configuration.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = `No scoreable openings in ${q.replace('-', ' ')}. Roles need Level and Complexity in Ashby — see Data Hygiene → Roles Missing Score Inputs.`; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
+    if (wrap) wrap.style.height = Math.max(240, bars.length * 34 + 80) + 'px';
     effFulfilCombined = new Chart(ctx, { type: 'bar',
-      data: { labels: rows.map(r => r.pod), datasets: [{ label: 'Target (summed capacity)', data: rows.map(r => r.cap), backgroundColor: C.blue, borderRadius: 4, barPercentage: 0.6 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, font: { size: 12 } } } },
-        scales: { x: { ...gridY, title: { display: true, text: 'Target Score', font: { size: 11 }, color: '#64748b' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
+      data: { labels: bars.map(r => r.dept), datasets: [
+        { label: 'Target Score', data: bars.map(r => r.target), backgroundColor: C.blue, borderRadius: 3, barPercentage: 0.8 },
+        { label: 'Offered Score', data: bars.map(r => r.offered), backgroundColor: C.green, borderRadius: 3, barPercentage: 0.8 }
+      ] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, font: { size: 12 } } } },
+        scales: { x: { ...gridY, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
+  }
+
+  // Per-department chart: Y = job, bars = Offered / Hired score for that job.
+  function fulfilDeptCfg({ jobs }) {
+    const js = jobs.filter(j => j.scoreable && (j.offer || j.hired)).sort((a, b) => (b.offer * b.score) - (a.offer * a.score));
+    if (!js.length) return null;
+    return {
+      _h: Math.max(120, js.length * 26 + 60),
+      type: 'bar',
+      data: { labels: js.map(j => j.title), datasets: [
+        { label: 'Offered', data: js.map(j => j.offer * j.score), backgroundColor: C.blue, borderRadius: 2 },
+        { label: 'Hired', data: js.map(j => j.hired * j.score), backgroundColor: C.green, borderRadius: 2 }
+      ] },
+      options: hbarOpts(false, 'Score')
+    };
+  }
+
+  // One small chart per department (mirror of the old renderPodCharts, keyed on department).
+  function renderDeptCharts(containerId, rows, buildCfg, emptyText) {
+    const el = document.getElementById(containerId); if (!el) return;
+    (podCharts[containerId] || []).forEach(c => { try { c.destroy(); } catch (e) {} }); podCharts[containerId] = [];
+    el.innerHTML = rows.map((r, i) => `<div class="eff-podchart"><h5>${r.dept}</h5><div class="eff-podchart-body" id="${containerId}_b${i}" style="position:relative"><canvas id="${containerId}_${i}"></canvas></div></div>`).join('');
+    rows.forEach((r, i) => {
+      const cfg = buildCfg(r);
+      const host = document.getElementById(`${containerId}_b${i}`);
+      const cv = document.getElementById(`${containerId}_${i}`);
+      if (!cfg) { if (host) host.innerHTML = `<p style="font-size:11px;color:var(--muted);margin:0">${emptyText}</p>`; return; }
+      if (host) host.style.height = (cfg._h || 160) + 'px';
+      podCharts[containerId].push(new Chart(cv, { type: cfg.type, data: cfg.data, options: cfg.options }));
+    });
   }
 
   // Horizontal STACKED bar: one bar per source TYPE, segmented by the source NAMES within it (top ~12 names
@@ -974,19 +1090,10 @@ export function initEfficiencyFilters(data) {
     else if (activeTab === 'sourcing') renderSourcing();
   }
 
-  function renderAll() {
-    // Re-render every panel so switching tabs shows current filters immediately.
-    renderFulfilment();
-    renderVelocity();
-    renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.');
-    renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), tpPodCfg, 'No stage-transition activity yet for this pod.');
-    renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.');
-    renderSourcing();
-    // Time in Process was missing from this list, so the panel only ever rendered when its sub-tab was
-    // clicked — no filter of any kind reached it. That is why the audit saw it byte-identical across
-    // quarters: it was not re-rendering at all, let alone re-rendering with the wrong scope.
-    renderTimeInProcess();
-  }
+  // Only the visible panel is rendered. This used to rebuild all seven, which was tolerable at 5 pod charts
+  // and is not at 13 department charts (~91 Chart.js instances per filter change). showTab() re-renders on
+  // switch, so nothing goes stale.
+  function renderAll() { renderActive(); }
 
   function showTab(name) {
     activeTab = name;
@@ -999,7 +1106,9 @@ export function initEfficiencyFilters(data) {
   // Filters
   const deptNames = [...new Set(jobs.map(j => resolveDeptTeam(j.department).dept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const jobNames = [...new Set(jobs.map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  msPod = makeMultiSelect(document.getElementById('effMsPod'), 'Pod', POD_ORDER, renderAll);
+  // Pod filter removed (#18) — Overall Efficiency is Department → Job now. visiblePods() still returns
+  // every pod for the sub-tabs not yet converted, so nothing else changes until they are.
+  msPod = null;
   msDept = makeMultiSelect(document.getElementById('effMsDept'), 'Department', deptNames, renderAll);
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobNames, renderAll);
   document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
