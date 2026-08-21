@@ -1,35 +1,40 @@
-// Interviewer Efficiency — per-panelist interview load + feedback turnaround, from data.interviewers[]
-// (interviewSchedule.list + applicationFeedback.list pipeline pass). data.panelists[] feeds the HM tab.
+// Interviewer Efficiency — per-panelist interview load + feedback turnaround.
 //
-// FILTERS (added 2026-08-21, backlog #15): Year/Quarter period + Panelist multi-select.
-// GRAIN WARNING 1 — only `interviews` has a per-quarter breakdown (`byQuarter`). `feedbackSubmitted`,
-// `pendingFeedback` and `avgTurnaroundHrs` are LIFETIME in the pipeline, with no quarter dimension.
-// So the period selector moves the interview counts ONLY; every feedback column stays all-time and is
-// labelled as such.
+// GRAIN: the TABLE is built from data.panelists[] ({dept, jobTitle, name, interviews, byQuarter, byMonth,
+// feedbackSubmitted, feedbackOnScheduled, avgTurnaroundHrs}), which is the only array carrying the
+// Department -> Job -> Panelist grain the tree needs. data.interviewers[] is org-wide per person and is used
+// ONLY for the two fields panelists[] cannot carry — pendingFeedback and therefore Feedback Coverage.
 //
-// GRAIN WARNING 2 — `feedbackSubmitted` counts every feedback FORM the person submitted, which is not the
-// same population as their panel interviews: 73 of 138 panelists have more forms than interviews (one has
-// 440 forms against 2 interviews). So feedbackSubmitted / interviews is NOT a completion rate and must
-// never be shown as one. The coherent measure is `pendingFeedback` - interviews with no feedback attached -
-// so coverage = (interviews - pending) / interviews. The raw form count is still shown, but as its own
-// column. The pipeline now also emits `feedbackOnScheduled` — forms that matched one of the panelist's
-// scheduled interview events — which IS comparable to the interview count, so the table leads with that
-// and shows the raw total in brackets behind it.
+// GRAIN WARNING 1 — only interview counts have a period breakdown (byQuarter / byMonth). feedbackSubmitted,
+// feedbackOnScheduled, pendingFeedback and avgTurnaroundHrs are LIFETIME, so the period selector moves the
+// interview counts ONLY and every feedback figure is labelled all-time.
 //
-// GRAIN WARNING 3 — data.totalInterviews / data.interviewsByQuarter count DISTINCT interview events
-// (2,623); summing interviewers[].interviews counts panelist SLOTS (2,938), because a panel of two counts
-// twice. The org card uses the distinct count; the table column is per-panelist load. Never mix them.
+// GRAIN WARNING 2 — feedbackSubmitted counts every feedback FORM a person submitted, a wider population than
+// their panel interviews (one panelist has 440 forms against 2 interviews). feedbackOnScheduled counts only
+// the forms matched to one of their scheduled interviews and IS comparable to the interview count; the table
+// leads with that. Coverage is (interviews - pendingFeedback) / interviews, never forms / interviews.
+//
+// GRAIN WARNING 3 — Feedback Coverage and Awaiting Feedback come from the ORG-WIDE per-person record, so they
+// are shown on panelist rows only and left blank on Department and Job rows. Summing them up a tree that
+// splits one person across several jobs would double-count.
 
 let ivChart = null;
-let msIvPanel = null;
+let msIvPanel = null, msIvDept = null, msIvJob = null;
 
 const fmtTurn = (hrs) => hrs == null ? '—' : (hrs >= 24 ? (hrs / 24).toFixed(1) + 'd' : hrs.toFixed(1) + 'h');
 const pct = (n, d) => d ? Math.round((n / d) * 100) : 0;
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const monthLabel = (mk) => { const [y, m] = mk.split('-'); return `${MONTH_ABBR[parseInt(m, 10) - 1]} ${y.slice(2)}`; };
 
-// Union of every quarter key present in the data, newest last ("2026-Q1" sorts naturally).
 function allQuarterKeys(data) {
   const set = new Set(Object.keys((data && data.interviewsByQuarter) || {}));
   ((data && data.interviewers) || []).forEach(r => Object.keys(r.byQuarter || {}).forEach(k => set.add(k)));
+  return [...set].sort();
+}
+function allMonthKeys(data) {
+  const set = new Set(Object.keys((data && data.interviewsByMonth) || {}));
+  ((data && data.panelists) || []).forEach(r => Object.keys(r.byMonth || {}).forEach(k => set.add(k)));
+  ((data && data.interviewers) || []).forEach(r => Object.keys(r.byMonth || {}).forEach(k => set.add(k)));
   return [...set].sort();
 }
 
@@ -48,7 +53,10 @@ export function renderInterviewer(data) {
 
   const qkeys = allQuarterKeys(data);
   const years = [...new Set(qkeys.map(k => k.slice(0, 4)))].sort().reverse();
+  const panelists = (data && data.panelists) || [];
   const names = [...new Set(ivs.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const depts = [...new Set(panelists.map(p => p.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const jobs = [...new Set(panelists.map(p => p.jobTitle).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   return `
     <style>
@@ -64,6 +72,10 @@ export function renderInterviewer(data) {
       .iv-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
       .iv-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
       .iv-grain { font-size:11px; color:var(--orange); margin:-8px 0 14px; }
+      /* Chart spans the full content width rather than sitting in a narrow centred column. */
+      .iv-chart-wrap { width:100%; border:1px solid var(--border); border-radius:10px; background:var(--card);
+        padding:14px 16px; margin:0 0 24px; position:relative; }
+      .iv-chart-wrap canvas { max-height:none !important; }
     </style>
 
     <div class="section-title">Interviewer Efficiency</div>
@@ -73,7 +85,10 @@ export function renderInterviewer(data) {
       <div class="fchip"><span class="lbl">Year</span><select id="ivYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="ivQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
       <span class="fdiv"></span>
+      <div class="fchip"><span class="lbl">Department</span><div class="ms" id="ivMsDept"></div></div>
+      <div class="fchip"><span class="lbl">Job</span><div class="ms" id="ivMsJob"></div></div>
       <div class="fchip"><span class="lbl">Panelist</span><div class="ms" id="ivMsPanel"></div></div>
+      <div class="fchip"><label class="opt" style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="ivExpandAll"> Expand all</label></div>
     </div>
 
     <p class="iv-grain" id="ivGrainNote" style="display:none"></p>
@@ -86,17 +101,18 @@ export function renderInterviewer(data) {
     </div>
 
     <h3 class="subsection-title" id="ivChartTitle">Top panelists by interview load</h3>
-    <div class="chart-wrap" style="max-width:820px;margin:0 auto 24px;height:${Math.max(160, Math.min(ivs.length, 15) * 24 + 40)}px;position:relative"><canvas id="ivTopChart"></canvas></div>
+    <p class="sub-note" style="margin-top:-4px" id="ivChartNote">Each bar is one panelist, stacked by month.</p>
+    <div class="iv-chart-wrap" id="ivChartWrap"><canvas id="ivTopChart"></canvas></div>
 
-    <h3 class="subsection-title">All panelists <span id="ivRowCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></h3>
+    <h3 class="subsection-title">Department → Panelist → Job <span id="ivRowCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></h3>
     <div class="scroll-table"><table>
       <thead><tr>
-        <th style="min-width:200px">Panelist</th>
+        <th style="min-width:280px">Department / Panelist / Job</th>
         <th id="ivThInterviews">Interviews</th>
-        <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Derived from Awaiting Feedback, not from the raw form count.">Feedback Coverage</th>
-        <th title="Interviews with no feedback attached yet (all-time).">Awaiting Feedback</th>
+        <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Org-wide per person, so it is shown on panelist rows only — summing it up the tree would double-count anyone who interviews for more than one job.">Feedback Coverage</th>
+        <th title="Interviews with no feedback attached yet (all-time, org-wide per person).">Awaiting Feedback</th>
         <th title="Time from an interview ending to feedback being submitted (all-time average).">Avg Turnaround</th>
-        <th title="Feedback forms matched to one of this panelist's scheduled interviews. The number in brackets is every form they submitted, including application-review and screening feedback that is not tied to a panel interview — which is why the bracketed figure can exceed their interview count.">Interview Feedback</th>
+        <th title="Feedback forms matched to one of this panelist's scheduled interviews. The bracketed figure is every form they submitted, including application-review and screening feedback.">Interview Feedback</th>
       </tr></thead>
       <tbody id="ivBody"></tbody>
     </table></div>`;
@@ -105,130 +121,252 @@ export function renderInterviewer(data) {
 export function initInterviewer(data) {
   const ivs = (data && data.interviewers) || [];
   if (!ivs.length) return;
+  const panelists = (data && data.panelists) || [];
 
   const qkeys = allQuarterKeys(data);
+  const mkeys = allMonthKeys(data);
   const years = [...new Set(qkeys.map(k => k.slice(0, 4)))].sort().reverse();
   const names = [...new Set(ivs.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const depts = [...new Set(panelists.map(p => p.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const jobList = [...new Set(panelists.map(p => p.jobTitle).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const orgByUser = {}; ivs.forEach(r => { if (r.userId) orgByUser[r.userId] = r; });
 
-  // Selected period as a list of quarter keys; null = all-time (use the lifetime `interviews` field).
+  const sel = (id) => document.getElementById(id)?.value || '';
+
+  // Quarters covered by the Year/Quarter selection; null = all-time.
   function selQuarters() {
-    const y = document.getElementById('ivYear')?.value || '';
-    const q = document.getElementById('ivQuarter')?.value || '';
+    const y = sel('ivYear'), q = sel('ivQuarter');
     if (!y && !q) return null;
     const yr = y || years[0] || String(new Date().getFullYear());
     if (q) return [`${yr}-${q}`];
     return qkeys.filter(k => k.slice(0, 4) === yr);
   }
+  // Months covered by the same selection; null = all-time (every month present).
+  function selMonths() {
+    const y = sel('ivYear'), q = sel('ivQuarter');
+    if (!y && !q) return mkeys.slice();
+    const yr = y || years[0] || String(new Date().getFullYear());
+    let ms = mkeys.filter(k => k.slice(0, 4) === yr);
+    if (q) { const qi = parseInt(q.slice(1), 10); const lo = (qi - 1) * 3 + 1, hi = lo + 2;
+      ms = ms.filter(k => { const mm = parseInt(k.slice(5), 10); return mm >= lo && mm <= hi; }); }
+    return ms;
+  }
+  function periodLabel(qs) { return !qs ? '' : (qs.length === 1 ? qs[0] : (qs[0] || '').slice(0, 4)); }
 
-  // Interview count for the selected period. Older data files without byQuarter fall back to the
-  // lifetime total rather than reporting a false zero.
-  function periodCount(r, quarters) {
-    if (!quarters) return r.interviews || 0;
-    if (!r.byQuarter) return r.interviews || 0;
-    return quarters.reduce((s, q) => s + (r.byQuarter[q] || 0), 0);
+  // Interview count for the selected period. Prefers byMonth (finer), falls back to byQuarter, then lifetime.
+  function periodCount(rec, quarters, months) {
+    if (!quarters) return rec.interviews || 0;
+    if (rec.byMonth && months && months.length) return months.reduce((s, m) => s + (rec.byMonth[m] || 0), 0);
+    if (rec.byQuarter) return quarters.reduce((s, q) => s + (rec.byQuarter[q] || 0), 0);
+    return rec.interviews || 0;
   }
 
-  function periodLabel(quarters) {
-    if (!quarters) return '';
-    return quarters.length === 1 ? quarters[0] : (quarters[0] || '').slice(0, 4);
+  function filteredPanelists(quarters, months) {
+    const dSel = msIvDept ? msIvDept.getSelected() : [];
+    const jSel = msIvJob ? msIvJob.getSelected() : [];
+    const nSel = msIvPanel ? msIvPanel.getSelected() : [];
+    return panelists
+      .filter(p => !dSel.length || dSel.includes(p.dept))
+      .filter(p => !jSel.length || jSel.includes(p.jobTitle))
+      .filter(p => !nSel.length || nSel.includes(p.name))
+      .map(p => ({ ...p, _count: periodCount(p, quarters, months) }))
+      .filter(p => p._count > 0);
   }
 
   function render() {
     const quarters = selQuarters();
+    const months = selMonths();
     const label = periodLabel(quarters);
-    const nameSel = msIvPanel ? msIvPanel.getSelected() : [];
+    const rows = filteredPanelists(quarters, months);
 
-    let rows = ivs.map(r => ({ ...r, _count: periodCount(r, quarters) }));
-    if (nameSel.length) rows = rows.filter(r => nameSel.includes(r.name));
-    rows = rows.filter(r => r._count > 0).sort((a, b) => b._count - a._count);
+    // ---- tree: Department -> Panelist -> Job -------------------------------------------------
+    const tree = {};
+    rows.forEach(p => {
+      const D = tree[p.dept || 'Unknown'] || (tree[p.dept || 'Unknown'] = { total: 0, people: {} });
+      D.total += p._count;
+      const P = D.people[p.name] || (D.people[p.name] = { total: 0, userId: p.userId, jobs: [] });
+      P.total += p._count;
+      P.jobs.push(p);
+    });
 
-    const slotTotal = rows.reduce((s, r) => s + r._count, 0);        // panelist SLOTS (a 2-person panel counts twice)
-    const lifetimeInts = rows.reduce((s, r) => s + (r.interviews || 0), 0);
-    const lifetimePending = rows.reduce((s, r) => s + (r.pendingFeedback || 0), 0);
-    const covered = Math.max(0, lifetimeInts - lifetimePending);
-    const turnRows = rows.filter(r => r.avgTurnaroundHrs != null);
+    const setText = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+    const setHtml = (id, h) => { const e = document.getElementById(id); if (e) e.innerHTML = h; };
+
+    // Distinct people across the filtered set (one person can appear under several jobs).
+    const people = new Set(rows.map(r => r.name));
+    const totalInterviews = rows.reduce((s, r) => s + r._count, 0);
+    // Coverage/turnaround come from the org-wide record, counted once per person.
+    const orgRows = [...people].map(n => ivs.find(r => r.name === n)).filter(Boolean);
+    const lifeInts = orgRows.reduce((s, r) => s + (r.interviews || 0), 0);
+    const lifePend = orgRows.reduce((s, r) => s + (r.pendingFeedback || 0), 0);
+    const covered = Math.max(0, lifeInts - lifePend);
+    const turnRows = orgRows.filter(r => r.avgTurnaroundHrs != null);
     const avgTurn = turnRows.length ? turnRows.reduce((s, r) => s + r.avgTurnaroundHrs, 0) / turnRows.length : null;
 
-    // Distinct interview EVENTS org-wide for the period. Only meaningful with no panelist filter, since a
-    // filtered subset cannot be de-duplicated from per-panelist counts.
     const byQ = (data && data.interviewsByQuarter) || null;
-    const distinct = !quarters ? ((data && data.totalInterviews) || null)
-      : (byQ ? quarters.reduce((s, q) => s + (byQ[q] || 0), 0) : null);
+    const scoped = (msIvDept?.getSelected().length || msIvJob?.getSelected().length || msIvPanel?.getSelected().length);
+    const distinct = scoped ? null : (!quarters ? ((data && data.totalInterviews) || null)
+      : (byQ ? quarters.reduce((s, q) => s + (byQ[q] || 0), 0) : null));
 
-    const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-    const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-
-    if (nameSel.length || distinct == null) {
+    if (distinct == null) {
       setText('ivCardIntLabel', label ? `Panel Slots · ${label}` : 'Panel Slots');
-      setText('ivCardInterviews', slotTotal.toLocaleString());
-      setText('ivCardIntSub', `${rows.length} selected panelist${rows.length === 1 ? '' : 's'} — a panel of two counts twice`);
+      setText('ivCardInterviews', totalInterviews.toLocaleString());
+      setText('ivCardIntSub', `${people.size} panelist${people.size === 1 ? '' : 's'} in view — a panel of two counts twice`);
     } else {
       setText('ivCardIntLabel', label ? `Interviews · ${label}` : 'Total Interviews');
       setText('ivCardInterviews', distinct.toLocaleString());
-      setText('ivCardIntSub', `${slotTotal.toLocaleString()} panel slots across ${rows.length} panelists`);
+      setText('ivCardIntSub', `${totalInterviews.toLocaleString()} panel slots across ${people.size} panelists`);
     }
     setText('ivCardPanLabel', label ? `Panelists Active · ${label}` : 'Panelists');
-    setText('ivCardPanelists', String(rows.length));
-    setText('ivCardCoverage', `${pct(covered, lifetimeInts)}%`);
-    setText('ivCardCoverageSub', `${covered.toLocaleString()} of ${lifetimeInts.toLocaleString()} interviews have feedback`);
+    setText('ivCardPanelists', String(people.size));
+    setText('ivCardCoverage', `${pct(covered, lifeInts)}%`);
+    setText('ivCardCoverageSub', `${covered.toLocaleString()} of ${lifeInts.toLocaleString()} interviews have feedback`);
     setText('ivCardTurn', fmtTurn(avgTurn));
     setText('ivThInterviews', label ? `Interviews (${label})` : 'Interviews');
     setText('ivChartTitle', label ? `Top panelists by interview load — ${label}` : 'Top panelists by interview load');
-    setText('ivRowCount', rows.length ? `${rows.length} of ${ivs.length}` : '');
+    setText('ivRowCount', `${people.size} of ${names.length} panelists · ${Object.keys(tree).length} departments`);
 
-    // Say out loud that the feedback columns don't move with the period — the numbers next to a
-    // quarter heading would otherwise read as that quarter's.
     const note = document.getElementById('ivGrainNote');
     if (note) {
       if (label) {
         note.style.display = '';
-        note.textContent = `Only the interview count follows the ${label} filter. Feedback Coverage, Awaiting Feedback, Turnaround and Interview Feedback are all-time totals — the pipeline does not break feedback down by quarter.`;
-      } else {
-        note.style.display = 'none';
-      }
+        note.textContent = `Only the interview count follows the ${label} filter. Feedback Coverage, Awaiting Feedback, Turnaround and Interview Feedback are all-time totals — the pipeline does not break feedback down by period.`;
+      } else { note.style.display = 'none'; }
     }
 
+    const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
     const body = document.getElementById('ivBody');
     if (body) {
-      body.innerHTML = rows.length ? rows.map(r => {
-        const life = r.interviews || 0;
-        const pend = r.pendingFeedback || 0;
-        const cov = life ? pct(Math.max(0, life - pend), life) : 0;
-        return `<tr>
-        <td style="font-weight:500">${esc(r.name)}</td>
-        <td>${r._count}</td>
-        <td class="${cls(cov)}">${life ? cov + '%' : '—'}</td>
-        <td>${pend ? `<span style="color:var(--orange)">${pend}</span>` : '0'}</td>
-        <td class="${r.avgTurnaroundHrs != null && r.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(r.avgTurnaroundHrs)}</td>
-        <td style="color:var(--muted)">${r.feedbackOnScheduled != null ? r.feedbackOnScheduled : '—'}${r.feedbackSubmitted ? ` <span style="font-size:11px">(${r.feedbackSubmitted})</span>` : ''}</td>
-      </tr>`; }).join('')
-        : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;font-size:12px">No panelist ran an interview in this period.</td></tr>`;
+      let html = '';
+      const dNames = Object.keys(tree).sort((a, b) => tree[b].total - tree[a].total);
+      dNames.forEach((dept, di) => {
+        const D = tree[dept];
+        const pNames = Object.keys(D.people).sort((a, b) => D.people[b].total - D.people[a].total);
+        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${esc(dept)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${pNames.length}</span></td>
+          <td style="font-weight:600">${D.total}</td><td></td><td></td><td></td><td></td></tr>`;
+        pNames.forEach((nm, pi) => {
+          const P = D.people[nm];
+          const org = orgByUser[P.userId] || ivs.find(r => r.name === nm) || {};
+          const life = org.interviews || 0, pend = org.pendingFeedback || 0;
+          const cov = life ? pct(Math.max(0, life - pend), life) : 0;
+          const onSched = P.jobs.reduce((s, j) => s + (j.feedbackOnScheduled || 0), 0);
+          const allForms = P.jobs.reduce((s, j) => s + (j.feedbackSubmitted || 0), 0);
+          const tRows = P.jobs.filter(j => j.avgTurnaroundHrs != null);
+          const tAvg = tRows.length ? tRows.reduce((s, j) => s + j.avgTurnaroundHrs, 0) / tRows.length : null;
+          html += `<tr data-path="${di}-${pi}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:30px;font-weight:500">${CARET}${esc(nm)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${P.jobs.length}</span></td>
+            <td>${P.total}</td>
+            <td class="${cls(cov)}">${life ? cov + '%' : '—'}</td>
+            <td>${pend ? `<span style="color:var(--orange)">${pend}</span>` : '0'}</td>
+            <td class="${tAvg != null && tAvg > 72 ? 'warn' : ''}">${fmtTurn(tAvg)}</td>
+            <td style="color:var(--muted)">${onSched}${allForms ? ` <span style="font-size:11px">(${allForms})</span>` : ''}</td></tr>`;
+          P.jobs.slice().sort((a, b) => b._count - a._count).forEach((j, ji) => {
+            html += `<tr data-path="${di}-${pi}-${ji}" style="display:none">
+              <td style="padding-left:58px;color:var(--muted)">${esc(j.jobTitle || '(untitled)')}</td>
+              <td>${j._count}</td><td></td><td></td>
+              <td class="${j.avgTurnaroundHrs != null && j.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(j.avgTurnaroundHrs)}</td>
+              <td style="color:var(--muted)">${j.feedbackOnScheduled || 0}${j.feedbackSubmitted ? ` <span style="font-size:11px">(${j.feedbackSubmitted})</span>` : ''}</td></tr>`;
+          });
+        });
+      });
+      body.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;font-size:12px">No panelist ran an interview under these filters.</td></tr>`;
+      wireIvTree(body);
     }
 
-    buildChart(rows);
+    buildChart(rows, months, label);
   }
 
-  function buildChart(rows) {
+  // Top panelists, one bar each, STACKED BY MONTH. Same idea as the Momentum chart: month is the stack
+  // segment, and lightness carries recency so ~6 segments stay readable as one colour family.
+  function buildChart(rows, months, label) {
     const ctx = document.getElementById('ivTopChart');
+    const wrap = document.getElementById('ivChartWrap');
     if (!ctx || !window.Chart) return;
     if (ivChart) { try { ivChart.destroy(); } catch (e) {} ivChart = null; }
-    const top = rows.slice(0, 15);
-    if (!top.length) return;
+
+    // byMonth is newer than byQuarter in the pipeline. Until a refresh has emitted it, stack by QUARTER
+    // instead of rendering an empty chart — the shape is the same, just coarser, and the caption says which.
+    const hasMonths = rows.some(p => p.byMonth && Object.keys(p.byMonth).length);
+    const buckets = hasMonths ? months : (selQuarters() || allQuarterKeys(data));
+    const bucketOf = (p, k) => hasMonths ? ((p.byMonth && p.byMonth[k]) || 0) : ((p.byQuarter && p.byQuarter[k]) || 0);
+    const bucketLabel = (k) => hasMonths ? monthLabel(k) : k;
+    const byName = {};
+    rows.forEach(p => {
+      const B = byName[p.name] || (byName[p.name] = { total: 0, m: {} });
+      B.total += p._count;
+      buckets.forEach(k => { const v = bucketOf(p, k); if (v) B.m[k] = (B.m[k] || 0) + v; });
+    });
+    const top = Object.entries(byName).sort((a, b) => b[1].total - a[1].total).slice(0, 15);
+    if (!top.length) { if (wrap) wrap.style.height = '140px'; return; }
+
+    // Only months that actually carry data, oldest first, so empty months don't eat legend space.
+    const live = buckets.filter(mk => top.some(([, b]) => (b.m[mk] || 0) > 0));
+    const useMonths = live.length ? live : buckets.slice(-1);
+    const [rr, gg, bb] = [78, 107, 166];
+    const datasets = useMonths.map((mk, i) => {
+      const t = useMonths.length > 1 ? 0.6 * (1 - i / (useMonths.length - 1)) : 0;
+      const mix = (c) => Math.round(c + (255 - c) * t);
+      return { label: bucketLabel(mk), stack: 'm', data: top.map(([, b]) => b.m[mk] || 0),
+        backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`, borderWidth: 0, barPercentage: 0.86, categoryPercentage: 0.86 };
+    });
+
+    const h = Math.max(220, top.length * 30 + 90);
+    if (wrap) wrap.style.height = h + 'px';
+    const cn = document.getElementById('ivChartNote');
+    const unit = hasMonths ? 'month' : 'quarter';
+    if (cn) cn.textContent = `Each bar is one panelist, stacked by ${unit}${label ? ` across ${label}` : ''} — ${useMonths.length} ${unit}${useMonths.length === 1 ? '' : 's'} shown, oldest at the left.` + (hasMonths ? '' : ' Monthly detail appears after the next pipeline refresh.');
+
     ivChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: top.map(r => r.name), datasets: [{ label: 'Interviews', data: top.map(r => r._count), backgroundColor: '#4E6BA6', borderRadius: 2 }] },
+      data: { labels: top.map(([n]) => n), datasets },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+        plugins: {
+          valueLabels: false,
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: {
+            label: (c) => `${c.dataset.label}: ${c.parsed.x}`,
+            footer: (items) => items.length ? `Total: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}` : ''
+          } }
+        },
+        scales: {
+          x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } }, title: { display: true, text: 'Interviews', font: { size: 11 }, color: '#64748b' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
       }
     });
   }
 
+  msIvDept = makeMultiSelect(document.getElementById('ivMsDept'), 'Department', depts, render);
+  msIvJob = makeMultiSelect(document.getElementById('ivMsJob'), 'Job', jobList, render);
   msIvPanel = makeMultiSelect(document.getElementById('ivMsPanel'), 'Panelist', names, render);
   document.getElementById('ivYear')?.addEventListener('change', render);
   document.getElementById('ivQuarter')?.addEventListener('change', render);
+  document.getElementById('ivExpandAll')?.addEventListener('change', render);
   render();
+}
+
+// Generic depth-agnostic collapse/expand over data-path rows (same scheme as the other tabs).
+function wireIvTree(tbody) {
+  tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
+    row.addEventListener('click', () => {
+      const path = row.dataset.path, depth = path.split('-').length;
+      const exp = row.dataset.exp === '1';
+      row.dataset.exp = exp ? '0' : '1';
+      const c = row.querySelector('.caret'); if (c) c.textContent = exp ? '▸' : '▾';
+      tbody.querySelectorAll('tr[data-path]').forEach(r => {
+        const p = r.dataset.path;
+        if (!p || p === path || !p.startsWith(path + '-')) return;
+        const d = p.split('-').length;
+        if (exp) { r.style.display = 'none'; if (d > depth) { r.dataset.exp = '0'; const rc = r.querySelector('.caret'); if (rc) rc.textContent = '▸'; } }
+        else if (d === depth + 1) { r.style.display = ''; }
+      });
+    });
+  });
+  if (document.getElementById('ivExpandAll')?.checked) {
+    tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.dataset.haschild) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
+  }
 }
 
 // Styled multi-select checkbox dropdown. Returns { getSelected }; empty selection = "All".
