@@ -6,7 +6,7 @@
 
 // Stage columns, in pipeline order. keys match the histogram stage keys.
 export const TIS_STAGES = [
-  ['appReview', 'App Review'], ['taScreen', 'TA Screen'], ['hmReview', 'HM Screening'], ['oa', 'OA'],
+  ['appReview', 'App Review'], ['helloChristy', 'Hello Christy'], ['taScreen', 'TA Screen'], ['hmReview', 'HM Screening'], ['oa', 'OA'],
   ['r1', 'R1'], ['r2', 'R2'], ['r3', 'R3'], ['r4', 'R4'], ['r5', 'R5'], ['refCheck', 'Ref Check'], ['docSub', 'Doc Sub'], ['offer', 'Offer']
 ];
 

@@ -12,7 +12,9 @@
 // 440 forms against 2 interviews). So feedbackSubmitted / interviews is NOT a completion rate and must
 // never be shown as one. The coherent measure is `pendingFeedback` - interviews with no feedback attached -
 // so coverage = (interviews - pending) / interviews. The raw form count is still shown, but as its own
-// column labelled "Feedback Forms", never as a percentage of interviews.
+// column. The pipeline now also emits `feedbackOnScheduled` — forms that matched one of the panelist's
+// scheduled interview events — which IS comparable to the interview count, so the table leads with that
+// and shows the raw total in brackets behind it.
 //
 // GRAIN WARNING 3 — data.totalInterviews / data.interviewsByQuarter count DISTINCT interview events
 // (2,623); summing interviewers[].interviews counts panelist SLOTS (2,938), because a panel of two counts
@@ -65,7 +67,7 @@ export function renderInterviewer(data) {
     </style>
 
     <div class="section-title">Interviewer Efficiency</div>
-    <p class="sub-note">Interview load and feedback turnaround per panelist. <strong>Feedback Coverage</strong> = interviews that have feedback attached ÷ that panelist’s interviews. <strong>Turnaround</strong> = time from the interview ending to feedback being submitted. <em>Feedback Forms</em> is a raw count of every form the person submitted — it covers more than scheduled panel interviews, so it can exceed their interview count and is deliberately not shown as a percentage.</p>
+    <p class="sub-note">Interview load and feedback turnaround per panelist. <strong>Feedback Coverage</strong> = interviews that have feedback attached ÷ that panelist’s interviews. <strong>Turnaround</strong> = time from the interview ending to feedback being submitted. <em>Interview Feedback</em> counts forms matched to one of that panelist’s scheduled interviews; the figure in brackets is every form they submitted, including application-review and screening feedback, which is why it can exceed their interview count and is deliberately never shown as a percentage.</p>
 
     <div class="iv-filters">
       <div class="fchip"><span class="lbl">Year</span><select id="ivYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
@@ -94,7 +96,7 @@ export function renderInterviewer(data) {
         <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Derived from Awaiting Feedback, not from the raw form count.">Feedback Coverage</th>
         <th title="Interviews with no feedback attached yet (all-time).">Awaiting Feedback</th>
         <th title="Time from an interview ending to feedback being submitted (all-time average).">Avg Turnaround</th>
-        <th title="Every feedback form this person submitted, including forms not tied to a scheduled panel interview. That is why it can exceed their interview count - it is a raw form count, not a completion measure.">Feedback Forms</th>
+        <th title="Feedback forms matched to one of this panelist's scheduled interviews. The number in brackets is every form they submitted, including application-review and screening feedback that is not tied to a panel interview — which is why the bracketed figure can exceed their interview count.">Interview Feedback</th>
       </tr></thead>
       <tbody id="ivBody"></tbody>
     </table></div>`;
@@ -180,7 +182,7 @@ export function initInterviewer(data) {
     if (note) {
       if (label) {
         note.style.display = '';
-        note.textContent = `Only the interview count follows the ${label} filter. Feedback Coverage, Awaiting Feedback, Turnaround and Feedback Forms are all-time totals — the pipeline does not break feedback down by quarter.`;
+        note.textContent = `Only the interview count follows the ${label} filter. Feedback Coverage, Awaiting Feedback, Turnaround and Interview Feedback are all-time totals — the pipeline does not break feedback down by quarter.`;
       } else {
         note.style.display = 'none';
       }
@@ -198,7 +200,7 @@ export function initInterviewer(data) {
         <td class="${cls(cov)}">${life ? cov + '%' : '—'}</td>
         <td>${pend ? `<span style="color:var(--orange)">${pend}</span>` : '0'}</td>
         <td class="${r.avgTurnaroundHrs != null && r.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(r.avgTurnaroundHrs)}</td>
-        <td style="color:var(--muted)">${r.feedbackSubmitted || 0}</td>
+        <td style="color:var(--muted)">${r.feedbackOnScheduled != null ? r.feedbackOnScheduled : '—'}${r.feedbackSubmitted ? ` <span style="font-size:11px">(${r.feedbackSubmitted})</span>` : ''}</td>
       </tr>`; }).join('')
         : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;font-size:12px">No panelist ran an interview in this period.</td></tr>`;
     }
