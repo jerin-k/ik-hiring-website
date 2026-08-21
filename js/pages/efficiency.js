@@ -4,7 +4,7 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
 import { scoreForRole } from '../score-model.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
-// Department. Trees are Pod → Department → Job; charts are one-per-pod with Y = Job. Pods map to
+// Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
 // recruiters (not jobs), so attributing a Job/Department to a Pod needs the recruiter×job rollup from the
 // pipeline redesign — until then every metric cell is a placeholder (—), same honesty as the Recruiter tab.
 // The only live values here: Fulfilment pod Target = summed pod capacities, and the org-wide Sourcing chart.
@@ -102,7 +102,7 @@ export function renderEfficiency(data) {
       .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:var(--bg); }
       .evel-table tbody td:nth-child(1), .evel-table tbody td:nth-child(2) { background:var(--card); }
 
-      /* per-pod chart placeholder cards */
+      /* per-department chart cards */
       .eff-podcharts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:18px; }
       .eff-podchart { border:1px solid var(--border); border-radius:10px; padding:14px 16px; background:var(--card); min-height:110px;
         display:flex; flex-direction:column; gap:6px; }
@@ -111,7 +111,7 @@ export function renderEfficiency(data) {
     </style>
 
     <h2 class="section-title">Overall Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Pod → Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Momentum</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (both from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
+    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Momentum</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (both from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
@@ -143,7 +143,7 @@ export function renderEfficiency(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table>
         <thead>
-          <tr><th rowspan="2" style="min-width:260px">Pod / Department / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
+          <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilOfferBody"></tbody>
@@ -152,7 +152,7 @@ export function renderEfficiency(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table>
         <thead>
-          <tr><th rowspan="2" style="min-width:260px">Pod / Department / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Hired</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
+          <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Hired</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilHireBody"></tbody>
@@ -162,7 +162,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
       <p class="sub-note" id="effVelUntracked" style="display:none;color:var(--orange)"></p>
-      <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Pod → Department → Job → Stage</strong> (HM Screening / OA / R1), daily over the last 30 days of the range. Falls back to a pod-level snapshot until the history accumulator has run.</p>
+      <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Department → Job → Stage</strong> (HM Screening / OA / R1), daily over the last 30 days of the range. Falls back to pending until the history accumulator has run.</p>
       <div class="eff-podcharts" id="effVelPodCharts"></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
@@ -172,11 +172,11 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="eff-panel" data-panel="screening" style="display:none">
-      <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Pod → Department → Job</strong> across the funnel; the per-pod charts show Added vs Cleared per stage. Falls back to a pod-level snapshot until the accumulator has run.</p>
+      <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Department → Job</strong> across the funnel; the per-department charts show Added vs Cleared per stage. Falls back to pending until the accumulator has run.</p>
       <div class="eff-podcharts" id="effScreenPodCharts"></div>
       <div class="scroll-table"><table>
         <thead>
-          <tr><th rowspan="2" style="min-width:260px">Pod / Department / Job</th><th colspan="3" class="stage-hdr">HM Screening</th><th colspan="3" class="stage-hdr">Online Assessment</th><th colspan="3" class="stage-hdr">R1</th></tr>
+          <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="3" class="stage-hdr">HM Screening</th><th colspan="3" class="stage-hdr">Online Assessment</th><th colspan="3" class="stage-hdr">R1</th></tr>
           <tr><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th></tr>
         </thead>
         <tbody id="effScreenBody"></tbody>
@@ -185,7 +185,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Throughput (mirrors HM) -->
     <div class="eff-panel" data-panel="throughput" style="display:none">
-      <p class="sub-note"><strong>In</strong> = candidates who entered the stage, <strong>Out</strong> = candidates who moved past it, Throughput = Out/In % — from real stage history, live at <strong>Pod → Department → Job</strong>. Falls back to pending until the history accumulator has run.</p>
+      <p class="sub-note"><strong>In</strong> = candidates who entered the stage, <strong>Out</strong> = candidates who moved past it, Throughput = Out/In % — from real stage history, live at <strong>Department → Job</strong>. Falls back to pending until the history accumulator has run.</p>
       <div style="display:flex;flex-wrap:wrap;gap:12px 16px;margin-bottom:12px;font-size:12px;align-items:center">
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
         ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
@@ -200,7 +200,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Time in Process -->
     <div class="eff-panel" data-panel="timeinprocess" style="display:none">
       <p class="sub-note" id="effTisNote" style="display:none"></p>
-      <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Pod → Department → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked there (today − applied date, full coverage); <strong>TA Screen → Offer</strong> come from real stage-transition history. Median is used (not mean) so a few candidates stuck 150+ days in App Review don't skew the stage.</p>
+      <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Department → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked there (today − applied date, full coverage); <strong>TA Screen → Offer</strong> come from real stage-transition history. Median is used (not mean) so a few candidates stuck 150+ days in App Review don't skew the stage.</p>
       <div class="scroll-table"><table>
         <thead id="effTisHead"></thead>
         <tbody id="effTisBody"></tbody>
@@ -209,10 +209,10 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Joining Conversion -->
     <div class="eff-panel" data-panel="joining" style="display:none">
-      <p class="sub-note"><strong>Offered → Hired</strong>, live to the job level (Pod → Department → Job), attributed via the recruiters who worked each job.</p>
+      <p class="sub-note"><strong>Offered → Hired</strong>, live to the job level (Department → Job), attributed via the recruiters who worked each job.</p>
       <div class="eff-podcharts" id="effJoinPodCharts"></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:260px">Pod / Department / Job</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
+        <thead><tr><th style="min-width:260px">Department / Job</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
         <tbody id="effJoinBody"></tbody>
       </table></div>
     </div>
@@ -412,16 +412,15 @@ export function initEfficiencyFilters(data) {
 
   const PENDING = 'Department → Job — pending job→pod attribution (pipeline)';
 
-  // Skeleton body: Pod header rows + one pending child per pod. cellsFn(pod, q, isPodRow) returns the
-  // metric <td>s for the pod row; the pending child fills metric columns with —.
+  // Skeleton body: Department header rows + one pending child each, used while a data source is absent.
   function podSkeletonBody(tbodyId, metricCols, cellsFn, grandRow) {
     const body = document.getElementById(tbodyId);
     if (!body) return;
-    const pods = visiblePods();
+    const rows = deptJobs(selQuarter());
     let html = '';
-    pods.forEach((pod, pi) => {
+    rows.forEach(({ dept }, pi) => {
       html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}</td>${cellsFn(pod)}</tr>`;
+        <td style="font-weight:600">${CARET}${dept}</td>${cellsFn(dept)}</tr>`;
       html += `<tr data-path="${pi}-0" style="display:none">
         <td style="padding-left:32px;color:var(--muted);font-style:italic">${PENDING}</td>${dashTds(metricCols)}</tr>`;
     });
@@ -505,7 +504,6 @@ export function initEfficiencyFilters(data) {
   // present; else pod-level current-stage approximation (R1-cleared unknown).
   function renderScreening() {
     const q = selQuarter();
-    const pods = visiblePods();
     const body = document.getElementById('effScreenBody'); if (!body) return;
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
     const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
@@ -515,51 +513,33 @@ export function initEfficiencyFilters(data) {
       const jobTriple = (jid) => { const t = tpByJob[jid] || {}; return SK.map(k => { const c = t[k] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; }); };
       const cells = (tr) => tr.map(s => `<td>${s.r}</td><td>${s.c}</td><td class="${cls(pc(s.c, s.r))}">${pc(s.c, s.r)}%</td>`).join('');
       const sumTr = (arrs) => SK.map((_, i) => arrs.reduce((a, t) => ({ r: a.r + t[i].r, c: a.c + t[i].c }), { r: 0, c: 0 }));
-      pods.forEach((pod, pi) => {
-        const podArrs = [];
-        const deptRows = podDeptJobs(pod, q).map(({ dept, jobs: js }) => { const jtr = js.map(j => jobTriple(j.jid)); jtr.forEach(a => podArrs.push(a)); return { dept, js, jtr, deptSum: sumTr(jtr) }; });
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${cells(sumTr(podArrs))}</tr>`;
-        deptRows.forEach(({ dept, js, jtr, deptSum }, di) => {
-          html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(deptSum)}</tr>`;
-          js.forEach((j, ji) => { html += `<tr data-path="${pi}-${di}-${ji}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${j.title}</td>${cells(jtr[ji])}</tr>`; });
-        });
+      deptJobs(q).forEach(({ dept, jobs: js }, di) => {
+        const jtr = js.map(j => jobTriple(j.jid));
+        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(sumTr(jtr))}</tr>`;
+        js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(jtr[ji])}</tr>`; });
       });
     } else {
-      const scells = (hm, oa, r1) => { const hmC = Math.min(hm, oa), oaC = Math.min(oa, r1); return `<td>${hm}</td><td>${hmC}</td><td class="${cls(pc(hmC, hm))}">${pc(hmC, hm)}%</td><td>${oa}</td><td>${oaC}</td><td class="${cls(pc(oaC, oa))}">${pc(oaC, oa)}%</td><td>${r1}</td><td>${DASH}</td><td>${DASH}</td>`; };
-      pods.forEach((pod, pi) => {
-        const mem = podMembers(pod, q);
-        const hm = mem.reduce((s, r) => s + (r.hm || 0), 0), oa = mem.reduce((s, r) => s + (r.oa || 0), 0), r1 = mem.reduce((s, r) => s + (r.r1 || 0), 0);
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${scells(hm, oa, r1)}</tr>`;
-        html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job — awaiting the stage-history accumulator</td>${dashTds(9)}</tr>`;
-      });
+      html += `<tr><td colspan="10" style="color:var(--muted);font-style:italic;padding:16px">Department → Job — awaiting the stage-history accumulator.</td></tr>`;
     }
-    body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
   function renderJoining() {
     const q = selQuarter();
-    const pods = visiblePods();
     const body = document.getElementById('effJoinBody'); if (!body) return;
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
     let html = '';
-    pods.forEach((pod, pi) => {
-      const djs = podDeptJobs(pod, q);
-      const po = djs.reduce((s, d) => s + d.jobs.reduce((a, j) => a + j.offer, 0), 0);
-      const ph = djs.reduce((s, d) => s + d.jobs.reduce((a, j) => a + j.hired, 0), 0);
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${pod}</td><td style="font-weight:600">${po || '<span class="zero">0</span>'}</td><td class="${ph > 0 ? 'good' : 'zero'}" style="font-weight:600">${ph}</td><td>${pc(ph, po)}%</td></tr>`;
-      djs.forEach(({ dept, jobs }, di) => {
-        const dpo = jobs.reduce((a, j) => a + j.offer, 0), dph = jobs.reduce((a, j) => a + j.hired, 0);
-        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-          <td style="padding-left:30px;font-weight:500">${CARET}${dept}</td><td>${dpo}</td><td class="${dph > 0 ? 'good' : 'zero'}">${dph}</td><td>${pc(dph, dpo)}%</td></tr>`;
-        jobs.forEach((j, ji) => {
-          html += `<tr data-path="${pi}-${di}-${ji}" style="display:none">
-            <td style="padding-left:56px;color:var(--muted)">${j.title}</td><td>${j.offer}</td><td class="${j.hired > 0 ? 'good' : 'zero'}">${j.hired}</td><td>${pc(j.hired, j.offer)}%</td></tr>`;
-        });
+    deptJobs(q).forEach(({ dept, jobs }, di) => {
+      const dpo = jobs.reduce((a, j) => a + j.offer, 0), dph = jobs.reduce((a, j) => a + j.hired, 0);
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length}</span></td><td style="font-weight:600">${dpo || '<span class="zero">0</span>'}</td><td class="${dph > 0 ? 'good' : 'zero'}" style="font-weight:600">${dph}</td><td>${pc(dph, dpo)}%</td></tr>`;
+      jobs.forEach((j, ji) => {
+        html += `<tr data-path="${di}-${ji}" style="display:none">
+          <td style="padding-left:30px;color:var(--muted)">${j.title}</td><td>${j.offer}</td><td class="${j.hired > 0 ? 'good' : 'zero'}">${j.hired}</td><td>${pc(j.hired, j.offer)}%</td></tr>`;
       });
     });
-    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
@@ -567,7 +547,7 @@ export function initEfficiencyFilters(data) {
     const vis = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
     const head = document.getElementById('effTpHead');
     if (head) {
-      let r1 = '<tr><th rowspan="2" style="min-width:260px">Pod / Department / Job</th>';
+      let r1 = '<tr><th rowspan="2" style="min-width:260px">Department / Job</th>';
       vis.forEach(k => { r1 += `<th colspan="3" class="stage-hdr">${TP_LABELS[k]}</th>`; });
       r1 += '</tr><tr>';
       vis.forEach(() => { r1 += '<th class="stage-sub">In</th><th class="stage-sub">Out</th><th class="stage-sub">%</th>'; });
@@ -575,27 +555,20 @@ export function initEfficiencyFilters(data) {
     }
     const body = document.getElementById('effTpBody'); if (!body) return;
     if (!tpByJob) { podSkeletonBody('effTpBody', vis.length * 3, () => dashTds(vis.length * 3)); return; }
-    // LIVE: In = reached (entered the stage), Out = cleared (left it) — from stage history, Pod → Dept → Job.
-    const q = selQuarter(), pods = visiblePods();
+    // LIVE: In = reached (entered the stage), Out = cleared (left it) — from stage history, Department → Job.
+    const q = selQuarter();
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
     const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
     const jobRC = (jid) => { const t = tpByJob[jid] || {}; return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; }); };
     const cells = (rc) => rc.map(x => `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
     const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
     let html = '';
-    pods.forEach((pod, pi) => {
-      const podArrs = [];
-      const deptRows = podDeptJobs(pod, q).map(({ dept, jobs: js }) => {
-        const jrc = js.map(j => jobRC(j.jid)); jrc.forEach(a => podArrs.push(a));
-        return { dept, js, jrc, deptSum: sumRC(jrc) };
-      });
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${cells(sumRC(podArrs))}</tr>`;
-      deptRows.forEach(({ dept, js, jrc, deptSum }, di) => {
-        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(deptSum)}</tr>`;
-        js.forEach((j, ji) => { html += `<tr data-path="${pi}-${di}-${ji}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${j.title}</td>${cells(jrc[ji])}</tr>`; });
-      });
+    deptJobs(q).forEach(({ dept, jobs: js }, di) => {
+      const jrc = js.map(j => jobRC(j.jid));
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(sumRC(jrc))}</tr>`;
+      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(jrc[ji])}</tr>`; });
     });
-    body.innerHTML = html || `<tr><td colspan="${vis.length * 3 + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${vis.length * 3 + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
@@ -621,12 +594,12 @@ export function initEfficiencyFilters(data) {
       : `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`;
   }
 
-  // ===== Time in Process (Pod → Department → Job; median days parked per stage, red > 5) =====
+  // ===== Time in Process (Department → Job; median days parked per stage, red > 5) =====
   function renderTimeInProcess() {
     const head = document.getElementById('effTisHead');
     if (head) {
       const perH = tisPeriod();
-      let h = '<tr><th style="min-width:260px">Pod / Department / Job</th>';
+      let h = '<tr><th style="min-width:260px">Department / Job</th>';
       TIS_STAGES.forEach(([sk, lbl]) => {
         const live = perH && sk === 'appReview';
         h += `<th class="stage-sub" style="min-width:48px"${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
@@ -635,7 +608,7 @@ export function initEfficiencyFilters(data) {
     }
     const body = document.getElementById('effTisBody'); if (!body) return;
     if (!tisByJob && !arDwellJob) { podSkeletonBody('effTisBody', TIS_STAGES.length, () => dashTds(TIS_STAGES.length)); return; }
-    const q = selQuarter(), pods = visiblePods();
+    const q = selQuarter();
     const per = tisPeriod();
     // Per job: one histogram per stage column. App Review from the main-pull dwell (live, never period-scoped),
     // other stages from stage history, scoped to the selected period when the rollups carry the quarter dimension.
@@ -645,24 +618,17 @@ export function initEfficiencyFilters(data) {
     const rowCells = (histArr) => histArr.map(hh => tisCell(hh, 5)).join('');
     const poolCells = (arrs) => TIS_STAGES.map((_, i) => tisCell(poolHists(arrs.map(a => a[i])), 5)).join('');
     let html = '';
-    pods.forEach((pod, pi) => {
-      const podArrs = [];
-      const deptRows = podDeptJobs(pod, q).map(({ dept, jobs: js }) => {
-        const jh = js.map(j => jobHists(j.jid)); jh.forEach(a => podArrs.push(a));
-        return { dept, js, jh };
-      });
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${poolCells(podArrs)}</tr>`;
-      deptRows.forEach(({ dept, js, jh }, di) => {
-        html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${poolCells(jh)}</tr>`;
-        js.forEach((j, ji) => { html += `<tr data-path="${pi}-${di}-${ji}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
-      });
+    deptJobs(q).forEach(({ dept, jobs: js }, di) => {
+      const jh = js.map(j => jobHists(j.jid));
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${poolCells(jh)}</tr>`;
+      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
     });
-    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
     tisNote(per);
   }
 
-  // ===== Momentum (Pod → Department → Job → Stage; last 30 days of range, descending) =====
+  // ===== Momentum (Department → Job → Stage; last 30 days of range, descending) =====
   function velDates() {
     const toV = document.getElementById('effVelTo')?.value;
     const fromV = document.getElementById('effVelFrom')?.value;
@@ -695,11 +661,10 @@ export function initEfficiencyFilters(data) {
     const body = document.getElementById('effVelBody');
     if (!body) return;
     const q = selQuarter();
-    const pods = visiblePods();
     const dates = velDates();
     const dkeys = dates.map(dkeyEff);
     if (head) {
-      let h = `<tr><th style="min-width:260px">Pod / Department / Job / Stage</th><th>Total · ${dates.length}d</th>`;
+      let h = `<tr><th style="min-width:260px">Department / Job / Stage</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       head.innerHTML = h + '</tr>';
     }
@@ -708,42 +673,30 @@ export function initEfficiencyFilters(data) {
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
     const add = (dst, src) => { for (let i = 0; i < dst.length; i++) dst[i] += src[i]; };
     let html = '';
+    const rows = deptJobs(q);
     if (velByJob) {
-      // Full Pod → Department → Job → Stage from true stage-entry rollups (velocityByJob[job][stage][day]).
-      pods.forEach((pod, pi) => {
-        const podArr = new Array(dkeys.length).fill(0); let podTot = 0;
-        const depts = podDeptJobs(pod, q).map(({ dept, jobs: js }) => {
-          const dArr = new Array(dkeys.length).fill(0); let dTot = 0;
-          const jd = js.map(j => {
-            const jm = velByJob[j.jid] || {}; const jArr = new Array(dkeys.length).fill(0); let jTot = 0;
-            const sd = VELS.map(([sk, label]) => { const m = jm[sk] || {}; let sTot = 0; const sArr = dkeys.map(dk => { const v = m[dk] || 0; sTot += v; return v; }); add(jArr, sArr); jTot += sTot; return { label, sArr, sTot }; });
-            add(dArr, jArr); dTot += jTot; return { j, jArr, jTot, sd };
-          });
-          add(podArr, dArr); podTot += dTot; return { dept, jd, dArr, dTot };
+      // Department → Job → Stage from true stage-entry rollups (velocityByJob[job][stage][day]).
+      rows.forEach(({ dept, jobs: js }, di) => {
+        const dArr = new Array(dkeys.length).fill(0); let dTot = 0;
+        const jd = js.map(j => {
+          const jm = velByJob[j.jid] || {}; const jArr = new Array(dkeys.length).fill(0); let jTot = 0;
+          const sd = VELS.map(([sk, label]) => { const m = jm[sk] || {}; let sTot = 0; const sArr = dkeys.map(dk => { const v = m[dk] || 0; sTot += v; return v; }); add(jArr, sArr); jTot += sTot; return { label, sArr, sTot }; });
+          add(dArr, jArr); dTot += jTot; return { j, jArr, jTot, sd };
         });
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${numRow(podTot, podArr, true)}</tr>`;
-        depts.forEach(({ dept, jd, dArr, dTot }, di) => {
-          html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, false)}</tr>`;
-          jd.forEach(({ j, jArr, jTot, sd }, ji) => {
-            html += `<tr data-path="${pi}-${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:56px;color:var(--text)">${CARET}${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
-            sd.forEach(({ label, sArr, sTot }, si) => {
-              html += `<tr data-path="${pi}-${di}-${ji}-${si}" style="display:none"><td style="padding-left:82px;color:var(--muted)">${label}</td>${numRow(sTot, sArr, false)}</tr>`;
-            });
+        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
+        jd.forEach(({ j, jArr, jTot, sd }, ji) => {
+          html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;color:var(--text)">${CARET}${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
+          sd.forEach(({ label, sArr, sTot }, si) => {
+            html += `<tr data-path="${di}-${ji}-${si}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${label}</td>${numRow(sTot, sArr, false)}</tr>`;
           });
         });
       });
     } else {
-      // fallback: pod-level from recruiters[].daily (snapshot) until the accumulator has run
-      pods.forEach((pod, pi) => {
-        const mem = podMembers(pod, q); const arr = new Array(dkeys.length).fill(0); let tot = 0;
-        mem.forEach(r => VELS.forEach(([sk]) => { const m = (r.daily && r.daily[sk]) || {}; dkeys.forEach((dk, i) => { const v = m[dk] || 0; arr[i] += v; tot += v; }); }));
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${pod}</td>${numRow(tot, arr, true)}</tr>`;
-        html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">Department → Job → Stage — awaiting the stage-history accumulator</td>${`<td>${DASH}</td>`.repeat(dkeys.length + 1)}</tr>`;
-      });
+      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">Department → Job → Stage — awaiting the stage-history accumulator.</td></tr>`;
     }
-    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
-    renderPodCharts('effVelPodCharts', pods, velPodCfg, 'No submissions in range.');
+    renderDeptCharts('effVelPodCharts', rows, velDeptCfg, 'No stage activity in range.');
     const untracked = untrackedStages(velByJob, VELS);
     const un = document.getElementById('effVelUntracked');
     if (un) {
@@ -752,7 +705,7 @@ export function initEfficiencyFilters(data) {
     }
   }
 
-  // ===== Sourcing Mix — Pod → Department → Job → Source type → Source name =====
+  // ===== Sourcing Mix — Department → Job → Source type → Source name =====
   // Sources are recorded per application, so the honest tree needs a per-(recruiter × job) source bucket:
   // recruiters[].srcByJob { job8: { type: { name: count } } }. Pod attribution follows the recruiter, the
   // Department/Job scope follows the job — which is what makes those two filters real on this tab.
@@ -767,27 +720,18 @@ export function initEfficiencyFilters(data) {
 
   // Pod → Dept → Job, each carrying its merged {type:{name:count}}. Honours Department + Job multi-selects.
   function sourceTree(q) {
-    return visiblePods().map(pod => {
-      const mem = podMembers(pod, q);
-      const depts = [];
-      podDeptJobs(pod, q).forEach(({ dept, jobs }) => {
-        const jarr = [];
-        jobs.forEach(j => {
-          const nst = {};
-          mem.forEach(r => { const s = r.srcByJob && r.srcByJob[j.jid]; if (s) mergeNested(nst, s); });
-          const tot = sumNested(nst);
-          if (tot) jarr.push({ title: j.title, nst, tot });
-        });
-        if (jarr.length) {
-          jarr.sort((a, b) => b.tot - a.tot);
-          const dn = jarr.reduce((d, j) => mergeNested(d, j.nst), {});
-          depts.push({ dept, jobs: jarr, nst: dn, tot: sumNested(dn) });
-        }
+    return deptJobs(q).map(({ dept, jobs }) => {
+      const jarr = [];
+      jobs.forEach(j => {
+        const nst = {};
+        recruiters.forEach(r => { const sj = r.srcByJob && r.srcByJob[j.jid]; if (sj) mergeNested(nst, sj); });
+        const tot = sumNested(nst);
+        if (tot) jarr.push({ title: j.title, nst, tot });
       });
-      depts.sort((a, b) => b.tot - a.tot);
-      const pn = depts.reduce((d, x) => mergeNested(d, x.nst), {});
-      return { pod, depts, nst: pn, tot: sumNested(pn) };
-    });
+      jarr.sort((a, b) => b.tot - a.tot);
+      const dn = jarr.reduce((d, j) => mergeNested(d, j.nst), {});
+      return { dept, jobs: jarr, nst: dn, tot: sumNested(dn) };
+    }).filter(d => d.tot > 0).sort((a, b) => b.tot - a.tot);
   }
 
   // Fallback aggregate: pod → {type:{name:count}} from srcNested (or the coarse sources{} map). No job grain.
@@ -804,8 +748,8 @@ export function initEfficiencyFilters(data) {
   // The {type:{name:count}} the chart draws — same scope as the table, so the two can never disagree.
   function visibleSourceAgg(q) {
     const agg = {};
-    if (hasSrcByJob) sourceTree(q).forEach(p => mergeNested(agg, p.nst));
-    else visiblePods().forEach(pod => mergeNested(agg, podNestedFlat(pod, q)));
+    if (hasSrcByJob) sourceTree(q).forEach(d => mergeNested(agg, d.nst));
+    else recruiters.forEach(r => mergeNested(agg, (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : {}));
     return agg;
   }
 
@@ -818,9 +762,9 @@ export function initEfficiencyFilters(data) {
     const scoped = selDepts().length || selJobs().length;
 
     if (note) note.innerHTML = hasSrcByJob
-      ? '<strong>Pod → Department → Job → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>). Counts are applications, attributed to the pod of the recruiter who worked them.'
-      : '<strong>Pod → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members.';
-    if (th) th.textContent = hasSrcByJob ? 'Pod / Department / Job / Source type / Source name' : 'Pod / Source type / Source name';
+      ? '<strong>Department → Job → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>). Counts are applications, attributed to the pod of the recruiter who worked them.'
+      : '<strong>Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members.';
+    if (th) th.textContent = hasSrcByJob ? 'Department / Job / Source type / Source name' : 'Source type / Source name';
     if (warn) {
       const show = !hasSrcByJob && scoped;
       warn.style.display = show ? '' : 'none';
@@ -844,31 +788,28 @@ export function initEfficiencyFilters(data) {
     let html = '';
     if (hasSrcByJob) {
       const tree = sourceTree(q);
-      const grand = tree.reduce((s, p) => s + p.tot, 0) || 1;
-      tree.forEach((P, pi) => {
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${P.pod}</td><td style="font-weight:600">${P.tot || '<span class="zero">0</span>'}</td><td>${pc(P.tot, grand)}%</td></tr>`;
-        if (!P.depts.length) {
-          html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
-          return;
-        }
-        P.depts.forEach((D, di) => {
-          html += `<tr data-path="${pi}-${di}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;font-weight:500">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${D.jobs.length}</span></td><td>${D.tot}</td><td>${pc(D.tot, P.tot)}%</td></tr>`;
-          D.jobs.forEach((J, ji) => {
-            html += `<tr data-path="${pi}-${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:56px">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
-            html += typeRows(J.nst, J.tot, `${pi}-${di}-${ji}`, 82);
-          });
+      const grand = tree.reduce((s, d) => s + d.tot, 0) || 1;
+      tree.forEach((D, di) => {
+        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${D.jobs.length}</span></td><td style="font-weight:600">${D.tot || '<span class="zero">0</span>'}</td><td>${pc(D.tot, grand)}%</td></tr>`;
+        D.jobs.forEach((J, ji) => {
+          html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
+          html += typeRows(J.nst, J.tot, `${di}-${ji}`, 56);
         });
       });
     } else {
-      const flats = visiblePods().map(pod => { const nst = podNestedFlat(pod, q); return { pod, nst, tot: sumNested(nst) }; });
-      const grand = flats.reduce((s, p) => s + p.tot, 0) || 1;
-      flats.forEach((P, pi) => {
-        html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${P.pod}</td><td style="font-weight:600">${P.tot || '<span class="zero">0</span>'}</td><td>${pc(P.tot, grand)}%</td></tr>`;
-        if (P.tot) html += typeRows(P.nst, P.tot, String(pi), 32);
-        else html += `<tr data-path="${pi}-0" style="display:none"><td style="padding-left:32px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+      // No per-job sources yet: org-wide Type → Name only. Department/Job cannot be applied, and the warning
+      // above the table says so.
+      const agg = {};
+      recruiters.forEach(r => {
+        const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
+        if (sn) mergeNested(agg, sn);
+        else for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; }
       });
+      const tot = sumNested(agg);
+      html += `<tr data-path="0" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}All departments</td><td style="font-weight:600">${tot || '<span class="zero">0</span>'}</td><td>100.0%</td></tr>`;
+      if (tot) html += typeRows(agg, tot, '0', 32);
     }
 
     body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
@@ -902,47 +843,30 @@ export function initEfficiencyFilters(data) {
     });
   }
 
-  // Per-tab per-pod chart builders (Y = Job where a job grain exists; else pod-level).
-  const fulfilPodCfg = (pod) => {
-    const q = selQuarter(), isSales = isSalesPod(pod);
-    const jobs = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => ({ t: j.title, v: isSales ? j.hired * j.score : j.offer * j.score })).filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, 10);
-    if (!jobs.length) return null;
-    return { type: 'bar', data: { labels: jobs.map(j => j.t), datasets: [{ label: isSales ? 'Hired Score' : 'Offered Score', data: jobs.map(j => j.v), backgroundColor: C.blue, borderRadius: 3, barPercentage: 0.75 }] }, options: hbarOpts(false, isSales ? 'Hired Score' : 'Offered Score') };
+  // Per-tab per-DEPARTMENT chart builders (#18). Each receives {dept, jobs} straight from deptJobs(q), so
+  // there is no pod lookup left — Y = Job in every one.
+  const joinDeptCfg = ({ jobs }) => {
+    const js = jobs.filter(j => j.offer > 0).sort((a, b) => b.offer - a.offer).slice(0, 10);
+    if (!js.length) return null;
+    return { type: 'bar', data: { labels: js.map(j => j.title), datasets: [
+      { label: 'Hired', data: js.map(j => j.hired), backgroundColor: C.green, stack: 'j', borderRadius: 2 },
+      { label: 'Offered', data: js.map(j => Math.max(0, j.offer - j.hired)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
   };
-  const joinPodCfg = (pod) => {
-    const jobs = podDeptJobs(pod, selQuarter()).flatMap(d => d.jobs).filter(j => j.offer > 0).sort((a, b) => b.offer - a.offer).slice(0, 10);
-    if (!jobs.length) return null;
-    return { type: 'bar', data: { labels: jobs.map(j => j.title), datasets: [
-      { label: 'Hired', data: jobs.map(j => j.hired), backgroundColor: C.green, stack: 'j', borderRadius: 2 },
-      { label: 'Offered', data: jobs.map(j => Math.max(0, j.offer - j.hired)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
-  };
-  const velPodCfg = (pod) => {
-    const q = selQuarter(), dates = velDates(), dk = dates.map(dkeyEff);
-    let per;
-    if (velByJob) {
-      const jids = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => j.jid);
-      per = dk.map(k => jids.reduce((s, jid) => { const jm = velByJob[jid] || {}; return ['oa', 'hmReview', 'r1'].reduce((ss, sk) => ss + (((jm[sk] || {})[k]) || 0), s); }, 0));
-    } else {
-      const mem = podMembers(pod, q);
-      per = dk.map(k => mem.reduce((s, r) => ['oa', 'hmReview', 'r1'].reduce((ss, sk) => ss + ((((r.daily && r.daily[sk]) || {})[k]) || 0), s), 0));
-    }
+  const velDeptCfg = ({ jobs }) => {
+    const dates = velDates(), dk = dates.map(dkeyEff);
+    if (!velByJob) return null;
+    const jids = jobs.map(j => j.jid);
+    const per = dk.map(k => jids.reduce((s, jid) => { const jm = velByJob[jid] || {}; return ['hmReview', 'oa', 'r1'].reduce((ss, sk) => ss + (((jm[sk] || {})[k]) || 0), s); }, 0));
     if (per.every(v => v === 0)) return null;
     const labels = dates.map(d => `${MON[d.getMonth()]} ${d.getDate()}`).reverse();
     return { _h: 140, type: 'bar', data: { labels, datasets: [{ label: 'Submissions', data: per.slice().reverse(), backgroundColor: C.blue, borderRadius: 2, barPercentage: 0.9 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }, y: { ...gridY } } } };
   };
-  const screenPodCfg = (pod) => {
-    const q = selQuarter();
-    let hmR, hmC, oaR, oaC, r1R, r1C;
-    if (tpByJob) {
-      const jids = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => j.jid);
-      const agg = (k) => jids.reduce((a, jid) => { const c = (tpByJob[jid] || {})[k] || { reached: 0, cleared: 0 }; return { r: a.r + c.reached, c: a.c + c.cleared }; }, { r: 0, c: 0 });
-      const hm = agg('hmReview'), oa = agg('oa'), r1 = agg('r1');
-      hmR = hm.r; hmC = hm.c; oaR = oa.r; oaC = oa.c; r1R = r1.r; r1C = r1.c;
-    } else {
-      const mem = podMembers(pod, q);
-      hmR = mem.reduce((s, r) => s + (r.hm || 0), 0); oaR = mem.reduce((s, r) => s + (r.oa || 0), 0); r1R = mem.reduce((s, r) => s + (r.r1 || 0), 0);
-      hmC = Math.min(hmR, oaR); oaC = Math.min(oaR, r1R); r1C = 0;
-    }
+  const screenDeptCfg = ({ jobs }) => {
+    if (!tpByJob) return null;
+    const jids = jobs.map(j => j.jid);
+    const agg = (k) => jids.reduce((a, jid) => { const c = (tpByJob[jid] || {})[k] || { reached: 0, cleared: 0 }; return { r: a.r + c.reached, c: a.c + c.cleared }; }, { r: 0, c: 0 });
+    const hm = agg('hmReview'), oa = agg('oa'), r1 = agg('r1');
+    const hmR = hm.r, hmC = hm.c, oaR = oa.r, oaC = oa.c, r1R = r1.r, r1C = r1.c;
     if (hmR + oaR + r1R === 0) return null;
     return { _h: 150, type: 'bar', data: { labels: ['HM', 'OA', 'R1'], datasets: [
       { label: 'Added', data: [hmR, oaR, r1R], backgroundColor: C.blue, borderRadius: 2 },
@@ -951,10 +875,9 @@ export function initEfficiencyFilters(data) {
 
   // Per-pod Throughput chart: Added (reached) vs Cleared per stage, from throughputByJob over the pod's jobs.
   // Respects the stage toggle; shows only stages with any activity. Horizontal grouped bars. Null → placeholder.
-  const tpPodCfg = (pod) => {
+  const tpDeptCfg = ({ jobs }) => {
     if (!tpByJob) return null;
-    const q = selQuarter();
-    const jids = podDeptJobs(pod, q).flatMap(d => d.jobs).map(j => j.jid);
+    const jids = jobs.map(j => j.jid);
     if (!jids.length) return null;
     const visKeys = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
     const rows = visKeys.map(k => {
@@ -1083,10 +1006,10 @@ export function initEfficiencyFilters(data) {
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
-    else if (activeTab === 'screening') { renderScreening(); renderPodCharts('effScreenPodCharts', visiblePods(), screenPodCfg, 'No stage activity.'); }
-    else if (activeTab === 'throughput') { renderThroughput(); renderPodCharts('effTpPodCharts', visiblePods(), tpPodCfg, 'No stage-transition activity yet for this pod.'); }
+    else if (activeTab === 'screening') { renderScreening(); renderDeptCharts('effScreenPodCharts', deptJobs(selQuarter()), screenDeptCfg, 'No stage activity in this department.'); }
+    else if (activeTab === 'throughput') { renderThroughput(); renderDeptCharts('effTpPodCharts', deptJobs(selQuarter()), tpDeptCfg, 'No stage-transition activity in this department.'); }
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
-    else if (activeTab === 'joining') { renderJoining(); renderPodCharts('effJoinPodCharts', visiblePods(), joinPodCfg, 'No offers yet.'); }
+    else if (activeTab === 'joining') { renderJoining(); renderDeptCharts('effJoinPodCharts', deptJobs(selQuarter()), joinDeptCfg, 'No offers yet in this department.'); }
     else if (activeTab === 'sourcing') renderSourcing();
   }
 
