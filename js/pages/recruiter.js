@@ -346,6 +346,7 @@ export function renderRecruiter(data) {
         <button class="hyg-tab" data-h="roster">Recruiter Roster<span class="n" id="hygNRoster"></span></button>
         <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
         <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
+        <button class="hyg-tab" data-h="unscored">Roles Missing Score Inputs<span class="n" id="hygNUnscored"></span></button>
         <button class="hyg-tab" data-h="anomalies">Other Anomalies<span class="n" id="hygNAnom"></span></button>
       </div>
 
@@ -418,6 +419,18 @@ export function renderRecruiter(data) {
         <div class="scroll-table"><table>
           <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>DOJ</th><th>Recruiter</th></tr></thead>
           <tbody id="hygHiredGapBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="unscored" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Roles missing score inputs</h4>
+          <p class="sub-note" style="margin:0">A role's Score needs <strong>Level</strong> and <strong>Complexity</strong> from Ashby. Without both, the role scores nothing — so it contributes nothing to its department's Fulfilment target, and the target reads lower than the real workload. Fill these in on the job in Ashby.</p></div>
+          <button class="hyg-dl" data-dl="unscored">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
+          <tbody id="hygUnscoredBody"></tbody>
         </table></div>
       </div>
 
@@ -939,6 +952,26 @@ export function initRecruiterFilters(data) {
         || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nothing here.</td></tr>`;
     }
 
+    // --- Roles missing score inputs (Level and/or Complexity) ---
+    // Both fields come from Ashby job custom fields and are needed for the role Score. A role missing
+    // either scores nothing, which silently deflates its department's Fulfilment target — surfaced here
+    // rather than left to be discovered as a number that looks low for no visible reason.
+    const unscored = (data.jobs || [])
+      .map(j => ({ j, missing: [!j.level || j.level === 'NA' ? 'Level' : null, !j.complexity ? 'Complexity' : null].filter(Boolean) }))
+      .filter(x => x.missing.length)
+      .sort((a, b) => (b.j.total || 0) - (a.j.total || 0));
+    const usBody = document.getElementById('hygUnscoredBody');
+    if (usBody) {
+      usBody.innerHTML = unscored.map(({ j, missing }) => `<tr>
+        <td style="font-weight:500">${esc(j.title || '(untitled)')}</td>
+        <td>${esc(j.department || '—')}</td>
+        <td class="${!j.level || j.level === 'NA' ? 'zero' : ''}">${esc(j.level || '—')}</td>
+        <td class="${!j.complexity ? 'zero' : ''}">${esc(j.complexity || '—')}</td>
+        <td style="color:var(--orange);font-weight:500">${missing.join(' + ')}</td>
+        <td>${j.total || 0}</td></tr>`).join('')
+        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every role has both Level and Complexity. ✓</td></tr>`;
+    }
+
     // --- Other anomalies ---
     const anomList = [];
     (dq.excludedAsRecruiter || []).forEach(n => anomList.push({
@@ -988,6 +1021,7 @@ export function initRecruiterFilters(data) {
     setN('hygNRoster', allRecs.filter(r => r.name && r.name !== 'Unassigned').length, false);
     setN('hygNOfferGap', gapLive.length, true);
     setN('hygNHiredGap', gapDone.length, false);
+    setN('hygNUnscored', unscored.length, true);
     setN('hygNAnom', anomList.length, true);
 
     // --- CSV export per tab (client-side; no backend) ---
@@ -1006,6 +1040,8 @@ export function initRecruiterFilters(data) {
         ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.doj || '', g.recruiter || ''])],
       hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'DOJ', 'Recruiter'],
         ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.doj || '', g.recruiter || ''])],
+      unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Missing', 'Applications'],
+        ...unscored.map(({ j, missing }) => [j.title || '', j.department || '', j.level || '', j.complexity || '', missing.join(' + '), j.total || 0])],
       anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
     };
   }
