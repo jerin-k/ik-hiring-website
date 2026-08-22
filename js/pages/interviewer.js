@@ -88,7 +88,7 @@ export function renderInterviewer(data) {
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="ivMsDept"></div></div>
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="ivMsJob"></div></div>
       <div class="fchip"><span class="lbl">Panelist</span><div class="ms" id="ivMsPanel"></div></div>
-      <div class="fchip"><label class="opt" style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="ivExpandAll"> Expand all</label></div>
+      <div class="fchip"><label class="opt" style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="ivExpandAll" checked> Expand all</label></div>
     </div>
 
     <p class="iv-grain" id="ivGrainNote" style="display:none"></p>
