@@ -984,7 +984,7 @@ export function initEfficiencyFilters(data) {
   // NOTE: the stack total at the end of each bar is now drawn by the GLOBAL stackTotalsPlugin
   // (chart-datalabels.js, registered in app.js), so every stacked chart in the app gets it, not just
   // these two. Opt a chart out with options.plugins.stackTotals = false.
-  const FULFIL_COLORS = { joined: '#0f766e', pending: '#4E6BA6', gap: '#D8B5BE' };
+  const FULFIL_COLORS = { joined: '#398AA2', pending: '#4E6BA6', gap: '#D8B5BE' };   // palette: Blue Munsell / True Blue / Fairy Tale
   const fulfilStackOpts = (xTitle) => ({
     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
     layout: { padding: { right: 34 } },   // room for the total label
