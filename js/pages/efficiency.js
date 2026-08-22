@@ -330,6 +330,31 @@ export function initEfficiencyFilters(data) {
         e.total += j.total || 0; e.offer += j.offer || 0; e.hired += j.hired || 0;
       });
     }));
+    // Openings are sourced all-time, but a job only enters the tree above if a recruiter worked it inside
+    // the scoped year. So an opening raised this quarter on a role whose applications all predate the scope
+    // got no row at all and its positions vanished from Fulfilment — while Overview and the HM tab, which
+    // read openingBuckets directly, kept counting them. Measured 2026-08-22: 2026-Q1 read 191 positions /
+    // 175 joined against a true 195 / 179, and 2026-Q2 read 112 against 118. Seed those jobs from the
+    // buckets, flagged openingOnly so ONLY Fulfilment shows them — the activity sub-tabs have nothing to
+    // say about a job with no candidates.
+    const seen = new Set();
+    Object.values(byDept).forEach(T => Object.keys(T).forEach(jid => seen.add(jid)));
+    Object.entries(data.openingBuckets || {}).forEach(([jid, b]) => {
+      if (seen.has(jid)) return;
+      const qq = b.quarters && b.quarters[q];
+      if (!qq || !(qq.total > 0)) return;
+      const raw = b.department || '';
+      const dept = (raw && resolveDeptTeam(raw).dept) || 'Unknown';
+      const known = !!b.title;
+      const T = byDept[dept] || (byDept[dept] = {});
+      T[jid] = {
+        jid, dept, openingOnly: true, unknown: !known,
+        title: known ? b.title : `Unknown job (${jid}) — not in Ashby's job list`,
+        level: undefined, complexity: undefined,
+        score: scoreForRole({ department: raw, title: b.title }, q),
+        total: 0, offer: 0, hired: 0
+      };
+    });
     _dtQ = q; _dt = byDept;
     return byDept;
   }
@@ -346,13 +371,16 @@ export function initEfficiencyFilters(data) {
   const isScoreable = (j) => !!(j.level && j.level !== 'NA' && j.complexity);
 
   // [{dept, jobs:[...]}] honouring the Department/Job multi-selects, sorted by department load.
-  function deptJobs(q) {
+  // withOpeningOnly adds the jobs that exist only as openings (no candidate activity in scope). Fulfilment
+  // needs them to reach its true position count; every other sub-tab would just gain permanently empty rows.
+  function deptJobs(q, withOpeningOnly) {
     const dsel = selDepts(), jsel = selJobs();
     const t = deptTree(q);
     const out = [];
     Object.keys(t).forEach(dept => {
       if (dsel.length && !dsel.includes(dept)) return;
       const arr = Object.values(t[dept])
+        .filter(j => withOpeningOnly || !j.openingOnly)
         .filter(j => !jsel.length || jsel.includes(j.title))
         .map(j => ({ ...j, openings: openingsOf(j.jid, q), scoreable: isScoreable(j) }))
         .sort((a, b) => (b.total || 0) - (a.total || 0));
@@ -467,11 +495,12 @@ export function initEfficiencyFilters(data) {
     unscored: a.unscored + (x.scoreable ? 0 : (x.total > 0 ? 1 : 0))
   }), { total: 0, joined: 0, pending: 0, gap: 0, tS: 0, jS: 0, pS: 0, gS: 0, unscored: 0 });
 
-  // Departments with any positions this quarter. "Unknown" is excluded: it only ever held jobs missing from
-  // Ashby's job list, which cannot have real openings — the Data Hygiene tab is where those belong.
+  // Departments with any positions this quarter. "Unknown" is NO LONGER excluded: it holds the jobs Ashby's
+  // job list never returned (DRAFT status — see the pipeline note in Data Hygiene), and two of those carry
+  // real openings, one of them already filled. The sp.total > 0 filter below is what keeps candidate-only
+  // rows out of this table, so admitting Unknown leaks nothing that has no positions.
   function fulfilRows(q) {
-    return deptJobs(q)
-      .filter(({ dept }) => dept !== 'Unknown')
+    return deptJobs(q, true)
       .map(({ dept, jobs }) => {
         const js = jobs.map(j => ({ j, sp: jobSplit(j, q) })).filter(x => x.sp.total > 0);
         js.sort((a, b) => b.sp.total - a.sp.total);
