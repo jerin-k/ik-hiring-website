@@ -264,6 +264,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
 
 function fetchAndProcessOffers_(startTime, appMap) {
   var cursor = null, count = 0, byJob = {}, byRecruiter = {}, nowMs = Date.now(), events = [], recovered = 0;
+  var oiCalls = 0, oiVersions = 0, oiRecovered = 0, oiParamUsed = '(none)';
   do {
     if (Date.now() - startTime > TIMEOUT_MS) { Logger.log('OFFER cutoff at ' + count); break; }
     var body = { limit: 100 }; if (cursor) body.cursor = cursor;
@@ -317,6 +318,28 @@ function fetchAndProcessOffers_(startTime, appMap) {
         if (vv.createdAt && (!firstCreated || String(vv.createdAt) < String(firstCreated))) firstCreated = vv.createdAt;
         if (vv.openingId && !anyOpening) anyOpening = vv.openingId;
       }
+      // ---- Recover the opening from OFFER VERSION HISTORY (archived offers only) ----
+      // offer.list does NOT populate the `versions` array. Verified the hard way 2026-08-22: verN came back
+      // as exactly 1 for all 644 offers, while MCP counts 399 offer_versions on archived applications alone.
+      // The fallback [latestVersion] had silently turned "not returned" into "one version", so the earlier
+      // check LOOKED like a clean negative and was actually blind. offer.info DOES return versions.
+      // Only ARCHIVED offers are looked up - they are the population whose latest version lost the link -
+      // so this costs ~92 calls per run, not 644.
+      // ⚠ The docs do not pin the request param name, so try offerId then id and record which worked.
+      if (am.status === 'Archived' && !anyOpening && o.id && (Date.now() - startTime) < TIMEOUT_MS) {
+        var oi = null;
+        try { oi = ashbyPost_('/offer.info', { offerId: o.id }); } catch (e3) { oi = null; }
+        if (oi && oi.results) { if (oiParamUsed === '(none)') oiParamUsed = 'offerId'; }
+        else { try { oi = ashbyPost_('/offer.info', { id: o.id }); if (oi && oi.results && oiParamUsed === '(none)') oiParamUsed = 'id'; } catch (e4) { oi = null; } }
+        oiCalls++;
+        var ovs = (oi && oi.results && oi.results.versions) || [];
+        oiVersions += ovs.length;
+        for (var oj = 0; oj < ovs.length; oj++) {
+          var ov = ovs[oj]; if (!ov) continue;
+          if (ov.createdAt && (!firstCreated || String(ov.createdAt) < String(firstCreated))) firstCreated = ov.createdAt;
+          if (ov.openingId && !anyOpening) { anyOpening = ov.openingId; oiRecovered++; }
+        }
+      }
       // per-offer event for split-scoring (recruiter+sourcer) + the HM joining-pending table (startDate)
       events.push({ applicationId: o.applicationId, jobId8: (jobId || '').substring(0, 8), candidate: am.candidate || null,
         recruiter: rec || null, sourcer: src || null, decidedAt: (o.decidedAt || '').substring(0, 10),
@@ -328,6 +351,7 @@ function fetchAndProcessOffers_(startTime, appMap) {
     if (cursor) Utilities.sleep(30);
   } while (cursor);
   Logger.log('offers processed (scoped): ' + count + ' | recovered via application.info (pre-scope-year apps): ' + recovered);
+  Logger.log('offer.info version lookups: ' + oiCalls + ' calls | param=' + oiParamUsed + ' | versions seen: ' + oiVersions + ' | OPENING LINKS RECOVERED: ' + oiRecovered);
   return { byJob: byJob, byRecruiter: byRecruiter, count: count, events: events };
 }
 
