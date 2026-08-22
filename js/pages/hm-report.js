@@ -156,12 +156,16 @@ export function renderHmReport(data) {
          width:auto used to size the table to its content, which left a wide dead strip on the right of the
          card. The name column takes the slack; the numeric columns stay compact and right-aligned so the
          digits still line up. */
-      .hm-report .hm-summary { width:100%; min-width:720px; table-layout:fixed; }
-      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:auto; }
+      /* #13 (2026-08-23): min-width was 720px while the six numeric columns alone need 840, so the table grew
+         past it and the ROLE NAME column was squeezed to 0px — that is the 'weird spacing'. The name column
+         now has a real width and min-width covers the whole row. */
+      .hm-report .hm-summary { width:100%; min-width:1100px; table-layout:fixed; }
+      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:260px; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
         text-align:right; width:130px; white-space:nowrap; font-variant-numeric:tabular-nums; }
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
-      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:170px; }
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:150px; }   /* Dropped + % caption */
+      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:180px; }   /* Delta: track + number + caption */
 
       /* tidy, evenly spaced stage checkbox strip */
       .hm-stages { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:2px 0 14px; }
