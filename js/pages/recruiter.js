@@ -453,11 +453,17 @@ export function initRecruiterFilters(data) {
   if (!data || !data.recruiters) return;
   const allRecs = data.recruiters;
   const nDate = 7;
-  // Inactive = Ashby account disabled (isActive===false) OR manually marked inactive in Admin (the manual
-  // override handles "lost the recruiter role", which has no clean Ashby signal). Historical offers still score.
-  const manualInactive = (() => { try { return JSON.parse(localStorage.getItem('ik_recruiter_inactive') || '{}'); } catch (e) { return {}; } })();
-  const isRecInactive = (r) => !!(r && (r.isActive === false || manualInactive[r.name]));
-  const inactiveTag = (r) => isRecInactive(r) ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>' : '';
+  // Inactive = the recruiter's Ashby account is disabled. Identity is the Ashby USER RECORD
+  // (recruiters[].userId), so this is a direct lookup rather than a name match, and the manual Admin
+  // override was retired 2026-08-22 once the pipeline could resolve it on its own.
+  // activeKnown === false means NO Ashby user could be matched at all - the status is genuinely UNKNOWN.
+  // It must never render as "Active": a departed recruiter hiding behind a default is exactly the kind of
+  // plausible-looking wrong answer this dashboard has been bitten by before.
+  const isRecInactive = (r) => !!(r && r.isActive === false);
+  const isStatusUnknown = (r) => !!(r && r.activeKnown === false);
+  const inactiveTag = (r) => isRecInactive(r)
+    ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>'
+    : (isStatusUnknown(r) ? ' <span title="No Ashby user record matched this name, so active/inactive is unknown" style="font-size:10px;color:var(--orange);font-weight:600">· status unknown</span>' : '');
   // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
   const _sr = data.stageRollups || {};
   const tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
@@ -924,9 +930,12 @@ export function initRecruiterFilters(data) {
       const sorted = [...allRecs].filter(r => r.name && r.name !== 'Unassigned')
         .sort((a, b) => (isRecInactive(a) - isRecInactive(b)) || a.name.localeCompare(b.name));
       rBody.innerHTML = sorted.map(r => {
-        const active = !isRecInactive(r);
+        const unknown = isStatusUnknown(r), active = !isRecInactive(r);
+        const label = unknown ? 'Unknown' : (active ? 'Active' : 'Inactive');
+        const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
+        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Active."' : '';
         return `<tr><td style="font-weight:500">${esc(r.name)}</td>
-          <td><span style="font-size:11px;font-weight:600;color:${active ? 'var(--green)' : 'var(--red)'}">${active ? 'Active' : 'Inactive'}</span></td>
+          <td><span${tip} style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
           <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
       }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No recruiters.</td></tr>`;
     }
