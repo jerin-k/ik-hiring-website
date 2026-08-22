@@ -642,6 +642,9 @@ function refreshDashboardData() {
   };
   saveDashboardJson_(dashboard);
   Logger.log('=== Refresh v4 done: ' + appResult.funnel.applied + ' apps, ' + jobsList.length + ' jobs, ' + recruitersList.length + ' recruiters, ' + offerResult.count + ' offers, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
+  // Mirror this project into the repo so the checked-in copy tracks what is actually running.
+  // Wrapped: a sync failure must never take down the data refresh.
+  try { pushSourceToGitHub(); } catch (e) { Logger.log("source sync error: " + e.message); }
   return dashboard;
 }
 
