@@ -188,7 +188,11 @@ function fetchAndProcessApps_(startTime, jobLookup) {
 
       // Tag apps that reached screening+ (or hired) — the stage-history accumulator pulls listHistory for these.
       var reachedScreening = ((stageKey && stageKey !== 'appReview') || isHired);
-      if (app.id && reachedScreening) histApps.push({ id: app.id, r: recruiter, j: jobId });
+      // s = application status ('Active' | 'Archived' | 'Hired'). The stage-history pass needs it because
+      // application.listHistory records an 'Archived' TRANSITION for almost nobody — 30 of 2,134 apps in the
+      // 2026-08-22 run — so a drop cannot be detected from the history feed alone. History supplies "did they
+      // reach a late stage", status supplies "did they end archived"; a drop needs both.
+      if (app.id && reachedScreening) histApps.push({ id: app.id, r: recruiter, j: jobId, s: app.status || null });
       if (!recruiter && reachedScreening && unassignedCases.length < 800) unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
 
       // App Review dwell: candidates sitting in App Review right now → days = today - createdAt (capped 0..365).
@@ -757,13 +761,17 @@ function refreshStageHistory() {
     try {
       var resp = ashbyPost_('/application.listHistory', { applicationId: a.id });
       var hist = resp.results || resp.history || [];
-      var ev = [];
+      var ev = [], arch = null;
       for (var h = 0; h < hist.length; h++) {
+        // 'Archived' is not a pipeline stage so it has no STAGE_KEY_MAP entry, but it is the ONLY record that a
+        // candidate dropped out - Ashby moves them off their stage when archiving, so the main pull cannot see it.
+        // Capture the day it happened before the unmapped-title skip throws it away, or Drop counts nothing.
+        if (hist[h].title === 'Archived' && hist[h].enteredStageAt) { arch = dayKey_(new Date(hist[h].enteredStageAt).getTime()); }
         var k = STAGE_KEY_MAP[hist[h].title];
         if (!k) { if (hist[h].title) unmappedHist[hist[h].title] = (unmappedHist[hist[h].title] || 0) + 1; continue; }
         ev.push({ k: k, e: hist[h].enteredStageAt ? dayKey_(new Date(hist[h].enteredStageAt).getTime()) : null, l: hist[h].leftStageAt ? dayKey_(new Date(hist[h].leftStageAt).getTime()) : null });
       }
-      events[a.id] = { r: a.r || null, j: a.j || null, ev: ev };
+      events[a.id] = { r: a.r || null, j: a.j || null, ev: ev, x: arch, s: a.s || null };
       pulled++;
     } catch (e) { Logger.log('listHistory ' + a.id + ': ' + e.message); }
     if (i > 0 && i % 250 === 0) Logger.log('  ' + i + '/' + scoped.length + ' (' + Math.round((Date.now() - startTime) / 1000) + 's)');
@@ -785,6 +793,12 @@ function computeStageRollups_(events) {
   // Added 2026-08-21 after the filter audit: the quarter selector was only regrouping
   // pods (stage numbers were lifetime), and per-job rows under Screening had no source.
   var tpByJobQ = {}, tpByRecQ = {}, tpByRecJob = {};
+  // Drop = candidate reached Ref Check / Documentation / Offer and was then ARCHIVED, i.e. dropped out late.
+  // Bucketed by the quarter they were archived, keyed recruiter -> job8 -> quarter so the frontend can price
+  // each one with that role's score. It can only be computed here: the main pull sees an archived candidate's
+  // CURRENT stage, which Ashby has already changed to 'Archived', so the stage they dropped from is lost.
+  var LATE_DROP_STAGES = { refCheck: 1, docSub: 1, offer: 1 };
+  var dropRecJobQ = {};
   function bump(o, day) { o[day] = (o[day] || 0) + 1; }
   // add one dwell sample (in days) to a {stage:{days:count}} histogram store
   function tis(store, key, stage, dw) { var s = store[key] || (store[key] = {}); var h = s[stage] || (s[stage] = {}); h[dw] = (h[dw] || 0) + 1; }
@@ -819,10 +833,26 @@ function computeStageRollups_(events) {
         if (rec && qk) tisQ(tisRecQ, rec, k, qk, dw);
       }
     }
+    // One drop per application, not per stage. Detection is status-based, NOT the 'Archived' transition:
+    // that transition exists for only ~1% of applications, which made the first attempt read 11 drops against
+    // a true 108 for 2026. Dated by when they LEFT the last late stage they reached, falling back to the
+    // archive transition when one happens to exist.
+    if (d.s === 'Archived' && rec) {
+      var lateDay = null;
+      for (var m2 = 0; m2 < d.ev.length; m2++) { if (LATE_DROP_STAGES[d.ev[m2].k]) { lateDay = d.ev[m2].l || d.ev[m2].e || lateDay; } }
+      var dropDay = d.x || lateDay;
+      if (lateDay && dropDay) {
+        var dq = dropDay.substring(0, 4) + '-Q' + (Math.floor((parseInt(dropDay.substring(5, 7), 10) - 1) / 3) + 1);
+        var dr = dropRecJobQ[rec] || (dropRecJobQ[rec] = {});
+        var dj = dr[j8 || 'unknown'] || (dr[j8 || 'unknown'] = {});
+        dj[dq] = (dj[dq] || 0) + 1;
+      }
+    }
   }
   return { schemaVersion: 1, generatedAt: new Date().toISOString(), windowDays: ROLLUP_WINDOW_DAYS,
     velocityByRecruiter: velByRec, velocityByJob: velByJob, velocityByRecruiterJob: velByRecJob, throughputByJob: tpByJob, throughputByRecruiter: tpByRec, throughputByJobQ: tpByJobQ, throughputByRecruiterQ: tpByRecQ, throughputByRecruiterJob: tpByRecJob,
-    timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ };
+    timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ,
+    dropByRecruiterJobQ: dropRecJobQ };
 }
 
 function triggerStageHistoryNow() {
