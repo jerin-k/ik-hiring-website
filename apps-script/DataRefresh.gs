@@ -507,8 +507,15 @@ function refreshDashboardData() {
     });
   }
   // user.list -> isEnabled (Active/Inactive) + userId -> name (panelist / interviewer display names)
-  var enabledById = {}, userNameById = {};
-  try { ashbyListAll_('/user.list').forEach(function (u) { enabledById[u.id] = (u.isEnabled !== false); var nm = ((u.firstName || '') + ' ' + (u.lastName || '')).trim(); if (nm) userNameById[u.id] = nm; }); Logger.log('user.list: ' + Object.keys(enabledById).length + ' users'); } catch (e) { Logger.log('user.list failed: ' + e.message); }
+  // 🚨 isEnabled is USELESS as an offboarding signal here: it is true for all 446 Ashby users (verified
+  // 2026-08-22) because IK never disables accounts. The real signal is the SEAT: an active recruiter holds
+  // an elevated seat - UI roles 'Recruiter' / 'Recruiter Admin', which the API reports as globalRole
+  // 'Elevated Access' / 'Organization Admin'. Everyone else sits on 'Limited Access'.
+  // Corroborated against activity: 12 of the 15 roster recruiters WITHOUT an elevated seat had ZERO
+  // 2026-Q3 throughput while active in Q1/Q2 - the signature of having left.
+  var RECRUITER_SEAT_ROLES = { 'Elevated Access': 1, 'Organization Admin': 1 };
+  var enabledById = {}, userNameById = {}, roleById = {};
+  try { ashbyListAll_('/user.list').forEach(function (u) { enabledById[u.id] = (u.isEnabled !== false); roleById[u.id] = u.globalRole || null; var nm = ((u.firstName || '') + ' ' + (u.lastName || '')).trim(); if (nm) userNameById[u.id] = nm; }); Logger.log('user.list: ' + Object.keys(enabledById).length + ' users'); } catch (e) { Logger.log('user.list failed: ' + e.message); }
 
   var jobsList = [];
   for (var jid2 in jobLookup) { var j2 = jobLookup[jid2]; if (j2.applied === 0) continue;
@@ -527,7 +534,8 @@ function refreshDashboardData() {
     var rUid = appResult.recruiterUserId[rn] || null;
     rc.userId = rUid;
     rc.activeKnown = (rn === 'Unassigned') ? true : !!rUid;
-    rc.isActive = (rn === 'Unassigned') ? true : (rUid ? (enabledById[rUid] !== false) : true);
+    rc.seatRole = rUid ? (roleById[rUid] || null) : null;
+    rc.isActive = (rn === 'Unassigned') ? true : (rUid ? !!RECRUITER_SEAT_ROLES[roleById[rUid]] : true);
     if (rn !== 'Unassigned' && !rUid) recruitersWithoutUserId.push(rn);
     if (rUid && userNameById[rUid] && userNameById[rUid] !== rn) nameDrift.push(rn + ' -> ' + userNameById[rUid]);
     recruitersList.push(rc); }
