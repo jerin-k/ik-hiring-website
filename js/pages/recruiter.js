@@ -236,7 +236,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
       <div class="fchip"><label class="opt" title="Inactive = no longer holds an elevated recruiter seat in Ashby. Their past offers and hires still count, so this stays ON by default - untick it to see only current recruiters."><input type="checkbox" id="recInclInactive" checked> Include past recruiters</label></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll"> Expand all branches</label></div>
+      <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="recVelTo"></div>
@@ -296,7 +296,7 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>). Assigned / Offered / Hired HC &amp; Score are <strong>live</strong>. <strong>Target = min(Capacity, Assigned Score)</strong> and <strong>Gap</strong> populate once you set per-recruiter <strong>Capacities</strong> for the quarter (0 until then). Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="metrics">
         <thead>
           <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
@@ -305,7 +305,7 @@ export function renderRecruiter(data) {
       </table></div>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="metrics">
         <thead>
           <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Hired</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
@@ -709,12 +709,13 @@ export function initRecruiterFilters(data) {
       // v = {aHC,aSc,tSc,oHC,oSc,jpHC,jpSc,hHC,hSc,gSc}; null → dash
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
-        let s = `<td${w}>${c(v.aHC)}</td><td>${c(v.aSc)}</td>`   // Assigned HC/Score
-          + `<td>${c(v.tSc)}</td>`                                // Target Score
-          + `<td${w}>${c(v.oHC)}</td><td>${c(v.oSc)}</td>`        // Offered HC/Score
-          + `<td>${c(v.jpHC)}</td><td>${c(v.jpSc)}</td>`;         // Joining Pending HC/Score
-        if (isSales) s += `<td${w}>${c(v.hHC)}</td><td>${c(v.hSc)}</td>`; // Hired HC/Score
-        s += `<td>${c(v.gSc)}</td>`;                              // Gap Score
+        // .score marks the secondary half of each HC/Score pair so headcount reads first.
+        let s = `<td${w}>${c(v.aHC)}</td><td class="score">${c(v.aSc)}</td>`   // Assigned HC/Score
+          + `<td class="score">${c(v.tSc)}</td>`                              // Target Score
+          + `<td${w}>${c(v.oHC)}</td><td class="score">${c(v.oSc)}</td>`      // Offered HC/Score
+          + `<td>${c(v.jpHC)}</td><td class="score">${c(v.jpSc)}</td>`;       // Joining Pending HC/Score
+        if (isSales) s += `<td${w}>${c(v.hHC)}</td><td class="score">${c(v.hSc)}</td>`; // Hired HC/Score
+        s += `<td class="score">${c(v.gSc)}</td>`;                            // Gap Score
         return s;
       };
       const recFulfil = (r) => {

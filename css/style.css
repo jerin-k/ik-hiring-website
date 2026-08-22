@@ -226,9 +226,12 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 /* ===== Tables ===== */
 .scroll-table {
   overflow-x: auto;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
 }
+.scroll-table > table { border: 0; border-radius: 0; }
 
 table {
   width: 100%;
@@ -281,10 +284,42 @@ tr:hover td { background: #f8fafc; }
 }
 
 /* ===== Throughput Stage Cells ===== */
-.stage-hdr { background: #eef1f6 !important; text-align: center !important; border-left: 1px solid var(--border); }
-.stage-sub { text-align: center !important; font-size: 10px !important; }
+.stage-hdr { background: var(--border-light) !important; text-align: center !important; border-left: 1px solid var(--border);
+  color: var(--text-secondary); }
+.stage-sub { text-align: center !important; font-size: 10px !important; font-weight: 500 !important; color: var(--muted); }
 td.stage-cell { text-align: center; border-left: 1px solid var(--border-light); }
 td.stage-first { border-left: 1px solid var(--border); }
+
+/* ===== Metric tables (Fulfilment & friends) =====
+   Wide grouped tables where each metric is an HC/Score PAIR. Three things make them readable:
+   numbers right-aligned so digits line up, a visible rule only at GROUP boundaries (not every column,
+   which turns the table into a grid), and a first column that stays put while the metrics scroll. */
+table.metrics { font-variant-numeric: tabular-nums; }
+table.metrics th:not(:first-child),
+table.metrics td:not(:first-child) { text-align: right; }
+table.metrics th.stage-hdr,
+table.metrics th.stage-sub { text-align: center !important; }
+
+/* Group boundary: the rule belongs on the first column of each metric group. */
+table.metrics thead tr:first-child th { border-left: 1px solid var(--border); }
+table.metrics thead tr:first-child th:first-child { border-left: 0; }
+
+/* Keep the name column visible while the metric columns scroll sideways.
+   background:inherit lets pod/total rows keep their own row colour underneath. */
+table.metrics th:first-child,
+table.metrics td:first-child {
+  position: sticky; left: 0; z-index: 2; text-align: left;
+  background: var(--card); background: inherit;
+}
+table.metrics thead th:first-child { z-index: 3; background: var(--bg); }
+table.metrics tbody tr { background: var(--card); }
+table.metrics tbody tr:hover { background: #f8fafc; }
+/* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */
+table.metrics th:first-child,
+table.metrics td:first-child { box-shadow: 1px 0 0 var(--border); }
+
+/* Score sits beside its HC as the secondary number - lighten it so headcount reads first. */
+table.metrics td.score { color: var(--muted); font-weight: 400; }
 
 /* ===== Filter Bar ===== */
 /* multi-select checkbox dropdown (shared: Recruiter + HM tabs) */

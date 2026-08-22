@@ -121,7 +121,7 @@ export function renderEfficiency(data) {
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="effMsJob"></div></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll"> Expand all branches</label></div>
+      <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="effVelFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="effVelTo"></div>
@@ -148,10 +148,10 @@ export function renderEfficiency(data) {
         Complexity in Ashby scores nothing and is marked <span style="color:var(--orange)">unscored</span>; its headcount still counts.
         See <strong>Recruiter Efficiency → Data Hygiene → Roles Missing Score Inputs</strong>.</p>
       <div class="eff-podcharts eff-2col" id="effFulfilPodCharts"></div>
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">All departments</h4>
+      <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">All departments</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
 
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="metrics">
         <thead>
           <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
@@ -515,9 +515,10 @@ export function initEfficiencyFilters(data) {
     const z = (n) => n > 0 ? n : '<span class="zero">0</span>';
     const cells = (x, bold) => {
       const w = bold ? ' style="font-weight:600"' : '';
-      return `<td${w}>${z(x.total)}</td><td>${z(x.tS)}</td><td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td>${z(x.jS)}</td>`
-        + `<td>${x.pending > 0 ? `<span style="color:var(--blue);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td>${z(x.pS)}</td>`
-        + `<td${w} class="${x.gap > 0 ? 'warn' : ''}">${z(x.gap)}</td><td>${z(x.gS)}</td>`;
+      // .score marks the secondary half of each HC/Score pair so headcount reads first.
+      return `<td${w}>${z(x.total)}</td><td class="score">${z(x.tS)}</td><td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td class="score">${z(x.jS)}</td>`
+        + `<td>${x.pending > 0 ? `<span style="color:var(--blue);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td class="score">${z(x.pS)}</td>`
+        + `<td${w} class="${x.gap > 0 ? 'warn' : ''}">${z(x.gap)}</td><td class="score">${z(x.gS)}</td>`;
     };
     const rows = fulfilRows(q);
     let html = '';
@@ -1017,7 +1018,19 @@ export function initEfficiencyFilters(data) {
 
     const ctx = document.getElementById('effFulfilCombined'); if (!ctx) return;
     if (effFulfilCombined) effFulfilCombined.destroy();
+    effFulfilCombined = null;
     const wrap = document.getElementById('effFulfilCombinedWrap');
+    // The "All departments" chart compares departments against each other. Filter down to ONE department and
+    // it degenerates into a single bar restating the chart directly above it, so hide it (heading included).
+    // Two or more departments selected still compare, so it stays.
+    const hdr = document.getElementById('effFulfilCombinedHdr');
+    if (selDepts().length === 1) {
+      if (wrap) wrap.style.display = 'none';
+      if (hdr) hdr.style.display = 'none';
+      return;
+    }
+    if (wrap) wrap.style.display = '';
+    if (hdr) hdr.style.display = '';
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     if (!rows.length) {
       ctx.style.display = 'none';
