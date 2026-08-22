@@ -55,10 +55,12 @@ function familyOf(dept) { const o = loadDeptFamily(); const d = DEPT_FAMILY_DEFA
 // defaults — and merges them on top of any explicit edits (edits always win; this only FILLS gaps). Preserves
 // every other quarter's edits untouched. See memory metric-config-serverside.
 const POD_LS = 'ik_recruiter_pods_q', CAP_LS = 'ik_recruiter_capacity_q';
-// The manual Active/Inactive override was RETIRED 2026-08-22. Offboarding is a single consistent action in
-// Ashby - the account gets disabled - so the pipeline reads it straight from /user.list isEnabled, keyed on
-// recruiters[].userId. Status is therefore reported, never edited here. Where no Ashby user can be matched
-// the pipeline says so (dataQuality.recruitersWithoutUserId) instead of defaulting to Active.
+// The manual Active/Inactive override was RETIRED 2026-08-22. Status now comes from the Ashby SEAT: an
+// active recruiter holds an elevated seat (UI roles Recruiter / Recruiter Admin = API globalRole
+// 'Elevated Access' / 'Organization Admin'). NOTE isEnabled is useless here - it is true for all 446 Ashby
+// users because IK never disables accounts, which is why every recruiter first appeared Active.
+// Status is reported, never edited. Where no Ashby user matches, the pipeline says so
+// (dataQuality.recruitersWithoutUserId) rather than defaulting to Active.
 function buildEffectiveConfig(data) {
   const q = currentQuarter();
   const readLS = (k) => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } };
@@ -198,7 +200,7 @@ export function renderAdmin(accessConfig, data) {
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 8px">Recruiter → Pod &amp; Capacity</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target. <strong>Status is read from Ashby</strong> (the account being disabled) and is not editable here — disable the person's Ashby account and it follows automatically. Historical offers/hires still score. (Pod &amp; Capacity are per-quarter.) Remember to <strong>Publish to team</strong> to share.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target. <strong>Status is read from the Ashby seat</strong> and is not editable here: Active means the person holds an elevated recruiter seat (role <em>Recruiter</em> or <em>Recruiter Admin</em>). Remove that seat in Ashby and they show as Inactive on the next refresh. Historical offers/hires still score. (Pod &amp; Capacity are per-quarter.) Remember to <strong>Publish to team</strong> to share.</p>
         <div class="cfg-scroll"><table>
           <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px">Status</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
@@ -393,7 +395,7 @@ export function initAdminMetricConfig(data) {
       <td style="font-weight:500">${name}</td>
       <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
       <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td>
-      <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Read from the Ashby account (enabled/disabled).'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Inactive' : 'Active')}</span></td></tr>`; }).join('')
+      <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Active = holds an elevated recruiter seat in Ashby (Recruiter / Recruiter Admin).'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Inactive' : 'Active')}</span></td></tr>`; }).join('')
       || `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">No recruiters in the data yet.</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
