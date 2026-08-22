@@ -293,13 +293,16 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = min(Capacity, Assigned Score)</strong> — Capacity is set in <strong>Metric Configuration</strong> (per quarter).</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
-      <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>). Assigned / Offered / Hired HC &amp; Score are <strong>live</strong>. <strong>Target = min(Capacity, Assigned Score)</strong> and <strong>Gap</strong> populate once you set per-recruiter <strong>Capacities</strong> for the quarter (0 until then). Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
+      <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
+      <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> (Sales) counts candidates whose <strong>start date</strong> falls in the quarter; <strong>Offered</strong> (Non-Sales) counts offers <strong>decided</strong> in the quarter — both from per-candidate offer records, so they follow the quarter selector.
+      <span style="color:var(--orange)"><strong>Goal does not yet follow the quarter</strong></span> — it is every role assigned to the recruiter across 2026, because assignments carry no date in the pipeline. So <strong>Gap</strong> (Goal − outcome) compares a year-to-date goal against one quarter's output and will read high. <strong>Capacity Utilisation</strong> (outcome ÷ Capacity) is clean, since both sides are quarter-scoped.
+      Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Offers</th><th rowspan="2" class="stage-hdr">Capacity — Offers<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
@@ -307,7 +310,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Assigned</th><th rowspan="2" class="stage-hdr">Target<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Hired</th><th rowspan="2" class="stage-hdr">Gap<br><span style="font-weight:400;text-transform:none">Score</span></th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr">Capacity — Joiners<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
@@ -701,45 +704,110 @@ export function initRecruiterFilters(data) {
     // Assigned Score) (Capacity per quarter from Metric Config; 0 until set). Gap = max(0, Target − Achieved),
     // Achieved = Offered Score (Non-Sales) / Hired Score (Sales). Joining Pending is recruiter-level only (offer
     // pass gives a count, not per-job) → HC at recruiter/pod rows, Score unattributable (—). Tree = Pod → Recruiter → Job.
+    // ===== Fulfilment v2 (2026-08-22) =====
+    // Goal replaces Assigned; Capacity is the RAW configured capacity (the old Target capped it at the
+    // assigned work, which would make utilisation read 100% for everyone). Gap is measured against Goal,
+    // and Capacity Utilisation is OUTPUT over capacity - what was delivered against what could have been.
+    // ⚠ The colour sense is the opposite of a load metric: past 100% is over-delivery (good); under 70% is
+    // under-use, which is the thing worth acting on.
     function fulfilRows(gs, mode) {
       const q = selQuarter();
       const isSales = mode === 'hire';
-      const ncol = isSales ? 11 : 9;
+      const ncol = 11;
+
+      // 🚨 THE OUTCOME IS DATED FROM offerEvents, NOT FROM byJob (fixed 2026-08-22).
+      // recruiters[].byJob carries {jobId,title,department,total,offer,hired} and NO date of any kind, so
+      // reading Joined/Offered from it showed every 2026 hire under whichever quarter was selected — the Sales
+      // pod read 162 joiners for Q3 when the true figure is 11. offerEvents has a real date per candidate:
+      //   Sales     → accepted offers whose START DATE falls in the quarter (they actually joined)
+      //   Non-Sales → offers whose DECIDED date falls in the quarter (the offer was made)
+      // Score comes from the event's own department/title/level/complexity, same grid as everywhere else.
+      const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+      const outByRec = {}, outByRecJob = {};
+      (data.offerEvents || []).forEach(e => {
+        const rec = e.recruiter; if (!rec) return;
+        if (isSales && !e.accepted) return;
+        if (qOf(isSales ? e.startDate : e.decidedAt) !== q) return;
+        const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+        const a = outByRec[rec] || (outByRec[rec] = { hc: 0, sc: 0 });
+        a.hc += 1; a.sc += sc;
+        const jk = rec + '|' + (e.jobId8 || '');
+        const b = outByRecJob[jk] || (outByRecJob[jk] = { hc: 0, sc: 0 });
+        b.hc += 1; b.sc += sc;
+      });
+      const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0 };
+      const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
       const c = x => (x == null ? DASH : x);
-      // v = {aHC,aSc,tSc,oHC,oSc,jpHC,jpSc,hHC,hSc,gSc}; null → dash
+      const pctOf = (num, den) => (den > 0 ? Math.round((num / den) * 100) : null);
+
+      // Gap bar: filled = (Goal - Gap) / Goal, so the bar can never disagree with the number beside it.
+      const gapCell = (v) => {
+        if (v.gSc == null) return `<td class="score">${DASH}</td>`;
+        const fill = v.aSc > 0 ? Math.max(0, Math.min(100, Math.round(((v.aSc - v.gSc) / v.aSc) * 100))) : 0;
+        const cls = v.gSc === 0 ? 'done' : (fill < 75 ? 'short' : '');
+        // Caption is derived from Goal MINUS Gap, never from the raw outcome. At pod level Gap is the sum of
+        // each recruiter's shortfall, so a pod whose total output exceeds its total goal can still carry a real
+        // gap — quoting the raw outcome there produced "2252 of 1313 · 81%", three numbers that disagree.
+        const done = v.aSc - v.gSc;
+        const cap = v.aSc > 0
+          ? (v.gSc === 0 ? `${v.aSc} of ${v.aSc} · goal met` : `${done} of ${v.aSc} · ${fill}%`)
+          : 'no goal set';
+        return `<td class="score gapcell"><span class="gapwrap"><i class="${cls}" style="width:${fill}%"></i>`
+          + `<span class="${v.gSc === 0 ? 'zero' : ''}">${v.gSc}</span></span>`
+          + `<span class="sublab">${cap}</span></td>`;
+      };
+      // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
+      const utilCell = (v) => {
+        const u = pctOf(v.xSc, v.capSc);
+        if (u == null) return `<td title="No capacity set for this quarter, so utilisation cannot be worked out.">${DASH}</td>`;
+        const cls = u >= 100 ? 'over' : (u >= 70 ? 'well' : 'under');
+        return `<td><span class="util ${cls}">${u}%</span><span class="sublab">${v.xSc} of ${v.capSc}</span></td>`;
+      };
+
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
-        // .score marks the secondary half of each HC/Score pair so headcount reads first.
-        let s = `<td${w}>${c(v.aHC)}</td><td class="score">${c(v.aSc)}</td>`   // Assigned HC/Score
-          + `<td class="score">${c(v.tSc)}</td>`                              // Target Score
-          + `<td${w}>${c(v.oHC)}</td><td class="score">${c(v.oSc)}</td>`      // Offered HC/Score
-          + `<td>${c(v.jpHC)}</td><td class="score">${c(v.jpSc)}</td>`;       // Joining Pending HC/Score
-        if (isSales) s += `<td${w}>${c(v.hHC)}</td><td class="score">${c(v.hSc)}</td>`; // Hired HC/Score
-        s += `<td class="score">${c(v.gSc)}</td>`;                            // Gap Score
-        return s;
+        return `<td${w}>${c(v.aHC)}</td><td class="score">${c(v.aSc)}</td>`      // Goal HC / Score
+          + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
+          + `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`         // Joined (Sales) / Offered (Non-Sales)
+          + `<td>${c(v.jpHC)}</td><td class="score">${c(v.jpSc)}</td>`           // Joining Pending
+          + `<td${w}>${c(v.gHC)}</td>` + gapCell(v)                              // Gap HC / Score + bar
+          + utilCell(v);                                                          // Capacity Utilisation
       };
+
       const recFulfil = (r) => {
-        let aHC = 0, aSc = 0, oHC = 0, oSc = 0, hHC = 0, hSc = 0;
-        (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); aHC += 1; aSc += sc; oHC += (bj.offer || 0); oSc += (bj.offer || 0) * sc; hHC += (bj.hired || 0); hSc += (bj.hired || 0) * sc; });
-        const tSc = Math.min(capacityOf(r.name, q) || 0, aSc);
-        const gSc = Math.max(0, tSc - (isSales ? hSc : oSc));
-        return { aHC, aSc, tSc, oHC, oSc, jpHC: (r.joiningPending || 0), jpSc: null, hHC, hSc, gSc };
+        // Goal is still the un-dated assignment list — see the note above the table. Only the OUTCOME is dated.
+        let aHC = 0, aSc = 0;
+        (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); aHC += 1; aSc += sc; });
+        const o = outOf(r.name);
+        const capSc = capacityOf(r.name, q) || 0;
+        return { aHC, aSc, capSc, xHC: o.hc, xSc: o.sc, jpHC: (r.joiningPending || 0), jpSc: null,
+                 gHC: Math.max(0, aHC - o.hc), gSc: Math.max(0, aSc - o.sc) };
       };
+      // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
+      // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
+      const worthShowing = (v) => v.capSc > 0 || v.xHC > 0 || v.jpHC > 0 || v.aHC > 0;
+
       let html = '';
       gs.forEach((G, pi) => {
-        const podAgg = { aHC: 0, aSc: 0, tSc: 0, oHC: 0, oSc: 0, hHC: 0, hSc: 0, jpHC: 0, jpSc: null, gSc: 0 };
-        const recVals = G.recs.map(r => { const a = recFulfil(r); ['aHC', 'aSc', 'tSc', 'oHC', 'oSc', 'hHC', 'hSc', 'jpHC', 'gSc'].forEach(k => podAgg[k] += a[k]); return a; });
+        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, jpHC: 0, jpSc: null, gHC: 0, gSc: 0 };
+        const shown = [];
+        G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
+          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'jpHC', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
+          shown.push({ r, a }); });
+        if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${cells(podAgg, true)}</tr>`;
-        G.recs.forEach((r, ri) => {
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>${cells(podAgg, true)}</tr>`;
+        shown.forEach(({ r, a }, ri) => {
           const rk = `${mode}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(recVals[ri], false)}</tr>`;
-          const jobs = (r.byJob || []).slice().sort((a, b) => (b[isSales ? 'hired' : 'offer'] || 0) - (a[isSales ? 'hired' : 'offer'] || 0) || (b.total || 0) - (a.total || 0));
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
+          const jobs = (r.byJob || []).slice().sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
           if (jobs.length) {
             jobs.forEach(bj => {
               const m = jobMeta(bj), sc = scoreForRole(m, q);
-              const jv = { aHC: 1, aSc: sc, tSc: null, oHC: (bj.offer || 0), oSc: (bj.offer || 0) * sc, jpHC: null, jpSc: null, hHC: (bj.hired || 0), hSc: (bj.hired || 0) * sc, gSc: null };
+              const jo = outOfJob(r.name, bj.jobId);   // dated, same basis as the recruiter row above
+              const jv = { aHC: 1, aSc: sc, capSc: null, xHC: jo.hc, xSc: jo.sc, jpHC: null, jpSc: null,
+                           gHC: Math.max(0, 1 - jo.hc), gSc: Math.max(0, sc - jo.sc) };
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
             });
