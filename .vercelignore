@@ -1,0 +1,4 @@
+# Backend Apps Script source, mirrored here by pushSourceToGitHub() so the checked-in copy
+# can never go stale. It is server-side code with no role in the static site, so keep it out
+# of the deployment — otherwise Vercel serves it at /apps-script/*.gs on the dashboard domain.
+apps-script/
