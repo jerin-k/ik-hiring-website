@@ -200,7 +200,10 @@ export function renderAdmin(accessConfig, data) {
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 8px">Recruiter → Pod &amp; Capacity</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target. <strong>Status is read from the Ashby seat</strong> and is not editable here: Active means the person holds an elevated recruiter seat (role <em>Recruiter</em> or <em>Recruiter Admin</em>). Remove that seat in Ashby and they show as Inactive on the next refresh. Historical offers/hires still score. (Pod &amp; Capacity are per-quarter.) Remember to <strong>Publish to team</strong> to share.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target. <strong>Status is read from the Ashby seat</strong> and is not editable here: Active means the person holds an elevated recruiter seat (role <em>Recruiter</em> or <em>Recruiter Admin</em>). Remove that seat in Ashby and they show as Inactive on the next refresh. Historical offers/hires still score, and the reports still include past recruiters. This table lists <strong>current recruiters only</strong> — tick the box below to see the rest. (Pod &amp; Capacity are per-quarter.) Remember to <strong>Publish to team</strong> to share.</p>
+        <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer" title="Past recruiters no longer hold a recruiter seat in Ashby. Their saved Pod and Capacity are kept either way — this only changes what is listed here.">
+          <input type="checkbox" id="cfgShowPast"> Show past recruiters <span id="cfgPastCount" style="color:var(--muted)"></span>
+        </label>
         <div class="cfg-scroll"><table>
           <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px">Status</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
@@ -383,20 +386,32 @@ export function initAdminMetricConfig(data) {
   function updatePodSummary() {
     const el = document.getElementById('cfgPodSummary'); if (!el) return;
     const q = cfgQ(); const counts = {};
-    recs.forEach(r => { const p = podOf(r.name, q); counts[p] = (counts[p] || 0) + 1; });
-    el.textContent = Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join('  ·  ');
+    const showPast = !!document.getElementById('cfgShowPast')?.checked;
+    // Count what is actually listed, so pod sizes read as current headcount rather than an all-time tally.
+    const shown = recs.filter(r => r.name !== 'Unassigned' && (showPast || r.isActive !== false));
+    shown.forEach(r => { const p = podOf(r.name, q); counts[p] = (counts[p] || 0) + 1; });
+    const hidden = showPast ? 0 : recs.filter(r => r.name !== 'Unassigned' && r.isActive === false).length;
+    el.textContent = Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join('  ·  ') + (hidden ? `  ·  ${hidden} past hidden` : '');
   }
   function renderPodCapacity() {
     const body = document.getElementById('cfgPodBody'); if (!body) return;
     const q = cfgQ();
-    const sorted = [...recs].filter(r => r.name && r.name !== 'Unassigned').sort((a, b) => a.name.localeCompare(b.name));
+    // This table is for CONFIGURING current staff, so past recruiters are hidden by default. It is a display
+    // filter only — their saved Pod/Capacity is untouched and still published, and the reports still show
+    // their historical work (Recruiter Efficiency defaults to including them, deliberately).
+    const showPast = !!document.getElementById('cfgShowPast')?.checked;
+    const all = [...recs].filter(r => r.name && r.name !== 'Unassigned').sort((a, b) => a.name.localeCompare(b.name));
+    const pastCount = all.filter(r => r.isActive === false).length;
+    const pc = document.getElementById('cfgPastCount');
+    if (pc) pc.textContent = pastCount ? `(${pastCount})` : '';
+    const sorted = showPast ? all : all.filter(r => r.isActive !== false);
     const podOpts = [...POD_OPTIONS, 'Unassigned'];
     body.innerHTML = sorted.map(r => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false; return `<tr>
       <td style="font-weight:500">${name}</td>
       <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
       <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td>
       <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Active = holds an elevated recruiter seat in Ashby (Recruiter / Recruiter Admin).'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Inactive' : 'Active')}</span></td></tr>`; }).join('')
-      || `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">No recruiters in the data yet.</td></tr>`;
+      || `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'No current recruiters — tick “Show past recruiters” to see the ' + pastCount + ' who no longer hold a seat.' : 'No recruiters in the data yet.'}</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
     updatePodSummary();
@@ -471,6 +486,7 @@ export function initAdminMetricConfig(data) {
     qSel.innerHTML = qs.map(q => `<option value="${q}">${q.replace('-', ' ')}</option>`).join('');
     qSel.value = currentQuarter();
     qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); });
+    document.getElementById('cfgShowPast')?.addEventListener('change', renderPodCapacity);
   }
   renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock(); refreshPublishUI();
 }
