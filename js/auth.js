@@ -1,4 +1,10 @@
-const GOOGLE_CLIENT_ID = '359460211465-2n4vi9hcrf94ltm2mdrc37dshgpr87ja.apps.googleusercontent.com';
+// Google Sign-in client for this dashboard. Lives in its OWN GCP project, 'IK Hiring Dashboard'
+// (ik-hiring-dashboard-506305), audience Internal so only @interviewkickstart.com accounts can sign in.
+// Authorised origins: https://hiring.interviewkickstart.com + https://hiring-dashboard-phi.vercel.app.
+// Replaced the old client (359460211465-...) on 2026-08-22: that one sat in the unrelated 'Data Sync for
+// Burhan' project, had no consent screen configured, and so could not be edited to add the custom domain
+// - which is what produced Error 400: origin_mismatch on hiring.interviewkickstart.com.
+const GOOGLE_CLIENT_ID = '1099393636246-1tbpdlecqin1mhglup1bnuarv2kdm8bu.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'interviewkickstart.com';
 
 let currentUser = null;
