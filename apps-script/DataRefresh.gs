@@ -183,7 +183,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
       var stageKey = stageName ? (STAGE_KEY_MAP[stageName] || null) : null;
       if (stageName && !stageKey) unmappedStages[stageName] = (unmappedStages[stageName] || 0) + 1;
       var isHired = (app.status === 'Hired');
-      if (app.id && appMap[app.id]) { appMap[app.id].stage = stageName; appMap[app.id].status = app.status || null; }
+      if (app.id && appMap[app.id]) { appMap[app.id].stage = stageName; appMap[app.id].status = app.status || null; appMap[app.id].archivedAt = app.archivedAt || null; }
       var updatedMs = app.updatedAt ? new Date(app.updatedAt).getTime() : createdMs;
 
       // Tag apps that reached screening+ (or hired) — the stage-history accumulator pulls listHistory for these.
@@ -288,6 +288,7 @@ function fetchAndProcessOffers_(startTime, appMap) {
               candidate: (a.candidate && (a.candidate.name || ((a.candidate.firstName || '') + ' ' + (a.candidate.lastName || '')).trim())) || null };
               am.stage = (a.currentInterviewStage && a.currentInterviewStage.title) || null;
               am.status = a.status || null;
+              am.archivedAt = a.archivedAt || null;
               appMap[o.applicationId] = am;
             recovered++;
           }
@@ -575,6 +576,11 @@ function refreshDashboardData() {
       // application.opening the moment an application is archived (measured: Hired 1879 / Active 25 /
       // Archived 0 across all six opening statuses), so an application-side link is empty for every drop.
       appStatus: amE ? (amE.status || null) : null,
+      // When they LEFT. A drop that was never decided has no decidedAt (14 offers sat at
+      // WaitingOnCandidateResponse and 1 at WaitingOnApprovalStart while the application was archived),
+      // so archivedAt is the only date that covers every drop. Confirmed against the application.list
+      // reference 2026-08-22: archivedAt is ISO 8601 and null for anything not archived.
+      archivedAt: (amE && amE.archivedAt) ? String(amE.archivedAt).substring(0, 10) : null,
       openingId: e.offerOpeningId || null,
       openingQuarter: null,   // stamped below, once openQuarterOf_ exists
       // ⚠ An earlier note here called Created|Extended|Accepted|Declined|Cancelled the offerStatus enum.
