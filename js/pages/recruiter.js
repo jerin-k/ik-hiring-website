@@ -296,7 +296,7 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
       <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> (Sales) counts candidates whose <strong>start date</strong> falls in the quarter; <strong>Offered</strong> (Non-Sales) counts offers <strong>decided</strong> in the quarter — both from per-candidate offer records, so they follow the quarter selector.
       <strong>Goal</strong> counts the seats <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − outcome, and <strong>Capacity Utilisation</strong> = outcome ÷ Capacity; all three sides are now quarter-scoped. Where several recruiters work the same job, its seats are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
-      <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. It is dated by <strong>when they left</strong>, not by when the seat opened, because Ashby removes the link between a candidate and their opening the moment they are archived — so a drop cannot be traced back to the quarter of its opening. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
+      <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. Each drop is counted in the quarter the <strong>work was live</strong> — the quarter the candidate first entered Ref Check, Documentation or Offer — not the quarter the record was finally closed. Ashby cannot tell us which opening a drop was against (the link is absent on 91% of offers and on every archived one), so this is a <strong>close approximation, not the opening itself</strong>. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table class="metrics">
@@ -792,13 +792,23 @@ export function initRecruiterFilters(data) {
       // 77 read CandidateRejected (candidate declined) and 15 were still sitting at
       // WaitingOnCandidateResponse/WaitingOnApprovalStart when the application was archived. Both count.
       //
-      // 🚨 DATED BY archivedAt — NOT by the opening's quarter, and this is not a shortcut.
-      // Ashby CLEARS the opening link the moment an application is archived. Measured on this very file:
-      // of 92 archived offers, ZERO carry an openingId, while Active carry 25 and Hired 33. The same holds
-      // application-side (Hired 1879 / Active 25 / Archived 0 across all six opening statuses). So a drop
-      // can NEVER be bucketed by the quarter its seat was opened — do not try again. "When they left" is
-      // the only date that exists for all 92; decidedAt is the fallback where an archive date is missing.
-      // ⚠ This means Drop is on a different clock from Goal (which is dated by the opening). Unavoidable.
+      // 🚨 ATTRIBUTED BY attrQuarter — the quarter the WORK was live, not the quarter the record was closed.
+      // attrQuarter is built in the pipeline, best source first:
+      //   1. the offer's REAL opening, when it has one (9% of offers; 0% of drops today)
+      //   2. else the quarter the candidate first ENTERED Ref Check / Documentation / Offer, read from the
+      //      real stage transitions in application.listHistory
+      //   3. else the archive date, so no row is ever silently unplaceable
+      // Only (1) is a measurement. (2) is a CONVENTION agreed with Jerin: openings are meant to be closed
+      // off each quarter, so the quarter a candidate reached the late stages is the quarter of the seat
+      // they were filling. It is not a recovery of the true opening — say so on screen.
+      //
+      // ⚠ Do NOT go looking for the real opening again. Three routes were tested and every one returns zero
+      // for archived applications: the live application.opening link, offer.latestVersion.openingId, and the
+      // full offer.info version history (92 calls, 144 versions, 0 links). And only 58 of 644 offers carry an
+      // opening at all — 1% in Business - India, where 41 of the 92 drops sit — so the link could never have
+      // carried this metric even if archiving preserved it. That is a process gap, not a code problem.
+      // ⚠ Attribution reaches back into 2025 for some drops. Those 2025 buckets are PARTIAL, because the
+      // pipeline only pulls offers decided in the current year. Accepted deliberately (Jerin, 2026-08-22).
       //
       // ⚠ Do NOT match offerStatus against 'Declined'. Per the offer.list reference, offerStatus is
       // WaitingOnApprovalStart|WaitingOnOfferApproval|WaitingOnApprovalDefinition|WaitingOnCandidateResponse|
@@ -809,7 +819,7 @@ export function initRecruiterFilters(data) {
       (data.offerEvents || []).forEach(e => {
         const rec = e.recruiter; if (!rec) return;
         if (e.appStatus !== 'Archived') return;
-        if (qOf(e.archivedAt || e.decidedAt) !== q) return;
+        if ((e.attrQuarter || qOf(e.archivedAt || e.decidedAt)) !== q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         const a = dropByRec[rec] || (dropByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
         const jk = rec + '|' + (e.jobId8 || '');
