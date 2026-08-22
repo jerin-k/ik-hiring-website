@@ -296,7 +296,7 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
       <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> (Sales) counts candidates whose <strong>start date</strong> falls in the quarter; <strong>Offered</strong> (Non-Sales) counts offers <strong>decided</strong> in the quarter — both from per-candidate offer records, so they follow the quarter selector.
       <strong>Goal</strong> counts the seats <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − outcome, and <strong>Capacity Utilisation</strong> = outcome ÷ Capacity; all three sides are now quarter-scoped. Where several recruiters work the same job, its seats are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
-      <strong>Drop</strong> counts offers the candidate turned down (Ashby <code>CandidateRejected</code>), dated by the offer decision. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
+      <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. It is dated by <strong>when they left</strong>, not by when the seat opened, because Ashby removes the link between a candidate and their opening the moment they are archived — so a drop cannot be traced back to the quarter of its opening. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table class="metrics">
@@ -786,18 +786,30 @@ export function initRecruiterFilters(data) {
       };
       // Shared seats produce fractions; show at most one decimal and never a trailing '.0'.
       const seatFmt = (v) => (v == null ? null : (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1)));
-      // DROP = the candidate turned the offer down. Ashby's REST field reports 'CandidateRejected'.
-      // ⚠ Do NOT use 'Declined': that is the label Ashby's FILTER api shows, not the value the REST feed
-      // returns, and matching on it yields zero. Nor `accepted === false`, which lumps rejections in with
-      // offers still awaiting a response (123 of those today). Dated by decidedAt — all 77 carry one.
-      // Offer-stage drops are ~97% of all late-stage drops, so this is effectively the whole picture; the
-      // benchmark is 108 applications archived after reaching Offer in 2026, the difference being offers the
-      // company withdrew rather than the candidate rejecting.
+      // DROP = they reached an offer and then LEFT — BOTH SIDES, as asked: the candidate turning us down
+      // AND the ones we withdrew, or who were archived while the offer was still open.
+      // The test is the APPLICATION being archived, not the offer's own status. Of 92 archived offers,
+      // 77 read CandidateRejected (candidate declined) and 15 were still sitting at
+      // WaitingOnCandidateResponse/WaitingOnApprovalStart when the application was archived. Both count.
+      //
+      // 🚨 DATED BY archivedAt — NOT by the opening's quarter, and this is not a shortcut.
+      // Ashby CLEARS the opening link the moment an application is archived. Measured on this very file:
+      // of 92 archived offers, ZERO carry an openingId, while Active carry 25 and Hired 33. The same holds
+      // application-side (Hired 1879 / Active 25 / Archived 0 across all six opening statuses). So a drop
+      // can NEVER be bucketed by the quarter its seat was opened — do not try again. "When they left" is
+      // the only date that exists for all 92; decidedAt is the fallback where an archive date is missing.
+      // ⚠ This means Drop is on a different clock from Goal (which is dated by the opening). Unavoidable.
+      //
+      // ⚠ Do NOT match offerStatus against 'Declined'. Per the offer.list reference, offerStatus is
+      // WaitingOnApprovalStart|WaitingOnOfferApproval|WaitingOnApprovalDefinition|WaitingOnCandidateResponse|
+      // CandidateRejected|CandidateAccepted|OfferCancelled. 'Declined' belongs to the SEPARATE
+      // acceptanceStatus field (Accepted|Declined|Pending|Created|Cancelled). Confusing the two is exactly
+      // why this metric read zero three times.
       const dropByRec = {}, dropByRecJob = {};
       (data.offerEvents || []).forEach(e => {
         const rec = e.recruiter; if (!rec) return;
-        if (e.offerStatus !== 'CandidateRejected') return;
-        if (qOf(e.decidedAt) !== q) return;
+        if (e.appStatus !== 'Archived') return;
+        if (qOf(e.archivedAt || e.decidedAt) !== q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         const a = dropByRec[rec] || (dropByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
         const jk = rec + '|' + (e.jobId8 || '');
@@ -865,7 +877,9 @@ export function initRecruiterFilters(data) {
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
       // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
-      const worthShowing = (v) => v.capSc > 0 || v.xHC > 0 || v.jpHC > 0 || v.aHC > 0;
+      // dHC is in the test too: a recruiter whose only activity this quarter was people dropping out has
+      // had a real (bad) quarter, and hiding that row would quietly delete the worst news in the table.
+      const worthShowing = (v) => v.capSc > 0 || v.xHC > 0 || v.jpHC > 0 || v.aHC > 0 || v.dHC > 0;
 
       let html = '';
       gs.forEach((G, pi) => {
