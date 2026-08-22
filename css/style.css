@@ -575,6 +575,10 @@ td.gapcell { min-width: 150px; }
 .gapwrap i { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .gapwrap i.done  { background: color-mix(in srgb, var(--green) 24%, transparent); }
 .gapwrap i.short { background: color-mix(in srgb, var(--orange) 30%, transparent); }
+/* #1 Option A (2026-08-22): on HM Positions the bar now fills with the GAP, not the coverage, so the bar
+   and the bold number beside it finally encode the same thing. Own class — Recruiter Fulfilment keeps the
+   accent/done/short bar above, where the number IS the covered figure and the old sense is correct. */
+.gapwrap i.gap { background: color-mix(in srgb, var(--red) 26%, transparent); }
 .gapwrap > span { position: relative; font-weight: 600; color: var(--text); }
 .gapwrap > span.zero { color: var(--green); }
 .sublab { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: .02em; white-space: nowrap; }
@@ -583,3 +587,34 @@ td.gapcell { min-width: 150px; }
 .util.well  { color: var(--accent); }
 .util.under { color: var(--orange); }
 
+
+/* ===== #9 (2026-08-22): HM Current Pipeline — uniform column grid =====
+   The stage columns were sized by their content, so every column was a different width and the numbers did
+   not line up down the table. Fixed layout gives one width to the role column and one to every stage. */
+#hm3Table { table-layout: fixed; width: 100%; min-width: 880px; }
+#hm3Table th:first-child,
+#hm3Table td:first-child { width: 280px; text-align: left; }
+#hm3Table th:not(:first-child),
+#hm3Table td:not(:first-child) { width: 72px; text-align: right; }
+
+/* ===== #10 Option A (2026-08-22): HM Throughput conversion heat =====
+   One cell per stage instead of an In / Out / % triple. The number is how many entered the stage; the tint is
+   how many moved past it. Tints are deliberately pale — the digits must stay the thing you read, not the
+   background. Bands: under 50% / 50-70% / over 70%, plus an explicit "not used" for stages this workspace
+   never runs (OA has never had a candidate, so a 0 there would read as missing data). */
+td.heat { text-align: center; padding: 5px 6px; white-space: nowrap; }
+td.heat .hv { display: block; font-weight: 600; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+td.heat .hp { display: block; font-size: 9.5px; font-weight: 500; opacity: .78; margin-top: 1px; }
+td.heat.lo   { background: color-mix(in srgb, var(--red) 12%, transparent);    color: var(--red); }
+td.heat.mid  { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
+td.heat.hi   { background: color-mix(in srgb, var(--green) 13%, transparent);  color: var(--green); }
+td.heat.none { background: var(--border-light); color: var(--muted); font-weight: 500; }
+
+.heat-legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 10px 2px 0; font-size: 11px; color: var(--muted); }
+.heat-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.heat-legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.heat-legend .sw.lo   { background: color-mix(in srgb, var(--red) 30%, transparent); }
+.heat-legend .sw.mid  { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.heat-legend .sw.hi   { background: color-mix(in srgb, var(--green) 30%, transparent); }
+.heat-legend .sw.none { background: var(--border-light); border: 1px solid var(--border); }
+.heat-legend .leg-note { margin-left: auto; font-style: italic; }
