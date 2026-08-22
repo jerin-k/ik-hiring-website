@@ -116,7 +116,14 @@ export function renderHmReport(data) {
 
   const allDepts = [...new Set([...(data.openings || []), ...(data.jobs || [])].map(x => deptOf(x.department)))].filter(Boolean).sort();
   const years = [...new Set((data.openings || []).map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
-  const jpMonths = [...new Set((data.joiningPendingCases || []).map(c => monthOf(c.doj || c.startDate)).filter(m => m && m !== '—'))];
+  // #12 (2026-08-23): built straight off case order, so the list came out unsorted — Sep, Aug, Jul, May, Jun,
+  // Mar... Sort on the raw YYYY-MM (which sorts correctly as a string) and format only at the end; sorting the
+  // formatted "Aug 2026" labels would order them alphabetically, which is worse.
+  const jpMonths = [...new Set((data.joiningPendingCases || [])
+    .map(c => String(c.doj || c.startDate || '').slice(0, 7))
+    .filter(m => m.length === 7))]
+    .sort().reverse()
+    .map(m => monthOf(m));
 
   return `
     <style>
