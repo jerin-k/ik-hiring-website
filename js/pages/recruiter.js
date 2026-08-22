@@ -235,7 +235,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="recInclInactive"> Include inactive</label></div>
+      <div class="fchip"><label class="opt" title="Inactive = no longer holds an elevated recruiter seat in Ashby. Their past offers and hires still count, so this stays ON by default - untick it to see only current recruiters."><input type="checkbox" id="recInclInactive" checked> Include past recruiters</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll"> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
@@ -453,9 +453,11 @@ export function initRecruiterFilters(data) {
   if (!data || !data.recruiters) return;
   const allRecs = data.recruiters;
   const nDate = 7;
-  // Inactive = the recruiter's Ashby account is disabled. Identity is the Ashby USER RECORD
-  // (recruiters[].userId), so this is a direct lookup rather than a name match, and the manual Admin
-  // override was retired 2026-08-22 once the pipeline could resolve it on its own.
+  // Inactive = the person no longer holds an elevated recruiter seat in Ashby (UI roles Recruiter /
+  // Recruiter Admin). Identity is the Ashby USER RECORD (recruiters[].userId), so this is a direct lookup
+  // rather than a name match, and the manual Admin override was retired 2026-08-22.
+  // 🚨 Do NOT go back to isEnabled: it is true for all 446 Ashby users because IK never disables accounts,
+  // so it marked every departed recruiter as Active. The seat is the signal.
   // activeKnown === false means NO Ashby user could be matched at all - the status is genuinely UNKNOWN.
   // It must never render as "Active": a departed recruiter hiding behind a default is exactly the kind of
   // plausible-looking wrong answer this dashboard has been bitten by before.
@@ -611,6 +613,8 @@ export function initRecruiterFilters(data) {
     const inclInactive = document.getElementById('recInclInactive')?.checked;
     return allRecs.filter(r => {
       if (hideZero && (r.total || 0) === 0) return false;
+      // Default is ON: 15 of 27 recruiters lost their Ashby seat, and hiding them would wipe most of the
+      // Q1/Q2 history from every sub-tab. Their past offers and hires are still real work that happened.
       if (!inclInactive && isRecInactive(r)) return false;
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(podOf(r.name, q))) return false;
@@ -933,7 +937,7 @@ export function initRecruiterFilters(data) {
         const unknown = isStatusUnknown(r), active = !isRecInactive(r);
         const label = unknown ? 'Unknown' : (active ? 'Active' : 'Inactive');
         const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
-        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Active."' : '';
+        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Active."' : (active ? ' title="Holds an elevated recruiter seat in Ashby."' : ' title="No longer holds an elevated recruiter seat in Ashby."');
         return `<tr><td style="font-weight:500">${esc(r.name)}</td>
           <td><span${tip} style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
           <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
