@@ -32,6 +32,9 @@ var STAGE_KEY_MAP = {
   'R1': 'r1', 'R2': 'r2', 'R3': 'r3', 'R4': 'r4', 'R5': 'r5',
   'Reference Check': 'refCheck', 'Document Submission': 'docSub', 'Offer': 'offer'
 };
+// The three late stages. A candidate's FIRST entry into any of them marks the quarter whose opening they
+// were working against - the convention Drop is attributed by, since Ashby cannot supply the opening.
+var LATE_STAGES_ = { 'Reference Check': 1, 'Document Submission': 1, 'Offer': 1 };
 var PIPELINE_KEYS = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 var RECRUITER_STAGES = ['hc','ta','hm','oa','r1','r2','r3','r4','r5','offer','hired'];
 var STAGEKEY_TO_RECKEY = { helloChristy:'hc', taScreen:'ta', hmReview:'hm', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', offer:'offer' };
@@ -264,7 +267,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
 
 function fetchAndProcessOffers_(startTime, appMap) {
   var cursor = null, count = 0, byJob = {}, byRecruiter = {}, nowMs = Date.now(), events = [], recovered = 0;
-  var oiCalls = 0, oiVersions = 0, oiRecovered = 0, oiParamUsed = '(none)';
+  var lhCalls = 0, lhFound = 0, lhErr = 0;
   do {
     if (Date.now() - startTime > TIMEOUT_MS) { Logger.log('OFFER cutoff at ' + count); break; }
     var body = { limit: 100 }; if (cursor) body.cursor = cursor;
@@ -318,40 +321,49 @@ function fetchAndProcessOffers_(startTime, appMap) {
         if (vv.createdAt && (!firstCreated || String(vv.createdAt) < String(firstCreated))) firstCreated = vv.createdAt;
         if (vv.openingId && !anyOpening) anyOpening = vv.openingId;
       }
-      // ---- Recover the opening from OFFER VERSION HISTORY (archived offers only) ----
-      // offer.list does NOT populate the `versions` array. Verified the hard way 2026-08-22: verN came back
-      // as exactly 1 for all 644 offers, while MCP counts 399 offer_versions on archived applications alone.
-      // The fallback [latestVersion] had silently turned "not returned" into "one version", so the earlier
-      // check LOOKED like a clean negative and was actually blind. offer.info DOES return versions.
-      // Only ARCHIVED offers are looked up - they are the population whose latest version lost the link -
-      // so this costs ~92 calls per run, not 644.
-      // ⚠ The docs do not pin the request param name, so try offerId then id and record which worked.
-      if (am.status === 'Archived' && !anyOpening && o.id && (Date.now() - startTime) < TIMEOUT_MS) {
-        var oi = null;
-        try { oi = ashbyPost_('/offer.info', { offerId: o.id }); } catch (e3) { oi = null; }
-        if (oi && oi.results) { if (oiParamUsed === '(none)') oiParamUsed = 'offerId'; }
-        else { try { oi = ashbyPost_('/offer.info', { id: o.id }); if (oi && oi.results && oiParamUsed === '(none)') oiParamUsed = 'id'; } catch (e4) { oi = null; } }
-        oiCalls++;
-        var ovs = (oi && oi.results && oi.results.versions) || [];
-        oiVersions += ovs.length;
-        for (var oj = 0; oj < ovs.length; oj++) {
-          var ov = ovs[oj]; if (!ov) continue;
-          if (ov.createdAt && (!firstCreated || String(ov.createdAt) < String(firstCreated))) firstCreated = ov.createdAt;
-          if (ov.openingId && !anyOpening) { anyOpening = ov.openingId; oiRecovered++; }
-        }
+      // ---- LATE-STAGE ENTRY DATE: which quarter's opening was this drop working against? ----
+      // Ashby cannot tell us the opening for a drop. Three routes were tested and all return zero for
+      // archived applications: the live application.opening link, offer.latestVersion.openingId, and the
+      // full offer.info version history (92 calls, 144 versions inspected, 0 links). Separately, only 58 of
+      // 644 offers carry an opening AT ALL - 1% in Business - India, where 41 of the 92 drops sit - so the
+      // link was never going to carry this metric even if archiving preserved it.
+      //
+      // Convention (Jerin, 2026-08-22): the quarter a candidate ENTERED the late stages is the quarter of
+      // the opening they were working against, because openings are meant to be closed off each quarter.
+      // The EARLIEST of Reference Check / Document Submission / Offer is used - the first two sit before
+      // Offer but only 34 and 231 candidates ever pass through them, so most rows resolve to Offer entry.
+      //
+      // ⚠ This is the real stage TRANSITION date from application.listHistory, NOT the offer's creation
+      // date. The offer is often raised well after the candidate is moved to the stage, and it is the
+      // move that marks the work starting. Only ARCHIVED offers are looked up (~92 calls per run).
+      var lateEntry = null;
+      if (am.status === 'Archived' && o.applicationId && (Date.now() - startTime) < TIMEOUT_MS) {
+        lhCalls++;
+        try {
+          var hres = ashbyPost_('/application.listHistory', { applicationId: o.applicationId });
+          var hist2 = (hres && (hres.results || hres.history)) || [];
+          for (var hi = 0; hi < hist2.length; hi++) {
+            var ht = hist2[hi]; if (!ht || !ht.enteredStageAt) continue;
+            if (!LATE_STAGES_[ht.title]) continue;
+            if (!lateEntry || String(ht.enteredStageAt) < String(lateEntry)) lateEntry = ht.enteredStageAt;
+          }
+          if (lateEntry) lhFound++;
+        } catch (e5) { lhErr++; }
       }
+
       // per-offer event for split-scoring (recruiter+sourcer) + the HM joining-pending table (startDate)
       events.push({ applicationId: o.applicationId, jobId8: (jobId || '').substring(0, 8), candidate: am.candidate || null,
         recruiter: rec || null, sourcer: src || null, decidedAt: (o.decidedAt || '').substring(0, 10),
         startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null, acceptanceStatus: o.acceptanceStatus || null,
         offerCreatedAt: firstCreated ? String(firstCreated).substring(0, 10) : null,
-        offerOpeningIdAny: anyOpening || null, verN: vers.length });
+        offerOpeningIdAny: anyOpening || null, verN: vers.length,
+        lateEntryAt: lateEntry ? String(lateEntry).substring(0, 10) : null });
     }
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
     if (cursor) Utilities.sleep(30);
   } while (cursor);
   Logger.log('offers processed (scoped): ' + count + ' | recovered via application.info (pre-scope-year apps): ' + recovered);
-  Logger.log('offer.info version lookups: ' + oiCalls + ' calls | param=' + oiParamUsed + ' | versions seen: ' + oiVersions + ' | OPENING LINKS RECOVERED: ' + oiRecovered);
+  Logger.log('late-stage entry lookups (archived offers): ' + lhCalls + ' calls | resolved: ' + lhFound + ' | errors: ' + lhErr);
   return { byJob: byJob, byRecruiter: byRecruiter, count: count, events: events };
 }
 
@@ -641,7 +653,8 @@ function refreshDashboardData() {
       // vs company-cancelled without another pipeline run.
       offerStatus: e.offerStatus || null, acceptanceStatus: e.acceptanceStatus || null,
       offerCreatedAt: e.offerCreatedAt || null, verN: e.verN || 0,
-      openingIdAny: e.offerOpeningIdAny || null, openingQuarterAny: null }; });
+      openingIdAny: e.offerOpeningIdAny || null, openingQuarterAny: null,
+      lateEntryAt: e.lateEntryAt || null, attrQuarter: null }; });
   // ---- #53 BROAD Joining-Pending cases: Ref Check / Documentation / Offer ----
   var OFFER_SUBSTAGE_ = { 'WaitingOnApprovalStart':'Offer Created', 'WaitingOnApprovalDefinition':'Offer Created', 'WaitingOnOfferApproval':'Offer Created', 'WaitingOnCandidateResponse':'Offer Sent', 'CandidateAccepted':'Offer Accepted' };
   var PRE_OFFER_SUBSTAGE_ = { 'Reference Check':'Ref Check', 'Document Submission':'Documentation' };
@@ -653,9 +666,21 @@ function refreshDashboardData() {
   };
   // offerEvents is a 1:1 map of offerResult.events, so index i lines up. Stamped here rather than inside the
   // map above because openQuarterOf_ is a var-assigned function and is not defined yet at that point.
+  // attrQuarter = the quarter this offer's work belongs to, best source first:
+  //   1. the REAL opening, when the offer actually carries one (only 9% of offers today, 0% of drops)
+  //   2. else the quarter the candidate first entered Ref Check / Documentation / Offer
+  //   3. else the archive date, so a row is never silently unplaceable
+  // ⚠ Only (1) is a measurement. (2) is a convention and (3) is a fallback - label them as such on screen.
+  var qOfDate_ = function (ds) {
+    if (!ds || String(ds).length < 7) return null;
+    var y = String(ds).substring(0, 4), mo = parseInt(String(ds).substring(5, 7), 10);
+    if (!mo) return null;
+    return y + '-Q' + (Math.floor((mo - 1) / 3) + 1);
+  };
   offerEvents.forEach(function (ev, i) { var se = offerResult.events[i];
     ev.openingQuarter = openQuarterOf_(se.offerOpeningId);
-    ev.openingQuarterAny = openQuarterOf_(se.offerOpeningIdAny); });
+    ev.openingQuarterAny = openQuarterOf_(se.offerOpeningIdAny);
+    ev.attrQuarter = ev.openingQuarter || qOfDate_(ev.lateEntryAt) || qOfDate_(ev.archivedAt) || null; });
   var jpCaseByApp_ = {};
   offerResult.events.forEach(function(e) {
     var sub3 = OFFER_SUBSTAGE_[e.offerStatus || ''] || null;
