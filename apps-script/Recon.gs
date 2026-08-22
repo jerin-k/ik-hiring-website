@@ -152,3 +152,27 @@ function pushSourceToGitHub() {
   });
   Logger.log("source sync: " + pushed + " pushed, " + same + " unchanged");
 }
+
+// One-off probe (2026-08-22): confirmed application.list returns archiveReason {text, reasonType} on
+// 25/25 archived rows, so the pipeline needs no extra call. KEPT BELOW resetAndRefreshNow on purpose -
+// the run selector picks the FIRST function in the file, which must stay the routine refresh.
+function reconArchiveReason() {
+  Logger.log('=== RECON archiveReason ===');
+  var ids = ['48368c4f-9557-4fb4-afa3-092e15239d62','741c9245-0aae-4158-ae47-c5fdc489e997','cf461b0d-03a6-45a2-84d8-84f89a4772e2','00024aca-674c-4a28-98c3-25b44a2e3095','000ceaa4-d1ba-4079-a6ce-040b216106ff','000e2980-52dd-4cbb-a08c-21a287bf4e7b','0006ddb4-e1a6-4881-88b9-d59138651a84','0015948d-c303-4bea-890e-540d190433d2'];
+  ids.forEach(function (id) {
+    try {
+      var r = ashbyPost_('/application.info', { applicationId: id });
+      var a = r.results || {};
+      var ar = a.archiveReason;
+      Logger.log('INFO ' + (a.candidate ? a.candidate.name : '?') + ' | status=' + a.status + ' | archivedAt=' + a.archivedAt + ' | reason=' + (ar ? JSON.stringify([ar.text, ar.reasonType, ar.id]) : 'NULL'));
+    } catch (e) { Logger.log('INFO ' + id + ' FAILED ' + e.message); }
+  });
+  var lr = ashbyPost_('/application.list', { limit: 25, status: 'Archived' });
+  var rs = lr.results || [];
+  var withAR = 0, texts = {};
+  rs.forEach(function (a) { if (a.archiveReason) { withAR++; var t = a.archiveReason.text || '(blank)'; texts[t] = (texts[t] || 0) + 1; } });
+  Logger.log('LIST Archived rows=' + rs.length + ' | archiveReason present on ' + withAR);
+  Logger.log('LIST row keys: ' + (rs[0] ? JSON.stringify(Object.keys(rs[0])) : 'none'));
+  Logger.log('LIST reason texts: ' + JSON.stringify(texts));
+  Logger.log('=== RECON DONE ===');
+}
