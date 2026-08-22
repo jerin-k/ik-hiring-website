@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-20T18:44:57.471Z",
+  "updatedAt": "2026-08-22T08:58:15.505Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -31,33 +31,33 @@
   "capacity": {
     "2026-Q3": {
       "Aaron Collins": 220,
-      "Aditya Singh": 220,
-      "Alokita Dhumne": 220,
+      "Aditya Singh": 225,
+      "Alokita Dhumne": 180,
       "Ankita Kabra": 220,
       "Astha Thakur": 220,
       "Chhavi Rana": 220,
-      "Deepti Leslie": 220,
-      "G Darshan": 220,
-      "Gopu Nair V": 220,
-      "Jerin Kesavan": 220,
+      "Deepti Leslie": 225,
+      "G Darshan": 0,
+      "Gopu Nair V": 0,
+      "Jerin Kesavan": 0,
       "Kaashvika Kashyap": 220,
       "M Navya": 220,
-      "Mahima Agarwal": 220,
+      "Mahima Agarwal": 180,
       "Mashika De Almeida": 220,
       "Neha Vivekanand Pattar": 220,
-      "Oshin Verma": 220,
+      "Oshin Verma": 225,
       "Prathima Pai": 218,
-      "Rijo John": 220,
-      "Ritika Bhasin": 220,
+      "Rijo John": 180,
+      "Ritika Bhasin": 225,
       "Sanghamitra Moulik": 220,
       "Satinder Kaur": 218,
       "Siva Sruthi V S": 220,
       "Smriti Das": 220,
       "Tabitha Anceline E": 220,
       "Talent Acquisition Team": 220,
-      "Tina Anisha Bibeiro": 220,
+      "Tina Anisha Bibeiro": 180,
       "Unassigned": 220,
-      "V Pooja": 220
+      "V Pooja": 210
     }
   },
   "scoreGrid": {
