@@ -981,22 +981,9 @@ export function initEfficiencyFilters(data) {
   // Fulfilment charts: bars are STACKED Joined / Joining Pending / Gap, which add up to Total Positions —
   // so the bar and the table carry the same three numbers. A label at the end of each bar gives the total,
   // because a stacked bar hides it otherwise and the total is the number people are looking for.
-  const stackTotalLabel = {
-    id: 'stackTotal',
-    afterDatasetsDraw(chart) {
-      const ctx = chart.ctx, ds = chart.data.datasets;
-      if (!ds.length) return;
-      ctx.save();
-      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillStyle = '#334155'; ctx.textBaseline = 'middle';
-      const last = chart.getDatasetMeta(ds.length - 1);
-      last.data.forEach((bar, i) => {
-        const tot = ds.reduce((a, d) => a + (d.data[i] || 0), 0);
-        if (tot > 0) ctx.fillText(String(tot), bar.x + 6, bar.y);
-      });
-      ctx.restore();
-    }
-  };
+  // NOTE: the stack total at the end of each bar is now drawn by the GLOBAL stackTotalsPlugin
+  // (chart-datalabels.js, registered in app.js), so every stacked chart in the app gets it, not just
+  // these two. Opt a chart out with options.plugins.stackTotals = false.
   const FULFIL_COLORS = { joined: '#0f766e', pending: '#4E6BA6', gap: '#D8B5BE' };
   const fulfilStackOpts = (xTitle) => ({
     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -1048,8 +1035,7 @@ export function initEfficiencyFilters(data) {
         { label: 'Joining Pending', data: rows.map(r => r.sum.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
         { label: 'Gap', data: rows.map(r => r.sum.gap), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
       ] },
-      options: fulfilStackOpts('Positions'),
-      plugins: [stackTotalLabel]
+      options: fulfilStackOpts('Positions')
     });
   }
 
@@ -1065,8 +1051,7 @@ export function initEfficiencyFilters(data) {
         { label: 'Joining Pending', data: js.map(x => x.sp.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
         { label: 'Gap', data: js.map(x => x.sp.gap), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
       ] },
-      options: fulfilStackOpts('Positions'),
-      plugins: [stackTotalLabel]
+      options: fulfilStackOpts('Positions')
     };
   }
 

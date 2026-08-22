@@ -10,11 +10,13 @@ import { renderSourcing, initSourcingChart } from './pages/sourcing.js';
 import { renderInterviewer, initInterviewer } from './pages/interviewer.js';
 import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
-import { valueLabelsPlugin } from './chart-datalabels.js';
+import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
 
 // Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
 // every tab then shows data labels; individual charts can opt out via options.plugins.valueLabels = false.
 if (window.Chart && !window.Chart.registry.plugins.get('valueLabels')) window.Chart.register(valueLabelsPlugin);
+// Stacked bars hide their total; draw it at the end of every stack, on every tab, automatically.
+if (window.Chart && !window.Chart.registry.plugins.get('stackTotals')) window.Chart.register(stackTotalsPlugin);
 
 let currentAccess = null;
 let accessConfig = null;
@@ -74,7 +76,10 @@ async function onAuthSuccess(user) {
   setupSignout();
   setupRefreshButton();
   initTableSorting();
-  navigateTo('home');
+  // #4 (2026-08-22): a refresh used to dump you back on Overview. The active tab now lives in the URL hash,
+  // so reloading returns you to where you were, and back/forward work. Falls back to Overview when the hash is
+  // empty or names a page this user cannot see (navigateTo re-checks access anyway).
+  navigateTo(pageFromHash());
 
   const lastUpdated = getLastUpdated();
   if (lastUpdated) {
@@ -141,10 +146,20 @@ function setupSignout() {
   document.getElementById('signout-btn').addEventListener('click', signOut);
 }
 
+function pageFromHash() {
+  return (location.hash || '').replace(/^#\/?/, '') || 'home';
+}
+
+let currentPage = null;
+
 function navigateTo(page) {
   if (!canAccessPage(currentAccess, page)) {
     page = 'home';
   }
+  currentPage = page;
+  // Keep the URL in step. The hashchange listener below compares against currentPage, so this assignment
+  // cannot bounce back into navigateTo and loop.
+  if (pageFromHash() !== page) location.hash = page;
 
   document.querySelectorAll('[data-nav]').forEach(el => {
     el.classList.toggle('active', el.dataset.nav === page);
@@ -185,3 +200,9 @@ function navigateTo(page) {
       break;
   }
 }
+
+// Browser back/forward, and any hash typed by hand, route through the same entry point.
+window.addEventListener('hashchange', () => {
+  const p = pageFromHash();
+  if (p !== currentPage) navigateTo(p);
+});

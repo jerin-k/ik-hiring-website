@@ -24,7 +24,12 @@ export const valueLabelsPlugin = {
       (meta.data || []).forEach((el, i) => {
         if (!el || typeof el.getProps !== 'function') return;
         const raw = ds.data[i];
-        const v = (raw && typeof raw === 'object') ? (raw.v ?? raw.y ?? raw.x) : raw;
+        // FLOATING bars carry [start, end] — the HM pipeline funnel draws each stage as [-v/2, +v/2] so it
+        // reads as a centred funnel. Its value is the SPAN, not either endpoint. Without this branch the
+        // funnel silently loses every label (it did, briefly, on 2026-08-22).
+        const floating = Array.isArray(raw);
+        const v = floating ? (raw[1] - raw[0])
+          : ((raw && typeof raw === 'object') ? (raw.v ?? raw.y ?? raw.x) : raw);
         if (v == null || v === 0 || isNaN(v)) return;
         const label = fmtVal(v);
         if (!label) return;
@@ -49,7 +54,7 @@ export const valueLabelsPlugin = {
         if (horizontal) {
           if ((p.height || 0) < 8) return;                           // bar too thin to read
           const span = Math.abs(p.x - p.base);
-          if (stacked) {
+          if (stacked || floating) {
             if (span < w + 6) return;                                // segment too small
             ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(label, (p.x + p.base) / 2, p.y);
@@ -60,7 +65,7 @@ export const valueLabelsPlugin = {
         } else {
           if ((p.width || 0) < 13) return;
           const span = Math.abs(p.base - p.y);
-          if (stacked) {
+          if (stacked || floating) {
             if (span < 12) return;
             ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(label, p.x, (p.y + p.base) / 2);
@@ -70,6 +75,69 @@ export const valueLabelsPlugin = {
           }
         }
       });
+    });
+    ctx.restore();
+  }
+};
+
+// ===== Stack totals =====
+// A stacked bar HIDES the number people actually came for: the total. Chart.js has no built-in for it, so this
+// draws the sum of the visible segments just past the end of each stack (right edge when horizontal, above the
+// column when vertical). It fires on ANY chart whose value axis is stacked, so a new stacked chart inherits it
+// without being wired up — the previous version of this lived inside efficiency.js and reached only 2 of the
+// ~16 stacked charts in the app, which is exactly the bug it is here to stop repeating.
+// Respects legend toggles (hidden datasets drop out of the sum) and opts out via plugins.stackTotals = false.
+
+function stackInfo(chart) {
+  const horizontal = chart.options.indexAxis === 'y';
+  const stacked = !!chart.options.scales?.[horizontal ? 'x' : 'y']?.stacked;
+  return { stacked, horizontal };
+}
+
+export const stackTotalsPlugin = {
+  id: 'stackTotals',
+  // Reserve room so the label is not clipped by the canvas edge. Only ever grows existing padding.
+  beforeLayout(chart) {
+    if (chart.options?.plugins?.stackTotals === false) return;
+    const { stacked, horizontal } = stackInfo(chart);
+    if (!stacked) return;
+    const lay = chart.options.layout || (chart.options.layout = {});
+    let pad = lay.padding;
+    if (pad == null) pad = {};
+    else if (typeof pad === 'number') pad = { top: pad, right: pad, bottom: pad, left: pad };
+    const side = horizontal ? 'right' : 'top';
+    pad[side] = Math.max(pad[side] || 0, horizontal ? 34 : 18);
+    lay.padding = pad;
+  },
+  afterDatasetsDraw(chart) {
+    if (chart.options?.plugins?.stackTotals === false) return;
+    const { stacked, horizontal } = stackInfo(chart);
+    if (!stacked) return;
+    const ds = chart.data.datasets || [];
+    // The OUTER edge of each stack belongs to the last dataset still visible.
+    let outer = -1;
+    for (let i = 0; i < ds.length; i++) if (!chart.getDatasetMeta(i).hidden) outer = i;
+    if (outer < 0) return;
+    const meta = chart.getDatasetMeta(outer);
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#334155';
+    (meta.data || []).forEach((el, i) => {
+      if (!el || typeof el.getProps !== 'function') return;
+      const p = el.getProps(['x', 'y', 'width', 'height'], true);
+      // Too cramped to label without colliding with the neighbouring stack.
+      if (horizontal ? (p.height || 0) < 8 : (p.width || 0) < 18) return;
+      let tot = 0;
+      ds.forEach((d, di) => {
+        if (chart.getDatasetMeta(di).hidden) return;
+        const raw = d.data[i];
+        const v = (raw && typeof raw === 'object') ? (raw.v ?? raw.y ?? raw.x) : raw;
+        if (v != null && !isNaN(v)) tot += Number(v);
+      });
+      if (!tot) return;
+      if (horizontal) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(fmtVal(tot), el.x + 6, el.y); }
+      else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(fmtVal(tot), el.x, el.y - 4); }
     });
     ctx.restore();
   }

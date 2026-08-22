@@ -87,40 +87,10 @@ function reachedFunnel(agg) {
   return FUNNEL_ORDER.map(s => ({ key: s, label: STAGE_LABELS[s], value: reached[s] }));
 }
 
-// Draws the numeric value on each bar segment (skips segments too small to fit).
-const valueLabels = {
-  id: 'valueLabels',
-  afterDatasetsDraw(chart) {
-    const ctx = chart.ctx;
-    ctx.save();
-    ctx.font = "600 10px -apple-system, system-ui, sans-serif";
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    chart.data.datasets.forEach((ds, di) => {
-      const meta = chart.getDatasetMeta(di);
-      if (meta.hidden) return;
-      meta.data.forEach((el, i) => {
-        const raw = ds.data[i];
-        const val = Array.isArray(raw) ? Math.round(raw[1] - raw[0]) : raw;
-        if (!val) return;
-        const props = el.getProps(['x', 'y', 'base', 'horizontal'], true);
-        let cx, cy, segLen;
-        if (props.horizontal) {
-          cx = (el.x + props.base) / 2; cy = el.y;
-          segLen = Math.abs(el.x - props.base);
-          if (segLen < String(val).length * 7 + 4) return;
-        } else {
-          cx = el.x; cy = (el.y + props.base) / 2;
-          segLen = Math.abs(el.y - props.base);
-          if (segLen < 13) return;
-        }
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(val, cx, cy);
-      });
-    });
-    ctx.restore();
-  }
-};
+// #6 (2026-08-22): the local `valueLabels` plugin that used to live here was a DUPLICATE of the global one
+// in chart-datalabels.js — both were registered under the same id and both drew, so every grouped bar
+// carried its number twice: once inside the bar in white, once above it in slate. The global plugin
+// already handles grouped vs stacked correctly, so this file just uses it.
 
 // Collapse/expand a 2-level Department -> leaf tree. dept-header rows have data-g; leaf rows have data-g.
 function wireTree(tbody) {
@@ -197,6 +167,7 @@ export function renderHmReport(data) {
     <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:#e4eaf4;border:1px solid #c3d0e8;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.06)">
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
+      <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msHmJob"></div></div>
       <div class="fchip"><span class="lbl">Status</span>
         <label class="opt"><input type="checkbox" class="hm1Status" value="Open" checked> Open</label>
         <label class="opt"><input type="checkbox" class="hm1Status" value="Closed" checked> Closed</label>
@@ -223,11 +194,8 @@ export function renderHmReport(data) {
 
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
-      <div class="filter-bar" style="margin-bottom:10px">
-        <div class="ms" id="msHm1Job"></div>
-      </div>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Delta</th><th>Missed</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Delta</th><th>Missed</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
 
@@ -236,7 +204,6 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Joining Pending — Cases</h3>
       <p class="sub-note">Individual candidates in Ref Check, Documentation, or Offer stage. This table lists everyone currently pending joining — the page date/quarter filter does not apply here.</p>
       <div class="filter-bar">
-        <div class="ms" id="msHmJP"></div>
         <select id="hmJPMonth"><option value="">All DOJ Months</option>${jpMonths.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
         <span style="font-size:11px;color:var(--muted)">DOJ</span>
         <input type="date" id="hmJPFrom" title="DOJ from">
@@ -255,7 +222,6 @@ export function renderHmReport(data) {
       <p class="sub-note">In = candidates who entered the stage, Out = candidates who moved past it — counted from real stage transitions in the selected period. Click a department to drill in.</p>
       <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
       <div class="filter-bar">
-        <div class="ms" id="msHm2Job"></div>
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="hm-stages">
@@ -266,6 +232,7 @@ export function renderHmReport(data) {
         <thead id="hm2Head"></thead>
         <tbody id="hm2Body"></tbody>
       </table></div>
+      <div class="heat-legend" id="hm2Legend"></div>
 
       <h3 class="subsection-title">Stage Throughput (In vs Out)</h3>
       <div class="chart-wrap" style="height:300px"><canvas id="hm2Chart"></canvas></div>
@@ -277,9 +244,8 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: PIPELINE ===== -->
     <div class="hm-panel" data-panel="pipeline" style="display:none">
-      <p class="sub-note" style="color:var(--orange)">Live snapshot — the <strong>Department</strong> filter applies here; the date/quarter filter does not. Click a department to drill in.</p>
+      <p class="sub-note" style="color:var(--orange)">Live snapshot — counts show where candidates stand <strong>today</strong>, so the date filter does not change them. It does decide <strong>which roles are listed</strong>: only those with an opening in the selected period. Click a department to drill in.</p>
       <div class="filter-bar">
-        <div class="ms" id="msHm3Job"></div>
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="hm-stages">
@@ -322,7 +288,10 @@ export function initHmFilters(data) {
   jobs.forEach(j => { j._dept = deptOf(j.department); });
 
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
-  let msHm1Job = null, msHm2Job = null, msHm3Job = null, msHmJP = null, msHmPanel = null;
+  // #7 (2026-08-22): there used to be FOUR separate Job multi-selects, one per sub-tab, each filtering only
+  // its own table. Now a single control in the main filter bar drives every panel and every chart on the tab.
+  let msHmJob = null, msHmPanel = null;
+  const selJobs = () => (msHmJob ? msHmJob.getSelected() : []);
   const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
   // Kept identical across the HM / Recruiter / Overall-Efficiency tabs on purpose.
@@ -429,7 +398,7 @@ export function initHmFilters(data) {
   function renderSection1() {
     const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept();
     const statuses = getSelectedStatuses();
-    const jobSel = msHm1Job ? msHm1Job.getSelected() : [];
+    const jobSel = selJobs();
     const ob = data.openingBuckets || {};
     const pendingByJobQ = data.openingPendingByJobQ || {};
 
@@ -450,48 +419,97 @@ export function initHmFilters(data) {
         jp += (pendingByJobQ[job8] && pendingByJobQ[job8][q]) || 0;
       });
       if (!t && !jn && !op && !ms) return;
-      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jobs: [] };
+      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
       G.total += t; G.joined += jn; G.open += op; G.missed += ms; G.jp += jp;
-      G.jobs.push({ title: rec.title, total: t, joined: jn, open: op, missed: ms, jp });
+      G.jobs.push({ title: rec.title, total: t, joined: jn, open: op, missed: ms, jp, jpP: 0, drop: 0 });
     });
+    // ===== CANDIDATE-SIDE COLUMNS (people, not openings) — definition set by Jerin 2026-08-22 =====
+    // Joining Pending = every candidate currently parked in Ref Check, Documentation or Offer.
+    // ⚠ It is a LIVE count and CANNOT be quarter-scoped: openingQuarter is absent on 141 of the 166 cases,
+    // so filing them by quarter would silently drop 85% of the people. Dropped CAN be scoped (attrQuarter
+    // covers 92/92) and is, so these two columns sit on different time bases — the caption says so.
+    // Rows are added for jobs that have people in closing but NO opening in the period: restricting to
+    // openings showed 88 of 166 pending people and hid 45 of SME - India's 46.
+    const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title));
+    function bump(dept, title, field) {
+      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0, jobs: [] };
+      const G = groups[dept];
+      G[field] += 1;
+      let row = G.jobs.find(j => j.title === title);
+      if (!row) { row = { title, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0 }; G.jobs.push(row); }
+      row[field] += 1;
+    }
+    // ...MINUS anyone whose opening belongs to an EARLIER quarter (Jerin, 2026-08-22): their offer is last
+    // quarter's demand still in flight, and counting it here would inflate the current quarter every time.
+    // Only 25 of 166 cases carry an opening at all, so this can only judge those; the 141 unlinked stay in
+    // because there is nothing to judge them by. Under Q3 2026 it removes the 2 sitting on Q2 openings.
+    const fromQ = dateFrom ? quarterOf(dateFrom) : null;
+    (data.joiningPendingCases || []).forEach(c => {
+      const dept = deptOf(c.department || '') || 'Unknown', title = c.job || c.jobTitle || '(no job)';
+      if (!inScope(dept, title)) return;
+      if (c.openingQuarter && fromQ && fromQ !== '\u2014' && c.openingQuarter < fromQ) return;
+      bump(dept, title, 'jpP');
+    });
+    (data.offerEvents || []).forEach(e => {
+      if (e.appStatus !== 'Archived') return;
+      if (!quarterInRange(e.attrQuarter, dateFrom, dateTo)) return;
+      const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
+      if (!inScope(dept, title)) return;
+      bump(dept, title, 'drop');
+    });
+
     const deptArr = Object.values(groups).sort((a, b) => a.dept.localeCompare(b.dept));
 
-    const totals = { total: 0, joined: 0, open: 0, missed: 0, jp: 0 };
-    deptArr.forEach(t => { totals.total += t.total; totals.joined += t.joined; totals.open += t.open; totals.missed += t.missed; totals.jp += t.jp; });
+    const totals = { total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0 };
+    deptArr.forEach(t => { totals.total += t.total; totals.joined += t.joined; totals.open += t.open; totals.missed += t.missed; totals.jp += t.jp; totals.jpP += t.jpP; totals.drop += t.drop; });
 
     document.getElementById('hm1Cards').innerHTML = `
       <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div><div class="sub">opened in this period</div></div>
       <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.joined}</div><div class="sub">closed as hired</div></div>
       <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div><div class="sub">still to fill</div></div>
       <div class="card"><div class="label">Missed</div><div class="value" style="color:var(--red)">${totals.missed}</div><div class="sub">carried to next quarter</div></div>
-      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jp}</div><div class="sub">offer out, opening linked</div></div>
+      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jpP}</div><div class="sub">in Ref Check, Documentation or Offer \u00b7 live</div></div>
+      <div class="card"><div class="label">Dropped</div><div class="value" style="color:var(--red)">${totals.drop}</div><div class="sub">${(totals.joined + totals.jpP + totals.drop) > 0 ? Math.round((totals.drop / (totals.joined + totals.jpP + totals.drop)) * 100) + '% of outcomes' : 'no outcomes yet'}</div></div>
     `;
 
     // Total Openings = Joined + Joining Pending + Delta + Missed, so every opening sits in exactly one bucket.
     // Delta is what is left with nothing in flight: the old "Open" column minus the ones that already have an
     // offer out. It carries the bar, filled by (Total - Delta) / Total, so bar and number can never disagree.
-    const metrics = (t, jn, op, ms, jp) => {
-      const delta = Math.max(0, op - jp);
-      const fill = t > 0 ? Math.max(0, Math.min(100, Math.round(((t - delta) / t) * 100))) : 0;
-      const cls = delta === 0 ? 'done' : (fill < 75 ? 'short' : '');
-      const cap = t > 0 ? `${t - delta} of ${t} · ${fill}%` : '—';
-      return `<td style="font-weight:600">${t}</td><td class="good">${jn}</td><td style="color:var(--orange)">${jp}</td>`
-        + `<td class="gapcell"><span class="gapwrap"><i class="${cls}" style="width:${fill}%"></i>`
+    const metrics = (v) => {
+      const delta = Math.max(0, v.open - v.jp);
+      // #1 Option A (2026-08-22): the bar used to fill with COVERAGE while the bold number counted the GAP,
+      // so a nearly-full-looking cell could sit beside a 7. Both now measure the same thing — the shortfall.
+      const gapPct = v.total > 0 ? Math.max(0, Math.min(100, Math.round((delta / v.total) * 100))) : 0;
+      const cap = delta > 0
+        ? `${delta} of ${v.total} still to fill`
+        : (v.total > 0 ? 'nothing outstanding' : '\u2014');
+      // Drop % denominator INCLUDES Dropped itself (Jerin, 2026-08-22): of everything that reached a
+      // conclusion or is about to, what share fell out.
+      const den = v.joined + v.jpP + v.drop;
+      const dpct = den > 0 ? Math.round((v.drop / den) * 100) : null;
+      const dropCell = v.drop
+        ? `<span style="color:var(--red);font-weight:600">${v.drop}</span>`
+          + (dpct !== null ? `<span class="sublab">${dpct}% of outcomes</span>` : '')
+        : `<span class="zero">0</span>`;
+      return `<td style="font-weight:600">${v.total}</td><td class="good">${v.joined}</td>`
+        + `<td style="color:var(--orange)">${v.jpP || `<span class="zero">0</span>`}</td>`
+        + `<td class="gapcell">${dropCell}</td>`
+        + `<td class="gapcell"><span class="gapwrap"><i class="gap" style="width:${gapPct}%"></i>`
         + `<span class="${delta === 0 ? 'zero' : ''}">${delta}</span></span><span class="sublab">${cap}</span></td>`
-        + `<td style="color:var(--red)">${ms}</td>`;
+        + `<td style="color:var(--red)">${v.missed}</td>`;
     };
     let html = '';
     deptArr.forEach((D, gi) => {
       const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
       html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D.total, D.joined, D.open, D.missed, D.jp)}</tr>`;
+        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}</tr>`;
       jobs2.forEach(o => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:30px;font-weight:500;max-width:360px">${o.title}</td>${metrics(o.total, o.joined, o.open, o.missed, o.jp)}</tr>`;
+          <td style="padding-left:30px;font-weight:500;max-width:360px">${o.title}</td>${metrics(o)}</tr>`;
       });
     });
-    html += `<tr class="totals-row"><td>Total</td>${metrics(totals.total, totals.joined, totals.open, totals.missed, totals.jp)}</tr>`;
+    html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}</tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
     wireTree(body);
@@ -523,8 +541,7 @@ export function initHmFilters(data) {
             x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions / Candidates', font: { size: 11 }, color: '#64748b' } },
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
           }
-        },
-        plugins: [valueLabels]
+        }
       });
     }
   }
@@ -546,21 +563,28 @@ export function initHmFilters(data) {
   // is what made this table ignore the period filter entirely.
   function throughputFor(j, quarters) {
     const byQ = data.stageRollups && data.stageRollups.throughputByJobQ && data.stageRollups.throughputByJobQ[j.id];
-    if (!byQ || !quarters.length) return computeThroughput(j.pipeline, j.total);
-    const out = {};
-    TP_KEYS.forEach(k => {
-      const st = byQ[TP_TO_STAGE[k]] || {};
-      let i = 0, o = 0;
-      quarters.forEach(q => { const v = st[q]; if (v) { i += v.reached || 0; o += v.cleared || 0; } });
-      out[k] = { i: i, o: o };
-    });
-    out.overall = out.r1.i > 0 ? out.ds.i / out.r1.i : null;
-    return out;
+    // 🚨 #5 (2026-08-22): when a PERIOD is selected, a job with no rollup entry for those quarters has NO
+    // throughput in the period and must read zero. It used to fall back to computeThroughput(j.pipeline,
+    // j.total) — the LIFETIME snapshot — which quietly poured all-time numbers into a quarter-scoped table:
+    // Senior Manager, SEO showed 255 applications at 0% under a Q3 filter, and long-closed roles looked busy.
+    // The lifetime fallback is only correct when no period is set at all.
+    if (quarters.length) {
+      const out = {};
+      TP_KEYS.forEach(k => {
+        const st = (byQ && byQ[TP_TO_STAGE[k]]) || {};
+        let i = 0, o = 0;
+        quarters.forEach(q => { const v = st[q]; if (v) { i += v.reached || 0; o += v.cleared || 0; } });
+        out[k] = { i: i, o: o };
+      });
+      out.overall = out.r1.i > 0 ? out.ds.i / out.r1.i : null;
+      return out;
+    }
+    return computeThroughput(j.pipeline, j.total);
   }
 
   function renderThroughput() {
     const deptG = gDept();
-    const jobSel = msHm2Job ? msHm2Job.getSelected() : [];
+    const jobSel = selJobs();
     const hideEmpty = document.getElementById('hm2HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm2Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
@@ -570,26 +594,32 @@ export function initHmFilters(data) {
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(j.title)) return false;
-      if (hideEmpty && j.total === 0) return false;
       if (!j.pipeline) return false;
       return true;
     }).sort(byDept);
 
-    let row1 = '<tr><th rowspan="2">Department</th>';
-    let row2 = '<tr>';
-    visStages.forEach(s => {
-      row1 += `<th colspan="3" class="stage-hdr">${TP_LABELS[s]}</th>`;
-      row2 += '<th class="stage-sub">In</th><th class="stage-sub">Out</th><th class="stage-sub">%</th>';
-    });
-    row1 += '<th rowspan="2" style="background:#e0e7ff;text-align:center">Overall<br>R1→Doc</th></tr>';
-    row2 += '</tr>';
-    document.getElementById('hm2Head').innerHTML = row1 + row2;
+    // #5 (2026-08-22): "Hide zero-pipeline" used to test j.total — the job's LIFETIME application count — so a
+    // job with 308 applications ever and no activity at all in the selected quarter still rendered a full row
+    // of zeros, and the department's job count was inflated to match. It now tests throughput IN THE SELECTED
+    // PERIOD, which is what the checkbox claims and what the quarter selector implies.
+    const withT = filtered.map(j => ({ j, t: throughputFor(j, quarters) }));
+    const shown = hideEmpty
+      ? withT.filter(({ t }) => TP_KEYS.some(k => (t[k].i > 0 || t[k].o > 0)))
+      : withT;
+
+    // #10 Option A (2026-08-22): one cell per stage instead of an In / Out / % triple. Twelve stages used to
+    // mean thirty-six numeric columns scrolling sideways, every one weighted the same, so nothing said where
+    // the pipeline was actually leaking. Now the NUMBER is how many entered and the SHADE is how many got
+    // through, which makes a weak stage visible without reading a digit.
+    let row1 = '<tr><th>Department</th>';
+    visStages.forEach(s => { row1 += `<th class="stage-hdr">${TP_LABELS[s]}</th>`; });
+    row1 += '<th class="stage-hdr" style="background:#e0e7ff">Overall<br>R1→Doc</th></tr>';
+    document.getElementById('hm2Head').innerHTML = row1;
 
     const tpTotals = {};
     TP_KEYS.forEach(k => { tpTotals[k] = { i: 0, o: 0 }; });
     const groups = {};
-    filtered.forEach(j => {
-      const t = throughputFor(j, quarters);
+    shown.forEach(({ j, t }) => {
       TP_KEYS.forEach(k => { tpTotals[k].i += t[k].i; tpTotals[k].o += t[k].o; });
       if (!groups[j._dept]) groups[j._dept] = [];
       groups[j._dept].push({ job: j, t });
@@ -604,8 +634,14 @@ export function initHmFilters(data) {
     function tpCells(per) {
       let s = '';
       visStages.forEach(sk => {
-        const c = per[sk]; const cls = c.i === 0 ? 'zero' : '';
-        s += `<td class="stage-cell stage-first ${cls}">${zv(c.i)}</td><td class="stage-cell ${cls}">${zv(c.o)}</td><td class="stage-cell">${pctCell(c.o, c.i)}</td>`;
+        const c = per[sk];
+        // A stage nobody entered is NOT a zero — several stages in this workspace are simply unused (OA has
+        // never had a candidate). Saying so beats printing 0 / 0 / — which reads as missing data.
+        if (!c || c.i === 0) { s += '<td class="heat none" title="no candidates entered this stage">—</td>'; return; }
+        const pct = Math.round((c.o / c.i) * 100);
+        const band = pct < 50 ? 'lo' : (pct < 70 ? 'mid' : 'hi');
+        s += `<td class="heat ${band}" title="${c.i} entered, ${c.o} moved past">`
+          + `<span class="hv">${c.i}</span><span class="hp">${pct}%</span></td>`;
       });
       const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
       s += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="${pctClass(ov)}">${ov}</span></td>`;
@@ -628,6 +664,13 @@ export function initHmFilters(data) {
     const hm2Body = document.getElementById('hm2Body');
     hm2Body.innerHTML = html;
     wireTree(hm2Body);
+    const legEl = document.getElementById('hm2Legend');
+    if (legEl) legEl.innerHTML =
+      '<span><i class="sw lo"></i>under 50% moved past</span>'
+      + '<span><i class="sw mid"></i>50–70%</span>'
+      + '<span><i class="sw hi"></i>over 70%</span>'
+      + '<span><i class="sw none"></i>stage not used</span>'
+      + '<span class="leg-note">Number = candidates who entered the stage.</span>';
 
     // Chart 1: In vs Out by stage (Application excluded, labelled)
     const chartLabels = [], chartIn = [], chartOut = [];
@@ -647,14 +690,13 @@ export function initHmFilters(data) {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } } },
           scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-        },
-        plugins: [valueLabels]
+        }
       });
     }
 
     // Chart 2: aggregate reached-stage funnel
     const agg = {};
-    filtered.forEach(j => { Object.keys(j.pipeline).forEach(k => { agg[k] = (agg[k] || 0) + (j.pipeline[k] || 0); }); });
+    shown.forEach(({ j }) => { Object.keys(j.pipeline).forEach(k => { agg[k] = (agg[k] || 0) + (j.pipeline[k] || 0); }); });
     const funnel = reachedFunnel(agg);
     if (hm2FunnelInstance) hm2FunnelInstance.destroy();
     const ctxF = document.getElementById('hm2Funnel');
@@ -669,8 +711,7 @@ export function initHmFilters(data) {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => 'Reached: ' + Math.round(c.raw[1] - c.raw[0]) } } },
           scales: { x: { display: false, grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } } }
-        },
-        plugins: [valueLabels]
+        }
       });
     }
   }
@@ -692,6 +733,9 @@ export function initHmFilters(data) {
     };
     let list = (data.panelists || []).map(p => ({ ...p, _dept: deptOf(p.dept || p.department || ''), _count: periodCount(p) }));
     list = list.filter(p => !deptG || p._dept === deptG);
+    // #7: the shared Job filter applies here as well — panelists carry the job they interviewed for.
+    const jobSel = selJobs();
+    if (jobSel.length) list = list.filter(p => jobSel.includes(p.jobTitle || p.job || ''));
     if (nameSel.length) list = list.filter(p => nameSel.includes(p.name || p.panelist || ''));
     list = list.filter(p => p._count > 0);
     if (!list.length) {
@@ -723,7 +767,7 @@ export function initHmFilters(data) {
     const body = document.getElementById('hmJPBody');
     if (!body) return;
     const deptG = gDept();
-    const jobSel = msHmJP ? msHmJP.getSelected() : [];
+    const jobSel = selJobs();
     const monthF = document.getElementById('hmJPMonth')?.value || '';
     const dojFrom = document.getElementById('hmJPFrom')?.value || '';
     const dojTo = document.getElementById('hmJPTo')?.value || '';
@@ -733,11 +777,11 @@ export function initHmFilters(data) {
     // so they are easy to spot and fix — that is the point of the list.
     // Note this is a wider population than the "Joining Pending" metric, which counts only
     // the linked ones. The caption spells the difference out.
-    // LINKED ONLY (2026-08-22). The list used to be deliberately broad — everyone in Ref Check, Documentation
-    // or Offer whether or not their offer was tied to an opening — which made it disagree with the Joining
-    // Pending card above it (166 rows against a card reading 21). The unlinked ones are a data-hygiene problem,
-    // not a joining-pending one, and they already have their own tab there. Table and card now match.
-    let list = (data.joiningPendingCases || []).filter(c => c.linked).map(c => ({
+    // BROAD AGAIN (2026-08-22, Jerin's definition): Joining Pending is EVERY candidate parked in Ref Check,
+    // Documentation or Offer, linked or not. It was narrowed to linked-only earlier that same day to make it
+    // agree with the card above; the card has now been redefined to this same population instead, so the two
+    // still match — but at 166 rather than 25. The Linked column marks the ones missing an opening.
+    let list = (data.joiningPendingCases || []).map(c => ({
       ...c,
       // job/doj were renamed from jobTitle/startDate when the cases table went broad
       job: c.job || c.jobTitle || '',
@@ -755,11 +799,13 @@ export function initHmFilters(data) {
 
     const capEl = document.getElementById('hmJPCaption');
     if (capEl) {
-      // Every row here is linked by construction now, so report the count and point at where the rest live.
-      const unlinkedAll = (data.joiningPendingCases || []).filter(c => !c.linked).length;
+      // Now the BROAD population, so the caption reports the whole count and calls out how many are
+      // missing an opening link — that is a hygiene problem sitting inside a real joining number.
+      const unlinkedShown = list.filter(c => !c.linked).length;
       capEl.innerHTML = list.length
-        ? `<strong>${list.length}</strong> in Ref Check, Documentation or Offer with an opening attached.`
-          + (unlinkedAll ? ` A further <strong>${unlinkedAll}</strong> are in closing with no opening attached — they are a linking problem, not a joining one, and are listed under <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.` : '')
+        ? `<strong>${list.length}</strong> currently in Ref Check, Documentation or Offer.`
+          + (unlinkedShown ? ` <strong>${unlinkedShown}</strong> of them have no opening attached — a linking gap, not a joining one; they are listed under <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Offers Missing Opening Link</strong>.` : '')
+          + ` This count is <strong>live</strong> \u2014 the page date/quarter filter does not apply to it.`
         : '';
     }
 
@@ -775,7 +821,7 @@ export function initHmFilters(data) {
     });
     body.innerHTML = list.map(c => `<tr>
       <td>${c.openingQuarter || '<span style="color:var(--red);font-size:11px">Not linked</span>'}</td>
-      <td>${c.month || monthOf(c.doj)}</td>
+      <td>${monthOf(c.doj) !== '\u2014' ? monthOf(c.doj) : (c.month || '\u2014')}</td>
       <td>${c.doj || '—'}</td>
       <td style="font-weight:500">${c._dept || ''}</td>
       <td style="max-width:280px">${c.job || ''}</td>
@@ -788,16 +834,28 @@ export function initHmFilters(data) {
   // ===== Section 3: Current Pipeline (Department -> Job tree) =====
   function renderPipeline() {
     const deptG = gDept();
-    const jobSel = msHm3Job ? msHm3Job.getSelected() : [];
+    const jobSel = selJobs();
     const hideEmpty = document.getElementById('hm3HideEmpty')?.checked;
     const visStages = [];
     document.querySelectorAll('.hm3Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
 
+    // #8 (2026-08-22): the row list was every job that had ever existed, so roles whose opening closed
+    // quarters ago kept appearing. The COUNTS here stay live — this panel is a snapshot of where people stand
+    // today and must not be date-filtered — but the JOB LIST is now limited to roles with an opening in the
+    // selected period. #9: "Hide zero-pipeline" also tested j.total (LIFETIME applications) rather than who is
+    // actually standing in the visible stages right now, which is what this table shows.
+    const openTitles = new Set();
+    Object.values(data.openingBuckets || {}).forEach(rec => {
+      Object.keys(rec.quarters || {}).forEach(q => {
+        if (quarterInRange(q, gFrom(), gTo())) openTitles.add(rec.title);
+      });
+    });
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(j.title)) return false;
-      if (hideEmpty && j.total === 0) return false;
       if (!j.pipeline) return false;
+      if (openTitles.size && !openTitles.has(j.title)) return false;
+      if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return false;
       return true;
     }).sort(byDept);
 
@@ -873,15 +931,12 @@ export function initHmFilters(data) {
   document.querySelectorAll('.hm1Status').forEach(cb => cb.addEventListener('change', renderActive));
   document.getElementById('hmExpandAll')?.addEventListener('change', renderActive);
 
-  // Job-title multi-selects (build + wire) — one per section
-  msHm1Job = makeMultiSelect(document.getElementById('msHm1Job'), 'Job', jobTitles, renderSection1);
-  msHmJP = makeMultiSelect(document.getElementById('msHmJP'), 'Job', jobTitles, renderJoiningPending);
+  // ONE Job multi-select in the main filter bar, wired to renderActive so it reaches every sub-tab.
+  msHmJob = makeMultiSelect(document.getElementById('msHmJob'), 'Job', jobTitles, renderActive);
   // Panelist names are the long tail here (hundreds of rows) — the shared multi-select gives
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msHmPanel = makeMultiSelect(document.getElementById('msHmPanel'), 'Panelist', panelistNames, renderPanelist);
-  msHm2Job = makeMultiSelect(document.getElementById('msHm2Job'), 'Job', jobTitles, renderThroughput);
-  msHm3Job = makeMultiSelect(document.getElementById('msHm3Job'), 'Job', jobTitles, renderPipeline);
   document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
   // Joining Pending local listeners
   document.getElementById('hmJPMonth')?.addEventListener('change', renderJoiningPending);
