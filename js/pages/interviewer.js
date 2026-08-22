@@ -344,6 +344,14 @@ export function initInterviewer(data) {
   document.getElementById('ivYear')?.addEventListener('change', render);
   document.getElementById('ivQuarter')?.addEventListener('change', render);
   document.getElementById('ivExpandAll')?.addEventListener('change', render);
+
+  // Default the period to the CURRENT quarter, matching Recruiter and Overall Efficiency.
+  // Landing on "All"/full-year mixed finished quarters with the one in progress, which is not the view
+  // anyone actually wants first — the live quarter is what gets worked on.
+  const ivY = document.getElementById('ivYear'), ivQ = document.getElementById('ivQuarter');
+  if (ivY) { const nowY = String(new Date().getFullYear()); if ([...ivY.options].some(o => o.value === nowY)) ivY.value = nowY; }
+  if (ivQ) ivQ.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+
   render();
 }
 

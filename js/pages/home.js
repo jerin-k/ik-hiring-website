@@ -38,6 +38,15 @@ export function initHomeFilters() {
   const sel = document.getElementById('period-selector');
   if (!sel) return;
 
+  // Default the period to the CURRENT quarter, matching Recruiter and Overall Efficiency.
+  // Landing on "All"/full-year mixed finished quarters with the one in progress, which is not the view
+  // anyone actually wants first — the live quarter is what gets worked on.
+  (() => {
+    const now = new Date();
+    const want = `${now.getFullYear()}-Q${Math.floor(now.getMonth() / 3) + 1}`;
+    if ([...sel.options].some(o => o.value === want)) sel.value = want;
+  })();
+
   function renderData() {
     const data = getData();
     if (!data) return;
