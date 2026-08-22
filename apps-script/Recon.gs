@@ -1,36 +1,3 @@
-// Mirrors this Apps Script project into the GitHub repo so the checked-in copy can never go stale.
-// Reads the project via Drive export (works with the scopes the script already has; the Apps Script
-// API route returns 403 without an extra scope). Only pushes a file whose content actually changed,
-// so a twice-daily run does not create empty commits. Verified 2026-08-22: no secrets are hardcoded
-// in any project file - the token and API key live in Script Properties.
-function pushSourceToGitHub() {
-  var id = ScriptApp.getScriptId();
-  var url = "https://www.googleapis.com/drive/v3/files/" + id + "/export?mimeType=application/vnd.google-apps.script%2Bjson";
-  var res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
-  if (res.getResponseCode() !== 200) { Logger.log("source sync FAILED: Drive export " + res.getResponseCode()); return; }
-  var files = JSON.parse(res.getContentText()).files || [];
-  var props = PropertiesService.getScriptProperties();
-  var token = props.getProperty("GITHUB_TOKEN"), repo = props.getProperty("GITHUB_REPO");
-  if (!token || !repo) { Logger.log("source sync skipped: token/repo not set"); return; }
-  var pushed = 0, same = 0;
-  files.forEach(function (f) {
-    var ext = (f.type === "server_js") ? ".gs" : ((f.type === "html") ? ".html" : ".json");
-    var path = "apps-script/" + f.name + ext;
-    var cur = null;
-    try {
-      var g = UrlFetchApp.fetch("https://api.github.com/repos/" + repo + "/contents/" + path,
-        { headers: { Authorization: "token " + token, "User-Agent": "IK-Dashboard" }, muteHttpExceptions: true });
-      if (g.getResponseCode() === 200) {
-        var enc = (JSON.parse(g.getContentText()).content || "").replace(/\n/g, "");
-        cur = Utilities.newBlob(Utilities.base64Decode(enc)).getDataAsString();
-      }
-    } catch (e) { Logger.log("source sync read " + path + ": " + e.message); }
-    if (cur === f.source) { same++; return; }
-    pushFileToGitHub_(path, f.source, "Sync Apps Script source: " + f.name + ext);
-    pushed++;
-  });
-  Logger.log("source sync: " + pushed + " pushed, " + same + " unchanged");
-}
 // Recon.gs — refresh trigger management
 
 // NOTE the run selector picks the FIRST function in the file on page load (the toolbar
@@ -148,4 +115,38 @@ function reconWriteProbe() {
       Logger.log(ep + '  ->  THREW ' + err.message);
     }
   });
+}
+
+// Mirrors this Apps Script project into the GitHub repo so the checked-in copy can never go stale.
+// Reads the project via Drive export (works with the scopes the script already has; the Apps Script
+// API route returns 403 without an extra scope). Only pushes a file whose content actually changed,
+// so a twice-daily run does not create empty commits. Verified 2026-08-22: no secrets are hardcoded
+// in any project file - the token and API key live in Script Properties.
+function pushSourceToGitHub() {
+  var id = ScriptApp.getScriptId();
+  var url = "https://www.googleapis.com/drive/v3/files/" + id + "/export?mimeType=application/vnd.google-apps.script%2Bjson";
+  var res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) { Logger.log("source sync FAILED: Drive export " + res.getResponseCode()); return; }
+  var files = JSON.parse(res.getContentText()).files || [];
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty("GITHUB_TOKEN"), repo = props.getProperty("GITHUB_REPO");
+  if (!token || !repo) { Logger.log("source sync skipped: token/repo not set"); return; }
+  var pushed = 0, same = 0;
+  files.forEach(function (f) {
+    var ext = (f.type === "server_js") ? ".gs" : ((f.type === "html") ? ".html" : ".json");
+    var path = "apps-script/" + f.name + ext;
+    var cur = null;
+    try {
+      var g = UrlFetchApp.fetch("https://api.github.com/repos/" + repo + "/contents/" + path,
+        { headers: { Authorization: "token " + token, "User-Agent": "IK-Dashboard" }, muteHttpExceptions: true });
+      if (g.getResponseCode() === 200) {
+        var enc = (JSON.parse(g.getContentText()).content || "").replace(/\n/g, "");
+        cur = Utilities.newBlob(Utilities.base64Decode(enc)).getDataAsString();
+      }
+    } catch (e) { Logger.log("source sync read " + path + ": " + e.message); }
+    if (cur === f.source) { same++; return; }
+    pushFileToGitHub_(path, f.source, "Sync Apps Script source: " + f.name + ext);
+    pushed++;
+  });
+  Logger.log("source sync: " + pushed + " pushed, " + same + " unchanged");
 }
