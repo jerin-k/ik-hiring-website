@@ -884,6 +884,13 @@ export function initHmFilters(data) {
     yearSel.value = hasNow ? nowY : (yearSel.options[1] ? yearSel.options[1].value : '');
   }
   if (qSel) qSel.value = nowQ;
+  // Default the period to the CURRENT quarter, matching Recruiter and Overall Efficiency.
+  // Landing on "All"/full-year mixed finished quarters with the one in progress, which is not the view
+  // anyone actually wants first — the live quarter is what gets worked on.
+  // applyYearQuarter() returns early when both are blank, so the dates would have stayed empty.
+  const hmY = document.getElementById('hmYear'), hmQ = document.getElementById('hmQuarter');
+  if (hmY) { const nowY = String(new Date().getFullYear()); if ([...hmY.options].some(o => o.value === nowY)) hmY.value = nowY; }
+  if (hmQ) hmQ.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
   applyYearQuarter();
 
   showTab('positions');
