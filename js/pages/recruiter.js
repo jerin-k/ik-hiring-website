@@ -295,7 +295,7 @@ export function renderRecruiter(data) {
 
       <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
       <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> (Sales) counts candidates whose <strong>start date</strong> falls in the quarter; <strong>Offered</strong> (Non-Sales) counts offers <strong>decided</strong> in the quarter — both from per-candidate offer records, so they follow the quarter selector.
-      <span style="color:var(--orange)"><strong>Goal does not yet follow the quarter</strong></span> — it is every role assigned to the recruiter across 2026, because assignments carry no date in the pipeline. So <strong>Gap</strong> (Goal − outcome) compares a year-to-date goal against one quarter's output and will read high. <strong>Capacity Utilisation</strong> (outcome ÷ Capacity) is clean, since both sides are quarter-scoped.
+      <strong>Goal</strong> counts the seats <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − outcome, and <strong>Capacity Utilisation</strong> = outcome ÷ Capacity; all three sides are now quarter-scoped. Where several recruiters work the same job, its seats are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
       Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
@@ -750,6 +750,29 @@ export function initRecruiterFilters(data) {
         const jk = rec + '|' + (e.jobId8 || '');
         const b = joinByRecJob[jk] || (joinByRecJob[jk] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
       });
+      // Seats actually opened on a job in the SELECTED quarter, from openingBuckets — the only
+      // quarter-scoped source of demand we have — SPLIT EQUALLY across the recruiters who work that job.
+      // Without the split, evergreen roles blew the totals apart: Program Advisor - US (AI Programs) has 15
+      // Q3 seats and 12 recruiters on it, so the Sales pod counted 146 seats where the true figure is 19.
+      // An equal share is a convention, not a measurement — the data cannot say who owns which seat — but it
+      // keeps a pod's Goal close to the seats it is actually carrying.
+      const obk = data.openingBuckets || {};
+      const sharers = {};
+      recs.forEach(r => (r.byJob || []).forEach(bj => {
+        const k = (bj.jobId || '').slice(0, 8); if (!k) return;
+        (sharers[k] || (sharers[k] = new Set())).add(r.name);
+      }));
+      const seatsOf = (jid) => {
+        const k = (jid || '').slice(0, 8);
+        const b = obk[k];
+        const qq = b && b.quarters && b.quarters[q];
+        const total = qq ? (qq.total || 0) : 0;
+        if (!total) return 0;
+        const n = (sharers[k] && sharers[k].size) || 1;
+        return total / n;
+      };
+      // Shared seats produce fractions; show at most one decimal and never a trailing '.0'.
+      const seatFmt = (v) => (v == null ? null : (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1)));
       const joinOf = (rec) => joinByRec[rec] || { hc: 0, sc: 0 };
       const joinOfJob = (rec, jid) => joinByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
       const c = x => (x == null ? DASH : x);
@@ -763,12 +786,12 @@ export function initRecruiterFilters(data) {
         // Caption is derived from Goal MINUS Gap, never from the raw outcome. At pod level Gap is the sum of
         // each recruiter's shortfall, so a pod whose total output exceeds its total goal can still carry a real
         // gap — quoting the raw outcome there produced "2252 of 1313 · 81%", three numbers that disagree.
-        const done = v.aSc - v.gSc;
+        const done = Math.round(v.aSc - v.gSc);
         const cap = v.aSc > 0
-          ? (v.gSc === 0 ? `${v.aSc} of ${v.aSc} · goal met` : `${done} of ${v.aSc} · ${fill}%`)
+          ? (v.gSc === 0 ? `${Math.round(v.aSc)} of ${Math.round(v.aSc)} · goal met` : `${done} of ${Math.round(v.aSc)} · ${fill}%`)
           : 'no goal set';
         return `<td class="score gapcell"><span class="gapwrap"><i class="${cls}" style="width:${fill}%"></i>`
-          + `<span class="${v.gSc === 0 ? 'zero' : ''}">${v.gSc}</span></span>`
+          + `<span class="${v.gSc === 0 ? 'zero' : ''}">${Math.round(v.gSc)}</span></span>`
           + `<span class="sublab">${cap}</span></td>`;
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
@@ -781,19 +804,26 @@ export function initRecruiterFilters(data) {
 
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
-        return `<td${w}>${c(v.aHC)}</td><td class="score">${c(v.aSc)}</td>`      // Goal HC / Score
+        return `<td${w}>${c(seatFmt(v.aHC))}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
           + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
           + `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`         // Joined (Sales) / Offered (Non-Sales)
           + (isSales ? '' : `<td${w}>${c(v.jHC)}</td><td class="score">${c(v.jSc)}</td>`)  // Non-Sales: Joined total
           + `<td>${c(v.jpHC)}</td><td class="score">${c(v.jpSc)}</td>`           // Joining Pending
-          + `<td${w}>${c(v.gHC)}</td>` + gapCell(v)                              // Gap HC / Score + bar
+          + `<td${w}>${c(seatFmt(v.gHC))}</td>` + gapCell(v)                     // Gap HC / Score + bar
           + utilCell(v);                                                          // Capacity Utilisation
       };
 
       const recFulfil = (r) => {
-        // Goal is still the un-dated assignment list — see the note above the table. Only the OUTCOME is dated.
+        // Goal = seats OPENED IN THE SELECTED QUARTER on the jobs this recruiter works, not one point per job
+        // they have ever touched. Counting one per job made Goal a lifetime list under a quarter heading:
+        // Deepti Leslie read a Goal of 19 for Q3 when only 3 of her 19 jobs had a Q3 opening at all.
+        // ⚠ A job worked by two recruiters counts its seats for both — same attribution as before, but now
+        // it is seats being duplicated rather than a flat 1, so pod totals overstate where jobs are shared.
         let aHC = 0, aSc = 0;
-        (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); aHC += 1; aSc += sc; });
+        (r.byJob || []).forEach(bj => {
+          const seats = seatsOf(bj.jobId); if (!seats) return;
+          const sc = scoreForRole(jobMeta(bj), q); aHC += seats; aSc += seats * sc;
+        });
         const o = outOf(r.name), jn = joinOf(r.name);
         const capSc = capacityOf(r.name, q) || 0;
         return { aHC, aSc, capSc, xHC: o.hc, xSc: o.sc, jHC: jn.hc, jSc: jn.sc,
@@ -824,8 +854,11 @@ export function initRecruiterFilters(data) {
               const m = jobMeta(bj), sc = scoreForRole(m, q);
               const jo = outOfJob(r.name, bj.jobId);   // dated, same basis as the recruiter row above
               const jj = joinOfJob(r.name, bj.jobId);
-              const jv = { aHC: 1, aSc: sc, capSc: null, xHC: jo.hc, xSc: jo.sc, jHC: jj.hc, jSc: jj.sc, jpHC: null, jpSc: null,
-                           gHC: Math.max(0, 1 - jo.hc), gSc: Math.max(0, sc - jo.sc) };
+              const seats = seatsOf(bj.jobId);
+              // A job with no seats this quarter and nothing delivered on it is not this quarter's work.
+              if (!seats && !jo.hc && !jj.hc) return;
+              const jv = { aHC: seats, aSc: seats * sc, capSc: null, xHC: jo.hc, xSc: jo.sc, jHC: jj.hc, jSc: jj.sc, jpHC: null, jpSc: null,
+                           gHC: Math.max(0, seats - jo.hc), gSc: Math.max(0, seats * sc - jo.sc) };
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
             });
