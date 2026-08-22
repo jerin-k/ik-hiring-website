@@ -17,6 +17,7 @@ function resetAndRefreshNow() {
   Logger.log('Deleted ' + deleted + ' refreshDashboardData trigger(s); restored 2 daily (6AM/6PM) + 1 one-time now.');
 }
 
+
 // Stage-history accumulator runner. Same self-cleaning pattern as resetAndRefreshNow:
 // one-time triggers pile up and eventually hit Apps Script's per-script cap.
 function runStageHistoryOnce() {
