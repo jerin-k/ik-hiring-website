@@ -304,7 +304,7 @@ function fetchAndProcessOffers_(startTime, appMap) {
       // per-offer event for split-scoring (recruiter+sourcer) + the HM joining-pending table (startDate)
       events.push({ applicationId: o.applicationId, jobId8: (jobId || '').substring(0, 8), candidate: am.candidate || null,
         recruiter: rec || null, sourcer: src || null, decidedAt: (o.decidedAt || '').substring(0, 10),
-        startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null });
+        startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null, acceptanceStatus: o.acceptanceStatus || null });
     }
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
     if (cursor) Utilities.sleep(30);
@@ -565,15 +565,34 @@ function refreshDashboardData() {
   // Offer events enriched with job score-inputs (dept/level/complexity) — frontend does the 50/50 split-scoring.
   var jobBy8 = {}; for (var jk in jobLookup) jobBy8[jobLookup[jk].id.substring(0, 8)] = jobLookup[jk];
   var offerEvents = (offerResult.events || []).map(function (e) { var jd = jobBy8[e.jobId8] || null;
+    var amE = appResult.appMap[e.applicationId] || null;
     return { jobId8: e.jobId8, jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', level: jd ? jd.level : null, complexity: jd ? jd.complexity : null,
       recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted, joiningPending: e.joiningPending,
-      // Ashby's own offer status: Created | Extended | Accepted | Declined | Cancelled. This is what Drop needs.
-      // `accepted` cannot carry it, being just (status === 'Accepted'), so it lumps DECLINED together with
+      // DROP needs three things the events did not carry: the application's own status (a drop is an ARCHIVED
+      // application), the opening the offer was made against, and that opening's quarter.
+      // ⚠ The opening link here comes from the OFFER VERSION (o.latestVersion.openingId), which is a historical
+      // snapshot and survives archiving. Do NOT try to read it off the application: Ashby CLEARS
+      // application.opening the moment an application is archived (measured: Hired 1879 / Active 25 /
+      // Archived 0 across all six opening statuses), so an application-side link is empty for every drop.
+      appStatus: amE ? (amE.status || null) : null,
+      openingId: e.offerOpeningId || null,
+      openingQuarter: null,   // stamped below, once openQuarterOf_ exists
+      // ⚠ An earlier note here called Created|Extended|Accepted|Declined|Cancelled the offerStatus enum.
+      // It is actually the acceptanceStatus enum - see the corrected pair below. `accepted` cannot carry the
+      // drop signal either, being just (status === 'Accepted'), so it lumps DECLINED together with
       // NOT-YET-DECIDED. ⚠ Drop is NOT computable from stage history: archived candidates never enter
       // scoped_apps.json, because that list is gated on reachedScreening and an archived candidate's current
       // stage title is 'Archived', which STAGE_KEY_MAP does not map. dropByRecruiterJobQ in the rollups is a
       // dead end from that attempt and always emits {} - ignore it.
-      offerStatus: e.offerStatus || null }; });
+      // Two DIFFERENT Ashby fields, confirmed against the offer.list reference 2026-08-22:
+      //   offerStatus      (offerProcessStatus)    = WaitingOnApprovalStart | WaitingOnOfferApproval |
+      //                    WaitingOnApprovalDefinition | WaitingOnCandidateResponse | CandidateRejected |
+      //                    CandidateAccepted | OfferCancelled
+      //   acceptanceStatus (offerAcceptanceStatus) = Accepted | Declined | Pending | Created | Cancelled
+      // 'Declined' belongs to acceptanceStatus, NOT offerStatus — that mix-up is why matching offerStatus
+      // against 'Declined' returned zero. Both are emitted so a drop can be split into candidate-declined
+      // vs company-cancelled without another pipeline run.
+      offerStatus: e.offerStatus || null, acceptanceStatus: e.acceptanceStatus || null }; });
   // ---- #53 BROAD Joining-Pending cases: Ref Check / Documentation / Offer ----
   var OFFER_SUBSTAGE_ = { 'WaitingOnApprovalStart':'Offer Created', 'WaitingOnApprovalDefinition':'Offer Created', 'WaitingOnOfferApproval':'Offer Created', 'WaitingOnCandidateResponse':'Offer Sent', 'CandidateAccepted':'Offer Accepted' };
   var PRE_OFFER_SUBSTAGE_ = { 'Reference Check':'Ref Check', 'Document Submission':'Documentation' };
@@ -583,6 +602,9 @@ function refreshDashboardData() {
     var dd = new Date(iso); if (isNaN(dd.getTime())) return null;
     return dd.getUTCFullYear() + '-Q' + (Math.floor(dd.getUTCMonth() / 3) + 1);
   };
+  // offerEvents is a 1:1 map of offerResult.events, so index i lines up. Stamped here rather than inside the
+  // map above because openQuarterOf_ is a var-assigned function and is not defined yet at that point.
+  offerEvents.forEach(function (ev, i) { ev.openingQuarter = openQuarterOf_(offerResult.events[i].offerOpeningId); });
   var jpCaseByApp_ = {};
   offerResult.events.forEach(function(e) {
     var sub3 = OFFER_SUBSTAGE_[e.offerStatus || ''] || null;
