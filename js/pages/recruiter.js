@@ -301,8 +301,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Offers</th><th rowspan="2" class="stage-hdr">Capacity — Offers<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Offers</th><th rowspan="2" class="stage-hdr">Capacity — Offers<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joined — Total</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
@@ -713,7 +713,7 @@ export function initRecruiterFilters(data) {
     function fulfilRows(gs, mode) {
       const q = selQuarter();
       const isSales = mode === 'hire';
-      const ncol = 11;
+      const ncol = isSales ? 11 : 13;
 
       // 🚨 THE OUTCOME IS DATED FROM offerEvents, NOT FROM byJob (fixed 2026-08-22).
       // recruiters[].byJob carries {jobId,title,department,total,offer,hired} and NO date of any kind, so
@@ -737,6 +737,21 @@ export function initRecruiterFilters(data) {
       });
       const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0 };
       const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
+
+      // Non-Sales also shows Joined · total — actual joiners, dated by START date, the same basis Sales uses.
+      // Its two sub-columns (this-quarter vs later-quarter opening) split THIS number once offers carry an
+      // opening; until then the total stands on its own rather than the column sitting empty.
+      const joinByRec = {}, joinByRecJob = {};
+      if (!isSales) (data.offerEvents || []).forEach(e => {
+        const rec = e.recruiter; if (!rec || !e.accepted) return;
+        if (qOf(e.startDate) !== q) return;
+        const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+        const a = joinByRec[rec] || (joinByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
+        const jk = rec + '|' + (e.jobId8 || '');
+        const b = joinByRecJob[jk] || (joinByRecJob[jk] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
+      });
+      const joinOf = (rec) => joinByRec[rec] || { hc: 0, sc: 0 };
+      const joinOfJob = (rec, jid) => joinByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
       const c = x => (x == null ? DASH : x);
       const pctOf = (num, den) => (den > 0 ? Math.round((num / den) * 100) : null);
 
@@ -769,6 +784,7 @@ export function initRecruiterFilters(data) {
         return `<td${w}>${c(v.aHC)}</td><td class="score">${c(v.aSc)}</td>`      // Goal HC / Score
           + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
           + `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`         // Joined (Sales) / Offered (Non-Sales)
+          + (isSales ? '' : `<td${w}>${c(v.jHC)}</td><td class="score">${c(v.jSc)}</td>`)  // Non-Sales: Joined total
           + `<td>${c(v.jpHC)}</td><td class="score">${c(v.jpSc)}</td>`           // Joining Pending
           + `<td${w}>${c(v.gHC)}</td>` + gapCell(v)                              // Gap HC / Score + bar
           + utilCell(v);                                                          // Capacity Utilisation
@@ -778,9 +794,10 @@ export function initRecruiterFilters(data) {
         // Goal is still the un-dated assignment list — see the note above the table. Only the OUTCOME is dated.
         let aHC = 0, aSc = 0;
         (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); aHC += 1; aSc += sc; });
-        const o = outOf(r.name);
+        const o = outOf(r.name), jn = joinOf(r.name);
         const capSc = capacityOf(r.name, q) || 0;
-        return { aHC, aSc, capSc, xHC: o.hc, xSc: o.sc, jpHC: (r.joiningPending || 0), jpSc: null,
+        return { aHC, aSc, capSc, xHC: o.hc, xSc: o.sc, jHC: jn.hc, jSc: jn.sc,
+                 jpHC: (r.joiningPending || 0), jpSc: null,
                  gHC: Math.max(0, aHC - o.hc), gSc: Math.max(0, aSc - o.sc) };
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
@@ -789,10 +806,10 @@ export function initRecruiterFilters(data) {
 
       let html = '';
       gs.forEach((G, pi) => {
-        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, jpHC: 0, jpSc: null, gHC: 0, gSc: 0 };
+        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, jHC: 0, jSc: 0, jpHC: 0, jpSc: null, gHC: 0, gSc: 0 };
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
-          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'jpHC', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
+          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'jHC', 'jSc', 'jpHC', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -806,7 +823,8 @@ export function initRecruiterFilters(data) {
             jobs.forEach(bj => {
               const m = jobMeta(bj), sc = scoreForRole(m, q);
               const jo = outOfJob(r.name, bj.jobId);   // dated, same basis as the recruiter row above
-              const jv = { aHC: 1, aSc: sc, capSc: null, xHC: jo.hc, xSc: jo.sc, jpHC: null, jpSc: null,
+              const jj = joinOfJob(r.name, bj.jobId);
+              const jv = { aHC: 1, aSc: sc, capSc: null, xHC: jo.hc, xSc: jo.sc, jHC: jj.hc, jSc: jj.sc, jpHC: null, jpSc: null,
                            gHC: Math.max(0, 1 - jo.hc), gSc: Math.max(0, sc - jo.sc) };
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
