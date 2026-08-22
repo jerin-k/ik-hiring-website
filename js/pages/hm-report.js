@@ -175,11 +175,14 @@ export function renderHmReport(data) {
       .hm-subtab:hover { color:var(--text); }
       .hm-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
 
-      /* even, compact numeric columns for the Department Summary table */
-      .hm-report .hm-summary { width:auto; min-width:min(100%,720px); }
-      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:340px; }
+      /* Department Summary: run edge to edge like every other table.
+         width:auto used to size the table to its content, which left a wide dead strip on the right of the
+         card. The name column takes the slack; the numeric columns stay compact and right-aligned so the
+         digits still line up. */
+      .hm-report .hm-summary { width:100%; min-width:720px; table-layout:fixed; }
+      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:auto; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
-        text-align:right; width:96px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        text-align:right; width:130px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 
       /* tidy, evenly spaced stage checkbox strip */
       .hm-stages { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:2px 0 14px; }
