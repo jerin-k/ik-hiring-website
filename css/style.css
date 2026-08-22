@@ -629,3 +629,18 @@ td.heat.none { background: var(--border-light); color: var(--muted); font-weight
 .heat-legend .sw.hi   { background: color-mix(in srgb, var(--green) 30%, transparent); }
 .heat-legend .sw.none { background: var(--border-light); border: 1px solid var(--border); }
 .heat-legend .leg-note { margin-left: auto; font-style: italic; }
+
+/* ===== #15 (2026-08-23): long definition notes fold away =====
+   The Fulfilment note is a dense paragraph of definitions people need once and then never again. Collapsed by
+   default so the table starts near the top of the panel; the marker stays visible so it is clearly there. */
+details.defs { margin: 0 0 12px; }
+details.defs > summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+  padding: 4px 0;
+}
+details.defs > summary::-webkit-details-marker { display: none; }
+details.defs > summary::before { content: '▸'; font-size: 10px; transition: transform .12s ease; }
+details.defs[open] > summary::before { transform: rotate(90deg); }
+details.defs > summary:hover { color: var(--text); }
+details.defs > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }

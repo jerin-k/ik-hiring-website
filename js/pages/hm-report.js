@@ -538,7 +538,7 @@ export function initHmFilters(data) {
           datasets: [
             { label: 'Joined', data: cDepts.map(d => groups[d].joined), backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.7 },
             { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Missed', data: cDepts.map(d => groups[d].missed), backgroundColor: '#be123c', borderRadius: 4, barPercentage: 0.7 }
+            { label: 'Missed', data: cDepts.map(d => groups[d].missed), backgroundColor: '#b45a72', borderRadius: 4, barPercentage: 0.7 }   // pastel --red, not the pre-2026-08-09 crimson
           ]
         },
         options: {

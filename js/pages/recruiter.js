@@ -235,7 +235,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
-      <div class="fchip"><label class="opt" title="Inactive = no longer holds an elevated recruiter seat in Ashby. Their past offers and hires still count, so this stays ON by default - untick it to see only current recruiters."><input type="checkbox" id="recInclInactive" checked> Include past recruiters</label></div>
+      <div class="fchip"><label class="opt" title="Past recruiter = no longer holds an elevated recruiter seat in Ashby. Their offers and hires still count toward history; tick this to bring them back into the view."><input type="checkbox" id="recInclInactive"> Include past recruiters</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
@@ -293,10 +293,13 @@ export function renderRecruiter(data) {
       <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = min(Capacity, Assigned Score)</strong> — Capacity is set in <strong>Metric Configuration</strong> (per quarter).</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
-      <p class="sub-note"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
+      <details class="defs">
+        <summary>How these columns are calculated</summary>
+        <p class="sub-note" style="margin:8px 0 0"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
       <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> (Sales) counts candidates whose <strong>start date</strong> falls in the quarter; <strong>Offered</strong> (Non-Sales) counts offers <strong>decided</strong> in the quarter — both from per-candidate offer records, so they follow the quarter selector.
       <strong>Goal</strong> counts the seats <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − outcome, and <strong>Capacity Utilisation</strong> = outcome ÷ Capacity; all three sides are now quarter-scoped. Where several recruiters work the same job, its seats are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
       <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. Each drop is counted in the quarter the <strong>work was live</strong> — the quarter the candidate first entered Ref Check, Documentation or Offer — not the quarter the record was finally closed. Ashby cannot tell us which opening a drop was against (the link is absent on 91% of offers and on every archived one), so this is a <strong>close approximation, not the opening itself</strong>. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
+      </details>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
       <div class="scroll-table"><table class="metrics">
@@ -628,9 +631,13 @@ export function initRecruiterFilters(data) {
     // deliberately ignores this and always lists everyone; that tab exists to show the split.
     const inclInactive = document.getElementById('recInclInactive')?.checked;
     return allRecs.filter(r => {
+      // #18 (2026-08-23): "Unassigned" is not a recruiter — it is every candidate nobody is tagged on. It was
+      // appearing as a row and a bar in every table and chart, where it reads like a person with a workload.
+      // It already has its own Data Hygiene tab, which builds its own list and is untouched by this.
+      if (r.name === 'Unassigned') return false;
       if (hideZero && (r.total || 0) === 0) return false;
-      // Default is ON: 15 of 27 recruiters lost their Ashby seat, and hiding them would wipe most of the
-      // Q1/Q2 history from every sub-tab. Their past offers and hires are still real work that happened.
+      // #14 (2026-08-23): default is now OFF. Past recruiters keep their history in the data and still score;
+      // they just don't clutter the working view unless asked for.
       if (!inclInactive && isRecInactive(r)) return false;
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(podOf(r.name, q))) return false;
@@ -1412,6 +1419,8 @@ export function initRecruiterFilters(data) {
   }
 
   // ===== charts (standard palette + square legends) =====
+  // Pastel palette, applied site-wide 2026-08-09. blue=True Blue, green=Blue Munsell (positive/achieved),
+  // cyan=Cerulean, amber=Fairy Tale (used for shortfall/gap), slate=Cool Gray. Do not hardcode off-palette hexes.
   const C = { blue: '#4E6BA6', green: '#398AA2', cyan: '#1E7590', amber: '#D8B5BE', slate: '#938FB8' };
   const legendSquare = () => ({ position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 16, font: { size: 12 } } });
   const gridY = { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } };
@@ -1579,7 +1588,9 @@ export function initRecruiterFilters(data) {
         seg('Online Assessment', clOA, C.cyan, 'OA'), seg('_oaRem', remOA, '#A9CAD6', 'OA'),
         seg('R1 (reached)', A.r1, C.green, 'R1')] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 28 } },
-        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, filter: (item, data) => !(data.datasets[item.datasetIndex].label || '').startsWith('_') } } },
+        plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
+          // + the Target marker at the bar end); the global plugins would print both a second time
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, filter: (item, data) => !(data.datasets[item.datasetIndex].label || '').startsWith('_') } } },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Count of Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
@@ -1620,7 +1631,9 @@ export function initRecruiterFilters(data) {
         { label: 'Hired', data: hired, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
         { label: '_rem', data: rem, backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 34 } },
-        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, generateLabels: () => [{ text: 'Hired', fillStyle: C.green, strokeStyle: C.green, pointStyle: 'rect' }, { text: 'Offered (full bar)', fillStyle: '#B4D3DC', strokeStyle: '#B4D3DC', pointStyle: 'rect' }] } } },
+        plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
+          // + the Target marker at the bar end); the global plugins would print both a second time
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, generateLabels: () => [{ text: 'Hired', fillStyle: C.green, strokeStyle: C.green, pointStyle: 'rect' }, { text: 'Offered (full bar)', fillStyle: '#B4D3DC', strokeStyle: '#B4D3DC', pointStyle: 'rect' }] } } },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
@@ -1668,10 +1681,12 @@ export function initRecruiterFilters(data) {
     };
     recFulfilChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: '#B4D3DC', stack: 'f', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Gap to Target (Score)', data: recs.map(r => r.gap), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
+        { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Gap to Target (Score)', data: recs.map(r => r.gap), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 60 } },
-        plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
+        plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
+          // + the Target marker at the bar end); the global plugins would print both a second time
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
