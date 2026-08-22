@@ -2,12 +2,19 @@
 // Source: Ashby → Admin → Organization Setup → Departments & Teams
 // (app.ashbyhq.com/admin/organizational-settings/teams), captured 2026-08-05.
 //
-// The data pipeline (DataRefresh.gs) currently resolves each job's `departmentId`
-// via /department.list and copies that single value into BOTH `department` and `team`.
-// That value is the LEAF (team) node name — so this tree lets us recover the true
-// parent department. The permanent fix is for the pipeline to read Ashby's department
-// parent hierarchy and emit separate department/team fields; until then this map is the
-// single source of truth for the frontend. Keep it in sync with Ashby.
+// ⚠ STATUS 2026-08-22 — THE PIPELINE BUG THIS TREE EXISTED TO PATCH IS FIXED.
+// DataRefresh.gs builds a departmentId -> {name, parentId} map from /department.list and
+// walks it up (`topDept`), emitting the true PARENT as `department` and the LEAF as `team`.
+// Measured on live data: 54 of 118 jobs now carry a department different from their team,
+// and resolveDeptTeam() rewrites ZERO of them — every value already arrives correct.
+//
+// So this tree is NO LONGER load-bearing for department resolution. It is kept for:
+//   1. the read-only "Departments & Teams" reference table on the Admin page, and
+//   2. a safety net for older cached dashboard.json files that predate the pipeline fix.
+// Verified 2026-08-22: all 16 departments present, no missing teams vs live data.
+// resolveDeptTeam() on an already-correct parent name returns it unchanged, so calls to it
+// are harmless — but do NOT reintroduce it as "the way" to get a department. Read
+// job.department straight from the data. Keep this tree in sync with Ashby regardless.
 
 export const DEPT_TREE = {
   'B2B': ['B2B Operations'],
