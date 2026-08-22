@@ -302,10 +302,27 @@ function fetchAndProcessOffers_(startTime, appMap) {
       var pending = accepted && startMs > nowMs;
       if (jobId) { var bj = byJob[jobId] || (byJob[jobId] = { offered:0, accepted:0, joiningPending:0 }); bj.offered++; if (accepted) bj.accepted++; if (pending) bj.joiningPending++; }
       if (rec)   { var br = byRecruiter[rec] || (byRecruiter[rec] = { offered:0, accepted:0, joiningPending:0 }); br.offered++; if (accepted) br.accepted++; if (pending) br.joiningPending++; }
+      // Offer VERSION history. offer.list returns a `versions` array (confirmed against the offer.list
+      // reference 2026-08-22), each version carrying its own createdAt and openingId. Two uses:
+      //  (a) the EARLIEST version's createdAt is when the offer was FIRST created - the proxy for "entered
+      //      the Offer stage". That is the anchor for attributing a drop to the quarter the work happened
+      //      in, rather than the quarter somebody got round to archiving the record.
+      //  (b) an earlier version may still carry the openingId the latest one lost. If it does, we recover
+      //      the TRUE opening instead of a proxy. verN is emitted so an EMPTY versions array can be told
+      //      apart from an ABSENT one - without it, "0 recovered" would be unreadable.
+      var vers = (o.versions && o.versions.length) ? o.versions : (o.latestVersion ? [o.latestVersion] : []);
+      var firstCreated = null, anyOpening = null;
+      for (var vi = 0; vi < vers.length; vi++) {
+        var vv = vers[vi]; if (!vv) continue;
+        if (vv.createdAt && (!firstCreated || String(vv.createdAt) < String(firstCreated))) firstCreated = vv.createdAt;
+        if (vv.openingId && !anyOpening) anyOpening = vv.openingId;
+      }
       // per-offer event for split-scoring (recruiter+sourcer) + the HM joining-pending table (startDate)
       events.push({ applicationId: o.applicationId, jobId8: (jobId || '').substring(0, 8), candidate: am.candidate || null,
         recruiter: rec || null, sourcer: src || null, decidedAt: (o.decidedAt || '').substring(0, 10),
-        startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null, acceptanceStatus: o.acceptanceStatus || null });
+        startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null, acceptanceStatus: o.acceptanceStatus || null,
+        offerCreatedAt: firstCreated ? String(firstCreated).substring(0, 10) : null,
+        offerOpeningIdAny: anyOpening || null, verN: vers.length });
     }
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
     if (cursor) Utilities.sleep(30);
@@ -598,7 +615,9 @@ function refreshDashboardData() {
       // 'Declined' belongs to acceptanceStatus, NOT offerStatus — that mix-up is why matching offerStatus
       // against 'Declined' returned zero. Both are emitted so a drop can be split into candidate-declined
       // vs company-cancelled without another pipeline run.
-      offerStatus: e.offerStatus || null, acceptanceStatus: e.acceptanceStatus || null }; });
+      offerStatus: e.offerStatus || null, acceptanceStatus: e.acceptanceStatus || null,
+      offerCreatedAt: e.offerCreatedAt || null, verN: e.verN || 0,
+      openingIdAny: e.offerOpeningIdAny || null, openingQuarterAny: null }; });
   // ---- #53 BROAD Joining-Pending cases: Ref Check / Documentation / Offer ----
   var OFFER_SUBSTAGE_ = { 'WaitingOnApprovalStart':'Offer Created', 'WaitingOnApprovalDefinition':'Offer Created', 'WaitingOnOfferApproval':'Offer Created', 'WaitingOnCandidateResponse':'Offer Sent', 'CandidateAccepted':'Offer Accepted' };
   var PRE_OFFER_SUBSTAGE_ = { 'Reference Check':'Ref Check', 'Document Submission':'Documentation' };
@@ -610,7 +629,9 @@ function refreshDashboardData() {
   };
   // offerEvents is a 1:1 map of offerResult.events, so index i lines up. Stamped here rather than inside the
   // map above because openQuarterOf_ is a var-assigned function and is not defined yet at that point.
-  offerEvents.forEach(function (ev, i) { ev.openingQuarter = openQuarterOf_(offerResult.events[i].offerOpeningId); });
+  offerEvents.forEach(function (ev, i) { var se = offerResult.events[i];
+    ev.openingQuarter = openQuarterOf_(se.offerOpeningId);
+    ev.openingQuarterAny = openQuarterOf_(se.offerOpeningIdAny); });
   var jpCaseByApp_ = {};
   offerResult.events.forEach(function(e) {
     var sub3 = OFFER_SUBSTAGE_[e.offerStatus || ''] || null;
