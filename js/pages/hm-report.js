@@ -183,6 +183,8 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:auto; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
         text-align:right; width:130px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+      /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:170px; }
 
       /* tidy, evenly spaced stage checkbox strip */
       .hm-stages { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:2px 0 14px; }
@@ -225,7 +227,7 @@ export function renderHmReport(data) {
         <div class="ms" id="msHm1Job"></div>
       </div>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total Positions</th><th>Joined</th><th>Open</th><th>Missed</th><th>Joining Pending</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Delta</th><th>Missed</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
 
@@ -466,7 +468,19 @@ export function initHmFilters(data) {
       <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jp}</div><div class="sub">offer out, opening linked</div></div>
     `;
 
-    const metrics = (t, jn, op, ms, jp) => `<td style="font-weight:600">${t}</td><td class="good">${jn}</td><td style="color:var(--blue)">${op}</td><td style="color:var(--red)">${ms}</td><td style="color:var(--orange)">${jp}</td>`;
+    // Total Openings = Joined + Joining Pending + Delta + Missed, so every opening sits in exactly one bucket.
+    // Delta is what is left with nothing in flight: the old "Open" column minus the ones that already have an
+    // offer out. It carries the bar, filled by (Total - Delta) / Total, so bar and number can never disagree.
+    const metrics = (t, jn, op, ms, jp) => {
+      const delta = Math.max(0, op - jp);
+      const fill = t > 0 ? Math.max(0, Math.min(100, Math.round(((t - delta) / t) * 100))) : 0;
+      const cls = delta === 0 ? 'done' : (fill < 75 ? 'short' : '');
+      const cap = t > 0 ? `${t - delta} of ${t} · ${fill}%` : '—';
+      return `<td style="font-weight:600">${t}</td><td class="good">${jn}</td><td style="color:var(--orange)">${jp}</td>`
+        + `<td class="gapcell"><span class="gapwrap"><i class="${cls}" style="width:${fill}%"></i>`
+        + `<span class="${delta === 0 ? 'zero' : ''}">${delta}</span></span><span class="sublab">${cap}</span></td>`
+        + `<td style="color:var(--red)">${ms}</td>`;
+    };
     let html = '';
     deptArr.forEach((D, gi) => {
       const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
@@ -719,7 +733,11 @@ export function initHmFilters(data) {
     // so they are easy to spot and fix — that is the point of the list.
     // Note this is a wider population than the "Joining Pending" metric, which counts only
     // the linked ones. The caption spells the difference out.
-    let list = (data.joiningPendingCases || []).map(c => ({
+    // LINKED ONLY (2026-08-22). The list used to be deliberately broad — everyone in Ref Check, Documentation
+    // or Offer whether or not their offer was tied to an opening — which made it disagree with the Joining
+    // Pending card above it (166 rows against a card reading 21). The unlinked ones are a data-hygiene problem,
+    // not a joining-pending one, and they already have their own tab there. Table and card now match.
+    let list = (data.joiningPendingCases || []).filter(c => c.linked).map(c => ({
       ...c,
       // job/doj were renamed from jobTitle/startDate when the cases table went broad
       job: c.job || c.jobTitle || '',
@@ -737,14 +755,16 @@ export function initHmFilters(data) {
 
     const capEl = document.getElementById('hmJPCaption');
     if (capEl) {
-      const linked = list.filter(c => c.linked).length;
+      // Every row here is linked by construction now, so report the count and point at where the rest live.
+      const unlinkedAll = (data.joiningPendingCases || []).filter(c => !c.linked).length;
       capEl.innerHTML = list.length
-        ? `Everyone currently in closing: <strong>${list.length}</strong> — <strong>${linked}</strong> with an opening attached, <strong>${list.length - linked}</strong> still to attach.`
+        ? `<strong>${list.length}</strong> in Ref Check, Documentation or Offer with an opening attached.`
+          + (unlinkedAll ? ` A further <strong>${unlinkedAll}</strong> are in closing with no opening attached — they are a linking problem, not a joining one, and are listed under <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.` : '')
         : '';
     }
 
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody with an opening attached is in Ref Check, Documentation or Offer for this filter. Unlinked cases appear in Data Hygiene.</td></tr>`;
       return;
     }
     // Newest opening quarter first, unlinked rows last (they have no quarter to sort on).
