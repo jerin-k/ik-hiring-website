@@ -502,8 +502,9 @@ export function initHmFilters(data) {
       return `<td style="font-weight:600">${v.total}</td><td class="good">${v.joined}</td>`
         + `<td style="color:var(--orange)">${v.jpP || `<span class="zero">0</span>`}</td>`
         + `<td class="gapcell">${dropCell}</td>`
-        + `<td class="gapcell"><span class="gapwrap"><i class="gap" style="width:${gapPct}%"></i>`
-        + `<span class="${delta === 0 ? 'zero' : ''}">${delta}</span></span><span class="sublab">${cap}</span></td>`
+        + `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
+        + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span>`
+        + `<span class="sublab">${cap}</span></td>`
         + `<td style="color:var(--red)">${v.missed}</td>`;
     };
     let html = '';

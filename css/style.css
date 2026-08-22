@@ -578,7 +578,18 @@ td.gapcell { min-width: 150px; }
 /* #1 Option A (2026-08-22): on HM Positions the bar now fills with the GAP, not the coverage, so the bar
    and the bold number beside it finally encode the same thing. Own class — Recruiter Fulfilment keeps the
    accent/done/short bar above, where the number IS the covered figure and the old sense is correct. */
-.gapwrap i.gap { background: color-mix(in srgb, var(--red) 26%, transparent); }
+/* #1 Option A (2026-08-23): the Delta cell is a SLIM TRACK with the number beside it, not the filled box the
+   Recruiter tab uses. The bar measures the SHORTFALL, so bar and number finally say the same thing — the old
+   cell filled with coverage while the bold number counted the gap, and a nearly-full box could sit beside a 7.
+   .gapwrap above is untouched: on Recruiter Fulfilment the number IS the covered figure and that sense is right. */
+.deltacell { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+/* Track uses --border, not --border-light: department rows are themselves --border-light, so a lighter
+   track vanished on exactly the rows that summarise a whole department. */
+.deltacell .track { width: 64px; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; flex: none; }
+.deltacell .track i { display: block; height: 100%; background: var(--red); opacity: .75; }
+.deltacell .dnum { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; min-width: 18px; text-align: right; }
+.deltacell .dnum.high { color: var(--red); }
+.deltacell .dnum.none { color: var(--green); }
 .gapwrap > span { position: relative; font-weight: 600; color: var(--text); }
 .gapwrap > span.zero { color: var(--green); }
 .sublab { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: .02em; white-space: nowrap; }
