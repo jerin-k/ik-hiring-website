@@ -516,12 +516,24 @@ function refreshDashboardData() {
   jobsList.sort(function(a, b) { return b.applied - a.applied; });
 
   var recruitersList = [];
+  var recruitersWithoutUserId = [], nameDrift = [];
   for (var rn in appResult.recruiterCounts) { var rc = appResult.recruiterCounts[rn]; if (rc.total <= 0) continue;
     var oR = offerResult.byRecruiter[rn]; if (oR) { rc.offeredReal = oR.offered; rc.joiningPending = jpByRecruiter[rn] || 0; rc.accepted = oR.accepted; }
     var bjArr = []; for (var bjid in rc.byJob) bjArr.push(rc.byJob[bjid]); rc.byJob = bjArr;
-    rc.isActive = (rn === 'Unassigned') ? true : (appResult.recruiterUserId[rn] ? (enabledById[appResult.recruiterUserId[rn]] !== false) : true);
+    // Identity is the Ashby USER RECORD, not the name string: isActive is a direct lookup of that user's
+    // isEnabled flag. When no Ashby user resolves we must NOT quietly report 'Active' - that hides a
+    // departed recruiter behind a guess, which is the same failure shape as the OA/feedback bugs. Record
+    // the gap (dataQuality.recruitersWithoutUserId) and set activeKnown false so the UI shows 'unknown'.
+    var rUid = appResult.recruiterUserId[rn] || null;
+    rc.userId = rUid;
+    rc.activeKnown = (rn === 'Unassigned') ? true : !!rUid;
+    rc.isActive = (rn === 'Unassigned') ? true : (rUid ? (enabledById[rUid] !== false) : true);
+    if (rn !== 'Unassigned' && !rUid) recruitersWithoutUserId.push(rn);
+    if (rUid && userNameById[rUid] && userNameById[rUid] !== rn) nameDrift.push(rn + ' -> ' + userNameById[rUid]);
     recruitersList.push(rc); }
   recruitersList.sort(function(a, b) { return b.total - a.total; });
+  if (nameDrift.length) Logger.log('WARN recruiter name differs from Ashby user record: ' + nameDrift.join(' | '));
+  if (recruitersWithoutUserId.length) Logger.log('WARN recruiters with no Ashby user resolved (status shown as unknown): ' + recruitersWithoutUserId.join(', '));
 
   var sourcesList = [];
   for (var sn in appResult.sourceCounts) if (appResult.sourceCounts[sn].candidates > 0) sourcesList.push(appResult.sourceCounts[sn]);
@@ -614,7 +626,7 @@ function refreshDashboardData() {
   });
   Logger.log('offer link gaps: ' + offerLinkGaps.length + ' | needs fix: ' + offerLinkGaps.filter(function(r) { return r.needsFix; }).length);
   var uaRow = appResult.recruiterCounts['Unassigned'];
-  var dataQuality = { unassigned: appResult.unassignedCases, unassignedTotal: uaRow ? uaRow.total : 0, offerMissingLink: offerMissingLink, openingsNoOpenedAt: openingsNoOpenedAt, excludedAsRecruiter: recruitersList.filter(function (r) { return r.name === 'G Darshan' && (r.total || 0) > 0; }).map(function (r) { return r.name; }),
+  var dataQuality = { recruitersWithoutUserId: recruitersWithoutUserId, unassigned: appResult.unassignedCases, unassignedTotal: uaRow ? uaRow.total : 0, offerMissingLink: offerMissingLink, openingsNoOpenedAt: openingsNoOpenedAt, excludedAsRecruiter: recruitersList.filter(function (r) { return r.name === 'G Darshan' && (r.total || 0) > 0; }).map(function (r) { return r.name; }),
     multiRecruiter: appResult.anomalies.multiRecruiter.slice(0, 200), multiSourcer: appResult.anomalies.multiSourcer.slice(0, 200),
     unmappedStages: appResult.unmappedStages || {} };
   Logger.log('ATTRIBUTION: recruiters(incl Unassigned)=' + recruitersList.length + ' | Unassigned total=' + dataQuality.unassignedTotal +
