@@ -180,7 +180,11 @@ function fetchAndProcessApps_(startTime, jobLookup) {
       if (htr.recruiters.length > 1) anomalies.multiRecruiter.push({ app: app.id, job8: (jobId || '').substring(0, 8), names: htr.recruiters.map(function (r) { return r.name; }) });
       if (htr.sourcers.length > 1) anomalies.multiSourcer.push({ app: app.id, job8: (jobId || '').substring(0, 8), names: htr.sourcers.map(function (r) { return r.name; }) });
       var candName = (app.candidate && (app.candidate.name || ((app.candidate.firstName || '') + ' ' + (app.candidate.lastName || '')).trim())) || null;
-      if (app.id) appMap[app.id] = { jobId: jobId, recruiter: recruiter, sourcer: sourcer, candidate: candName };
+      // primaryEmailAddress is already in the application.list payload (confirmed against the reference
+      // 2026-08-22). It is the ONLY reliable join key to the Hiring Tracker - names disagree constantly.
+      // 🚨 It must never reach dashboard.json; see the offer_contacts.json comment below.
+      var candEmail = (app.candidate && app.candidate.primaryEmailAddress && app.candidate.primaryEmailAddress.value) || null;
+      if (app.id) appMap[app.id] = { jobId: jobId, recruiter: recruiter, sourcer: sourcer, candidate: candName, email: candEmail };
       var jd = jobLookup[jobId];
       var stageName = app.currentInterviewStage ? app.currentInterviewStage.title : null;
       var stageKey = stageName ? (STAGE_KEY_MAP[stageName] || null) : null;
@@ -293,6 +297,7 @@ function fetchAndProcessOffers_(startTime, appMap) {
               am.stage = (a.currentInterviewStage && a.currentInterviewStage.title) || null;
               am.status = a.status || null;
               am.archivedAt = a.archivedAt || null;
+              am.email = (a.candidate && a.candidate.primaryEmailAddress && a.candidate.primaryEmailAddress.value) || null;
               appMap[o.applicationId] = am;
             recovered++;
           }
@@ -681,6 +686,23 @@ function refreshDashboardData() {
     ev.openingQuarter = openQuarterOf_(se.offerOpeningId);
     ev.openingQuarterAny = openQuarterOf_(se.offerOpeningIdAny);
     ev.attrQuarter = ev.openingQuarter || qOfDate_(ev.lateEntryAt) || qOfDate_(ev.archivedAt) || null; });
+  // ---- PRIVATE, DRIVE-ONLY: candidate contact details, for reconciling against the Hiring Tracker ----
+  // 🚨 NEVER put email into dashboard.json. That file is pushed to a PUBLIC GitHub repo, so an email in it
+  // becomes contactable personal data published on the open internet, permanently and indexably. This file
+  // is written to DRIVE ONLY - the same restricted place scoped_apps.json and stage_events.json already
+  // live - and is never pushed. Email is the only dependable join key to the tracker: candidate names
+  // disagree constantly (middle names, order flips), whereas the tracker has an email on 100% of the rows
+  // in scope. If a future change starts pushing this file, that is a personal-data incident, not a bug.
+  saveDriveJson_('offer_contacts.json', { generatedAt: new Date().toISOString(),
+    note: 'PRIVATE - contains candidate email addresses. Drive only. Never push to GitHub.',
+    rows: offerEvents.map(function (ev, oi2) {
+      var se2 = offerResult.events[oi2], am5 = appResult.appMap[se2.applicationId] || null;
+      return { applicationId: se2.applicationId, email: (am5 && am5.email) || null, candidate: ev.candidate,
+        jobTitle: ev.jobTitle, department: ev.department, decidedAt: ev.decidedAt, startDate: ev.startDate,
+        appStatus: ev.appStatus, archivedAt: ev.archivedAt, attrQuarter: ev.attrQuarter,
+        openingQuarter: ev.openingQuarter, offerStatus: ev.offerStatus, accepted: ev.accepted,
+        joiningPending: ev.joiningPending };
+    }) });
   var jpCaseByApp_ = {};
   offerResult.events.forEach(function(e) {
     var sub3 = OFFER_SUBSTAGE_[e.offerStatus || ''] || null;
