@@ -743,18 +743,9 @@ export function initRecruiterFilters(data) {
       //   Non-Sales → offers whose DECIDED date falls in the quarter (the offer was made)
       // Score comes from the event's own department/title/level/complexity, same grid as everywhere else.
       const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-      const outByRec = {}, outByRecJob = {};
-      (data.offerEvents || []).forEach(e => {
-        const rec = e.recruiter; if (!rec) return;
-        if (isSales && !e.accepted) return;
-        if (qOf(isSales ? e.startDate : e.decidedAt) !== q) return;
-        const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
-        const a = outByRec[rec] || (outByRec[rec] = { hc: 0, sc: 0 });
-        a.hc += 1; a.sc += sc;
-        const jk = rec + '|' + (e.jobId8 || '');
-        const b = outByRecJob[jk] || (outByRecJob[jk] = { hc: 0, sc: 0 });
-        b.hc += 1; b.sc += sc;
-      });
+      const OM = outcomeMaps(q);
+      const outByRec = isSales ? OM.sales : OM.nonSales;
+      const outByRecJob = isSales ? OM.salesJob : OM.nonSalesJob;
       const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0 };
       const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
 
@@ -999,6 +990,32 @@ export function initRecruiterFilters(data) {
 
   // Quarter keys the Year/Quarter selector covers; null = all-time. Distinct from selQuarter(), which always
   // resolves to ONE quarter for pod grouping and capacity even when the selector reads "All".
+  // ===== ONE definition of "outcome", used by the tables AND the chart (#22, 2026-08-23) =====
+  // The chart used to compute achieved from recruiters[].byJob, which carries NO date, so it showed a
+  // LIFETIME score under a quarter heading and disagreed with the table right beside it — Mahima Agarwal
+  // read 531 on the chart against her real Q3 figure. The tables were moved off byJob on 2026-08-22 for
+  // exactly this reason; the chart was missed. Both now call this, so they cannot drift apart again.
+  //   Sales     → accepted offers whose START DATE falls in the quarter (they actually joined)
+  //   Non-Sales → offers whose DECIDED date falls in the quarter (the offer was made)
+  function outcomeMaps(q) {
+    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const sales = {}, nonSales = {}, salesJob = {}, nonSalesJob = {};
+    (data.offerEvents || []).forEach(e => {
+      const rec = e.recruiter; if (!rec) return;
+      const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+      const jk = rec + '|' + (e.jobId8 || '');
+      if (e.accepted && qOf(e.startDate) === q) {
+        const a = sales[rec] || (sales[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
+        const aj = salesJob[jk] || (salesJob[jk] = { hc: 0, sc: 0 }); aj.hc += 1; aj.sc += sc;
+      }
+      if (qOf(e.decidedAt) === q) {
+        const b = nonSales[rec] || (nonSales[rec] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
+        const bj = nonSalesJob[jk] || (nonSalesJob[jk] = { hc: 0, sc: 0 }); bj.hc += 1; bj.sc += sc;
+      }
+    });
+    return { sales, nonSales, salesJob, nonSalesJob };
+  }
+
   function tisPeriod() {
     const ySel = document.getElementById('recVelYear');
     const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
@@ -1643,11 +1660,10 @@ export function initRecruiterFilters(data) {
     // Y = recruiter, X = Score. Target = Capacity (interim, until Assigned Score lands → then min(Cap,Assigned)).
     // Bar = Target; the Gap (shortfall to target) is the dark segment, Achieved the light. Labels on all.
     const q = selQuarter();
+    const OM = outcomeMaps(q);
     const recs = lastRecs.map(r => {
       const sales = isSalesPod(podOf(r.name, q));
-      let oSc = 0, hSc = 0;
-      (r.byJob || []).forEach(bj => { const sc = scoreForRole(jobMeta(bj), q); oSc += (bj.offer || 0) * sc; hSc += (bj.hired || 0) * sc; });
-      const achieved = sales ? hSc : oSc;
+      const achieved = Math.round(((sales ? OM.sales : OM.nonSales)[r.name] || { sc: 0 }).sc);
       const target = capacityOf(r.name, q);
       return { name: r.name, target, achieved, gap: Math.max(0, target - achieved) };
     }).filter(r => r.target > 0).sort((a, b) => b.target - a.target);
