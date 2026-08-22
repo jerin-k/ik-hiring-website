@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-13T05:17:20.070Z",
+  "updatedAt": "2026-08-22T06:44:21.293Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -13,22 +13,13 @@
       "role": "admin"
     },
     {
-      "email": "recruiter1@interviewkickstart.com",
-      "role": "restricted",
-      "isRecruiter": true,
+      "email": "gopu.nair@interviewkickstart.com",
+      "role": "full_access",
+      "tabs": [
+        "hm-report"
+      ],
       "departments": [],
       "teams": []
-    },
-    {
-      "email": "hm@interviewkickstart.com",
-      "role": "restricted",
-      "isRecruiter": false,
-      "departments": [
-        "Engineering"
-      ],
-      "teams": [
-        "Software Development"
-      ]
     }
   ]
 }
