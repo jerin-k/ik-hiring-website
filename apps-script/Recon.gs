@@ -18,6 +18,7 @@ function resetAndRefreshNow() {
 }
 
 
+
 // Stage-history accumulator runner. Same self-cleaning pattern as resetAndRefreshNow:
 // one-time triggers pile up and eventually hit Apps Script's per-script cap.
 function runStageHistoryOnce() {
