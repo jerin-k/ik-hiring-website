@@ -190,7 +190,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
       var stageKey = stageName ? (STAGE_KEY_MAP[stageName] || null) : null;
       if (stageName && !stageKey) unmappedStages[stageName] = (unmappedStages[stageName] || 0) + 1;
       var isHired = (app.status === 'Hired');
-      if (app.id && appMap[app.id]) { appMap[app.id].stage = stageName; appMap[app.id].status = app.status || null; appMap[app.id].archivedAt = app.archivedAt || null; }
+      if (app.id && appMap[app.id]) { appMap[app.id].stage = stageName; appMap[app.id].status = app.status || null; appMap[app.id].archivedAt = app.archivedAt || null; appMap[app.id].archiveReason = (app.archiveReason && app.archiveReason.text) || null; appMap[app.id].archiveReasonType = (app.archiveReason && app.archiveReason.reasonType) || null; }
       var updatedMs = app.updatedAt ? new Date(app.updatedAt).getTime() : createdMs;
 
       // Tag apps that reached screening+ (or hired) — the stage-history accumulator pulls listHistory for these.
@@ -297,6 +297,12 @@ function fetchAndProcessOffers_(startTime, appMap) {
               am.stage = (a.currentInterviewStage && a.currentInterviewStage.title) || null;
               am.status = a.status || null;
               am.archivedAt = a.archivedAt || null;
+              // The free-text reason actually chosen when the application was archived, plus its type
+              // (RejectedByCandidate | RejectedByOrg | Other). Verified present on 25/25 archived rows of
+              // application.list on 2026-08-22, so it costs no extra API call. This is the ONLY field that
+              // says WHY a drop happened - offerStatus only says CandidateRejected, and the two disagree.
+              am.archiveReason = (a.archiveReason && a.archiveReason.text) || null;
+              am.archiveReasonType = (a.archiveReason && a.archiveReason.reasonType) || null;
               am.email = (a.candidate && a.candidate.primaryEmailAddress && a.candidate.primaryEmailAddress.value) || null;
               appMap[o.applicationId] = am;
             recovered++;
@@ -639,6 +645,11 @@ function refreshDashboardData() {
       // so archivedAt is the only date that covers every drop. Confirmed against the application.list
       // reference 2026-08-22: archivedAt is ISO 8601 and null for anything not archived.
       archivedAt: (amE && amE.archivedAt) ? String(amE.archivedAt).substring(0, 10) : null,
+      // WHY the application was archived. offerStatus alone is not enough: it reads CandidateRejected
+      // for people the archive reason records as RejectedByOrg (e.g. "Lacking skill(s)/qualification(s)"),
+      // so a drop labelled "candidate declined" is not evidence the candidate declined.
+      archiveReason: (amE && amE.archiveReason) || null,
+      archiveReasonType: (amE && amE.archiveReasonType) || null,
       openingId: e.offerOpeningId || null,
       openingQuarter: null,   // stamped below, once openQuarterOf_ exists
       // ⚠ An earlier note here called Created|Extended|Accepted|Declined|Cancelled the offerStatus enum.
@@ -700,6 +711,7 @@ function refreshDashboardData() {
       return { applicationId: se2.applicationId, email: (am5 && am5.email) || null, candidate: ev.candidate,
         jobTitle: ev.jobTitle, department: ev.department, decidedAt: ev.decidedAt, startDate: ev.startDate,
         appStatus: ev.appStatus, archivedAt: ev.archivedAt, attrQuarter: ev.attrQuarter,
+        archiveReason: ev.archiveReason, archiveReasonType: ev.archiveReasonType,
         openingQuarter: ev.openingQuarter, offerStatus: ev.offerStatus, accepted: ev.accepted,
         joiningPending: ev.joiningPending };
     }) });
