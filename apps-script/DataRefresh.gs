@@ -566,7 +566,14 @@ function refreshDashboardData() {
   var jobBy8 = {}; for (var jk in jobLookup) jobBy8[jobLookup[jk].id.substring(0, 8)] = jobLookup[jk];
   var offerEvents = (offerResult.events || []).map(function (e) { var jd = jobBy8[e.jobId8] || null;
     return { jobId8: e.jobId8, jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', level: jd ? jd.level : null, complexity: jd ? jd.complexity : null,
-      recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted, joiningPending: e.joiningPending }; });
+      recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted, joiningPending: e.joiningPending,
+      // Ashby's own offer status: Created | Extended | Accepted | Declined | Cancelled. This is what Drop needs.
+      // `accepted` cannot carry it, being just (status === 'Accepted'), so it lumps DECLINED together with
+      // NOT-YET-DECIDED. ⚠ Drop is NOT computable from stage history: archived candidates never enter
+      // scoped_apps.json, because that list is gated on reachedScreening and an archived candidate's current
+      // stage title is 'Archived', which STAGE_KEY_MAP does not map. dropByRecruiterJobQ in the rollups is a
+      // dead end from that attempt and always emits {} - ignore it.
+      offerStatus: e.offerStatus || null }; });
   // ---- #53 BROAD Joining-Pending cases: Ref Check / Documentation / Offer ----
   var OFFER_SUBSTAGE_ = { 'WaitingOnApprovalStart':'Offer Created', 'WaitingOnApprovalDefinition':'Offer Created', 'WaitingOnOfferApproval':'Offer Created', 'WaitingOnCandidateResponse':'Offer Sent', 'CandidateAccepted':'Offer Accepted' };
   var PRE_OFFER_SUBSTAGE_ = { 'Reference Check':'Ref Check', 'Document Submission':'Documentation' };
@@ -793,12 +800,13 @@ function computeStageRollups_(events) {
   // Added 2026-08-21 after the filter audit: the quarter selector was only regrouping
   // pods (stage numbers were lifetime), and per-job rows under Screening had no source.
   var tpByJobQ = {}, tpByRecQ = {}, tpByRecJob = {};
-  // Drop = candidate reached Ref Check / Documentation / Offer and was then ARCHIVED, i.e. dropped out late.
-  // Bucketed by the quarter they were archived, keyed recruiter -> job8 -> quarter so the frontend can price
-  // each one with that role's score. It can only be computed here: the main pull sees an archived candidate's
-  // CURRENT stage, which Ashby has already changed to 'Archived', so the stage they dropped from is lost.
-  var LATE_DROP_STAGES = { refCheck: 1, docSub: 1, offer: 1 };
-  var dropRecJobQ = {};
+  // ⚠ DROP IS NOT COMPUTED HERE, AND CANNOT BE — do not try this path again. Archived candidates never
+  // reach this population: scoped_apps.json is gated on reachedScreening, and an archived candidate's
+  // CURRENT stage title is 'Archived', which STAGE_KEY_MAP has no entry for, so they are filtered out
+  // before the history job sees them. Including them would mean pulling listHistory for ~14,000 more
+  // applications — roughly seven times the volume — which blows the run's time budget. Two attempts died
+  // here: the 'Archived' TRANSITION (present for 30 of 2,134 apps) and application STATUS (never present,
+  // per the gate above). Drop comes from offerEvents[].offerStatus === 'Declined' instead.
   function bump(o, day) { o[day] = (o[day] || 0) + 1; }
   // add one dwell sample (in days) to a {stage:{days:count}} histogram store
   function tis(store, key, stage, dw) { var s = store[key] || (store[key] = {}); var h = s[stage] || (s[stage] = {}); h[dw] = (h[dw] || 0) + 1; }
@@ -833,26 +841,10 @@ function computeStageRollups_(events) {
         if (rec && qk) tisQ(tisRecQ, rec, k, qk, dw);
       }
     }
-    // One drop per application, not per stage. Detection is status-based, NOT the 'Archived' transition:
-    // that transition exists for only ~1% of applications, which made the first attempt read 11 drops against
-    // a true 108 for 2026. Dated by when they LEFT the last late stage they reached, falling back to the
-    // archive transition when one happens to exist.
-    if (d.s === 'Archived' && rec) {
-      var lateDay = null;
-      for (var m2 = 0; m2 < d.ev.length; m2++) { if (LATE_DROP_STAGES[d.ev[m2].k]) { lateDay = d.ev[m2].l || d.ev[m2].e || lateDay; } }
-      var dropDay = d.x || lateDay;
-      if (lateDay && dropDay) {
-        var dq = dropDay.substring(0, 4) + '-Q' + (Math.floor((parseInt(dropDay.substring(5, 7), 10) - 1) / 3) + 1);
-        var dr = dropRecJobQ[rec] || (dropRecJobQ[rec] = {});
-        var dj = dr[j8 || 'unknown'] || (dr[j8 || 'unknown'] = {});
-        dj[dq] = (dj[dq] || 0) + 1;
-      }
-    }
   }
   return { schemaVersion: 1, generatedAt: new Date().toISOString(), windowDays: ROLLUP_WINDOW_DAYS,
     velocityByRecruiter: velByRec, velocityByJob: velByJob, velocityByRecruiterJob: velByRecJob, throughputByJob: tpByJob, throughputByRecruiter: tpByRec, throughputByJobQ: tpByJobQ, throughputByRecruiterQ: tpByRecQ, throughputByRecruiterJob: tpByRecJob,
-    timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ,
-    dropByRecruiterJobQ: dropRecJobQ };
+    timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ };
 }
 
 function triggerStageHistoryNow() {
