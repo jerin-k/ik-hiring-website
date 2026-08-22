@@ -350,6 +350,7 @@ export function renderRecruiter(data) {
         <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
         <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
         <button class="hyg-tab" data-h="unscored">Roles Missing Score Inputs<span class="n" id="hygNUnscored"></span></button>
+        <button class="hyg-tab" data-h="nocap">Capacity Not Set<span class="n" id="hygNNoCap"></span></button>
         <button class="hyg-tab" data-h="anomalies">Other Anomalies<span class="n" id="hygNAnom"></span></button>
       </div>
 
@@ -434,6 +435,18 @@ export function renderRecruiter(data) {
         <div class="scroll-table"><table>
           <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
           <tbody id="hygUnscoredBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="nocap" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Capacity not set — but candidates attributed</h4>
+          <p class="sub-note" style="margin:0">Recruiters with a <strong>Capacity of 0</strong> for the selected quarter who nevertheless have offers, hires or joining-pending candidates against their name. Either the capacity belongs in <strong>Admin → Metric Configuration</strong>, or those candidates are attributed to the wrong person. Until it is settled they have no Target and no Capacity Utilisation, so their work is invisible in Fulfilment.</p></div>
+          <button class="hyg-dl" data-dl="nocap">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Capacity</th><th>Offers</th><th>Hired</th><th>Joining pending</th></tr></thead>
+          <tbody id="hygNoCapBody"></tbody>
         </table></div>
       </div>
 
@@ -1143,6 +1156,31 @@ export function initRecruiterFilters(data) {
       anBody.innerHTML = ah;
     }
 
+    // --- Capacity not set, but candidates attributed ---
+    // Capacity 0 is legitimate for people who carry no req load (admins, coordinators). It is only a problem
+    // when candidates ARE attributed to them, because Fulfilment then shows work with no target to measure it
+    // against — and the Fulfilment row-hiding rule deliberately keeps them visible rather than dropping the work.
+    const noCap = allRecs
+      .filter(r => r.name && r.name !== 'Unassigned')
+      .map(r => ({ r, cap: capacityOf(r.name, q) || 0,
+                   offers: r.offer || 0, hired: r.hired || 0, jp: r.joiningPending || 0 }))
+      .filter(x => x.cap === 0 && (x.offers > 0 || x.hired > 0 || x.jp > 0))
+      .sort((a, b) => (b.offers + b.hired) - (a.offers + a.hired));
+    const noCapBody = document.getElementById('hygNoCapBody');
+    if (noCapBody) {
+      noCapBody.innerHTML = noCap.map(({ r, cap, offers, hired, jp }) => {
+        const unknown = isStatusUnknown(r), active = !isRecInactive(r);
+        const label = unknown ? 'Unknown' : (active ? 'Active' : 'Inactive');
+        const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
+        return `<tr><td style="font-weight:500">${esc(r.name)}</td>
+          <td><span style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
+          <td>${esc(podOf(r.name, q))}</td>
+          <td><span style="color:var(--red);font-weight:600">${cap}</span></td>
+          <td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td>
+          <td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td></tr>`;
+      }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody with candidates attributed is missing a capacity for this quarter.</td></tr>`;
+    }
+
     // --- tab counts ---
     const setN = (id, n, warn) => {
       const el = document.getElementById(id);
@@ -1155,10 +1193,15 @@ export function initRecruiterFilters(data) {
     setN('hygNOfferGap', gapLive.length, true);
     setN('hygNHiredGap', gapDone.length, false);
     setN('hygNUnscored', unscored.length, true);
+    setN('hygNNoCap', noCap.length, true);
     setN('hygNAnom', anomList.length, true);
 
     // --- CSV export per tab (client-side; no backend) ---
     hygCsv = {
+      nocap: () => [['Recruiter', 'Status', 'Pod', 'Capacity', 'Offers', 'Hired', 'Joining pending'],
+        ...noCap.map(({ r, cap, offers, hired, jp }) => [r.name,
+          (r.activeKnown === false ? 'Unknown' : (r.isActive === false ? 'Inactive' : 'Active')),
+          podOf(r.name, q), cap, offers, hired, jp])],
       unassigned: () => [['Job', 'Candidate', 'Stage', 'Applied', 'Application ID'],
         ...unassigned.map(u => [u.jobTitle || u.job8 || '', u.candidate || '', u.stage || '', u.createdAt || '', u.applicationId || ''])],
       multirec: () => [['Job', 'Recruiters tagged', 'Application ID'],
