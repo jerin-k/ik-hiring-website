@@ -176,3 +176,46 @@ function reconArchiveReason() {
   Logger.log('LIST reason texts: ' + JSON.stringify(texts));
   Logger.log('=== RECON DONE ===');
 }
+
+// Probe (2026-08-22): PROVED with a working control (6/6 offers known to have an opening surfaced it
+// via offer.info, one across 2 versions) that 0 of 322 CandidateRejected offers carry an openingId in ANY
+// version. offer.list never returns `versions` at all - only offer.info does. Kept BELOW the refresh runner:
+// the run selector picks the FIRST function in the file, which must stay resetAndRefreshNow.
+
+// ⛔ SETTLED 2026-08-22, do not re-test. A drop can never be tied to its opening. Ran offer.info over ALL
+// 322 CandidateRejected offers: 367 versions returned (max 6 on one offer, 29 with >1), 0 failures,
+// openingId recovered ZERO times. The negative is trustworthy because the control passed 6/6 - offers whose
+// latestVersion already had an openingId surfaced it through the same code path, one of them only in v2.
+// Root cause is a process gap, not data loss: only 58 of 2430 offers EVER had an opening attached, and none
+// of those 58 was ever rejected. NOTE offer.list never returns `versions` at all - only offer.info does.
+// Kept BELOW the refresh runner: the run selector picks the FIRST function in the file.
+function probeOfferVersions() {
+  Logger.log('=== PROBE v4: FULL history for EVERY rejected offer ===');
+  var offers = [], cursor = null, pages = 0;
+  do {
+    var body = { limit: 100 }; if (cursor) body.cursor = cursor;
+    var r = ashbyPost_('/offer.list', body);
+    (r.results || []).forEach(function (o) { offers.push(o); });
+    cursor = r.moreDataAvailable ? r.nextCursor : null; pages++;
+  } while (cursor && pages < 80);
+  var rej = offers.filter(function (o) { return o.offerStatus === 'CandidateRejected'; });
+  Logger.log('total offers ' + offers.length + ' | CandidateRejected ' + rej.length);
+  var recovered = 0, totalVersions = 0, multi = 0, failed = 0, maxV = 0;
+  rej.forEach(function (o) {
+    try {
+      var r2 = ashbyPost_('/offer.info', { offerId: o.id });
+      var vs = (r2.results && r2.results.versions) || [];
+      totalVersions += vs.length;
+      if (vs.length > 1) multi++;
+      if (vs.length > maxV) maxV = vs.length;
+      var hit = false;
+      vs.forEach(function (v) { if (v.openingId) hit = true; });
+      if (hit) { recovered++; Logger.log('RECOVERED openingId on rejected offer ' + o.id + ' across ' + vs.length + ' versions'); }
+    } catch (e) { failed++; }
+  });
+  Logger.log('>>> rejected offers probed : ' + rej.length);
+  Logger.log('>>> versions returned      : ' + totalVersions + ' (max ' + maxV + ' on one offer; ' + multi + ' offers had >1)');
+  Logger.log('>>> openingId RECOVERED    : ' + recovered);
+  Logger.log('>>> calls failed           : ' + failed);
+  Logger.log('=== PROBE v4 DONE ===');
+}
