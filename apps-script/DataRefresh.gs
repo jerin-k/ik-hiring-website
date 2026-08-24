@@ -328,8 +328,8 @@ function fetchAndProcessOffers_(startTime, appMap) {
       var startDateStr = (o.latestVersion && o.latestVersion.startDate) ? o.latestVersion.startDate : null;
       var startMs = startDateStr ? new Date(startDateStr).getTime() : 0;
       var pending = accepted && startMs > nowMs;
-      if (jobId) { var bj = byJob[jobId] || (byJob[jobId] = { offered:0, accepted:0, joiningPending:0 }); bj.offered++; if (accepted) bj.accepted++; if (pending) bj.joiningPending++; }
-      if (rec)   { var br = byRecruiter[rec] || (byRecruiter[rec] = { offered:0, accepted:0, joiningPending:0 }); br.offered++; if (accepted) br.accepted++; if (pending) br.joiningPending++; }
+      if (jobId) { var bj = byJob[jobId] || (byJob[jobId] = { offered:0, accepted:0 }); bj.offered++; if (accepted) bj.accepted++; }
+      if (rec)   { var br = byRecruiter[rec] || (byRecruiter[rec] = { offered:0, accepted:0 }); br.offered++; if (accepted) br.accepted++; }
       // Offer VERSION history. offer.list returns a `versions` array (confirmed against the offer.list
       // reference 2026-08-22), each version carrying its own createdAt and openingId. Two uses:
       //  (a) the EARLIEST version's createdAt is when the offer was FIRST created - the proxy for "entered
@@ -526,7 +526,7 @@ function refreshDashboardData() {
     var jo = openingsByJob[j.id] || []; if (jo.length === 0) return;
     var filled = 0; jo.forEach(function(o) { if (o.closedAt) filled++; });
     var leaf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
-    openingsList.push({ title: j.title, department: topDept(j.departmentId) || leaf, team: leaf, total: jo.length, filled: filled, open: jo.length - filled, joiningPending: 0, openedAt: (j.openedAt || j.createdAt || '').substring(0, 10), jobId: j.id.substring(0, 8), status: 'Open' });
+    openingsList.push({ title: j.title, department: topDept(j.departmentId) || leaf, team: leaf, total: jo.length, filled: filled, open: jo.length - filled, openedAt: (j.openedAt || j.createdAt || '').substring(0, 10), jobId: j.id.substring(0, 8), status: 'Open' });
   });
   openingsList.sort(function(a, b) { return b.total - a.total; });
   // ===== openings quarter buckets (openings-quarter-model, 2026-08-20) — per DISTINCT opening x job x quarter =====
@@ -560,11 +560,14 @@ function refreshDashboardData() {
   Logger.log('scoped_apps (reached screening+): ' + appResult.histApps.length);
   var offerResult = fetchAndProcessOffers_(startTime, appResult.appMap);
 
-  for (var jid in jobLookup) { var oj = offerResult.byJob[jid]; if (oj) { jobLookup[jid].offeredReal = oj.offered; jobLookup[jid].joiningPending = oj.joiningPending; jobLookup[jid].accepted = oj.accepted; } else jobLookup[jid].joiningPending = 0; }
+  for (var jid in jobLookup) { var oj = offerResult.byJob[jid]; if (oj) { jobLookup[jid].offeredReal = oj.offered; jobLookup[jid].accepted = oj.accepted; } }
 
-  // openings joiningPending back-fill (was hard-coded 0): map offer joiningPending onto each opening by job
-  var jpByJob8 = {}; for (var jjid in offerResult.byJob) jpByJob8[jjid.substring(0, 8)] = offerResult.byJob[jjid].joiningPending;
-  openingsList.forEach(function (op) { op.joiningPending = jpByJob8[op.jobId] || 0; });
+  // #25 (2026-08-24, approved by Jerin): openings[].joiningPending, jobs[].joiningPending and
+  // offerEvents[].joiningPending are GONE. They were a THIRD definition of Joining Pending (an accepted
+  // offer whose start date is still ahead) sitting in the data file beside the real one, with nothing
+  // marking which was which - which is how three disagreeing JP numbers reached the screen.
+  // The live definitions are joiningPendingCases[] (every PERSON in Ref Check / Documentation / Offer)
+  // and openingPendingByJobQ (SEATS with a live linked offer). Do not add a fourth.
   // ===== openings pending overlay (JP #52, 2026-08-20) — open opening + live linked offer =====
   var openingById_ = {}; allOpenings.forEach(function (o) { openingById_[o.id] = o; });
   var pendingOpeningSet_ = {}, jpByRecruiter = {}, offerMissingLink = 0;
@@ -602,7 +605,7 @@ function refreshDashboardData() {
 
   var jobsList = [];
   for (var jid2 in jobLookup) { var j2 = jobLookup[jid2]; if (j2.applied === 0) continue;
-    jobsList.push({ id: j2.id.substring(0, 8), title: j2.title, department: j2.department, team: j2.team, level: j2.level, complexity: j2.complexity, status: j2.status, total: j2.applied, applied: j2.applied, screen: j2.screen, interview: j2.interview, offer: j2.offer, hired: j2.hired, joiningPending: j2.joiningPending || 0, pipeline: j2.pipeline, recruiters: j2.recruiterSet }); }
+    jobsList.push({ id: j2.id.substring(0, 8), title: j2.title, department: j2.department, team: j2.team, level: j2.level, complexity: j2.complexity, status: j2.status, total: j2.applied, applied: j2.applied, screen: j2.screen, interview: j2.interview, offer: j2.offer, hired: j2.hired, pipeline: j2.pipeline, recruiters: j2.recruiterSet }); }
   jobsList.sort(function(a, b) { return b.applied - a.applied; });
 
   var recruitersList = [];
@@ -647,7 +650,7 @@ function refreshDashboardData() {
     var amE = appResult.appMap[e.applicationId] || null;
     return { jobId8: e.jobId8, jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', level: jd ? jd.level : null, complexity: jd ? jd.complexity : null,
       employmentType: jd ? jd.employmentType : null,
-      recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted, joiningPending: e.joiningPending,
+      recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted,
       // DROP needs three things the events did not carry: the application's own status (a drop is an ARCHIVED
       // application), the opening the offer was made against, and that opening's quarter.
       // ⚠ The opening link here comes from the OFFER VERSION (o.latestVersion.openingId), which is a historical
@@ -730,7 +733,9 @@ function refreshDashboardData() {
         recruiter: ev.recruiter, level: ev.level, complexity: ev.complexity, employmentType: ev.employmentType,
         offerCreatedAt: ev.offerCreatedAt,   // when the offer was MADE - decidedAt is when the candidate answered
         openingQuarter: ev.openingQuarter, offerStatus: ev.offerStatus, accepted: ev.accepted,
-        joiningPending: ev.joiningPending };
+        // Drive-only audit field, read by buildAuditSheet(): an accepted offer whose start date is still
+        // ahead. This is NOT the dashboard's Joining Pending and never leaves Drive.
+        joiningPending: se2.joiningPending };
     }) });
   var jpCaseByApp_ = {};
   offerResult.events.forEach(function(e) {
