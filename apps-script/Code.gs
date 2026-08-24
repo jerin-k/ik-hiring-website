@@ -1,7 +1,7 @@
 // TEMPORARY runner (2026-08-24). The Apps Script run selector picks the FIRST function of the OPEN file and
 // the file tree was unreachable, so this sits at the top of Code.gs purely to be runnable. DELETE when done.
 function zzRunNow() {
-  resetAndRefreshNow();   // clears stale triggers, restores the 6AM/6PM pair, fires one refresh immediately
+  resetAndRefreshNow();   // refresh first: offer_contacts.json needs offerCreatedAt before the audit rebuilds
 }
 
 // ===== CONFIG =====
