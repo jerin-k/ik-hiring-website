@@ -168,7 +168,7 @@ export const DEFINITIONS = {
         heading: 'The chart and the Cases list',
         items: [
           ['Chart', 'One bar per recruiter, its full length their Capacity for the quarter: the solid part is what they achieved, the amber part the gap to capacity. Only recruiters with a capacity set appear. It reads off exactly the same figures as the table.'],
-          ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>Unassigned / past recruiter</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
+          ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
         ]
       },
     ],
