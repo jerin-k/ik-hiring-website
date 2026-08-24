@@ -12,6 +12,10 @@ function buildAuditSheet() {
   var TRACKER_ID = '1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A';
   var FOLDER_ID  = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
   var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // 🚨 Was 'UTC'. Google Sheets stores a date as midnight in the SPREADSHEET's timezone, so formatting an
+  // IST sheet's date in UTC lands on the previous day: 2026-01-27 00:00 IST is 2026-01-26 18:30 UTC. Every
+  // tracker date came out one day early, which made DOJ, DOJ Month, DOJ Quarter, Offer Date and Offer
+  // Quarter read No on rows that actually agree. Set from the tracker itself once it is open.
   var TZ = 'UTC';
 
   function d2s(v) {
@@ -38,7 +42,10 @@ function buildAuditSheet() {
   var eq = function (a, b) { return String(a).trim().toLowerCase() === String(b).trim().toLowerCase() ? 'Yes' : 'No'; };
 
   // ---- 1. tracker ----
-  var vals = SpreadsheetApp.openById(TRACKER_ID).getSheetByName('Master').getDataRange().getValues();
+  var trackerSS = SpreadsheetApp.openById(TRACKER_ID);
+  TZ = trackerSS.getSpreadsheetTimeZone() || 'UTC';
+  var vals = trackerSS.getSheetByName('Master').getDataRange().getValues();
+  Logger.log('tracker timezone: ' + TZ);
   var hdr = vals[0];
   function col(n) { for (var i=0;i<hdr.length;i++) if (String(hdr[i]).trim() === n) return i; return -1; }
   // Employment Type / Level / Complexity are newer tracker columns and their exact heading is not guaranteed.
