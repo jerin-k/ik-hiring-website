@@ -1043,6 +1043,8 @@ export function initRecruiterFilters(data) {
       });
       const visible = new Set(recs.map(r => r.name));
       const roster = {}; allRecs.forEach(r => { if (r.name) roster[r.name] = r; });
+      // ⚠ Do NOT call this group "Unassigned" — that is also a POD name, and naming it that made the table
+      // read as though the no-pod exclusion had been reversed (Jerin, 2026-08-24).
       // #26 (2026-08-24): everyone in closing has to land somewhere, or this table quietly disagrees with the
       // JP figures in the tables above it. Two populations were falling off the bottom: cases with NO
       // recruiter tagged, and cases sitting with a PAST recruiter (hidden since "Include past recruiters"
@@ -1100,7 +1102,7 @@ export function initRecruiterFilters(data) {
       orphanCount = noRec.length + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
       if (orphanCount) {
         html += `<tr data-path="${oi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}Unassigned / past recruiter${cnt(orphanCount)}</td>
+          <td style="font-weight:600">${CARET}No recruiter in this view${cnt(orphanCount)}</td>
           <td colspan="6" style="color:var(--muted)">Nobody in the view above owns these — kept here so the list reconciles to every case in closing.</td></tr>`;
         let ri = 0;
         if (noRec.length) {
