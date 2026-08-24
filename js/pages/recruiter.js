@@ -229,7 +229,7 @@ export function renderRecruiter(data) {
     </style>
 
     <h2 class="section-title">Recruiter Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives <strong>Momentum</strong>.</p>
+    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives <strong>Momentum</strong>.<br>Recruiters with <strong>no pod set</strong> for the selected quarter are excluded from every row and every total here — they are listed in <strong>Data Hygiene → Pod Not Set</strong>.</p>
     <div class="rec-filters">
       <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
@@ -290,22 +290,23 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Position Fulfilment -->
     <div class="rec-panel" data-panel="fulfilment">
-      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Offers</strong>; the <strong>Sales</strong> pod on <strong>Hires</strong>. <strong>Target Score = min(Capacity, Assigned Score)</strong> — Capacity is set in <strong>Metric Configuration</strong> (per quarter).</p>
+      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Joined + Joining Pending</strong>; the <strong>Sales</strong> pod on <strong>Joined</strong>. <strong>Capacity</strong> is the raw figure set per quarter in <strong>Admin → Metric Configuration</strong>.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
       <details class="defs">
         <summary>How these columns are calculated</summary>
         <p class="sub-note" style="margin:8px 0 0"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
-      <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> (Sales) counts candidates whose <strong>start date</strong> falls in the quarter; <strong>Offered</strong> (Non-Sales) counts offers <strong>decided</strong> in the quarter — both from per-candidate offer records, so they follow the quarter selector.
-      <strong>Goal</strong> counts the seats <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − outcome, and <strong>Capacity Utilisation</strong> = outcome ÷ Capacity; all three sides are now quarter-scoped. Where several recruiters work the same job, its seats are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
+      <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> counts candidates whose <strong>start date</strong> falls in the quarter, on both tables, from per-candidate offer records — so it follows the quarter selector.
+      <strong>Joining Pending</strong> counts <em>people</em> currently in Ref Check, Documentation or Offer; its <strong>Total is always its two sub-columns added</strong>. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong> and <strong>Sales</strong> on <strong>Joined</strong> — that is what <strong>Gap</strong> and <strong>Capacity Utilisation</strong> compare against on each table.
+      <strong>Goal</strong> counts the seats <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − achieved, and <strong>Capacity Utilisation</strong> = achieved ÷ Capacity; all three sides are quarter-scoped. Where several recruiters work the same job, its seats are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
       <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. Each drop is counted in the quarter the <strong>work was live</strong> — the quarter the candidate first entered Ref Check, Documentation or Offer — not the quarter the record was finally closed. Ashby cannot tell us which opening a drop was against (the link is absent on 91% of offers and on every archived one), so this is a <strong>close approximation, not the opening itself</strong>. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
       </details>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales (Offers)</h4>
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Offers</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Offers. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Offered</th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
@@ -313,7 +314,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone whose start date fell in the previous quarter.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
@@ -360,6 +361,7 @@ export function renderRecruiter(data) {
         <button class="hyg-tab" data-h="multirec">Multiple Recruiters<span class="n" id="hygNMultiRec"></span></button>
         <button class="hyg-tab" data-h="multisrc">Multiple Sourcers<span class="n" id="hygNMultiSrc"></span></button>
         <button class="hyg-tab" data-h="roster">Recruiter Roster<span class="n" id="hygNRoster"></span></button>
+        <button class="hyg-tab" data-h="nopod">Pod Not Set<span class="n" id="hygNNoPod"></span></button>
         <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
         <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
         <button class="hyg-tab" data-h="unscored">Roles Missing Score Inputs<span class="n" id="hygNUnscored"></span></button>
@@ -412,6 +414,18 @@ export function renderRecruiter(data) {
         <div class="scroll-table"><table>
           <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
           <tbody id="hygRosterBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="nopod" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Pod not set — excluded from every table on this tab</h4>
+          <p class="sub-note" style="margin:0">These are <strong>real recruiters with real numbers</strong> who have no pod assigned for the selected quarter. Everything below is <strong>left out</strong> of the pod rows, the pod totals and the charts on Fulfilment, Momentum, Screening, Joining Conversion and Sourcing — because a row labelled "Unassigned" reads like a team, and its totals silently inflate the tab. Fix it in <strong>Admin → Metric Configuration</strong> (Recruiter → Pod, per quarter); the numbers rejoin their pod on the next render.</p></div>
+          <button class="hyg-dl" data-dl="nopod">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Applications</th><th>Offers</th><th>Hired</th><th>Joining pending</th><th>Capacity</th></tr></thead>
+          <tbody id="hygNoPodBody"></tbody>
         </table></div>
       </div>
 
@@ -617,25 +631,41 @@ export function initRecruiterFilters(data) {
     return { getSelected: () => [...selected] };
   }
 
+  // Job multi-select works off throughputByRecruiterJob: a recruiter stays in the list only if they have
+  // stage history on one of the selected jobs. Until that data existed this filter was wired but inert.
+  function selectedJobIds() {
+    const jobSel = msJob ? msJob.getSelected() : [];
+    return jobSel.length
+      ? new Set((data.jobs || []).filter(j => jobSel.includes(j.title)).map(j => j.id))
+      : null;
+  }
+  function recWorkedSelectedJob(name, jobIdsSelected) {
+    if (!jobIdsSelected) return true;
+    const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
+    const mine = rj && rj[name];
+    if (!mine) return false;
+    return Object.keys(mine).some(j8 => jobIdsSelected.has(j8));
+  }
+
+  // Recruiters the user has EXPLICITLY filtered out with the Pod / Recruiter / Job multi-selects — as
+  // opposed to the ones this tab hides by DEFAULT (past recruiters, no pod set, zero applications).
+  // The JP Cases table needs the difference: a default exclusion still has to be accounted for somewhere,
+  // an explicit one must not be quietly re-added under an "unassigned" label.
+  function explicitlyFiltered(name, q) {
+    const pods = msPod ? msPod.getSelected() : [];
+    const names = msRec ? msRec.getSelected() : [];
+    if (names.length && !names.includes(name)) return true;
+    if (pods.length && !pods.includes(podOf(name, q))) return true;
+    if (!recWorkedSelectedJob(name, selectedJobIds())) return true;
+    return false;
+  }
+
   function getFilteredRecs() {
     const q = selQuarter();
     const hideZero = document.getElementById('recHideZero')?.checked;
     const pods = msPod ? msPod.getSelected() : [];
     const names = msRec ? msRec.getSelected() : [];
-    // Job multi-select now works off throughputByRecruiterJob: a recruiter stays in the list
-    // only if they have stage history on one of the selected jobs. Until that data existed
-    // this filter was wired but inert — it looked functional and changed nothing.
-    const jobSel = msJob ? msJob.getSelected() : [];
-    const jobIdsSelected = jobSel.length
-      ? new Set((data.jobs || []).filter(j => jobSel.includes(j.title)).map(j => j.id))
-      : null;
-    const recWorkedSelectedJob = (name) => {
-      if (!jobIdsSelected) return true;
-      const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
-      const mine = rj && rj[name];
-      if (!mine) return false;
-      return Object.keys(mine).some(j8 => jobIdsSelected.has(j8));
-    };
+    const jobIdsSelected = selectedJobIds();
     // Departed recruiters are hidden by default — their historical numbers are still in the
     // data (and still score), they just clutter the working view. The Data Hygiene roster
     // deliberately ignores this and always lists everyone; that tab exists to show the split.
@@ -645,13 +675,18 @@ export function initRecruiterFilters(data) {
       // appearing as a row and a bar in every table and chart, where it reads like a person with a workload.
       // It already has its own Data Hygiene tab, which builds its own list and is untouched by this.
       if (r.name === 'Unassigned') return false;
+      // #23 (2026-08-24): a recruiter with NO pod set for this quarter is excluded from every row AND every
+      // total on this tab. An "Unassigned" pod row reads like a real team with a real workload, which it is
+      // not. Nobody is lost — Data Hygiene → Pod Not Set carries their numbers, and the note under the
+      // heading says the exclusion is happening.
+      if (podOf(r.name, q) === 'Unassigned') return false;
       if (hideZero && (r.total || 0) === 0) return false;
       // #14 (2026-08-23): default is now OFF. Past recruiters keep their history in the data and still score;
       // they just don't clutter the working view unless asked for.
       if (!inclInactive && isRecInactive(r)) return false;
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(podOf(r.name, q))) return false;
-      if (!recWorkedSelectedJob(r.name)) return false;
+      if (!recWorkedSelectedJob(r.name, jobIdsSelected)) return false;
       return true;
     });
   }
@@ -743,7 +778,9 @@ export function initRecruiterFilters(data) {
     function fulfilRows(gs, mode) {
       const q = selQuarter();
       const isSales = mode === 'hire';
-      const ncol = isSales ? 13 : 15;
+      // 1 label + Goal(2) + Capacity(1) + Joined(2) + JP total(1) + JP A(2) + JP B(2) + Drop(2) + Gap(2)
+      // + Utilisation(1). Both tables are the same shape now that Offered is gone from Non-Sales (#24).
+      const ncol = 16;
 
       // 🚨 THE OUTCOME IS DATED FROM offerEvents, NOT FROM byJob (fixed 2026-08-22).
       // recruiters[].byJob carries {jobId,title,department,total,offer,hired} and NO date of any kind, so
@@ -755,11 +792,10 @@ export function initRecruiterFilters(data) {
       const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
       const OM = outcomeMaps(q);
       const JP = jpMaps(q, isSales);
-      const jpOf = (rec) => ({
-        t: JP.total[rec] || { hc: 0, sc: 0 },
-        a: JP.bucketA[rec] || { hc: 0, sc: 0 },
-        b: JP.bucketB[rec] || { hc: 0, sc: 0 }
-      });
+      const Z = { hc: 0, sc: 0 };
+      const jpOf = (rec) => ({ t: JP.total[rec] || Z, a: JP.bucketA[rec] || Z, b: JP.bucketB[rec] || Z });
+      const jpOfJob = (rec, title) => { const k = rec + '|' + (title || '');
+        return { t: JP.totalJ[k] || Z, a: JP.bucketAJ[k] || Z, b: JP.bucketBJ[k] || Z }; };
       const outByRec = isSales ? OM.sales : OM.nonSales;
       const outByRecJob = isSales ? OM.salesJob : OM.nonSalesJob;
       const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0 };
@@ -867,10 +903,10 @@ export function initRecruiterFilters(data) {
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
       const utilCell = (v) => {
-        const u = pctOf(v.xSc, v.capSc);
+        const u = pctOf(v.uSc, v.capSc);
         if (u == null) return `<td title="No capacity set for this quarter, so utilisation cannot be worked out.">${DASH}</td>`;
         const cls = u >= 100 ? 'over' : (u >= 70 ? 'well' : 'under');
-        return `<td><span class="util ${cls}">${u}%</span><span class="sublab">${v.xSc} of ${v.capSc}</span></td>`;
+        return `<td><span class="util ${cls}">${u}%</span><span class="sublab">${v.uSc} of ${v.capSc}</span></td>`;
       };
 
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
@@ -890,12 +926,13 @@ export function initRecruiterFilters(data) {
           + `<td class="score">${v.dSc ? Math.round(v.dSc) : `<span class="zero">0</span>`}</td>`;
       };
 
+      // #24 (Jerin, asked twice): the Offered column is GONE from Non-Sales. Both tables now show Joined as
+      // the outcome. Do not put Offered back.
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
         return `<td${w}>${c(seatFmt(v.aHC))}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
           + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
-          + `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`         // Joined (Sales) / Offered (Non-Sales)
-          + (isSales ? '' : `<td${w}>${c(v.jHC)}</td><td class="score">${c(v.jSc)}</td>`)  // Non-Sales: Joined total
+          + `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`         // Joined
           + jpCells(v)                                                          // Joining Pending: total + 2 buckets
           + dropCells(v)                                                        // Drop HC / Score + % subtext
           + `<td${w}>${c(seatFmt(v.gHC))}</td>` + gapCell(v)                     // Gap HC / Score + bar
@@ -913,11 +950,16 @@ export function initRecruiterFilters(data) {
           const seats = seatsOf(bj.jobId); if (!seats) return;
           const sc = scoreForRole(jobMeta(bj), q); aHC += seats; aSc += seats * sc;
         });
-        const o = outOf(r.name), jn = joinOf(r.name), dr = dropOf(r.name);
+        const o = outOf(r.name), jn = joinOf(r.name), dr = dropOf(r.name), jp = jpOf(r.name);
         const capSc = capacityOf(r.name, q) || 0;
-        return { aHC, aSc, capSc, xHC: o.hc, xSc: o.sc, jHC: jn.hc, jSc: jn.sc,
-                 dHC: dr.hc, dSc: dr.sc, jp: jpOf(r.name),
-                 gHC: Math.max(0, aHC - o.hc), gSc: Math.max(0, aSc - o.sc) };
+        // Outcome column = Joined on BOTH tables.
+        const xHC = isSales ? o.hc : jn.hc, xSc = isSales ? o.sc : jn.sc;
+        // What Gap and Capacity Utilisation are measured against (Jerin, 2026-08-24):
+        //   Sales     → Joined
+        //   Non-Sales → Joined + Joining Pending  (the work is delivered once the person is in closing)
+        const uHC = isSales ? xHC : xHC + jp.t.hc, uSc = isSales ? xSc : xSc + jp.t.sc;
+        return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
+                 gHC: Math.max(0, aHC - uHC), gSc: Math.max(0, aSc - uSc) };
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
       // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
@@ -927,10 +969,14 @@ export function initRecruiterFilters(data) {
 
       let html = '';
       gs.forEach((G, pi) => {
-        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, jHC: 0, jSc: 0, dHC: 0, dSc: 0, jpHC: 0, jpSc: null, gHC: 0, gSc: 0 };
+        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0,
+                         jp: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } } };
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
-          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'jHC', 'jSc', 'dHC', 'dSc', 'jpHC', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
+          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
+          // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
+          // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
+          ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; });
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -947,11 +993,15 @@ export function initRecruiterFilters(data) {
               const jj = joinOfJob(r.name, bj.jobId);
               const seats = seatsOf(bj.jobId);
               const jd2 = dropOfJob(r.name, bj.jobId);
-              // A job with no seats this quarter and nothing delivered or dropped is not this quarter's work.
-              if (!seats && !jo.hc && !jj.hc && !jd2.hc) return;
-              const jv = { aHC: seats, aSc: seats * sc, capSc: null, xHC: jo.hc, xSc: jo.sc, jHC: jj.hc, jSc: jj.sc,
-                           dHC: jd2.hc, dSc: jd2.sc, jpHC: null, jpSc: null,
-                           gHC: Math.max(0, seats - jo.hc), gSc: Math.max(0, seats * sc - jo.sc) };
+              const jjp = jpOfJob(r.name, m.title);
+              // A job with no seats this quarter and nothing delivered, in closing or dropped is not this
+              // quarter's work.
+              if (!seats && !jo.hc && !jj.hc && !jd2.hc && !jjp.t.hc) return;
+              const jxHC = isSales ? jo.hc : jj.hc, jxSc = isSales ? jo.sc : jj.sc;
+              const juHC = isSales ? jxHC : jxHC + jjp.t.hc, juSc = isSales ? jxSc : jxSc + jjp.t.sc;
+              const jv = { aHC: seats, aSc: seats * sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
+                           dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
+                           gHC: Math.max(0, seats - juHC), gSc: Math.max(0, seats * sc - juSc) };
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
             });
@@ -977,46 +1027,98 @@ export function initRecruiterFilters(data) {
     const jpBody = document.getElementById('recJPBody');
     if (jpBody) {
       const q2 = selQuarter();
-      const byRec = {};
+      const byRec = {}, noRec = [];
       (data.joiningPendingCases || []).forEach(c => {
         const rec = c.recruiter;
-        if (!rec || rec === 'Unassigned') return;
+        if (!rec || rec === 'Unassigned') { noRec.push(c); return; }
         (byRec[rec] || (byRec[rec] = [])).push(c);
       });
       const visible = new Set(recs.map(r => r.name));
-      let html = '', shown = 0, unlinked = 0;
+      const roster = {}; allRecs.forEach(r => { if (r.name) roster[r.name] = r; });
+      // #26 (2026-08-24): everyone in closing has to land somewhere, or this table quietly disagrees with the
+      // JP figures in the tables above it. Two populations were falling off the bottom: cases with NO
+      // recruiter tagged, and cases sitting with a PAST recruiter (hidden since "Include past recruiters"
+      // defaults off). Both now sit in their own group so the list reconciles to the full case count.
+      // ⚠ Cases hidden by an explicit Pod / Recruiter / Job selection are NOT swept in here — the user asked
+      // for those to be filtered out, and re-adding them under an "unassigned" label would be a lie.
+      const orphanBy = {};
+      Object.entries(byRec).forEach(([rec, list]) => {
+        if (visible.has(rec)) return;
+        if (explicitlyFiltered(rec, q2)) return;   // the user asked for these to be filtered out
+        orphanBy[rec] = list;
+      });
+      // Say WHY each one is here, so the group is a worklist rather than a dumping ground.
+      const orphanWhy = (rec) => {
+        const r = roster[rec];
+        if (!r) return 'not on the recruiter roster';
+        if (isRecInactive(r)) return 'past recruiter';
+        if (isStatusUnknown(r)) return 'status unknown';
+        if (podOf(rec, q2) === 'Unassigned') return 'no pod set';
+        if (!(r.total || 0)) return 'no applications';
+        return 'not shown above';
+      };
+
+      let html = '', shown = 0, unlinked = 0, orphanCount = 0;
+      const byDoj = (a, b) => String(a.doj || '').localeCompare(String(b.doj || ''));
+      const cnt = (n, extra) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${extra ? extra + ' · ' : ''}${n}</span>`;
+      const candRow = (c, path) => {
+        shown++; if (!c.linked) unlinked++;
+        const oq = c.openingQuarter
+          ? c.openingQuarter
+          : '<span style="color:var(--orange);font-size:11px">Not linked</span>';
+        return `<tr data-path="${path}" style="display:none">
+          <td style="padding-left:52px">${c.candidate || DASH}</td>
+          <td>${oq}</td><td>${monthLabel(c.doj)}</td><td>${c.doj || DASH}</td>
+          <td>${c.department || DASH}</td><td style="max-width:260px">${c.job || c.jobTitle || DASH}</td>
+          <td>${c.subStage || DASH}</td></tr>`;
+      };
       groups.forEach((G, pi) => {
         const mine = G.recs.filter(r => visible.has(r.name) && (byRec[r.name] || []).length);
         if (!mine.length) return;
         const podCount = mine.reduce((n, r) => n + byRec[r.name].length, 0);
         html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${podCount}</span></td>
+          <td style="font-weight:600">${CARET}${G.pod}${cnt(podCount)}</td>
           <td colspan="6" style="color:var(--muted)">${mine.length} recruiter${mine.length === 1 ? '' : 's'}</td></tr>`;
         mine.forEach((r, ri) => {
-          const list = byRec[r.name].slice().sort((a, b) => String(a.doj || '').localeCompare(String(b.doj || '')));
-          html += `<tr data-path="${pi}.${ri}" data-parent="${pi}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${list.length}</span></td>
+          const list = byRec[r.name].slice().sort(byDoj);
+          html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${cnt(list.length)}</td>
             <td colspan="6"></td></tr>`;
-          list.forEach((c, ci) => {
-            shown++; if (!c.linked) unlinked++;
-            const oq = c.openingQuarter
-              ? c.openingQuarter
-              : '<span style="color:var(--orange);font-size:11px">Not linked</span>';
-            html += `<tr data-path="${pi}.${ri}.${ci}" data-parent="${pi}.${ri}" style="display:none">
-              <td style="padding-left:52px">${c.candidate || DASH}</td>
-              <td>${oq}</td><td>${monthLabel(c.doj)}</td><td>${c.doj || DASH}</td>
-              <td>${c.department || DASH}</td><td style="max-width:260px">${c.job || c.jobTitle || DASH}</td>
-              <td>${c.subStage || DASH}</td></tr>`;
-          });
+          list.forEach((c, ci) => { html += candRow(c, `${pi}-${ri}-${ci}`); });
         });
       });
+      const oi = groups.length;
+      const orphanNames = Object.keys(orphanBy).sort();
+      orphanCount = noRec.length + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
+      if (orphanCount) {
+        html += `<tr data-path="${oi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+          <td style="font-weight:600">${CARET}Unassigned / past recruiter${cnt(orphanCount)}</td>
+          <td colspan="6" style="color:var(--muted)">Nobody in the view above owns these — kept here so the list reconciles to every case in closing.</td></tr>`;
+        let ri = 0;
+        if (noRec.length) {
+          html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:26px;font-weight:500">${CARET}No recruiter tagged${cnt(noRec.length)}</td><td colspan="6" style="color:var(--orange);font-size:11px">Fix in Ashby: tag a Recruiter on the hiring team.</td></tr>`;
+          noRec.slice().sort(byDoj).forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
+          ri++;
+        }
+        orphanNames.forEach(nm => {
+          const list = orphanBy[nm].slice().sort(byDoj);
+          html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
+            <td style="padding-left:26px;font-weight:500">${CARET}${nm}${cnt(list.length, orphanWhy(nm))}</td><td colspan="6"></td></tr>`;
+          list.forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
+          ri++;
+        });
+      }
       jpBody.innerHTML = html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody in closing under these filters.</td></tr>`;
-      wireVelTree(jpBody);
+      // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
+      // knows about .lvl-pod / .lvl-rec rows — so nothing here expanded at all and only the pod headers showed.
+      wireTreePath(jpBody);
       const cap = document.getElementById('recJPCaption');
       if (cap) cap.innerHTML = shown
-        ? `<strong>${shown}</strong> currently in Ref Check, Documentation or Offer across the recruiters shown above.`
+        ? `<strong>${shown}</strong> currently in Ref Check, Documentation or Offer.`
+          + (orphanCount ? ` <strong>${orphanCount}</strong> of them sit in the last group — no recruiter tagged, or a recruiter this tab hides by default (past recruiter, no pod set, no applications). Everyone in closing is listed, so this table reconciles.` : '')
           + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
-          + ` This list is <strong>live</strong> \u2014 the quarter selector does not apply to it.`
+          + ` This list is <strong>live</strong> — the quarter selector does not apply to it.`
         : '';
     }
 
@@ -1114,23 +1216,38 @@ export function initRecruiterFilters(data) {
     const prevQ = qShift(q, -1), nextQ = qShift(q, 1);
     const meta = {};
     (data.jobs || []).forEach(j => { if (j.title && !meta[j.title]) meta[j.title] = j; });
-    const total = {}, bucketA = {}, bucketB = {};
+    const bucketA = {}, bucketB = {};
+    // Job-level too, keyed recruiter|job title. Job rows used to print a hard 0 in every JP column, which
+    // reads as "nobody in closing on this role" when the real answer was "not worked out per job".
+    const bucketAJ = {}, bucketBJ = {};
     const add = (m, rec, sc) => { const a = m[rec] || (m[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc; };
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
       const j = meta[c.job || c.jobTitle || ''] || {};
       const sc = scoreForRole({ department: c.department, title: c.job || c.jobTitle, level: j.level, complexity: j.complexity }, q);
       const oq = c.openingQuarter || null, dq = qOf(c.doj || c.startDate);
-      add(total, rec, sc);
+      const jk = rec + '|' + (c.job || c.jobTitle || '');
+      // #27 (Jerin, 2026-08-24) — the settled definitions, one line each. Do not re-derive them.
       if (isSales) {
-        if (oq === prevQ && dq === q) add(bucketA, rec, sc);
-        if (dq !== prevQ) add(bucketB, rec, sc);
+        // A: the opening was raised LAST quarter and the candidate joins THIS quarter (carried over).
+        // B: everyone else in closing — i.e. the whole population MINUS A, so A + B is the total.
+        // ⚠ B used to test `dq !== prevQ`, which is a different question entirely and read 85 of 153.
+        if (oq === prevQ && dq === q) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
+        else { add(bucketB, rec, sc); add(bucketBJ, jk, sc); }
       } else {
-        if (!(oq && oq < q)) add(bucketA, rec, sc);
-        if (oq === q && dq === nextQ) add(bucketB, rec, sc);
+        // A: everyone except those sitting on an EARLIER quarter's opening — identical to the HM card rule.
+        // B: the opening was raised THIS quarter but the candidate joins NEXT quarter.
+        if (!(oq && oq < q)) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
+        if (oq === q && dq === nextQ) { add(bucketB, rec, sc); add(bucketBJ, jk, sc); }
       }
     });
-    return { total, bucketA, bucketB };
+    // Total is the two sub-columns ADDED, never a separate count — that is what stops the three JP figures
+    // on this tab from drifting apart again. It is why Non-Sales and Sales totals differ by the carried-over
+    // person: Non-Sales is measured on offers, so last quarter's opening should not count toward it.
+    const sum = (...ms) => { const out = {}; ms.forEach(m => Object.entries(m).forEach(([k, v]) => {
+      const t = out[k] || (out[k] = { hc: 0, sc: 0 }); t.hc += v.hc; t.sc += v.sc; })); return out; };
+    return { total: sum(bucketA, bucketB), bucketA, bucketB,
+             totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ };
   }
 
   function outcomeMaps(q) {
@@ -1387,6 +1504,30 @@ export function initRecruiterFilters(data) {
       }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody with candidates attributed is missing a capacity for this quarter.</td></tr>`;
     }
 
+    // --- #23: pod not set — the numbers this tab is deliberately leaving out ---
+    // getFilteredRecs() drops anyone whose pod resolves to "Unassigned", from rows AND totals. That is only
+    // honest if the excluded work is visible somewhere, which is here. Data Hygiene ignores the tab filters
+    // by design, so past recruiters are listed too.
+    const noPod = allRecs
+      .filter(r => r.name && r.name !== 'Unassigned' && podOf(r.name, q) === 'Unassigned')
+      .map(r => ({ r, cap: capacityOf(r.name, q) || 0, total: r.total || 0,
+                   offers: r.offer || 0, hired: r.hired || 0, jp: r.joiningPending || 0 }))
+      .sort((a, b) => (b.offers + b.hired) - (a.offers + a.hired) || a.r.name.localeCompare(b.r.name));
+    const noPodBody = document.getElementById('hygNoPodBody');
+    if (noPodBody) {
+      noPodBody.innerHTML = noPod.map(({ r, cap, total, offers, hired, jp }) => {
+        const unknown = isStatusUnknown(r), active = !isRecInactive(r);
+        const label = unknown ? 'Unknown' : (active ? 'Active' : 'Past recruiter');
+        const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
+        return `<tr><td style="font-weight:500">${esc(r.name)}</td>
+          <td><span style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
+          <td>${total.toLocaleString()}</td>
+          <td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td>
+          <td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td>
+          <td class="${cap > 0 ? '' : 'zero'}">${cap}</td></tr>`;
+      }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Every recruiter has a pod set for this quarter — nothing is being excluded.</td></tr>`;
+    }
+
     // --- tab counts ---
     const setN = (id, n, warn) => {
       const el = document.getElementById(id);
@@ -1399,11 +1540,16 @@ export function initRecruiterFilters(data) {
     setN('hygNOfferGap', gapLive.length, true);
     setN('hygNHiredGap', gapDone.length, false);
     setN('hygNUnscored', unscored.length, true);
+    setN('hygNNoPod', noPod.length, true);
     setN('hygNNoCap', noCap.length, true);
     setN('hygNAnom', anomList.length, true);
 
     // --- CSV export per tab (client-side; no backend) ---
     hygCsv = {
+      nopod: () => [['Recruiter', 'Status', 'Applications', 'Offers', 'Hired', 'Joining pending', 'Capacity'],
+        ...noPod.map(({ r, cap, total, offers, hired, jp }) => [r.name,
+          (isStatusUnknown(r) ? 'Unknown' : (isRecInactive(r) ? 'Past recruiter' : 'Active')),
+          total, offers, hired, jp, cap])],
       nocap: () => [['Recruiter', 'Status', 'Pod', 'Capacity', 'Offers', 'Hired', 'Joining pending'],
         ...noCap.map(({ r, cap, offers, hired, jp }) => [r.name,
           (r.activeKnown === false ? 'Unknown' : (r.isActive === false ? 'Inactive' : 'Active')),
@@ -1797,9 +1943,16 @@ export function initRecruiterFilters(data) {
     // Bar = Target; the Gap (shortfall to target) is the dark segment, Achieved the light. Labels on all.
     const q = selQuarter();
     const OM = outcomeMaps(q);
+    const JPn = jpMaps(q, false);
+    // ⚠ Achieved MUST use the same basis as the table above, or the chart quietly tells a different story —
+    // this chart already once showed lifetime scores under a quarter heading. Sales = Joined; Non-Sales =
+    // Joined + Joining Pending (#24, Jerin 2026-08-24). Joined is OM.sales for both: accepted offers whose
+    // start date falls in the quarter.
     const recs = lastRecs.map(r => {
       const sales = isSalesPod(podOf(r.name, q));
-      const achieved = Math.round(((sales ? OM.sales : OM.nonSales)[r.name] || { sc: 0 }).sc);
+      const joined = Math.round((OM.sales[r.name] || { sc: 0 }).sc);
+      const jp = sales ? 0 : Math.round((JPn.total[r.name] || { sc: 0 }).sc);
+      const achieved = joined + jp;
       const target = capacityOf(r.name, q);
       return { name: r.name, target, achieved, gap: Math.max(0, target - achieved) };
     }).filter(r => r.target > 0).sort((a, b) => b.target - a.target);
@@ -1833,7 +1986,7 @@ export function initRecruiterFilters(data) {
     };
     recFulfilChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Achieved — Joined + Joining Pending (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 },
         { label: 'Gap to Target (Score)', data: recs.map(r => r.gap), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 60 } },
         plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
@@ -1907,7 +2060,7 @@ export function initRecruiterFilters(data) {
   }));
 
   // Global filters (apply to all sub-tabs) — Pod / Recruiter / Job are multi-select
-  msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_ORDER, renderAll);
+  msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_OPTIONS, renderAll);
   msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);
   const jobNames = [...new Set((data.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, renderAll);

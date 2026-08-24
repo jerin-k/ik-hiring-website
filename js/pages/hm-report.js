@@ -353,13 +353,6 @@ export function initHmFilters(data) {
     return { getSelected: () => [...selected] };
   }
 
-  // Joining Pending = Ref Check + Doc Submission + Offer (from the linked job pipeline)
-  function jpOf(o) {
-    const j = jobById[o.jobId];
-    if (j && j.pipeline) { const p = j.pipeline; return (p.refCheck || 0) + (p.docSub || 0) + (p.offer || 0); }
-    return o.joiningPending || 0;
-  }
-
   function gDept() { return document.getElementById('hmDept')?.value || ''; }
   function gFrom() { return document.getElementById('hmDateFrom')?.value || ''; }
   function gTo() { return document.getElementById('hmDateTo')?.value || ''; }
@@ -411,7 +404,6 @@ export function initHmFilters(data) {
     const statuses = getSelectedStatuses();
     const jobSel = selJobs();
     const ob = data.openingBuckets || {};
-    const pendingByJobQ = data.openingPendingByJobQ || {};
 
     // Each DISTINCT opening is counted once, in the quarter it was opened, and
     // Total = Joined + Open + Missed. A role opened in Q2 therefore still counts
@@ -423,17 +415,16 @@ export function initHmFilters(data) {
       if (deptG && dept !== deptG) return;
       if (statuses.length > 0 && statuses.indexOf(rec.status || 'Open') === -1) return;
       if (jobSel.length && !jobSel.includes(rec.title)) return;
-      let t = 0, jn = 0, op = 0, ms = 0, jp = 0;
+      let t = 0, jn = 0, op = 0, ms = 0;
       Object.entries(rec.quarters || {}).forEach(([q, b]) => {
         if (!quarterInRange(q, dateFrom, dateTo)) return;
         t += b.total || 0; jn += b.joined || 0; op += b.open || 0; ms += b.missed || 0;
-        jp += (pendingByJobQ[job8] && pendingByJobQ[job8][q]) || 0;
       });
       if (!t && !jn && !op && !ms) return;
-      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0, jobs: [] };
+      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
-      G.total += t; G.joined += jn; G.open += op; G.missed += ms; G.jp += jp;
-      G.jobs.push({ title: rec.title, total: t, joined: jn, open: op, missed: ms, jp, jpP: 0, drop: 0 });
+      G.total += t; G.joined += jn; G.open += op; G.missed += ms;
+      G.jobs.push({ title: rec.title, total: t, joined: jn, open: op, missed: ms, jpP: 0, drop: 0 });
     });
     // ===== CANDIDATE-SIDE COLUMNS (people, not openings) — definition set by Jerin 2026-08-22 =====
     // Joining Pending = every candidate currently parked in Ref Check, Documentation or Offer.
@@ -444,11 +435,11 @@ export function initHmFilters(data) {
     // openings showed 88 of 166 pending people and hid 45 of SME - India's 46.
     const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title));
     function bump(dept, title, field) {
-      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0, jobs: [] };
+      if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
       G[field] += 1;
       let row = G.jobs.find(j => j.title === title);
-      if (!row) { row = { title, total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0 }; G.jobs.push(row); }
+      if (!row) { row = { title, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0 }; G.jobs.push(row); }
       row[field] += 1;
     }
     // ...MINUS anyone whose opening belongs to an EARLIER quarter (Jerin, 2026-08-22): their offer is last
@@ -472,8 +463,8 @@ export function initHmFilters(data) {
 
     const deptArr = Object.values(groups).sort((a, b) => a.dept.localeCompare(b.dept));
 
-    const totals = { total: 0, joined: 0, open: 0, missed: 0, jp: 0, jpP: 0, drop: 0 };
-    deptArr.forEach(t => { totals.total += t.total; totals.joined += t.joined; totals.open += t.open; totals.missed += t.missed; totals.jp += t.jp; totals.jpP += t.jpP; totals.drop += t.drop; });
+    const totals = { total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0 };
+    deptArr.forEach(t => { totals.total += t.total; totals.joined += t.joined; totals.open += t.open; totals.missed += t.missed; totals.jpP += t.jpP; totals.drop += t.drop; });
 
     document.getElementById('hm1Cards').innerHTML = `
       <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div><div class="sub">opened in this period</div></div>
@@ -484,17 +475,23 @@ export function initHmFilters(data) {
       <div class="card"><div class="label">Dropped</div><div class="value" style="color:var(--red)">${totals.drop}</div><div class="sub">${(totals.joined + totals.jpP + totals.drop) > 0 ? Math.round((totals.drop / (totals.joined + totals.jpP + totals.drop)) * 100) + '% of outcomes' : 'no outcomes yet'}</div></div>
     `;
 
-    // Total Openings = Joined + Joining Pending + Delta + Missed, so every opening sits in exactly one bucket.
-    // Delta is what is left with nothing in flight: the old "Open" column minus the ones that already have an
-    // offer out. It carries the bar, filled by (Total - Delta) / Total, so bar and number can never disagree.
+    // #28 (Jerin, 2026-08-24): Delta = Total Openings − Joined − Joining Pending, and a NEGATIVE result
+    // STANDS — the Math.max(0, …) clamp is gone deliberately, do not put it back.
+    // ⚠ Total Openings counts SEATS; Joining Pending counts PEOPLE. Subtracting them mixes units on purpose:
+    // more people can be in closing than there are seats (US Business Q3: 19 seats, 6 joined, 23 people in
+    // closing → −10). That is a true signal about missing opening links, and it corrects itself as they
+    // are fixed. The old formula (Open − seats-with-an-offer-out) gave the right number but its arithmetic
+    // was invisible on screen, which is what made three JP figures disagree all week.
     const metrics = (v) => {
-      const delta = Math.max(0, v.open - v.jp);
+      const delta = v.total - v.joined - v.jpP;
       // #1 Option A (2026-08-22): the bar used to fill with COVERAGE while the bold number counted the GAP,
       // so a nearly-full-looking cell could sit beside a 7. Both now measure the same thing — the shortfall.
       const gapPct = v.total > 0 ? Math.max(0, Math.min(100, Math.round((delta / v.total) * 100))) : 0;
       const cap = delta > 0
         ? `${delta} of ${v.total} still to fill`
-        : (v.total > 0 ? 'nothing outstanding' : '\u2014');
+        : (delta < 0
+          ? `${-delta} more people in closing than seats opened`
+          : (v.total > 0 ? 'nothing outstanding' : '\u2014'));
       // Drop % denominator INCLUDES Dropped itself (Jerin, 2026-08-22): of everything that reached a
       // conclusion or is about to, what share fell out.
       const den = v.joined + v.jpP + v.drop;
