@@ -305,7 +305,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter, minus anyone joining next quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
@@ -1235,9 +1235,13 @@ export function initRecruiterFilters(data) {
         if (oq === prevQ && dq === q) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
         else { add(bucketB, rec, sc); add(bucketBJ, jk, sc); }
       } else {
-        // A: everyone except those sitting on an EARLIER quarter's opening — identical to the HM card rule.
+        // A: everyone except those sitting on an EARLIER quarter's opening (the HM card rule), MINUS anyone
+        //    whose joining date falls in the NEXT quarter.
         // B: the opening was raised THIS quarter but the candidate joins NEXT quarter.
-        if (!(oq && oq < q)) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
+        // That last clause on A is what makes the two DISJOINT (Jerin, 2026-08-24). Without it everyone in B
+        // was also in A — their opening is this quarter, so nothing excluded them — and Total = A + B counted
+        // them twice. It reads 0 today only because no offer carried an opening link before 2026-07-25.
+        if (!(oq && oq < q) && dq !== nextQ) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
         if (oq === q && dq === nextQ) { add(bucketB, rec, sc); add(bucketBJ, jk, sc); }
       }
     });
