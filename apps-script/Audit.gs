@@ -3,6 +3,11 @@
 // and writes a fresh audit spreadsheet. Candidates are joined on PERSONAL EMAIL - both sides carry it on
 // 100% of the rows in scope, and names disagree constantly (middle names, order flips).
 // Scope: 2026 OPENINGS only, statuses Joined / Joining Pending / Dropped - Offer.
+// The sheet is REUSED, never recreated. SpreadsheetApp.create() made a NEW file on every run, so the folder
+// ended up with two identically-named audits nine minutes apart and the link already sent to the team went
+// stale the moment anyone rebuilt. Rebuilding now clears this spreadsheet in place, so the URL is permanent.
+var AUDIT_SHEET_ID = '1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA';
+
 function buildAuditSheet() {
   var TRACKER_ID = '1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A';
   var FOLDER_ID  = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
@@ -36,9 +41,17 @@ function buildAuditSheet() {
   var vals = SpreadsheetApp.openById(TRACKER_ID).getSheetByName('Master').getDataRange().getValues();
   var hdr = vals[0];
   function col(n) { for (var i=0;i<hdr.length;i++) if (String(hdr[i]).trim() === n) return i; return -1; }
+  // Employment Type / Level / Complexity are newer tracker columns and their exact heading is not guaranteed.
+  // colAny tries each spelling and returns -1 if none match, so the audit renders a blank cell instead of
+  // throwing and taking the whole rebuild down.
+  function colAny(list) { for (var i=0;i<list.length;i++) { var c = col(list[i]); if (c >= 0) return c; } return -1; }
+  function at(row, idx) { return idx >= 0 ? String(row[idx] == null ? '' : row[idx]).trim() : ''; }
   var C = { date:col('Date'), jcq:col('Job Creation Quarter'), status:col('Overall Status'), dept:col('Department'),
             job:col('Job Name'), rec:col('Recruiter'), name:col('Candidate Name'), email:col('Personal Email'),
-            offer:col('Date of Offer'), doj:col('DOJ'), jm:col('Joining Month'), jq:col('Joining Quarter') };
+            offer:col('Date of Offer'), doj:col('DOJ'), jm:col('Joining Month'), jq:col('Joining Quarter'),
+            emp:colAny(['Employment Type','Employment type','Emp Type','Type of Employment']),
+            lvl:colAny(['Level','Job Level','Grade']),
+            cx:colAny(['Complexity','Role Complexity','Job Complexity']) };
   for (var k in C) if (C[k] < 0) throw new Error('Tracker column not found: ' + k);
 
   var KEEP = { 'Joined':1, 'Joining Pending':1, 'Dropped - Offer':1 };
@@ -52,6 +65,7 @@ function buildAuditSheet() {
     var is26 = (jcq.indexOf('2026') > -1) || (od.substring(0,4) === '2026');
     if (!is26 || !KEEP[stat]) continue;
     trk.push({ email:e, name:nm, job:String(row[C.job]||'').trim(), opd:od, opq:jcq, doj:dj,
+               rec:at(row,C.rec), emp:at(row,C.emp), lvl:at(row,C.lvl), cx:at(row,C.cx), offd:d2s(row[C.offer]),
                djm:String(row[C.jm]||'').trim() || mth(dj), djq:String(row[C.jq]||'').trim() || qtr(dj), status:stat });
   }
 
@@ -63,6 +77,13 @@ function buildAuditSheet() {
   for (var i = 0; i < rows.length; i++) {
     var e2 = nrm(rows[i].email);
     if (okEmail(e2) && !ash[e2]) ash[e2] = rows[i];
+  }
+  // The free-text reason actually chosen when the application was archived, with who rejected whom. This is
+  // the ONLY field that says why: offerStatus reads CandidateRejected even where the archive reason records
+  // RejectedByOrg, and for the 19 in question the two flatly disagree.
+  function reasonOf(o) {
+    if (!o || !o.archiveReason) return '';
+    return o.archiveReason + (o.archiveReasonType ? ' (' + o.archiveReasonType + ')' : '');
   }
   function aStat(o) {
     if (o.appStatus === 'Hired') return 'Joined';
@@ -80,7 +101,8 @@ function buildAuditSheet() {
   // ---- 3. Tab 1 ----
   var t1 = [['Personal Email (match key)','Candidate Name','Match?','Job Name','Match?','Opening Date','Match?',
              'Opening Quarter','Match?','DOJ','Match?','DOJ Month','Match?','DOJ Quarter','Match?','Status','Match?',
-             'What Ashby has (reference)']];
+             'Recruiter','Match?','Employment Type','Match?','Level','Match?','Complexity','Match?',
+             'Offer Date','Match?','Offer Quarter','Match?','What Ashby has (reference)','Ashby archive reason']];
   var used = {}, matched = 0;
   for (i = 0; i < trk.length; i++) {
     var t = trk[i], m = ash[t.email] || null, ref = '';
@@ -89,12 +111,19 @@ function buildAuditSheet() {
     t1.push([t.email, t.name, m ? 'Yes' : 'No', t.job, m ? (roleOk(t.job, m.jobTitle) ? 'Yes' : 'No') : '',
              t.opd, m ? 'n/a' : '', t.opq, m ? eq(t.opq, mq) : '', t.doj, m ? eq(t.doj, m.startDate || '') : '',
              t.djm, m ? eq(t.djm, mth(m.startDate || '')) : '', t.djq, m ? eq(t.djq, qtr(m.startDate || '')) : '',
-             t.status, m ? eq(t.status, aStat(m)) : '', ref]);
+             t.status, m ? eq(t.status, aStat(m)) : '',
+             t.rec, m ? eq(t.rec, m.recruiter || '') : '',
+             t.emp, m ? eq(t.emp, m.employmentType || '') : '',
+             t.lvl, m ? eq(t.lvl, m.level || '') : '',
+             t.cx,  m ? eq(t.cx,  m.complexity || '') : '',
+             t.offd, m ? eq(t.offd, m.decidedAt || '') : '',
+             qtr(t.offd), m ? eq(qtr(t.offd), qtr(m.decidedAt || '')) : '',
+             ref, reasonOf(m)]);
   }
 
   // ---- 4. Tab 2 ----
   var t2 = [['Personal Email','Candidate Name','Job Name','Opening Date','Opening Quarter','DOJ','DOJ Month',
-             'DOJ Quarter','Status','Opening Quarter - source','Ashby application status']];
+             'DOJ Quarter','Status','Opening Quarter - source','Ashby application status','Ashby archive reason']];
   var t3 = [['Personal Email','Candidate Name','Job Name','Ashby opening quarter (inferred)','Ashby status',
              'Tracker status','Tracker opening quarter','Tracker DOJ','Ashby DOJ','Why it is not on Tab 1']];
   for (i = 0; i < rows.length; i++) {
@@ -106,7 +135,7 @@ function buildAuditSheet() {
     var tt = allTrk[e3];
     if (!tt) {
       t2.push([o.email, o.candidate || '', o.jobTitle || '', '', q[0], o.startDate || '', mth(o.startDate || ''),
-               qtr(o.startDate || ''), aStat(o), q[1], o.appStatus || '']);
+               qtr(o.startDate || ''), aStat(o), q[1], o.appStatus || '', reasonOf(o)]);
     } else {
       var why = (tt.jcq && tt.jcq.indexOf('2026') < 0)
         ? ('Tracker opening is ' + tt.jcq + ', not 2026')
@@ -117,8 +146,21 @@ function buildAuditSheet() {
   }
 
   // ---- 5. write ----
-  var out = SpreadsheetApp.create('Hiring Audit 2026 - Tracker vs Ashby');
-  var s1 = out.getActiveSheet().setName('Tracker Candidates');
+  var out = null;
+  try { out = SpreadsheetApp.openById(AUDIT_SHEET_ID); } catch (e) { out = null; }
+  if (out) {
+    // Wipe in place: drop every sheet but the first, then strip its contents, formats and dropdowns so a
+    // shorter rebuild cannot leave stale rows or validations behind.
+    var olds = out.getSheets();
+    for (var k = olds.length - 1; k >= 1; k--) out.deleteSheet(olds[k]);
+    olds[0].clear().clearFormats();
+    olds[0].clearDataValidations();
+    if (olds[0].getFrozenRows()) olds[0].setFrozenRows(0);
+    if (olds[0].getFrozenColumns()) olds[0].setFrozenColumns(0);
+  } else {
+    out = SpreadsheetApp.create('Hiring Audit 2026 - Tracker vs Ashby');
+  }
+  var s1 = out.getSheets()[0].setName('Tracker Candidates');
   s1.getRange(1,1,t1.length,t1[0].length).setValues(t1);
   s1.getRange(1,1,1,t1[0].length).setFontWeight('bold').setBackground('#334155').setFontColor('#ffffff');
   s1.setFrozenRows(1); s1.setFrozenColumns(2);
@@ -133,7 +175,10 @@ function buildAuditSheet() {
   for (i = 1; i <= t3[0].length; i++) s3.autoResizeColumn(i);
 
   var yn = SpreadsheetApp.newDataValidation().requireValueInList(['Yes','No','n/a'], true).setAllowInvalid(true).build();
-  var mcols = [3,5,7,9,11,13,15,17];
+  // Match? dropdowns. Six new pairs were appended (Recruiter, Employment Type, Level, Complexity, Offer Date,
+  // Offer Quarter), so the list runs to 29; leaving it at 17 would have silently dropped the dropdowns from
+  // exactly the columns this rebuild was for.
+  var mcols = [3,5,7,9,11,13,15,17,19,21,23,25,27,29];
   for (i = 0; i < mcols.length; i++) if (t1.length > 1) s1.getRange(2, mcols[i], t1.length-1, 1).setDataValidation(yn);
   var STAT = ['Open','Joining Pending','Joined','Dropped - Offer','Dropped - Select','Role Shelved',
               'Carry Forward to Next Q','Yet to Open','Offer to be released','Offer Released'];
@@ -152,7 +197,7 @@ function buildAuditSheet() {
    ['DO NOT audit Opening Quarter','Most rows read No. Ashby holds no real opening for these people, so its quarter is inferred. Skip this column.'],
    ['Where to start','1) Status mismatches. 2) DOJ mismatches. 3) Candidate Name Match? = No. 4) Tab 2 rows saying NOT IN TRACKER.'],
    ['Opening Date, Ashby side','Always blank / n-a. Ashby drops the opening link on archive and 91% of offers never had one.'],
-   ['Rebuild','Re-run buildAuditSheet() in Apps Script. It reads the live tracker and the latest Ashby refresh.'],
+   ['Rebuild','Re-run buildAuditSheet() in Apps Script. It reads the live tracker and the latest Ashby refresh, and rewrites THIS spreadsheet - the link never changes.'],
    ['Built at', Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm') + ' UTC']]);
   rd.getRange(1,1,11,1).setFontWeight('bold');
   rd.setColumnWidth(1,240); rd.setColumnWidth(2,760);
