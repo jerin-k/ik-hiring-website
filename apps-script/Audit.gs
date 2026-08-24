@@ -81,6 +81,10 @@ function buildAuditSheet() {
   // The free-text reason actually chosen when the application was archived, with who rejected whom. This is
   // the ONLY field that says why: offerStatus reads CandidateRejected even where the archive reason records
   // RejectedByOrg, and for the 19 in question the two flatly disagree.
+  // The tracker's "Date of Offer" is the day the offer WENT OUT. Ashby's decidedAt is the day the candidate
+  // ANSWERED - they coincide on only 7% of offers, typically 1-9 days apart, so matching on decidedAt made
+  // this column read No on nearly every row. offerCreatedAt is the like-for-like field.
+  function offerDateOf(o) { return (o && (o.offerCreatedAt || o.decidedAt)) || ''; }
   function reasonOf(o) {
     if (!o || !o.archiveReason) return '';
     return o.archiveReason + (o.archiveReasonType ? ' (' + o.archiveReasonType + ')' : '');
@@ -116,8 +120,8 @@ function buildAuditSheet() {
              t.emp, m ? eq(t.emp, m.employmentType || '') : '',
              t.lvl, m ? eq(t.lvl, m.level || '') : '',
              t.cx,  m ? eq(t.cx,  m.complexity || '') : '',
-             t.offd, m ? eq(t.offd, m.decidedAt || '') : '',
-             qtr(t.offd), m ? eq(qtr(t.offd), qtr(m.decidedAt || '')) : '',
+             t.offd, m ? eq(t.offd, offerDateOf(m)) : '',
+             qtr(t.offd), m ? eq(qtr(t.offd), qtr(offerDateOf(m))) : '',
              ref, reasonOf(m)]);
   }
 
@@ -154,7 +158,9 @@ function buildAuditSheet() {
     var olds = out.getSheets();
     for (var k = olds.length - 1; k >= 1; k--) out.deleteSheet(olds[k]);
     olds[0].clear().clearFormats();
-    olds[0].clearDataValidations();
+    // clearDataValidations lives on Range, NOT on Sheet — calling it on the sheet threw and left the audit
+    // half-wiped (contents gone, nothing rebuilt).
+    olds[0].getRange(1, 1, olds[0].getMaxRows(), olds[0].getMaxColumns()).clearDataValidations();
     if (olds[0].getFrozenRows()) olds[0].setFrozenRows(0);
     if (olds[0].getFrozenColumns()) olds[0].setFrozenColumns(0);
   } else {
