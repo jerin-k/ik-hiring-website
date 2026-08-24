@@ -728,6 +728,7 @@ function refreshDashboardData() {
         appStatus: ev.appStatus, archivedAt: ev.archivedAt, attrQuarter: ev.attrQuarter,
         archiveReason: ev.archiveReason, archiveReasonType: ev.archiveReasonType,
         recruiter: ev.recruiter, level: ev.level, complexity: ev.complexity, employmentType: ev.employmentType,
+        offerCreatedAt: ev.offerCreatedAt,   // when the offer was MADE - decidedAt is when the candidate answered
         openingQuarter: ev.openingQuarter, offerStatus: ev.offerStatus, accepted: ev.accepted,
         joiningPending: ev.joiningPending };
     }) });
