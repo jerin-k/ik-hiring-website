@@ -124,6 +124,19 @@ function jobCustomField_(job, cfId) {
   }
   return null;
 }
+// Employment Type (PTC / FTC / ...) is matched on the field TITLE rather than a hardcoded id: unlike Level and
+// Complexity we never captured its uuid, and a title match survives the field being recreated in Ashby.
+function jobCustomFieldByTitle_(job, re) {
+  var cfs = job.customFields || [];
+  for (var i = 0; i < cfs.length; i++) {
+    var t = cfs[i].title || cfs[i].name || '';
+    if (!re.test(t)) continue;
+    var v = cfs[i].valueLabel != null ? cfs[i].valueLabel : cfs[i].value;
+    if (v && v.length === 1 && typeof v !== 'string') v = v[0];
+    return (v === '' || v == null) ? null : String(v);
+  }
+  return null;
+}
 function getQuarter_(dateStr) { var d = new Date(dateStr); return d.getFullYear() + '-Q' + (Math.floor(d.getMonth() / 3) + 1); }
 function dayKey_(ms) { var d = new Date(ms); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 // Whole-days between two 'YYYY-MM-DD' day keys (toKey - fromKey). Used for time-in-stage dwell.
@@ -499,6 +512,7 @@ function refreshDashboardData() {
     var leaf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
     jobLookup[j.id] = { id: j.id, title: j.title, department: topDept(j.departmentId) || leaf, team: leaf, status: j.status,
       level: jobCustomField_(j, LEVEL_CF_ID), complexity: jobCustomField_(j, COMPLEXITY_CF_ID),
+      employmentType: jobCustomFieldByTitle_(j, /employ/i),
       applied: 0, screen: 0, interview: 0, offer: 0, hired: 0, pipeline: emptyPipeline_(), recruiterSet: [] };
   });
 
@@ -632,6 +646,7 @@ function refreshDashboardData() {
   var offerEvents = (offerResult.events || []).map(function (e) { var jd = jobBy8[e.jobId8] || null;
     var amE = appResult.appMap[e.applicationId] || null;
     return { jobId8: e.jobId8, jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', level: jd ? jd.level : null, complexity: jd ? jd.complexity : null,
+      employmentType: jd ? jd.employmentType : null,
       recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted, joiningPending: e.joiningPending,
       // DROP needs three things the events did not carry: the application's own status (a drop is an ARCHIVED
       // application), the opening the offer was made against, and that opening's quarter.
@@ -712,6 +727,7 @@ function refreshDashboardData() {
         jobTitle: ev.jobTitle, department: ev.department, decidedAt: ev.decidedAt, startDate: ev.startDate,
         appStatus: ev.appStatus, archivedAt: ev.archivedAt, attrQuarter: ev.attrQuarter,
         archiveReason: ev.archiveReason, archiveReasonType: ev.archiveReasonType,
+        recruiter: ev.recruiter, level: ev.level, complexity: ev.complexity, employmentType: ev.employmentType,
         openingQuarter: ev.openingQuarter, offerStatus: ev.offerStatus, accepted: ev.accepted,
         joiningPending: ev.joiningPending };
     }) });
