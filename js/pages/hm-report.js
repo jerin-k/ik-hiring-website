@@ -233,6 +233,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
       <p class="sub-note">In = candidates who entered the stage, Out = candidates who moved past it — counted from real stage transitions in the selected period. Click a department to drill in.</p>
+      ${defsBlock('hm-throughput')}
       <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
       <div class="filter-bar">
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
@@ -257,6 +258,7 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: PIPELINE ===== -->
     <div class="hm-panel" data-panel="pipeline" style="display:none">
+      ${defsBlock('hm-pipeline')}
       <p class="sub-note" style="color:var(--orange)">Live snapshot — counts show where candidates stand <strong>today</strong>, so the date filter does not change them. It does decide <strong>which roles are listed</strong>: only those with an opening in the selected period. Click a department to drill in.</p>
       <div class="filter-bar">
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
@@ -273,6 +275,7 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: PANELISTS ===== -->
     <div class="hm-panel" data-panel="panelists" style="display:none">
+      ${defsBlock('hm-panelists')}
       <p class="sub-note">Interview load per panelist for the selected period. Click a department to expand. Feedback turnaround is all-time — it isn't broken down by quarter.</p>
       <div class="filter-bar">
         <div class="ms" id="msHmPanel"></div>
@@ -479,8 +482,9 @@ export function initHmFilters(data) {
 
     // #28 (Jerin, 2026-08-24): Delta = Total Openings − Joined − Joining Pending, and a NEGATIVE result
     // STANDS — the Math.max(0, …) clamp is gone deliberately, do not put it back.
-    // ⚠ Total Openings counts SEATS; Joining Pending counts PEOPLE. Subtracting them mixes units on purpose:
-    // more people can be in closing than there are seats (US Business Q3: 19 seats, 6 joined, 23 people in
+    // ⚠ Total Openings counts POSITIONS; Joining Pending counts PEOPLE. Subtracting them mixes units on purpose:
+    // ⚠ Say POSITIONS, never "seats", in anything the user reads (Jerin, 2026-08-24).
+    // more people can be in closing than there are positions (US Business Q3: 19 positions, 6 joined, 23 in
     // closing → −10). That is a true signal about missing opening links, and it corrects itself as they
     // are fixed. The old formula (Open − seats-with-an-offer-out) gave the right number but its arithmetic
     // was invisible on screen, which is what made three JP figures disagree all week.
@@ -492,7 +496,7 @@ export function initHmFilters(data) {
       const cap = delta > 0
         ? `${delta} of ${v.total} still to fill`
         : (delta < 0
-          ? `${-delta} more people in closing than seats opened`
+          ? `${-delta} more people in closing than positions opened`
           : (v.total > 0 ? 'nothing outstanding' : '\u2014'));
       // Drop % denominator INCLUDES Dropped itself (Jerin, 2026-08-22): of everything that reached a
       // conclusion or is about to, what share fell out.
