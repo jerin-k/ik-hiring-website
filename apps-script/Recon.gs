@@ -6,29 +6,6 @@
 // Cleanup + one-shot. The one-time triggers created by runRefreshOnceSafe accumulate and
 // eventually hit Apps Script's per-script trigger cap. This deletes ALL refreshDashboardData
 // triggers, restores the two daily ones (6AM/6PM), then schedules a single immediate run.
-function reconAuditInputs() {
-  Logger.log('=== RECON: audit inputs ===');
-  var vals = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A').getSheetByName('Master').getDataRange().getValues();
-  var hdr = vals[0];
-  Logger.log('TRACKER header count: ' + hdr.length);
-  var names = [];
-  for (var i = 0; i < hdr.length; i++) { var h = String(hdr[i] || '').trim(); if (h) names.push(i + ':' + h); }
-  Logger.log('TRACKER COLS: ' + names.join(' | '));
-  // Which job custom fields exist, and what are they called?
-  var r = ashbyPost_('/job.list', { limit: 25 });
-  var seen = {};
-  (r.results || []).forEach(function (j) {
-    (j.customFields || []).forEach(function (cf) {
-      var key = (cf.title || cf.name || '?') + ' :: ' + (cf.id || '?');
-      if (!seen[key]) seen[key] = 0;
-      seen[key] += (cf.value != null && cf.value !== "" ? 1 : 0);
-    });
-  });
-  Logger.log('JOB CUSTOM FIELDS (name :: id -> populated count of 25):');
-  for (var k in seen) Logger.log('   ' + k + ' -> ' + seen[k]);
-  Logger.log('=== RECON DONE ===');
-}
-
 function resetAndRefreshNow() {
   var deleted = 0;
   ScriptApp.getProjectTriggers().forEach(function(t) {
