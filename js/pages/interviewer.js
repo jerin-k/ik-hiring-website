@@ -38,6 +38,8 @@ function allMonthKeys(data) {
   return [...set].sort();
 }
 
+import { defsBlock } from '../definitions.js';
+
 export function renderInterviewer(data) {
   const ivs = (data && data.interviewers) || [];
 
@@ -79,6 +81,7 @@ export function renderInterviewer(data) {
     </style>
 
     <div class="section-title">Interviewer Efficiency</div>
+    ${defsBlock('interviewer')}
     <p class="sub-note">Interview load and feedback turnaround per panelist. <strong>Feedback Coverage</strong> = interviews that have feedback attached ÷ that panelist’s interviews. <strong>Turnaround</strong> = time from the interview ending to feedback being submitted. <em>Interview Feedback</em> counts forms matched to one of that panelist’s scheduled interviews; the figure in brackets is every form they submitted, including application-review and screening feedback, which is why it can exceed their interview count and is deliberately never shown as a percentage.</p>
 
     <div class="iv-filters">

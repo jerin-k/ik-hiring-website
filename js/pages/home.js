@@ -1,4 +1,5 @@
 import { getData } from '../data.js';
+import { defsBlock } from '../definitions.js';
 
 export function renderHome(access) {
   const data = getData();
@@ -172,6 +173,7 @@ export function initHomeFilters() {
     const maxPipeline = Math.max(...pipelineStages.map(s => s.value), 1);
 
     container.innerHTML = `
+      ${defsBlock('overview')}
       <div style="margin-bottom:24px;">
         <h3 class="subsection-title" style="margin-top:0;">Key Metrics — ${periodLabel}</h3>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">

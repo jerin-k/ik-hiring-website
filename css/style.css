@@ -680,3 +680,9 @@ details.defs.defs-full[open] > summary {
   border-top: 1px solid var(--border-light);
 }
 @media (max-width: 720px) { .defs-row { grid-template-columns: 1fr; gap: 2px; } }
+.defs-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 3px;
+  background: var(--border-light); color: var(--muted);
+  font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  vertical-align: middle;
+}

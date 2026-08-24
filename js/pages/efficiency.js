@@ -1,4 +1,5 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
+import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
@@ -141,6 +142,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
+      ${defsBlock('eff-fulfilment')}
       <p class="sub-note"><strong>Total Positions</strong> = distinct openings opened in the quarter. It splits three ways —
         <strong>Joined</strong> (filled) + <strong>Joining Pending</strong> (offer out, start date ahead) + <strong>Gap</strong> (still to fill) —
         so the bar and the table say the same thing. <strong>Score</strong> is the position count × the role's score
@@ -169,6 +171,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
+      ${defsBlock('eff-momentum')}
       <p class="sub-note" id="effVelUntracked" style="display:none;color:var(--orange)"></p>
       <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Department → Job → Stage</strong> (HM Screening / OA / R1), daily over the last 30 days of the range. Falls back to pending until the history accumulator has run.</p>
       <div class="eff-podcharts eff-2col" id="effVelPodCharts"></div>
@@ -180,6 +183,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Screening Efficiency -->
     <div class="eff-panel" data-panel="screening" style="display:none">
+      ${defsBlock('eff-screening')}
       <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Department → Job</strong> across the funnel; the per-department charts show Added vs Cleared per stage. Falls back to pending until the accumulator has run.</p>
       <div class="eff-podcharts eff-2col" id="effScreenPodCharts"></div>
       <div class="scroll-table"><table>
@@ -193,6 +197,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Throughput (mirrors HM) -->
     <div class="eff-panel" data-panel="throughput" style="display:none">
+      ${defsBlock('eff-throughput')}
       <p class="sub-note"><strong>In</strong> = candidates who entered the stage, <strong>Out</strong> = candidates who moved past it, Throughput = Out/In % — from real stage history, live at <strong>Department → Job</strong>. Falls back to pending until the history accumulator has run.</p>
       <div style="display:flex;flex-wrap:wrap;gap:12px 16px;margin-bottom:12px;font-size:12px;align-items:center">
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
@@ -207,6 +212,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Time in Process -->
     <div class="eff-panel" data-panel="timeinprocess" style="display:none">
+      ${defsBlock('eff-tis')}
       <p class="sub-note" id="effTisNote" style="display:none"></p>
       <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Department → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked there (today − applied date, full coverage); <strong>TA Screen → Offer</strong> come from real stage-transition history. Median is used (not mean) so a few candidates stuck 150+ days in App Review don't skew the stage.</p>
       <div class="scroll-table"><table>
@@ -217,6 +223,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Joining Conversion -->
     <div class="eff-panel" data-panel="joining" style="display:none">
+      ${defsBlock('eff-joining')}
       <p class="sub-note"><strong>Offered → Hired</strong>, live to the job level (Department → Job), attributed via the recruiters who worked each job.</p>
       <div class="eff-podcharts eff-2col" id="effJoinPodCharts"></div>
       <div class="scroll-table"><table>
@@ -227,6 +234,7 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
+      ${defsBlock('eff-sourcing')}
       <p class="sub-note" id="effSourceNote"></p>
       <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-6px"></p>
       <h3 class="subsection-title">Channel Mix — source names within each type</h3>
