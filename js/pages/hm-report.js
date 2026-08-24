@@ -1,4 +1,5 @@
 import { getData } from '../data.js';
+import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
@@ -201,6 +202,7 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: POSITIONS ===== -->
     <div class="hm-panel" data-panel="positions">
+      ${defsBlock('hm-positions')}
       <div class="cards" id="hm1Cards"></div>
 
       <h3 class="subsection-title">Department Summary</h3>

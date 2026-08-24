@@ -645,3 +645,38 @@ details.defs[open] > summary::before { transform: rotate(90deg); }
 details.defs > summary:hover { color: var(--text); }
 details.defs > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 
+
+/* ===== Definitions block (js/definitions.js) — plain-English explanation of a section's numbers =====
+   Closed, this is a quiet one-line link, not a banner: an empty full-width uppercase card above the
+   numbers shouts at you every visit for something you read once. The card treatment only appears once
+   it is actually open and has content to hold. */
+details.defs.defs-full { margin: 0 0 14px; }
+details.defs.defs-full > summary {
+  text-transform: none; letter-spacing: normal; font-size: 11.5px; font-weight: 500;
+  color: var(--orange); padding: 2px 0;
+}
+details.defs.defs-full > summary:hover { color: var(--orange); text-decoration: underline; }
+details.defs.defs-full[open] {
+  border: 1px solid var(--border); border-radius: 6px; background: #fff; margin-bottom: 18px;
+}
+details.defs.defs-full[open] > summary {
+  padding: 9px 12px; border-bottom: 1px solid var(--border-light); width: 100%;
+}
+.defs-body { padding: 14px 14px 4px; }
+.defs-intro { font-size: 12.5px; line-height: 1.55; color: var(--muted); margin: 0 0 16px; }
+.defs-group { margin: 0 0 16px; }
+.defs-group h5 {
+  font-size: 12.5px; font-weight: 600; color: var(--text); margin: 0 0 6px;
+}
+.defs-row { display: grid; grid-template-columns: 190px 1fr; gap: 14px; padding: 5px 0; align-items: start; }
+.defs-row + .defs-row { border-top: 1px solid var(--border-light); }
+.defs-term { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.defs-text { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+.defs-text strong { color: var(--text); font-weight: 600; }
+.defs-warn { border-left: 2px solid var(--orange); padding-left: 12px; }
+.defs-warn h5 { color: var(--orange); }
+.defs-confirmed {
+  font-size: 11px; color: var(--muted); margin: 0; padding: 8px 0 10px;
+  border-top: 1px solid var(--border-light);
+}
+@media (max-width: 720px) { .defs-row { grid-template-columns: 1fr; gap: 2px; } }
