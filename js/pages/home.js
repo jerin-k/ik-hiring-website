@@ -148,6 +148,22 @@ export function initHomeFilters() {
           ? (iq[val] || 0)
           : Object.entries(iq).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0));
 
+    // ===== Candidates Interviewed (2026-08-25) =====
+    // PEOPLE, not interviews. interviewsByQuarter counts EVENTS — one candidate doing R1, R2 and R3 is three
+    // of those and one of these — so the tile could not simply be relabelled; the pipeline now emits a
+    // distinct-candidate count per quarter. A candidate counts if they sat a panel interview OR took an
+    // online assessment (HeyMilo / Trifle / HackerEarth, which live in Ashby as the Online Assessment STAGE,
+    // not as interview events). The two sets are unioned server-side by application, never added, because
+    // plenty of people do both in one quarter.
+    // Until the next refresh has run these fields are absent — in that case the tile keeps its OLD name and
+    // its old number rather than putting a people label on a count of events.
+    const periodSum = (m) => !m ? null
+      : (isQuarter ? (m[val] || 0) : Object.entries(m).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0));
+    const candInterviewed = periodSum(data.candidatesInterviewedByQuarter);
+    const panelPeople = periodSum(data.panelInterviewedByQuarter);
+    const assessedPeople = periodSum(data.assessedByQuarter);
+    const hasCand = candInterviewed != null && Object.keys(data.candidatesInterviewedByQuarter || {}).length > 0;
+
     // Panelists for the selected period. Each panelist carries a per-quarter breakdown,
     // so the list matches the Total Interviews figure above it instead of always showing
     // lifetime totals (which made a future quarter look busy while the total read zero).
@@ -188,9 +204,11 @@ export function initHomeFilters() {
             <div class="sub">candidates applied</div>
           </div>
           <div class="card">
-            <div class="label">Total Interviews Managed</div>
-            <div class="value">${interviewCount.toLocaleString()}</div>
-            <div class="sub">${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}</div>
+            <div class="label">${hasCand ? 'Candidates Interviewed' : 'Total Interviews Managed'}</div>
+            <div class="value">${(hasCand ? candInterviewed : interviewCount).toLocaleString()}</div>
+            <div class="sub">${hasCand
+              ? `${panelPeople.toLocaleString()} interviewed · ${assessedPeople.toLocaleString()} assessed online`
+              : `${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}`}</div>
           </div>
           <div class="card">
             <div class="label">Total Hired</div>
