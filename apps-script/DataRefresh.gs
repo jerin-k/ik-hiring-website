@@ -399,7 +399,11 @@ function fetchAndProcessOffers_(startTime, appMap) {
 // (createdAfter) with a client-side date guard, plus the shared TIMEOUT_MS cutoff. Emits interviewers[] (org-wide
 // per-panelist totals) + panelists[] (per Dept→Job→panelist rows for the HM Panelists tab).
 function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) {
-  var byUser = {}, byDJU = {}; var EXCLUDED_INTERVIEWER_ID = '924ff493-7411-49a4-ba4b-e083d78dc0b9', interviewsByQuarter = {}, interviewsByMonth = {};        // userId totals / dept->title->userId
+  var byUser = {}, byDJU = {}; var EXCLUDED_INTERVIEWER_ID = '924ff493-7411-49a4-ba4b-e083d78dc0b9', interviewsByQuarter = {}, interviewsByMonth = {};
+  // DISTINCT CANDIDATES per quarter, not interview events. interviewsByQuarter counts EVENTS - one candidate
+  // doing R1, R2 and R3 is three of those and one of these. The Overview tile asks 'how many people did we
+  // interview', which is this. Keyed quarter -> {applicationId: 1}; only the counts ever leave the server.
+  var intAppsByQ = {};        // userId totals / dept->title->userId
   var evEndByAppUser = {};            // (appId '|' userId) -> [event endMs, ...] — for feedback turnaround matching
   function eu(uid) { if (!byUser[uid]) byUser[uid] = { interviews: 0, feedbackCount: 0, turnSum: 0, turnN: 0, byQuarter: {}, byMonth: {}, pending: 0 }; return byUser[uid]; }
   function edju(dept, title, uid) { var d = byDJU[dept] || (byDJU[dept] = {}); var t = d[title] || (d[title] = {}); return t[uid] || (t[uid] = { interviews: 0, feedbackCount: 0, turnSum: 0, turnN: 0, byQuarter: {}, byMonth: {} }); }
@@ -419,7 +423,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
         var ev = evs[e];
         var st = ev.startTime ? new Date(ev.startTime).getTime() : 0;
         if (st && st < SCOPE_FROM_MS) continue;
-        var _uu = ev.interviewerUserIds || [], _hasReal = false; for (var _z = 0; _z < _uu.length; _z++) { if (_uu[_z] && _uu[_z] !== EXCLUDED_INTERVIEWER_ID) { _hasReal = true; break; } } if (!_hasReal) continue; evCount++; if (st) { var _qd = new Date(st); var _qk = _qd.getUTCFullYear() + '-Q' + (Math.floor(_qd.getUTCMonth() / 3) + 1); interviewsByQuarter[_qk] = (interviewsByQuarter[_qk] || 0) + 1; var _mk = _qd.getUTCFullYear() + '-' + ('0' + (_qd.getUTCMonth() + 1)).slice(-2); interviewsByMonth[_mk] = (interviewsByMonth[_mk] || 0) + 1; }
+        var _uu = ev.interviewerUserIds || [], _hasReal = false; for (var _z = 0; _z < _uu.length; _z++) { if (_uu[_z] && _uu[_z] !== EXCLUDED_INTERVIEWER_ID) { _hasReal = true; break; } } if (!_hasReal) continue; evCount++; if (st) { var _qd = new Date(st); var _qk = _qd.getUTCFullYear() + '-Q' + (Math.floor(_qd.getUTCMonth() / 3) + 1); interviewsByQuarter[_qk] = (interviewsByQuarter[_qk] || 0) + 1; if (appId) { (intAppsByQ[_qk] || (intAppsByQ[_qk] = {}))[appId] = 1; } var _mk = _qd.getUTCFullYear() + '-' + ('0' + (_qd.getUTCMonth() + 1)).slice(-2); interviewsByMonth[_mk] = (interviewsByMonth[_mk] || 0) + 1; }
         var endMs = ev.endTime ? new Date(ev.endTime).getTime() : 0;
         var uids = ev.interviewerUserIds || [];
         for (var k = 0; k < uids.length; k++) {
@@ -480,7 +484,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
   var panelists = [];
   for (var dp in byDJU) for (var tt in byDJU[dp]) for (var uu in byDJU[dp][tt]) { var x = byDJU[dp][tt][uu];
     panelists.push({ dept: dp, jobTitle: tt, name: nameOf(uu), userId: uu, interviews: x.interviews, byQuarter: x.byQuarter, byMonth: x.byMonth, feedbackSubmitted: x.feedbackCount, feedbackOnScheduled: x.fbOnSched || 0, avgTurnaroundHrs: x.turnN ? Math.round(x.turnSum / x.turnN * 10) / 10 : null }); }
-  return { interviewers: interviewers, panelists: panelists, totalInterviews: evCount, totalFeedback: fbCount, interviewsByQuarter: interviewsByQuarter, interviewsByMonth: interviewsByMonth };
+  return { interviewers: interviewers, panelists: panelists, totalInterviews: evCount, totalFeedback: fbCount, interviewsByQuarter: interviewsByQuarter, interviewsByMonth: interviewsByMonth, intAppsByQ: intAppsByQ };
 }
 
 // Fast recon: verify createdAfter scoping + volume + shape on the two endpoints (run once before a full refresh).
@@ -813,6 +817,39 @@ function refreshDashboardData() {
     Logger.log('Interviews: ' + ivResult.totalInterviews + ' events, ' + ivResult.totalFeedback + ' feedback, ' + ivResult.interviewers.length + ' interviewers, ' + ivResult.panelists.length + ' panelist rows'); }
   catch (e) { Logger.log('interview pass failed: ' + e.message); }
 
+  // ===== Candidates Interviewed (Overview tile, 2026-08-25) =====
+  // A candidate counts if they sat a PANEL INTERVIEW or took an ONLINE ASSESSMENT in the quarter.
+  // The assessments run in external tools (HeyMilo, Trifle, HackerEarth); in Ashby they are the
+  // 'Online Assessment' STAGE, not interview events, so interviewSchedule.list cannot see them.
+  // The assessment side comes from stage_events.json (Drive-only, written by the stage-history job):
+  // each app's stage timeline, so an entry with k === 'oa' is that candidate reaching the assessment.
+  // The two sets are UNIONED by applicationId, never added - plenty of candidates do both in one quarter
+  // and adding would count them twice. Only counts are emitted; no ids leave the server.
+  var oaAppsByQ = {}, panelByQ = {}, assessedByQ = {}, candidatesInterviewedByQuarter = {};
+  try {
+    var _se = loadDriveJson_('stage_events.json') || {};
+    var _qk2 = function (ds) { if (!ds || ds.length < 7) return null; return ds.substring(0, 4) + '-Q' + (Math.floor((parseInt(ds.substring(5, 7), 10) - 1) / 3) + 1); };
+    for (var _aid in _se) {
+      var _evs = (_se[_aid] && _se[_aid].ev) || [];
+      for (var _n = 0; _n < _evs.length; _n++) {
+        if (_evs[_n].k !== 'oa' || !_evs[_n].e) continue;
+        var _q = _qk2(_evs[_n].e); if (!_q) continue;
+        (oaAppsByQ[_q] || (oaAppsByQ[_q] = {}))[_aid] = 1;
+      }
+    }
+  } catch (e) { Logger.log('stage_events read for assessments failed: ' + e.message); }
+  var _intByQ = ivResult.intAppsByQ || {}, _allQ = {};
+  for (var _q1 in _intByQ) _allQ[_q1] = 1;
+  for (var _q2 in oaAppsByQ) _allQ[_q2] = 1;
+  for (var _q3 in _allQ) {
+    var _u = {}, _n1 = 0, _n2 = 0, _c = 0, _k;
+    var _a1 = _intByQ[_q3] || {}; for (_k in _a1) { _u[_k] = 1; _n1++; }
+    var _a2 = oaAppsByQ[_q3] || {}; for (_k in _a2) { _u[_k] = 1; _n2++; }
+    for (_k in _u) _c++;
+    panelByQ[_q3] = _n1; assessedByQ[_q3] = _n2; candidatesInterviewedByQuarter[_q3] = _c;
+  }
+  Logger.log('Candidates interviewed by quarter: ' + JSON.stringify(candidatesInterviewedByQuarter) + ' (panel ' + JSON.stringify(panelByQ) + ', assessed ' + JSON.stringify(assessedByQ) + ')');
+
   var dashboard = {
     lastUpdated: new Date().toISOString(), schemaVersion: 4, scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
@@ -823,7 +860,8 @@ function refreshDashboardData() {
     weeklyVelocity: velocity, quarterly: quarterly, avgTimeToHire: 0,
     offerEvents: offerEvents, joiningPendingCases: joiningPendingCases, offerLinkGaps: offerLinkGaps, dataQuality: dataQuality,
     appReviewDwellByJob: appResult.appReviewDwellByJob, appReviewDwellByRecruiter: appResult.appReviewDwellByRecruiter,
-    interviewers: ivResult.interviewers, panelists: ivResult.panelists, totalInterviews: ivResult.totalInterviews, interviewsByQuarter: ivResult.interviewsByQuarter, interviewsByMonth: ivResult.interviewsByMonth || {}
+    interviewers: ivResult.interviewers, panelists: ivResult.panelists, totalInterviews: ivResult.totalInterviews, interviewsByQuarter: ivResult.interviewsByQuarter, interviewsByMonth: ivResult.interviewsByMonth || {},
+    candidatesInterviewedByQuarter: candidatesInterviewedByQuarter, panelInterviewedByQuarter: panelByQ, assessedByQuarter: assessedByQ
   };
   saveDashboardJson_(dashboard);
   Logger.log('=== Refresh v4 done: ' + appResult.funnel.applied + ' apps, ' + jobsList.length + ' jobs, ' + recruitersList.length + ' recruiters, ' + offerResult.count + ' offers, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
