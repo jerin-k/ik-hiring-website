@@ -166,7 +166,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
   var arDwellJob = {}, arDwellRec = {};
 
   function ensureRec(name) {
-    if (!recruiterCounts[name]) { var r = { name: name, total: 0, byJob: {}, sources: {}, srcNested: {}, srcByJob: {} }; RECRUITER_STAGES.forEach(function(s) { r[s] = 0; }); recruiterCounts[name] = r; }
+    if (!recruiterCounts[name]) { var r = { name: name, total: 0, byJob: {}, sources: {}, srcNested: {}, srcByJob: {}, srcQ: {}, srcByJobQ: {} }; RECRUITER_STAGES.forEach(function(s) { r[s] = 0; }); recruiterCounts[name] = r; }
     return recruiterCounts[name];
   }
   function ensureQ(qk) { if (!qData[qk]) qData[qk] = { funnel: { applied:0,screened:0,interviewed:0,offered:0,hired:0 }, jobCounts: {}, sourceCounts: {} }; return qData[qk]; }
@@ -259,6 +259,23 @@ function fetchAndProcessApps_(startTime, jobLookup) {
         // and Job filters. Keying by (recruiter x job) fixes that: pod attribution follows the recruiter,
         // the dept/job scope follows the job. job8 matches the 8-char job ids used everywhere else.
         if (jobId) { var sbj = recruiterCounts[recName].srcByJob; var j8 = jobId.slice(0, 8); var sjb = sbj[j8] || (sbj[j8] = {}); var stb = sjb[srcType] || (sjb[srcType] = {}); stb[srcName] = (stb[srcName] || 0) + 1; }
+        // Same counts again, split by the QUARTER THE CANDIDATE APPLIED (2026-08-25). Sourcing Mix carried no
+        // date at all, so its Year/Quarter selector regrouped pods and changed nothing else - a quarter
+        // heading over lifetime numbers, the same shape as the bugs found on 2026-08-21. srcQ drives the
+        // Recruiter tab, srcByJobQ the Overall Efficiency tab (which needs the job to honour dept/job filters).
+        // Emitted ALONGSIDE the undated fields so a frontend running against older data still works.
+        var _sq = app.createdAt ? getQuarter_(app.createdAt) : null;
+        if (_sq) {
+          var _rq = recruiterCounts[recName].srcQ || (recruiterCounts[recName].srcQ = {});
+          var _rqq = _rq[_sq] || (_rq[_sq] = {}); var _rqt = _rqq[srcType] || (_rqq[srcType] = {});
+          _rqt[srcName] = (_rqt[srcName] || 0) + 1;
+          if (jobId) {
+            var _bq = recruiterCounts[recName].srcByJobQ || (recruiterCounts[recName].srcByJobQ = {});
+            var _j8q = jobId.slice(0, 8); var _bj = _bq[_j8q] || (_bq[_j8q] = {});
+            var _bjq = _bj[_sq] || (_bj[_sq] = {}); var _bjt = _bjq[srcType] || (_bjq[srcType] = {});
+            _bjt[srcName] = (_bjt[srcName] || 0) + 1;
+          }
+        }
       }
       if (app.createdAt) { var wk = getWeekLabel_(app.createdAt); weekCounts[wk] = (weekCounts[wk] || 0) + 1; }
       if (app.createdAt) {
