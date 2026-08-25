@@ -160,8 +160,8 @@ export const DEFINITIONS = {
           ['JP — Prev Qtr Openings <span class="defs-tag">Sales</span>', 'Opening raised last quarter, candidate joining this quarter — last quarter’s work landing now.'],
           ['JP — Current Qtr Openings <span class="defs-tag">Sales</span>', 'Everyone else in closing.'],
           ['Drop', 'People who reached an offer and then left — declined, withdrew, or archived with the offer still open. The small print is Drop ÷ (Joined + JP + Drop).'],
-          ['Gap', 'Goal minus what was achieved, so it is the shortfall. The bar fills with that shortfall, so the bar and the number always agree. Never shown below zero.'],
-          ['Capacity Utilisation', 'Achieved ÷ Capacity. <strong>The colour runs the opposite way to Gap on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
+          ['Delta', 'Goal minus what was achieved, so it is the shortfall. The bar fills with that shortfall, so the bar and the number always agree. Never shown below zero.'],
+          ['Capacity Utilisation', 'Achieved ÷ Capacity. <strong>The colour runs the opposite way to Delta on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
         ]
       },
       {
@@ -256,7 +256,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['All-time, not this quarter', 'The source breakdown carries no date, so the quarter selector does not change these numbers. Org-wide totals by department and role are on <strong>Overall Efficiency → Sourcing Mix</strong>.'],
+      ['Counted by when the candidate APPLIED', 'Someone sourced in June counts in Q2 even if they are still in process now. Org-wide totals by department and role are on <strong>Overall Efficiency → Sourcing Mix</strong>.'],
     ]
   },
 
@@ -319,7 +319,7 @@ export const DEFINITIONS = {
           ['Joined', 'Those positions that have been filled.'],
           ['Joining Pending', 'Everyone parked in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone whose opening belongs to an earlier quarter. Counts <strong>people</strong>. Live — the quarter selector does not change it.'],
           ['Drop', 'People who reached an offer and then left — declined, withdrew, or were archived with the offer still open. Counted in the quarter the work was live, not the quarter the record was closed. The small print is Drop ÷ (Joined + Joining Pending + Drop).'],
-          ['Gap', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
+          ['Delta', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
           ['Missed', 'Positions closed as <em>carry forward</em> to the next quarter.'],
           ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role with no Level or Complexity in Ashby is marked <em>unscored</em>: it still counts in HC but adds nothing to Score.'],
         ]
@@ -327,14 +327,14 @@ export const DEFINITIONS = {
       {
         heading: 'Charts and the Cases list',
         items: [
-          ['One chart per department', 'Bars are the roles inside it, stacked Joined / Joining Pending / Gap, with the total on the end — the same three numbers as the table. The <em>All departments</em> chart does the same one level up, and hides itself when you filter to a single department.'],
-          ['A negative Gap on a chart', 'A bar cannot be drawn backwards, so the Gap segment stops at zero while the table keeps the negative number. The table is the honest version.'],
+          ['One chart per department', 'Bars are the roles inside it, stacked Joined / Joining Pending / Delta, with the total on the end — the same three numbers as the table. The <em>All departments</em> chart does the same one level up, and hides itself when you filter to a single department.'],
+          ['A negative Delta on a chart', 'A bar cannot be drawn backwards, so the Delta segment stops at zero while the table keeps the negative number. The table is the honest version.'],
           ['Joining Pending — Cases', 'Every person with an offer in play, scoped to the Department and Job filters. <strong>Unlinked</strong> means no opening is attached in Ashby, so that person is invisible to the position counts above. Those are the ones to fix first.'],
         ]
       },
     ],
     warnings: [
-      ['Positions and people in the same row', 'Total Positions, Joined and Missed count <strong>positions</strong>. Joining Pending and Drop count <strong>people</strong>. One position can hold several people in closing, which is exactly why Gap is allowed to go negative.'],
+      ['Positions and people in the same row', 'Total Positions, Joined and Missed count <strong>positions</strong>. Joining Pending and Drop count <strong>people</strong>. One position can hold several people in closing, which is exactly why Delta is allowed to go negative.'],
       ['This table should now agree with HM → Department Summary', 'Same definitions, same rules about which roles appear. The differences that remain are presentation: this one adds Score to every column and drills to the job with a chart per department.'],
       ['The Cases list is slightly longer than the column', 'The column subtracts people sitting on an earlier quarter’s opening; the list shows everyone, so nobody is lost.'],
     ]
@@ -428,13 +428,13 @@ export const DEFINITIONS = {
         heading: 'The columns',
         items: [
           ['Offered', 'Offers made on that role.'],
-          ['Hired', 'How many became hires.'],
+          ['Hired', 'How many of those offers ended in a hire.'],
           ['Conversion %', 'Hired ÷ Offered.'],
         ]
       },
     ],
     warnings: [
-      ['All-time, not this quarter', 'These counts carry no date, so the quarter selector does not change them.'],
+      ['An offer counts in the quarter it was DECIDED, not raised', 'So every offer in the denominator has actually been answered, and the rate is not dragged down by offers still awaiting a reply.'],
     ]
   },
 
@@ -446,14 +446,14 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Count', 'Candidates credited to that source for that role.'],
+          ['Count', 'Candidates credited to that source for that role, who applied in the selected quarter.'],
           ['%', 'Share of the level above — a source’s share of its type, a type’s share of the role, and so on.'],
           ['Why it can be filtered by department and job', 'Sources are recorded per candidate and per role, so the tree can follow the role while the credit follows the recruiter who worked it.'],
         ]
       },
     ],
     warnings: [
-      ['All-time, not this quarter', 'The source breakdown carries no date, so the quarter selector does not change these numbers.'],
+      ['Counted by when the candidate APPLIED', 'Someone sourced in June counts in Q2 even if they are still in process now.'],
     ]
   },
 
