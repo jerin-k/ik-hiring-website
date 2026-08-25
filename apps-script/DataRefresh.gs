@@ -155,6 +155,11 @@ function fetchAndProcessApps_(startTime, jobLookup) {
   var cursor = null, pageNum = 0, totalApps = 0, scopedApps = 0;
   var funnel = { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 };
   var recruiterCounts = {}, sourceCounts = {}, weekCounts = {}, qData = {}, appMap = {}, histApps = [];
+  // Every ARCHIVED application, for the drop backfill. An archived candidate's current stage reads
+  // 'Archived', so the stage map cannot tell us whether they ever reached a late stage - only their
+  // history can, and that needs one call each. Collecting the ids here costs nothing: this pass already
+  // walks every application. The backfill job consumes this list on its own trigger.
+  var archivedApps = [];
   var recruiterUserId = {};   // recruiter name -> userId (for user.list isEnabled -> Active/Inactive)
   var anomalies = { multiRecruiter: [], multiSourcer: [] };
   // Stage titles Ashby returned that STAGE_KEY_MAP has no entry for. An unmapped stage is dropped
@@ -213,6 +218,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
       // 2026-08-22 run — so a drop cannot be detected from the history feed alone. History supplies "did they
       // reach a late stage", status supplies "did they end archived"; a drop needs both.
       if (app.id && reachedScreening) histApps.push({ id: app.id, r: recruiter, j: jobId, s: app.status || null });
+      if (app.id && app.status === 'Archived') archivedApps.push({ id: app.id, r: recruiter, j: jobId });
       if (!recruiter && reachedScreening && unassignedCases.length < 800) unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
 
       // App Review dwell: candidates sitting in App Review right now → days = today - createdAt (capped 0..365).
@@ -293,7 +299,7 @@ function fetchAndProcessApps_(startTime, jobLookup) {
     if (pageNum % 50 === 0 || !cursor) Logger.log('/application.list(createdAfter): ' + totalApps + ' fetched, ' + scopedApps + ' scoped, ' + pageNum + ' pages, ' + Math.round((Date.now() - startTime) / 1000) + 's' + (cursor ? ' (more)' : ' DONE'));
   } while (cursor);
 
-  return { total: totalApps, scoped: scopedApps, funnel: funnel, recruiterCounts: recruiterCounts, sourceCounts: sourceCounts, weekCounts: weekCounts, qData: qData, appMap: appMap, histApps: histApps,
+  return { total: totalApps, scoped: scopedApps, funnel: funnel, recruiterCounts: recruiterCounts, sourceCounts: sourceCounts, weekCounts: weekCounts, qData: qData, appMap: appMap, histApps: histApps, archivedApps: archivedApps,
     recruiterUserId: recruiterUserId, anomalies: anomalies, unassignedCases: unassignedCases, unmappedStages: unmappedStages, appReviewDwellByJob: arDwellJob, appReviewDwellByRecruiter: arDwellRec };
 }
 
@@ -578,6 +584,8 @@ function refreshDashboardData() {
   Logger.log('Apps: ' + appResult.total + ' fetched, ' + appResult.scoped + ' scoped, ' + Math.round((Date.now() - startTime) / 1000) + 's');
   // Hand the reached-screening+ apps to the stage-history accumulator (runs as its own trigger).
   saveDriveJson_('scoped_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.histApps });
+  saveDriveJson_('archived_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.archivedApps });
+  Logger.log('archived_apps (for drop backfill): ' + appResult.archivedApps.length);
   Logger.log('scoped_apps (reached screening+): ' + appResult.histApps.length);
   var offerResult = fetchAndProcessOffers_(startTime, appResult.appMap);
 
@@ -941,6 +949,59 @@ function saveDriveJson_(name, obj) {
 function loadDriveJson_(name) {
   try { var folder = DriveApp.getFolderById(DASHBOARD_FOLDER_ID); var f = folder.getFilesByName(name); if (f.hasNext()) return JSON.parse(f.next().getBlob().getDataAsString()); } catch (e) { Logger.log('loadDriveJson ' + name + ': ' + e.message); }
   return null;
+}
+
+// ===== DROP BACKFILL: archived applications that reached a late stage =====
+// WHY. Drop used to require an OFFER RECORD, because that was the only source covering archived people.
+// That is a silent filter: someone archived out of Ref Check before anyone raised the offer is a real drop
+// and was invisible. Their history is the only evidence, and an archived candidate's CURRENT stage reads
+// 'Archived', so nothing but application.listHistory can answer 'did they ever reach a late stage'.
+//
+// SHAPE. One call per archived application (~14k, ~0.29s each => ~68 min), resumable on a cursor, on its own
+// trigger. An archived application's history is FROZEN, so every id is pulled ONCE and never again - `done`
+// is the permanent record of that. Only applications that actually reached Ref Check / Documentation / Offer
+// are KEPT (`hits`); the rest are marked done and discarded, which is what keeps the store small.
+//
+// ⚠ This data feeds DROP ONLY. It is deliberately NOT fed into the velocity / throughput / time-in-stage
+// rollups - doing so would move Momentum, Screening Efficiency, Throughput and Time in Process, tabs that
+// have already been reviewed and signed off.
+function backfillArchivedLateStage() {
+  var startTime = Date.now();
+  var list = (loadDriveJson_('archived_apps.json') || {}).apps || [];
+  if (!list.length) { Logger.log('no archived_apps.json yet - run refreshDashboardData first'); return; }
+  var store = loadDriveJson_('archived_late_stage.json') || { done: {}, hits: {} };
+  if (!store.done) store.done = {}; if (!store.hits) store.hits = {};
+  var state = loadDriveJson_('archived_backfill_state.json') || { cursor: 0 };
+  var i = state.cursor, pulled = 0, kept = 0, errs = 0;
+  for (; i < list.length; i++) {
+    if (Date.now() - startTime > HIST_TIMEOUT_MS) {
+      saveDriveJson_('archived_late_stage.json', store);
+      saveDriveJson_('archived_backfill_state.json', { cursor: i, total: list.length });
+      Logger.log('CUTOFF at ' + i + '/' + list.length + ' (pulled ' + pulled + ', kept ' + kept + ', errors ' + errs + ') - resumes next run');
+      return;
+    }
+    var a = list[i];
+    if (!a || !a.id || store.done[a.id]) continue;
+    try {
+      var res = ashbyPost_('/application.listHistory', { applicationId: a.id });
+      var hist = (res && (res.results || res.history)) || [];
+      var earliest = null;
+      for (var h = 0; h < hist.length; h++) {
+        var ht = hist[h];
+        if (!ht || !ht.enteredStageAt || !LATE_STAGES_[ht.title]) continue;
+        if (!earliest || String(ht.enteredStageAt) < String(earliest)) earliest = ht.enteredStageAt;
+      }
+      store.done[a.id] = 1;
+      pulled++;
+      // ONE record per application, so a candidate who bounced into Offer three times is counted once.
+      if (earliest) { store.hits[a.id] = { r: a.r || null, j: a.j || null, e: String(earliest).substring(0, 10) }; kept++; }
+    } catch (e) { errs++; }
+    if (i > 0 && i % 500 === 0) Logger.log('  ' + i + '/' + list.length + ' (' + Math.round((Date.now() - startTime) / 1000) + 's, kept ' + kept + ')');
+  }
+  saveDriveJson_('archived_late_stage.json', store);
+  saveDriveJson_('archived_backfill_state.json', { cursor: 0, total: list.length });
+  Logger.log('=== drop backfill COMPLETE: ' + Object.keys(store.done).length + ' applications checked, ' +
+    Object.keys(store.hits).length + ' reached a late stage (this run: pulled ' + pulled + ', kept ' + kept + ', errors ' + errs + ') ===');
 }
 
 // ===== STAGE-HISTORY ACCUMULATOR =====
