@@ -143,9 +143,9 @@ export function renderEfficiency(data) {
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
       ${defsBlock('eff-fulfilment')}
-      <p class="sub-note"><strong>Total Positions</strong> = distinct openings opened in the quarter. It splits three ways —
-        <strong>Joined</strong> (filled) + <strong>Joining Pending</strong> (offer out, start date ahead) + <strong>Gap</strong> (still to fill) —
-        so the bar and the table say the same thing. <strong>Score</strong> is the position count × the role's score
+      <p class="sub-note"><strong>Total Positions</strong> = distinct openings opened in the quarter.
+        <strong>Joined</strong> and <strong>Missed</strong> also count positions; <strong>Joining Pending</strong> and <strong>Drop</strong> count <strong>people</strong>,
+        on the same definitions as the Hiring Manager and Recruiter tabs. <strong>Gap</strong> = Total − Joined − Joining Pending, and can be negative. <strong>Score</strong> is the position count × the role's score
         (Family + Level + Complexity → grid, per <strong>Admin → Metric Configuration</strong>). A role with no Level or
         Complexity in Ashby scores nothing and is marked <span style="color:var(--orange)">unscored</span>; its headcount still counts.
         See <strong>Recruiter Efficiency → Data Hygiene → Roles Missing Score Inputs</strong>.</p>
@@ -155,8 +155,8 @@ export function renderEfficiency(data) {
 
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Gap</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr" title="Everyone parked in Ref Check, Documentation or Offer, minus anyone whose opening belongs to an earlier quarter. Counts PEOPLE. Live — the quarter selector does not change it.">Joining Pending</th><th colspan="2" class="stage-hdr" title="Reached an offer and then left — declined, withdrew, or archived with the offer still open. Counted in the quarter the work was live.">Drop</th><th colspan="2" class="stage-hdr" title="Total Positions − Joined − Joining Pending. Can be negative when more people are in closing than positions were opened.">Gap</th><th colspan="2" class="stage-hdr" title="Positions closed as carry forward to the next quarter.">Missed</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
@@ -486,47 +486,139 @@ export function initEfficiencyFilters(data) {
   //   Gap = Total − Joined − Pending, i.e. everything still genuinely to fill.
   // Score mirrors each headcount × the role score. A role with no Level/Complexity scores nothing but its
   // HEADCOUNT still counts — the position is real even when Ashby cannot price it.
-  const pendByJobQ = data.openingPendingByJobQ || {};
-  function jobSplit(j, q) {
+  // ===== Joining Pending and Drop are PEOPLE here now (2026-08-25, Jerin) =====
+  // JP means exactly what it means on the Hiring Manager and Recruiter tabs: every PERSON parked in
+  // Ref Check, Documentation or Offer, MINUS anyone whose opening belongs to an EARLIER quarter.
+  // It used to count POSITIONS with a live linked offer, which is why this tab never reconciled with the
+  // other two. Drop follows the Recruiter tab: the APPLICATION was archived, attributed to attrQuarter —
+  // the quarter the work was live, not the quarter the record was closed.
+  // 🚨 Total Positions, Joined and Missed count POSITIONS. Joining Pending and Drop count PEOPLE. They are
+  // shown side by side because that is what was asked for, but they are NOT the same unit — which is why
+  // Gap below is allowed to come out negative.
+  const qOfDate = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+  const dkey = (d) => resolveDeptTeam(d || '').dept || d || 'Unknown';
+  function peopleMaps(q) {
+    const jp = {}, drop = {};
+    const add = (m, k) => { m[k] = (m[k] || 0) + 1; };
+    (data.joiningPendingCases || []).forEach(c => {
+      if (c.openingQuarter && c.openingQuarter < q) return;
+      add(jp, dkey(c.department) + '|' + (c.job || c.jobTitle || ''));
+    });
+    (data.offerEvents || []).forEach(e => {
+      if (e.appStatus !== 'Archived') return;
+      if ((e.attrQuarter || qOfDate(e.archivedAt || e.decidedAt)) !== q) return;
+      add(drop, dkey(e.department) + '|' + (e.jobTitle || ''));
+    });
+    return { jp, drop };
+  }
+  function jobSplit(j, q, dept, PM) {
     const b = openBuckets[j.jid], qq = b && b.quarters && b.quarters[q];
     const total = qq ? (qq.total || 0) : 0;
     const joined = qq ? (qq.joined || 0) : 0;
-    const pending = Math.min(Math.max(0, total - joined), ((pendByJobQ[j.jid] || {})[q]) || 0);
-    const gap = Math.max(0, total - joined - pending);
+    const missed = qq ? (qq.missed || 0) : 0;
+    const key = dept + '|' + (j.title || '');
+    const pending = (PM.jp[key] || 0);
+    const drop = (PM.drop[key] || 0);
+    // SIGNED on purpose — the clamp is gone here for the same reason it is gone from HM Delta: more people
+    // can be in closing than there are positions when an offer carries no opening link. Hiding that behind a
+    // zero makes the row's arithmetic impossible to check by eye.
+    const gap = total - joined - pending;
     const sc = j.scoreable ? j.score : 0;
-    return { total, joined, pending, gap, sc, scoreable: j.scoreable,
-      tS: total * sc, jS: joined * sc, pS: pending * sc, gS: gap * sc };
+    return { total, joined, pending, drop, missed, gap, sc, scoreable: j.scoreable,
+      tS: total * sc, jS: joined * sc, pS: pending * sc, dS: drop * sc, mS: missed * sc, gS: gap * sc };
   }
   const sumSplits = (arr) => arr.reduce((a, x) => ({
-    total: a.total + x.total, joined: a.joined + x.joined, pending: a.pending + x.pending, gap: a.gap + x.gap,
-    tS: a.tS + x.tS, jS: a.jS + x.jS, pS: a.pS + x.pS, gS: a.gS + x.gS,
+    total: a.total + x.total, joined: a.joined + x.joined, pending: a.pending + x.pending,
+    drop: a.drop + x.drop, missed: a.missed + x.missed, gap: a.gap + x.gap,
+    tS: a.tS + x.tS, jS: a.jS + x.jS, pS: a.pS + x.pS, dS: a.dS + x.dS, mS: a.mS + x.mS, gS: a.gS + x.gS,
     unscored: a.unscored + (x.scoreable ? 0 : (x.total > 0 ? 1 : 0))
-  }), { total: 0, joined: 0, pending: 0, gap: 0, tS: 0, jS: 0, pS: 0, gS: 0, unscored: 0 });
+  }), { total: 0, joined: 0, pending: 0, drop: 0, missed: 0, gap: 0,
+        tS: 0, jS: 0, pS: 0, dS: 0, mS: 0, gS: 0, unscored: 0 });
 
   // Departments with any positions this quarter. "Unknown" is NO LONGER excluded: it holds the jobs Ashby's
   // job list never returned (DRAFT status — see the pipeline note in Data Hygiene), and two of those carry
   // real openings, one of them already filled. The sp.total > 0 filter below is what keeps candidate-only
   // rows out of this table, so admitting Unknown leaks nothing that has no positions.
   function fulfilRows(q) {
-    return deptJobs(q, true)
+    const PM = peopleMaps(q);
+    const dsel = selDepts(), jsel = selJobs();
+    const seen = {};
+    const out = deptJobs(q, true)
       .map(({ dept, jobs }) => {
-        const js = jobs.map(j => ({ j, sp: jobSplit(j, q) })).filter(x => x.sp.total > 0);
-        js.sort((a, b) => b.sp.total - a.sp.total);
+        // A role belongs on this table if it had positions in the quarter OR has people against it — the
+        // same rule the Hiring Manager tab uses. Restricting to roles with openings hid most of the people
+        // in closing there (45 of SME - India's 46), and would hide them here too.
+        const js = jobs.map(j => { seen[dept + '|' + (j.title || '')] = 1; return { j, sp: jobSplit(j, q, dept, PM) }; })
+          .filter(x => x.sp.total > 0 || x.sp.pending > 0 || x.sp.drop > 0 || x.sp.missed > 0);
+        js.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
         return { dept, jobs: js, sum: sumSplits(js.map(x => x.sp)) };
       })
-      .filter(d => d.jobs.length)
-      .sort((a, b) => b.sum.total - a.sum.total);
+      .filter(d => d.jobs.length);
+
+    // ⚠ People whose department/role has NO row in the job tree at all. Without this they were silently
+    // dropped: the table read 165 in closing against the Hiring Manager tab's 167. Two missing people is
+    // exactly the kind of quiet shortfall that is impossible to spot by looking at the number, so every
+    // (department, role) carrying people gets a row whether or not the tree knows the job — the same thing
+    // the HM tab does when it builds its rows straight from the cases.
+    const metaByTitle = {};
+    (data.jobs || []).forEach(j => { if (j.title && !metaByTitle[j.title]) metaByTitle[j.title] = j; });
+    const extra = {};
+    const addLeftover = (key) => {
+      if (seen[key]) return;
+      const i = key.indexOf('|'); const dept = key.slice(0, i), title = key.slice(i + 1);
+      if (dsel.length && !dsel.includes(dept)) return;
+      if (jsel.length && !jsel.includes(title)) return;
+      (extra[dept] || (extra[dept] = {}))[title] = 1;
+    };
+    Object.keys(PM.jp).forEach(addLeftover);
+    Object.keys(PM.drop).forEach(addLeftover);
+    Object.entries(extra).forEach(([dept, titles]) => {
+      let grp = out.find(g => g.dept === dept);
+      if (!grp) { grp = { dept, jobs: [], sum: null }; out.push(grp); }
+      Object.keys(titles).forEach(title => {
+        const m = metaByTitle[title] || {};
+        const j = { jid: null, title, dept, level: m.level, complexity: m.complexity,
+                    score: scoreForRole({ department: dept, title, level: m.level, complexity: m.complexity }, q),
+                    scoreable: isScoreable(m) };
+        grp.jobs.push({ j, sp: jobSplit(j, q, dept, PM) });
+      });
+      grp.jobs.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
+      grp.sum = sumSplits(grp.jobs.map(x => x.sp));
+    });
+    return out.filter(d => d.jobs.length).sort((a, b) => b.sum.total - a.sum.total);
   }
 
   function fulfilTable(q) {
     const body = document.getElementById('effFulfilBody'); if (!body) return;
     const z = (n) => n > 0 ? n : '<span class="zero">0</span>';
+    // Gap cell borrowed wholesale from Recruiter → Fulfilment: a slim track that fills with the SHORTFALL,
+    // the number beside it, so the bar and the number can never point in opposite directions.
+    // A NEGATIVE gap draws an empty track and says why in words — more people are in closing than there are
+    // positions, which is real and shrinks as offers get linked to openings.
+    const gapCell = (x) => {
+      const pct = x.total > 0 ? Math.max(0, Math.min(100, Math.round((x.gap / x.total) * 100))) : 0;
+      const cap = x.gap < 0
+        ? `${-x.gap} more in closing than opened`
+        : (x.total > 0
+          ? (x.gap === 0 ? `${x.total} of ${x.total} · covered` : `${x.total - x.gap} of ${x.total} · ${100 - pct}%`)
+          : '\u2014');
+      return `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${pct}%"></i></span>`
+        + `<span class="dnum ${x.gap === 0 ? 'none' : (pct >= 50 ? 'high' : '')}">${x.gap}</span></span>`
+        + `<span class="sublab">${cap}</span></td>`;
+    };
+    // Column order mirrors HM → Department Summary exactly:
+    // Total Positions · Joined · Joining Pending · Drop · Gap · Missed. Each carries its Score alongside.
     const cells = (x, bold) => {
       const w = bold ? ' style="font-weight:600"' : '';
       // .score marks the secondary half of each HC/Score pair so headcount reads first.
-      return `<td${w}>${z(x.total)}</td><td class="score">${z(x.tS)}</td><td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td class="score">${z(x.jS)}</td>`
-        + `<td>${x.pending > 0 ? `<span style="color:var(--blue);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td class="score">${z(x.pS)}</td>`
-        + `<td${w} class="${x.gap > 0 ? 'warn' : ''}">${z(x.gap)}</td><td class="score">${z(x.gS)}</td>`;
+      const dropPct = (() => { const den = x.joined + x.pending + x.drop; return den > 0 ? Math.round((x.drop / den) * 100) : null; })();
+      return `<td${w}>${z(x.total)}</td><td class="score">${z(x.tS)}</td>`
+        + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td class="score">${z(x.jS)}</td>`
+        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td class="score">${z(x.pS)}</td>`
+        + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
+        + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}% of outcomes</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
+        + gapCell(x) + `<td class="score">${x.gS}</td>`
+        + `<td style="color:var(--red)">${z(x.missed)}</td><td class="score">${z(x.mS)}</td>`;
     };
     const rows = fulfilRows(q);
     let html = '';
@@ -543,7 +635,7 @@ export function initEfficiencyFilters(data) {
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
     html += `<tr style="background:var(--accent-light);font-weight:700"><td>All departments</td>${cells(g, true)}</tr>`;
-    body.innerHTML = html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No openings in this period.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:16px">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
@@ -1041,7 +1133,7 @@ export function initEfficiencyFilters(data) {
       data: { labels: rows.map(r => r.dept), datasets: [
         { label: 'Joined', data: rows.map(r => r.sum.joined), backgroundColor: FULFIL_COLORS.joined, stack: 'p', borderWidth: 0 },
         { label: 'Joining Pending', data: rows.map(r => r.sum.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
-        { label: 'Gap', data: rows.map(r => r.sum.gap), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
+        { label: 'Gap', data: rows.map(r => Math.max(0, r.sum.gap)), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
       ] },
       options: fulfilStackOpts('Positions')
     });
@@ -1057,7 +1149,7 @@ export function initEfficiencyFilters(data) {
       data: { labels: js.map(x => x.j.title), datasets: [
         { label: 'Joined', data: js.map(x => x.sp.joined), backgroundColor: FULFIL_COLORS.joined, stack: 'p', borderWidth: 0 },
         { label: 'Joining Pending', data: js.map(x => x.sp.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
-        { label: 'Gap', data: js.map(x => x.sp.gap), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
+        { label: 'Gap', data: js.map(x => Math.max(0, x.sp.gap)), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
       ] },
       options: fulfilStackOpts('Positions')
     };

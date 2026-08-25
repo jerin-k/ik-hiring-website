@@ -309,30 +309,34 @@ export const DEFINITIONS = {
 
   'eff-fulfilment': {
     summary: 'How these numbers are worked out',
-    intro: 'The same picture as the Recruiter tab with the recruiter taken out: <strong>Department → Job</strong>. Everything follows the Year/Quarter selector.',
-    confirmed: 'Under review with Jerin — see Worth knowing',
+    intro: 'The same picture as the Hiring Manager tab, cut <strong>Department → Job</strong> and with a <strong>Score</strong> beside every count. Everything follows the Year/Quarter selector except Joining Pending, which is live.',
+    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Total Positions', 'Distinct openings raised in the selected quarter, counted once each, in the quarter they were opened.'],
-          ['Joined', 'Those openings that have been filled.'],
-          ['Joining Pending', 'Openings with an offer out and a start date still ahead. <strong>Counted as positions here</strong>, not people.'],
-          ['Gap', 'Total Positions − Joined − Joining Pending: positions with nothing in flight against them.'],
-          ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights each position by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role with no Level or Complexity in Ashby is marked <em>unscored</em> — it still counts in HC but adds nothing to Score.'],
+          ['Total Positions', 'Distinct openings raised in the selected quarter, counted once each in the quarter they were opened.'],
+          ['Joined', 'Those positions that have been filled.'],
+          ['Joining Pending', 'Everyone parked in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone whose opening belongs to an earlier quarter. Counts <strong>people</strong>. Live — the quarter selector does not change it.'],
+          ['Drop', 'People who reached an offer and then left — declined, withdrew, or were archived with the offer still open. Counted in the quarter the work was live, not the quarter the record was closed. The small print is Drop ÷ (Joined + Joining Pending + Drop).'],
+          ['Gap', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
+          ['Missed', 'Positions closed as <em>carry forward</em> to the next quarter.'],
+          ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role with no Level or Complexity in Ashby is marked <em>unscored</em>: it still counts in HC but adds nothing to Score.'],
         ]
       },
       {
         heading: 'Charts and the Cases list',
         items: [
-          ['One chart per department', 'Bars are the roles inside it, stacked Joined / Joining Pending / Gap, with the total on the end. The <em>All departments</em> chart underneath does the same thing one level up, and hides itself when you have filtered to a single department.'],
-          ['Joining Pending — Cases', 'Every person with an offer in play — Reference Check, Documentation or Offer — scoped to the Department and Job filters. <strong>Unlinked</strong> means no opening is attached in Ashby, so that person is invisible to the position counts above. Those are the ones to fix first.'],
+          ['One chart per department', 'Bars are the roles inside it, stacked Joined / Joining Pending / Gap, with the total on the end — the same three numbers as the table. The <em>All departments</em> chart does the same one level up, and hides itself when you filter to a single department.'],
+          ['A negative Gap on a chart', 'A bar cannot be drawn backwards, so the Gap segment stops at zero while the table keeps the negative number. The table is the honest version.'],
+          ['Joining Pending — Cases', 'Every person with an offer in play, scoped to the Department and Job filters. <strong>Unlinked</strong> means no opening is attached in Ashby, so that person is invisible to the position counts above. Those are the ones to fix first.'],
         ]
       },
     ],
     warnings: [
-      ['This tab’s Joining Pending does not match the other tabs — deliberately, for now', 'Here the <strong>column</strong> counts positions with an offer out, while the <strong>cases list</strong> counts people with no subtraction. On the Hiring Manager and Recruiter tabs, Joining Pending counts people and excludes earlier-quarter openings. Jerin is reviewing this tab separately; until then the numbers will not tie out and are not meant to.'],
-      ['Positions and people again', 'Everything in the table counts <strong>positions</strong>. The Cases list below it counts <strong>people</strong>. One position can hold several people in closing.'],
+      ['Positions and people in the same row', 'Total Positions, Joined and Missed count <strong>positions</strong>. Joining Pending and Drop count <strong>people</strong>. One position can hold several people in closing, which is exactly why Gap is allowed to go negative.'],
+      ['This table should now agree with HM → Department Summary', 'Same definitions, same rules about which roles appear. The differences that remain are presentation: this one adds Score to every column and drills to the job with a chart per department.'],
+      ['The Cases list is slightly longer than the column', 'The column subtracts people sitting on an earlier quarter’s opening; the list shows everyone, so nobody is lost.'],
     ]
   },
 
