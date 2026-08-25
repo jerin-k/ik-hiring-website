@@ -77,7 +77,7 @@ export const DEFINITIONS = {
           ['One column per stage', 'The <strong>number</strong> is how many candidates <em>entered</em> that stage during the selected period. The <strong>shade</strong> behind it is what share of them then <em>moved past</em> it: pale under 50%, mid 50–70%, strong over 70%.'],
           ['Rows', 'Department, then the individual roles inside it. Click a department to open it.'],
           ['Overall', 'Doc Submission entries ÷ R1 entries — how much of what reaches the first interview makes it to paperwork.'],
-          ['“Stage not used”', 'The grey cell means this workspace has never put a candidate in that stage — it is not a zero, it is a stage nobody uses. <em>Online Assessment</em> is the one that reads this way.'],
+          ['“Stage not used”', 'The grey cell means this workspace has never put a candidate in that stage — it is not a zero, it is a stage nobody uses. It is a guard against reading a naming problem as a business fact.'],
           ['Stage tick-boxes and Hide zero-pipeline', 'The tick-boxes choose which stage columns appear. <em>Hide zero-pipeline</em> drops roles with no movement at all in the period.'],
         ]
       },
@@ -112,7 +112,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Do not add it to the Throughput numbers', 'That table counts movement during a period; this one counts people standing still today. Different questions, different totals.'],
-      ['Online Assessment is always empty', 'Not a data problem — this workspace has never used that stage.'],
+      ['Online Assessment is thin, not empty', 'It is genuinely used — 182 candidates have reached it, 83 of them this quarter — but the volumes are small next to App Review and R1, so read a single role’s OA numbers with care.'],
     ]
   },
 
@@ -197,7 +197,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['An orange line naming a stage means no data anywhere', 'Not a quiet week — that stage has no events in the whole history. <em>Online Assessment</em> is the usual one.'],
+      ['An orange line naming a stage means no data anywhere', 'Not a quiet week — that stage has no events in the whole history. It checks everything on file, not just the visible window.'],
     ]
   },
 
@@ -218,7 +218,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Added and Cleared can belong to different people', 'Someone entering the stage in March and clearing it in April is counted in whichever quarter each event happened. Over a short window the percentage can exceed 100%.'],
-      ['Online Assessment is empty in this workspace', 'The column exists but nobody uses the stage.'],
+      ['Online Assessment volumes are small', 'Real but thin — 182 candidates have reached it in total. Percentages on a single recruiter’s OA column can swing on one or two people.'],
     ]
   },
 
@@ -352,7 +352,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['An orange line naming a stage means no data at all', 'It checks the whole history, not just the visible window, so a quiet week is never mislabelled. <em>Online Assessment</em> is the one that shows up.'],
+      ['An orange line naming a stage means no data at all', 'It checks the whole history, not just the visible window, so a quiet week is never mislabelled as an unused stage.'],
     ]
   },
 
@@ -391,7 +391,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['Online Assessment is structurally empty', 'Nobody in this workspace uses that stage, so its columns are permanently blank. Not a gap in the data.'],
+      ['Online Assessment carries small numbers', 'Used, but thinly: 182 candidates in total (Q1 159, Q2 75, Q3 83 reached it). Treat a single role’s OA conversion as indicative, not solid.'],
     ]
   },
 
