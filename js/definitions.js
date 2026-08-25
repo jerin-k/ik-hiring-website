@@ -488,7 +488,7 @@ export const DEFINITIONS = {
         items: [
           ['Total Positions', 'Positions opened in the selected period, counted once each in the quarter they were opened. The line underneath splits them into joined, open and — where there are any — missed.'],
           ['Applications', 'Candidates who applied in the period.'],
-          ['Total Interviews Managed', 'Interviews <strong>held</strong> in the period, and how many panelists ran them. This counts interview <em>events</em>: a two-person panel is one interview.'],
+          ['Candidates Interviewed', 'Distinct <strong>people</strong> we assessed in the period. Someone counts once whether they sat one interview or five. It includes candidates who took an <strong>online assessment</strong> (HeyMilo, Trifle, HackerEarth) as well as those who met a panel — the two are combined by person, not added, because plenty of candidates do both. The line underneath splits them.'],
           ['Total Hired', 'Hires in the period, with the conversion from applications underneath.'],
           ['Fill Rate', 'Positions joined ÷ positions opened, for the period.'],
         ]
@@ -504,7 +504,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['The interview count here is smaller than the Hiring Manager tab’s', 'This counts interview <strong>events</strong>; the Panelists table counts <strong>places on panels</strong>. A two-person panel is one event and two places. Both are right; they answer different questions.'],
+      ['This card counts people; the interview tabs count interviews', 'Candidates Interviewed counts a person once. The Hiring Manager → Panelists table and the Interviewer Efficiency tab count <strong>places on panels</strong> — a candidate seen three times by two people each is 1 here and 6 there. Both are right; they answer different questions, so never compare them directly.'],
     ]
   },
 
