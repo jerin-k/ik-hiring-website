@@ -19,6 +19,18 @@ function resetAndRefreshNow() {
 
 
 
+// Drop backfill runner. Same self-cleaning pattern as the others: delete-then-recreate, so it can never
+// contribute to the per-script trigger cap that once nearly killed the 6AM/6PM refresh.
+// Resumable - the job saves a cursor at its 25-min cutoff, so run it repeatedly until the log says COMPLETE.
+function runDropBackfillOnce() {
+  var deleted = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'backfillArchivedLateStage') { ScriptApp.deleteTrigger(t); deleted++; }
+  });
+  ScriptApp.newTrigger('backfillArchivedLateStage').timeBased().after(1000).create();
+  Logger.log('Deleted ' + deleted + ' backfill trigger(s); scheduled 1 immediate run.');
+}
+
 // Stage-history accumulator runner. Same self-cleaning pattern as resetAndRefreshNow:
 // one-time triggers pile up and eventually hit Apps Script's per-script cap.
 function runStageHistoryOnce() {
