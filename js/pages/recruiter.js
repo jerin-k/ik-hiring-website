@@ -284,7 +284,7 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joining Conversion -->
     <div class="rec-panel" data-panel="joining" style="display:none">
       ${defsBlock('rec-joining')}
-      <p class="sub-note">Offered → Hired, by pod.</p>
+      <p class="sub-note"><strong>Offered → Hired</strong>, by pod, for the selected quarter. An offer belongs to the quarter its outcome was <strong>decided</strong> in, so every offer counted here has actually been answered.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
@@ -302,15 +302,15 @@ export function renderRecruiter(data) {
         <summary>How these columns are calculated</summary>
         <p class="sub-note" style="margin:8px 0 0"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
       <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> counts candidates whose <strong>start date</strong> falls in the quarter, on both tables, from per-candidate offer records — so it follows the quarter selector.
-      <strong>Joining Pending</strong> counts <em>people</em> currently in Ref Check, Documentation or Offer; its <strong>Total is always its two sub-columns added</strong>. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong> and <strong>Sales</strong> on <strong>Joined</strong> — that is what <strong>Gap</strong> and <strong>Capacity Utilisation</strong> compare against on each table.
-      <strong>Goal</strong> counts the positions <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Gap</strong> = Goal − achieved, and <strong>Capacity Utilisation</strong> = achieved ÷ Capacity; all three sides are quarter-scoped. Where several recruiters work the same job, its positions are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
+      <strong>Joining Pending</strong> counts <em>people</em> currently in Ref Check, Documentation or Offer; its <strong>Total is always its two sub-columns added</strong>. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong> and <strong>Sales</strong> on <strong>Joined</strong> — that is what <strong>Delta</strong> and <strong>Capacity Utilisation</strong> compare against on each table.
+      <strong>Goal</strong> counts the positions <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Delta</strong> = Goal − achieved, and <strong>Capacity Utilisation</strong> = achieved ÷ Capacity; all three sides are quarter-scoped. Where several recruiters work the same job, its positions are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
       <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. Each drop is counted in the quarter the <strong>work was live</strong> — the quarter the candidate first entered Ref Check, Documentation or Offer — not the quarter the record was finally closed. Ashby cannot tell us which opening a drop was against (the link is absent on 91% of offers and on every archived one), so this is a <strong>close approximation, not the opening itself</strong>. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
       </details>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter, minus anyone joining next quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter, minus anyone joining next quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
@@ -319,7 +319,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Gap</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
@@ -339,7 +339,8 @@ export function renderRecruiter(data) {
     <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
       ${defsBlock('rec-sourcing')}
-      <p class="sub-note"><strong>Pod → Recruiter → Source type → Source name.</strong> Expand a source type to see the specific <code>source</code> (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>). Count = candidates credited; % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
+      <p class="sub-note"><strong>Pod → Recruiter → Source type → Source name.</strong> Expand a source type to see the specific <code>source</code> (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>). Count = candidates credited in the <strong>selected quarter</strong> (by when the candidate applied); % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
+      <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
@@ -751,19 +752,24 @@ export function initRecruiterFilters(data) {
     // ===== Joining Conversion =====
     const joinBody = document.getElementById('recJoinBody');
     if (joinBody) {
+      const CM = convMaps(selQuarter());
+      const cOf = (name) => CM.byRec[name] || { o: 0, h: 0 };
       let html = '';
       groups.forEach((G, gi) => {
-        const po = G.recs.reduce((s, r) => s + (r.offer || 0), 0);
-        const ph = G.recs.reduce((s, r) => s + (r.hired || 0), 0);
+        const po = G.recs.reduce((s, r) => s + cOf(r.name).o, 0);
+        const ph = G.recs.reduce((s, r) => s + cOf(r.name).h, 0);
+        const shown = G.recs.filter(r => cOf(r.name).o > 0);
+        if (!po && !ph) return;
         html += `<tr class="pod-header" data-g="j${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>
           <td style="font-weight:600">${po}</td><td class="${ph > 0 ? 'good' : 'zero'}" style="font-weight:600">${ph}</td><td class="${pctClass(pct(ph, po))}">${pct(ph, po)}%</td></tr>`;
-        G.recs.forEach(r => {
+        shown.forEach(r => {
+          const c2 = cOf(r.name);
           html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}${inactiveTag(r)}</td>
-            <td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td><td class="${pctClass(pct(r.hired || 0, r.offer || 0))}">${pct(r.hired || 0, r.offer || 0)}%</td></tr>`;
+            <td>${c2.o}</td><td class="${c2.h > 0 ? 'good' : 'zero'}">${c2.h}</td><td class="${pctClass(pct(c2.h, c2.o))}">${pct(c2.h, c2.o)}%</td></tr>`;
         });
       });
-      joinBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+      joinBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No offers decided in this quarter for the recruiters shown.</td></tr>`;
       wirePodTree(joinBody);
     }
 
@@ -1137,7 +1143,14 @@ export function initRecruiterFilters(data) {
     // (the finer Ashby `source` name). % = share within the parent. Org-wide totals live in Overall Efficiency.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
-      const recSrcTotal = r => Object.values(r.sources || {}).reduce((s, v) => s + v, 0);
+      const qSrc = selQuarter();
+      const nestOf = (r) => srcNestedOf(r, qSrc);
+      const recSrcTotal = r => Object.values(nestOf(r)).reduce((s, names) => s + Object.values(names).reduce((a, v) => a + v, 0), 0);
+      const sn = document.getElementById('recSourceNote');
+      if (sn) {
+        sn.style.display = srcHasQ() ? 'none' : '';
+        sn.innerHTML = 'Heads up: these are <strong>all-time</strong> numbers, not the selected quarter. The dated source data appears after the next refresh.';
+      }
       const grand = recs.reduce((s, r) => s + recSrcTotal(r), 0) || 1;
       let html = '';
       groups.forEach((G, pi) => {
@@ -1152,9 +1165,8 @@ export function initRecruiterFilters(data) {
             <td>${rt || '<span class="zero">0</span>'}</td><td>${rt ? pct(rt, podTotal) + '%' : DASH}</td></tr>`;
           // Source type → source name (from srcNested). Falls back to type-only (r.sources) until the refresh
           // that emits srcNested has run.
-          const nst = r.srcNested || {};
-          let types = Object.entries(nst).map(([t, names]) => [t, Object.values(names).reduce((a, v) => a + v, 0), names]).sort((a, b) => b[1] - a[1]);
-          if (!types.length) types = Object.entries(r.sources || {}).sort((a, b) => b[1] - a[1]).map(([t, cnt]) => [t, cnt, null]);
+          const nst = nestOf(r);
+          const types = Object.entries(nst).map(([t, names]) => [t, Object.values(names).reduce((a, v) => a + v, 0), names]).sort((a, b) => b[1] - a[1]);
           if (types.length) {
             types.forEach(([t, tcnt, names], ti) => {
               const hasNames = names && Object.keys(names).length;
@@ -1262,6 +1274,37 @@ export function initRecruiterFilters(data) {
       const t = out[k] || (out[k] = { hc: 0, sc: 0 }); t.hc += v.hc; t.sc += v.sc; })); return out; };
     return { total: sum(bucketA, bucketB), bucketA, bucketB,
              totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ };
+  }
+
+  // Offered -> Hired for ONE quarter, per recruiter and per (recruiter, job).
+  // ⚠ This panel used to read recruiters[].offer / .hired, which carry NO date — so the Year/Quarter
+  // selector regrouped the pods and changed not a single number. Same family as the three panels fixed on
+  // 2026-08-21: a lifetime figure under a quarter heading is impossible to spot by looking at it.
+  // Basis: an offer belongs to the quarter its outcome was DECIDED in (decidedAt), so every offer in the
+  // denominator has actually been answered — a conversion rate whose denominator still contains undecided
+  // offers reads low for reasons that have nothing to do with the recruiter.
+  // ===== Sourcing Mix, quarter-scoped (2026-08-25) =====
+  // The source counts carried NO date, so this panel's Year/Quarter selector regrouped pods and changed
+  // nothing else. The pipeline now emits recruiters[].srcQ {quarter:{type:{name:count}}}, bucketed by the
+  // quarter the candidate APPLIED. Falls back to the undated srcNested when running against older data —
+  // and says so on screen rather than passing lifetime numbers off as the quarter's.
+  const srcHasQ = () => (data.recruiters || []).some(r => r.srcQ && Object.keys(r.srcQ).length);
+  function srcNestedOf(r, q) {
+    if (r.srcQ) return r.srcQ[q] || {};
+    return r.srcNested || {};
+  }
+  function convMaps(q) {
+    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const byRec = {}, byRecJob = {};
+    (data.offerEvents || []).forEach(e => {
+      const rec = e.recruiter; if (!rec) return;
+      if (qOf(e.decidedAt) !== q) return;
+      const hired = e.appStatus === 'Hired' ? 1 : 0;
+      const a = byRec[rec] || (byRec[rec] = { o: 0, h: 0 }); a.o += 1; a.h += hired;
+      const k = rec + '|' + (e.jobId8 || '');
+      const b = byRecJob[k] || (byRecJob[k] = { o: 0, h: 0, title: e.jobTitle || '' }); b.o += 1; b.h += hired;
+    });
+    return { byRec, byRecJob };
   }
 
   function outcomeMaps(q) {
@@ -1912,9 +1955,13 @@ export function initRecruiterFilters(data) {
     if (recJoinChart) recJoinChart.destroy();
     // Y = recruiter. Full bar = Offered; dark segment = Hired. Labels: Offered at bar end,
     // Hired (with conversion %) on the dark segment.
-    const recs = [...lastRecs].sort((a, b) => (b.offer || 0) - (a.offer || 0));
-    const hired = recs.map(r => r.hired || 0);
-    const offered = recs.map(r => r.offer || 0);
+    // Same quarter-scoped basis as the table above. Reading recruiters[].offer/.hired here while the table
+    // used dated offers is exactly how the Fulfilment chart came to show lifetime scores under a quarter.
+    const CMc = convMaps(selQuarter());
+    const cOfC = (n) => CMc.byRec[n] || { o: 0, h: 0 };
+    const recs = [...lastRecs].filter(r => cOfC(r.name).o > 0).sort((a, b) => cOfC(b.name).o - cOfC(a.name).o);
+    const hired = recs.map(r => cOfC(r.name).h);
+    const offered = recs.map(r => cOfC(r.name).o);
     const rem = recs.map((r, i) => Math.max(0, offered[i] - hired[i]));
     const h = Math.max(240, recs.length * 34 + 80);
     if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
@@ -2001,7 +2048,7 @@ export function initRecruiterFilters(data) {
     recFulfilChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
         { label: 'Achieved — Joined + Joining Pending (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Gap to Target (Score)', data: recs.map(r => r.gap), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
+        { label: 'Delta to Capacity (Score)', data: recs.map(r => r.gap), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 60 } },
         plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
           // + the Target marker at the bar end); the global plugins would print both a second time
@@ -2015,7 +2062,10 @@ export function initRecruiterFilters(data) {
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     // Recruiter-centric stacked bar: Y = recruiter (top 20 by sourced volume), stacked by source_type.
-    const srcTotal = r => Object.values(r.sources || {}).reduce((s, v) => s + v, 0);
+    // Same quarter-scoped basis as the table below it.
+    const qS = selQuarter();
+    const typeTotals = (r) => { const out = {}; Object.entries(srcNestedOf(r, qS)).forEach(([t, names]) => { out[t] = Object.values(names).reduce((a, v) => a + v, 0); }); return out; };
+    const srcTotal = r => Object.values(typeTotals(r)).reduce((s, v) => s + v, 0);
     const withSrc = [...lastRecs].filter(r => srcTotal(r) > 0).sort((a, b) => srcTotal(b) - srcTotal(a)).slice(0, 20);
     if (withSrc.length === 0) {
       ctx.style.display = 'none';
@@ -2025,14 +2075,15 @@ export function initRecruiterFilters(data) {
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
     // aggregate source_types by volume; keep top 6 + roll the rest into "Other"
-    const agg = {}; withSrc.forEach(r => Object.entries(r.sources).forEach(([s, v]) => agg[s] = (agg[s] || 0) + v));
+    const tt = {}; withSrc.forEach(r => { tt[r.name] = typeTotals(r); });
+    const agg = {}; withSrc.forEach(r => Object.entries(tt[r.name]).forEach(([s, v]) => agg[s] = (agg[s] || 0) + v));
     const ordered = Object.entries(agg).sort((a, b) => b[1] - a[1]).map(e => e[0]);
     const topTypes = ordered.slice(0, 6); const rest = ordered.slice(6);
     const cats = rest.length ? [...topTypes, 'Other'] : topTypes;
     const palette = [C.blue, C.green, C.cyan, C.slate, C.amber, '#C5CFE5', '#94a3b8'];
     const datasets = cats.map((cat, ci) => ({
       label: cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, barPercentage: 0.8,
-      data: withSrc.map(r => cat === 'Other' ? rest.reduce((s, t) => s + (r.sources[t] || 0), 0) : (r.sources[cat] || 0))
+      data: withSrc.map(r => cat === 'Other' ? rest.reduce((s, t) => s + (tt[r.name][t] || 0), 0) : (tt[r.name][cat] || 0))
     }));
     const h = Math.max(240, withSrc.length * 30 + 90);
     if (wrap) wrap.style.height = h + 'px'; ctx.style.maxHeight = h + 'px';
