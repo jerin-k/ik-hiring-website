@@ -192,7 +192,8 @@ export const DEFINITIONS = {
         items: [
           ['The numbers', 'How many candidates <strong>entered</strong> that stage on that day, taken from the real stage-change history — so a bulk tidy-up in Ashby does not show up as a spike of work.'],
           ['Which stages', 'The three that recruiters actually drive: HM Screening, Online Assessment and R1.'],
-          ['Rows and columns', 'Pod → Recruiter → Stage down the side, the last 30 days of the selected range across the top. Open a recruiter to see the individual roles behind their numbers.'],
+          ['Rows and columns', 'Pod → Recruiter → Job → Stage down the side, the last 30 days of the selected range across the top. Open a recruiter to see the roles behind their numbers, and a role to see the three stages.'],
+          ['Total · 30d', 'Everything in the 30 columns beside it added up — the row’s work for the window, not for the whole quarter.'],
           ['The From / To boxes', 'Momentum is the one panel driven by the <strong>From</strong> and <strong>To</strong> dates rather than the quarter selector.'],
           ['Chart', 'Three bars per recruiter, one per stage, stacked by week so you can see whether the pace is holding up.'],
         ]
@@ -205,14 +206,16 @@ export const DEFINITIONS = {
 
   'rec-screening': {
     summary: 'How these numbers are worked out',
-    intro: 'How much of what arrives at a stage actually moves on, from real stage transitions, scoped to the selected quarter.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'How much of what arrives at a stage actually moves on, from real stage transitions, scoped to the period selected at the top of the tab.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · period scoping 26 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Added', 'Candidates who <strong>entered</strong> the stage in the period.'],
-          ['Cleared', 'Candidates who <strong>left</strong> it — reached the next stage.'],
+          ['The three stages', 'HM Screening, Online Assessment and R1 — the ones a recruiter drives. Each has its own Added, Cleared and % beneath it.'],
+          ['Added', 'Arrivals <strong>into</strong> the stage during the period. It counts arrivals, not people — a candidate sent back through a stage counts each time they arrive.'],
+          ['Cleared', 'Departures <strong>out</strong> of it — they reached the next stage.'],
+          ['The period', 'Whatever the Year and Quarter boxes say. Leave Quarter on <em>All</em> and you get the whole year; the line above the table always names the period being shown.'],
           ['%', 'Cleared ÷ Added. What share of the queue got moved on.'],
           ['Rows', 'Pod → Recruiter → the individual roles behind each recruiter’s numbers.'],
         ]
@@ -220,7 +223,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Added and Cleared can belong to different people', 'Someone entering the stage in March and clearing it in April is counted in whichever quarter each event happened. Over a short window the percentage can exceed 100%.'],
-      ['Online Assessment volumes are small', 'Real but thin — 182 candidates have reached it in total. Percentages on a single recruiter’s OA column can swing on one or two people.'],
+      ['Online Assessment volumes are small', 'Real, but thin — of the order of a hundred arrivals a quarter across the whole company, against a few hundred for R1. A single recruiter’s OA percentage can swing on one or two people.'],
     ]
   },
 
@@ -257,7 +260,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Board</em>) → the specific source (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
-          ['Count', 'Candidates credited to that recruiter from that source.'],
+          ['Count', 'Candidates credited to that recruiter from that source, in the selected period. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
           ['%', 'Share of the level above it — a source’s share of its type, a type’s share of the recruiter, a recruiter’s share of the pod.'],
         ]
       },
@@ -278,6 +281,7 @@ export const DEFINITIONS = {
           ['The numbers', 'Median days a candidate was parked in that stage. Hover a cell for the average and how many candidates it is based on.'],
           ['Red', 'Above 5 days. Colour only — nothing is filtered out.'],
           ['Rows', 'Pod → Recruiter → Job. Job rows cover everyone on that role, not only this recruiter.'],
+          ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
           ['TA Screen → Offer', 'Measured from real stage history: when they entered the stage to when they left it, for candidates who entered during the selected period.'],
           ['App Review <span class="defs-tag">live</span>', 'Different from the rest: it measures everyone <strong>currently sitting</strong> in App Review, today minus the date they applied. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you pick. It is marked with an orange asterisk.'],
         ]

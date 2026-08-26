@@ -65,8 +65,11 @@ function wirePodTree(tbody) {
 }
 
 // A Momentum stage with no events ANYWHERE in the dataset is not "a quiet week" — it means the stage is
-// not used in this Ashby workspace at all, and a permanently blank row reads as "nobody did any". OA is
-// exactly that today: 0 in the pipeline snapshot, 0 lifetime in stage history, 0 on every recruiter.
+// not used in this Ashby workspace at all, and a permanently blank row reads as "nobody did any".
+// 🚨 OA is NOT that stage — the old comment here said it was, which was only ever true while the
+// 'OA' vs 'Online Assessment' STAGE_KEY_MAP bug was live. Re-measured 2026-08-26: 158 OA stage-entries in
+// the 120-day velocity window; 307 lifetime at recruiter level (Q1 139 · Q2 74 · Q3 94). This banner does
+// not fire for it.
 // Checked against the whole store rather than the visible 30-day window so a genuinely quiet week is
 // never mislabelled as untracked.
 function untrackedStages(store, stages) {
@@ -260,6 +263,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><span class="lbl">To</span><input type="date" id="recVelTo"></div>
       <div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+      <p class="sub-note" id="recQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p>
     </div>
 
     <div class="rec-subtabs">
@@ -287,7 +291,8 @@ export function renderRecruiter(data) {
     <!-- PANEL: Screening Efficiency -->
     <div class="rec-panel" data-panel="screening" style="display:none">
       ${defsBlock('rec-screening')}
-      <p class="sub-note">Added = reached the stage, Cleared = transitioned <em>out</em> (reached the next stage) — from real stage history, scoped to the selected quarter. Click a pod to see its recruiters, and a recruiter to see the jobs behind their numbers.</p>
+      <p class="sub-note" id="recScreenPeriod" style="font-weight:600"></p>
+      <p class="sub-note">Added = reached the stage, Cleared = transitioned <em>out</em> (reached the next stage) — from real stage history, scoped to the period selected above. Click a pod to see its recruiters, and a recruiter to see the jobs behind their numbers.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recScreenChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead>
@@ -356,7 +361,8 @@ export function renderRecruiter(data) {
     <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
       ${defsBlock('rec-sourcing')}
-      <p class="sub-note"><strong>Pod → Recruiter → Source type → Source name.</strong> Expand a source type to see the specific <code>source</code> (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>). Count = candidates credited in the <strong>selected quarter</strong> (by when the candidate applied); % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
+      <p class="sub-note"><strong>Pod → Recruiter → Source type → Source name.</strong> Expand a source type to see the specific <code>source</code> (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>). Count = candidates credited in the <strong>selected period</strong> (by when the candidate applied); % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
+      <p class="sub-note" id="recSourcePeriod" style="font-weight:600"></p>
       <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table>
@@ -551,25 +557,32 @@ export function initRecruiterFilters(data) {
 
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
   // else the current-stage approximation (R1-cleared unknown → null).
-  // Pulls one stage's {reached,cleared} for the selected quarter. throughputByRecruiterQ is
-  // keyed stage -> quarter; when it's absent (older rollups) we fall back to the lifetime
-  // figure so nothing breaks, but then the number genuinely IS lifetime.
+  // Pulls one stage's {reached,cleared} for EVERY quarter the selector covers (null = all time, which is
+  // what the lifetime store holds — the two reconcile exactly, checked 2026-08-26: 209 stage entries, 0
+  // mismatches). throughputByRecruiterQ is keyed stage -> quarter; when it is absent (older rollups) the
+  // lifetime figure is used, and then the number genuinely IS lifetime whatever the selector says.
   const ZERO = () => ({ reached: 0, cleared: 0 });
-  const stageForQuarter = (byStageQ, byStageLifetime, stage, q) => {
-    if (byStageQ) { const s = byStageQ[stage]; return (s && s[q]) ? s[q] : ZERO(); }
+  const addTp = (a, b) => ({ reached: a.reached + b.reached, cleared: (a.cleared == null || b.cleared == null) ? null : a.cleared + b.cleared });
+  const stageForPeriod = (byStageQ, byStageLifetime, stage, per) => {
+    if (byStageQ && per && per.length) {
+      const s = byStageQ[stage] || {};
+      return per.reduce((acc, q) => addTp(acc, s[q] || ZERO()), ZERO());
+    }
     const t = byStageLifetime && byStageLifetime[stage];
-    return t || ZERO();
+    if (t) return t;
+    if (byStageQ) return Object.values(byStageQ[stage] || {}).reduce((acc, v) => addTp(acc, v), ZERO());
+    return ZERO();
   };
   const screenTriple = (r) => {
     const sr = data.stageRollups || {};
-    const q = selQuarter();
+    const per = selQuarters();
     const perQ = sr.throughputByRecruiterQ && sr.throughputByRecruiterQ[r.name];
     const life = sr.throughputByRecruiter && sr.throughputByRecruiter[r.name];
     if (perQ || life) {
       return {
-        hm: stageForQuarter(perQ, life, 'hmReview', q),
-        oa: stageForQuarter(perQ, life, 'oa', q),
-        r1: stageForQuarter(perQ, life, 'r1', q)
+        hm: stageForPeriod(perQ, life, 'hmReview', per),
+        oa: stageForPeriod(perQ, life, 'oa', per),
+        r1: stageForPeriod(perQ, life, 'r1', per)
       };
     }
     return { hm: { reached: r.hm || 0, cleared: Math.min(r.hm || 0, r.oa || 0) }, oa: { reached: r.oa || 0, cleared: Math.min(r.oa || 0, r.r1 || 0) }, r1: { reached: r.r1 || 0, cleared: null } };
@@ -582,13 +595,14 @@ export function initRecruiterFilters(data) {
     const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
     const t = (rj && rj[recName] && rj[recName][job8]) || null;
     if (!t) return null;
-    const q = selQuarter();
+    const per = selQuarters();
     const pick = (stage) => {
       const s = t[stage];
       if (!s) return ZERO();
       // quarter-keyed shape {stage:{quarter:{reached,cleared}}}; older rollups were flat
       if (typeof s.reached === 'number') return s;
-      return s[q] || ZERO();
+      if (!per || !per.length) return Object.values(s).reduce((acc, v) => addTp(acc, v), ZERO());
+      return per.reduce((acc, q) => addTp(acc, s[q] || ZERO()), ZERO());
     };
     return { hm: pick('hmReview'), oa: pick('oa'), r1: pick('r1') };
   };
@@ -601,10 +615,35 @@ export function initRecruiterFilters(data) {
   let msPod = null, msRec = null, msJob = null;
 
   // Quarter selected in the global filter (Year+Quarter) — drives pod grouping + capacity lookups.
+  // The year the selector is on. "All" resolves to the first real year in the list (2026 today) — the same
+  // year periodQuarters() resolves to, so two panels can never read different periods from one selection.
+  function selYear() {
+    const sel = document.getElementById('recVelYear');
+    if (sel && sel.value) return sel.value;
+    const first = sel ? [...sel.options].map(o => o.value).filter(Boolean)[0] : '';
+    return first || String(new Date().getFullYear());
+  }
+  // ONE quarter — for the things that only exist per quarter: pod membership, capacity, the Fulfilment goal.
+  // 🚨 This used to fall through to TODAY's quarter whenever EITHER dropdown read "All", so picking Q1 with
+  // Year on All showed Q3 numbers under a Q1 heading. Resolve the year instead, and fall back to the current
+  // quarter only when no quarter is picked at all.
   function selQuarter() {
-    const y = document.getElementById('recVelYear')?.value;
     const q = document.getElementById('recVelQuarter')?.value;
-    return (y && q) ? qKey(y, q) : currentQuarter();
+    return q ? qKey(selYear(), q) : currentQuarter();
+  }
+  // EVERY quarter the selector covers; null = nothing picked (= all time). Panels whose data carries a date
+  // read THIS, not selQuarter(): one quarter under a "Quarter: All" filter silently hides the rest of the
+  // year — Sourcing Mix was showing 3,223 of 54,501 applications that way.
+  function selQuarters() {
+    const ySel = document.getElementById('recVelYear');
+    const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
+    return periodQuarters(ySel?.value || '', document.getElementById('recVelQuarter')?.value || '', yrs);
+  }
+  // Plain-English name for a period, for the line printed above a table.
+  function periodLabel(per) {
+    if (!per || !per.length) return 'all time';
+    if (per.length === 1) return per[0];
+    return `${per[0].slice(0, 4)} — ${per[0].slice(5)} to ${per[per.length - 1].slice(5)}`;
   }
 
   // Styled multi-select checkbox dropdown. Returns { getSelected } ; empty selection = "All".
@@ -720,6 +759,20 @@ export function initRecruiterFilters(data) {
   function renderAll() {
     const recs = getFilteredRecs();
     const groups = groupByPod(recs, selQuarter());
+
+    // Which period each panel is actually on. Two of them CANNOT follow a multi-quarter selection —
+    // pods, capacity and the Fulfilment goal are set quarter by quarter — so say which quarter they used
+    // rather than letting a "Quarter: All" filter sit over one quarter's numbers.
+    const per = selQuarters();
+    const perTxt = periodLabel(per);
+    const qNote = document.getElementById('recQtrNote');
+    if (qNote) {
+      const oneQuarter = !!document.getElementById('recVelQuarter')?.value;
+      qNote.style.display = oneQuarter ? 'none' : '';
+      if (!oneQuarter) qNote.innerHTML = `<strong>Quarter: All.</strong> Screening Efficiency, Sourcing Mix and Time in Process cover <strong>${perTxt}</strong>. Fulfilment and Joining Conversion exist only per quarter, so they show <strong>${selQuarter()}</strong> — and because pods and capacity are set quarter by quarter, <strong>every</strong> table here groups by ${selQuarter()} pod membership. Momentum always shows the last 30 days of the From/To range.`;
+    }
+    const spEl = document.getElementById('recScreenPeriod');
+    if (spEl) spEl.textContent = `Showing ${perTxt}.`;
 
     // ===== Momentum (own POD/date filters) =====
     renderVelocity();
@@ -1177,14 +1230,19 @@ export function initRecruiterFilters(data) {
     // (the finer Ashby `source` name). % = share within the parent. Org-wide totals live in Overall Efficiency.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
-      const qSrc = selQuarter();
-      const nestOf = (r) => srcNestedOf(r, qSrc);
+      const perSrc = selQuarters();
+      const nestOf = (r) => srcNestedFor(r, perSrc);
       const recSrcTotal = r => Object.values(nestOf(r)).reduce((s, names) => s + Object.values(names).reduce((a, v) => a + v, 0), 0);
       const sn = document.getElementById('recSourceNote');
       if (sn) {
-        sn.style.display = srcHasQ() ? 'none' : '';
-        sn.innerHTML = 'Heads up: these are <strong>all-time</strong> numbers, not the selected quarter. The dated source data appears after the next refresh.';
+        // Orange only when a period is asked for and the dated data isn't there — with nothing selected,
+        // all-time is what was asked for and there is nothing to warn about.
+        const stale = !!perSrc && !srcHasQ();
+        sn.style.display = stale ? '' : 'none';
+        sn.innerHTML = 'Heads up: these are <strong>all-time</strong> numbers, not the selected period. The dated source data appears after the next refresh.';
       }
+      const spSrc = document.getElementById('recSourcePeriod');
+      if (spSrc) spSrc.textContent = `Showing ${periodLabel(perSrc)}.`;
       const grand = recs.reduce((s, r) => s + recSrcTotal(r), 0) || 1;
       let html = '';
       groups.forEach((G, pi) => {
@@ -1323,9 +1381,20 @@ export function initRecruiterFilters(data) {
   // quarter the candidate APPLIED. Falls back to the undated srcNested when running against older data —
   // and says so on screen rather than passing lifetime numbers off as the quarter's.
   const srcHasQ = () => (data.recruiters || []).some(r => r.srcQ && Object.keys(r.srcQ).length);
-  function srcNestedOf(r, q) {
-    if (r.srcQ) return r.srcQ[q] || {};
-    return r.srcNested || {};
+  // Sources for one recruiter across EVERY quarter the selector covers. null period = all time, which is
+  // exactly what the undated srcNested holds (checked 2026-08-26: srcQ summed == srcNested for all 27
+  // recruiters, 54,501 = 54,501).
+  function srcNestedFor(r, per) {
+    if (!r.srcQ || !per || !per.length) return r.srcNested || {};
+    const out = {};
+    per.forEach(q => {
+      const byType = r.srcQ[q] || {};
+      for (const t in byType) {
+        const dst = out[t] || (out[t] = {});
+        for (const nm in byType[t]) dst[nm] = (dst[nm] || 0) + byType[t][nm];
+      }
+    });
+    return out;
   }
   // ===== Joining Conversion (spec settled with Jerin, 2026-08-26) =====
   //   Offered           = Joined + Joining Pending + Dropped
@@ -1388,11 +1457,7 @@ export function initRecruiterFilters(data) {
     return { sales, nonSales, salesJob, nonSalesJob };
   }
 
-  function tisPeriod() {
-    const ySel = document.getElementById('recVelYear');
-    const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
-    return periodQuarters(ySel?.value || '', document.getElementById('recVelQuarter')?.value || '', yrs);
-  }
+  function tisPeriod() { return selQuarters(); }
 
   // Spells out which stages actually follow the period, so quarter-scoped columns never sit unlabelled
   // next to the live App Review one.
@@ -2138,8 +2203,8 @@ export function initRecruiterFilters(data) {
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     // Recruiter-centric stacked bar: Y = recruiter (top 20 by sourced volume), stacked by source_type.
     // Same quarter-scoped basis as the table below it.
-    const qS = selQuarter();
-    const typeTotals = (r) => { const out = {}; Object.entries(srcNestedOf(r, qS)).forEach(([t, names]) => { out[t] = Object.values(names).reduce((a, v) => a + v, 0); }); return out; };
+    const perS = selQuarters();
+    const typeTotals = (r) => { const out = {}; Object.entries(srcNestedFor(r, perS)).forEach(([t, names]) => { out[t] = Object.values(names).reduce((a, v) => a + v, 0); }); return out; };
     const srcTotal = r => Object.values(typeTotals(r)).reduce((s, v) => s + v, 0);
     const withSrc = [...lastRecs].filter(r => srcTotal(r) > 0).sort((a, b) => srcTotal(b) - srcTotal(a)).slice(0, 20);
     if (withSrc.length === 0) {
@@ -2154,11 +2219,15 @@ export function initRecruiterFilters(data) {
     const agg = {}; withSrc.forEach(r => Object.entries(tt[r.name]).forEach(([s, v]) => agg[s] = (agg[s] || 0) + v));
     const ordered = Object.entries(agg).sort((a, b) => b[1] - a[1]).map(e => e[0]);
     const topTypes = ordered.slice(0, 6); const rest = ordered.slice(6);
-    const cats = rest.length ? [...topTypes, 'Other'] : topTypes;
+    // 🚨 The roll-up bucket must NOT be keyed on the string "Other": Ashby has a real source type called
+    // exactly that, and when it landed in the top 6 the bucket's data replaced it — the chart read 7,799
+    // against the table's 7,810 for Q1 (2026-08-26). Key the bucket on a sentinel and label it distinctly.
+    const REST = '\u0000rest';
+    const cats = rest.length ? [...topTypes, REST] : topTypes;
     const palette = [C.blue, C.green, C.cyan, C.slate, C.amber, '#C5CFE5', '#94a3b8'];
     const datasets = cats.map((cat, ci) => ({
-      label: cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, barPercentage: 0.8,
-      data: withSrc.map(r => cat === 'Other' ? rest.reduce((s, t) => s + (tt[r.name][t] || 0), 0) : (tt[r.name][cat] || 0))
+      label: cat === REST ? 'All other types' : cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, barPercentage: 0.8,
+      data: withSrc.map(r => cat === REST ? rest.reduce((s, t) => s + (tt[r.name][t] || 0), 0) : (tt[r.name][cat] || 0))
     }));
     const h = Math.max(240, withSrc.length * 30 + 90);
     if (wrap) wrap.style.height = h + 'px'; ctx.style.maxHeight = h + 'px';
