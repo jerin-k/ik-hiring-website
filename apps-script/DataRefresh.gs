@@ -875,6 +875,45 @@ function refreshDashboardData() {
   }
   Logger.log('Candidates interviewed by quarter: ' + JSON.stringify(candidatesInterviewedByQuarter) + ' (panel ' + JSON.stringify(panelByQ) + ', assessed ' + JSON.stringify(assessedByQ) + ')');
 
+  // ===== DROP, unified (2026-08-26) =====
+  // Jerin's definition: anyone who moved to Ref Check / Documentation / Offer in a quarter (earliest of the
+  // three) and was then archived. Two sources, because neither alone covers everyone:
+  //   1. archived OFFER records - the only source that reaches people whose application predates 2026
+  //   2. archived_late_stage.json - applications that reached those stages with NO offer ever raised.
+  //      Measured 2026-08-26: 63 such applications, 46 already had an offer record, 17 were invisible.
+  //      Q2 alone gained 10 against a previous 20.
+  // 🚨 DEDUPED BY APPLICATION, and each application carries ONE date - the EARLIEST late-stage entry. So a
+  // candidate who bounced into the Offer stage three times is one row, not three. That double-counting is
+  // what made a stage-entry count read 337 for Q2 when the truth was 178 people.
+  // ⚠ One row per APPLICATION, not per person: somebody who applied to two roles and was archived from both
+  // is two drops, because they are two separate hiring efforts.
+  var dropEvents = [], seenDrop = {};
+  offerEvents.forEach(function (ev, di) {
+    if (ev.appStatus !== 'Archived') return;
+    var se = offerResult.events[di];
+    var aid = se && se.applicationId;
+    if (aid) { if (seenDrop[aid]) return; seenDrop[aid] = 1; }
+    dropEvents.push({ jobId8: ev.jobId8, jobTitle: ev.jobTitle, department: ev.department,
+      recruiter: ev.recruiter || null, level: ev.level, complexity: ev.complexity,
+      quarter: ev.attrQuarter || null, source: 'offer' });
+  });
+  try {
+    var lateStore = loadDriveJson_('archived_late_stage.json') || { hits: {} };
+    var lateHits = lateStore.hits || {}, added = 0;
+    for (var laid in lateHits) {
+      if (seenDrop[laid]) continue;
+      seenDrop[laid] = 1;
+      var hit = lateHits[laid];
+      var jd3 = hit.j ? jobLookup[hit.j] : null;
+      dropEvents.push({ jobId8: hit.j ? String(hit.j).substring(0, 8) : '', jobTitle: jd3 ? jd3.title : '',
+        department: jd3 ? jd3.department : '', recruiter: hit.r || null,
+        level: jd3 ? jd3.level : null, complexity: jd3 ? jd3.complexity : null,
+        quarter: qOfDate_(hit.e), source: 'stage' });
+      added++;
+    }
+    Logger.log('dropEvents: ' + dropEvents.length + ' total (' + (dropEvents.length - added) + ' from offers, ' + added + ' from late-stage archived apps with no offer)');
+  } catch (eD) { Logger.log('late-stage drop merge skipped: ' + eD.message); }
+
   var dashboard = {
     lastUpdated: new Date().toISOString(), schemaVersion: 4, scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
@@ -886,7 +925,8 @@ function refreshDashboardData() {
     offerEvents: offerEvents, joiningPendingCases: joiningPendingCases, offerLinkGaps: offerLinkGaps, dataQuality: dataQuality,
     appReviewDwellByJob: appResult.appReviewDwellByJob, appReviewDwellByRecruiter: appResult.appReviewDwellByRecruiter,
     interviewers: ivResult.interviewers, panelists: ivResult.panelists, totalInterviews: ivResult.totalInterviews, interviewsByQuarter: ivResult.interviewsByQuarter, interviewsByMonth: ivResult.interviewsByMonth || {},
-    candidatesInterviewedByQuarter: candidatesInterviewedByQuarter, panelInterviewedByQuarter: panelByQ, assessedByQuarter: assessedByQ
+    candidatesInterviewedByQuarter: candidatesInterviewedByQuarter, panelInterviewedByQuarter: panelByQ, assessedByQuarter: assessedByQ,
+    dropEvents: dropEvents
   };
   saveDashboardJson_(dashboard);
   Logger.log('=== Refresh v4 done: ' + appResult.funnel.applied + ' apps, ' + jobsList.length + ' jobs, ' + recruitersList.length + ' recruiters, ' + offerResult.count + ' offers, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
@@ -977,7 +1017,19 @@ function backfillArchivedLateStage() {
     if (Date.now() - startTime > HIST_TIMEOUT_MS) {
       saveDriveJson_('archived_late_stage.json', store);
       saveDriveJson_('archived_backfill_state.json', { cursor: i, total: list.length });
-      Logger.log('CUTOFF at ' + i + '/' + list.length + ' (pulled ' + pulled + ', kept ' + kept + ', errors ' + errs + ') - resumes next run');
+      // SELF-CHAIN so a ~68-minute job does not need to be re-launched by hand three times.
+      // delete-then-recreate, never a bare create: one-time triggers that accumulate are what hit the
+      // per-script cap and would silently stop the 6AM/6PM refresh from scheduling.
+      // Only the CUTOFF path re-arms. Completion does not, and neither does an error, so this cannot spin.
+      try {
+        ScriptApp.getProjectTriggers().forEach(function (tr) {
+          if (tr.getHandlerFunction() === 'backfillArchivedLateStage') ScriptApp.deleteTrigger(tr);
+        });
+        ScriptApp.newTrigger('backfillArchivedLateStage').timeBased().after(1000).create();
+        Logger.log('CUTOFF at ' + i + '/' + list.length + ' (pulled ' + pulled + ', kept ' + kept + ', errors ' + errs + ') - re-armed, continuing automatically');
+      } catch (eT) {
+        Logger.log('CUTOFF at ' + i + '/' + list.length + ' but could NOT re-arm: ' + eT.message + ' - run runDropBackfillOnce() again by hand');
+      }
       return;
     }
     var a = list[i];
@@ -1000,6 +1052,11 @@ function backfillArchivedLateStage() {
   }
   saveDriveJson_('archived_late_stage.json', store);
   saveDriveJson_('archived_backfill_state.json', { cursor: 0, total: list.length });
+  try {
+    ScriptApp.getProjectTriggers().forEach(function (tr) {
+      if (tr.getHandlerFunction() === 'backfillArchivedLateStage') ScriptApp.deleteTrigger(tr);
+    });
+  } catch (eT2) { Logger.log('could not clear backfill trigger: ' + eT2.message); }
   Logger.log('=== drop backfill COMPLETE: ' + Object.keys(store.done).length + ' applications checked, ' +
     Object.keys(store.hits).length + ' reached a late stage (this run: pulled ' + pulled + ', kept ' + kept + ', errors ' + errs + ') ===');
 }
