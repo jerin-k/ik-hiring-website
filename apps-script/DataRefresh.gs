@@ -1033,17 +1033,28 @@ function backfillArchivedLateStage() {
       return;
     }
     var a = list[i];
-    if (!a || !a.id || store.done[a.id]) continue;
+    if (!a || !a.id) continue;
+    // done  = the original drop pass (late-stage arrivals). v2 = the same application re-read for its
+    // HM Screening arrival, which ToFU needs and the first pass threw away. An application is skipped
+    // only once BOTH passes have seen it, so adding v2 costs one more sweep and then nothing.
+    if (store.done[a.id] && store.v2 && store.v2[a.id]) continue;
     try {
       var res = ashbyPost_('/application.listHistory', { applicationId: a.id });
       var hist = (res && (res.results || res.history)) || [];
-      var earliest = null;
+      var earliest = null, hmEarliest = null;
       for (var h = 0; h < hist.length; h++) {
         var ht = hist[h];
-        if (!ht || !ht.enteredStageAt || !LATE_STAGES_[ht.title]) continue;
-        if (!earliest || String(ht.enteredStageAt) < String(earliest)) earliest = ht.enteredStageAt;
+        if (!ht || !ht.enteredStageAt) continue;
+        if (LATE_STAGES_[ht.title] && (!earliest || String(ht.enteredStageAt) < String(earliest))) earliest = ht.enteredStageAt;
+        // ToFU needs the HM arrival of people who have since been archived. Without it a July ToFU
+        // number shrinks every time somebody from July is rejected in August - the past quietly
+        // rewriting itself, which is the one thing this metric must not do.
+        if (STAGE_KEY_MAP[ht.title] === 'hmReview' && (!hmEarliest || String(ht.enteredStageAt) < String(hmEarliest))) hmEarliest = ht.enteredStageAt;
       }
       store.done[a.id] = 1;
+      if (!store.v2) store.v2 = {};
+      store.v2[a.id] = 1;
+      if (hmEarliest) { if (!store.tofuHm) store.tofuHm = {}; store.tofuHm[a.id] = String(hmEarliest).substring(0, 10); }
       pulled++;
       // ONE record per application, so a candidate who bounced into Offer three times is counted once.
       if (earliest) { store.hits[a.id] = { r: a.r || null, j: a.j || null, e: String(earliest).substring(0, 10) }; kept++; }
@@ -1114,6 +1125,13 @@ function refreshStageHistory() {
   var un = Object.keys(unmappedHist);
   if (un.length) Logger.log('STAGE HISTORY: ' + un.length + ' UNMAPPED stage title(s) skipped - ' + un.map(function (t) { return t + ' x' + unmappedHist[t]; }).join(', ') + '. Add them to STAGE_KEY_MAP or they count for nothing.');
   var rollups = computeStageRollups_(events);
+  // ToFU (top of funnel), added 2026-08-26. Lives in Tofu.gs; merged in here so it travels in the same
+  // rollups file the frontend already fetches. Wrapped because it makes its own API calls: if Ashby is
+  // having a bad day the stage rollups still ship, one field lighter, rather than the whole run failing.
+  try {
+    var tofu = computeTofuRollups_(events);
+    for (var tk in tofu) rollups[tk] = tofu[tk];
+  } catch (eT) { Logger.log('ToFU pass FAILED (rollups still written without it): ' + eT.message); }
   saveDriveJson_('stage_rollups.json', rollups);
   pushFileToGitHub_('data/stage_rollups.json', JSON.stringify(rollups), 'Update stage rollups');
   saveDriveJson_('stage_history_state.json', { cursor: 0, scopedCount: scoped.length });   // reset -> re-pull next cycle
