@@ -280,7 +280,6 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="velocity" style="display:none">
       ${defsBlock('rec-momentum')}
       <p class="sub-note" id="recVelUntracked" style="display:none;color:var(--orange)"></p>
-      <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Pod → Recruiter → Stage</strong> (HM Screening / OA / R1) across the last 30 days of the selected range.</p>
       <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
@@ -292,9 +291,8 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="screening" style="display:none">
       ${defsBlock('rec-screening')}
       <p class="sub-note" id="recScreenPeriod" style="font-weight:600"></p>
-      <p class="sub-note">Added = reached the stage, Cleared = transitioned <em>out</em> (reached the next stage) — from real stage history, scoped to the period selected above. Click a pod to see its recruiters, and a recruiter to see the jobs behind their numbers.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recScreenChart"></canvas></div>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="metrics">
         <thead>
           <tr><th rowspan="2" style="min-width:220px">Pod / Recruiter</th><th colspan="3" class="stage-hdr">HM Screening</th><th colspan="3" class="stage-hdr">Online Assessment</th><th colspan="3" class="stage-hdr">R1</th></tr>
           <tr><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th></tr>
@@ -306,9 +304,8 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joining Conversion -->
     <div class="rec-panel" data-panel="joining" style="display:none">
       ${defsBlock('rec-joining')}
-      <p class="sub-note"><strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes. <strong>Joining Conversion = (Joined + Joining Pending) ÷ Offered</strong> — the share of everyone who reached an offer who has <em>not</em> fallen out. ⚠ <strong>Joining Pending is live</strong>, so the same people appear in every quarter's Offered.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="metrics">
         <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th title="Joined + Joining Pending + Dropped.">Offered</th><th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th><th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th><th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
@@ -317,17 +314,8 @@ export function renderRecruiter(data) {
     <!-- PANEL: Position Fulfilment -->
     <div class="rec-panel" data-panel="fulfilment">
       ${defsBlock('rec-fulfilment')}
-      <p class="sub-note"><strong>Non-Sales</strong> pods are measured on <strong>Joined + Joining Pending</strong>; the <strong>Sales</strong> pod on <strong>Joined</strong>. <strong>Capacity</strong> is the raw figure set per quarter in <strong>Admin → Metric Configuration</strong>.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
-      <details class="defs">
-        <summary>How these columns are calculated</summary>
-        <p class="sub-note" style="margin:8px 0 0"><strong>HC</strong> = headcount, <strong>Score</strong> = Σ role scores (Family+Level+Complexity → grid, per <strong>Admin → Metric Configuration</strong>).
-      <strong>Capacity</strong> is the figure set for the selected quarter. <strong>Joined</strong> counts candidates whose <strong>start date</strong> falls in the quarter, on both tables, from per-candidate offer records — so it follows the quarter selector.
-      <strong>Joining Pending</strong> counts <em>people</em> currently in Ref Check, Documentation or Offer; its <strong>Total is always its two sub-columns added</strong>. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong> and <strong>Sales</strong> on <strong>Joined</strong> — that is what <strong>Delta</strong> and <strong>Capacity Utilisation</strong> compare against on each table.
-      <strong>Goal</strong> counts the positions <strong>opened in the selected quarter</strong> on that recruiter's jobs (from the openings model), so it follows the quarter like everything else — a job they work that had no opening this quarter contributes nothing. <strong>Delta</strong> = Goal − achieved, and <strong>Capacity Utilisation</strong> = achieved ÷ Capacity; all three sides are quarter-scoped. Where several recruiters work the same job, its positions are <strong>split equally</strong> between them, so shared evergreen roles do not multiply across the pod — which is why some Goal figures show a decimal.
-      <strong>Drop</strong> counts everyone who reached an offer and then left — <strong>both sides</strong>: offers the candidate turned down, and offers we withdrew or that were archived while still open. Each drop is counted in the quarter the <strong>work was live</strong> — the quarter the candidate first entered Ref Check, Documentation or Offer — not the quarter the record was finally closed. Ashby cannot tell us which opening a drop was against (the link is absent on 91% of offers and on every archived one), so this is a <strong>close approximation, not the opening itself</strong>. Joining Pending is a recruiter-level count from offers (per-job Score unattributable → <span class="zero">—</span>).</p>
-      </details>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
@@ -361,11 +349,10 @@ export function renderRecruiter(data) {
     <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
       ${defsBlock('rec-sourcing')}
-      <p class="sub-note"><strong>Pod → Recruiter → Source type → Source name.</strong> Expand a source type to see the specific <code>source</code> (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>). Count = candidates credited in the <strong>selected period</strong> (by when the candidate applied); % = share within the parent. Org-wide totals live in <strong>Overall Efficiency</strong>.</p>
       <p class="sub-note" id="recSourcePeriod" style="font-weight:600"></p>
       <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="metrics">
         <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
@@ -375,7 +362,6 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="timeinprocess" style="display:none">
       ${defsBlock('rec-tis')}
       <p class="sub-note" id="recTisNote" style="display:none"></p>
-      <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Pod → Recruiter → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked (today − applied date, full coverage); <strong>TA Screen → Offer</strong> from real stage history. Job rows are job-level (all recruiters on the job). Median (not mean) so App-Review outliers don't skew a stage.</p>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recTisHead"></thead>
         <tbody id="recTisBody"></tbody>
@@ -385,7 +371,6 @@ export function renderRecruiter(data) {
     <!-- PANEL: Data Hygiene (LIVE — surfaces data.dataQuality from the attribution pass) -->
     <div class="rec-panel" data-panel="hygiene" style="display:none">
       ${defsBlock('rec-hygiene')}
-      <p class="sub-note"><strong>Compliance view.</strong> These are candidates &amp; applications the pipeline could not attribute cleanly. The team fixes them <strong>in Ashby</strong> (tag a Recruiter on the hiring team, or remove duplicate Recruiter/Sourcer tags); the next refresh clears the fixed rows. 2026-onward only.</p>
       <div class="cards" id="hygCards" style="margin-bottom:18px"></div>
 
       <div class="hyg-tabs" id="hygTabs">
