@@ -154,7 +154,7 @@ export const DEFINITIONS = {
         items: [
           ['Goal — Joiners', 'The <strong>positions opened in the selected quarter</strong> on the roles this recruiter works — not every role they have ever touched. Where several recruiters work the same role, its positions are <strong>split equally</strong> between them, which is why some Goals show a decimal.'],
           ['Capacity', 'What this recruiter is expected to carry in the quarter, set by hand in <strong>Admin → Metric Configuration</strong>. Blank until somebody sets it.'],
-          ['Joined', 'Candidates whose <strong>start date</strong> falls in the quarter, taken from the individual offer records — so it follows the quarter properly.'],
+          ['Joined', 'Candidates whose <strong>start date</strong> falls in the quarter, from the individual offer records. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised.'],
           ['JP Total', 'People currently in Ref Check, Documentation or Offer. It is always <strong>exactly the two columns beside it added together</strong> — never counted separately.'],
           ['JP — Current Qtr <span class="defs-tag">Non-Sales</span>', 'Everyone in closing, minus anyone on an earlier quarter’s opening, minus anyone joining next quarter.'],
           ['JP — Upcoming Qtr <span class="defs-tag">Non-Sales</span>', 'Their opening was raised this quarter but they join next quarter. Reads 0 today because offers only started carrying an opening link on 25 Jul 2026.'],
@@ -226,24 +226,25 @@ export const DEFINITIONS = {
 
   'rec-joining': {
     summary: 'How these numbers are worked out',
-    intro: 'A <strong>cohort</strong> view: take the offers raised in the selected quarter, then follow what became of those same people. Every row closes — Offered = Joined + Dropped + still in flight.',
+    intro: 'Everyone who reached an offer, and what became of them. <strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes.',
     confirmed: 'Definitions confirmed with Jerin · 26 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Offered', 'Offers <strong>raised in the selected quarter</strong>. This fixes the group of people the rest of the row is about.'],
-          ['Dropped', 'Of those same offers, how many ended <strong>archived</strong> — the candidate declined, they withdrew, or we closed it with the offer still open.'],
-          ['Joined', 'Of those same offers, how many became hires.'],
-          ['Joining Conversion', 'Joined ÷ Offered, with a bar so it reads at a glance. The caption underneath shows the split, including anyone <strong>still in flight</strong>.'],
-          ['The chart', 'One bar per recruiter: <strong>Joined</strong> and <strong>Dropped</strong> stacked, with the cohort total — <strong>Offered</strong> — printed at the end of the bar. The bar stops short of that number whenever people are still in flight; the pale segment is that remainder, drawn so the number at the end is honest rather than unexplained.'],
+          ['Offered', 'Joined + Joining Pending + Dropped — everyone who got as far as an offer.'],
+          ['Joined', 'People whose <strong>start date</strong> falls in the quarter, minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong> — that was last quarter\u2019s work landing now.'],
+          ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
+          ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and both Fulfilment tables use.'],
+          ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
+          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>, with <strong>Offered</strong> — the sum of the three — printed at the end.'],
         ]
       },
     ],
     warnings: [
-      ['The newest quarter always reads low, and it is not a performance signal', 'Conversion is Joined ÷ <strong>Offered</strong>, so candidates who have accepted but not yet started sit in the denominator. A quarter climbs as its people start. Compare a finished quarter with a finished quarter.'],
-      ['Dropped here is narrower than Drop on Fulfilment', 'This table is built from offers, so someone archived after reaching Ref Check or Documentation with <em>no offer ever raised</em> cannot appear on it. Same definition of a drop, smaller population — the two will not tie.'],
-      ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab. That currently hides a large share of the quarter\u2019s offers — see <strong>Data Hygiene → Pod Not Set</strong>.'],
+      ['This measures drop-out, not joining', 'Joined and Joining Pending sit on <em>both</em> sides of the fraction, so they cancel: the figure is arithmetically <strong>1 − Dropped ÷ Offered</strong>. It will hover near 96% and move only when people fall out. A quarter where everyone joined and one where everyone is still waiting score the same. That is the intended question — <em>who have we lost?</em> — not a measure of how many started.'],
+      ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in Ref Check, Documentation or Offer <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered. Kept that way on purpose, so this column matches the HM Positions card instead of inventing a fifth definition.'],
+      ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab — see <strong>Data Hygiene → Pod Not Set</strong>.'],
     ]
   },
 

@@ -301,10 +301,10 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joining Conversion -->
     <div class="rec-panel" data-panel="joining" style="display:none">
       ${defsBlock('rec-joining')}
-      <p class="sub-note"><strong>Offered → Joined</strong>, by pod. <strong>Offered</strong> counts offers <strong>raised in the selected quarter</strong>; <strong>Dropped</strong> and <strong>Joined</strong> are what became of that same set, so the row always closes — anything left over is still in flight and shows under the conversion bar. <strong>Joining Conversion = Joined ÷ Offered</strong>, so the newest quarter reads low until its candidates start.</p>
+      <p class="sub-note"><strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes. <strong>Joining Conversion = (Joined + Joining Pending) ÷ Offered</strong> — the share of everyone who reached an offer who has <em>not</em> fallen out. ⚠ <strong>Joining Pending is live</strong>, so the same people appear in every quarter's Offered.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th title="Offers raised in the selected quarter.">Offered</th><th title="Of those offers, how many were archived — the candidate declined, withdrew, or we closed it.">Dropped</th><th title="Of those offers, how many became hires.">Joined</th><th>Joining Conversion</th></tr></thead>
+        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th title="Joined + Joining Pending + Dropped.">Offered</th><th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th><th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th><th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
     </div>
@@ -770,38 +770,36 @@ export function initRecruiterFilters(data) {
     const joinBody = document.getElementById('recJoinBody');
     if (joinBody) {
       const CM = convMaps(selQuarter());
-      const cOf = (name) => CM.byRec[name] || { o: 0, j: 0, dr: 0, fl: 0 };
-      // Conversion = Joined ÷ Offered, per Jerin. Note this is NOT "of those resolved" — candidates still in
-      // flight sit in the denominator, so the newest quarter reads low and climbs as they start. The caption
-      // under the bar shows the split so the low number is explainable rather than mysterious.
+      const cOf = (name) => CM.byRec[name] || { o: 0, j: 0, p: 0, dr: 0 };
       const convCell = (v) => {
         if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
-        const pct = Math.round((v.j / v.o) * 100);
+        const pct = Math.round(((v.j + v.p) / v.o) * 100);
         const band = pct >= 50 ? '' : (pct >= 20 ? ' mid' : ' low');
         return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${pct}%"></i></span>`
           + `<span class="dnum">${pct}%</span></span>`
-          + `<span class="sublab">${v.j} of ${v.o}${v.fl ? ` · ${v.fl} in flight` : ''}</span></td>`;
+          + `<span class="sublab">${v.j + v.p} of ${v.o}</span></td>`;
       };
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
         return `<td${w}>${v.o || '<span class="zero">0</span>'}</td>`
-          + `<td class="${v.dr > 0 ? 'bad' : ''}">${v.dr || '<span class="zero">0</span>'}</td>`
           + `<td${w} class="${v.j > 0 ? 'good' : 'zero'}">${v.j}</td>`
+          + `<td style="color:var(--orange)">${v.p || '<span class="zero">0</span>'}</td>`
+          + `<td class="${v.dr > 0 ? 'bad' : ''}">${v.dr || '<span class="zero">0</span>'}</td>`
           + convCell(v);
       };
-      const add = (a, b) => ({ o: a.o + b.o, j: a.j + b.j, dr: a.dr + b.dr, fl: a.fl + b.fl });
+      const add = (a, b) => ({ o: a.o + b.o, j: a.j + b.j, p: a.p + b.p, dr: a.dr + b.dr });
       let html = '';
       groups.forEach((G, gi) => {
         const shown = G.recs.filter(r => cOf(r.name).o > 0);
         if (!shown.length) return;
-        const tot = shown.reduce((a, r) => add(a, cOf(r.name)), { o: 0, j: 0, dr: 0, fl: 0 });
+        const tot = shown.reduce((a, r) => add(a, cOf(r.name)), { o: 0, j: 0, p: 0, dr: 0 });
         html += `<tr class="pod-header" data-g="j${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>${cells(tot, true)}</tr>`;
         shown.forEach(r => {
           html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}${inactiveTag(r)}</td>${cells(cOf(r.name), false)}</tr>`;
         });
       });
-      joinBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No offers raised in this quarter for the recruiters shown.</td></tr>`;
+      joinBody.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nothing in play this quarter for the recruiters shown.</td></tr>`;
       wirePodTree(joinBody);
     }
 
@@ -851,9 +849,14 @@ export function initRecruiterFilters(data) {
       // Its two sub-columns (this-quarter vs later-quarter opening) split THIS number once offers carry an
       // opening; until then the total stands on its own rather than the column sitting empty.
       const joinByRec = {}, joinByRecJob = {};
+      // NON-SALES ONLY: minus anyone linked to an EARLIER quarter's opening — the same subtraction the
+      // Joining Pending column uses, so both columns describe THIS quarter's work.
+      // ⚠ SALES deliberately takes NO subtraction: its goal is joiners regardless of when the opening was
+      // raised (Jerin, 2026-08-26). Same word, two rules, on purpose — do not "fix" it.
       if (!isSales) (data.offerEvents || []).forEach(e => {
         const rec = e.recruiter; if (!rec || !e.accepted) return;
         if (qOf(e.startDate) !== q) return;
+        if (e.openingQuarter && e.openingQuarter < q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         const a = joinByRec[rec] || (joinByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
         const jk = rec + '|' + (e.jobId8 || '');
@@ -1324,25 +1327,45 @@ export function initRecruiterFilters(data) {
     if (r.srcQ) return r.srcQ[q] || {};
     return r.srcNested || {};
   }
+  // ===== Joining Conversion (spec settled with Jerin, 2026-08-26) =====
+  //   Offered           = Joined + Joining Pending + Dropped
+  //   Joined            = started in the quarter, MINUS anyone linked to an EARLIER quarter's opening
+  //   Joining Pending   = the HM Positions card rule - in Ref Check / Documentation / Offer, minus
+  //                       earlier-quarter openings. LIVE, so the same people sit in every quarter.
+  //   Dropped           = the unified dropEvents list (reached a late stage, then archived)
+  //   Joining Conversion = (Joined + Joining Pending) / Offered
+  //
+  // ⚠ TWO THINGS TO KNOW BEFORE "FIXING" THIS PANEL:
+  // 1. The conversion is algebraically 1 - Dropped/Offered, because Joined and JP appear on BOTH sides of
+  //    the fraction and cancel. It therefore sits near 96% and moves only with drops. Jerin chose this
+  //    knowing that: it answers "what share of everyone who reached an offer has not fallen out".
+  // 2. Joining Pending is LIVE while Joined and Dropped are quarterly, so the same ~165 people are inside
+  //    every quarter's Offered. Deliberate - it keeps this column identical to the HM card rather than
+  //    inventing a fifth definition of Joining Pending. The definitions block says both of these on screen.
   function convMaps(q) {
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const byRec = {};
+    const bump = (rec, key) => { const a = byRec[rec] || (byRec[rec] = { o: 0, j: 0, p: 0, dr: 0 }); a[key] += 1; };
+    // Joined - people, by start date, minus last quarter's carry-over.
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      // 🚨 THE COHORT IS FIXED BY WHEN THE OFFER WAS RAISED (Jerin, 2026-08-25: "anyone who moved to Offer
-      // stage in the Qtr"). Every other column is then what BECAME of that same set of people, so the row
-      // always closes: Offered = Joined + Dropped + still in flight.
-      // ⚠ Do NOT source Offered from the stage-history rollups instead. `throughputByJobQ.offer.reached`
-      // counts stage ENTRIES, not people, and covers a different population — it reads 337 for 2026-Q2
-      // against 187 real offers. Joined and Dropped come from the offer records, so mixing the two would
-      // put a numerator and denominator from different populations in the same percentage.
-      if (qOf(e.offerCreatedAt) !== q) return;
-      const a = byRec[rec] || (byRec[rec] = { o: 0, j: 0, dr: 0, fl: 0 });
-      a.o += 1;
-      if (e.appStatus === 'Hired') a.j += 1;
-      else if (e.appStatus === 'Archived') a.dr += 1;
-      else a.fl += 1;
+      if (!e.accepted || qOf(e.startDate) !== q) return;
+      if (e.openingQuarter && e.openingQuarter < q) return;
+      bump(rec, 'j');
     });
+    // Joining Pending - identical rule to the HM Positions card, and LIVE.
+    (data.joiningPendingCases || []).forEach(c => {
+      const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
+      if (c.openingQuarter && c.openingQuarter < q) return;
+      bump(rec, 'p');
+    });
+    // Dropped - the one unified list, shared with HM and both Fulfilment tables.
+    dropRows(data).forEach(e => {
+      const rec = e.recruiter; if (!rec) return;
+      if (e.quarter !== q) return;
+      bump(rec, 'dr');
+    });
+    Object.values(byRec).forEach(a => { a.o = a.j + a.p + a.dr; });
     return { byRec };
   }
 
@@ -1992,12 +2015,10 @@ export function initRecruiterFilters(data) {
   function buildJoinChart() {
     const ctx = document.getElementById('recJoinChart'); if (!ctx) return;
     if (recJoinChart) recJoinChart.destroy();
-    // Y = recruiter. Stacked Joined + Dropped, with the cohort TOTAL (Offered) printed at the end of the bar.
-    // The bar therefore stops SHORT of that number whenever candidates are still in flight — the gap is the
-    // point, not a rendering fault, so the third segment is drawn faintly rather than left invisible.
-    // Same numbers as the table above it, from the same convMaps call.
+    // Joined / Joining Pending / Dropped stacked, with OFFERED - the sum of the three - printed at the end.
+    // Reads the same convMaps call as the table, so the two can never disagree.
     const CMc = convMaps(selQuarter());
-    const cOfC = (n) => CMc.byRec[n] || { o: 0, j: 0, dr: 0, fl: 0 };
+    const cOfC = (n) => CMc.byRec[n] || { o: 0, j: 0, p: 0, dr: 0 };
     const recs = [...lastRecs].filter(r => cOfC(r.name).o > 0).sort((a, b) => cOfC(b.name).o - cOfC(a.name).o);
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
@@ -2005,37 +2026,36 @@ export function initRecruiterFilters(data) {
       if (recJoinChart) { recJoinChart.destroy(); recJoinChart = null; }
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = 'No offers raised in this quarter for the recruiters shown.'; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = 'Nothing in play this quarter for the recruiters shown.'; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
     const joined = recs.map(r => cOfC(r.name).j);
+    const pending = recs.map(r => cOfC(r.name).p);
     const dropped = recs.map(r => cOfC(r.name).dr);
-    const inflight = recs.map(r => cOfC(r.name).fl);
     const offered = recs.map(r => cOfC(r.name).o);
     const h = Math.max(240, recs.length * 34 + 80);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
+    const seg = (arr, i, meta, colour) => ({ arr, i, meta, colour });
     const labelPlugin = {
       id: 'joinLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const jMeta = chart.getDatasetMeta(0), dMeta = chart.getDatasetMeta(1), fMeta = chart.getDatasetMeta(2);
-        jMeta.data.forEach((bar, i) => {
-          if (joined[i] > 0 && (bar.x - bar.base) > 20) {
-            c.fillStyle = '#fff'; c.textAlign = 'center';
-            c.fillText(String(joined[i]), (bar.base + bar.x) / 2, bar.y);
-          }
-          const db = dMeta.data[i];
-          if (dropped[i] > 0 && (db.x - db.base) > 18) {
-            c.fillStyle = '#fff'; c.textAlign = 'center';
-            c.fillText(String(dropped[i]), (db.base + db.x) / 2, db.y);
-          }
-          // Offered — the cohort total — at the very end of the bar.
-          const end = fMeta.data[i];
-          c.fillStyle = '#334155'; c.textAlign = 'left'; c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-          c.fillText(String(offered[i]), end.x + 6, end.y);
+        [[0, joined], [1, pending], [2, dropped]].forEach(([di, arr]) => {
+          const meta = chart.getDatasetMeta(di);
+          meta.data.forEach((bar, i) => {
+            if (arr[i] > 0 && (bar.x - bar.base) > 20) {
+              c.fillStyle = '#fff'; c.textAlign = 'center';
+              c.fillText(String(arr[i]), (bar.base + bar.x) / 2, bar.y);
+            }
+          });
+        });
+        const last = chart.getDatasetMeta(2);
+        last.data.forEach((bar, i) => {
+          c.fillStyle = '#334155'; c.textAlign = 'left';
+          c.fillText(String(offered[i]), bar.x + 6, bar.y);
         });
         c.restore();
       }
@@ -2043,13 +2063,13 @@ export function initRecruiterFilters(data) {
     recJoinChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
         { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Still in flight', data: inflight, backgroundColor: '#D9DEE7', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 40 } },
+        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 44 } },
         plugins: { valueLabels: false, stackTotals: false,
-          tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; return `Offered: ${offered[i]}`; } } },
+          tooltip: { callbacks: { afterBody: (items) => `Offered: ${offered[items[0].dataIndex]}` } },
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates (number at the bar end = Offered)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People (number at the bar end = Offered)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
   function buildFulfilChart() {
