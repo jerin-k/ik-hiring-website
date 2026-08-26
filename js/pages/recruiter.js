@@ -64,26 +64,8 @@ function wirePodTree(tbody) {
   }
 }
 
-// A Momentum stage with no events ANYWHERE in the dataset is not "a quiet week" — it means the stage is
-// not used in this Ashby workspace at all, and a permanently blank row reads as "nobody did any".
-// 🚨 OA is NOT that stage — the old comment here said it was, which was only ever true while the
-// 'OA' vs 'Online Assessment' STAGE_KEY_MAP bug was live. Re-measured 2026-08-26: 158 OA stage-entries in
-// the 120-day velocity window; 307 lifetime at recruiter level (Q1 139 · Q2 74 · Q3 94). This banner does
-// not fire for it.
-// Checked against the whole store rather than the visible 30-day window so a genuinely quiet week is
-// never mislabelled as untracked.
-function untrackedStages(store, stages) {
-  if (!store) return [];
-  return stages.filter(([sk]) => {
-    for (const key in store) {
-      const days = store[key] && store[key][sk];
-      if (days) { for (const d in days) { if (days[d] > 0) return false; } }
-    }
-    return true;
-  }).map(([, label]) => label);
-}
-
-// Collapse/expand a 3-level Pod -> Recruiter -> Stage tree (Momentum).
+// Collapse/expand a 3-level Pod -> Recruiter -> Job tree (Screening Efficiency, Time in Process).
+// Momentum used to use it too; it moved to the generic wireTreePath when it stopped having stage rows.
 function wireVelTree(tbody) {
   tbody.querySelectorAll('tr.lvl-pod').forEach(h => {
     h.addEventListener('click', () => {
@@ -250,7 +232,7 @@ export function renderRecruiter(data) {
     </style>
 
     <h2 class="section-title">Recruiter Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives <strong>Momentum</strong>.<br>Recruiters with <strong>no pod set</strong> for the selected quarter are excluded from every row and every total here — they are listed in <strong>Data Hygiene → Pod Not Set</strong>.</p>
+    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives the <strong>Momentum</strong> window.<br>Recruiters with <strong>no pod set</strong> for the selected quarter are excluded from every row and every total here — they are listed in <strong>Data Hygiene → Pod Not Set</strong>.</p>
     <div class="rec-filters">
       <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
@@ -279,7 +261,6 @@ export function renderRecruiter(data) {
     <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) — per-stage/day stage-entry counts -->
     <div class="rec-panel" data-panel="velocity" style="display:none">
       ${defsBlock('rec-momentum')}
-      <p class="sub-note" id="recVelUntracked" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
@@ -1784,106 +1765,78 @@ export function initRecruiterFilters(data) {
       toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
     } else { fromEl.value = `${yr}-01-01`; toEl.value = `${yr}-12-31`; }
   }
-  // recruiters[].daily is keyed by pipeline stage-key ({stageKey:{'YYYY-MM-DD':count}}), bucketed by
-  // last-activity day. Map the 3 displayed stages to those keys.
-  // Stage order is HM Screening -> OA -> R1 everywhere: it is the order the work actually happens in,
-  // so a row reads left-to-right as a candidate's progression rather than jumping backwards.
-  const VEL_STAGES = [['hmReview', 'HM Screening'], ['oa', 'OA'], ['r1', 'R1']];
+  // ===== ToFU (top of funnel) — rebuilt 2026-08-26 to Jerin's spec =====
+  // "How many candidates got added to ToFU on a particular day. ToFU is HM or OA or R1, whichever comes
+  //  first. Once a candidate is logged as added to ToFU they shouldn't be repeated in the same job."
+  // So this is ONE row per candidate, not three rows of stages. The three signals are HM Screening entry,
+  // an assessment TRIGGERED while the candidate sat in the Online Assessment stage, and an R1 interview
+  // being BOOKED (dated the day it was booked). Cancelled bookings and cancelled assessments do not count.
+  // The deduplication happens in the PIPELINE — candidate identity exists nowhere in this file — and it
+  // resets each quarter, so quarters do not add up to a year.
+  // ⚠ Deliberately NOT Screening Efficiency's "Added", which counts arrivals at each stage separately and
+  // counts a person again every time they re-enter one. Two questions, two numbers. Do not reconcile them.
   function dkey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function tofuStores() {
+    const sr = data.stageRollups || {};
+    return { rec: sr.tofuByRecruiter || null, recJob: sr.tofuByRecruiterJob || null };
+  }
   function renderVelocity() {
     const head = document.getElementById('recVelHead');
     const body = document.getElementById('recVelBody');
     if (!body) return;
+    const { rec: tRec, recJob: tRecJob } = tofuStores();
     const recs = getFilteredRecs();
     const groups = groupByPod(recs, selQuarter());
     const dates = velDates();
     const dkeys = dates.map(dkey);
 
     if (head) {
-      const hasJob = !!(data.stageRollups && data.stageRollups.velocityByRecruiterJob);
-      let h = `<tr><th style="min-width:240px">Pod / Recruiter${hasJob ? ' / Job' : ''} / Stage</th><th>Total · ${dates.length}d</th>`;
+      let h = `<tr><th style="min-width:240px">Pod / Recruiter / Job</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
-      h += '</tr>';
-      head.innerHTML = h;
+      head.innerHTML = h + '</tr>';
     }
     const ncol = dates.length + 2;
-    // Prefer the stage-history rollups (bucketed by true enteredStageAt → no bulk-update spike); fall back to
-    // the snapshot `daily` only if the rollups file isn't present yet.
-    const roll = data.stageRollups && data.stageRollups.velocityByRecruiter;
-    const stageDay = (r, sk) => roll ? ((roll[r.name] && roll[r.name][sk]) || {}) : ((r.daily && r.daily[sk]) || {});
-    // number row: total cell + one cell per date. zero → faint dot to keep 30 cols readable.
+    // No ToFU field yet (rollups file written before 2026-08-26). Say so rather than falling back to the
+    // old per-stage counts: those answer a different question and would sit under this heading as a lie.
+    if (!tRec) {
+      body.innerHTML = `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">ToFU arrivals appear after the next stage-history refresh.</td></tr>`;
+      return;
+    }
     const numRow = (total, perDay, boldTotal) =>
       `<td${boldTotal ? ' style="font-weight:600"' : ''}>${total > 0 ? total : '<span class="zero">0</span>'}</td>`
       + perDay.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
-    // sum a recruiter's displayed stages into a per-day array (+ total)
-    const recDaily = (r) => {
-      const arr = new Array(dkeys.length).fill(0); let total = 0;
-      VEL_STAGES.forEach(([sk]) => { const m = stageDay(r, sk); dkeys.forEach((dk, i) => { const v = m[dk] || 0; arr[i] += v; total += v; }); });
-      return { arr, total };
-    };
-
-    // Pod -> Recruiter -> [Job ->] Stage. The Job level appears only when the pipeline has emitted the
-    // recruiter x job x day cross (velocityByRecruiterJob); without it the tree stays 3 deep exactly as before.
-    // Uses the generic data-path tree (arbitrary depth) rather than wireVelTree, which only wires 3 levels.
-    const velRJ = data.stageRollups && data.stageRollups.velocityByRecruiterJob;
-    const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
-    const spanN = (n) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`;
-    // days array + total for one {day:count} map
     const series = (m) => { let t = 0; const per = dkeys.map(dk => { const v = (m && m[dk]) || 0; t += v; return v; }); return { per, t }; };
     const addInto = (dst, src) => { src.forEach((v, i) => dst[i] += v); };
+    const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
+    const spanN = (n) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`;
 
     let html = '';
     groups.forEach((G, pi) => {
       const podArr = new Array(dkeys.length).fill(0); let podTotal = 0;
-      const recCache = G.recs.map(r => { const d = recDaily(r); addInto(podArr, d.arr); podTotal += d.total; return d; });
+      const recSeries = G.recs.map(r => { const sres = series(tRec[r.name]); addInto(podArr, sres.per); podTotal += sres.t; return sres; });
       html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
       G.recs.forEach((r, ri) => {
         const rp = `${pi}-${ri}`;
-        // Jobs this recruiter actually moved someone through, in the window, for the displayed stages.
         const jobs = [];
-        if (velRJ && velRJ[r.name]) {
-          Object.keys(velRJ[r.name]).forEach(j8 => {
-            const byStage = velRJ[r.name][j8] || {};
-            const arr = new Array(dkeys.length).fill(0); let tot = 0;
-            const stages = VEL_STAGES.map(([sk, label]) => {
-              const sres = series(byStage[sk]); addInto(arr, sres.per); tot += sres.t;
-              return { label, per: sres.per, t: sres.t };
-            });
-            if (tot) jobs.push({ j8, title: jobTitleOf[j8] || j8, arr, tot, stages });
+        const mine = tRecJob && tRecJob[r.name];
+        if (mine) {
+          Object.keys(mine).forEach(j8 => {
+            const sres = series(mine[j8]);
+            if (sres.t) jobs.push({ j8, title: jobTitleOf[j8] || j8, per: sres.per, t: sres.t });
           });
-          jobs.sort((a, b) => b.tot - a.tot);
+          jobs.sort((a, b) => b.t - a.t);
         }
-        html += `<tr data-path="${rp}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-          <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recCache[ri].total, recCache[ri].arr, false)}</tr>`;
-        if (jobs.length) {
-          jobs.forEach((J, ji) => {
-            const jp = `${rp}-${ji}`;
-            html += `<tr data-path="${jp}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-              <td style="padding-left:52px">${CARET}${J.title}</td>${numRow(J.tot, J.arr, false)}</tr>`;
-            J.stages.forEach((st, si) => {
-              html += `<tr data-path="${jp}-${si}" style="display:none">
-                <td style="padding-left:78px;color:var(--muted)">${st.label}</td>${numRow(st.t, st.per, false)}</tr>`;
-            });
-          });
-        } else {
-          // No job cross available (or no job activity): keep the original Stage level directly under the recruiter.
-          VEL_STAGES.forEach(([sk, label], si) => {
-            const sres = series(stageDay(r, sk));
-            html += `<tr data-path="${rp}-${si}" style="display:none">
-              <td style="padding-left:52px;color:var(--muted)">${label}</td>${numRow(sres.t, sres.per, false)}</tr>`;
-          });
-        }
+        html += `<tr data-path="${rp}"${jobs.length ? ' data-haschild data-exp="0"' : ''} style="display:none${jobs.length ? ';cursor:pointer' : ''}">
+          <td style="padding-left:26px;font-weight:500">${jobs.length ? CARET : ''}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recSeries[ri].t, recSeries[ri].per, false)}</tr>`;
+        jobs.forEach((J, ji) => {
+          html += `<tr data-path="${rp}-${ji}" style="display:none">
+            <td style="padding-left:52px;color:var(--muted)">${J.title}</td>${numRow(J.t, J.per, false)}</tr>`;
+        });
       });
     });
     body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
     wireTreePath(body);
-    const untracked = untrackedStages(roll, VEL_STAGES);
-    const un = document.getElementById('recVelUntracked');
-    if (un) {
-      un.style.display = untracked.length ? '' : 'none';
-      if (untracked.length) un.innerHTML = `<strong>${untracked.join(' and ')}</strong> ${untracked.length > 1 ? 'are' : 'is'} not tracked in this Ashby workspace — no candidate has ever been recorded entering ${untracked.length > 1 ? 'those stages' : 'that stage'}, so the row${untracked.length > 1 ? 's read' : ' reads'} zero for every day. That is a missing signal, not a lack of activity.`;
-    }
   }
 
   // ===== charts (standard palette + square legends) =====
@@ -1896,22 +1849,18 @@ export function initRecruiterFilters(data) {
   const podLabels = () => lastGroups.map(G => G.pod);
   const sumBy = (G, key) => G.recs.reduce((s, r) => s + (r[key] || 0), 0);
 
-  // Momentum chart: THREE bars per recruiter (HM Screening / OA / R1), each bar stacked BY WEEK.
-  // Grouped-and-stacked in Chart.js comes from the `stack` property: datasets sharing a stack id pile up,
-  // different ids sit side by side. So stage = stack id, week = dataset within it. Hue carries the stage,
-  // lightness carries the week (older = paler), which keeps ~15 datasets readable as 3 colour families.
-  // Day-level stacking was tried and rejected as unreadable — 30 slivers per bar.
-  const VEL_HUE = { hmReview: [78, 107, 166], oa: [57, 138, 162], r1: [30, 117, 144] };
+  // ToFU chart: ONE bar per recruiter, stacked by week (older week paler), so the eye reads both the
+  // total and whether the pace is holding. Reads the same tofuByRecruiter the table reads, over the same
+  // 30 days — when the table changes basis this must change with it.
   function buildVelChart() {
     const ctx = document.getElementById('recVelChart'); if (!ctx) return;
     if (recVelChart) { recVelChart.destroy(); recVelChart = null; }
-    const recs = [...getFilteredRecs()].sort((a, b) => (b.total || 0) - (a.total || 0));
+    const { rec: tRec } = tofuStores();
     const wrap = document.getElementById('recVelChartWrap');
+    const dayTotal = (r) => { const m = (tRec && tRec[r.name]) || {}; return velDates().reduce((a, d) => a + (m[dkey(d)] || 0), 0); };
+    const recs = tRec ? [...getFilteredRecs()].filter(r => dayTotal(r) > 0).sort((a, b) => dayTotal(b) - dayTotal(a)) : [];
     if (!recs.length) { if (wrap) wrap.style.height = '160px'; return; }
 
-    // velDates() returns up to 30 days, most recent first. Chunk into 7-day weeks from the most recent
-    // day backwards, then reverse so the OLDEST week is the innermost stack segment and the bar reads
-    // left-to-right in time order.
     const days = velDates();
     const weeks = [];
     for (let i = 0; i < days.length; i += 7) {
@@ -1920,31 +1869,22 @@ export function initRecruiterFilters(data) {
     }
     weeks.reverse();
     const fmtD = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const roll = data.stageRollups && data.stageRollups.velocityByRecruiter;
-    const cell = (r, sk) => roll ? ((roll[r.name] && roll[r.name][sk]) || {}) : ((r.daily && r.daily[sk]) || {});
-
-    const datasets = [];
-    VEL_STAGES.forEach(([sk, label]) => {
-      const [rr, gg, bb] = VEL_HUE[sk] || [100, 116, 139];
-      weeks.forEach((w, wi) => {
-        // oldest week palest; mix toward white by up to ~55%
-        const t = weeks.length > 1 ? 0.55 * (1 - wi / (weeks.length - 1)) : 0;
-        const mix = (c) => Math.round(c + (255 - c) * t);
-        datasets.push({
-          label: `${label} · ${fmtD(w.start)}–${fmtD(w.end)}`,
-          stack: sk,
-          _stage: sk, _stageLabel: label,
-          data: recs.map(r => { const m = cell(r, sk); return w.keys.reduce((a, k) => a + (m[k] || 0), 0); }),
-          backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`,
-          borderWidth: 0, barPercentage: 0.92, categoryPercentage: 0.8
-        });
-      });
+    const [rr, gg, bb] = [78, 107, 166];
+    const datasets = weeks.map((w, wi) => {
+      const t = weeks.length > 1 ? 0.55 * (1 - wi / (weeks.length - 1)) : 0;
+      const mix = (c) => Math.round(c + (255 - c) * t);
+      return {
+        label: `${fmtD(w.start)}–${fmtD(w.end)}`,
+        stack: 'tofu',
+        data: recs.map(r => { const m = (tRec && tRec[r.name]) || {}; return w.keys.reduce((a, k) => a + (m[k] || 0), 0); }),
+        backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`,
+        borderWidth: 0, barPercentage: 0.9, categoryPercentage: 0.8
+      };
     });
 
-    // 3 bars per recruiter, so the row needs roughly triple the height of a single-bar chart.
-    const h = Math.max(260, recs.length * 3 * 16 + 90);
+    const h = Math.max(240, recs.length * 26 + 90);
     if (wrap) wrap.style.height = h + 'px';
-    ctx.style.maxHeight = h + 'px';   // override .chart-wrap canvas { max-height:300px }
+    ctx.style.maxHeight = h + 'px';
 
     recVelChart = new Chart(ctx, {
       type: 'bar',
@@ -1952,51 +1892,22 @@ export function initRecruiterFilters(data) {
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: {
-          valueLabels: false,   // ~15 datasets: per-segment labels would be unreadable
-          legend: {
-            position: 'top', align: 'center',
-            labels: {
-              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 16, font: { size: 12 },
-              // One entry per STAGE, not one per dataset — 15 legend entries would be noise. Each swatch
-              // uses that stage's strongest (most recent) shade.
-              generateLabels: (chart) => VEL_STAGES.map(([sk, label]) => {
-                const idx = chart.data.datasets.findIndex(d => d._stage === sk);
-                const last = chart.data.datasets.map((d, i) => [d, i]).filter(([d]) => d._stage === sk).pop();
-                return {
-                  text: label,
-                  fillStyle: last ? last[0].backgroundColor : '#94a3b8',
-                  strokeStyle: 'transparent',
-                  hidden: idx >= 0 ? !chart.isDatasetVisible(idx) : false,
-                  datasetIndex: idx
-                };
-              })
-            },
-            // Clicking a stage toggles every week-segment in that stack together.
-            onClick: (e, item, legend) => {
-              const chart = legend.chart;
-              const sk = chart.data.datasets[item.datasetIndex]?._stage;
-              if (!sk) return;
-              const show = !chart.isDatasetVisible(item.datasetIndex);
-              chart.data.datasets.forEach((d, i) => { if (d._stage === sk) chart.setDatasetVisibility(i, show); });
-              chart.update();
-            }
-          },
+          valueLabels: false,
+          legend: legendSquare(),
           tooltip: {
             callbacks: {
-              title: (items) => items.length ? items[0].label : '',
               label: (c) => `${c.dataset.label}: ${c.parsed.x}`,
-              // A stacked bar's total is the number people actually want; Chart.js won't show it by default.
               footer: (items) => {
                 if (!items.length) return '';
-                const sk = items[0].dataset._stage, i = items[0].dataIndex;
-                const tot = items[0].chart.data.datasets.filter(d => d._stage === sk).reduce((a, d) => a + (d.data[i] || 0), 0);
-                return `${items[0].dataset._stageLabel} total: ${tot}`;
+                const i = items[0].dataIndex;
+                const tot = items[0].chart.data.datasets.reduce((a, d) => a + (d.data[i] || 0), 0);
+                return `Total: ${tot}`;
               }
             }
           }
         },
         scales: {
-          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates entering the stage', font: { size: 11 }, color: '#64748b' } },
+          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       }

@@ -35,29 +35,12 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 // Throughput stages (mirrors the HM tab)
 const TP_KEYS = ['app','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
 const TP_LABELS = { app:'Application', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
-// The three stages Momentum reports on, in work order. One definition for both the table and the chart.
-const VEL_STAGES_EFF = [['hmReview', 'HM Screening'], ['oa', 'OA'], ['r1', 'R1']];
 const TP_TO_SK = { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' };
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 
 // Generic N-level collapsible tree. Rows carry data-path ("0", "0-1", "0-1-2"…) + data-haschild for
 // expandable rows. Clicking shows only direct children; collapsing hides + resets all descendants.
-// A Momentum stage with no events ANYWHERE in the dataset is not "a quiet week" — it means the stage is
-// not used in this Ashby workspace at all, and a permanently blank row reads as "nobody did any". OA is
-// exactly that today: 0 in the pipeline snapshot, 0 lifetime in stage history, 0 on every recruiter.
-// Checked against the whole store rather than the visible 30-day window so a genuinely quiet week is
-// never mislabelled as untracked.
-function untrackedStages(store, stages) {
-  if (!store) return [];
-  return stages.filter(([sk]) => {
-    for (const key in store) {
-      const days = store[key] && store[key][sk];
-      if (days) { for (const d in days) { if (days[d] > 0) return false; } }
-    }
-    return true;
-  }).map(([, label]) => label);
-}
 
 function wireTreePath(tbody, expandAll) {
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
@@ -189,8 +172,6 @@ export function renderEfficiency(data) {
     <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
       ${defsBlock('eff-momentum')}
-      <p class="sub-note" id="effVelUntracked" style="display:none;color:var(--orange)"></p>
-      <p class="sub-note">Momentum is the <strong>pace of work</strong> — how many candidates were pushed into each of the three stages that recruiters actually drive, day by day. Counted by true <strong>stage-entry date</strong> from stage history, so a bulk update does not show up as a spike. <strong>Department → Job → Stage</strong> (HM Screening / OA / R1), daily over the last 30 days of the range. Falls back to pending until the history accumulator has run.</p>
       <div class="eff-podcharts eff-2col" id="effVelPodCharts"></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
@@ -271,7 +252,7 @@ export function initEfficiencyFilters(data) {
   // Stage-history rollups (true daily velocity by enteredStageAt + reached/cleared throughput). null until
   // the accumulator has run — the velocity/throughput panels fall back to pod-level snapshots when absent.
   const rollups = data.stageRollups || {};
-  const velByJob = rollups.velocityByJob || null;
+  const tofuByJob = rollups.tofuByJob || null;
   const tpByJob = rollups.throughputByJob || null;
   const tisByJob = rollups.timeInStageByJob || null;         // {job8:{stage:{days:count}}} — TA Screen → Offer dwell
   const tisByJobQ = rollups.timeInStageByJobQ || null;       // {job8:{stage:{quarter:{days:count}}}} — same, per quarter entered
@@ -849,6 +830,12 @@ export function initEfficiencyFilters(data) {
   function dkeyEff(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   // Pod-level daily submissions (OA/HM/R1), summed across pod members from recruiters[].daily. Dept/Job
   // per-day detail needs a job×stage×date rollup the pipeline doesn't emit → pending child row.
+  // ===== ToFU (top of funnel) — rebuilt 2026-08-26, same definition as Recruiter → Momentum =====
+  // A candidate is added the first time they hit HM Screening, an assessment triggered while they sat in
+  // the Online Assessment stage, or an R1 interview being booked — whichever came first — and is not
+  // counted again for that role in the same quarter. The pipeline does the deduplication and emits
+  // tofuByJob; there is no candidate identity in this file to do it with.
+  // ⚠ Not the same as Screening Efficiency's "Added". Different question. Do not reconcile them.
   function renderVelocity() {
     const head = document.getElementById('effVelHead');
     const body = document.getElementById('effVelBody');
@@ -857,44 +844,36 @@ export function initEfficiencyFilters(data) {
     const dates = velDates();
     const dkeys = dates.map(dkeyEff);
     if (head) {
-      let h = `<tr><th style="min-width:260px">Department / Job / Stage</th><th>Total · ${dates.length}d</th>`;
+      let h = `<tr><th style="min-width:260px">Department / Job</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
       head.innerHTML = h + '</tr>';
     }
-    const VELS = VEL_STAGES_EFF;
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
     const add = (dst, src) => { for (let i = 0; i < dst.length; i++) dst[i] += src[i]; };
     let html = '';
     const rows = deptJobs(q);
-    if (velByJob) {
-      // Department → Job → Stage from true stage-entry rollups (velocityByJob[job][stage][day]).
+    if (tofuByJob) {
       rows.forEach(({ dept, jobs: js }, di) => {
         const dArr = new Array(dkeys.length).fill(0); let dTot = 0;
         const jd = js.map(j => {
-          const jm = velByJob[j.jid] || {}; const jArr = new Array(dkeys.length).fill(0); let jTot = 0;
-          const sd = VELS.map(([sk, label]) => { const m = jm[sk] || {}; let sTot = 0; const sArr = dkeys.map(dk => { const v = m[dk] || 0; sTot += v; return v; }); add(jArr, sArr); jTot += sTot; return { label, sArr, sTot }; });
-          add(dArr, jArr); dTot += jTot; return { j, jArr, jTot, sd };
+          const jm = tofuByJob[j.jid] || {};
+          let jTot = 0;
+          const jArr = dkeys.map(dk => { const v = jm[dk] || 0; jTot += v; return v; });
+          add(dArr, jArr); dTot += jTot; return { j, jArr, jTot };
         });
         html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
-        jd.forEach(({ j, jArr, jTot, sd }, ji) => {
-          html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px;color:var(--text)">${CARET}${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
-          sd.forEach(({ label, sArr, sTot }, si) => {
-            html += `<tr data-path="${di}-${ji}-${si}" style="display:none"><td style="padding-left:56px;color:var(--muted)">${label}</td>${numRow(sTot, sArr, false)}</tr>`;
-          });
+        jd.forEach(({ j, jArr, jTot }, ji) => {
+          html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--text)">${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
         });
       });
     } else {
-      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">Department → Job → Stage — awaiting the stage-history accumulator.</td></tr>`;
+      // No ToFU field yet. Say so rather than falling back to the old per-stage counts, which answer a
+      // different question and would sit under this heading as a lie.
+      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">ToFU arrivals appear after the next stage-history refresh.</td></tr>`;
     }
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
-    renderDeptCharts('effVelPodCharts', rows, velDeptCfg, 'No stage activity in range.');
-    const untracked = untrackedStages(velByJob, VELS);
-    const un = document.getElementById('effVelUntracked');
-    if (un) {
-      un.style.display = untracked.length ? '' : 'none';
-      if (untracked.length) un.innerHTML = `<strong>${untracked.join(' and ')}</strong> ${untracked.length > 1 ? 'are' : 'is'} not tracked in this Ashby workspace — no candidate has ever been recorded entering ${untracked.length > 1 ? 'those stages' : 'that stage'}, so the row${untracked.length > 1 ? 's read' : ' reads'} zero for every day. That is a missing signal, not a lack of activity.`;
-    }
+    renderDeptCharts('effVelPodCharts', rows, velDeptCfg, 'No ToFU arrivals in range.');
   }
 
   // ===== Sourcing Mix — Department → Job → Source type → Source name =====
@@ -1069,21 +1048,17 @@ export function initEfficiencyFilters(data) {
   // Momentum per department: the three stages the tab is ABOUT, stacked per day. It used to merge all three
   // into one unlabelled "Submissions" series with the legend switched off — which hid exactly the breakdown
   // the tab exists to show.
-  const VEL_STAGE_COLORS = { hmReview: '#4E6BA6', oa: '#398AA2', r1: '#1E7590' };
   const velDeptCfg = ({ jobs }) => {
-    if (!velByJob) return null;
+    if (!tofuByJob) return null;
     const dates = velDates(), dk = dates.map(dkeyEff);
     const jids = jobs.map(j => j.jid);
-    const series = VEL_STAGES_EFF.map(([sk, label]) => ({
-      sk, label,
-      data: dk.map(k => jids.reduce((s2, jid) => s2 + ((((velByJob[jid] || {})[sk] || {})[k]) || 0), 0)).reverse()
-    }));
-    if (series.every(x => x.data.every(v => v === 0))) return null;
+    const dataPts = dk.map(k => jids.reduce((s2, jid) => s2 + (((tofuByJob[jid] || {})[k]) || 0), 0)).reverse();
+    if (dataPts.every(v => v === 0)) return null;
     const labels = dates.map(d => `${MON[d.getMonth()]} ${d.getDate()}`).reverse();
     return {
       _h: 230,
       type: 'bar',
-      data: { labels, datasets: series.map(x => ({ label: x.label, data: x.data, backgroundColor: VEL_STAGE_COLORS[x.sk], stack: 's', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.9 })) },
+      data: { labels, datasets: [{ label: 'Added to ToFU', data: dataPts, backgroundColor: '#4E6BA6', stack: 's', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.9 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
@@ -1092,7 +1067,7 @@ export function initEfficiencyFilters(data) {
         },
         scales: {
           x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
-          y: { ...gridY, stacked: true, ticks: { ...TICKS, precision: 0 }, title: { display: true, text: 'Candidates entering', font: { size: 11 }, color: '#64748b' } }
+          y: { ...gridY, stacked: true, ticks: { ...TICKS, precision: 0 }, title: { display: true, text: 'Candidates added', font: { size: 11 }, color: '#64748b' } }
         }
       }
     };
