@@ -209,7 +209,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This will not match Screening Efficiency', 'That tab counts <em>arrivals at each stage</em> and counts a person again every time they re-enter one. This counts <em>people</em>, once. Two different questions \u2014 the numbers are not supposed to agree.'],
-      ['Assessments only exist from 8 July 2026', 'That is the earliest assessment record in Ashby, so before then a candidate could only be added by HM Screening or an R1 booking. Earlier quarters are therefore slightly understated.'],
+      ['Assessments start on 8 July 2026', 'That is when the team began sending assessments through Ashby \u2014 confirmed by Jerin. Before that date a candidate could only be added by HM Screening or an R1 booking, because there were no assessments to see. Nothing is missing from Q1 and Q2; that is simply how the process ran.'],
     ]
   },
   'rec-screening': {
@@ -385,7 +385,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This will not match Screening Efficiency', 'That panel counts arrivals at each stage separately, and counts a person again every time they re-enter one. This counts people, once. The two are not supposed to agree.'],
-      ['Assessments only exist from 8 July 2026', 'The earliest assessment record in Ashby. Before then a candidate could only be added by HM Screening or an R1 booking, so earlier quarters are slightly understated.'],
+      ['Assessments start on 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Screening or an R1 booking, because there were no assessments to see \u2014 nothing is missing from Q1 and Q2.'],
     ]
   },
   'eff-screening': {
