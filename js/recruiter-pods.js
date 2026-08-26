@@ -20,13 +20,12 @@ export const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 // and Data Hygiene → Pod Not Set read 13 under Q1 against 4 under Q3. Brought in line with the Q3 config on
 // Jerin's call — a person's current pod is taken to be where they sat earlier in the year too. Anyone who
 // genuinely moved pods mid-year needs an explicit assignment on that quarter, which overrides this.
-// ⚠ ONE name is deliberately NOT aligned: Aditya Singh reads Sales here and SME-US in the published Q3
-// config. That is the only place the two disagree, so it may be a real mid-year move rather than a
-// correction — left alone rather than silently rewriting the one value that carries evidence either way.
-// If it was a correction, change it here too; if he moved, this is already right.
+// Aditya Singh was the one place the two lists disagreed (Sales here, SME-US in the Q3 config). Jerin
+// confirmed 2026-08-26 that the old value was simply wrong and he had corrected it to SME-US — not a
+// mid-year move — so the baseline now says SME-US and he reads the same in every quarter.
 export const RECRUITER_POD = {
   "Aaron Collins": "SME-US",
-  "Aditya Singh": "Sales",
+  "Aditya Singh": "SME-US",
   "Alokita Dhumne": "Sales",
   "Ankita Kabra": "Lateral",
   "Astha Thakur": "Lateral",
