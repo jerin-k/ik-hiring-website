@@ -28,7 +28,7 @@ export const DEFINITIONS = {
           ['Open', 'Positions from that set still to fill.'],
           ['Missed', 'Positions closed with the reason <em>carry forward</em> — the hire did not happen in that quarter and moved to the next one.'],
           ['Joining Pending', 'Counts <strong>people</strong>, not positions: everyone sitting in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, minus anyone whose opening was raised in an earlier quarter. It is a <strong>live</strong> figure — changing the date filter does not change it.'],
-          ['Dropped', 'People who got as far as an offer and then left — they declined, they withdrew, or we archived them with the offer still open. Counted in the quarter the work was live, not the quarter the record was closed. The small print underneath is Dropped ÷ (Joined + Joining Pending + Dropped).'],
+          ['Dropped', 'Someone who moved to <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> — they declined, they withdrew, or we closed it with the offer still open. Counted in the quarter they <strong>first reached those stages</strong> (earliest of the three), not the quarter the record was closed. Each person counts <strong>once</strong>, however many times they moved in and out of a stage. The small print underneath is Dropped ÷ (Joined + Joining Pending + Dropped).'],
         ]
       },
       {
@@ -38,7 +38,7 @@ export const DEFINITIONS = {
           ['Total Openings', 'Positions opened in the period, as above.'],
           ['Joined', 'Positions closed as hired.'],
           ['Joining Pending', 'People currently in Ref Check, Documentation or Offer — same rule as the card.'],
-          ['Dropped', 'People who reached an offer and left, with their share of all outcomes underneath.'],
+          ['Dropped', 'As above — reached Ref Check, Documentation or Offer, then archived — with their share of all outcomes underneath.'],
           ['Delta', 'Total Openings − Joined − Joining Pending. <strong>This can be negative, and that is allowed.</strong> A negative number means more people are in closing than there are positions recorded — which happens when an offer was never linked to an opening in Ashby. It shrinks as those links get fixed. The bar beside it fills with the shortfall, so the bar and the number always point the same way.'],
           ['Missed', 'Positions carried forward to the next quarter.'],
         ]
@@ -61,6 +61,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Positions and people are different units', 'Total Openings, Open and Missed count <strong>positions</strong>. Joining Pending and Dropped count <strong>people</strong>. One position can have several people in closing against it, so never read across the row as if it were one running total.'],
+      ['Drop includes people who never had an offer raised', 'Until 26 Aug it did not — Drop required an offer record, which silently excluded anyone archived out of Ref Check or Documentation before anyone raised one. Every archived application was checked: <strong>17 such people</strong> were invisible, and 2026-Q2 went from 20 drops to 30.'],
       ['Joining Pending ignores the date filter', 'It always shows where things stand today. Everything else on this page follows the period you picked.'],
       ['A role only appears if it belongs here', 'It shows up when it had an opening in the period, or when someone is in closing on it. Roles with neither are not this period’s work and are left out.'],
     ]
@@ -159,7 +160,7 @@ export const DEFINITIONS = {
           ['JP — Upcoming Qtr <span class="defs-tag">Non-Sales</span>', 'Their opening was raised this quarter but they join next quarter. Reads 0 today because offers only started carrying an opening link on 25 Jul 2026.'],
           ['JP — Prev Qtr Openings <span class="defs-tag">Sales</span>', 'Opening raised last quarter, candidate joining this quarter — last quarter’s work landing now.'],
           ['JP — Current Qtr Openings <span class="defs-tag">Sales</span>', 'Everyone else in closing.'],
-          ['Drop', 'People who reached an offer and then left — declined, withdrew, or archived with the offer still open. The small print is Drop ÷ (Joined + JP + Drop).'],
+          ['Drop', 'Someone who moved to <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> — they declined, they withdrew, or we closed it with the offer still open. Counted in the quarter they <strong>first reached those stages</strong> (earliest of the three), not the quarter the record was closed. Each person counts <strong>once</strong>, however many times they moved in and out of a stage. The small print is Drop ÷ (Joined + JP + Drop).'],
           ['Delta', 'Goal minus what was achieved, so it is the shortfall. The bar fills with that shortfall, so the bar and the number always agree. Never shown below zero.'],
           ['Capacity Utilisation', 'Achieved ÷ Capacity. <strong>The colour runs the opposite way to Delta on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
         ]
@@ -174,6 +175,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Recruiters with no pod set are left out entirely', 'Out of every row, total and chart on this tab. Their numbers are in <strong>Data Hygiene → Pod Not Set</strong> — worth a look, one of them carries real volume.'],
+      ['Drop includes people who never had an offer raised', 'Until 26 Aug it did not — Drop required an offer record, which silently excluded anyone archived out of Ref Check or Documentation before anyone raised one. Every archived application was checked: <strong>17 such people</strong> were invisible, and 2026-Q2 went from 20 drops to 30.'],
       ['Past recruiters are hidden by default', 'Their history still counts in the data; tick <em>Include past recruiters</em> to see them.'],
       ['Shared positions are split by convention, not measurement', 'The data cannot say who owns which position of a role several recruiters work, so the positions are divided equally. Treat a Goal on an evergreen role as approximate.'],
       ['Roles with no Level or Complexity in Ashby score nothing', 'They still count in HC, but contribute 0 to Score — so Score understates the work until those fields are filled in. The list is in <strong>Data Hygiene → Roles Missing Score Inputs</strong>.'],
@@ -318,7 +320,7 @@ export const DEFINITIONS = {
           ['Total Positions', 'Distinct openings raised in the selected quarter, counted once each in the quarter they were opened.'],
           ['Joined', 'Those positions that have been filled.'],
           ['Joining Pending', 'Everyone parked in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone whose opening belongs to an earlier quarter. Counts <strong>people</strong>. Live — the quarter selector does not change it.'],
-          ['Drop', 'People who reached an offer and then left — declined, withdrew, or were archived with the offer still open. Counted in the quarter the work was live, not the quarter the record was closed. The small print is Drop ÷ (Joined + Joining Pending + Drop).'],
+          ['Drop', 'Someone who moved to <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> — they declined, they withdrew, or we closed it with the offer still open. Counted in the quarter they <strong>first reached those stages</strong> (earliest of the three), not the quarter the record was closed. Each person counts <strong>once</strong>, however many times they moved in and out of a stage. The small print is Drop ÷ (Joined + Joining Pending + Drop).'],
           ['Delta', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
           ['Missed', 'Positions closed as <em>carry forward</em> to the next quarter.'],
           ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role with no Level or Complexity in Ashby is marked <em>unscored</em>: it still counts in HC but adds nothing to Score.'],
@@ -334,6 +336,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['Drop includes people who never had an offer raised', 'Until 26 Aug it did not — Drop required an offer record, which silently excluded anyone archived out of Ref Check or Documentation before anyone raised one. Every archived application was checked: <strong>17 such people</strong> were invisible, and 2026-Q2 went from 20 drops to 30.'],
       ['Positions and people in the same row', 'Total Positions, Joined and Missed count <strong>positions</strong>. Joining Pending and Drop count <strong>people</strong>. One position can hold several people in closing, which is exactly why Delta is allowed to go negative.'],
       ['This table should now agree with HM → Department Summary', 'Same definitions, same rules about which roles appear. The differences that remain are presentation: this one adds Score to every column and drills to the job with a chart per department.'],
       ['The Cases list is slightly longer than the column', 'The column subtracts people sitting on an earlier quarter’s opening; the list shows everyone, so nobody is lost.'],
@@ -429,6 +432,7 @@ export const DEFINITIONS = {
         items: [
           ['Offered', 'Offers made on that role.'],
           ['Hired', 'How many of those offers ended in a hire.'],
+          ['Dropped', 'Of those same offers, how many ended archived. ⚠ Narrower than the <strong>Drop</strong> column on Fulfilment: this table is built from offers, so someone archived after reaching a late stage with <em>no offer ever raised</em> cannot appear here at all. Same definition of a drop, smaller population.'],
           ['Conversion %', 'Hired ÷ Offered.'],
         ]
       },
