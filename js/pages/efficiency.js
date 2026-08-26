@@ -1045,9 +1045,9 @@ export function initEfficiencyFilters(data) {
       { label: 'Hired', data: js.map(x => x.c.h), backgroundColor: C.green, stack: 'j', borderRadius: 2 },
       { label: 'Offered', data: js.map(x => Math.max(0, x.c.o - x.c.h)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
   };
-  // Momentum per department: the three stages the tab is ABOUT, stacked per day. It used to merge all three
-  // into one unlabelled "Submissions" series with the legend switched off — which hid exactly the breakdown
-  // the tab exists to show.
+  // Momentum per department: candidates ADDED to ToFU per day. One series now, because the metric is one
+  // number per candidate rather than three stage counts — see renderVelocity above for the definition.
+  // Reads tofuByJob, the same field the table reads, so the chart cannot drift from the table beneath it.
   const velDeptCfg = ({ jobs }) => {
     if (!tofuByJob) return null;
     const dates = velDates(), dk = dates.map(dkeyEff);
