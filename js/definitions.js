@@ -226,20 +226,24 @@ export const DEFINITIONS = {
 
   'rec-joining': {
     summary: 'How these numbers are worked out',
-    intro: 'The simplest view on the tab: of the offers a recruiter made, how many turned into hires.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'A <strong>cohort</strong> view: take the offers raised in the selected quarter, then follow what became of those same people. Every row closes — Offered = Joined + Dropped + still in flight.',
+    confirmed: 'Definitions confirmed with Jerin · 26 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Offered', 'Offers credited to that recruiter.'],
-          ['Hired', 'How many of them were hired.'],
-          ['Conversion %', 'Hired ÷ Offered.'],
+          ['Offered', 'Offers <strong>raised in the selected quarter</strong>. This fixes the group of people the rest of the row is about.'],
+          ['Dropped', 'Of those same offers, how many ended <strong>archived</strong> — the candidate declined, they withdrew, or we closed it with the offer still open.'],
+          ['Joined', 'Of those same offers, how many became hires.'],
+          ['Joining Conversion', 'Joined ÷ Offered, with a bar so it reads at a glance. The caption underneath shows the split, including anyone <strong>still in flight</strong>.'],
+          ['The chart', 'One bar per recruiter: <strong>Joined</strong> and <strong>Dropped</strong> stacked, with the cohort total — <strong>Offered</strong> — printed at the end of the bar. The bar stops short of that number whenever people are still in flight; the pale segment is that remainder, drawn so the number at the end is honest rather than unexplained.'],
         ]
       },
     ],
     warnings: [
-      ['These are all-time figures', 'Unlike the rest of the tab, this panel is not scoped to the selected quarter — the underlying counts carry no date. Read it as a career-to-date conversion rate, not this quarter’s.'],
+      ['The newest quarter always reads low, and it is not a performance signal', 'Conversion is Joined ÷ <strong>Offered</strong>, so candidates who have accepted but not yet started sit in the denominator. A quarter climbs as its people start. Compare a finished quarter with a finished quarter.'],
+      ['Dropped here is narrower than Drop on Fulfilment', 'This table is built from offers, so someone archived after reaching Ref Check or Documentation with <em>no offer ever raised</em> cannot appear on it. Same definition of a drop, smaller population — the two will not tie.'],
+      ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab. That currently hides a large share of the quarter\u2019s offers — see <strong>Data Hygiene → Pod Not Set</strong>.'],
     ]
   },
 
@@ -432,7 +436,6 @@ export const DEFINITIONS = {
         items: [
           ['Offered', 'Offers made on that role.'],
           ['Hired', 'How many of those offers ended in a hire.'],
-          ['Dropped', 'Of those same offers, how many ended archived. ⚠ Narrower than the <strong>Drop</strong> column on Fulfilment: this table is built from offers, so someone archived after reaching a late stage with <em>no offer ever raised</em> cannot appear here at all. Same definition of a drop, smaller population.'],
           ['Conversion %', 'Hired ÷ Offered.'],
         ]
       },
