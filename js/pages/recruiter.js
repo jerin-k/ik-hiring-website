@@ -5,6 +5,23 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
+// ===== DROP (unified, 2026-08-26) =====
+// Jerin's definition: moved to Ref Check / Documentation / Offer in a quarter (earliest of the three) and
+// was then archived. The pipeline emits `dropEvents` already DEDUPED BY APPLICATION with one date each, so
+// a candidate who bounced into the Offer stage three times counts once.
+// It merges two sources: archived offer records, and archived applications that reached those stages with
+// NO offer ever raised - 17 people who were invisible before (Q2 alone went from 20 drops to 30).
+// ⚠ Falls back to the old offer-only filter when `dropEvents` is absent, so the tab still works against a
+// data file written before this shipped. The fallback UNDERCOUNTS; it is a bridge, not an equivalent.
+function dropRows(data) {
+  if (data.dropEvents && data.dropEvents.length) return data.dropEvents;
+  return (data.offerEvents || [])
+    .filter(e => e.appStatus === 'Archived')
+    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer' }));
+}
+
+
 function pct(num, den) {
   if (!den) return '0.0';
   return ((num / den) * 100).toFixed(1);
@@ -284,10 +301,10 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joining Conversion -->
     <div class="rec-panel" data-panel="joining" style="display:none">
       ${defsBlock('rec-joining')}
-      <p class="sub-note"><strong>Offered → Hired</strong>, by pod, for the selected quarter. An offer belongs to the quarter its outcome was <strong>decided</strong> in, so every offer counted here has actually been answered.</p>
+      <p class="sub-note"><strong>Offered → Joined</strong>, by pod. <strong>Offered</strong> counts offers <strong>raised in the selected quarter</strong>; <strong>Dropped</strong> and <strong>Joined</strong> are what became of that same set, so the row always closes — anything left over is still in flight and shows under the conversion bar. <strong>Joining Conversion = Joined ÷ Offered</strong>, so the newest quarter reads low until its candidates start.</p>
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
+        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th title="Offers raised in the selected quarter.">Offered</th><th title="Of those offers, how many were archived — the candidate declined, withdrew, or we closed it.">Dropped</th><th title="Of those offers, how many became hires.">Joined</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
     </div>
@@ -753,23 +770,38 @@ export function initRecruiterFilters(data) {
     const joinBody = document.getElementById('recJoinBody');
     if (joinBody) {
       const CM = convMaps(selQuarter());
-      const cOf = (name) => CM.byRec[name] || { o: 0, h: 0 };
+      const cOf = (name) => CM.byRec[name] || { o: 0, j: 0, dr: 0, fl: 0 };
+      // Conversion = Joined ÷ Offered, per Jerin. Note this is NOT "of those resolved" — candidates still in
+      // flight sit in the denominator, so the newest quarter reads low and climbs as they start. The caption
+      // under the bar shows the split so the low number is explainable rather than mysterious.
+      const convCell = (v) => {
+        if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
+        const pct = Math.round((v.j / v.o) * 100);
+        const band = pct >= 50 ? '' : (pct >= 20 ? ' mid' : ' low');
+        return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${pct}%"></i></span>`
+          + `<span class="dnum">${pct}%</span></span>`
+          + `<span class="sublab">${v.j} of ${v.o}${v.fl ? ` · ${v.fl} in flight` : ''}</span></td>`;
+      };
+      const cells = (v, bold) => {
+        const w = bold ? ' style="font-weight:600"' : '';
+        return `<td${w}>${v.o || '<span class="zero">0</span>'}</td>`
+          + `<td class="${v.dr > 0 ? 'bad' : ''}">${v.dr || '<span class="zero">0</span>'}</td>`
+          + `<td${w} class="${v.j > 0 ? 'good' : 'zero'}">${v.j}</td>`
+          + convCell(v);
+      };
+      const add = (a, b) => ({ o: a.o + b.o, j: a.j + b.j, dr: a.dr + b.dr, fl: a.fl + b.fl });
       let html = '';
       groups.forEach((G, gi) => {
-        const po = G.recs.reduce((s, r) => s + cOf(r.name).o, 0);
-        const ph = G.recs.reduce((s, r) => s + cOf(r.name).h, 0);
         const shown = G.recs.filter(r => cOf(r.name).o > 0);
-        if (!po && !ph) return;
+        if (!shown.length) return;
+        const tot = shown.reduce((a, r) => add(a, cOf(r.name)), { o: 0, j: 0, dr: 0, fl: 0 });
         html += `<tr class="pod-header" data-g="j${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>
-          <td style="font-weight:600">${po}</td><td class="${ph > 0 ? 'good' : 'zero'}" style="font-weight:600">${ph}</td><td class="${pctClass(pct(ph, po))}">${pct(ph, po)}%</td></tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>${cells(tot, true)}</tr>`;
         shown.forEach(r => {
-          const c2 = cOf(r.name);
-          html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}${inactiveTag(r)}</td>
-            <td>${c2.o}</td><td class="${c2.h > 0 ? 'good' : 'zero'}">${c2.h}</td><td class="${pctClass(pct(c2.h, c2.o))}">${pct(c2.h, c2.o)}%</td></tr>`;
+          html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}${inactiveTag(r)}</td>${cells(cOf(r.name), false)}</tr>`;
         });
       });
-      joinBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No offers decided in this quarter for the recruiters shown.</td></tr>`;
+      joinBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No offers raised in this quarter for the recruiters shown.</td></tr>`;
       wirePodTree(joinBody);
     }
 
@@ -880,10 +912,9 @@ export function initRecruiterFilters(data) {
       // acceptanceStatus field (Accepted|Declined|Pending|Created|Cancelled). Confusing the two is exactly
       // why this metric read zero three times.
       const dropByRec = {}, dropByRecJob = {};
-      (data.offerEvents || []).forEach(e => {
+      dropRows(data).forEach(e => {
         const rec = e.recruiter; if (!rec) return;
-        if (e.appStatus !== 'Archived') return;
-        if ((e.attrQuarter || qOf(e.archivedAt || e.decidedAt)) !== q) return;
+        if (e.quarter !== q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         const a = dropByRec[rec] || (dropByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
         const jk = rec + '|' + (e.jobId8 || '');
@@ -1295,16 +1326,24 @@ export function initRecruiterFilters(data) {
   }
   function convMaps(q) {
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const byRec = {}, byRecJob = {};
+    const byRec = {};
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      if (qOf(e.decidedAt) !== q) return;
-      const hired = e.appStatus === 'Hired' ? 1 : 0;
-      const a = byRec[rec] || (byRec[rec] = { o: 0, h: 0 }); a.o += 1; a.h += hired;
-      const k = rec + '|' + (e.jobId8 || '');
-      const b = byRecJob[k] || (byRecJob[k] = { o: 0, h: 0, title: e.jobTitle || '' }); b.o += 1; b.h += hired;
+      // 🚨 THE COHORT IS FIXED BY WHEN THE OFFER WAS RAISED (Jerin, 2026-08-25: "anyone who moved to Offer
+      // stage in the Qtr"). Every other column is then what BECAME of that same set of people, so the row
+      // always closes: Offered = Joined + Dropped + still in flight.
+      // ⚠ Do NOT source Offered from the stage-history rollups instead. `throughputByJobQ.offer.reached`
+      // counts stage ENTRIES, not people, and covers a different population — it reads 337 for 2026-Q2
+      // against 187 real offers. Joined and Dropped come from the offer records, so mixing the two would
+      // put a numerator and denominator from different populations in the same percentage.
+      if (qOf(e.offerCreatedAt) !== q) return;
+      const a = byRec[rec] || (byRec[rec] = { o: 0, j: 0, dr: 0, fl: 0 });
+      a.o += 1;
+      if (e.appStatus === 'Hired') a.j += 1;
+      else if (e.appStatus === 'Archived') a.dr += 1;
+      else a.fl += 1;
     });
-    return { byRec, byRecJob };
+    return { byRec };
   }
 
   function outcomeMaps(q) {
@@ -1953,48 +1992,64 @@ export function initRecruiterFilters(data) {
   function buildJoinChart() {
     const ctx = document.getElementById('recJoinChart'); if (!ctx) return;
     if (recJoinChart) recJoinChart.destroy();
-    // Y = recruiter. Full bar = Offered; dark segment = Hired. Labels: Offered at bar end,
-    // Hired (with conversion %) on the dark segment.
-    // Same quarter-scoped basis as the table above. Reading recruiters[].offer/.hired here while the table
-    // used dated offers is exactly how the Fulfilment chart came to show lifetime scores under a quarter.
+    // Y = recruiter. Stacked Joined + Dropped, with the cohort TOTAL (Offered) printed at the end of the bar.
+    // The bar therefore stops SHORT of that number whenever candidates are still in flight — the gap is the
+    // point, not a rendering fault, so the third segment is drawn faintly rather than left invisible.
+    // Same numbers as the table above it, from the same convMaps call.
     const CMc = convMaps(selQuarter());
-    const cOfC = (n) => CMc.byRec[n] || { o: 0, h: 0 };
+    const cOfC = (n) => CMc.byRec[n] || { o: 0, j: 0, dr: 0, fl: 0 };
     const recs = [...lastRecs].filter(r => cOfC(r.name).o > 0).sort((a, b) => cOfC(b.name).o - cOfC(a.name).o);
-    const hired = recs.map(r => cOfC(r.name).h);
+    const wrap = ctx.parentElement;
+    let emptyMsg = wrap && wrap.querySelector('.chart-empty');
+    if (!recs.length) {
+      if (recJoinChart) { recJoinChart.destroy(); recJoinChart = null; }
+      ctx.style.display = 'none';
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (emptyMsg) { emptyMsg.textContent = 'No offers raised in this quarter for the recruiters shown.'; emptyMsg.style.display = 'flex'; }
+      return;
+    }
+    ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
+    const joined = recs.map(r => cOfC(r.name).j);
+    const dropped = recs.map(r => cOfC(r.name).dr);
+    const inflight = recs.map(r => cOfC(r.name).fl);
     const offered = recs.map(r => cOfC(r.name).o);
-    const rem = recs.map((r, i) => Math.max(0, offered[i] - hired[i]));
     const h = Math.max(240, recs.length * 34 + 80);
-    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+    if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const labelPlugin = {
       id: 'joinLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const hMeta = chart.getDatasetMeta(0), rMeta = chart.getDatasetMeta(1);
-        hMeta.data.forEach((bar, i) => {
-          if (hired[i] > 0 && (bar.x - bar.base) > 26) {
-            const p = offered[i] ? Math.round((hired[i] / offered[i]) * 100) : 0;
+        const jMeta = chart.getDatasetMeta(0), dMeta = chart.getDatasetMeta(1), fMeta = chart.getDatasetMeta(2);
+        jMeta.data.forEach((bar, i) => {
+          if (joined[i] > 0 && (bar.x - bar.base) > 20) {
             c.fillStyle = '#fff'; c.textAlign = 'center';
-            c.fillText(`${hired[i]} (${p}%)`, (bar.base + bar.x) / 2, bar.y);
+            c.fillText(String(joined[i]), (bar.base + bar.x) / 2, bar.y);
           }
-          if (offered[i] > 0) {
-            c.fillStyle = '#334155'; c.textAlign = 'left';
-            c.fillText(String(offered[i]), rMeta.data[i].x + 4, rMeta.data[i].y);
+          const db = dMeta.data[i];
+          if (dropped[i] > 0 && (db.x - db.base) > 18) {
+            c.fillStyle = '#fff'; c.textAlign = 'center';
+            c.fillText(String(dropped[i]), (db.base + db.x) / 2, db.y);
           }
+          // Offered — the cohort total — at the very end of the bar.
+          const end = fMeta.data[i];
+          c.fillStyle = '#334155'; c.textAlign = 'left'; c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+          c.fillText(String(offered[i]), end.x + 6, end.y);
         });
         c.restore();
       }
     };
     recJoinChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Hired', data: hired, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: '_rem', data: rem, backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 34 } },
-        plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
-          // + the Target marker at the bar end); the global plugins would print both a second time
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, generateLabels: () => [{ text: 'Hired', fillStyle: C.green, strokeStyle: C.green, pointStyle: 'rect' }, { text: 'Offered (full bar)', fillStyle: '#B4D3DC', strokeStyle: '#B4D3DC', pointStyle: 'rect' }] } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Still in flight', data: inflight, backgroundColor: '#D9DEE7', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 40 } },
+        plugins: { valueLabels: false, stackTotals: false,
+          tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; return `Offered: ${offered[i]}`; } } },
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates (number at the bar end = Offered)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
   function buildFulfilChart() {

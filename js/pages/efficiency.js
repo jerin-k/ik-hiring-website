@@ -11,6 +11,23 @@ import { scoreForRole } from '../score-model.js';
 // The only live values here: Fulfilment pod Target = summed pod capacities, and the org-wide Sourcing chart.
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
+
+// ===== DROP (unified, 2026-08-26) =====
+// Jerin's definition: moved to Ref Check / Documentation / Offer in a quarter (earliest of the three) and
+// was then archived. The pipeline emits `dropEvents` already DEDUPED BY APPLICATION with one date each, so
+// a candidate who bounced into the Offer stage three times counts once.
+// It merges two sources: archived offer records, and archived applications that reached those stages with
+// NO offer ever raised - 17 people who were invisible before (Q2 alone went from 20 drops to 30).
+// ⚠ Falls back to the old offer-only filter when `dropEvents` is absent, so the tab still works against a
+// data file written before this shipped. The fallback UNDERCOUNTS; it is a bridge, not an equivalent.
+function dropRows(data) {
+  if (data.dropEvents && data.dropEvents.length) return data.dropEvents;
+  return (data.offerEvents || [])
+    .filter(e => e.appStatus === 'Archived')
+    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer' }));
+}
+
 const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
 const DASH = '<span class="zero">—</span>';
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -504,9 +521,8 @@ export function initEfficiencyFilters(data) {
       if (c.openingQuarter && c.openingQuarter < q) return;
       add(jp, dkey(c.department) + '|' + (c.job || c.jobTitle || ''));
     });
-    (data.offerEvents || []).forEach(e => {
-      if (e.appStatus !== 'Archived') return;
-      if ((e.attrQuarter || qOfDate(e.archivedAt || e.decidedAt)) !== q) return;
+    dropRows(data).forEach(e => {
+      if (e.quarter !== q) return;
       add(drop, dkey(e.department) + '|' + (e.jobTitle || ''));
     });
     return { jp, drop };

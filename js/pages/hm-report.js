@@ -289,6 +289,23 @@ export function renderHmReport(data) {
   `;
 }
 
+
+// ===== DROP (unified, 2026-08-26) =====
+// Jerin's definition: moved to Ref Check / Documentation / Offer in a quarter (earliest of the three) and
+// was then archived. The pipeline emits `dropEvents` already DEDUPED BY APPLICATION with one date each, so
+// a candidate who bounced into the Offer stage three times counts once.
+// It merges two sources: archived offer records, and archived applications that reached those stages with
+// NO offer ever raised - 17 people who were invisible before (Q2 alone went from 20 drops to 30).
+// ⚠ Falls back to the old offer-only filter when `dropEvents` is absent, so the tab still works against a
+// data file written before this shipped. The fallback UNDERCOUNTS; it is a bridge, not an equivalent.
+function dropRows(data) {
+  if (data.dropEvents && data.dropEvents.length) return data.dropEvents;
+  return (data.offerEvents || [])
+    .filter(e => e.appStatus === 'Archived')
+    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer' }));
+}
+
 let hm1ChartInstance = null;
 let hm2ChartInstance = null;
 let hm2FunnelInstance = null;
@@ -458,9 +475,8 @@ export function initHmFilters(data) {
       if (c.openingQuarter && fromQ && fromQ !== '\u2014' && c.openingQuarter < fromQ) return;
       bump(dept, title, 'jpP');
     });
-    (data.offerEvents || []).forEach(e => {
-      if (e.appStatus !== 'Archived') return;
-      if (!quarterInRange(e.attrQuarter, dateFrom, dateTo)) return;
+    dropRows(data).forEach(e => {
+      if (!quarterInRange(e.quarter, dateFrom, dateTo)) return;
       const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
       if (!inScope(dept, title)) return;
       bump(dept, title, 'drop');
