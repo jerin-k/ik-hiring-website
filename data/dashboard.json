@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-26T00:15:06.671Z",
+  "lastUpdated": "2026-08-26T01:31:22.029Z",
   "schemaVersion": 4,
   "scopeYear": 2026,
   "velocityDays": 35,
@@ -5656,8 +5656,7 @@
         "Tina Anisha Bibeiro",
         "Chhavi Rana",
         "Alokita Dhumne",
-        "V Pooja",
-        "Jerin Kesavan"
+        "V Pooja"
       ]
     },
     {
@@ -5946,8 +5945,8 @@
         "hired": 0
       },
       "recruiters": [
-        "Oshin Verma",
-        "Gopu Nair V"
+        "Gopu Nair V",
+        "Oshin Verma"
       ]
     },
     {
@@ -8231,8 +8230,8 @@
         "hired": 2
       },
       "recruiters": [
-        "Sanghamitra Moulik",
         "Ankita Kabra",
+        "Sanghamitra Moulik",
         "Oshin Verma"
       ]
     },
@@ -12621,7 +12620,7 @@
     },
     {
       "name": "Deepti Leslie",
-      "total": 8782,
+      "total": 8781,
       "byJob": [
         {
           "jobId": "fc369c2c-ba64-44c8-98ff-cf000594947f",
@@ -12659,7 +12658,7 @@
           "jobId": "a6729ee8-f1ef-4a54-b5c3-abeab36f44bf",
           "title": "Software Engineer 1 , Backend",
           "department": "Engineering",
-          "total": 2547,
+          "total": 2548,
           "offer": 0,
           "hired": 0
         },
@@ -12731,7 +12730,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 111,
+          "total": 109,
           "offer": 1,
           "hired": 1
         },
@@ -12775,8 +12774,8 @@
         "MyGreenhouse": 69,
         "Referral": 491,
         "Other": 1,
-        "Inbound": 87,
-        "Job Portal": 75,
+        "Inbound": 88,
+        "Job Portal": 72,
         "Juicebox": 1
       },
       "srcNested": {
@@ -12806,11 +12805,11 @@
           "Recruiter Networking": 1
         },
         "Inbound": {
-          "Applied": 87
+          "Applied": 88
         },
         "Job Portal": {
           "Linkedin Outreach": 30,
-          "Naukri Outreach": 44,
+          "Naukri Outreach": 41,
           "Linkedin Inbound": 1
         },
         "Juicebox": {
@@ -12831,10 +12830,10 @@
             "MyGreenhouse Jobs": 1
           },
           "Job Portal": {
-            "Naukri Outreach": 9
+            "Naukri Outreach": 6
           },
           "Inbound": {
-            "Applied": 8
+            "Applied": 9
           }
         },
         "fc369c2c": {
@@ -13105,11 +13104,11 @@
         },
         "2026-Q3": {
           "Inbound": {
-            "Applied": 87
+            "Applied": 88
           },
           "Job Portal": {
             "Linkedin Outreach": 30,
-            "Naukri Outreach": 44,
+            "Naukri Outreach": 41,
             "Linkedin Inbound": 1
           },
           "Referral": {
@@ -13143,10 +13142,10 @@
           },
           "2026-Q3": {
             "Job Portal": {
-              "Naukri Outreach": 9
+              "Naukri Outreach": 6
             },
             "Inbound": {
-              "Applied": 8
+              "Applied": 9
             }
           }
         },
@@ -13475,8 +13474,8 @@
       "hc": 1,
       "ta": 8,
       "hm": 4,
-      "oa": 51,
-      "r1": 17,
+      "oa": 50,
+      "r1": 16,
       "r2": 5,
       "r3": 2,
       "r4": 1,
@@ -14080,15 +14079,15 @@
     },
     {
       "name": "G Darshan",
-      "total": 1682,
+      "total": 1683,
       "byJob": [
         {
           "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
           "title": "Program Advisor - US (AI Programs)",
           "department": "US Business",
-          "total": 1682,
-          "offer": 30,
-          "hired": 25
+          "total": 1683,
+          "offer": 31,
+          "hired": 26
         }
       ],
       "sources": {
@@ -14096,7 +14095,7 @@
         "Agencies": 349,
         "Company marketing": 118,
         "Other": 29,
-        "Referral": 41,
+        "Referral": 42,
         "Job Portal": 363,
         "Prospecting": 2,
         "Inbound": 289,
@@ -14124,7 +14123,7 @@
           "Recruiter Networking": 29
         },
         "Referral": {
-          "Referral": 41
+          "Referral": 42
         },
         "Job Portal": {
           "Linkedin Inbound": 263,
@@ -14168,7 +14167,7 @@
             "Recruiter Networking": 29
           },
           "Referral": {
-            "Referral": 41
+            "Referral": 42
           },
           "Job Portal": {
             "Linkedin Inbound": 263,
@@ -14248,7 +14247,7 @@
             "LinkedIn Limited Listing": 1
           },
           "Referral": {
-            "Referral": 10
+            "Referral": 11
           },
           "Job Portal": {
             "Linkedin Outreach": 51,
@@ -14325,7 +14324,7 @@
               "LinkedIn Limited Listing": 1
             },
             "Referral": {
-              "Referral": 10
+              "Referral": 11
             },
             "Job Portal": {
               "Linkedin Outreach": 51,
@@ -14354,11 +14353,11 @@
       "r3": 34,
       "r4": 0,
       "r5": 0,
-      "offer": 30,
-      "hired": 25,
-      "offeredReal": 37,
+      "offer": 31,
+      "hired": 26,
+      "offeredReal": 38,
       "joiningPending": 4,
-      "accepted": 30,
+      "accepted": 31,
       "userId": "924ff493-7411-49a4-ba4b-e083d78dc0b9",
       "activeKnown": true,
       "seatRole": "Organization Admin",
@@ -14366,7 +14365,7 @@
     },
     {
       "name": "Oshin Verma",
-      "total": 975,
+      "total": 959,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -14428,15 +14427,15 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Senior Associate, US HR Operations",
           "department": "Human Resource",
-          "total": 704,
-          "offer": 0,
+          "total": 692,
+          "offer": 1,
           "hired": 0
         },
         {
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 11,
+          "total": 7,
           "offer": 0,
           "hired": 0
         },
@@ -14466,21 +14465,21 @@
         }
       ],
       "sources": {
-        "Company marketing": 240,
-        "Third-party boards": 670,
+        "Company marketing": 238,
+        "Third-party boards": 657,
         "Referral": 8,
         "MyGreenhouse": 26,
         "Prospecting": 1,
-        "Job Portal": 28
+        "Job Portal": 27
       },
       "srcNested": {
         "Company marketing": {
-          "Jobs page on your website": 239,
+          "Jobs page on your website": 237,
           "Internal Applicant": 1
         },
         "Third-party boards": {
-          "LinkedIn": 662,
-          "Naukri": 7,
+          "LinkedIn": 648,
+          "Naukri": 8,
           "LinkedIn Limited Listing": 1
         },
         "Referral": {
@@ -14493,7 +14492,7 @@
           "Juicebox": 1
         },
         "Job Portal": {
-          "Linkedin Outreach": 27,
+          "Linkedin Outreach": 26,
           "Naukri Inbound": 1
         }
       },
@@ -14560,11 +14559,11 @@
         },
         "d8a917ae": {
           "Company marketing": {
-            "Jobs page on your website": 161
+            "Jobs page on your website": 159
           },
           "Third-party boards": {
-            "LinkedIn": 505,
-            "Naukri": 7
+            "LinkedIn": 494,
+            "Naukri": 8
           },
           "MyGreenhouse": {
             "MyGreenhouse Jobs": 23
@@ -14579,10 +14578,10 @@
             "Referral": 2
           },
           "Third-party boards": {
-            "LinkedIn": 6
+            "LinkedIn": 3
           },
           "Job Portal": {
-            "Linkedin Outreach": 3
+            "Linkedin Outreach": 2
           }
         },
         "db365cc9": {
@@ -14622,10 +14621,10 @@
         },
         "2026-Q2": {
           "Third-party boards": {
-            "LinkedIn": 600
+            "LinkedIn": 589
           },
           "Company marketing": {
-            "Jobs page on your website": 186
+            "Jobs page on your website": 184
           },
           "Referral": {
             "Referral": 7
@@ -14639,12 +14638,12 @@
         },
         "2026-Q3": {
           "Third-party boards": {
-            "LinkedIn": 9,
-            "Naukri": 7,
+            "Naukri": 8,
+            "LinkedIn": 6,
             "LinkedIn Limited Listing": 1
           },
           "Job Portal": {
-            "Linkedin Outreach": 27,
+            "Linkedin Outreach": 26,
             "Naukri Inbound": 1
           }
         }
@@ -14755,10 +14754,10 @@
         "d8a917ae": {
           "2026-Q2": {
             "Company marketing": {
-              "Jobs page on your website": 161
+              "Jobs page on your website": 159
             },
             "Third-party boards": {
-              "LinkedIn": 504
+              "LinkedIn": 493
             },
             "MyGreenhouse": {
               "MyGreenhouse Jobs": 23
@@ -14766,7 +14765,7 @@
           },
           "2026-Q3": {
             "Third-party boards": {
-              "Naukri": 7,
+              "Naukri": 8,
               "LinkedIn": 1
             },
             "Job Portal": {
@@ -14783,10 +14782,10 @@
           },
           "2026-Q3": {
             "Third-party boards": {
-              "LinkedIn": 6
+              "LinkedIn": 3
             },
             "Job Portal": {
-              "Linkedin Outreach": 3
+              "Linkedin Outreach": 2
             }
           }
         },
@@ -14816,15 +14815,15 @@
         }
       },
       "hc": 0,
-      "ta": 31,
+      "ta": 33,
       "hm": 7,
       "oa": 1,
-      "r1": 27,
+      "r1": 23,
       "r2": 3,
       "r3": 5,
-      "r4": 4,
+      "r4": 3,
       "r5": 8,
-      "offer": 55,
+      "offer": 56,
       "hired": 29,
       "offeredReal": 67,
       "joiningPending": 2,
@@ -14836,7 +14835,7 @@
     },
     {
       "name": "Ankita Kabra",
-      "total": 867,
+      "total": 871,
       "byJob": [
         {
           "jobId": "fc3105d6-731f-4653-a0b5-16a8ac8efda2",
@@ -14866,7 +14865,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 673,
+          "total": 675,
           "offer": 0,
           "hired": 0
         },
@@ -14898,7 +14897,7 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 1,
+          "total": 3,
           "offer": 0,
           "hired": 0
         },
@@ -14985,21 +14984,21 @@
       ],
       "sources": {
         "Company marketing": 646,
-        "Third-party boards": 184,
+        "Third-party boards": 186,
         "Referral": 13,
         "MyGreenhouse": 6,
         "Agencies": 6,
         "Other": 4,
         "Prospecting": 3,
         "Inbound": 1,
-        "Job Portal": 4
+        "Job Portal": 6
       },
       "srcNested": {
         "Company marketing": {
           "Jobs page on your website": 646
         },
         "Third-party boards": {
-          "LinkedIn": 77,
+          "LinkedIn": 79,
           "Naukri": 87,
           "Instahyre": 20
         },
@@ -15023,7 +15022,7 @@
           "Applied": 1
         },
         "Job Portal": {
-          "Naukri Outreach": 4
+          "Naukri Outreach": 6
         }
       },
       "srcByJob": {
@@ -15046,7 +15045,7 @@
             "LinkedIn": 2
           },
           "Job Portal": {
-            "Naukri Outreach": 4
+            "Naukri Outreach": 6
           }
         },
         "fc3105d6": {
@@ -15096,7 +15095,7 @@
         },
         "538f7111": {
           "Third-party boards": {
-            "LinkedIn": 1
+            "LinkedIn": 3
           }
         },
         "95b6ca87": {
@@ -15173,7 +15172,7 @@
             "Jobs page on your website": 629
           },
           "Third-party boards": {
-            "LinkedIn": 46,
+            "LinkedIn": 48,
             "Naukri": 7
           },
           "Referral": {
@@ -15214,7 +15213,7 @@
             "Applied": 1
           },
           "Job Portal": {
-            "Naukri Outreach": 4
+            "Naukri Outreach": 6
           }
         }
       },
@@ -15246,7 +15245,7 @@
           },
           "2026-Q3": {
             "Job Portal": {
-              "Naukri Outreach": 4
+              "Naukri Outreach": 6
             }
           }
         },
@@ -15312,7 +15311,7 @@
         "538f7111": {
           "2026-Q1": {
             "Third-party boards": {
-              "LinkedIn": 1
+              "LinkedIn": 3
             }
           }
         },
@@ -15413,7 +15412,7 @@
       "ta": 0,
       "hm": 0,
       "oa": 28,
-      "r1": 18,
+      "r1": 21,
       "r2": 0,
       "r3": 2,
       "r4": 0,
@@ -15430,7 +15429,7 @@
     },
     {
       "name": "V Pooja",
-      "total": 828,
+      "total": 829,
       "byJob": [
         {
           "jobId": "2b670683-2870-44e5-862a-c399766d383c",
@@ -15460,7 +15459,7 @@
           "jobId": "a6729ee8-f1ef-4a54-b5c3-abeab36f44bf",
           "title": "Software Engineer 1 , Backend",
           "department": "Engineering",
-          "total": 43,
+          "total": 42,
           "offer": 0,
           "hired": 0
         },
@@ -15500,7 +15499,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 29,
+          "total": 31,
           "offer": 1,
           "hired": 1
         },
@@ -15558,7 +15557,7 @@
         "Company marketing": 287,
         "Referral": 7,
         "Other": 1,
-        "Job Portal": 14,
+        "Job Portal": 16,
         "Inbound": 218
       },
       "srcNested": {
@@ -15580,8 +15579,8 @@
         },
         "Job Portal": {
           "InstaHyre": 2,
-          "Naukri Outreach": 1,
-          "Linkedin Inbound": 11
+          "Linkedin Inbound": 11,
+          "Naukri Outreach": 3
         },
         "Inbound": {
           "Applied": 218
@@ -15600,7 +15599,7 @@
             "Referral": 1
           },
           "Job Portal": {
-            "Naukri Outreach": 1
+            "Naukri Outreach": 3
           }
         },
         "2b670683": {
@@ -15759,8 +15758,8 @@
           },
           "Job Portal": {
             "InstaHyre": 2,
-            "Naukri Outreach": 1,
-            "Linkedin Inbound": 11
+            "Linkedin Inbound": 11,
+            "Naukri Outreach": 3
           },
           "Inbound": {
             "Applied": 218
@@ -15785,7 +15784,7 @@
           },
           "2026-Q3": {
             "Job Portal": {
-              "Naukri Outreach": 1
+              "Naukri Outreach": 3
             }
           }
         },
@@ -15980,7 +15979,7 @@
       "hc": 0,
       "ta": 0,
       "hm": 1,
-      "oa": 20,
+      "oa": 22,
       "r1": 12,
       "r2": 1,
       "r3": 6,
@@ -15998,14 +15997,14 @@
     },
     {
       "name": "Aditya Singh",
-      "total": 542,
+      "total": 544,
       "byJob": [
         {
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 409,
-          "offer": 35,
+          "total": 411,
+          "offer": 36,
           "hired": 16
         },
         {
@@ -16077,18 +16076,17 @@
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
           "total": 3,
-          "offer": 2,
+          "offer": 3,
           "hired": 1
         }
       ],
       "sources": {
         "Company marketing": 322,
         "Agencies": 8,
-        "Third-party boards": 170,
+        "Third-party boards": 171,
         "Prospecting": 24,
         "MyGreenhouse": 5,
-        "Job Portal": 2,
-        "Juicebox": 1,
+        "Job Portal": 3,
         "Inbound": 1
       },
       "srcNested": {
@@ -16099,7 +16097,7 @@
           "Bulls Eye": 8
         },
         "Third-party boards": {
-          "LinkedIn": 170
+          "LinkedIn": 171
         },
         "Prospecting": {
           "Other": 1,
@@ -16109,10 +16107,7 @@
           "MyGreenhouse Jobs": 5
         },
         "Job Portal": {
-          "Linkedin Outreach": 2
-        },
-        "Juicebox": {
-          "Juicebox Agent": 1
+          "Linkedin Outreach": 3
         },
         "Inbound": {
           "Applied": 1
@@ -16145,6 +16140,9 @@
           },
           "Inbound": {
             "Applied": 1
+          },
+          "Job Portal": {
+            "Linkedin Outreach": 1
           }
         },
         "745a9578": {
@@ -16196,14 +16194,14 @@
           }
         },
         "00833127": {
+          "Third-party boards": {
+            "LinkedIn": 1
+          },
           "Prospecting": {
             "Juicebox": 1
           },
           "Job Portal": {
             "Linkedin Outreach": 1
-          },
-          "Juicebox": {
-            "Juicebox Agent": 1
           }
         }
       },
@@ -16244,17 +16242,14 @@
           "Company marketing": {
             "Jobs page on your website": 30
           },
+          "Third-party boards": {
+            "LinkedIn": 3
+          },
           "Prospecting": {
             "Juicebox": 1
           },
-          "Third-party boards": {
-            "LinkedIn": 2
-          },
           "Job Portal": {
-            "Linkedin Outreach": 2
-          },
-          "Juicebox": {
-            "Juicebox Agent": 1
+            "Linkedin Outreach": 3
           },
           "Inbound": {
             "Applied": 1
@@ -16318,6 +16313,9 @@
             },
             "Inbound": {
               "Applied": 1
+            },
+            "Job Portal": {
+              "Linkedin Outreach": 1
             }
           }
         },
@@ -16399,14 +16397,14 @@
         },
         "00833127": {
           "2026-Q3": {
+            "Third-party boards": {
+              "LinkedIn": 1
+            },
             "Prospecting": {
               "Juicebox": 1
             },
             "Job Portal": {
               "Linkedin Outreach": 1
-            },
-            "Juicebox": {
-              "Juicebox Agent": 1
             }
           }
         }
@@ -16420,10 +16418,10 @@
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 49,
+      "offer": 51,
       "hired": 20,
-      "offeredReal": 51,
-      "joiningPending": 0,
+      "offeredReal": 53,
+      "joiningPending": 1,
       "accepted": 22,
       "userId": "e9ad307a-39a7-4bfd-b180-e6181c54e74e",
       "activeKnown": true,
@@ -17289,7 +17287,7 @@
     },
     {
       "name": "Alokita Dhumne",
-      "total": 374,
+      "total": 372,
       "byJob": [
         {
           "jobId": "092e9d9b-886b-4853-a476-c85896f42871",
@@ -17319,7 +17317,7 @@
           "jobId": "19982198-872f-45c5-8d6d-32ee85828c83",
           "title": "SDET 2",
           "department": "Engineering",
-          "total": 19,
+          "total": 17,
           "offer": 0,
           "hired": 0
         },
@@ -17402,8 +17400,7 @@
         "Referral": 2,
         "Company marketing": 1,
         "Other": 1,
-        "Job Portal": 7,
-        "Inbound": 1
+        "Job Portal": 6
       },
       "srcNested": {
         "Third-party boards": {
@@ -17425,10 +17422,7 @@
           "Recruiter Networking": 1
         },
         "Job Portal": {
-          "Naukri Outreach": 7
-        },
-        "Inbound": {
-          "Applied": 1
+          "Naukri Outreach": 6
         }
       },
       "srcByJob": {
@@ -17438,10 +17432,7 @@
             "Careerbloc": 1
           },
           "Job Portal": {
-            "Naukri Outreach": 7
-          },
-          "Inbound": {
-            "Applied": 1
+            "Naukri Outreach": 6
           }
         },
         "71601113": {
@@ -17568,10 +17559,7 @@
             "Recruiter Networking": 1
           },
           "Job Portal": {
-            "Naukri Outreach": 7
-          },
-          "Inbound": {
-            "Applied": 1
+            "Naukri Outreach": 6
           }
         }
       },
@@ -17585,10 +17573,7 @@
           },
           "2026-Q3": {
             "Job Portal": {
-              "Naukri Outreach": 7
-            },
-            "Inbound": {
-              "Applied": 1
+              "Naukri Outreach": 6
             }
           }
         },
@@ -17733,7 +17718,7 @@
       "hc": 0,
       "ta": 10,
       "hm": 0,
-      "oa": 21,
+      "oa": 20,
       "r1": 4,
       "r2": 0,
       "r3": 0,
@@ -18399,7 +18384,7 @@
     },
     {
       "name": "Ritika Bhasin",
-      "total": 244,
+      "total": 242,
       "byJob": [
         {
           "jobId": "7cecc40d-8ee8-4aab-b540-3cec0481dfb4",
@@ -18413,8 +18398,8 @@
           "jobId": "3c1dbb02-7212-42c2-a397-7d96f6b92ec4",
           "title": "Part Time Instructor - Agentic AI (US)",
           "department": "SME - US",
-          "total": 124,
-          "offer": 32,
+          "total": 122,
+          "offer": 31,
           "hired": 12
         },
         {
@@ -18494,26 +18479,26 @@
           "title": "Part Time Instructor - FDE (US)",
           "department": "SME - US",
           "total": 16,
-          "offer": 12,
+          "offer": 11,
           "hired": 2
         }
       ],
       "sources": {
         "Company marketing": 49,
-        "Third-party boards": 99,
+        "Third-party boards": 98,
         "MyGreenhouse": 2,
         "Referral": 1,
         "Prospecting": 1,
-        "Juicebox": 17,
+        "Juicebox": 18,
         "Inbound": 39,
-        "Job Portal": 17
+        "Job Portal": 16
       },
       "srcNested": {
         "Company marketing": {
           "Jobs page on your website": 49
         },
         "Third-party boards": {
-          "LinkedIn": 99
+          "LinkedIn": 98
         },
         "MyGreenhouse": {
           "MyGreenhouse Jobs": 2
@@ -18526,13 +18511,13 @@
         },
         "Juicebox": {
           "Juicebox Sourced": 1,
-          "Juicebox Agent": 16
+          "Juicebox Agent": 17
         },
         "Inbound": {
           "Applied": 39
         },
         "Job Portal": {
-          "Linkedin Outreach": 16,
+          "Linkedin Outreach": 15,
           "Linkedin Inbound": 1
         }
       },
@@ -18571,7 +18556,7 @@
             "Applied": 14
           },
           "Job Portal": {
-            "Linkedin Outreach": 8
+            "Linkedin Outreach": 7
           }
         },
         "c3c20ac6": {
@@ -18616,14 +18601,14 @@
         },
         "00833127": {
           "Third-party boards": {
-            "LinkedIn": 2
+            "LinkedIn": 1
           },
           "Job Portal": {
             "Linkedin Outreach": 8,
             "Linkedin Inbound": 1
           },
           "Juicebox": {
-            "Juicebox Agent": 5
+            "Juicebox Agent": 6
           }
         }
       },
@@ -18658,20 +18643,20 @@
             "Jobs page on your website": 4
           },
           "Third-party boards": {
-            "LinkedIn": 6
+            "LinkedIn": 5
           },
           "Prospecting": {
             "Juicebox": 1
           },
           "Juicebox": {
             "Juicebox Sourced": 1,
-            "Juicebox Agent": 16
+            "Juicebox Agent": 17
           },
           "Inbound": {
             "Applied": 39
           },
           "Job Portal": {
-            "Linkedin Outreach": 16,
+            "Linkedin Outreach": 15,
             "Linkedin Inbound": 1
           }
         }
@@ -18742,7 +18727,7 @@
               "Applied": 14
             },
             "Job Portal": {
-              "Linkedin Outreach": 8
+              "Linkedin Outreach": 7
             }
           }
         },
@@ -18805,14 +18790,14 @@
         "00833127": {
           "2026-Q3": {
             "Third-party boards": {
-              "LinkedIn": 2
+              "LinkedIn": 1
             },
             "Job Portal": {
               "Linkedin Outreach": 8,
               "Linkedin Inbound": 1
             },
             "Juicebox": {
-              "Juicebox Agent": 5
+              "Juicebox Agent": 6
             }
           }
         }
@@ -18826,10 +18811,10 @@
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 55,
+      "offer": 53,
       "hired": 25,
-      "offeredReal": 56,
-      "joiningPending": 10,
+      "offeredReal": 54,
+      "joiningPending": 9,
       "accepted": 39,
       "userId": "486b631c-e576-4376-a6b3-a656928fcc2c",
       "activeKnown": true,
@@ -18838,14 +18823,14 @@
     },
     {
       "name": "Gopu Nair V",
-      "total": 227,
+      "total": 239,
       "byJob": [
         {
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Senior Associate, US HR Operations",
           "department": "Human Resource",
-          "total": 197,
-          "offer": 1,
+          "total": 209,
+          "offer": 0,
           "hired": 0
         },
         {
@@ -18858,8 +18843,8 @@
         }
       ],
       "sources": {
-        "Company marketing": 44,
-        "Third-party boards": 133,
+        "Company marketing": 46,
+        "Third-party boards": 143,
         "MyGreenhouse": 4,
         "Job Portal": 24,
         "Inbound": 6,
@@ -18870,11 +18855,11 @@
       },
       "srcNested": {
         "Company marketing": {
-          "Jobs page on your website": 44
+          "Jobs page on your website": 46
         },
         "Third-party boards": {
-          "LinkedIn": 131,
-          "Naukri": 2
+          "LinkedIn": 142,
+          "Naukri": 1
         },
         "MyGreenhouse": {
           "MyGreenhouse Jobs": 4
@@ -18903,11 +18888,11 @@
       "srcByJob": {
         "d8a917ae": {
           "Company marketing": {
-            "Jobs page on your website": 44
+            "Jobs page on your website": 46
           },
           "Third-party boards": {
-            "LinkedIn": 131,
-            "Naukri": 2
+            "LinkedIn": 142,
+            "Naukri": 1
           },
           "MyGreenhouse": {
             "MyGreenhouse Jobs": 4
@@ -18945,10 +18930,10 @@
       "srcQ": {
         "2026-Q2": {
           "Company marketing": {
-            "Jobs page on your website": 44
+            "Jobs page on your website": 46
           },
           "Third-party boards": {
-            "LinkedIn": 131
+            "LinkedIn": 142
           },
           "MyGreenhouse": {
             "MyGreenhouse Jobs": 4
@@ -18965,15 +18950,15 @@
             "Applied": 1,
             "Naukri": 4
           },
-          "Third-party boards": {
-            "Naukri": 2
-          },
           "Job Portal": {
             "Linkedin Outreach": 20,
             "Linkedin Inbound": 3
           },
           "Juicebox": {
             "Juicebox Sourced": 1
+          },
+          "Third-party boards": {
+            "Naukri": 1
           },
           "Referral": {
             "Referral": 3
@@ -18990,10 +18975,10 @@
         "d8a917ae": {
           "2026-Q2": {
             "Company marketing": {
-              "Jobs page on your website": 44
+              "Jobs page on your website": 46
             },
             "Third-party boards": {
-              "LinkedIn": 131
+              "LinkedIn": 142
             },
             "MyGreenhouse": {
               "MyGreenhouse Jobs": 4
@@ -19001,7 +18986,7 @@
           },
           "2026-Q3": {
             "Third-party boards": {
-              "Naukri": 2
+              "Naukri": 1
             },
             "Inbound": {
               "Naukri": 1
@@ -19045,15 +19030,15 @@
         }
       },
       "hc": 4,
-      "ta": 4,
+      "ta": 2,
       "hm": 3,
       "oa": 4,
-      "r1": 0,
+      "r1": 1,
       "r2": 0,
       "r3": 0,
       "r4": 0,
       "r5": 0,
-      "offer": 11,
+      "offer": 10,
       "hired": 1,
       "offeredReal": 12,
       "joiningPending": 1,
@@ -20879,7 +20864,7 @@
     },
     {
       "name": "Sanghamitra Moulik",
-      "total": 28,
+      "total": 30,
       "byJob": [
         {
           "jobId": "b6f031b3-3350-4aab-8296-da542fed4a0f",
@@ -20901,21 +20886,21 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 7,
+          "total": 9,
           "offer": 2,
           "hired": 2
         }
       ],
       "sources": {
-        "Third-party boards": 25,
-        "Job Portal": 3
+        "Third-party boards": 26,
+        "Job Portal": 4
       },
       "srcNested": {
         "Third-party boards": {
-          "LinkedIn": 25
+          "LinkedIn": 26
         },
         "Job Portal": {
-          "Linkedin Outreach": 3
+          "Linkedin Outreach": 4
         }
       },
       "srcByJob": {
@@ -20931,22 +20916,25 @@
         },
         "538f7111": {
           "Third-party boards": {
-            "LinkedIn": 4
+            "LinkedIn": 5
           },
           "Job Portal": {
-            "Linkedin Outreach": 3
+            "Linkedin Outreach": 4
           }
         }
       },
       "srcQ": {
         "2026-Q1": {
           "Third-party boards": {
-            "LinkedIn": 25
+            "LinkedIn": 23
           }
         },
         "2026-Q3": {
+          "Third-party boards": {
+            "LinkedIn": 3
+          },
           "Job Portal": {
-            "Linkedin Outreach": 3
+            "Linkedin Outreach": 4
           }
         }
       },
@@ -20968,12 +20956,15 @@
         "538f7111": {
           "2026-Q1": {
             "Third-party boards": {
-              "LinkedIn": 4
+              "LinkedIn": 2
             }
           },
           "2026-Q3": {
+            "Third-party boards": {
+              "LinkedIn": 3
+            },
             "Job Portal": {
-              "Linkedin Outreach": 3
+              "Linkedin Outreach": 4
             }
           }
         }
@@ -20982,10 +20973,10 @@
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 6,
+      "r1": 7,
       "r2": 0,
       "r3": 0,
-      "r4": 0,
+      "r4": 1,
       "r5": 0,
       "offer": 7,
       "hired": 7,
@@ -21281,69 +21272,6 @@
       "activeKnown": true,
       "seatRole": null,
       "isActive": false
-    },
-    {
-      "name": "Jerin Kesavan",
-      "total": 1,
-      "byJob": [
-        {
-          "jobId": "22fcd2e7-ed30-4852-8be0-c8cbca3033a2",
-          "title": "Program Advisor - US (AI Programs)",
-          "department": "US Business",
-          "total": 1,
-          "offer": 1,
-          "hired": 1
-        }
-      ],
-      "sources": {
-        "Referral": 1
-      },
-      "srcNested": {
-        "Referral": {
-          "Referral": 1
-        }
-      },
-      "srcByJob": {
-        "22fcd2e7": {
-          "Referral": {
-            "Referral": 1
-          }
-        }
-      },
-      "srcQ": {
-        "2026-Q3": {
-          "Referral": {
-            "Referral": 1
-          }
-        }
-      },
-      "srcByJobQ": {
-        "22fcd2e7": {
-          "2026-Q3": {
-            "Referral": {
-              "Referral": 1
-            }
-          }
-        }
-      },
-      "hc": 0,
-      "ta": 0,
-      "hm": 0,
-      "oa": 0,
-      "r1": 0,
-      "r2": 0,
-      "r3": 0,
-      "r4": 0,
-      "r5": 0,
-      "offer": 1,
-      "hired": 1,
-      "offeredReal": 1,
-      "joiningPending": 0,
-      "accepted": 1,
-      "userId": "8e2e20bd-e8b9-4b6a-8b5f-d5cc73c1f7c1",
-      "activeKnown": true,
-      "seatRole": "Organization Admin",
-      "isActive": true
     }
   ],
   "sources": [
@@ -36903,7 +36831,7 @@
       "level": "NA",
       "complexity": "Complex",
       "employmentType": "PTE",
-      "recruiter": "Ritika Bhasin",
+      "recruiter": "Aditya Singh",
       "sourcer": null,
       "candidate": "Rancho Iyer",
       "decidedAt": "",
@@ -38555,7 +38483,7 @@
       "level": "L2",
       "complexity": "Normal",
       "employmentType": "FTE",
-      "recruiter": "Jerin Kesavan",
+      "recruiter": "G Darshan",
       "sourcer": null,
       "candidate": "Vishal Kumar Sharma",
       "decidedAt": "2026-08-05",
@@ -39983,7 +39911,7 @@
       "level": "NA",
       "complexity": null,
       "employmentType": "PTE",
-      "recruiter": "Ritika Bhasin",
+      "recruiter": "Aditya Singh",
       "sourcer": null,
       "candidate": "Avtar Singh",
       "decidedAt": "",
@@ -40114,7 +40042,7 @@
       "job": "Part Time Instructor - Agentic AI (US)",
       "candidate": "Avtar Singh",
       "subStage": "Offer Created",
-      "recruiter": "Ritika Bhasin",
+      "recruiter": "Aditya Singh",
       "linked": true
     },
     {
@@ -41390,7 +41318,7 @@
       "job": "Part Time Instructor - FDE (US)",
       "candidate": "Rancho Iyer",
       "subStage": "Offer Sent",
-      "recruiter": "Ritika Bhasin",
+      "recruiter": "Aditya Singh",
       "linked": false
     },
     {
@@ -41917,6 +41845,16 @@
       "department": "SME - US",
       "recruiter": "Aditya Singh",
       "doj": "2026-07-13",
+      "subStage": "Offer Sent",
+      "appStatus": "Active",
+      "needsFix": true
+    },
+    {
+      "candidate": "Rancho Iyer",
+      "job": "Part Time Instructor - FDE (US)",
+      "department": "SME - US",
+      "recruiter": "Aditya Singh",
+      "doj": "2026-07-10",
       "subStage": "Offer Sent",
       "appStatus": "Active",
       "needsFix": true
@@ -42748,16 +42686,6 @@
       "recruiter": "Ritika Bhasin",
       "doj": "2026-07-24",
       "subStage": "Offer Created",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Rancho Iyer",
-      "job": "Part Time Instructor - FDE (US)",
-      "department": "SME - US",
-      "recruiter": "Ritika Bhasin",
-      "doj": "2026-07-10",
-      "subStage": "Offer Sent",
       "appStatus": "Active",
       "needsFix": true
     },
@@ -50025,29 +49953,29 @@
         "app": "649f6f8e-4229-4426-9301-8319a4873d2f",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Sanghamitra Moulik"
         ]
       },
       {
         "app": "c783c116-672f-4d9b-9805-c5ad64ca99a1",
         "job8": "538f7111",
         "names": [
-          "Ankita Kabra",
           "Sanghamitra Moulik",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Ankita Kabra"
         ]
       },
       {
         "app": "1c9445bc-d91a-4832-bf94-21a8739022d6",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
+          "Sanghamitra Moulik",
           "Oshin Verma"
         ]
       },
@@ -50065,18 +49993,18 @@
         "app": "59fd67b3-b601-46dd-8f8c-26ff3fead39b",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
           "Mashika De Almeida",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Sanghamitra Moulik"
         ]
       },
       {
         "app": "356e20a5-b360-477e-99ca-9eb0dc1fe384",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50155,8 +50083,8 @@
         "app": "6df21dc1-55c1-4a55-b99a-2d73be4451ea",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50195,8 +50123,8 @@
         "app": "5db08b36-f53f-4bdb-868d-14ff8f0d6edc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50211,8 +50139,8 @@
         "app": "18719e3d-f2c8-4976-95f4-6714cf66b237",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50251,16 +50179,16 @@
         "app": "684b03b8-fb41-4dd3-b763-06ce15f07cc2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "7299b099-71f5-482e-9350-45ee72f24a7b",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50275,8 +50203,8 @@
         "app": "e46691b1-3571-43cc-be15-abfb45fca259",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50363,8 +50291,8 @@
         "app": "786b295a-74ab-4a16-93d4-4618b21c47ac",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50435,16 +50363,16 @@
         "app": "0b15beac-d2bf-4387-880a-9dd49a3f19dd",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "7080aeee-0576-4de8-9c55-a6e3e7cd1c7b",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50459,8 +50387,8 @@
         "app": "7de1b3e1-a74f-40c0-af5f-3f66228a385a",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50475,8 +50403,8 @@
         "app": "4512dac4-8c35-499f-a417-2fae5c1a3216",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50507,8 +50435,8 @@
         "app": "8727da30-bc2a-4d63-865c-7a2d6542c49d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50547,8 +50475,8 @@
         "app": "038491df-9346-4651-9d3b-6f5f9333f318",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50579,32 +50507,32 @@
         "app": "3e249034-229a-4284-add0-ce9bc2d379fe",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "8c3c9bf3-7b2c-4625-a9ad-b203ab0c5dbc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "93014b53-1102-4a34-b7d4-dfd808ac0180",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "8952728d-8f86-406e-a492-19a581cc9f4d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50627,8 +50555,8 @@
         "app": "c509a002-aa68-4038-bccd-6831e315f3b3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50643,8 +50571,8 @@
         "app": "c8c55921-c6c1-4ff7-a7cf-856e16a3c6dd",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50659,8 +50587,8 @@
         "app": "e7ecf2ad-dec7-494f-8ec7-2dc362beae9a",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50691,8 +50619,8 @@
         "app": "ca42a903-9ce3-4fa4-ac11-ed3edda251b5",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50747,8 +50675,8 @@
         "app": "19e2c8ac-e1cf-4be6-bc2c-e1ab0f6ff28e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50795,8 +50723,8 @@
         "app": "d580a20f-3004-48ff-87ae-4c4085fc2b94",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50843,24 +50771,24 @@
         "app": "f7d596ba-6542-4c13-97ea-2a1343fa1ea0",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "2dc35893-f598-47b1-9464-312c5cc18371",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "5388706e-8908-489e-abb5-a3041801d030",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -50899,8 +50827,8 @@
         "app": "6cb373ed-f799-480f-ac0c-87ac278f5ede",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50915,8 +50843,8 @@
         "app": "75377ab5-fb7e-4ad3-a8c1-1440a00694a3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50955,8 +50883,8 @@
         "app": "3cbf56bd-1f21-437e-9d4a-0e49722d7fe6",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -50971,8 +50899,8 @@
         "app": "88000d51-abde-45b6-be71-9265a99d2ecd",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51003,16 +50931,16 @@
         "app": "59d67c45-ff51-40f0-b8ec-3cead018c391",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "13cbf34b-3258-452c-baed-2ddd80f9b809",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51043,8 +50971,8 @@
         "app": "e929c608-3f9c-4c0b-8225-4cccbbd9f2eb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51059,8 +50987,8 @@
         "app": "8bc65cbb-7516-49a3-bd5e-8ffdeeb5aea8",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -51123,16 +51051,16 @@
         "app": "0ea2d323-a5ee-42db-8cc8-4b9f9a009268",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "9dad6e59-4b53-4373-b9b2-b9df0d8c510d",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -51155,8 +51083,8 @@
         "app": "a6c7457a-ec07-492d-acb6-4f7bc8bae13c",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51227,8 +51155,8 @@
         "app": "5c784ebc-40f8-4915-b9bb-32108e16f7bc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51259,8 +51187,8 @@
         "app": "99888f4e-ddac-414e-9429-bd483242b8b5",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51275,16 +51203,16 @@
         "app": "25a5ab77-b13e-4de3-adbf-ea3100f11145",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "4b505690-72b5-47c0-82d7-4628f44fd4f4",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -51315,8 +51243,8 @@
         "app": "aaaf600e-a2e5-466c-a211-6158279418cb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51347,32 +51275,32 @@
         "app": "43d548c1-e67e-4e6a-817b-35fb1fd1b026",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "57fca414-5106-4f6c-9a44-79d0afc268cf",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "318df207-1050-45b1-b18e-05674d0fd2d5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "5571e6a9-f6e3-4cbf-a315-7d2c816f2f9e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -51387,32 +51315,32 @@
         "app": "c0c008cf-4418-4a61-a197-f32eb6a140bc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "21926a82-d12d-43ef-8dbf-c9cd74843d2b",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "c1949300-f053-48fb-9aa4-e6b64165183d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "75ee231c-acfb-4ad3-a46a-dec236b85898",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51435,8 +51363,8 @@
         "app": "af93ef81-2ec2-472e-852d-a1a21a36084d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51459,12 +51387,20 @@
         "app": "60168961-81cb-42c9-bd57-b10c138e3850",
         "job8": "d8a917ae",
         "names": [
+          "Gopu Nair V",
+          "Oshin Verma"
+        ]
+      },
+      {
+        "app": "62abcbe8-8be9-437c-8cdf-12f0807647db",
+        "job8": "d8a917ae",
+        "names": [
           "Oshin Verma",
           "Gopu Nair V"
         ]
       },
       {
-        "app": "62abcbe8-8be9-437c-8cdf-12f0807647db",
+        "app": "51decdfb-91d6-4c27-bbbe-6c8c3631f5b3",
         "job8": "d8a917ae",
         "names": [
           "Gopu Nair V",
@@ -51472,19 +51408,11 @@
         ]
       },
       {
-        "app": "51decdfb-91d6-4c27-bbbe-6c8c3631f5b3",
-        "job8": "d8a917ae",
-        "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
-        ]
-      },
-      {
         "app": "b79bfa9e-8850-4adf-81fb-4233b3ff0588",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51515,16 +51443,16 @@
         "app": "674002f5-1168-48f1-9460-5ca16ae55067",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "ee736c66-8e8a-41ac-bea0-c5786da8aba3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51563,8 +51491,8 @@
         "app": "4c825903-b690-452c-949c-458682bd77d2",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51579,8 +51507,8 @@
         "app": "8e71bba0-1050-4ac7-b94b-89cd81a1f9f3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -51649,24 +51577,24 @@
       "86": 4,
       "87": 4,
       "88": 7,
-      "89": 11,
-      "90": 33,
+      "89": 10,
+      "90": 30,
       "91": 73,
-      "92": 134,
-      "93": 2,
+      "92": 137,
+      "93": 3,
       "94": 3,
       "95": 12,
       "96": 9,
       "97": 11,
       "98": 16,
-      "99": 19,
-      "100": 7,
+      "99": 18,
+      "100": 8,
       "101": 10,
-      "102": 34,
-      "103": 29,
-      "104": 63,
-      "105": 131,
-      "106": 391,
+      "102": 32,
+      "103": 31,
+      "104": 60,
+      "105": 128,
+      "106": 397,
       "175": 1,
       "178": 2,
       "179": 1,
@@ -51678,22 +51606,22 @@
       "186": 2,
       "187": 6,
       "188": 6,
-      "189": 6,
-      "190": 11,
+      "189": 5,
+      "190": 12,
       "191": 3,
       "193": 4,
       "194": 7,
       "195": 10,
       "196": 10,
-      "197": 13,
-      "198": 7,
+      "197": 12,
+      "198": 8,
       "199": 4,
       "200": 19,
       "201": 15,
       "202": 17,
       "203": 36,
-      "204": 111,
-      "205": 41,
+      "204": 110,
+      "205": 42,
       "206": 9,
       "207": 3,
       "208": 3,
@@ -51708,11 +51636,11 @@
       "218": 16,
       "219": 2,
       "220": 3,
-      "221": 40,
-      "222": 68,
+      "221": 39,
+      "222": 69,
       "223": 82,
-      "224": 57,
-      "225": 14
+      "224": 53,
+      "225": 18
     },
     "52845468": {
       "2": 1,
@@ -51724,7 +51652,7 @@
       "45": 1,
       "46": 1,
       "50": 2,
-      "51": 1,
+      "52": 1,
       "54": 2,
       "55": 1,
       "59": 1,
@@ -51744,8 +51672,8 @@
       "119": 2,
       "120": 2,
       "122": 2,
-      "124": 2,
-      "125": 1,
+      "124": 1,
+      "125": 2,
       "127": 1,
       "129": 1,
       "132": 4,
@@ -51756,8 +51684,8 @@
       "137": 1,
       "138": 3,
       "139": 1,
-      "140": 4,
-      "141": 2,
+      "140": 3,
+      "141": 3,
       "143": 2,
       "144": 1,
       "145": 10,
@@ -51771,8 +51699,7 @@
       "169": 2,
       "171": 1,
       "173": 3,
-      "174": 1,
-      "175": 4,
+      "175": 5,
       "176": 1,
       "178": 3,
       "179": 1,
@@ -51785,45 +51712,45 @@
       "210": 1
     },
     "dd785a22": {
-      "203": 74,
+      "203": 73,
       "204": 133,
-      "205": 69,
-      "206": 77,
-      "207": 114,
+      "205": 70,
+      "206": 75,
+      "207": 115,
       "208": 150,
-      "209": 138,
-      "210": 138,
+      "209": 137,
+      "210": 139,
       "211": 88,
-      "212": 81,
-      "213": 81,
-      "214": 113,
+      "212": 82,
+      "213": 79,
+      "214": 115,
       "215": 134,
       "216": 104,
-      "217": 111,
-      "218": 118,
+      "217": 110,
+      "218": 119,
       "219": 85,
       "220": 135,
-      "221": 123,
-      "222": 113,
+      "221": 120,
+      "222": 116,
       "223": 114,
-      "224": 179,
-      "225": 264,
-      "226": 128,
-      "227": 224,
-      "228": 371,
-      "229": 258,
-      "230": 257,
-      "231": 614,
-      "232": 478,
-      "233": 23,
-      "234": 71,
-      "235": 141,
-      "236": 39
+      "224": 178,
+      "225": 257,
+      "226": 136,
+      "227": 221,
+      "228": 372,
+      "229": 259,
+      "230": 255,
+      "231": 616,
+      "232": 479,
+      "233": 22,
+      "234": 69,
+      "235": 138,
+      "236": 45
     },
     "ad7e4c29": {
       "167": 6,
-      "168": 4,
-      "169": 2,
+      "168": 3,
+      "169": 3,
       "170": 3,
       "171": 2,
       "173": 6,
@@ -51831,8 +51758,8 @@
       "175": 2,
       "178": 1,
       "179": 3,
-      "180": 3,
-      "181": 2,
+      "180": 2,
+      "181": 3,
       "182": 4,
       "183": 13,
       "184": 8,
@@ -51842,55 +51769,55 @@
       "188": 33,
       "189": 34,
       "190": 30,
-      "191": 15,
-      "192": 17,
+      "191": 14,
+      "192": 18,
       "193": 11,
-      "194": 21,
+      "194": 20,
       "195": 26,
-      "196": 19,
+      "196": 20,
       "197": 24,
       "198": 20,
       "199": 9,
       "200": 29,
-      "201": 31,
-      "202": 35,
+      "201": 30,
+      "202": 36,
       "203": 35,
-      "204": 45,
+      "204": 44,
       "205": 32,
-      "206": 23,
-      "207": 28,
+      "206": 22,
+      "207": 30,
       "208": 20,
-      "209": 21,
-      "210": 32,
-      "211": 17,
-      "212": 36,
+      "209": 20,
+      "210": 33,
+      "211": 15,
+      "212": 38,
       "213": 6,
-      "230": 6,
-      "231": 51,
+      "230": 4,
+      "231": 52,
       "232": 34,
       "233": 48,
-      "234": 87,
-      "235": 31,
-      "236": 15
+      "234": 85,
+      "235": 32,
+      "236": 17
     },
     "39b328eb": {
       "142": 3,
-      "143": 7,
+      "143": 6,
       "144": 15,
       "145": 23,
       "146": 25,
-      "147": 7,
+      "147": 8,
       "148": 20,
-      "149": 5,
-      "150": 11,
+      "149": 4,
+      "150": 12,
       "151": 30,
       "152": 17,
       "153": 21,
       "154": 16,
-      "155": 22,
-      "156": 9,
-      "157": 25,
-      "158": 12,
+      "155": 21,
+      "156": 10,
+      "157": 24,
+      "158": 13,
       "159": 10,
       "160": 3,
       "161": 6,
@@ -51913,15 +51840,15 @@
       "179": 5,
       "180": 6,
       "181": 6,
-      "182": 8,
-      "183": 6,
+      "182": 7,
+      "183": 7,
       "184": 3,
       "185": 2,
-      "186": 9,
+      "186": 8,
       "187": 10,
-      "188": 7,
-      "189": 20,
-      "190": 47,
+      "188": 8,
+      "189": 18,
+      "190": 49,
       "191": 1,
       "192": 3,
       "193": 3,
@@ -51941,8 +51868,8 @@
       "208": 11,
       "209": 9,
       "210": 7,
-      "211": 2,
-      "212": 2,
+      "211": 1,
+      "212": 3,
       "213": 3,
       "214": 1,
       "215": 6,
@@ -51952,19 +51879,19 @@
       "219": 3,
       "220": 1,
       "221": 8,
-      "222": 4,
-      "223": 4,
-      "224": 6,
-      "225": 4,
+      "222": 2,
+      "223": 6,
+      "224": 5,
+      "225": 5,
       "226": 3,
       "227": 2,
       "228": 6,
       "229": 18,
-      "230": 16,
-      "231": 18,
+      "230": 15,
+      "231": 19,
       "232": 34,
-      "233": 11,
-      "234": 14,
+      "233": 10,
+      "234": 15,
       "235": 28,
       "236": 5
     },
@@ -51974,8 +51901,8 @@
       "7": 2,
       "11": 1,
       "13": 1,
-      "14": 2,
-      "15": 1,
+      "14": 1,
+      "15": 2,
       "20": 1,
       "33": 1,
       "34": 1,
@@ -52003,8 +51930,8 @@
       "66": 1,
       "70": 2,
       "71": 1,
-      "72": 4,
-      "73": 2,
+      "72": 3,
+      "73": 3,
       "74": 3,
       "76": 2,
       "77": 1,
@@ -52016,14 +51943,15 @@
       "84": 2,
       "87": 1,
       "90": 2,
-      "91": 4,
-      "92": 12,
+      "91": 3,
+      "92": 13,
       "93": 2,
       "95": 1,
       "96": 2,
       "98": 1,
       "99": 1,
-      "100": 2,
+      "100": 1,
+      "101": 1,
       "102": 2,
       "103": 1,
       "104": 1,
@@ -52032,7 +51960,7 @@
       "107": 2,
       "108": 1,
       "109": 1,
-      "111": 1,
+      "112": 1,
       "113": 2,
       "114": 1,
       "115": 1,
@@ -52140,10 +52068,10 @@
       "12": 14,
       "13": 12,
       "14": 21,
-      "15": 53,
-      "16": 35,
-      "17": 22,
-      "18": 9,
+      "15": 51,
+      "16": 37,
+      "17": 21,
+      "18": 10,
       "19": 16,
       "20": 29,
       "21": 24,
@@ -52176,18 +52104,19 @@
       "118": 25,
       "119": 3,
       "120": 4,
-      "121": 3,
+      "121": 2,
+      "122": 1,
       "123": 1,
       "125": 2,
       "126": 1,
       "127": 3,
       "128": 3,
-      "129": 3,
-      "130": 3,
+      "129": 2,
+      "130": 4,
       "131": 3,
       "132": 3,
-      "133": 3,
-      "134": 1,
+      "133": 2,
+      "134": 2,
       "136": 5,
       "137": 2,
       "138": 1,
@@ -52207,7 +52136,8 @@
       "158": 4,
       "159": 1,
       "161": 2,
-      "162": 4,
+      "162": 3,
+      "163": 1,
       "164": 1,
       "165": 2,
       "166": 1,
@@ -52232,8 +52162,8 @@
       "204": 10,
       "205": 1,
       "206": 3,
-      "207": 3,
-      "208": 9,
+      "207": 2,
+      "208": 10,
       "209": 5,
       "210": 7,
       "211": 2,
@@ -52257,8 +52187,8 @@
       "230": 4,
       "232": 4,
       "234": 3,
-      "235": 6,
-      "236": 3
+      "235": 5,
+      "236": 4
     },
     "ad340e02": {
       "168": 7,
@@ -52287,7 +52217,8 @@
       "9": 1,
       "13": 1,
       "14": 5,
-      "15": 6,
+      "15": 5,
+      "16": 1,
       "18": 1,
       "19": 5,
       "20": 1,
@@ -52295,14 +52226,13 @@
       "22": 1,
       "29": 1,
       "42": 1,
-      "45": 1,
-      "46": 2,
+      "46": 3,
       "47": 3,
       "168": 4,
       "169": 3,
       "170": 4,
-      "171": 3,
-      "172": 3,
+      "171": 2,
+      "172": 4,
       "173": 2,
       "174": 4,
       "175": 4,
@@ -52319,8 +52249,8 @@
       "187": 4,
       "188": 11,
       "189": 5,
-      "190": 4,
-      "191": 4,
+      "190": 3,
+      "191": 5,
       "192": 1,
       "194": 2,
       "195": 1,
@@ -52354,35 +52284,35 @@
       "236": 1
     },
     "a6729ee8": {
-      "84": 5,
+      "84": 4,
       "85": 20,
       "86": 23,
-      "87": 14,
-      "88": 35,
-      "89": 41,
-      "90": 74,
-      "91": 193,
-      "92": 469,
-      "93": 303,
+      "87": 15,
+      "88": 32,
+      "89": 42,
+      "90": 73,
+      "91": 189,
+      "92": 452,
+      "93": 327,
       "94": 19,
       "95": 16,
       "96": 23,
-      "97": 30,
-      "98": 35,
-      "99": 101,
-      "100": 75,
-      "101": 118,
-      "102": 394,
-      "103": 34,
+      "97": 29,
+      "98": 36,
+      "99": 98,
+      "100": 77,
+      "101": 109,
+      "102": 403,
+      "103": 35,
       "104": 71,
       "105": 11,
       "106": 2,
-      "140": 11,
+      "140": 10,
       "141": 51,
       "142": 16,
-      "143": 33,
-      "144": 190,
-      "145": 737,
+      "143": 31,
+      "144": 178,
+      "145": 752,
       "174": 2,
       "175": 6,
       "176": 2,
@@ -52391,15 +52321,15 @@
       "179": 10,
       "180": 12,
       "181": 8,
-      "182": 11,
-      "183": 15,
-      "184": 18,
+      "182": 9,
+      "183": 17,
+      "184": 17,
       "185": 12,
       "186": 21,
-      "187": 17,
+      "187": 15,
       "188": 29,
-      "189": 101,
-      "190": 149,
+      "189": 100,
+      "190": 153,
       "191": 7,
       "192": 5,
       "193": 7,
@@ -52409,11 +52339,11 @@
       "197": 6,
       "198": 8,
       "199": 9,
-      "200": 19,
-      "201": 19,
+      "200": 18,
+      "201": 20,
       "202": 51,
-      "203": 77,
-      "204": 202,
+      "203": 76,
+      "204": 203,
       "205": 8,
       "206": 8,
       "207": 5,
@@ -52427,32 +52357,32 @@
       "215": 6,
       "216": 7,
       "217": 12,
-      "218": 10,
-      "219": 4,
+      "218": 9,
+      "219": 5,
       "220": 11,
       "221": 10,
       "222": 5,
-      "223": 10,
-      "224": 9,
+      "223": 9,
+      "224": 10,
       "225": 13,
       "226": 11,
       "227": 6,
-      "228": 15,
-      "229": 24,
-      "230": 40,
-      "231": 58,
+      "228": 13,
+      "229": 26,
+      "230": 38,
+      "231": 59,
       "232": 52,
-      "233": 8,
-      "234": 32,
-      "235": 39,
+      "233": 9,
+      "234": 31,
+      "235": 40,
       "236": 2
     },
     "dbd73b6f": {
       "140": 3,
       "141": 3,
       "143": 1,
-      "144": 7,
-      "145": 3,
+      "144": 6,
+      "145": 4,
       "147": 2,
       "148": 4,
       "150": 1,
@@ -52479,8 +52409,8 @@
       "183": 3,
       "185": 1,
       "187": 1,
-      "188": 4,
-      "189": 4,
+      "188": 3,
+      "189": 5,
       "190": 2,
       "193": 6,
       "194": 2,
@@ -52511,8 +52441,8 @@
       "232": 9,
       "233": 2,
       "234": 5,
-      "235": 7,
-      "236": 4
+      "235": 5,
+      "236": 6
     },
     "4dee16ed": {
       "225": 2,
@@ -52527,7 +52457,7 @@
     "092e9d9b": {
       "2": 1,
       "5": 1,
-      "6": 1,
+      "7": 1,
       "8": 2,
       "9": 2,
       "11": 1,
@@ -52744,12 +52674,12 @@
       "166": 1,
       "167": 7,
       "168": 22,
-      "169": 18,
-      "170": 7,
+      "169": 17,
+      "170": 8,
       "171": 9,
       "172": 23,
-      "173": 12,
-      "174": 11,
+      "173": 11,
+      "174": 12,
       "175": 21,
       "176": 18,
       "177": 7,
@@ -52760,10 +52690,10 @@
       "182": 26,
       "183": 15,
       "184": 13,
-      "185": 18,
-      "186": 15,
-      "187": 22,
-      "188": 40,
+      "185": 15,
+      "186": 18,
+      "187": 21,
+      "188": 41,
       "189": 3,
       "190": 1,
       "193": 3,
@@ -52843,8 +52773,8 @@
       "154": 1,
       "155": 3,
       "156": 2,
-      "159": 2,
-      "160": 2,
+      "159": 1,
+      "160": 3,
       "161": 1,
       "162": 9,
       "163": 1,
@@ -52852,8 +52782,8 @@
       "165": 1,
       "166": 6,
       "167": 7,
-      "168": 8,
-      "169": 7,
+      "168": 7,
+      "169": 8,
       "170": 1,
       "171": 5,
       "172": 8,
@@ -52891,11 +52821,10 @@
       "27": 1,
       "29": 1,
       "30": 1,
-      "31": 1,
-      "32": 2,
+      "32": 3,
       "33": 1,
-      "34": 3,
-      "35": 4,
+      "34": 2,
+      "35": 5,
       "36": 1,
       "38": 2,
       "44": 1,
@@ -52914,7 +52843,7 @@
       "87": 2,
       "91": 1,
       "99": 1,
-      "100": 1,
+      "101": 1,
       "103": 1,
       "104": 1,
       "106": 1,
@@ -52932,8 +52861,7 @@
       "157": 1,
       "161": 2,
       "165": 1,
-      "168": 1,
-      "169": 1,
+      "169": 2,
       "175": 1,
       "177": 1,
       "181": 1,
@@ -52963,7 +52891,8 @@
       "46": 1,
       "47": 1,
       "49": 1,
-      "50": 2,
+      "50": 1,
+      "51": 1,
       "53": 2,
       "54": 1,
       "55": 1,
@@ -52983,8 +52912,8 @@
       "84": 4,
       "85": 3,
       "86": 1,
-      "87": 2,
-      "88": 3,
+      "87": 1,
+      "88": 4,
       "89": 1,
       "90": 1,
       "92": 1,
@@ -53077,8 +53006,8 @@
       "226": 2,
       "227": 3,
       "228": 9,
-      "229": 15,
-      "230": 18,
+      "229": 14,
+      "230": 19,
       "231": 12
     },
     "52b44276": {
@@ -53098,8 +53027,8 @@
       "190": 1,
       "191": 2,
       "192": 1,
-      "193": 3,
-      "194": 1,
+      "193": 2,
+      "194": 2,
       "195": 7,
       "196": 7,
       "197": 14,
@@ -53132,34 +53061,34 @@
     },
     "f8fd4dc8": {
       "166": 14,
-      "167": 47,
-      "168": 45,
-      "169": 27,
+      "167": 45,
+      "168": 44,
+      "169": 30,
       "170": 17,
-      "171": 25,
-      "172": 31,
+      "171": 24,
+      "172": 32,
       "173": 26,
       "174": 37,
       "175": 45,
       "176": 28,
-      "177": 18,
+      "177": 17,
       "178": 22,
-      "179": 36,
+      "179": 37,
       "180": 37,
       "181": 60,
       "182": 37,
-      "183": 37,
+      "183": 36,
       "184": 28,
-      "185": 19,
+      "185": 20,
       "186": 42,
       "187": 56,
-      "188": 76,
-      "189": 104,
-      "190": 129,
+      "188": 73,
+      "189": 106,
+      "190": 130,
       "191": 18,
-      "192": 18,
-      "193": 60,
-      "194": 221,
+      "192": 17,
+      "193": 58,
+      "194": 224,
       "195": 167,
       "196": 19,
       "197": 4,
@@ -53168,12 +53097,12 @@
       "200": 16,
       "201": 13,
       "202": 19,
-      "203": 36,
-      "204": 102,
+      "203": 35,
+      "204": 103,
       "205": 34,
-      "206": 7,
+      "206": 6,
       "207": 5,
-      "208": 6,
+      "208": 7,
       "209": 2,
       "210": 6,
       "211": 3,
@@ -53181,20 +53110,20 @@
       "213": 4,
       "214": 6,
       "215": 9,
-      "216": 5,
-      "217": 17,
+      "216": 4,
+      "217": 18,
       "218": 7,
       "219": 5,
       "220": 2,
-      "221": 20,
+      "221": 19,
       "222": 13,
-      "223": 41,
-      "224": 41,
-      "225": 54,
+      "223": 40,
+      "224": 42,
+      "225": 55,
       "226": 33,
       "227": 33,
-      "228": 79,
-      "229": 91,
+      "228": 78,
+      "229": 92,
       "230": 71
     },
     "3ea2b9d0": {
@@ -53208,18 +53137,18 @@
       "7": 2,
       "8": 3,
       "9": 2,
-      "10": 3,
-      "11": 3,
+      "10": 2,
+      "11": 4,
       "12": 17,
       "13": 24,
       "14": 23,
       "15": 31,
       "16": 32,
       "17": 29,
-      "18": 42,
-      "19": 61,
-      "20": 148,
-      "21": 207,
+      "18": 40,
+      "19": 63,
+      "20": 146,
+      "21": 209,
       "22": 3,
       "23": 1,
       "24": 1,
@@ -53236,31 +53165,31 @@
       "37": 1,
       "38": 3,
       "39": 2,
-      "41": 31,
-      "42": 93,
-      "43": 151,
+      "41": 30,
+      "42": 88,
+      "43": 157,
       "84": 8,
       "85": 15,
-      "86": 10,
-      "87": 15,
-      "88": 25,
+      "86": 8,
+      "87": 17,
+      "88": 24,
       "89": 27,
       "90": 27,
-      "91": 57,
-      "92": 84,
+      "91": 52,
+      "92": 90,
       "93": 10,
       "94": 13,
-      "95": 13,
-      "96": 27,
+      "95": 12,
+      "96": 28,
       "97": 16,
-      "98": 25,
+      "98": 24,
       "99": 32,
       "100": 15,
-      "101": 19,
+      "101": 20,
       "102": 64,
       "103": 19,
-      "104": 22,
-      "105": 34,
+      "104": 21,
+      "105": 35,
       "106": 19,
       "107": 7,
       "108": 6,
@@ -53278,18 +53207,18 @@
       "120": 16,
       "121": 9,
       "122": 9,
-      "123": 22,
+      "123": 21,
       "124": 34,
-      "125": 18,
-      "126": 16,
-      "127": 17,
+      "125": 19,
+      "126": 15,
+      "127": 18,
       "128": 6,
       "129": 6,
       "130": 11,
-      "131": 15,
-      "132": 10,
-      "133": 17,
-      "134": 10,
+      "131": 14,
+      "132": 11,
+      "133": 15,
+      "134": 12,
       "135": 9,
       "136": 11,
       "137": 12,
@@ -53309,43 +53238,43 @@
       "151": 8,
       "152": 9,
       "153": 10,
-      "154": 16,
+      "154": 15,
       "155": 16,
-      "156": 3,
+      "156": 4,
       "157": 12,
-      "158": 6,
-      "159": 15,
-      "160": 9,
+      "158": 5,
+      "159": 16,
+      "160": 8,
       "161": 17,
-      "162": 12,
+      "162": 13,
       "163": 10,
       "164": 5,
       "165": 13,
       "166": 11,
-      "167": 10,
-      "168": 10,
+      "167": 9,
+      "168": 11,
       "169": 10,
       "170": 7,
       "171": 10,
-      "172": 14,
-      "173": 18,
-      "174": 15,
+      "172": 13,
+      "173": 19,
+      "174": 14,
       "175": 8,
-      "176": 19,
+      "176": 20,
       "177": 12,
       "178": 5,
       "179": 15,
       "180": 16,
       "181": 11,
-      "182": 22,
-      "183": 21,
+      "182": 20,
+      "183": 23,
       "184": 13,
       "185": 11,
       "186": 19,
       "187": 23,
       "188": 21,
-      "189": 38,
-      "190": 42,
+      "189": 37,
+      "190": 43,
       "191": 12,
       "192": 5,
       "193": 21,
@@ -53353,43 +53282,42 @@
       "195": 18,
       "196": 21,
       "197": 34,
-      "198": 25,
-      "199": 31,
-      "200": 42,
+      "198": 24,
+      "199": 32,
+      "200": 41,
       "201": 87,
-      "202": 61,
+      "202": 62,
       "203": 94,
-      "204": 114,
-      "205": 60,
+      "204": 113,
+      "205": 61,
       "206": 34,
-      "207": 34,
-      "208": 38,
+      "207": 33,
+      "208": 39,
       "209": 41,
       "210": 23,
       "211": 25,
       "212": 15,
-      "213": 21,
-      "214": 17,
+      "213": 19,
+      "214": 19,
       "215": 35,
       "216": 34,
-      "217": 43,
-      "218": 37,
+      "217": 40,
+      "218": 39,
       "219": 37,
-      "220": 30,
+      "220": 31,
       "221": 58,
-      "222": 92,
+      "222": 90,
       "223": 131,
-      "224": 168,
-      "225": 289,
-      "226": 226,
-      "227": 240,
-      "228": 557,
-      "229": 1161,
+      "224": 164,
+      "225": 288,
+      "226": 232,
+      "227": 235,
+      "228": 556,
+      "229": 1168,
       "230": 52
     },
     "50c7c938": {
-      "84": 1,
-      "85": 3,
+      "85": 4,
       "86": 1,
       "87": 1,
       "88": 1,
@@ -53417,8 +53345,8 @@
       "120": 3,
       "121": 1,
       "122": 2,
-      "123": 3,
-      "124": 2,
+      "123": 2,
+      "124": 3,
       "125": 3,
       "126": 1,
       "127": 3,
@@ -53432,10 +53360,10 @@
       "136": 2,
       "137": 2,
       "138": 3,
-      "139": 6,
-      "140": 5,
-      "141": 2,
-      "142": 1,
+      "139": 5,
+      "140": 6,
+      "141": 1,
+      "142": 2,
       "143": 2,
       "144": 9,
       "145": 5,
@@ -53476,10 +53404,10 @@
       "198": 1,
       "199": 1,
       "200": 4,
-      "201": 6,
-      "202": 4,
-      "203": 13,
-      "204": 17,
+      "201": 5,
+      "202": 5,
+      "203": 12,
+      "204": 18,
       "205": 2,
       "206": 1,
       "207": 1,
@@ -53534,8 +53462,8 @@
       "211": 4,
       "212": 3,
       "213": 5,
-      "214": 10,
-      "215": 5,
+      "214": 9,
+      "215": 6,
       "216": 12,
       "217": 47,
       "218": 25,
@@ -53565,8 +53493,8 @@
       "191": 3,
       "192": 3,
       "194": 1,
-      "195": 5,
-      "196": 1,
+      "195": 4,
+      "196": 2,
       "198": 1,
       "199": 3,
       "200": 4,
@@ -53605,25 +53533,25 @@
       "85": 24,
       "86": 10,
       "87": 8,
-      "88": 18,
-      "89": 30,
+      "88": 17,
+      "89": 31,
       "90": 22,
-      "91": 25,
-      "92": 29,
+      "91": 24,
+      "92": 30,
       "93": 13,
       "94": 9,
       "95": 13,
-      "96": 21,
-      "97": 21,
+      "96": 20,
+      "97": 22,
       "98": 39,
       "99": 49,
-      "100": 21,
+      "100": 20,
       "101": 19,
-      "102": 60,
-      "103": 63,
+      "102": 57,
+      "103": 67,
       "156": 1,
-      "159": 3,
-      "160": 3,
+      "159": 2,
+      "160": 4,
       "161": 4,
       "162": 2,
       "163": 2,
@@ -53643,8 +53571,8 @@
       "183": 6,
       "186": 1,
       "187": 1,
-      "189": 5,
-      "190": 1,
+      "189": 4,
+      "190": 2,
       "191": 2,
       "192": 1,
       "193": 2,
@@ -53725,8 +53653,8 @@
       "190": 11,
       "191": 5,
       "192": 3,
-      "193": 11,
-      "194": 8,
+      "193": 8,
+      "194": 11,
       "195": 10,
       "196": 17,
       "197": 13,
@@ -53743,9 +53671,9 @@
       "208": 25,
       "209": 7,
       "210": 14,
-      "211": 7,
+      "211": 6,
       "212": 10,
-      "213": 18
+      "213": 19
     },
     "578af099": {
       "211": 1
@@ -53772,12 +53700,12 @@
       "107": 2,
       "109": 2,
       "110": 5,
-      "111": 7,
-      "112": 5,
+      "111": 6,
+      "112": 6,
       "113": 2,
       "114": 3,
-      "115": 3,
-      "116": 1,
+      "115": 2,
+      "116": 2,
       "117": 6,
       "118": 3,
       "119": 4,
@@ -53785,8 +53713,8 @@
       "121": 3,
       "122": 2,
       "123": 2,
-      "124": 5,
-      "125": 2,
+      "124": 4,
+      "125": 3,
       "126": 5,
       "127": 7,
       "128": 4,
@@ -53797,11 +53725,11 @@
       "133": 6,
       "134": 1,
       "135": 1,
-      "136": 3,
-      "137": 3,
+      "136": 2,
+      "137": 4,
       "138": 4,
-      "139": 8,
-      "140": 1,
+      "139": 7,
+      "140": 2,
       "141": 12,
       "142": 3,
       "143": 2,
@@ -53833,8 +53761,8 @@
       "173": 2,
       "174": 2,
       "175": 2,
-      "176": 2,
-      "177": 2,
+      "176": 1,
+      "177": 3,
       "178": 6,
       "179": 16,
       "180": 19,
@@ -53852,16 +53780,16 @@
       "196": 23,
       "197": 25,
       "198": 20,
-      "199": 11,
-      "200": 24,
+      "199": 10,
+      "200": 25,
       "201": 19,
       "202": 33,
       "203": 78,
       "204": 77,
       "205": 40,
       "206": 32,
-      "207": 46,
-      "208": 7
+      "207": 43,
+      "208": 10
     },
     "9c9f091d": {
       "207": 2
@@ -53919,15 +53847,15 @@
       "99": 6,
       "100": 5,
       "101": 7,
-      "102": 4,
-      "103": 7,
+      "102": 3,
+      "103": 8,
       "104": 8,
       "105": 15,
       "106": 3,
       "107": 1,
       "108": 6,
-      "109": 18,
-      "110": 133,
+      "109": 17,
+      "110": 134,
       "111": 86,
       "112": 8,
       "113": 6,
@@ -53940,16 +53868,16 @@
       "120": 71,
       "121": 71,
       "122": 54,
-      "123": 65,
-      "124": 61,
-      "125": 51,
-      "126": 44,
+      "123": 64,
+      "124": 62,
+      "125": 50,
+      "126": 45,
       "127": 45,
       "128": 40,
-      "129": 52,
-      "130": 39,
+      "129": 50,
+      "130": 40,
       "131": 62,
-      "132": 63,
+      "132": 64,
       "133": 74,
       "134": 88,
       "135": 52,
@@ -53957,13 +53885,13 @@
       "137": 75,
       "138": 79,
       "139": 84,
-      "140": 126,
-      "141": 135,
-      "142": 144,
+      "140": 125,
+      "141": 133,
+      "142": 145,
       "143": 199,
-      "144": 489,
-      "145": 94,
-      "146": 95
+      "144": 490,
+      "145": 93,
+      "146": 97
     },
     "b9a5a189": {
       "8": 1,
@@ -53998,7 +53926,8 @@
       "83": 4,
       "87": 1,
       "88": 1,
-      "90": 2,
+      "90": 1,
+      "91": 1,
       "95": 2,
       "96": 1,
       "98": 2,
@@ -54025,27 +53954,27 @@
       "121": 4,
       "122": 5,
       "123": 7,
-      "124": 11,
-      "125": 11,
+      "124": 10,
+      "125": 12,
       "126": 10,
       "127": 9,
       "128": 7,
       "129": 8,
       "130": 5,
       "131": 9,
-      "132": 14,
-      "133": 11,
+      "132": 13,
+      "133": 12,
       "134": 26,
-      "135": 5,
+      "135": 4,
       "136": 3,
-      "137": 2,
+      "137": 3,
       "138": 4,
       "139": 17,
       "140": 23,
       "141": 26,
       "142": 11,
-      "143": 13,
-      "144": 22,
+      "143": 12,
+      "144": 23,
       "145": 10
     },
     "dc7e0420": {
@@ -54062,8 +53991,8 @@
       "98": 4,
       "100": 1,
       "101": 3,
-      "102": 2,
-      "103": 4,
+      "102": 1,
+      "103": 5,
       "104": 18,
       "105": 30,
       "106": 14,
@@ -54072,29 +54001,29 @@
       "109": 17,
       "110": 11,
       "111": 27,
-      "112": 16,
+      "112": 15,
       "113": 28,
-      "114": 14,
+      "114": 15,
       "115": 10,
       "116": 20,
       "117": 29,
-      "118": 28,
-      "119": 47,
-      "120": 38,
-      "121": 22,
-      "122": 20,
+      "118": 26,
+      "119": 49,
+      "120": 37,
+      "121": 23,
+      "122": 19,
       "123": 30,
-      "124": 28,
+      "124": 29,
       "125": 21,
       "126": 24,
       "127": 34,
       "128": 18,
       "129": 20,
       "130": 13,
-      "131": 52,
-      "132": 44,
-      "133": 95,
-      "134": 32
+      "131": 51,
+      "132": 45,
+      "133": 94,
+      "134": 33
     },
     "24a83640": {
       "127": 2
@@ -54115,35 +54044,35 @@
       "84": 5,
       "86": 8,
       "87": 7,
-      "88": 17,
-      "89": 17,
+      "88": 16,
+      "89": 18,
       "90": 18,
       "91": 15,
       "92": 17,
       "93": 11,
       "94": 14,
       "95": 16,
-      "96": 19,
+      "96": 17,
       "97": 13,
-      "98": 14,
+      "98": 16,
       "99": 16,
       "100": 7,
       "101": 9,
       "102": 12,
-      "103": 18,
-      "104": 28,
+      "103": 17,
+      "104": 29,
       "105": 22,
       "106": 16,
       "107": 16,
       "108": 13,
       "109": 20,
-      "110": 23,
+      "110": 22,
       "111": 22,
       "112": 24,
-      "113": 74,
+      "113": 75,
       "114": 63,
-      "115": 123,
-      "116": 51,
+      "115": 122,
+      "116": 52,
       "117": 19
     },
     "0a8f3127": {
@@ -54175,9 +54104,9 @@
       "85": 7,
       "86": 2,
       "87": 6,
-      "88": 11,
+      "88": 10,
       "89": 12,
-      "90": 22,
+      "90": 23,
       "91": 24,
       "92": 12,
       "93": 8,
@@ -54198,12 +54127,12 @@
       "108": 5,
       "109": 11,
       "110": 8,
-      "111": 20,
-      "112": 39,
+      "111": 19,
+      "112": 40,
       "113": 32,
       "114": 21,
-      "115": 32,
-      "116": 23
+      "115": 31,
+      "116": 24
     },
     "23285eb9": {
       "2": 1,
@@ -54249,33 +54178,33 @@
     },
     "2b670683": {
       "85": 1,
-      "105": 25,
-      "106": 649
+      "105": 19,
+      "106": 655
     },
     "ec941888": {
       "84": 4,
       "85": 13,
       "86": 13,
       "87": 11,
-      "88": 18,
+      "88": 17,
       "89": 14,
-      "90": 21,
-      "91": 27,
-      "92": 12,
-      "93": 13,
-      "94": 6,
+      "90": 20,
+      "91": 28,
+      "92": 13,
+      "93": 12,
+      "94": 7,
       "95": 17,
       "96": 27,
       "97": 23,
-      "98": 34,
+      "98": 33,
       "99": 31,
-      "100": 27,
-      "101": 32,
+      "100": 28,
+      "101": 31,
       "102": 88,
-      "103": 123,
-      "104": 353,
-      "105": 432,
-      "106": 1164
+      "103": 121,
+      "104": 350,
+      "105": 411,
+      "106": 1191
     },
     "e38f7d54": {
       "38": 1,
@@ -54303,8 +54232,8 @@
       "1": 1,
       "2": 4,
       "3": 6,
-      "4": 2,
-      "5": 2,
+      "4": 1,
+      "5": 3,
       "9": 2,
       "10": 4,
       "11": 15,
@@ -54323,8 +54252,8 @@
       "3": 9,
       "4": 6,
       "5": 3,
-      "6": 9,
-      "7": 10,
+      "6": 8,
+      "7": 11,
       "8": 19,
       "9": 4,
       "10": 10,
@@ -54339,13 +54268,13 @@
       "3": 6,
       "4": 2,
       "5": 1,
-      "6": 2,
-      "7": 2,
+      "6": 1,
+      "7": 3,
       "8": 5,
       "9": 1,
       "10": 3,
-      "11": 13,
-      "12": 11
+      "11": 12,
+      "12": 12
     }
   },
   "appReviewDwellByRecruiter": {
@@ -54354,9 +54283,9 @@
       "85": 10,
       "86": 2,
       "87": 6,
-      "88": 11,
+      "88": 10,
       "89": 13,
-      "90": 26,
+      "90": 27,
       "91": 27,
       "92": 13,
       "93": 11,
@@ -54368,8 +54297,8 @@
       "99": 4,
       "100": 3,
       "101": 14,
-      "102": 9,
-      "103": 11,
+      "102": 8,
+      "103": 12,
       "104": 25,
       "105": 47,
       "106": 22,
@@ -54377,30 +54306,30 @@
       "108": 16,
       "109": 28,
       "110": 20,
-      "111": 47,
+      "111": 46,
       "112": 55,
       "113": 60,
-      "114": 35,
-      "115": 42,
-      "116": 43,
+      "114": 36,
+      "115": 41,
+      "116": 44,
       "117": 29,
-      "118": 28,
-      "119": 47,
-      "120": 38,
-      "121": 22,
-      "122": 20,
+      "118": 26,
+      "119": 49,
+      "120": 37,
+      "121": 23,
+      "122": 19,
       "123": 30,
-      "124": 28,
+      "124": 29,
       "125": 21,
       "126": 24,
       "127": 34,
       "128": 18,
       "129": 20,
       "130": 13,
-      "131": 52,
-      "132": 44,
-      "133": 95,
-      "134": 32,
+      "131": 51,
+      "132": 45,
+      "133": 94,
+      "134": 33,
       "167": 1,
       "168": 1,
       "169": 3,
@@ -54421,8 +54350,8 @@
       "190": 14,
       "191": 8,
       "192": 4,
-      "193": 12,
-      "194": 10,
+      "193": 9,
+      "194": 13,
       "195": 12,
       "196": 27,
       "197": 23,
@@ -54431,64 +54360,64 @@
       "200": 21,
       "201": 32,
       "202": 18,
-      "203": 105,
+      "203": 104,
       "204": 157,
-      "205": 80,
-      "206": 90,
-      "207": 133,
+      "205": 81,
+      "206": 88,
+      "207": 134,
       "208": 179,
-      "209": 150,
-      "210": 156,
-      "211": 99,
-      "212": 94,
-      "213": 104,
-      "214": 123,
-      "215": 139,
+      "209": 149,
+      "210": 157,
+      "211": 98,
+      "212": 95,
+      "213": 103,
+      "214": 124,
+      "215": 140,
       "216": 116,
-      "217": 158,
-      "218": 143,
+      "217": 157,
+      "218": 144,
       "219": 85,
       "220": 135,
-      "221": 123,
-      "222": 114,
+      "221": 120,
+      "222": 117,
       "223": 114,
-      "224": 179,
-      "225": 264,
-      "226": 128,
-      "227": 224,
-      "228": 371,
-      "229": 260,
-      "230": 257,
-      "231": 615,
-      "232": 478,
-      "233": 23,
-      "234": 71,
-      "235": 141,
-      "236": 40
+      "224": 178,
+      "225": 257,
+      "226": 136,
+      "227": 221,
+      "228": 372,
+      "229": 261,
+      "230": 255,
+      "231": 617,
+      "232": 479,
+      "233": 22,
+      "234": 69,
+      "235": 138,
+      "236": 46
     },
     "Unassigned": {
       "0": 18,
       "1": 59,
       "2": 34,
       "3": 17,
-      "4": 15,
-      "5": 8,
-      "6": 15,
-      "7": 8,
+      "4": 14,
+      "5": 9,
+      "6": 13,
+      "7": 10,
       "8": 14,
       "9": 12,
-      "10": 13,
+      "10": 12,
       "11": 36,
-      "12": 41,
+      "12": 42,
       "13": 50,
       "14": 42,
-      "15": 56,
-      "16": 43,
+      "15": 55,
+      "16": 44,
       "17": 56,
-      "18": 75,
-      "19": 79,
-      "20": 182,
-      "21": 238,
+      "18": 73,
+      "19": 81,
+      "20": 180,
+      "21": 240,
       "22": 7,
       "23": 2,
       "24": 1,
@@ -54506,18 +54435,18 @@
       "38": 6,
       "39": 4,
       "40": 1,
-      "41": 34,
-      "42": 95,
-      "43": 156,
+      "41": 33,
+      "42": 90,
+      "43": 162,
       "44": 3,
-      "45": 5,
-      "46": 5,
+      "45": 4,
+      "46": 6,
       "47": 3,
       "48": 3,
       "49": 4,
-      "50": 8,
+      "50": 7,
       "51": 3,
-      "52": 1,
+      "52": 2,
       "53": 3,
       "54": 11,
       "55": 4,
@@ -54547,33 +54476,33 @@
       "81": 5,
       "82": 2,
       "83": 9,
-      "84": 24,
-      "85": 53,
-      "86": 40,
-      "87": 41,
-      "88": 76,
+      "84": 22,
+      "85": 54,
+      "86": 38,
+      "87": 43,
+      "88": 73,
       "89": 86,
-      "90": 148,
-      "91": 325,
-      "92": 691,
-      "93": 316,
+      "90": 143,
+      "91": 317,
+      "92": 683,
+      "93": 341,
       "94": 37,
-      "95": 44,
-      "96": 69,
-      "97": 69,
-      "98": 96,
-      "99": 197,
-      "100": 131,
-      "101": 196,
-      "102": 591,
-      "103": 217,
-      "104": 524,
-      "105": 655,
-      "106": 2235,
+      "95": 43,
+      "96": 70,
+      "97": 68,
+      "98": 95,
+      "99": 193,
+      "100": 135,
+      "101": 187,
+      "102": 597,
+      "103": 219,
+      "104": 517,
+      "105": 626,
+      "106": 2274,
       "107": 11,
       "108": 16,
-      "109": 44,
-      "110": 159,
+      "109": 43,
+      "110": 160,
       "111": 108,
       "112": 23,
       "113": 22,
@@ -54586,30 +54515,30 @@
       "120": 110,
       "121": 84,
       "122": 70,
-      "123": 94,
-      "124": 110,
-      "125": 81,
+      "123": 92,
+      "124": 109,
+      "125": 83,
       "126": 71,
-      "127": 74,
+      "127": 75,
       "128": 53,
-      "129": 67,
-      "130": 56,
-      "131": 86,
-      "132": 92,
-      "133": 108,
-      "134": 129,
-      "135": 68,
+      "129": 65,
+      "130": 57,
+      "131": 85,
+      "132": 93,
+      "133": 107,
+      "134": 131,
+      "135": 67,
       "136": 72,
-      "137": 90,
+      "137": 91,
       "138": 116,
       "139": 119,
-      "140": 174,
-      "141": 183,
-      "142": 172,
-      "143": 225,
-      "144": 544,
-      "145": 139,
-      "146": 112,
+      "140": 172,
+      "141": 182,
+      "142": 173,
+      "143": 224,
+      "144": 546,
+      "145": 138,
+      "146": 114,
       "147": 17,
       "148": 22,
       "149": 7,
@@ -54617,92 +54546,92 @@
       "151": 11,
       "152": 15,
       "153": 17,
-      "154": 20,
+      "154": 19,
       "155": 21,
-      "156": 6,
+      "156": 7,
       "157": 15,
-      "158": 11,
+      "158": 10,
       "159": 18,
       "160": 11,
       "161": 21,
-      "162": 22,
+      "162": 23,
       "163": 12,
       "164": 9,
       "165": 17,
       "166": 20,
-      "167": 39,
-      "168": 63,
-      "169": 52,
-      "170": 27,
-      "171": 39,
+      "167": 38,
+      "168": 62,
+      "169": 53,
+      "170": 28,
+      "171": 38,
       "172": 52,
       "173": 50,
-      "174": 45,
-      "175": 52,
-      "176": 56,
+      "174": 44,
+      "175": 53,
+      "176": 57,
       "177": 24,
       "178": 30,
       "179": 48,
-      "180": 67,
-      "181": 45,
-      "182": 70,
-      "183": 66,
+      "180": 66,
+      "181": 46,
+      "182": 68,
+      "183": 68,
       "184": 42,
-      "185": 45,
-      "186": 67,
-      "187": 90,
-      "188": 110,
-      "189": 97,
+      "185": 42,
+      "186": 70,
+      "187": 89,
+      "188": 111,
+      "189": 96,
       "190": 91,
       "191": 44,
-      "192": 33,
-      "193": 58,
+      "192": 34,
+      "193": 57,
       "194": 57,
-      "195": 80,
-      "196": 54,
+      "195": 79,
+      "196": 56,
       "197": 80,
-      "198": 56,
-      "199": 54,
-      "200": 89,
-      "201": 140,
-      "202": 130,
+      "198": 55,
+      "199": 55,
+      "200": 88,
+      "201": 139,
+      "202": 132,
       "203": 168,
-      "204": 223,
-      "205": 129,
-      "206": 72,
-      "207": 92,
-      "208": 131,
-      "209": 130,
-      "210": 73,
-      "211": 60,
-      "212": 61,
-      "213": 45,
-      "214": 22,
+      "204": 221,
+      "205": 130,
+      "206": 71,
+      "207": 93,
+      "208": 132,
+      "209": 129,
+      "210": 74,
+      "211": 58,
+      "212": 63,
+      "213": 43,
+      "214": 24,
       "215": 39,
       "216": 41,
-      "217": 48,
-      "218": 43,
+      "217": 45,
+      "218": 45,
       "219": 39,
-      "220": 35,
+      "220": 36,
       "221": 67,
-      "222": 100,
+      "222": 98,
       "223": 138,
-      "224": 173,
-      "225": 298,
-      "226": 228,
-      "227": 245,
-      "228": 561,
-      "229": 1170,
-      "230": 64,
-      "231": 62,
+      "224": 169,
+      "225": 297,
+      "226": 234,
+      "227": 240,
+      "228": 560,
+      "229": 1177,
+      "230": 62,
+      "231": 63,
       "232": 39,
       "233": 53,
-      "234": 91,
-      "235": 38,
-      "236": 18
+      "234": 89,
+      "235": 39,
+      "236": 20
     },
     "Deepti Leslie": {
-      "0": 8,
+      "0": 9,
       "1": 4,
       "2": 2,
       "3": 2,
@@ -54728,26 +54657,26 @@
       "85": 24,
       "86": 10,
       "87": 8,
-      "88": 18,
-      "89": 30,
+      "88": 17,
+      "89": 31,
       "90": 22,
-      "91": 25,
-      "92": 29,
+      "91": 24,
+      "92": 30,
       "93": 13,
       "94": 9,
       "95": 13,
-      "96": 21,
-      "97": 21,
+      "96": 20,
+      "97": 22,
       "98": 39,
       "99": 49,
-      "100": 21,
+      "100": 20,
       "101": 19,
-      "102": 60,
-      "103": 63,
+      "102": 57,
+      "103": 67,
       "121": 1,
       "122": 3,
-      "123": 4,
-      "124": 6,
+      "123": 3,
+      "124": 7,
       "125": 6,
       "126": 4,
       "127": 6,
@@ -54761,104 +54690,104 @@
       "136": 2,
       "137": 5,
       "138": 6,
-      "139": 9,
+      "139": 8,
       "140": 19,
-      "141": 56,
-      "142": 22,
-      "143": 45,
-      "144": 222,
-      "145": 772,
+      "141": 55,
+      "142": 23,
+      "143": 42,
+      "144": 209,
+      "145": 788,
       "146": 28,
-      "147": 13,
+      "147": 14,
       "148": 24,
-      "149": 9,
-      "150": 12,
+      "149": 8,
+      "150": 13,
       "151": 35,
       "152": 19,
       "153": 25,
       "154": 19,
-      "155": 25,
-      "156": 12,
-      "157": 29,
-      "158": 14,
-      "159": 16,
-      "160": 12,
+      "155": 24,
+      "156": 13,
+      "157": 28,
+      "158": 15,
+      "159": 15,
+      "160": 13,
       "161": 15,
       "162": 10,
       "163": 7,
       "164": 6,
       "165": 9,
       "166": 29,
-      "167": 61,
-      "168": 52,
-      "169": 35,
+      "167": 59,
+      "168": 51,
+      "169": 38,
       "170": 22,
-      "171": 31,
-      "172": 35,
+      "171": 30,
+      "172": 36,
       "173": 28,
       "174": 42,
       "175": 61,
       "176": 37,
-      "177": 23,
+      "177": 22,
       "178": 32,
-      "179": 59,
+      "179": 60,
       "180": 58,
       "181": 84,
-      "182": 66,
-      "183": 80,
-      "184": 52,
-      "185": 34,
-      "186": 77,
-      "187": 93,
-      "188": 127,
-      "189": 241,
-      "190": 331,
+      "182": 63,
+      "183": 82,
+      "184": 51,
+      "185": 35,
+      "186": 76,
+      "187": 91,
+      "188": 124,
+      "189": 240,
+      "190": 339,
       "191": 28,
-      "192": 28,
-      "193": 78,
-      "194": 246,
+      "192": 27,
+      "193": 76,
+      "194": 249,
       "195": 194,
       "196": 38,
       "197": 31,
       "198": 14,
       "199": 24,
-      "200": 54,
+      "200": 53,
       "201": 62,
-      "202": 109,
-      "203": 169,
-      "204": 379,
+      "202": 110,
+      "203": 166,
+      "204": 382,
       "205": 53,
-      "206": 22,
+      "206": 21,
       "207": 22,
-      "208": 39,
+      "208": 40,
       "209": 22,
       "210": 30,
-      "211": 18,
-      "212": 11,
+      "211": 17,
+      "212": 12,
       "213": 13,
       "214": 10,
       "215": 29,
-      "216": 24,
-      "217": 38,
-      "218": 23,
-      "219": 16,
+      "216": 23,
+      "217": 39,
+      "218": 22,
+      "219": 17,
       "220": 17,
-      "221": 40,
-      "222": 30,
+      "221": 39,
+      "222": 28,
       "223": 68,
-      "224": 63,
-      "225": 87,
+      "224": 64,
+      "225": 89,
       "226": 53,
       "227": 49,
-      "228": 125,
-      "229": 164,
-      "230": 155,
-      "231": 93,
+      "228": 122,
+      "229": 166,
+      "230": 153,
+      "231": 95,
       "232": 95,
       "233": 21,
       "234": 51,
-      "235": 74,
-      "236": 11
+      "235": 73,
+      "236": 13
     },
     "Aditya Singh": {
       "20": 1,
@@ -54884,8 +54813,8 @@
       "66": 1,
       "70": 2,
       "71": 1,
-      "72": 4,
-      "73": 2,
+      "72": 3,
+      "73": 3,
       "74": 3,
       "76": 2,
       "77": 1,
@@ -54897,14 +54826,15 @@
       "84": 2,
       "87": 1,
       "90": 2,
-      "91": 4,
-      "92": 12,
+      "91": 3,
+      "92": 13,
       "93": 2,
       "95": 1,
       "96": 2,
       "98": 1,
       "99": 1,
-      "100": 2,
+      "100": 1,
+      "101": 1,
       "102": 2,
       "103": 1,
       "104": 1,
@@ -54913,7 +54843,7 @@
       "107": 2,
       "108": 1,
       "109": 1,
-      "111": 1,
+      "112": 1,
       "113": 2,
       "115": 1,
       "116": 2,
@@ -55015,10 +54945,10 @@
       "12": 14,
       "13": 12,
       "14": 21,
-      "15": 53,
-      "16": 35,
-      "17": 22,
-      "18": 9,
+      "15": 51,
+      "16": 37,
+      "17": 21,
+      "18": 10,
       "19": 16,
       "20": 29,
       "21": 24,
@@ -55051,18 +54981,19 @@
       "118": 25,
       "119": 3,
       "120": 4,
-      "121": 3,
+      "121": 2,
+      "122": 1,
       "123": 1,
       "125": 2,
       "126": 1,
       "127": 3,
       "128": 3,
-      "129": 3,
-      "130": 3,
+      "129": 2,
+      "130": 4,
       "131": 3,
       "132": 3,
-      "133": 3,
-      "134": 1,
+      "133": 2,
+      "134": 2,
       "136": 5,
       "137": 2,
       "138": 1,
@@ -55082,7 +55013,8 @@
       "158": 4,
       "159": 1,
       "161": 2,
-      "162": 4,
+      "162": 3,
+      "163": 1,
       "164": 1,
       "165": 2,
       "166": 1,
@@ -55107,8 +55039,8 @@
       "204": 10,
       "205": 1,
       "206": 3,
-      "207": 3,
-      "208": 9,
+      "207": 2,
+      "208": 10,
       "209": 5,
       "210": 7,
       "211": 2,
@@ -55132,51 +55064,51 @@
       "230": 4,
       "232": 4,
       "234": 3,
-      "235": 6,
-      "236": 3
+      "235": 5,
+      "236": 4
     },
     "Oshin Verma": {
       "69": 1,
       "73": 1,
       "75": 2,
-      "76": 1,
+      "76": 2,
       "78": 1,
       "80": 2,
       "81": 2,
       "82": 1,
       "83": 3,
-      "84": 3,
+      "84": 2,
       "86": 6,
-      "87": 7,
-      "88": 16,
-      "89": 15,
-      "90": 14,
-      "91": 14,
-      "92": 17,
-      "93": 9,
-      "94": 12,
-      "95": 14,
-      "96": 16,
-      "97": 11,
-      "98": 12,
-      "99": 9,
-      "100": 7,
-      "101": 7,
-      "102": 7,
+      "87": 5,
+      "88": 12,
+      "89": 14,
+      "90": 16,
+      "91": 12,
+      "92": 15,
+      "93": 10,
+      "94": 10,
+      "95": 11,
+      "96": 15,
+      "97": 9,
+      "98": 14,
+      "99": 14,
+      "100": 5,
+      "101": 6,
+      "102": 9,
       "103": 14,
-      "104": 21,
-      "105": 18,
+      "104": 23,
+      "105": 20,
       "106": 16,
-      "107": 13,
-      "108": 11,
-      "109": 17,
-      "110": 20,
-      "111": 19,
-      "112": 20,
-      "113": 56,
-      "114": 49,
-      "115": 98,
-      "116": 36,
+      "107": 14,
+      "108": 9,
+      "109": 15,
+      "110": 16,
+      "111": 14,
+      "112": 23,
+      "113": 65,
+      "114": 52,
+      "115": 86,
+      "116": 37,
       "117": 14,
       "118": 1,
       "119": 2,
@@ -55249,22 +55181,22 @@
       "47": 1,
       "103": 1,
       "104": 1,
-      "189": 2,
-      "190": 11,
+      "189": 1,
+      "190": 12,
       "191": 3,
       "193": 4,
       "194": 7,
       "195": 10,
       "196": 10,
-      "197": 13,
-      "198": 7,
+      "197": 12,
+      "198": 8,
       "199": 4,
       "200": 19,
       "201": 15,
       "202": 17,
       "203": 36,
-      "204": 111,
-      "205": 41,
+      "204": 110,
+      "205": 42,
       "206": 9,
       "207": 3,
       "208": 3,
@@ -55279,11 +55211,11 @@
       "218": 16,
       "219": 2,
       "220": 3,
-      "221": 40,
-      "222": 68,
+      "221": 39,
+      "222": 69,
       "223": 82,
-      "224": 57,
-      "225": 13,
+      "224": 53,
+      "225": 17,
       "228": 1,
       "229": 1,
       "232": 2,
@@ -55295,8 +55227,8 @@
       "7": 2,
       "11": 2,
       "13": 1,
-      "14": 3,
-      "15": 1,
+      "14": 2,
+      "15": 2,
       "18": 1,
       "22": 1,
       "23": 2,
@@ -55304,11 +55236,10 @@
       "27": 1,
       "29": 1,
       "30": 1,
-      "31": 1,
-      "32": 2,
+      "32": 3,
       "33": 2,
-      "34": 4,
-      "35": 4,
+      "34": 3,
+      "35": 5,
       "36": 2,
       "38": 3,
       "44": 2,
@@ -55327,7 +55258,7 @@
       "87": 2,
       "91": 1,
       "99": 1,
-      "100": 1,
+      "101": 1,
       "103": 1,
       "104": 1,
       "106": 1,
@@ -55348,8 +55279,7 @@
       "161": 2,
       "162": 1,
       "165": 1,
-      "168": 1,
-      "169": 1,
+      "169": 2,
       "175": 1,
       "177": 1,
       "181": 1,
@@ -55396,12 +55326,12 @@
       "108": 1,
       "109": 2,
       "110": 6,
-      "111": 7,
-      "112": 5,
+      "111": 6,
+      "112": 6,
       "113": 2,
       "114": 3,
-      "115": 3,
-      "116": 1,
+      "115": 2,
+      "116": 2,
       "117": 6,
       "118": 3,
       "119": 5,
@@ -55409,8 +55339,8 @@
       "121": 3,
       "122": 2,
       "123": 2,
-      "124": 5,
-      "125": 2,
+      "124": 4,
+      "125": 3,
       "126": 5,
       "127": 7,
       "128": 4,
@@ -55421,11 +55351,11 @@
       "133": 6,
       "134": 1,
       "135": 1,
-      "136": 3,
-      "137": 3,
+      "136": 2,
+      "137": 4,
       "138": 4,
-      "139": 8,
-      "140": 1,
+      "139": 7,
+      "140": 2,
       "141": 12,
       "142": 3,
       "143": 2,
@@ -55457,8 +55387,8 @@
       "173": 2,
       "174": 2,
       "175": 2,
-      "176": 2,
-      "177": 2,
+      "176": 1,
+      "177": 3,
       "178": 6,
       "179": 16,
       "180": 19,
@@ -55476,16 +55406,16 @@
       "196": 23,
       "197": 25,
       "198": 20,
-      "199": 11,
-      "200": 24,
+      "199": 10,
+      "200": 25,
       "201": 19,
       "202": 33,
       "203": 78,
       "204": 77,
       "205": 40,
       "206": 32,
-      "207": 46,
-      "208": 7,
+      "207": 43,
+      "208": 10,
       "209": 1,
       "211": 1
     },
@@ -55556,8 +55486,8 @@
       "3": 9,
       "4": 6,
       "5": 3,
-      "6": 9,
-      "7": 10,
+      "6": 8,
+      "7": 11,
       "8": 19,
       "9": 4,
       "10": 10,
@@ -55578,13 +55508,13 @@
       "85": 14,
       "86": 13,
       "87": 11,
-      "88": 18,
+      "88": 17,
       "89": 14,
-      "90": 21,
-      "91": 27,
-      "92": 12,
-      "93": 13,
-      "94": 6,
+      "90": 20,
+      "91": 28,
+      "92": 13,
+      "93": 12,
+      "94": 7,
       "95": 17,
       "96": 27,
       "97": 23,
@@ -55594,7 +55524,6 @@
       "190": 1
     },
     "Alokita Dhumne": {
-      "0": 1,
       "183": 1,
       "187": 2
     },
@@ -55610,39 +55539,40 @@
       "38": 1,
       "42": 4,
       "69": 1,
-      "76": 1,
       "78": 1,
       "80": 1,
       "82": 1,
-      "84": 2,
+      "84": 3,
       "86": 2,
-      "88": 1,
-      "89": 2,
-      "90": 4,
-      "91": 1,
-      "92": 1,
-      "93": 2,
-      "94": 2,
-      "95": 2,
-      "96": 3,
-      "97": 2,
+      "87": 2,
+      "88": 4,
+      "89": 4,
+      "90": 2,
+      "91": 3,
+      "92": 3,
+      "93": 1,
+      "94": 4,
+      "95": 5,
+      "96": 2,
+      "97": 4,
       "98": 2,
-      "99": 7,
-      "101": 2,
-      "102": 5,
-      "103": 4,
-      "104": 9,
-      "105": 4,
+      "99": 2,
+      "100": 2,
+      "101": 3,
+      "102": 3,
+      "103": 3,
+      "104": 8,
+      "105": 2,
       "106": 2,
-      "107": 4,
-      "108": 2,
-      "109": 4,
-      "110": 3,
-      "111": 3,
-      "112": 5,
-      "113": 20,
-      "114": 15,
-      "115": 26,
+      "107": 3,
+      "108": 4,
+      "109": 6,
+      "110": 6,
+      "111": 8,
+      "112": 2,
+      "113": 12,
+      "114": 12,
+      "115": 37,
       "116": 16,
       "117": 5
     },
@@ -55678,9 +55608,9 @@
       "name": "Dibyakanti Laskar",
       "userId": "29c02dd8-f302-42b2-a3f3-e89cd67c37ce",
       "interviews": 127,
-      "feedbackSubmitted": 102,
-      "feedbackOnScheduled": 26,
-      "pendingFeedback": 35,
+      "feedbackSubmitted": 103,
+      "feedbackOnScheduled": 27,
+      "pendingFeedback": 34,
       "byQuarter": {
         "2026-Q1": 35,
         "2026-Q2": 51,
@@ -55695,7 +55625,7 @@
         "2026-07": 15,
         "2026-08": 26
       },
-      "avgTurnaroundHrs": 19.5
+      "avgTurnaroundHrs": 18.7
     },
     {
       "name": "Sumit Kumar",
@@ -58165,9 +58095,9 @@
         "2026-07": 15,
         "2026-08": 23
       },
-      "feedbackSubmitted": 95,
-      "feedbackOnScheduled": 26,
-      "avgTurnaroundHrs": 19.5
+      "feedbackSubmitted": 96,
+      "feedbackOnScheduled": 27,
+      "avgTurnaroundHrs": 18.7
     },
     {
       "dept": "US Business",
