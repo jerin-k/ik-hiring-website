@@ -686,3 +686,9 @@ details.defs.defs-full[open] > summary {
   font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
   vertical-align: middle;
 }
+
+/* Conversion bar (Joining Conversion). Same cell shape as Delta, but the fill means the OPPOSITE thing:
+   here a FULL bar is good, so it must not use the red shortfall fill. Bands follow pctClass. */
+.deltacell .track i.conv { background: var(--green); opacity: .9; }
+.deltacell .track i.conv.mid { background: var(--orange); }
+.deltacell .track i.conv.low { background: var(--red); }
