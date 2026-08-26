@@ -184,26 +184,34 @@ export const DEFINITIONS = {
 
   'rec-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'Momentum is the <strong>pace of work</strong> — how many candidates a recruiter pushed into each stage, day by day.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026',
     groups: [
+      {
+        heading: 'What counts as being added',
+        items: [
+          ['Whichever of these comes first', 'The candidate <strong>enters HM Screening</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>. The first of the three is the day they were added.'],
+          ['R1 is dated when the interview was BOOKED', 'Not the day it is held \u2014 booking is the piece of work, and the interview itself can be a week later.'],
+          ['Counted once per role', 'Once somebody is logged as added, they are not counted again for that role. Moving them on afterwards does not add to the number \u2014 that is the point: this counts <em>people arriving</em>, not steps taken.'],
+          ['The count resets each quarter', 'Somebody who arrives again in a later quarter counts again in that quarter. So the quarters do not add up to a year.'],
+          ['Cancelled does not count', 'A cancelled interview booking or a cancelled assessment is removed. If that was the only thing that put someone in, the day they were on ticks back down.'],
+        ]
+      },
       {
         heading: 'Reading it',
         items: [
-          ['The numbers', 'How many candidates <strong>entered</strong> that stage on that day, taken from the real stage-change history — so a bulk tidy-up in Ashby does not show up as a spike of work.'],
-          ['Which stages', 'The three that recruiters actually drive: HM Screening, Online Assessment and R1.'],
-          ['Rows and columns', 'Pod → Recruiter → Job → Stage down the side, the last 30 days of the selected range across the top. Open a recruiter to see the roles behind their numbers, and a role to see the three stages.'],
-          ['Total · 30d', 'Everything in the 30 columns beside it added up — the row’s work for the window, not for the whole quarter.'],
-          ['The From / To boxes', 'Momentum is the one panel driven by the <strong>From</strong> and <strong>To</strong> dates rather than the quarter selector.'],
-          ['Chart', 'Three bars per recruiter, one per stage, stacked by week so you can see whether the pace is holding up.'],
+          ['Rows and columns', 'Pod \u2192 Recruiter \u2192 Role down the side, the last 30 days of the selected range across the top. Open a recruiter to see which roles the arrivals were on.'],
+          ['Total \u00b7 30d', 'Everything in the 30 columns beside it added up \u2014 the row\u2019s arrivals for that window, not for the whole quarter.'],
+          ['The From / To boxes', 'Momentum is the one panel driven by the <strong>From</strong> and <strong>To</strong> dates rather than the quarter selector. It always shows the last 30 days of that range.'],
+          ['Chart', 'One bar per recruiter, stacked by week with the oldest week palest, so you can see whether the pace is holding. It reads the same figures as the table.'],
         ]
       },
     ],
     warnings: [
-      ['An orange line naming a stage means no data anywhere', 'Not a quiet week — that stage has no events in the whole history. It checks everything on file, not just the visible window.'],
+      ['This will not match Screening Efficiency', 'That tab counts <em>arrivals at each stage</em> and counts a person again every time they re-enter one. This counts <em>people</em>, once. Two different questions \u2014 the numbers are not supposed to agree.'],
+      ['Assessments only exist from 8 July 2026', 'That is the earliest assessment record in Ashby, so before then a candidate could only be added by HM Screening or an R1 booking. Earlier quarters are therefore slightly understated.'],
     ]
   },
-
   'rec-screening': {
     summary: 'How these numbers are worked out',
     intro: 'How much of what arrives at a stage actually moves on, from real stage transitions, scoped to the period selected at the top of the tab.',
@@ -354,24 +362,32 @@ export const DEFINITIONS = {
 
   'eff-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'The pace of work across the whole org: how many candidates were pushed into each stage, day by day, <strong>Department → Job → Stage</strong>.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org \u2014 one row per person, not one per stage.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026',
     groups: [
+      {
+        heading: 'What counts as being added',
+        items: [
+          ['Whichever of these comes first', 'The candidate <strong>enters HM Screening</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>.'],
+          ['R1 is dated when the interview was BOOKED', 'Not the day it is held.'],
+          ['Counted once per role, per quarter', 'Somebody already added is not counted again for that role in the same quarter. Moving them further along adds nothing \u2014 this counts people arriving, not steps taken. The count resets each quarter, so quarters do not add up to a year.'],
+          ['Cancelled does not count', 'A cancelled interview booking or assessment is removed, which can take a count back off a past day.'],
+        ]
+      },
       {
         heading: 'Reading it',
         items: [
-          ['The numbers', 'Candidates who <strong>entered</strong> that stage on that day, from real stage-change history — so a bulk update in Ashby is not mistaken for a burst of work.'],
-          ['Which stages', 'HM Screening, Online Assessment and R1 — the three that get actively driven.'],
-          ['Columns', 'The last 30 days of the selected date range.'],
-          ['Charts', 'One per department, with the three stages stacked.'],
+          ['Rows and columns', 'Department \u2192 Role down the side, the last 30 days of the selected date range across the top.'],
+          ['Total \u00b7 30d', 'The 30 columns beside it added up.'],
+          ['Charts', 'One per department, a bar per day, reading the same figures as the table.'],
         ]
       },
     ],
     warnings: [
-      ['An orange line naming a stage means no data at all', 'It checks the whole history, not just the visible window, so a quiet week is never mislabelled as an unused stage.'],
+      ['This will not match Screening Efficiency', 'That panel counts arrivals at each stage separately, and counts a person again every time they re-enter one. This counts people, once. The two are not supposed to agree.'],
+      ['Assessments only exist from 8 July 2026', 'The earliest assessment record in Ashby. Before then a candidate could only be added by HM Screening or an R1 booking, so earlier quarters are slightly understated.'],
     ]
   },
-
   'eff-screening': {
     summary: 'How these numbers are worked out',
     intro: 'How much of what arrives at each screening stage moves on, <strong>Department → Job</strong>, from real stage transitions.',
