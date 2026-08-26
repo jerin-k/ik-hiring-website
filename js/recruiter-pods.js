@@ -13,18 +13,38 @@ export const POD_OPTIONS = ['Sales', 'Lateral', 'SME-US', 'SME-India'];
 export const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
 // Committed baseline (quarter-agnostic default). Update via Metric Configuration → Export, then commit.
+// 🚨 This list is what EVERY quarter without its own published assignment falls back to, and copy-forward
+// only fills forwards — a pod published for Q3 never reaches Q1. Pods have only ever been published for
+// 2026-Q3, so until 2026-08-26 the nine people below were "no pod set" for Q1 and Q2 and were therefore
+// excluded from every row, total and chart on the Recruiter tab: 11,576 applications, 125 offers, 85 hires,
+// and Data Hygiene → Pod Not Set read 13 under Q1 against 4 under Q3. Brought in line with the Q3 config on
+// Jerin's call — a person's current pod is taken to be where they sat earlier in the year too. Anyone who
+// genuinely moved pods mid-year needs an explicit assignment on that quarter, which overrides this.
+// ⚠ ONE name is deliberately NOT aligned: Aditya Singh reads Sales here and SME-US in the published Q3
+// config. That is the only place the two disagree, so it may be a real mid-year move rather than a
+// correction — left alone rather than silently rewriting the one value that carries evidence either way.
+// If it was a correction, change it here too; if he moved, this is already right.
 export const RECRUITER_POD = {
+  "Aaron Collins": "SME-US",
   "Aditya Singh": "Sales",
+  "Alokita Dhumne": "Sales",
+  "Ankita Kabra": "Lateral",
+  "Astha Thakur": "Lateral",
+  "Chhavi Rana": "Sales",
   "Deepti Leslie": "Lateral",
+  "Kaashvika Kashyap": "Sales",
   "M Navya": "Sales",
   "Mahima Agarwal": "Sales",
   "Mashika De Almeida": "Lateral",
   "Neha Vivekanand Pattar": "Lateral",
   "Oshin Verma": "SME-India",
   "Rijo John": "Sales",
+  "Ritika Bhasin": "SME-US",
   "Sanghamitra Moulik": "Lateral",
+  "Satinder Kaur": "Lateral",
   "Siva Sruthi V S": "Sales",
   "Smriti Das": "Sales",
+  "Tabitha Anceline E": "Sales",
   "Tina Anisha Bibeiro": "Sales",
   "V Pooja": "Lateral",
 };
