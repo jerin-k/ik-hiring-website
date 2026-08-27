@@ -230,7 +230,8 @@ export const DEFINITIONS = {
           ['Cleared', 'Departures <strong>out</strong> of it — they reached the next stage.'],
           ['The period', 'Whatever the Year and Quarter boxes say. Leave Quarter on <em>All</em> and you get the whole year; the line above the table always names the period being shown.'],
           ['%', 'Cleared ÷ Added. What share of the queue got moved on.'],
-          ['Rows', 'Pod → Recruiter → the individual roles behind each recruiter’s numbers.'],
+          ['Rows', 'Pod \u2192 Recruiter \u2192 the roles behind each recruiter\u2019s numbers. Only roles that actually moved somebody in the period are listed \u2014 a recruiter\u2019s older roles are not shown as a row of zeros.'],
+          ['Chart', 'Three bars per recruiter, one per stage, tagged HM / OA / R1 at the left. Each bar is the same two things: the solid part moved forward, the pale part is still sitting at that stage, and together they are how many arrived.'],
         ]
       },
     ],

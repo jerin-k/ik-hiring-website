@@ -794,9 +794,15 @@ export function initRecruiterFilters(data) {
             <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${screenCells(screenTriple(r))}</tr>`;
           // Per-job breakdown, now backed by throughputByRecruiterJob. Sorted by volume so the
           // jobs a recruiter actually worked come first.
+          // jobsForRecruiter() lists every role this recruiter has EVER had stage history on. Under a
+          // quarter filter most of them did nothing, and listing them made a recruiter look like they were
+          // carrying eleven live roles when two were actually moving (Jerin, 2026-08-26: "I don't think
+          // Oshin has these many roles open in the quarter"). Keep only roles with activity in the period.
+          const jobActivity = (t) => t.hm.reached + t.oa.reached + t.r1.reached
+            + (t.hm.cleared || 0) + (t.oa.cleared || 0) + (t.r1.cleared || 0);
           const jobRows = jobsForRecruiter(r.name)
             .map(j8 => ({ j8, t: screenTripleByJob(r.name, j8) }))
-            .filter(x => x.t)
+            .filter(x => x.t && jobActivity(x.t) > 0)
             .sort((a, b) => (b.t.hm.reached + b.t.oa.reached + b.t.r1.reached) - (a.t.hm.reached + a.t.oa.reached + a.t.r1.reached));
           if (jobRows.length) {
             jobRows.forEach(({ j8, t }) => {
@@ -806,7 +812,7 @@ export function initRecruiterFilters(data) {
             });
           } else {
             html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-              <td style="padding-left:52px;color:var(--muted);font-style:italic">No stage history for this recruiter</td>${dashScreen}</tr>`;
+              <td style="padding-left:52px;color:var(--muted);font-style:italic">No role moved in this period</td>${dashScreen}</tr>`;
           }
         });
       });
@@ -1990,25 +1996,36 @@ export function initRecruiterFilters(data) {
       }
     });
   }
+  // Screening chart. Y = recruiter, three bars each (HM / OA / R1). Every bar is the SAME two things:
+  // the solid part is how many moved forward, the pale part is how many are still sitting at that stage,
+  // and the two together are how many arrived. Jerin, 2026-08-26: "the legend isn't clear — each bar
+  // should represent how many were added versus how many moved fwd, right?" — yes, and the legend now
+  // says exactly that instead of naming the three stages, which described the bars' GROUPING rather than
+  // their SEGMENTS. The stage is written at the left of each bar, where it belongs.
+  // 🚨 R1 used to be drawn as a single solid bar of arrivals while the table beside it showed R1 Added,
+  // Cleared and % — a leftover from before the rollups carried R1's cleared count. Same treatment as the
+  // other two now, so the chart and the table cannot say different things about the same stage.
+  const SCREEN_SOLID = '#4E6BA6', SCREEN_PALE = '#C5CFE5';
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
     if (recScreenChart) recScreenChart.destroy();
-    // Y = recruiter, X = candidate count. One bar per stage (HM / OA / R1): full length = Added (reached),
-    // dark segment = Cleared (left the stage), light remainder = still there. Real reached/cleared from the
-    // stage-history rollups (falls back to the current-stage approximation with unknown R1-cleared).
     const T = r => screenTriple(r);
-    const sumR = r => T(r).hm.reached + T(r).oa.reached + T(r).r1.reached;
+    const sumR = r => { const t = T(r); return t.hm.reached + t.oa.reached + t.r1.reached; };
     const recs = [...lastRecs].sort((a, b) => sumR(b) - sumR(a));
-    const A = { hm: recs.map(r => T(r).hm.reached), oa: recs.map(r => T(r).oa.reached), r1: recs.map(r => T(r).r1.reached) };
-    const clHM = recs.map(r => T(r).hm.cleared || 0);
-    const remHM = recs.map((r, i) => Math.max(0, A.hm[i] - clHM[i]));
-    const clOA = recs.map(r => T(r).oa.cleared || 0);
-    const remOA = recs.map((r, i) => Math.max(0, A.oa[i] - clOA[i]));
+    const STAGES = [['hm', 'HM'], ['oa', 'OA'], ['r1', 'R1']];
+    const added = {}, moved = {}, still = {};
+    STAGES.forEach(([k]) => {
+      added[k] = recs.map(r => T(r)[k].reached);
+      moved[k] = recs.map(r => { const c = T(r)[k].cleared; return c == null ? 0 : c; });
+      still[k] = recs.map((r, i) => Math.max(0, added[k][i] - moved[k][i]));
+    });
     const h = Math.max(240, recs.length * 48 + 80);
     if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const seg = (label, data, color, stack) => ({ label, data, backgroundColor: color, stack, borderRadius: 2, barPercentage: 0.9, categoryPercentage: 0.78 });
-    // labels: full-bar total (added) at the end of each stack; Cleared value centered on the dark segment
+
+    // Stage tag at the left of each bar + the arrival total at its end. Without the tag the three bars in
+    // a group are unlabelled, which is the complaint this chart just fixed.
     const labelPlugin = {
       id: 'screenLabels',
       afterDatasetsDraw(chart) {
@@ -2016,39 +2033,70 @@ export function initRecruiterFilters(data) {
         c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
         c.textBaseline = 'middle';
-        const stages = [
-          { added: A.hm, cleared: clHM, clIdx: 0, endIdx: 1 },
-          { added: A.oa, cleared: clOA, clIdx: 2, endIdx: 3 },
-          { added: A.r1, cleared: null, clIdx: 4, endIdx: 4 },
-        ];
-        stages.forEach(st => {
-          const clMeta = chart.getDatasetMeta(st.clIdx);
-          const endMeta = chart.getDatasetMeta(st.endIdx);
-          clMeta.data.forEach((bar, i) => {
-            if (st.cleared && st.cleared[i] > 0 && (bar.x - bar.base) > 16) {
+        STAGES.forEach(([k, tag], si) => {
+          const movedMeta = chart.getDatasetMeta(si * 2);
+          const endMeta = chart.getDatasetMeta(si * 2 + 1);
+          movedMeta.data.forEach((bar, i) => {
+            c.fillStyle = '#64748b'; c.textAlign = 'right';
+            c.fillText(tag, bar.base - 6, bar.y);
+            if (moved[k][i] > 0 && (bar.x - bar.base) > 18) {
               c.fillStyle = '#fff'; c.textAlign = 'center';
-              c.fillText(String(st.cleared[i]), (bar.base + bar.x) / 2, bar.y);
+              c.fillText(String(moved[k][i]), (bar.base + bar.x) / 2, bar.y);
             }
-            if (st.added[i] > 0) {
+            if (added[k][i] > 0) {
               c.fillStyle = '#334155'; c.textAlign = 'left';
-              c.fillText(String(st.added[i]), endMeta.data[i].x + 4, endMeta.data[i].y);
+              c.fillText(String(added[k][i]), endMeta.data[i].x + 4, endMeta.data[i].y);
             }
           });
         });
         c.restore();
       }
     };
-    recScreenChart = new Chart(ctx, { type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets: [
-        seg('HM Screening', clHM, C.blue, 'HM'), seg('_hmRem', remHM, '#C5CFE5', 'HM'),
-        seg('Online Assessment', clOA, C.cyan, 'OA'), seg('_oaRem', remOA, '#A9CAD6', 'OA'),
-        seg('R1 (reached)', A.r1, C.green, 'R1')] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 28 } },
-        plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
-          // + the Target marker at the bar end); the global plugins would print both a second time
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 }, filter: (item, data) => !(data.datasets[item.datasetIndex].label || '').startsWith('_') } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Count of Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
-      plugins: [labelPlugin] });
+
+    recScreenChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: recs.map(r => r.name),
+        datasets: STAGES.flatMap(([k], si) => [
+          seg(si === 0 ? 'Moved forward' : '_moved' + k, moved[k], SCREEN_SOLID, k),
+          seg(si === 0 ? 'Still at this stage' : '_still' + k, still[k], SCREEN_PALE, k)
+        ])
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { left: 22, right: 28 } },
+        plugins: {
+          valueLabels: false, stackTotals: false,
+          legend: {
+            position: 'top', align: 'center',
+            labels: {
+              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 },
+              filter: (item, d) => !(d.datasets[item.datasetIndex].label || '').startsWith('_')
+            }
+          },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                if (!items.length) return '';
+                const si = Math.floor(items[0].datasetIndex / 2);
+                return `${items[0].label} — ${['HM Screening', 'Online Assessment', 'R1'][si]}`;
+              },
+              label: (c2) => `${c2.datasetIndex % 2 === 0 ? 'Moved forward' : 'Still at this stage'}: ${c2.parsed.x}`,
+              footer: (items) => {
+                if (!items.length) return '';
+                const si = Math.floor(items[0].datasetIndex / 2), i = items[0].dataIndex;
+                const k = STAGES[si][0];
+                return `Added: ${added[k][i]}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+        }
+      },
+      plugins: [labelPlugin]
+    });
   }
   function buildJoinChart() {
     const ctx = document.getElementById('recJoinChart'); if (!ctx) return;
