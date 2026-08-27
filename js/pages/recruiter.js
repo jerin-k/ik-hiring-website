@@ -212,6 +212,24 @@ export function renderRecruiter(data) {
       .ms-opt { display:flex; align-items:center; gap:7px; padding:5px 8px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; white-space:nowrap; }
       .ms-opt:hover { background:var(--border-light); }
 
+      /* ===== Momentum / ToFU (2026-08-26) ===== */
+      /* Summary cards: the three numbers worth reading before any breakdown. */
+      .tofu-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:0 0 16px; }
+      .tofu-card { border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--card); }
+      .tofu-card .k { font-size:10.5px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); }
+      .tofu-card .v { font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:4px; line-height:1.1; }
+      .tofu-card .s { font-size:11px; color:var(--muted); margin-top:2px; }
+      /* Sparkline: the 30-day shape, in the width the 30 columns used to need. */
+      .spark { display:block; }
+      .spark rect { fill:#C5CFE5; }
+      .spark rect.hot { fill:#4E6BA6; }
+      .tofu-table td.spark-cell { padding:4px 12px; }
+      .tofu-table tr.quiet td { color:var(--muted); }
+      .trend { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+      .trend.up { color:var(--green); }
+      .trend.down { color:var(--red); }
+      .trend.flat { color:var(--muted); font-weight:500; }
+
       /* Metric Configuration */
       .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }
       .cfg-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
@@ -258,12 +276,23 @@ export function renderRecruiter(data) {
       <button class="rec-subtab" data-tab="hygiene">Data Hygiene</button>
     </div>
 
-    <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) — per-stage/day stage-entry counts -->
+    <!-- PANEL: Momentum — candidates added to ToFU. Redesigned 2026-08-26: the 30 day-columns were mostly
+         empty (72 arrivals across 30 days and 9 recruiters), so the day-by-day answer moved to the chart,
+         where it reads at a glance, and the table became five numbers plus a 30-day shape per row. -->
     <div class="rec-panel" data-panel="velocity" style="display:none">
       ${defsBlock('rec-momentum')}
-      <div class="chart-wrap" id="recVelChartWrap" style="height:300px"><canvas id="recVelChart"></canvas></div>
-      <div class="scroll-table"><table class="vel-table">
-        <thead id="recVelHead"></thead>
+      <div class="tofu-cards" id="recVelCards"></div>
+      <div class="chart-wrap" id="recVelChartWrap" style="height:260px"><canvas id="recVelChart"></canvas></div>
+      <div class="scroll-table"><table class="metrics tofu-table">
+        <thead><tr>
+          <th style="min-width:260px">Pod / Recruiter / Job</th>
+          <th title="Everyone added in the window shown above.">Total</th>
+          <th title="The most recent 7 days of the window.">Last 7d</th>
+          <th title="The 7 days before that, for comparison.">Prev 7d</th>
+          <th title="Last 7 days against the 7 before. Up is more candidates arriving.">Trend</th>
+          <th title="How many separate days this row added anybody. A row can have the same total from one busy day or from steady work.">Active days</th>
+          <th style="min-width:150px">Last 30 days</th>
+        </tr></thead>
         <tbody id="recVelBody"></tbody>
       </table></div>
     </div>
@@ -1780,8 +1809,45 @@ export function initRecruiterFilters(data) {
     const sr = data.stageRollups || {};
     return { rec: sr.tofuByRecruiter || null, recJob: sr.tofuByRecruiterJob || null };
   }
+  // One row's 30-day series -> the numbers worth showing. Nothing here is a new definition: it is the same
+  // per-day counts the old 30 columns held, summarised so a row can be read without scrolling sideways.
+  function tofuStats(per) {
+    // `per` is most-recent-first (velDates order). Slice the two 7-day windows off the front.
+    const total = per.reduce((a, v) => a + v, 0);
+    const last7 = per.slice(0, 7).reduce((a, v) => a + v, 0);
+    const prev7 = per.slice(7, 14).reduce((a, v) => a + v, 0);
+    const activeDays = per.filter(v => v > 0).length;
+    return { total, last7, prev7, activeDays };
+  }
+  // Trend cell: last 7 days against the 7 before. Up is good here — more candidates arriving.
+  // With nothing in either window there is no trend to report, and an arrow would invent one.
+  function trendCell(last7, prev7) {
+    if (!last7 && !prev7) return '<td><span class="zero">—</span></td>';
+    const d = last7 - prev7;
+    if (d === 0) return '<td><span class="trend flat">no change</span></td>';
+    const cls = d > 0 ? 'up' : 'down';
+    return `<td><span class="trend ${cls}" title="${last7} in the last 7 days against ${prev7} in the 7 before">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}</span></td>`;
+  }
+  // 30 tiny bars in the space the 30 columns used to take. Oldest on the left, so it reads like the chart
+  // above it. Hover gives the day and the count, which is the detail the columns were carrying.
+  function sparkline(per, dates) {
+    const vals = [...per].reverse(), ds = [...dates].reverse();
+    const max = Math.max(1, ...vals);
+    const bw = 4, gap = 1, h = 22;
+    const w = vals.length * (bw + gap);
+    let bars = '';
+    vals.forEach((v, i) => {
+      const bh = v > 0 ? Math.max(2, Math.round((v / max) * h)) : 0;
+      if (!bh) return;
+      const d = ds[i];
+      const label = `${MON[d.getMonth()]} ${d.getDate()}: ${v}`;
+      bars += `<rect class="${v === max ? 'hot' : ''}" x="${i * (bw + gap)}" y="${h - bh}" width="${bw}" height="${bh}" rx="1"><title>${label}</title></rect>`;
+    });
+    if (!bars) return '<span class="zero">no arrivals</span>';
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="daily arrivals">${bars}</svg>`;
+  }
+
   function renderVelocity() {
-    const head = document.getElementById('recVelHead');
     const body = document.getElementById('recVelBody');
     if (!body) return;
     const { rec: tRec, recJob: tRecJob } = tofuStores();
@@ -1789,53 +1855,78 @@ export function initRecruiterFilters(data) {
     const groups = groupByPod(recs, selQuarter());
     const dates = velDates();
     const dkeys = dates.map(dkey);
+    const cards = document.getElementById('recVelCards');
+    const NCOL = 7;
 
-    if (head) {
-      let h = `<tr><th style="min-width:240px">Pod / Recruiter / Job</th><th>Total · ${dates.length}d</th>`;
-      dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
-      head.innerHTML = h + '</tr>';
-    }
-    const ncol = dates.length + 2;
-    // No ToFU field yet (rollups file written before 2026-08-26). Say so rather than falling back to the
-    // old per-stage counts: those answer a different question and would sit under this heading as a lie.
+    // No ToFU field yet (rollups written before 2026-08-26). Say so rather than falling back to the old
+    // per-stage counts: those answer a different question and would sit under this heading as a lie.
     if (!tRec) {
-      body.innerHTML = `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">ToFU arrivals appear after the next stage-history refresh.</td></tr>`;
+      if (cards) cards.innerHTML = '';
+      body.innerHTML = `<tr><td colspan="${NCOL}" style="text-align:center;color:var(--muted);padding:16px">ToFU arrivals appear after the next stage-history refresh.</td></tr>`;
       return;
     }
-    const numRow = (total, perDay, boldTotal) =>
-      `<td${boldTotal ? ' style="font-weight:600"' : ''}>${total > 0 ? total : '<span class="zero">0</span>'}</td>`
-      + perDay.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
+
     const series = (m) => { let t = 0; const per = dkeys.map(dk => { const v = (m && m[dk]) || 0; t += v; return v; }); return { per, t }; };
     const addInto = (dst, src) => { src.forEach((v, i) => dst[i] += v); };
     const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
     const spanN = (n) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`;
+    const num = (v, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${v > 0 ? v : '<span class="zero">0</span>'}</td>`;
+    const cells = (st, per, bold) => num(st.total, bold) + num(st.last7, bold) + num(st.prev7, bold)
+      + trendCell(st.last7, st.prev7) + num(st.activeDays, bold)
+      + `<td class="spark-cell">${sparkline(per, dates)}</td>`;
 
+    // ===== the three numbers worth reading before any breakdown =====
+    const allArr = new Array(dkeys.length).fill(0);
+    groups.forEach(G => G.recs.forEach(r => addInto(allArr, series(tRec[r.name]).per)));
+    const allSt = tofuStats(allArr);
+    const busiest = allArr.reduce((best, v, i) => (v > best.v ? { v, i } : best), { v: 0, i: 0 });
+    if (cards) {
+      const bd = dates[busiest.i];
+      const trendTxt = (!allSt.last7 && !allSt.prev7) ? '—'
+        : (allSt.last7 === allSt.prev7 ? 'level with the 7 before'
+          : `${allSt.last7 > allSt.prev7 ? 'up' : 'down'} ${Math.abs(allSt.last7 - allSt.prev7)} on the 7 before`);
+      cards.innerHTML = `
+        <div class="tofu-card"><div class="k">Added · ${dates.length} days</div><div class="v">${allSt.total}</div>
+          <div class="s">${allSt.activeDays} of ${dates.length} days had an arrival</div></div>
+        <div class="tofu-card"><div class="k">Last 7 days</div><div class="v">${allSt.last7}</div>
+          <div class="s">${trendTxt}</div></div>
+        <div class="tofu-card"><div class="k">Busiest day</div><div class="v">${busiest.v || 0}</div>
+          <div class="s">${busiest.v ? MON[bd.getMonth()] + ' ' + bd.getDate() : 'no arrivals in range'}</div></div>
+        <div class="tofu-card"><div class="k">Recruiters adding</div><div class="v">${groups.reduce((n, G) => n + G.recs.filter(r => series(tRec[r.name]).t > 0).length, 0)}</div>
+          <div class="s">of ${recs.length} in this view</div></div>`;
+    }
+
+    // ===== Pod -> Recruiter -> Job. Rows with nothing in the window sort last and read muted, so the
+    // eye lands on the work that happened rather than on a column of zeros. =====
     let html = '';
     groups.forEach((G, pi) => {
-      const podArr = new Array(dkeys.length).fill(0); let podTotal = 0;
-      const recSeries = G.recs.map(r => { const sres = series(tRec[r.name]); addInto(podArr, sres.per); podTotal += sres.t; return sres; });
+      const podArr = new Array(dkeys.length).fill(0);
+      const recRows = G.recs.map(r => { const sres = series(tRec[r.name]); addInto(podArr, sres.per); return { r, sres }; });
+      recRows.sort((a, b) => b.sres.t - a.sres.t);
+      const podSt = tofuStats(podArr);
       html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
-      G.recs.forEach((r, ri) => {
+        <td style="font-weight:600">${CARET}${G.pod}${spanN(G.recs.length)}</td>${cells(podSt, podArr, true)}</tr>`;
+      recRows.forEach(({ r, sres }, ri) => {
         const rp = `${pi}-${ri}`;
         const jobs = [];
         const mine = tRecJob && tRecJob[r.name];
         if (mine) {
           Object.keys(mine).forEach(j8 => {
-            const sres = series(mine[j8]);
-            if (sres.t) jobs.push({ j8, title: jobTitleOf[j8] || j8, per: sres.per, t: sres.t });
+            const js = series(mine[j8]);
+            if (js.t) jobs.push({ title: jobTitleOf[j8] || j8, per: js.per });
           });
-          jobs.sort((a, b) => b.t - a.t);
+          jobs.sort((a, b) => b.per.reduce((x, y) => x + y, 0) - a.per.reduce((x, y) => x + y, 0));
         }
-        html += `<tr data-path="${rp}"${jobs.length ? ' data-haschild data-exp="0"' : ''} style="display:none${jobs.length ? ';cursor:pointer' : ''}">
-          <td style="padding-left:26px;font-weight:500">${jobs.length ? CARET : ''}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recSeries[ri].t, recSeries[ri].per, false)}</tr>`;
+        const quiet = sres.t === 0 ? ' quiet' : '';
+        html += `<tr class="lvl${quiet}" data-path="${rp}"${jobs.length ? ' data-haschild data-exp="0"' : ''} style="display:none${jobs.length ? ';cursor:pointer' : ''}">
+          <td style="padding-left:26px;font-weight:500">${jobs.length ? CARET : ''}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${cells(tofuStats(sres.per), sres.per, false)}</tr>`;
         jobs.forEach((J, ji) => {
           html += `<tr data-path="${rp}-${ji}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted)">${J.title}</td>${numRow(J.t, J.per, false)}</tr>`;
+            <td style="padding-left:52px;color:var(--muted)">${J.title}</td>${cells(tofuStats(J.per), J.per, false)}</tr>`;
         });
       });
     });
-    body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${NCOL}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
     wireTreePath(body);
   }
 
@@ -1849,66 +1940,52 @@ export function initRecruiterFilters(data) {
   const podLabels = () => lastGroups.map(G => G.pod);
   const sumBy = (G, key) => G.recs.reduce((s, r) => s + (r[key] || 0), 0);
 
-  // ToFU chart: ONE bar per recruiter, stacked by week (older week paler), so the eye reads both the
-  // total and whether the pace is holding. Reads the same tofuByRecruiter the table reads, over the same
-  // 30 days — when the table changes basis this must change with it.
+  // ToFU chart: ONE BAR PER DAY — the literal question this panel answers ("how many candidates got added
+  // on a particular day"). Stacked by pod, so a day also shows who it came from without a second chart.
+  // Reads the same tofuByRecruiter over the same days as the table, so the two cannot drift.
+  const POD_COLORS = ['#4E6BA6', '#398AA2', '#1E7590', '#938FB8', '#D8B5BE'];
   function buildVelChart() {
     const ctx = document.getElementById('recVelChart'); if (!ctx) return;
     if (recVelChart) { recVelChart.destroy(); recVelChart = null; }
     const { rec: tRec } = tofuStores();
     const wrap = document.getElementById('recVelChartWrap');
-    const dayTotal = (r) => { const m = (tRec && tRec[r.name]) || {}; return velDates().reduce((a, d) => a + (m[dkey(d)] || 0), 0); };
-    const recs = tRec ? [...getFilteredRecs()].filter(r => dayTotal(r) > 0).sort((a, b) => dayTotal(b) - dayTotal(a)) : [];
-    if (!recs.length) { if (wrap) wrap.style.height = '160px'; return; }
-
-    const days = velDates();
-    const weeks = [];
-    for (let i = 0; i < days.length; i += 7) {
-      const chunk = days.slice(i, i + 7);
-      weeks.push({ keys: chunk.map(dkey), end: chunk[0], start: chunk[chunk.length - 1] });
-    }
-    weeks.reverse();
-    const fmtD = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const [rr, gg, bb] = [78, 107, 166];
-    const datasets = weeks.map((w, wi) => {
-      const t = weeks.length > 1 ? 0.55 * (1 - wi / (weeks.length - 1)) : 0;
-      const mix = (c) => Math.round(c + (255 - c) * t);
-      return {
-        label: `${fmtD(w.start)}–${fmtD(w.end)}`,
-        stack: 'tofu',
-        data: recs.map(r => { const m = (tRec && tRec[r.name]) || {}; return w.keys.reduce((a, k) => a + (m[k] || 0), 0); }),
-        backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`,
-        borderWidth: 0, barPercentage: 0.9, categoryPercentage: 0.8
-      };
-    });
-
-    const h = Math.max(240, recs.length * 26 + 90);
-    if (wrap) wrap.style.height = h + 'px';
-    ctx.style.maxHeight = h + 'px';
+    if (!tRec) { if (wrap) wrap.style.height = '0px'; return; }
+    const dates = velDates();                     // most recent first
+    const chrono = [...dates].reverse();
+    const keys = chrono.map(dkey);
+    const groups = groupByPod(getFilteredRecs(), selQuarter());
+    const datasets = groups.map((G, i) => ({
+      label: G.pod,
+      data: keys.map(k => G.recs.reduce((a, r) => a + (((tRec[r.name]) || {})[k] || 0), 0)),
+      backgroundColor: POD_COLORS[i % POD_COLORS.length],
+      stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
+    })).filter(d => d.data.some(v => v > 0));
+    if (!datasets.length) { if (wrap) wrap.style.height = '120px'; return; }
+    if (wrap) wrap.style.height = '260px';
+    ctx.style.maxHeight = '260px';
 
     recVelChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets },
+      data: { labels: chrono.map(d => `${MON[d.getMonth()]} ${d.getDate()}`), datasets },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           valueLabels: false,
           legend: legendSquare(),
           tooltip: {
             callbacks: {
-              label: (c) => `${c.dataset.label}: ${c.parsed.x}`,
               footer: (items) => {
                 if (!items.length) return '';
                 const i = items[0].dataIndex;
                 const tot = items[0].chart.data.datasets.reduce((a, d) => a + (d.data[i] || 0), 0);
-                return `Total: ${tot}`;
+                return `Added that day: ${tot}`;
               }
             }
           }
         },
         scales: {
-          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } },
-          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+          y: { ...gridY, stacked: true, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } }
         }
       }
     });
