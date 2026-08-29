@@ -1340,8 +1340,10 @@ export function initEfficiencyFilters(data) {
               generateLabels: (chart) => {
                 const seen = [];
                 chart.data.datasets.forEach((d, i) => { if (!seen.some(x => x.dept === d._dept)) seen.push({ dept: d._dept, i }); });
+                // ⚠ pointStyle must be set on the LABEL — a custom generateLabels ignores labels.pointStyle
+                // and falls back to a circle.
                 return seen.map(({ dept, i }) => ({ text: dept, fillStyle: chart.data.datasets[i].backgroundColor,
-                  strokeStyle: 'transparent', hidden: !chart.isDatasetVisible(i), datasetIndex: i }));
+                  strokeStyle: 'transparent', pointStyle: 'rect', hidden: !chart.isDatasetVisible(i), datasetIndex: i }));
               }
             },
             onClick: (e, item, legend) => {
