@@ -916,7 +916,7 @@ export function initEfficiencyFilters(data) {
             const w = c.measureText(t).width;
             c.fillStyle = conv >= 90 ? '#0F6B62' : (conv >= 70 ? '#A16207' : '#A15568');
             c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText(conv + '%', bar.x + 12 + w, bar.y);
+            c.fillText('(' + conv + '%)', bar.x + 12 + w, bar.y);
             c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
           }
         });
@@ -939,7 +939,7 @@ export function initEfficiencyFilters(data) {
             return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} · Joining Conversion ${conv}%`; } } }
         },
         scales: {
-          x: { ...gridY, stacked: true, title: { display: true, text: 'People (at the bar end: Offered, then Joining Conversion)', font: { size: 11 }, color: '#64748b' } },
+          x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },

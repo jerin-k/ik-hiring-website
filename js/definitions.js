@@ -250,7 +250,7 @@ export const DEFINITIONS = {
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and both Fulfilment tables use.'],
           ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
-          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>. At the end of each bar: <strong>Offered</strong> — the sum of the three — followed by that recruiter\u2019s <strong>Joining Conversion</strong>, the same percentage as the last column of the table.'],
+          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>. At the end of each bar: <strong>Offered</strong> — the sum of the three — with that recruiter\u2019s <strong>Joining Conversion</strong> in brackets after it, the same percentage as the last column of the table.'],
         ]
       },
     ],
@@ -466,7 +466,7 @@ export const DEFINITIONS = {
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. The same rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and the Recruiter tab use.'],
           ['Joining Conversion', '(Joined + Joining Pending) \u00f7 Offered \u2014 the share of everyone who reached an offer who has <strong>not</strong> fallen out.'],
-          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with Offered and the conversion printed at the end.'],
+          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with <strong>Offered</strong> at the end of the bar and the <strong>Joining Conversion</strong> in brackets after it.'],
         ]
       },
     ],
