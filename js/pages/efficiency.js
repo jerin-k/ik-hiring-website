@@ -3,7 +3,8 @@ import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
-import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleBandTooltip, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
+         buildDumbbell } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -742,63 +743,16 @@ export function initEfficiencyFilters(data) {
     const h = hbarHeight(rows.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    // Both bands split into the ROLES inside the department, in shades of their colour (Jerin, 2026-08-29).
-    const METRICS = [
-      { key: 'moved', label: 'Progressed past R1', color: '#4E6BA6' },
-      { key: 'still', label: 'Still at R1', color: '#C5CFE5' }
-    ];
-    const chartRows = rows.map(r => ({
+    // ===== Dumbbell, not a stacked bar (Jerin, 2026-08-30) — the mirror of the Recruiter tab's version.
+    // The line between the dots IS the drop-off. Axis reversed so it reads added -> progressed, in funnel
+    // order. Hovering a row lists the roles behind it.
+    effScreenChart = buildDumbbell(ctx, rows.map(r => ({
       label: r.dept,
-      sum: { moved: r.cleared, still: Math.max(0, r.added - r.cleared) },
-      jobs: (r.per || []).map(x => ({ title: x.title, v: { moved: x.v.cleared, still: Math.max(0, x.v.added - x.v.cleared) } }))
-    }));
-    const endLabels = {
-      id: 'effScreenLabels',
-      afterDatasetsDraw(chart) {
-        const c = chart.ctx; c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const last = chart.getDatasetMeta(chart.data.datasets.length - 1);
-        // Percentage in its own column at the far right of the plot area, under a heading — same treatment
-        // as the Recruiter tab's version of this chart.
-        const colX = chart.chartArea.right + 46;
-        c.textAlign = 'center'; c.fillStyle = '#64748b';
-        c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
-        c.fillText('PROGRESSED', colX, chart.chartArea.top - 10);
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-        rows.forEach((r, i) => {
-          const end = last.data[i]; if (!end) return;
-          if (r.added > 0) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
-          if (r.added > 0) {
-            const v = Math.round((r.cleared / r.added) * 100);
-            c.textAlign = 'center';
-            c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
-            c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText(v + '%', colX, end.y);
-            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-          }
-        });
-        c.restore();
-      }
-    };
-    effScreenChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS, { borderRadius: 2 }) },
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
-        plugins: {
-          valueLabels: false, stackTotals: false,
-          legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
-            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
-            footer: (items) => { const r = rows[items[0].dataIndex]; return `Added at R1: ${r.added} \u00b7 progressed ${Math.round((r.cleared / r.added) * 100)}%`; } } }
-        },
-        scales: {
-          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added at R1', font: { size: 11 }, color: '#64748b' } },
-          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
-        }
-      },
-      plugins: [endLabels, roleBandOverlay(METRICS)]
-    });
+      added: r.added,
+      progressed: r.cleared,
+      roles: (r.per || []).map(x => ({ title: x.title, added: x.v.added, progressed: x.v.cleared }))
+    })), { xTitle: 'Candidates added at R1', colHeader: 'PROGRESSED',
+           fromLabel: 'added at R1', toLabel: 'progressed past R1' });
   }
 
   // convByJob / convOf (Offered -> Hired) were removed on 2026-08-29 with the old definition.
@@ -932,10 +886,9 @@ export function initEfficiencyFilters(data) {
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
-            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
-            footer: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
-              return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } }
+          tooltip: roleSectionTooltip(METRICS, { totalLabel: 'Offered',
+            extra: (i) => { const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+              return conv == null ? '' : `Joining Conversion ${conv}%`; } })
         },
         scales: {
           x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } },
@@ -1332,7 +1285,9 @@ export function initEfficiencyFilters(data) {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          valueLabels: false,
+          // In-bar numbers (Jerin, 2026-08-30). The global plugin skips segments too thin to hold one, so a
+          // day with a single arrival in a department still reads cleanly.
+          valueLabels: true,
           legend: {
             position: 'top', align: 'center',
             labels: {
@@ -1460,7 +1415,7 @@ export function initEfficiencyFilters(data) {
 
     const opts = fulfilStackOpts('Positions');
     opts.plugins.legend = metricLegend(METRICS);
-    opts.plugins.tooltip = roleBandTooltip('Total positions');
+    opts.plugins.tooltip = roleSectionTooltip(METRICS, { totalLabel: 'Total positions' });
     effFulfilCombined = new Chart(ctx, {
       type: 'bar',
       data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS) },

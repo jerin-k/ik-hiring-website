@@ -326,7 +326,9 @@ export function initInterviewer(data) {
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: {
-          valueLabels: false,
+          // In-bar numbers on every chart (Jerin, 2026-08-30). The global plugin skips segments too thin to
+          // hold a number, so a quiet month stays blank rather than crowded.
+          valueLabels: true,
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 11 } } },
           tooltip: { callbacks: {
             label: (c) => `${c.dataset.label}: ${c.parsed.x}`,

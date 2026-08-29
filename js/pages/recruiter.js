@@ -3,7 +3,7 @@ import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
-         darken, SEP_DARKEN } from '../chart-style.js';
+         darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -2087,76 +2087,22 @@ export function initRecruiterFilters(data) {
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
-    const SCREEN_METRICS = [
-      { key: 'moved', label: 'Progressed past R1', color: SCREEN_SOLID },
-      { key: 'still', label: 'Still at R1', color: SCREEN_PALE }
-    ];
-    const screenRows = recs.map(r => ({
-      label: r.name,
-      sum: { moved: r.cleared, still: Math.max(0, r.added - r.cleared) },
-      jobs: (r.per || []).map(x => ({ title: x.title, v: { moved: x.v.cleared, still: Math.max(0, x.v.added - x.v.cleared) } }))
-    }));
-    // Bar thickness matches the Fulfilment chart (Jerin, 2026-08-29) — 46px a row, same bar/category split.
+    // ===== Dumbbell, not a stacked bar (Jerin, 2026-08-30) =====
+    // The stacked bar showed the split but hid the DROP. Here the line between the two dots IS the
+    // drop-off, so a weak conversion reads as a long bar. Axis reversed so it runs added → progressed
+    // left to right, in funnel order. Hovering a row lists the roles behind it.
     const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-
-    const labelPlugin = {
-      id: 'screenLabels',
-      afterDatasetsDraw(chart) {
-        const c = chart.ctx; c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const eMeta = chart.getDatasetMeta(chart.data.datasets.length - 1);
-        // The percentage sits in its own column at the far right of the plot area — square under a heading,
-        // rather than floating wherever each bar happens to end (Jerin, 2026-08-29). The count stays with
-        // the bar, because that one belongs to the bar's length.
-        const colX = chart.chartArea.right + 46;
-        c.textAlign = 'center';
-        c.fillStyle = '#64748b';
-        c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
-        c.fillText('PROGRESSED', colX, chart.chartArea.top - 10);
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-        recs.forEach((r, i) => {
-          const end = eMeta.data[i]; if (!end) return;
-          if (r.added > 0) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
-          if (r.added > 0) {
-            const v = pct(r.cleared, r.added);
-            c.textAlign = 'center';
-            c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
-            c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText(v + '%', colX, end.y);
-            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-          }
-        });
-        c.restore();
-      }
-    };
-
-    recScreenChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(screenRows, SCREEN_METRICS, { borderRadius: 2 }) },
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
-        plugins: {
-          valueLabels: false, stackTotals: false,
-          legend: metricLegend(SCREEN_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
-            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
-            footer: (items) => {
-              if (!items.length) return '';
-              const r = recs[items[0].dataIndex];
-              return `Added at R1: ${r.added} \u00b7 progressed ${pct(r.cleared, r.added)}%`;
-            }
-          } }
-        },
-        scales: {
-          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added at R1', font: { size: 11 }, color: '#64748b' } },
-          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
-        }
-      },
-      plugins: [labelPlugin, roleBandOverlay(SCREEN_METRICS)]
-    });
+    recScreenChart = buildDumbbell(ctx, recs.map(r => ({
+      label: r.name,
+      added: r.added,
+      progressed: r.cleared,
+      roles: (r.per || []).map(x => ({ title: x.title, added: x.v.added, progressed: x.v.cleared }))
+    })), { solid: SCREEN_SOLID, pale: SCREEN_PALE, xTitle: 'Candidates added at R1', colHeader: 'PROGRESSED',
+           fromLabel: 'added at R1', toLabel: 'progressed past R1' });
   }
+
   function buildJoinChart() {
     const ctx = document.getElementById('recJoinChart'); if (!ctx) return;
     if (recJoinChart) recJoinChart.destroy();
@@ -2222,9 +2168,9 @@ export function initRecruiterFilters(data) {
       data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(jcRows, JC_METRICS, { borderRadius: 2 }) },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: CONV_PAD + 34, top: 20 } },
         plugins: { valueLabels: false, stackTotals: false,
-          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
-            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
-            footer: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
+          tooltip: roleSectionTooltip(JC_METRICS, { totalLabel: 'Offered',
+            extra: (i) => { const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+              return conv == null ? '' : `Joining Conversion ${conv}%`; } }),
           legend: metricLegend(JC_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }) },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [endLabels, roleBandOverlay(JC_METRICS)] });
@@ -2321,19 +2267,13 @@ export function initRecruiterFilters(data) {
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: metricLegend(FUL_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: {
-            filter: (it) => (it.parsed.x || 0) > 0,
-            callbacks: {
-              label: (it) => `${it.dataset._titles[it.dataIndex] || 'across the quarter'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
-              afterBody: (items) => {
-                if (!items.length) return '';
-                const r = recs[items[0].dataIndex];
-                const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
-                const vs = r.goal > 0 ? (r.achieved >= r.goal ? `${r.achieved - r.goal} past goal` : `${r.goal - r.achieved} short of goal`) : 'no goal this quarter';
-                return [`Goal ${r.goal} \u00b7 Capacity ${r.cap}`, vs, util];
-              }
-            }
-          }
+          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal',
+            extra: (i) => {
+              const r = recs[i];
+              const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
+              const vs = r.goal > 0 ? (r.achieved >= r.goal ? `${r.achieved - r.goal} past goal` : `${r.goal - r.achieved} short of goal`) : 'no goal this quarter';
+              return `Goal ${r.goal} \u00b7 Capacity ${r.cap} \u00b7 ${vs} \u00b7 ${util}`;
+            } })
         },
         scales: {
           x: { ...gridY, stacked: true, suggestedMax: axisMax, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } },
