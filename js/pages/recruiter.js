@@ -173,18 +173,23 @@ export function renderRecruiter(data) {
       .tofu-heat-wrap { position:relative; margin:0 0 22px; overflow-x:auto; }
       .tofu-heat { display:block; min-width:100%; }
       .heat-row { display:flex; align-items:center; gap:3px; margin-bottom:4px; }
-      .heat-name { width:210px; min-width:210px; font-size:13px; color:var(--text); text-align:right;
-        padding-right:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      /* Left-aligned and the SAME WIDTH as the table's first column, so the two blocks line up down the
+         page (Jerin, 2026-08-30: "get the recruiter names left aligned, add some element to fill the gaps
+         & make it align"). The width is measured off the table at render time — see buildVelChart. */
+      .heat-name { width:210px; min-width:210px; font-size:13px; color:var(--text); text-align:left;
+        padding-left:14px; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .heat-cell { flex:1 1 0; min-width:24px; height:34px; border-radius:4px; background:#f4f6f8;
         font-size:13px; font-weight:500; display:flex; align-items:center; justify-content:center; color:#334155; }
       .heat-cell.has { cursor:default; }
       .heat-cell.wknd { background:#eef1f4; }
-      .heat-tot { width:62px; min-width:62px; text-align:center; font-size:14px; font-weight:600; color:var(--text); }
+      /* Sits between the name and the day cells, exactly where the table puts TOTAL · 30D. */
+      .heat-tot { width:96px; min-width:96px; text-align:right; padding-right:14px; font-size:14px;
+        font-weight:600; color:var(--text); }
       .heat-hd { font-size:11.5px; color:var(--muted); height:18px; background:none !important; }
       .heat-hd.wknd { color:#C08497; }
       .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:24px; font-size:12px; }
       .heat-foot .heat-name { font-size:12px; color:var(--muted); }
-      .heat-scale { display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:12px; padding-left:210px; }
+      .heat-scale { display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:12px; padding-left:14px; }
       .heat-scale i { width:20px; height:20px; border-radius:4px; display:inline-block; }
       .heat-tip { position:absolute; z-index:40; pointer-events:none; display:none; background:#fff;
         border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 18px rgba(15,23,42,0.13);
@@ -2004,24 +2009,39 @@ export function initRecruiterFilters(data) {
     const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
     let html = '<div class="heat-row"><div class="heat-name heat-hd">' + MONS[chrono[0].getMonth()] + '</div>'
+      + '<div class="heat-tot heat-hd">TOTAL \u00b7 30D</div>'
       + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">${d.getDate()}</div>`).join('')
-      + '<div class="heat-tot heat-hd">30d</div></div>';
+      + '</div>';
     rows.forEach((r, ri) => {
-      html += `<div class="heat-row"><div class="heat-name" title="${esc(r.pod)}">${esc(r.name)}</div>`;
+      html += `<div class="heat-row"><div class="heat-name" title="${esc(r.pod)}">${esc(r.name)}</div>`
+        + `<div class="heat-tot">${r.total}</div>`;
       r.per.forEach((v, i) => {
         const cls = 'heat-cell' + (v ? ' has' : (isWknd[i] ? ' wknd' : ''));
         const st = v ? ` style="background:${heatShade(v, mx)};color:${v / mx > 0.45 ? '#fff' : '#334155'}"` : '';
         html += `<div class="${cls}"${st} data-r="${ri}" data-d="${i}">${v || ''}</div>`;
       });
-      html += `<div class="heat-tot">${r.total}</div></div>`;
+      html += '</div>';
     });
     html += '<div class="heat-row heat-foot"><div class="heat-name">total</div>'
+      + `<div class="heat-tot">${grand}</div>`
       + dayTot.map(t => `<div class="heat-cell">${t || '·'}</div>`).join('')
-      + `<div class="heat-tot">${grand}</div></div>`;
+      + '</div>';
     html += '<div class="heat-scale">fewer'
       + [1, 2, 3, 4, 5].map(k => `<i style="background:${heatShade(mx * k / 5, mx)}"></i>`).join('')
       + `more<span style="margin-left:14px">darkest = ${mx} in a day</span></div>`;
     host.innerHTML = html;
+
+    // Line the name and total columns up with the TABLE's first two columns, measured rather than guessed —
+    // the table's first column sizes itself to the longest job title, so a fixed width would drift.
+    const th = document.querySelectorAll('.rec-panel[data-panel="velocity"] .vel-table thead th');
+    if (th.length >= 2) {
+      const w1 = Math.round(th[0].getBoundingClientRect().width);
+      const w2 = Math.round(th[1].getBoundingClientRect().width);
+      if (w1 > 80 && w2 > 40) {
+        host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
+        host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
+      }
+    }
 
     // Hover: the roles behind that square, with a count against each.
     const wrap = document.getElementById('recVelHeatWrap');
