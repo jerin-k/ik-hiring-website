@@ -1967,6 +1967,8 @@ export function initRecruiterFilters(data) {
   function buildVelChart() {
     const host = document.getElementById('recVelHeat');
     const tip = document.getElementById('recVelHeatTip');
+    const wrap = document.getElementById('recVelHeatWrap');
+    const wrapEl = wrap;
     if (!host) return;
     const { rec: tRec, recJob: tRecJob } = tofuStores();
     if (!tRec) { host.innerHTML = ''; return; }
@@ -2033,18 +2035,38 @@ export function initRecruiterFilters(data) {
 
     // Line the name and total columns up with the TABLE's first two columns, measured rather than guessed —
     // the table's first column sizes itself to the longest job title, so a fixed width would drift.
+    // ⚠ Alignment gives way to FITTING. On a narrower window the table's 250px first column leaves the 30 day
+    // cells needing about 1,150px, and the grid scrolls sideways — which reads as broken rather than as
+    // aligned (Jerin saw exactly this and blamed the legend; the legend is in its own row and cannot widen a
+    // column). So when the matched widths do not fit, the name and total columns shrink and the cells go to
+    // their smaller minimum, and the whole month stays on screen.
     const th = document.querySelectorAll('.rec-panel[data-panel="velocity"] .vel-table thead th');
+    const avail = (wrapEl ? wrapEl.clientWidth : 0) || host.clientWidth;
+    let w1 = 210, w2 = 96, cellMin = 24;
     if (th.length >= 2) {
-      const w1 = Math.round(th[0].getBoundingClientRect().width);
-      const w2 = Math.round(th[1].getBoundingClientRect().width);
-      if (w1 > 80 && w2 > 40) {
-        host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
-        host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
-      }
+      const t1 = Math.round(th[0].getBoundingClientRect().width);
+      const t2 = Math.round(th[1].getBoundingClientRect().width);
+      if (t1 > 80 && t2 > 40) { w1 = t1; w2 = t2; }
     }
+    // gaps sit BETWEEN cells, so there are n-1 of them, not n — counting one too many pushed the grid
+    // three pixels over its container and it still scrolled.
+    // The row is a flex with a 3px gap between EVERY child, so with 30 cells plus the name and total
+    // columns there are (30 + 1) gaps, not 29. Counting them short left the grid a few pixels over its
+    // container and it still scrolled.
+    const GAP = 3;
+    const needs = (n, t, c) => n + t + keys.length * c + (keys.length + 1) * GAP;
+    if (avail && needs(w1, w2, cellMin) > avail) {
+      cellMin = 20; w2 = 70;
+      w1 = Math.max(150, avail - (keys.length * cellMin + (keys.length + 1) * GAP) - w2 - 2);
+    }
+    host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
+    host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
+    if (cellMin !== 24) host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
+    // The colour scale describes the CELLS, so it starts under them rather than under the names.
+    const sc = host.querySelector('.heat-scale');
+    if (sc) sc.style.paddingLeft = (w1 + w2) + 'px';
 
     // Hover: the roles behind that square, with a count against each.
-    const wrap = document.getElementById('recVelHeatWrap');
     host.onmouseover = (e) => {
       const cell = e.target.closest('.heat-cell.has');
       if (!cell || !tip) return;
