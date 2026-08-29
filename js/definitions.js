@@ -263,20 +263,22 @@ export const DEFINITIONS = {
 
   'rec-sourcing': {
     summary: 'How these numbers are worked out',
-    intro: 'Where each recruiter’s candidates come from.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'Where the people who actually <strong>joined</strong> came from.',
+    confirmed: 'Definitions confirmed with Jerin · 29 Aug 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Board</em>) → the specific source (e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
-          ['Count', 'Candidates credited to that recruiter from that source, in the selected period. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
+          ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Portal</em>) → the specific source (e.g. <em>Naukri</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
+          ['Joiners', 'People who accepted an offer and whose <strong>start date</strong> falls in the selected period, credited to that recruiter, counted against the source on their application. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
           ['%', 'Share of the level above it — a source’s share of its type, a type’s share of the recruiter, a recruiter’s share of the pod.'],
+          ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
         ]
       },
     ],
     warnings: [
-      ['Counted by when the candidate APPLIED', 'Someone sourced in June counts in Q2 even if they are still in process now. Org-wide totals by department and role are on <strong>Overall Efficiency → Sourcing Mix</strong>.'],
+      ['This counts joiners, not applications', 'Deliberate (Jerin, 29 Aug 2026): a channel can bring tens of thousands of applications and produce almost no one who starts. Company marketing brought 25,810 applications in 2026 and 2 joiners; Job Portal brought far fewer and 44. The old application view made the loudest channel look like the best one.'],
+      ['It will not match the number of applications anywhere else', 'Nothing on this panel is comparable to the application counts on Momentum, Screening Efficiency or the Overview — different unit, on purpose. Org-wide totals by department and role are on <strong>Overall Efficiency → Sourcing Mix</strong>.'],
     ]
   },
 
@@ -348,7 +350,7 @@ export const DEFINITIONS = {
       {
         heading: 'Charts and the Cases list',
         items: [
-          ['One chart per department', 'Bars are the roles inside it, stacked Joined / Joining Pending / Delta, with the total on the end — the same three numbers as the table. The <em>All departments</em> chart does the same one level up, and hides itself when you filter to a single department.'],
+          ['The chart', 'One bar per department, stacked Joined / Joining Pending / Delta with the total on the end — the same three numbers as the table. Each of those three is split again into the <strong>roles</strong> inside the department, darkest band the biggest role, palest the smallest; beyond ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The legend is at metric level — clicking one toggles every band of that colour.'],
           ['A negative Delta on a chart', 'A bar cannot be drawn backwards, so the Delta segment stops at zero while the table keeps the negative number. The table is the honest version.'],
           ['Joining Pending — Cases', 'Every person with an offer in play, scoped to the Department and Job filters. <strong>Unlinked</strong> means no opening is attached in Ashby, so that person is invisible to the position counts above. Those are the ones to fix first.'],
         ]
@@ -478,20 +480,22 @@ export const DEFINITIONS = {
   },
   'eff-sourcing': {
     summary: 'How these numbers are worked out',
-    intro: 'Where candidates come from, <strong>Department → Job → Source type → Source</strong>.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'Where the people who actually <strong>joined</strong> came from, <strong>Department → Job → Source type → Source</strong>.',
+    confirmed: 'Definitions confirmed with Jerin · 29 Aug 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['Count', 'Candidates credited to that source for that role, who applied in the selected quarter.'],
+          ['Joiners', 'People who accepted an offer for that role and whose <strong>start date</strong> falls in the selected quarter, counted against the source on their application.'],
           ['%', 'Share of the level above — a source’s share of its type, a type’s share of the role, and so on.'],
-          ['Why it can be filtered by department and job', 'Sources are recorded per candidate and per role, so the tree can follow the role while the credit follows the recruiter who worked it.'],
+          ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
+          ['Chart', 'One bar per source type, split into the individual sources inside it. It reads the same rows as the table, so the two can never disagree.'],
         ]
       },
     ],
     warnings: [
-      ['Counted by when the candidate APPLIED', 'Someone sourced in June counts in Q2 even if they are still in process now.'],
+      ['This counts joiners, not applications', 'Deliberate (Jerin, 29 Aug 2026): a channel can bring tens of thousands of applications and produce almost no one who starts. Company marketing brought 25,810 applications in 2026 and 2 joiners; Job Portal brought far fewer and 44.'],
+      ['Counted by START DATE, like Joined everywhere else', 'Someone who accepted in June and starts in September counts in Q3, not Q2 — the same rule the Fulfilment tab uses, so the two panels count the same people.'],
     ]
   },
 

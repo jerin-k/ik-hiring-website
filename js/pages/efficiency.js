@@ -3,6 +3,7 @@ import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
+import { HBAR, hbarHeight } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -152,14 +153,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
       ${defsBlock('eff-fulfilment')}
-      <p class="sub-note"><strong>Total Positions</strong> = distinct openings opened in the quarter.
-        <strong>Joined</strong> and <strong>Missed</strong> also count positions; <strong>Joining Pending</strong> and <strong>Drop</strong> count <strong>people</strong>,
-        on the same definitions as the Hiring Manager and Recruiter tabs. <strong>Delta</strong> = Total − Joined − Joining Pending, and can be negative. <strong>Score</strong> is the position count × the role's score
-        (Family + Level + Complexity → grid, per <strong>Admin → Metric Configuration</strong>). A role with no Level or
-        Complexity in Ashby scores nothing and is marked <span style="color:var(--orange)">unscored</span>; its headcount still counts.
-        See <strong>Recruiter Efficiency → Data Hygiene → Roles Missing Score Inputs</strong>.</p>
-      <div class="eff-podcharts eff-2col" id="effFulfilPodCharts"></div>
-      <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">All departments</h4>
+      <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Positions by department — each band is a role</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
 
       <div class="scroll-table"><table class="metrics">
@@ -258,10 +252,10 @@ export function renderEfficiency(data) {
       ${defsBlock('eff-sourcing')}
       <p class="sub-note" id="effSourceNote"></p>
       <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-6px"></p>
-      <h3 class="subsection-title">Channel Mix — source names within each type</h3>
+      <h3 class="subsection-title">Channel mix — where joiners came from</h3>
       <div class="chart-wrap" style="max-width:840px;margin:0 auto 20px;height:460px;position:relative"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:340px" id="effSourceTh">Pod / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:340px" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
     </div>
@@ -746,7 +740,7 @@ export function initEfficiencyFilters(data) {
     }).filter(r => r.added > 0).sort((a, b) => b.added - a.added);
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
     // Bar thickness matches the Fulfilment chart and the Recruiter tab's version of this panel.
-    const h = Math.max(260, rows.length * 46 + 90);
+    const h = hbarHeight(rows.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const moved = rows.map(r => r.cleared), still = rows.map(r => Math.max(0, r.added - r.cleared));
@@ -783,8 +777,8 @@ export function initEfficiencyFilters(data) {
     effScreenChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: rows.map(r => r.dept), datasets: [
-        { label: 'Progressed past R1', data: moved, backgroundColor: '#4E6BA6', stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 },
-        { label: 'Still at R1', data: still, backgroundColor: '#C5CFE5', stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 }
+        { label: 'Progressed past R1', data: moved, backgroundColor: '#4E6BA6', stack: 'r1', borderRadius: 2, ...HBAR },
+        { label: 'Still at R1', data: still, backgroundColor: '#C5CFE5', stack: 'r1', borderRadius: 2, ...HBAR }
       ] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
@@ -892,7 +886,7 @@ export function initEfficiencyFilters(data) {
     }).filter(r => r.o > 0).sort((a, b) => b.o - a.o);
     const wrap = document.getElementById('effJoinChartWrap');
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
-    const h = Math.max(240, rows.length * 34 + 90);
+    const h = hbarHeight(rows.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const joined = rows.map(r => r.j), pending = rows.map(r => r.p), dropped = rows.map(r => r.dr), offered = rows.map(r => r.o);
@@ -926,9 +920,9 @@ export function initEfficiencyFilters(data) {
     effJoinChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: rows.map(r => r.dept), datasets: [
-        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Dropped', data: dropped, backgroundColor: '#A33253', stack: 'j', borderRadius: 2, barPercentage: 0.72 }
+        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, ...HBAR },
+        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, ...HBAR },
+        { label: 'Dropped', data: dropped, backgroundColor: '#A33253', stack: 'j', borderRadius: 2, ...HBAR }
       ] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 86 } },
@@ -1111,34 +1105,51 @@ export function initEfficiencyFilters(data) {
   }
 
   // ===== Sourcing Mix — Department → Job → Source type → Source name =====
-  // Sources are recorded per application, so the honest tree needs a per-(recruiter × job) source bucket:
-  // recruiters[].srcByJob { job8: { type: { name: count } } }. Pod attribution follows the recruiter, the
-  // Department/Job scope follows the job — which is what makes those two filters real on this tab.
-  // Until the pipeline emits srcByJob we fall back to the old recruiters[].srcNested tree (Pod → Type → Name),
-  // which has NO job dimension. In that mode Department/Job genuinely cannot be applied, and the panel says so
-  // instead of showing an unfiltered number under a filtered heading.
-  const hasSrcByJob = recruiters.some(r => r.srcByJob && Object.keys(r.srcByJob).length);
-  // Quarter-scoped sources (2026-08-25). srcByJobQ is {job8:{quarter:{type:{name:count}}}}, bucketed by the
-  // quarter the candidate APPLIED. Before this the source counts carried no date at all, so the Year/Quarter
-  // selector on this panel changed nothing. Falls back to the undated srcByJob on older data and says so.
-  const hasSrcQ = recruiters.some(r => r.srcByJobQ && Object.keys(r.srcByJobQ).length);
+  // Counts JOINERS, not applications (Jerin, 2026-08-29 — mirrored from Recruiter Efficiency).
+  // "Need this to be only for Hired folks." A channel can bring 25,810 applications and produce 2 people who
+  // actually start; the application view made the loudest channel look like the best one.
+  //
+  // Joiner = accepted offer whose START DATE falls in the selected quarter — the same rule "Joined" means
+  // everywhere else. The source comes off the offer record (srcType / srcName), which the pipeline started
+  // carrying on 2026-08-29; it was always on the application, it just was not travelling as far as the offer.
+  // ⚠ A joiner with no source on their application is kept under "(source not recorded)" rather than dropped,
+  // so this panel still adds up to the number of joiners. About 1 in 20 today.
+  //
+  // Department/Job scope comes off the offer's own job, so both filters are real here.
+  const NO_SRC = '(source not recorded)';
+  const hasJoinerSrc = (data.offerEvents || []).some(e => e.srcType);
+
+  let _jsQ = null, _jsMap = null;
+  // { job8: { sourceType: { sourceName: joiners } } } for the given quarter (null/'' = all time).
+  function joinerSourcesByJob(q) {
+    if (_jsQ === (q || 'ALL') && _jsMap) return _jsMap;
+    const out = {};
+    (data.offerEvents || []).forEach(e => {
+      if (!e.accepted || !e.jobId8) return;
+      const eq = qOfDate(e.startDate);
+      if (!eq) return;
+      if (q && eq !== q) return;
+      const t = e.srcType || NO_SRC;
+      const nm = e.srcType ? (e.srcName || '(unspecified)') : NO_SRC;
+      const j = out[e.jobId8] || (out[e.jobId8] = {});
+      const bt = j[t] || (j[t] = {});
+      bt[nm] = (bt[nm] || 0) + 1;
+    });
+    _jsQ = (q || 'ALL'); _jsMap = out;
+    return out;
+  }
 
   const mergeNested = (dst, src) => { for (const t in src) { const at = dst[t] || (dst[t] = {}); for (const nm in src[t]) at[nm] = (at[nm] || 0) + src[t][nm]; } return dst; };
   const sumNames = (names) => Object.values(names).reduce((a, v) => a + v, 0);
   const sumNested = (nst) => Object.values(nst).reduce((s, names) => s + sumNames(names), 0);
 
-  // Pod → Dept → Job, each carrying its merged {type:{name:count}}. Honours Department + Job multi-selects.
+  // Department → Job, each carrying its merged {type:{name:count}}. Honours the Department + Job filters.
   function sourceTree(q) {
+    const byJob = joinerSourcesByJob(q);
     return deptJobs(q).map(({ dept, jobs }) => {
       const jarr = [];
       jobs.forEach(j => {
-        const nst = {};
-        recruiters.forEach(r => {
-          const sj = hasSrcQ
-            ? (r.srcByJobQ && r.srcByJobQ[j.jid] && r.srcByJobQ[j.jid][q])
-            : (r.srcByJob && r.srcByJob[j.jid]);
-          if (sj) mergeNested(nst, sj);
-        });
+        const nst = mergeNested({}, byJob[j.jid] || {});
         const tot = sumNested(nst);
         if (tot) jarr.push({ title: j.title, nst, tot });
       });
@@ -1148,22 +1159,10 @@ export function initEfficiencyFilters(data) {
     }).filter(d => d.tot > 0).sort((a, b) => b.tot - a.tot);
   }
 
-  // Fallback aggregate: pod → {type:{name:count}} from srcNested (or the coarse sources{} map). No job grain.
-  function podNestedFlat(pod, q) {
-    const agg = {};
-    podMembers(pod, q).forEach(r => {
-      const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
-      if (sn) mergeNested(agg, sn);
-      else for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; }
-    });
-    return agg;
-  }
-
   // The {type:{name:count}} the chart draws — same scope as the table, so the two can never disagree.
   function visibleSourceAgg(q) {
     const agg = {};
-    if (hasSrcByJob) sourceTree(q).forEach(d => mergeNested(agg, d.nst));
-    else recruiters.forEach(r => mergeNested(agg, (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : {}));
+    sourceTree(q).forEach(d => mergeNested(agg, d.nst));
     return agg;
   }
 
@@ -1173,18 +1172,18 @@ export function initEfficiencyFilters(data) {
     const note = document.getElementById('effSourceNote');
     const warn = document.getElementById('effSourceWarn');
     const th = document.getElementById('effSourceTh');
-    const scoped = selDepts().length || selJobs().length;
 
-    if (note) note.innerHTML = hasSrcByJob
-      ? '<strong>Department → Job → Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>). Counts are applications received in the <strong>selected quarter</strong>, by when the candidate applied.'
-      : '<strong>Source type → Source name</strong> (Ashby <code>source_type</code> → the specific <code>source</code>, e.g. <em>Indeed Listing</em>, <em>LinkedIn</em>), summed across pod members.';
-    if (th) th.textContent = hasSrcByJob ? 'Department / Job / Source type / Source name' : 'Source type / Source name';
+    // Live state only — what the panel is showing right now. The definitions live in the collapsible block
+    // above (Jerin, 2026-08-29: "don't we have the collapsible section to give the definition").
+    if (note) note.textContent = q
+      ? `Showing where the people who joined in ${q} came from.`
+      : 'Showing where everyone who has joined came from (all time).';
+    if (th) th.textContent = 'Department / Job / Source type / Source name';
     if (warn) {
-      const noJob = !hasSrcByJob && scoped;
-      const noQ = hasSrcByJob && !hasSrcQ;
-      warn.style.display = (noJob || noQ) ? '' : 'none';
-      if (noJob) warn.textContent = 'Heads up: the Department and Job filters are NOT applied to these numbers. Sources are still stored per recruiter, not per job, in the current data file — the figures below are each pod\'s full book of work. They become filterable after the next pipeline refresh emits per-job sources.';
-      else if (noQ) warn.innerHTML = 'Heads up: these are <strong>all-time</strong> numbers, not the selected quarter. The dated source data appears after the next refresh.';
+      // The joiner cut needs the source ON THE OFFER RECORD, which the pipeline only started carrying on
+      // 2026-08-29. Against an older data file every joiner lands in "(source not recorded)" — say so.
+      warn.style.display = hasJoinerSrc ? 'none' : '';
+      warn.innerHTML = 'Heads up: this data file predates sources being carried onto offer records, so no joiner can be attributed to a source yet. It fills in at the next refresh.';
     }
     if (!body) { buildSourceChart(); return; }
 
@@ -1202,33 +1201,18 @@ export function initEfficiencyFilters(data) {
     };
 
     let html = '';
-    if (hasSrcByJob) {
-      const tree = sourceTree(q);
-      const grand = tree.reduce((s, d) => s + d.tot, 0) || 1;
-      tree.forEach((D, di) => {
-        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${D.jobs.length}</span></td><td style="font-weight:600">${D.tot || '<span class="zero">0</span>'}</td><td>${pc(D.tot, grand)}%</td></tr>`;
-        D.jobs.forEach((J, ji) => {
-          html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
-          html += typeRows(J.nst, J.tot, `${di}-${ji}`, 56);
-        });
+    const tree = sourceTree(q);
+    const grand = tree.reduce((s, d) => s + d.tot, 0) || 1;
+    tree.forEach((D, di) => {
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${D.jobs.length}</span></td><td style="font-weight:600">${D.tot || '<span class="zero">0</span>'}</td><td>${pc(D.tot, grand)}%</td></tr>`;
+      D.jobs.forEach((J, ji) => {
+        html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
+        html += typeRows(J.nst, J.tot, `${di}-${ji}`, 56);
       });
-    } else {
-      // No per-job sources yet: org-wide Type → Name only. Department/Job cannot be applied, and the warning
-      // above the table says so.
-      const agg = {};
-      recruiters.forEach(r => {
-        const sn = (r.srcNested && Object.keys(r.srcNested).length) ? r.srcNested : null;
-        if (sn) mergeNested(agg, sn);
-        else for (const [t, v] of Object.entries(r.sources || {})) { const at = agg[t] || (agg[t] = {}); at['(unspecified)'] = (at['(unspecified)'] || 0) + v; }
-      });
-      const tot = sumNested(agg);
-      html += `<tr data-path="0" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}All departments</td><td style="font-weight:600">${tot || '<span class="zero">0</span>'}</td><td>100.0%</td></tr>`;
-      if (tot) html += typeRows(agg, tot, '0', 32);
-    }
+    });
 
-    body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Nobody joined under these filters, so there is no source mix to show.</td></tr>`;
     wireTreePath(body, expandAll());
     buildSourceChart();
   }
@@ -1399,10 +1383,10 @@ export function initEfficiencyFilters(data) {
       return { label: TP_LABELS[k], r: t.r, c: t.c };
     }).filter(x => x.r || x.c);
     if (!rows.length) return null;
-    return { _h: Math.max(170, rows.length * 34 + 70), type: 'bar',
+    return { _h: hbarHeight(rows.length, 70, 170), type: 'bar',
       data: { labels: rows.map(x => x.label), datasets: [
-        { label: 'Added', data: rows.map(x => x.r), backgroundColor: C.blue, borderRadius: 3 },
-        { label: 'Cleared', data: rows.map(x => x.c), backgroundColor: C.green, borderRadius: 3 }] },
+        { label: 'Added', data: rows.map(x => x.r), backgroundColor: C.blue, borderRadius: 3, ...HBAR },
+        { label: 'Cleared', data: rows.map(x => x.c), backgroundColor: C.green, borderRadius: 3, ...HBAR }] },
       options: hbarOpts(false, 'Candidates') };
   };
 
@@ -1427,23 +1411,29 @@ export function initEfficiencyFilters(data) {
     }
   });
 
+  // One bar per department, stacked Joined / Joining Pending / Delta — and each of those three split again
+  // into the ROLES inside the department, in shades of that metric's colour (Jerin, 2026-08-29: "don't need
+  // department-wise charts, the overall chart is enough — but bring in the gradient to the department, each
+  // gradient being a job"). Darkest band = the department's biggest role for that metric, palest = smallest.
+  // The legend stays at metric level: one entry per role would be dozens of entries of noise, and the role
+  // name is in the tooltip. Clicking a legend entry toggles every band of that metric together.
+  // The bands are read straight off the same rows the table renders, so the two cannot drift apart.
+  const FULFIL_SLOTS = 10;   // roles drawn individually per department; the tail becomes one "other roles" band
+  function shadeOf(hex, i, n) {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    const t = n > 1 ? 0.6 * (i / (n - 1)) : 0;
+    const mix = (c) => Math.round(c + (255 - c) * t);
+    return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+  }
+
   function renderFulfilCharts(q) {
     const rows = fulfilRows(q);
-    renderDeptCharts('effFulfilPodCharts', rows, fulfilDeptCfg, 'No openings in this department this period.');
 
     const ctx = document.getElementById('effFulfilCombined'); if (!ctx) return;
     if (effFulfilCombined) effFulfilCombined.destroy();
     effFulfilCombined = null;
     const wrap = document.getElementById('effFulfilCombinedWrap');
-    // The "All departments" chart compares departments against each other. Filter down to ONE department and
-    // it degenerates into a single bar restating the chart directly above it, so hide it (heading included).
-    // Two or more departments selected still compare, so it stays.
     const hdr = document.getElementById('effFulfilCombinedHdr');
-    if (selDepts().length === 1) {
-      if (wrap) wrap.style.display = 'none';
-      if (hdr) hdr.style.display = 'none';
-      return;
-    }
     if (wrap) wrap.style.display = '';
     if (hdr) hdr.style.display = '';
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
@@ -1454,33 +1444,84 @@ export function initEfficiencyFilters(data) {
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
-    if (wrap) wrap.style.height = Math.max(220, rows.length * 32 + 80) + 'px';
+    if (wrap) wrap.style.height = hbarHeight(rows.length, 80, 220) + 'px';
     ctx.style.maxHeight = 'none';
-    effFulfilCombined = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: rows.map(r => r.dept), datasets: [
-        { label: 'Joined', data: rows.map(r => r.sum.joined), backgroundColor: FULFIL_COLORS.joined, stack: 'p', borderWidth: 0 },
-        { label: 'Joining Pending', data: rows.map(r => r.sum.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
-        { label: 'Delta', data: rows.map(r => Math.max(0, r.sum.gap)), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
-      ] },
-      options: fulfilStackOpts('Positions')
-    });
-  }
 
-  // Per-department chart: Y = job, each bar stacked Joined / Pending / Gap to Total Positions.
-  function fulfilDeptCfg({ jobs }) {
-    if (!jobs.length) return null;
-    const js = jobs.slice(0, 12);
-    return {
-      _h: Math.max(130, js.length * 26 + 70),
-      type: 'bar',
-      data: { labels: js.map(x => x.j.title), datasets: [
-        { label: 'Joined', data: js.map(x => x.sp.joined), backgroundColor: FULFIL_COLORS.joined, stack: 'p', borderWidth: 0 },
-        { label: 'Joining Pending', data: js.map(x => x.sp.pending), backgroundColor: FULFIL_COLORS.pending, stack: 'p', borderWidth: 0 },
-        { label: 'Delta', data: js.map(x => Math.max(0, x.sp.gap)), backgroundColor: FULFIL_COLORS.gap, stack: 'p', borderWidth: 0 }
-      ] },
-      options: fulfilStackOpts('Positions')
+    // Per department: roles ordered by how much of the bar they own, capped at FULFIL_SLOTS with the tail
+    // pooled — so every position in the table still appears in the bar.
+    const val = (sp, m) => m === 'gap' ? Math.max(0, sp.gap) : (sp[m] || 0);
+    const size = (sp) => val(sp, 'joined') + val(sp, 'pending');
+    const perDept = rows.map(r => {
+      const js = [...(r.jobs || [])].filter(x => size(x.sp) > 0).sort((a, b) => size(b.sp) - size(a.sp));
+      const head = js.slice(0, FULFIL_SLOTS), tail = js.slice(FULFIL_SLOTS);
+      const slots = head.map(x => ({ title: x.j.title, sp: x.sp }));
+      if (tail.length) slots.push({
+        title: `${tail.length} other role${tail.length > 1 ? 's' : ''}`,
+        sp: tail.reduce((a, x) => ({ joined: a.joined + val(x.sp, 'joined'), pending: a.pending + val(x.sp, 'pending'), gap: a.gap + val(x.sp, 'gap') }), { joined: 0, pending: 0, gap: 0 })
+      });
+      return slots;
+    });
+    const nSlots = Math.max(1, ...perDept.map(x => x.length));
+
+    // ⚠ Only Joined and Joining Pending are split by role. Delta is drawn as ONE band per department, on the
+    // department's own figure — because Delta can be negative and the table clamps it at the DEPARTMENT
+    // level. Clamping it per role instead let a −5 role and a +5 role cancel in the table but both count in
+    // the chart, and the bar total stopped matching the row (SME - India read 53 against the table's 48).
+    const METRICS = [
+      { key: 'joined', label: 'Joined', color: FULFIL_COLORS.joined, split: true },
+      { key: 'pending', label: 'Joining Pending', color: FULFIL_COLORS.pending, split: true },
+      { key: 'gap', label: 'Delta', color: FULFIL_COLORS.gap, split: false }
+    ];
+    const datasets = [];
+    METRICS.forEach(M => {
+      if (!M.split) {
+        const data = rows.map(r => Math.max(0, r.sum.gap));
+        if (data.some(v => v > 0)) datasets.push({
+          label: M.label, _m: M.key, _slot: 0, _titles: rows.map(() => 'across the department'),
+          data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR
+        });
+        return;
+      }
+      for (let k = 0; k < nSlots; k++) {
+        const data = perDept.map(slots => slots[k] ? val(slots[k].sp, M.key) : 0);
+        if (!data.some(v => v > 0)) continue;
+        datasets.push({
+          label: M.label, _m: M.key, _slot: k,
+          _titles: perDept.map(slots => slots[k] ? slots[k].title : ''),
+          data, backgroundColor: shadeOf(M.color, k, nSlots), stack: 'p', borderWidth: 0, ...HBAR
+        });
+      }
+    });
+
+    const opts = fulfilStackOpts('Positions');
+    opts.plugins.legend = {
+      position: 'top', align: 'end',
+      labels: {
+        usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 10 }, padding: 8,
+        generateLabels: (chart) => METRICS.map(M => ({
+          text: M.label, fillStyle: M.color, strokeStyle: M.color, lineWidth: 0,
+          hidden: !chart.data.datasets.some((d, i) => d._m === M.key && chart.isDatasetVisible(i)),
+          _m: M.key
+        }))
+      },
+      onClick: (e, item, legend) => {
+        const chart = legend.chart;
+        const on = chart.data.datasets.some((d, i) => d._m === item._m && chart.isDatasetVisible(i));
+        chart.data.datasets.forEach((d, i) => { if (d._m === item._m) chart.setDatasetVisibility(i, !on); });
+        chart.update();
+      }
     };
+    opts.plugins.tooltip = {
+      // Dozens of datasets means dozens of tooltip rows, nearly all of them zero. Show only the bands that
+      // actually carry something, named by their role.
+      filter: (it) => (it.parsed.x || 0) > 0,
+      callbacks: {
+        label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} — ${it.dataset.label}: ${it.parsed.x}`,
+        footer: (items) => items.length ? `Total positions: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}` : ''
+      }
+    };
+
+    effFulfilCombined = new Chart(ctx, { type: 'bar', data: { labels: rows.map(r => r.dept), datasets }, options: opts });
   }
 
   // Per-department chart: Y = job, bars = Offered / Hired score for that job.
@@ -1515,7 +1556,7 @@ export function initEfficiencyFilters(data) {
     if (!types.length || !totalAll) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = 'No source data for the current filter.'; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = 'Nobody joined under the current filter, so there is no source mix to show.'; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
@@ -1524,9 +1565,13 @@ export function initEfficiencyFilters(data) {
     const nameTotals = {}; types.forEach(t => { for (const nm in agg[t]) nameTotals[nm] = (nameTotals[nm] || 0) + agg[t][nm]; });
     const topNames = Object.entries(nameTotals).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]);
     const topSet = new Set(topNames);
-    const datasets = topNames.map((nm, i) => ({ label: nm, data: typeLabels.map(t => (agg[t] && agg[t][nm]) || 0), backgroundColor: SRC_PALETTE[i % SRC_PALETTE.length], stack: 's', borderWidth: 0 }));
+    const datasets = topNames.map((nm, i) => ({ label: nm, data: typeLabels.map(t => (agg[t] && agg[t][nm]) || 0), backgroundColor: SRC_PALETTE[i % SRC_PALETTE.length], stack: 's', borderWidth: 0, ...HBAR }));
     const otherData = typeLabels.map(t => Object.entries(agg[t]).reduce((s, [nm, c]) => s + (topSet.has(nm) ? 0 : c), 0));
-    if (otherData.some(v => v > 0)) datasets.push({ label: 'Other', data: otherData, backgroundColor: '#cbd5e1', stack: 's', borderWidth: 0 });
+    // ⚠ Not keyed on the string 'Other': Ashby has a real source NAME of its own that could collide. This
+    // bucket is the leftover names beyond the top 12, and is labelled so.
+    if (otherData.some(v => v > 0)) datasets.push({ label: 'All other sources', data: otherData, backgroundColor: '#cbd5e1', stack: 's', borderWidth: 0, ...HBAR });
+    const hSrc = hbarHeight(typeLabels.length, 130);
+    if (wrap) wrap.style.height = hSrc + 'px'; ctx.style.maxHeight = hSrc + 'px';
     effSourceChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: typeLabels, datasets },
@@ -1537,7 +1582,7 @@ export function initEfficiencyFilters(data) {
           tooltip: { callbacks: { label: (c) => (c.dataset.label || '') + ': ' + c.parsed.x } }
         },
         scales: {
-          x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+          x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } }, title: { display: true, text: 'Joiners', font: { size: 11 }, color: '#64748b' } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } }
         }
       }
