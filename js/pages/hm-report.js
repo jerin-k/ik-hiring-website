@@ -1,6 +1,7 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
+import { HBAR, hbarHeight } from '../chart-style.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -170,6 +171,7 @@ export function renderHmReport(data) {
 
       /* tidy, evenly spaced stage checkbox strip */
       .hm-stages { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:2px 0 14px; }
+      .hm-stages > label.stage-toggle { margin-left:auto; color:var(--muted); }
       .hm-stages > span.lbl { font-size:11px; color:var(--muted); }
       .hm-stages label { font-size:11px; display:flex; align-items:center; gap:5px; cursor:pointer; }
     </style>
@@ -205,6 +207,9 @@ export function renderHmReport(data) {
       ${defsBlock('hm-positions')}
       <div class="cards" id="hm1Cards"></div>
 
+      <h3 class="subsection-title">Positions by department</h3>
+      <div class="chart-wrap" id="hm1ChartWrap" style="height:340px"><canvas id="hm1Chart"></canvas></div>
+
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary">
@@ -212,10 +217,8 @@ export function renderHmReport(data) {
         <tbody id="hm1Body"></tbody>
       </table></div>
 
-      <div class="chart-wrap" id="hm1ChartWrap" style="height:340px"><canvas id="hm1Chart"></canvas></div>
-
       <h3 class="subsection-title">Joining Pending — Cases</h3>
-      <p class="sub-note">Individual candidates in Ref Check, Documentation, or Offer stage. This table lists everyone currently pending joining — the page date/quarter filter does not apply here.</p>
+      <p class="sub-note"><strong>Live</strong> — everyone with an offer in play right now. The page date filter does not apply to this list.</p>
       <div class="filter-bar">
         <select id="hmJPMonth"><option value="">All DOJ Months</option>${jpMonths.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
         <span style="font-size:11px;color:var(--muted)">DOJ</span>
@@ -232,15 +235,12 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
-      <p class="sub-note">In = candidates who entered the stage, Out = candidates who moved past it — counted from real stage transitions in the selected period. Click a department to drill in.</p>
       ${defsBlock('hm-throughput')}
-      <p class="sub-note">In = candidates who entered stage (cumulative). Out = candidates who moved past it. Throughput = Out/In %. Overall = R1 In → Doc Submission In.</p>
-      <div class="filter-bar">
-        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
-      </div>
+      <p class="sub-note">Click a department to drill in.</p>
       <div class="hm-stages">
         <span class="lbl">Stages:</span>
         ${TP_KEYS.map(k => `<label><input type="checkbox" class="hm2Stage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('\n        ')}
+        <label class="stage-toggle"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="scroll-table"><table id="hm2Table">
         <thead id="hm2Head"></thead>
@@ -252,7 +252,6 @@ export function renderHmReport(data) {
       <div class="chart-wrap" style="height:300px"><canvas id="hm2Chart"></canvas></div>
 
       <h3 class="subsection-title">Pipeline Funnel — Total</h3>
-      <p class="sub-note">Candidates who reached each stage, aggregated across the jobs matching the filters above.</p>
       <div class="chart-wrap" id="hm2FunnelWrap" style="height:360px"><canvas id="hm2Funnel"></canvas></div>
     </div>
 
@@ -260,12 +259,10 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="pipeline" style="display:none">
       ${defsBlock('hm-pipeline')}
       <p class="sub-note" style="color:var(--orange)">Live snapshot — counts show where candidates stand <strong>today</strong>, so the date filter does not change them. It does decide <strong>which roles are listed</strong>: only those with an opening in the selected period. Click a department to drill in.</p>
-      <div class="filter-bar">
-        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
-      </div>
       <div class="hm-stages">
         <span class="lbl">Stages:</span>
         ${STAGES_ORDER.map(k => `<label><input type="checkbox" class="hm3Stage" value="${k}" checked> ${STAGE_LABELS[k]}</label>`).join('\n        ')}
+        <label class="stage-toggle"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="scroll-table"><table id="hm3Table">
         <thead id="hm3Head"></thead>
@@ -276,7 +273,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: PANELISTS ===== -->
     <div class="hm-panel" data-panel="panelists" style="display:none">
       ${defsBlock('hm-panelists')}
-      <p class="sub-note">Interview load per panelist for the selected period. Click a department to expand. Feedback turnaround is all-time — it isn't broken down by quarter.</p>
+      <p class="sub-note">Click a department to expand.</p>
       <div class="filter-bar">
         <div class="ms" id="msHmPanel"></div>
       </div>
@@ -550,7 +547,7 @@ export function initHmFilters(data) {
     if (hm1ChartInstance) hm1ChartInstance.destroy();
     const ctx1 = document.getElementById('hm1Chart');
     if (ctx1) {
-      const h = Math.max(220, cDepts.length * 38 + 60);
+      const h = hbarHeight(cDepts.length, 60, 220);
       const wrap = document.getElementById('hm1ChartWrap');
       if (wrap) wrap.style.height = h + 'px';
       ctx1.style.maxHeight = h + 'px';   // override .chart-wrap canvas { max-height:300px } so the canvas fills the wrap
@@ -559,9 +556,9 @@ export function initHmFilters(data) {
         data: {
           labels: cDepts,
           datasets: [
-            { label: 'Joined', data: cDepts.map(d => groups[d].joined), backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.7 },
-            { label: 'Missed', data: cDepts.map(d => groups[d].missed), backgroundColor: '#b45a72', borderRadius: 4, barPercentage: 0.7 }   // pastel --red, not the pre-2026-08-09 crimson
+            { label: 'Joined', data: cDepts.map(d => groups[d].joined), backgroundColor: '#398AA2', borderRadius: 4, ...HBAR },
+            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, ...HBAR },
+            { label: 'Missed', data: cDepts.map(d => groups[d].missed), backgroundColor: '#b45a72', borderRadius: 4, ...HBAR }   // pastel --red, not the pre-2026-08-09 crimson
           ]
         },
         options: {
@@ -569,7 +566,7 @@ export function initHmFilters(data) {
           layout: { padding: { top: 4 } },
           plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } } },
           scales: {
-            x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions / Candidates', font: { size: 11 }, color: '#64748b' } },
+            x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions', font: { size: 11 }, color: '#64748b' } },
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
           }
         }
@@ -736,7 +733,7 @@ export function initHmFilters(data) {
         type: 'bar',
         data: { labels: funnel.map(f => f.label), datasets: [{
           label: 'Reached', data: funnel.map(f => [-f.value / 2, f.value / 2]),
-          backgroundColor: '#4E6BA6', borderRadius: 3, barPercentage: 0.85
+          backgroundColor: '#4E6BA6', borderRadius: 3, ...HBAR
         }] },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
