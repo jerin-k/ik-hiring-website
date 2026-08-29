@@ -301,6 +301,13 @@ export function buildDumbbell(ctx, rows, opts = {}) {
   } = opts;
   const max = Math.max(1, ...rows.map(r => r.added));
   const rate = (r) => r.added > 0 ? Math.round((r.progressed / r.added) * 100) : null;
+  // The connecting line is coloured by the conversion band, so the bar itself says how the stage went
+  // rather than being neutral grey (Jerin, 2026-08-30: "a lil more colourful, though with pastels itself").
+  // Pastel on purpose — these sit next to the site's own muted palette, they do not compete with it.
+  const BAND = { good: '#8FBDB4', watch: '#E3C79A', act: '#E0AAB6', none: '#dbe3ea' };
+  const bandOf = (r) => { const v = rate(r); return v == null ? BAND.none : (v >= 50 ? BAND.good : (v >= 20 ? BAND.watch : BAND.act)); };
+  const DOT_FROM = '#938FB8';   // added — the muted violet from the site palette
+  const DOT_TO = '#398AA2';     // progressed — Blue Munsell, the same green the tables use for a good outcome
 
   const marks = {
     id: 'dumbbellMarks',
@@ -318,14 +325,14 @@ export function buildDumbbell(ctx, rows, opts = {}) {
         const bar = meta.data[i]; if (!bar) return;
         const y = bar.y, xa = x.getPixelForValue(r.added), xp = x.getPixelForValue(r.progressed);
         // progressed: solid, with its number inside when the dot is big enough to hold it
-        c.beginPath(); c.arc(xp, y, 8, 0, Math.PI * 2); c.fillStyle = solid; c.fill();
+        c.beginPath(); c.arc(xp, y, 8, 0, Math.PI * 2); c.fillStyle = DOT_TO; c.fill();
         c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
         c.fillStyle = '#fff';
         if (r.progressed > 0) c.fillText(String(r.progressed), xp, y);
         // added: hollow, its number outside on the axis side
         c.beginPath(); c.arc(xa, y, 8, 0, Math.PI * 2);
         c.fillStyle = '#fff'; c.fill();
-        c.lineWidth = 2; c.strokeStyle = solid; c.stroke();
+        c.lineWidth = 2.5; c.strokeStyle = DOT_FROM; c.stroke();
         c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
         c.fillStyle = '#334155'; c.textAlign = 'right';
         c.fillText(String(r.added), xa - 13, y);
@@ -349,7 +356,7 @@ export function buildDumbbell(ctx, rows, opts = {}) {
       datasets: [{
         label: `${fromLabel} → ${toLabel}`,
         data: rows.map(r => [Math.min(r.added, r.progressed), Math.max(r.added, r.progressed)]),
-        backgroundColor: link, borderWidth: 0, borderRadius: 3,
+        backgroundColor: rows.map(bandOf), borderWidth: 0, borderRadius: 3,
         barPercentage: 0.16, categoryPercentage: HBAR.categoryPercentage
       }]
     },
@@ -361,7 +368,21 @@ export function buildDumbbell(ctx, rows, opts = {}) {
       interaction: { axis: 'y', mode: 'index', intersect: false },
       plugins: {
         valueLabels: false, stackTotals: false,
-        legend: { display: false },
+        // ⚠ A dumbbell has one dataset, so Chart.js would draw one meaningless legend entry. These two are
+        // synthetic and describe the DOTS — hollow and solid — which is the thing a reader needs the key
+        // for. Circles here rather than the site's usual squares because the marks themselves are circles;
+        // a square key next to a round dot is worse than the inconsistency.
+        legend: {
+          position: 'top', align: 'center',
+          labels: {
+            usePointStyle: true, boxWidth: 10, boxHeight: 10, padding: 16, font: { size: 12 },
+            generateLabels: () => [
+              { text: fromLabel, pointStyle: 'circle', fillStyle: '#fff', strokeStyle: DOT_FROM, lineWidth: 2.5, hidden: false },
+              { text: toLabel, pointStyle: 'circle', fillStyle: DOT_TO, strokeStyle: DOT_TO, lineWidth: 0, hidden: false }
+            ]
+          },
+          onClick: () => {}   // nothing to toggle — both marks come from the same dataset
+        },
         tooltip: {
           callbacks: {
             title: (items) => rows[items[0].dataIndex].label,
