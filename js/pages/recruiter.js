@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
-import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, metricGroupLabels, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -2182,7 +2182,7 @@ export function initRecruiterFilters(data) {
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [labelPlugin, metricGroupLabels(SCREEN_METRICS)]
+      plugins: [labelPlugin, roleBandOverlay(SCREEN_METRICS)]
     });
   }
   function buildJoinChart() {
@@ -2255,7 +2255,7 @@ export function initRecruiterFilters(data) {
             footer: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
           legend: metricLegend(JC_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }) },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
-      plugins: [endLabels, metricGroupLabels(JC_METRICS)] });
+      plugins: [endLabels, roleBandOverlay(JC_METRICS)] });
   }
   // Fulfilment chart, rebuilt 2026-08-29 to Jerin's spec: "let target be the Goal, instead of capacity...
   // let capacity be a marker on the bar, like a finishing line of sorts. Even when Target is less than
@@ -2305,7 +2305,7 @@ export function initRecruiterFilters(data) {
           const bar = meta.data[i]; if (!bar) return;
           const half = (bar.height || 18) / 2;
           const y0 = bar.y - half, y1 = bar.y + half;
-          // The Achieved number is drawn by metricGroupLabels now — once across all of its role bands,
+          // The Achieved number is drawn by roleBandOverlay now — once across all of its role bands,
           // rather than inside the first band only.
           // GOAL — the target. Solid slate line, labelled above the bar.
           if (r.goal > 0) {
@@ -2368,7 +2368,7 @@ export function initRecruiterFilters(data) {
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [markers, metricGroupLabels(FUL_METRICS)]
+      plugins: [markers, roleBandOverlay(FUL_METRICS)]
     });
   }
   function buildSourceChart() {

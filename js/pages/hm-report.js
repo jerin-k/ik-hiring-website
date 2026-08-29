@@ -1,7 +1,7 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
-import { HBAR, hbarHeight, roleBandDatasets, metricGroupLabels, roleBandTooltip, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleBandTooltip, metricLegend } from '../chart-style.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -588,7 +588,7 @@ export function initHmFilters(data) {
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
           }
         },
-        plugins: [metricGroupLabels(METRICS)]
+        plugins: [roleBandOverlay(METRICS)]
       });
     }
   }
