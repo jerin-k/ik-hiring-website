@@ -216,28 +216,27 @@ export const DEFINITIONS = {
   },
   'rec-screening': {
     summary: 'How these numbers are worked out',
-    intro: 'How much of what arrives at a stage actually moves on, from real stage transitions, scoped to the period selected at the top of the tab.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · period scoping 26 Aug 2026',
+    intro: 'What happens to candidates once they reach <strong>R1</strong> \u2014 how many were put into an R1 round, and how many went further.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['The three stages', 'HM Screening, Online Assessment and R1 — the ones a recruiter drives. Each has its own Added, Cleared and % beneath it.'],
-          ['Added', 'Arrivals <strong>into</strong> the stage during the period. It counts arrivals, not people — a candidate sent back through a stage counts each time they arrive.'],
-          ['Cleared', 'Departures <strong>out</strong> of it — they reached the next stage.'],
-          ['The period', 'Whatever the Year and Quarter boxes say. Leave Quarter on <em>All</em> and you get the whole year; the line above the table always names the period being shown.'],
-          ['%', 'Cleared ÷ Added. What share of the queue got moved on.'],
-          ['Rows', 'Pod \u2192 Recruiter \u2192 the roles behind each recruiter\u2019s numbers. Only roles that actually moved somebody in the period are listed \u2014 a recruiter\u2019s older roles are not shown as a row of zeros.'],
-          ['Chart', 'Three bars per recruiter, one per stage, tagged HM / OA / R1 at the left. Each bar is the same two things: the solid part moved forward, the pale part is still sitting at that stage, and together they are how many arrived.'],
+          ['Added at R1', 'The candidate was <strong>actioned at R1</strong>, by either route: an <strong>interview was scheduled</strong> at R1, or an <strong>assignment was triggered</strong> while they were sitting at R1. Either one counts; somebody with both counts once. Dated by when the interview was booked, or when the assignment went out.'],
+          ['Progressed', 'Of those, the ones who reached <strong>R2 or beyond</strong> \u2014 any later round, Reference Check, Documentation or Offer \u2014 on or after that day.'],
+          ['%', 'Progressed \u00f7 Added at R1.'],
+          ['Rows', 'Pod \u2192 Recruiter \u2192 Role. Only roles that actually saw R1 activity in the period are listed \u2014 a recruiter\u2019s older roles are not shown as a row of zeros.'],
+          ['Counted once', 'One count per candidate per role per quarter, however many times they were booked or re-booked. Cancelled interviews and cancelled assignments do not count at all.'],
+          ['Chart', 'One bar per recruiter: the solid part progressed past R1, the pale part is still sitting at R1, and the two together are how many were added. The number at the end of each bar is the total and the percentage.'],
         ]
       },
     ],
     warnings: [
-      ['Added and Cleared can belong to different people', 'Someone entering the stage in March and clearing it in April is counted in whichever quarter each event happened. Over a short window the percentage can exceed 100%.'],
-      ['Online Assessment volumes are small', 'Real, but thin — of the order of a hundred arrivals a quarter across the whole company, against a few hundred for R1. A single recruiter’s OA percentage can swing on one or two people.'],
+      ['This will not match the old per-stage numbers', 'The panel used to show HM Screening, Online Assessment and R1 side by side, counting stage ENTRIES \u2014 which counted a candidate again every time they came back round. This counts people once, off the action taken. The figures are not comparable.'],
+      ['It will not match Momentum\u2019s R1 either', 'Momentum only credits R1 when it was the candidate\u2019s <em>first</em> signal into the funnel. Here every R1 action counts, including candidates who arrived through HM Screening earlier. Momentum\u2019s R1 is a subset of this one.'],
+      ['HM Screening and Online Assessment are not on this panel', 'By design \u2014 this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
     ]
   },
-
   'rec-joining': {
     summary: 'How these numbers are worked out',
     intro: 'Everyone who reached an offer, and what became of them. <strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes.',
