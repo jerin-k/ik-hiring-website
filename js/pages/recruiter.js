@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
-import { HBAR, hbarHeight, CONV_PAD, drawConvColumn } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, metricGroupLabels, metricLegend } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -1072,6 +1072,10 @@ export function initRecruiterFilters(data) {
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
           const jobs = (r.byJob || []).slice().sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
+          // The role split the Fulfilment chart shades its Achieved band with (Jerin, 2026-08-29). Collected
+          // HERE, from the very rows the table prints, so the chart cannot end up on a different basis —
+          // this chart has been on the wrong basis twice before.
+          const roleAch = [];
           if (jobs.length) {
             jobs.forEach(bj => {
               const m = jobMeta(bj), sc = scoreForRole(m, q);
@@ -1088,6 +1092,7 @@ export function initRecruiterFilters(data) {
               const jv = { aHC: seats, aSc: seats * sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
                            dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
                            gHC: Math.max(0, seats - juHC), gSc: Math.max(0, seats * sc - juSc) };
+              roleAch.push({ title: m.title || '(untitled)', achievedSc: Math.round(juSc) });
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
             });
@@ -1095,6 +1100,7 @@ export function initRecruiterFilters(data) {
             html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
               <td style="padding-left:52px;color:var(--muted);font-style:italic">No jobs attributed</td>${`<td>${DASH}</td>`.repeat(ncol - 1)}</tr>`;
           }
+          if (lastFulfil[r.name]) lastFulfil[r.name].roles = roleAch;
         });
       });
       return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters in this group.</td></tr>`;
@@ -1419,29 +1425,39 @@ export function initRecruiterFilters(data) {
   //    inventing a fifth definition of Joining Pending. The definitions block says both of these on screen.
   function convMaps(q) {
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const byRec = {};
-    const bump = (rec, key) => { const a = byRec[rec] || (byRec[rec] = { o: 0, j: 0, p: 0, dr: 0 }); a[key] += 1; };
+    const byRec = {}, byRecJob = {};
+    // byRecJob carries the same three counts one level down, per ROLE, so the chart can shade each band by
+    // role (Jerin, 2026-08-29) without recomputing anything the table did not.
+    const bump = (rec, key, title) => {
+      const a = byRec[rec] || (byRec[rec] = { o: 0, j: 0, p: 0, dr: 0 });
+      a[key] += 1;
+      const t = title || '(no role recorded)';
+      const m = byRecJob[rec] || (byRecJob[rec] = {});
+      const b = m[t] || (m[t] = { o: 0, j: 0, p: 0, dr: 0 });
+      b[key] += 1;
+    };
     // Joined - people, by start date, minus last quarter's carry-over.
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
       if (!e.accepted || qOf(e.startDate) !== q) return;
       if (e.openingQuarter && e.openingQuarter < q) return;
-      bump(rec, 'j');
+      bump(rec, 'j', e.jobTitle);
     });
     // Joining Pending - identical rule to the HM Positions card, and LIVE.
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
       if (c.openingQuarter && c.openingQuarter < q) return;
-      bump(rec, 'p');
+      bump(rec, 'p', c.job || c.jobTitle);
     });
     // Dropped - the one unified list, shared with HM and both Fulfilment tables.
     dropRows(data).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
       if (e.quarter !== q) return;
-      bump(rec, 'dr');
+      bump(rec, 'dr', e.job || e.jobTitle);
     });
     Object.values(byRec).forEach(a => { a.o = a.j + a.p + a.dr; });
-    return { byRec };
+    Object.values(byRecJob).forEach(m => Object.values(m).forEach(a => { a.o = a.j + a.p + a.dr; }));
+    return { byRec, byRecJob };
   }
 
   function outcomeMaps(q) {
@@ -2078,7 +2094,19 @@ export function initRecruiterFilters(data) {
       keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
       return acc;
     };
-    const recs = store ? [...lastRecs].map(r => ({ name: r.name, ...sumFor(r.name) }))
+    // Per-JOB detail for the role gradient inside each band (Jerin, 2026-08-29). Same store the table reads.
+    const jobStore = (data.stageRollups && data.stageRollups.r1ByRecruiterJob) || null;
+    const jobTitleOfR1 = {}; (data.jobs || []).forEach(j => { jobTitleOfR1[String(j.id).slice(0, 8)] = j.title; });
+    const jobsFor = (name) => {
+      const mine = jobStore && jobStore[name]; if (!mine) return [];
+      return Object.keys(mine).map(j8 => {
+        const byQ = mine[j8]; const acc = { added: 0, cleared: 0 };
+        const keys = (per && per.length) ? per : Object.keys(byQ || {});
+        keys.forEach(qq => { const c = byQ && byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
+        return { title: jobTitleOfR1[j8] || j8, v: acc };
+      }).filter(x => x.v.added > 0);
+    };
+    const recs = store ? [...lastRecs].map(r => ({ name: r.name, ...sumFor(r.name), per: jobsFor(r.name) }))
       .filter(r => r.added > 0).sort((a, b) => b.added - a.added) : [];
     if (!recs.length) {
       ctx.style.display = 'none';
@@ -2087,8 +2115,15 @@ export function initRecruiterFilters(data) {
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
-    const moved = recs.map(r => r.cleared);
-    const still = recs.map(r => Math.max(0, r.added - r.cleared));
+    const SCREEN_METRICS = [
+      { key: 'moved', label: 'Progressed past R1', color: SCREEN_SOLID },
+      { key: 'still', label: 'Still at R1', color: SCREEN_PALE }
+    ];
+    const screenRows = recs.map(r => ({
+      label: r.name,
+      sum: { moved: r.cleared, still: Math.max(0, r.added - r.cleared) },
+      jobs: (r.per || []).map(x => ({ title: x.title, v: { moved: x.v.cleared, still: Math.max(0, x.v.added - x.v.cleared) } }))
+    }));
     // Bar thickness matches the Fulfilment chart (Jerin, 2026-08-29) — 46px a row, same bar/category split.
     const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
@@ -2099,7 +2134,7 @@ export function initRecruiterFilters(data) {
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const mMeta = chart.getDatasetMeta(0), eMeta = chart.getDatasetMeta(1);
+        const eMeta = chart.getDatasetMeta(chart.data.datasets.length - 1);
         // The percentage sits in its own column at the far right of the plot area — square under a heading,
         // rather than floating wherever each bar happens to end (Jerin, 2026-08-29). The count stays with
         // the bar, because that one belongs to the bar's length.
@@ -2110,16 +2145,14 @@ export function initRecruiterFilters(data) {
         c.fillText('PROGRESSED', colX, chart.chartArea.top - 10);
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
         recs.forEach((r, i) => {
-          const bar = mMeta.data[i]; if (!bar) return;
-          if (r.cleared > 0 && (bar.x - bar.base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.cleared), (bar.base + bar.x) / 2, bar.y); }
-          const end = eMeta.data[i];
-          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
+          const end = eMeta.data[i]; if (!end) return;
+          if (r.added > 0) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
           if (r.added > 0) {
             const v = pct(r.cleared, r.added);
             c.textAlign = 'center';
             c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
             c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText(v + '%', colX, bar.y);
+            c.fillText(v + '%', colX, end.y);
             c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
           }
         });
@@ -2129,20 +2162,18 @@ export function initRecruiterFilters(data) {
 
     recScreenChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Progressed past R1', data: moved, backgroundColor: SCREEN_SOLID, stack: 'r1', borderRadius: 2, ...HBAR },
-        { label: 'Still at R1', data: still, backgroundColor: SCREEN_PALE, stack: 'r1', borderRadius: 2, ...HBAR }
-      ] },
+      data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(screenRows, SCREEN_METRICS, { borderRadius: 2 }) },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
         plugins: {
           valueLabels: false, stackTotals: false,
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
-          tooltip: { callbacks: {
+          legend: metricLegend(SCREEN_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
+          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
+            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
             footer: (items) => {
               if (!items.length) return '';
               const r = recs[items[0].dataIndex];
-              return `Added at R1: ${r.added} · progressed ${pct(r.cleared, r.added)}%`;
+              return `Added at R1: ${r.added} \u00b7 progressed ${pct(r.cleared, r.added)}%`;
             }
           } }
         },
@@ -2151,7 +2182,7 @@ export function initRecruiterFilters(data) {
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [labelPlugin]
+      plugins: [labelPlugin, metricGroupLabels(SCREEN_METRICS)]
     });
   }
   function buildJoinChart() {
@@ -2179,26 +2210,33 @@ export function initRecruiterFilters(data) {
     const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    const seg = (arr, i, meta, colour) => ({ arr, i, meta, colour });
-    const labelPlugin = {
+    // Each of Joined / Joining Pending / Dropped is split into the ROLES behind it, in shades of its colour
+    // (Jerin, 2026-08-29). The metric's own number is kept, drawn once across its bands rather than on
+    // every band; the role name is in the tooltip.
+    const JC_METRICS = [
+      { key: 'j', label: 'Joined', color: C.green },
+      { key: 'p', label: 'Joining Pending', color: '#C9A227' },
+      { key: 'dr', label: 'Dropped', color: '#b45a72' }
+    ];
+    const jcRows = recs.map(r => {
+      const per = CMc.byRecJob && CMc.byRecJob[r.name] ? CMc.byRecJob[r.name] : {};
+      const v = cOfC(r.name);
+      return {
+        label: r.name,
+        sum: { j: v.j, p: v.p, dr: v.dr },
+        jobs: Object.keys(per).map(title => ({ title, v: per[title] }))
+      };
+    });
+    const endLabels = {
       id: 'joinLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        [[0, joined], [1, pending], [2, dropped]].forEach(([di, arr]) => {
-          const meta = chart.getDatasetMeta(di);
-          meta.data.forEach((bar, i) => {
-            if (arr[i] > 0 && (bar.x - bar.base) > 20) {
-              c.fillStyle = '#fff'; c.textAlign = 'center';
-              c.fillText(String(arr[i]), (bar.base + bar.x) / 2, bar.y);
-            }
-          });
-        });
         // Offered sits at the end of the bar; the Joining Conversion is its own labelled column at the
         // right edge (Jerin, 2026-08-29), so it reads straight down like a table column instead of as a
         // suffix on each bar. Same arithmetic as the table's column — (Joined + Joining Pending) / Offered
         // — read off the same convMaps.
-        const last = chart.getDatasetMeta(2);
+        const last = chart.getDatasetMeta(chart.data.datasets.length - 1);
         last.data.forEach((bar, i) => {
           c.textAlign = 'left';
           c.fillStyle = '#334155';
@@ -2209,16 +2247,15 @@ export function initRecruiterFilters(data) {
       }
     };
     recJoinChart = new Chart(ctx, { type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, ...HBAR },
-        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, ...HBAR },
-        { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, ...HBAR }] },
+      data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(jcRows, JC_METRICS, { borderRadius: 2 }) },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: CONV_PAD + 34, top: 20 } },
         plugins: { valueLabels: false, stackTotals: false,
-          tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
+          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
+            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
+            footer: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
+          legend: metricLegend(JC_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }) },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
-      plugins: [labelPlugin] });
+      plugins: [endLabels, metricGroupLabels(JC_METRICS)] });
   }
   // Fulfilment chart, rebuilt 2026-08-29 to Jerin's spec: "let target be the Goal, instead of capacity...
   // let capacity be a marker on the bar, like a finishing line of sorts. Even when Target is less than
@@ -2237,7 +2274,7 @@ export function initRecruiterFilters(data) {
       const f = lastFulfil[r.name];
       if (!f) return null;
       const goal = Math.round(f.goalSc || 0), cap = Math.round(f.capSc || 0), achieved = Math.round(f.achievedSc || 0);
-      return { name: r.name, goal, cap, achieved, short: Math.max(0, goal - achieved) };
+      return { name: r.name, goal, cap, achieved, short: Math.max(0, goal - achieved), roles: f.roles || [] };
     }).filter(r => r && (r.goal > 0 || r.cap > 0 || r.achieved > 0))
       .sort((a, b) => b.achieved - a.achieved);
     const wrap = ctx.parentElement;
@@ -2268,11 +2305,8 @@ export function initRecruiterFilters(data) {
           const bar = meta.data[i]; if (!bar) return;
           const half = (bar.height || 18) / 2;
           const y0 = bar.y - half, y1 = bar.y + half;
-          // value inside the achieved segment
-          if (r.achieved > 0 && (bar.x - bar.base) > 22) {
-            c.fillStyle = '#fff'; c.textAlign = 'center';
-            c.fillText(String(r.achieved), (bar.base + bar.x) / 2, bar.y);
-          }
+          // The Achieved number is drawn by metricGroupLabels now — once across all of its role bands,
+          // rather than inside the first band only.
           // GOAL — the target. Solid slate line, labelled above the bar.
           if (r.goal > 0) {
             const gx = x.getPixelForValue(r.goal);
@@ -2295,28 +2329,36 @@ export function initRecruiterFilters(data) {
       }
     };
 
+    // Achieved is split into the ROLES behind it, in shades of the metric colour (Jerin, 2026-08-29), read
+    // from the role scores the TABLE recorded. Short-of-Goal is deliberately NOT split: it is a residual
+    // against the goal, not something any single role owns — the same reason Delta stays whole elsewhere.
+    const FUL_METRICS = [
+      { key: 'achieved', label: 'Achieved (Score)', color: C.green },
+      { key: 'short', label: 'Short of Goal (Score)', color: C.amber, split: false }
+    ];
+    const fulRows = recs.map(r => ({
+      label: r.name,
+      sum: { achieved: r.achieved, short: r.short },
+      jobs: (r.roles || []).filter(x => x.achievedSc > 0).map(x => ({ title: x.title, v: { achieved: x.achievedSc } }))
+    }));
     recFulfilChart = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: recs.map(r => r.name),
-        datasets: [
-          { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, ...HBAR },
-          { label: 'Short of Goal (Score)', data: recs.map(r => r.short), backgroundColor: C.amber, stack: 'f', borderRadius: 2, ...HBAR }
-        ]
-      },
+      data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(fulRows, FUL_METRICS, { borderRadius: 2 }) },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 40, top: 8, bottom: 8 } },
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 40, top: 20, bottom: 8 } },
         plugins: {
           valueLabels: false, stackTotals: false,
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
+          legend: metricLegend(FUL_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
           tooltip: {
+            filter: (it) => (it.parsed.x || 0) > 0,
             callbacks: {
+              label: (it) => `${it.dataset._titles[it.dataIndex] || 'across the quarter'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
               afterBody: (items) => {
                 if (!items.length) return '';
                 const r = recs[items[0].dataIndex];
                 const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
                 const vs = r.goal > 0 ? (r.achieved >= r.goal ? `${r.achieved - r.goal} past goal` : `${r.goal - r.achieved} short of goal`) : 'no goal this quarter';
-                return [`Goal ${r.goal} · Capacity ${r.cap}`, vs, util];
+                return [`Goal ${r.goal} \u00b7 Capacity ${r.cap}`, vs, util];
               }
             }
           }
@@ -2326,7 +2368,7 @@ export function initRecruiterFilters(data) {
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [markers]
+      plugins: [markers, metricGroupLabels(FUL_METRICS)]
     });
   }
   function buildSourceChart() {

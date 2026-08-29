@@ -3,7 +3,7 @@ import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
-import { HBAR, hbarHeight, CONV_PAD, drawConvColumn } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, metricGroupLabels, roleBandTooltip, metricLegend } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -733,21 +733,31 @@ export function initEfficiencyFilters(data) {
       return acc;
     };
     const rows = deptJobs(selQuarter()).map(({ dept, jobs }) => {
-      const agg = jobs.reduce((a, j) => { const v = sumFor(j.jid); return { added: a.added + v.added, cleared: a.cleared + v.cleared }; }, { added: 0, cleared: 0 });
-      return { dept, ...agg };
+      const per = jobs.map(j => ({ title: j.title, v: sumFor(j.jid) })).filter(x => x.v.added > 0);
+      const agg = per.reduce((a, x) => ({ added: a.added + x.v.added, cleared: a.cleared + x.v.cleared }), { added: 0, cleared: 0 });
+      return { dept, ...agg, per };
     }).filter(r => r.added > 0).sort((a, b) => b.added - a.added);
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
     // Bar thickness matches the Fulfilment chart and the Recruiter tab's version of this panel.
     const h = hbarHeight(rows.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    const moved = rows.map(r => r.cleared), still = rows.map(r => Math.max(0, r.added - r.cleared));
-    const labelPlugin = {
+    // Both bands split into the ROLES inside the department, in shades of their colour (Jerin, 2026-08-29).
+    const METRICS = [
+      { key: 'moved', label: 'Progressed past R1', color: '#4E6BA6' },
+      { key: 'still', label: 'Still at R1', color: '#C5CFE5' }
+    ];
+    const chartRows = rows.map(r => ({
+      label: r.dept,
+      sum: { moved: r.cleared, still: Math.max(0, r.added - r.cleared) },
+      jobs: (r.per || []).map(x => ({ title: x.title, v: { moved: x.v.cleared, still: Math.max(0, x.v.added - x.v.cleared) } }))
+    }));
+    const endLabels = {
       id: 'effScreenLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const mMeta = chart.getDatasetMeta(0), eMeta = chart.getDatasetMeta(1);
+        const last = chart.getDatasetMeta(chart.data.datasets.length - 1);
         // Percentage in its own column at the far right of the plot area, under a heading — same treatment
         // as the Recruiter tab's version of this chart.
         const colX = chart.chartArea.right + 46;
@@ -756,16 +766,14 @@ export function initEfficiencyFilters(data) {
         c.fillText('PROGRESSED', colX, chart.chartArea.top - 10);
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
         rows.forEach((r, i) => {
-          const bar = mMeta.data[i]; if (!bar) return;
-          if (r.cleared > 0 && (bar.x - bar.base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.cleared), (bar.base + bar.x) / 2, bar.y); }
-          const end = eMeta.data[i];
-          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
+          const end = last.data[i]; if (!end) return;
+          if (r.added > 0) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
           if (r.added > 0) {
             const v = Math.round((r.cleared / r.added) * 100);
             c.textAlign = 'center';
             c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
             c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText(v + '%', colX, bar.y);
+            c.fillText(v + '%', colX, end.y);
             c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
           }
         });
@@ -774,23 +782,22 @@ export function initEfficiencyFilters(data) {
     };
     effScreenChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: rows.map(r => r.dept), datasets: [
-        { label: 'Progressed past R1', data: moved, backgroundColor: '#4E6BA6', stack: 'r1', borderRadius: 2, ...HBAR },
-        { label: 'Still at R1', data: still, backgroundColor: '#C5CFE5', stack: 'r1', borderRadius: 2, ...HBAR }
-      ] },
+      data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS, { borderRadius: 2 }) },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
         plugins: {
           valueLabels: false, stackTotals: false,
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
-          tooltip: { callbacks: { footer: (items) => { const r = rows[items[0].dataIndex]; return `Added at R1: ${r.added} · progressed ${Math.round((r.cleared / r.added) * 100)}%`; } } }
+          legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
+          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
+            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
+            footer: (items) => { const r = rows[items[0].dataIndex]; return `Added at R1: ${r.added} \u00b7 progressed ${Math.round((r.cleared / r.added) * 100)}%`; } } }
         },
         scales: {
           x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added at R1', font: { size: 11 }, color: '#64748b' } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [labelPlugin]
+      plugins: [endLabels, metricGroupLabels(METRICS)]
     });
   }
 
@@ -879,8 +886,9 @@ export function initEfficiencyFilters(data) {
     if (effJoinChart) { effJoinChart.destroy(); effJoinChart = null; }
     const q = selQuarter();
     const rows = deptJobs(q).map(({ dept, jobs }) => {
-      const agg = jobs.reduce((a, j) => { const c = jcOf(q, dept, j.title); return { o: a.o + c.o, j: a.j + c.j, p: a.p + c.p, dr: a.dr + c.dr }; }, { o: 0, j: 0, p: 0, dr: 0 });
-      return { dept, ...agg };
+      const per = jobs.map(j => ({ title: j.title, c: jcOf(q, dept, j.title) })).filter(x => x.c.o > 0);
+      const agg = per.reduce((a, x) => ({ o: a.o + x.c.o, j: a.j + x.c.j, p: a.p + x.c.p, dr: a.dr + x.c.dr }), { o: 0, j: 0, p: 0, dr: 0 });
+      return { dept, ...agg, per };
     }).filter(r => r.o > 0).sort((a, b) => b.o - a.o);
     const wrap = document.getElementById('effJoinChartWrap');
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
@@ -888,20 +896,27 @@ export function initEfficiencyFilters(data) {
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const joined = rows.map(r => r.j), pending = rows.map(r => r.p), dropped = rows.map(r => r.dr), offered = rows.map(r => r.o);
-    const labelPlugin = {
-      id: 'effJoinLabels',
+    // Each of Joined / Joining Pending / Dropped is split into the ROLES inside the department, in shades of
+    // its colour (Jerin, 2026-08-29). The number for each metric is kept, drawn once across its bands.
+    const METRICS = [
+      { key: 'j', label: 'Joined', color: C.green },
+      { key: 'p', label: 'Joining Pending', color: '#C9A227' },
+      { key: 'dr', label: 'Dropped', color: '#A33253' }
+    ];
+    const chartRows = rows.map(r => ({
+      label: r.dept,
+      sum: { j: r.j, p: r.p, dr: r.dr },
+      jobs: (r.per || []).map(x => ({ title: x.title, v: { j: x.c.j, p: x.c.p, dr: x.c.dr } }))
+    }));
+    const endLabels = {
+      id: 'effJoinEndLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        [[0, joined], [1, pending], [2, dropped]].forEach(([di, arr]) => {
-          const meta = chart.getDatasetMeta(di);
-          meta.data.forEach((bar, i) => {
-            if (arr[i] > 0 && (bar.x - bar.base) > 20) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(arr[i]), (bar.base + bar.x) / 2, bar.y); }
-          });
-        });
         // Offered at the end of the bar; the Joining Conversion is its own labelled column at the right
         // edge (Jerin, 2026-08-29) — same treatment as the Recruiter Efficiency version, same helper.
-        chart.getDatasetMeta(2).data.forEach((bar, i) => {
+        const last = chart.getDatasetMeta(chart.data.datasets.length - 1);
+        last.data.forEach((bar, i) => {
           c.textAlign = 'left'; c.fillStyle = '#334155';
           c.fillText(String(offered[i]), bar.x + 6, bar.y);
         });
@@ -911,25 +926,23 @@ export function initEfficiencyFilters(data) {
     };
     effJoinChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: rows.map(r => r.dept), datasets: [
-        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, ...HBAR },
-        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, ...HBAR },
-        { label: 'Dropped', data: dropped, backgroundColor: '#A33253', stack: 'j', borderRadius: 2, ...HBAR }
-      ] },
+      data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS, { borderRadius: 2 }) },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: CONV_PAD + 34, top: 20 } },
         plugins: {
           valueLabels: false, stackTotals: false,
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
-          tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
-            return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} · Joining Conversion ${conv}%`; } } }
+          legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
+          tooltip: { filter: (it) => (it.parsed.x || 0) > 0, callbacks: {
+            label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} \u2014 ${it.dataset.label}: ${it.parsed.x}`,
+            footer: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+              return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } }
         },
         scales: {
           x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [labelPlugin]
+      plugins: [endLabels, metricGroupLabels(METRICS)]
     });
   }
 
@@ -1403,21 +1416,14 @@ export function initEfficiencyFilters(data) {
     }
   });
 
-  // One bar per department, stacked Joined / Joining Pending / Delta — and each of those three split again
-  // into the ROLES inside the department, in shades of that metric's colour (Jerin, 2026-08-29: "don't need
-  // department-wise charts, the overall chart is enough — but bring in the gradient to the department, each
-  // gradient being a job"). Darkest band = the department's biggest role for that metric, palest = smallest.
-  // The legend stays at metric level: one entry per role would be dozens of entries of noise, and the role
-  // name is in the tooltip. Clicking a legend entry toggles every band of that metric together.
-  // The bands are read straight off the same rows the table renders, so the two cannot drift apart.
-  const FULFIL_SLOTS = 10;   // roles drawn individually per department; the tail becomes one "other roles" band
-  function shadeOf(hex, i, n) {
-    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-    const t = n > 1 ? 0.6 * (i / (n - 1)) : 0;
-    const mix = (c) => Math.round(c + (255 - c) * t);
-    return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
-  }
-
+  // One bar per department, stacked Joined / Joining Pending / Delta — and Joined and Joining Pending split
+  // again into the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29: "don't
+  // need department-wise charts, the overall chart is enough — but bring in the gradient to the department,
+  // each gradient being a job"). The shared helper in chart-style.js does the banding, so this chart, HM
+  // Positions and the two panels below it cannot drift apart.
+  // ⚠ Delta is NOT split — it can be negative and the table clamps it at DEPARTMENT level. Splitting it let
+  // a −5 role and a +5 role cancel in the table while both counted in the chart (SME - India read 53
+  // against the table's 48).
   function renderFulfilCharts(q) {
     const rows = fulfilRows(q);
 
@@ -1439,81 +1445,26 @@ export function initEfficiencyFilters(data) {
     if (wrap) wrap.style.height = hbarHeight(rows.length, 80, 220) + 'px';
     ctx.style.maxHeight = 'none';
 
-    // Per department: roles ordered by how much of the bar they own, capped at FULFIL_SLOTS with the tail
-    // pooled — so every position in the table still appears in the bar.
-    const val = (sp, m) => m === 'gap' ? Math.max(0, sp.gap) : (sp[m] || 0);
-    const size = (sp) => val(sp, 'joined') + val(sp, 'pending');
-    const perDept = rows.map(r => {
-      const js = [...(r.jobs || [])].filter(x => size(x.sp) > 0).sort((a, b) => size(b.sp) - size(a.sp));
-      const head = js.slice(0, FULFIL_SLOTS), tail = js.slice(FULFIL_SLOTS);
-      const slots = head.map(x => ({ title: x.j.title, sp: x.sp }));
-      if (tail.length) slots.push({
-        title: `${tail.length} other role${tail.length > 1 ? 's' : ''}`,
-        sp: tail.reduce((a, x) => ({ joined: a.joined + val(x.sp, 'joined'), pending: a.pending + val(x.sp, 'pending'), gap: a.gap + val(x.sp, 'gap') }), { joined: 0, pending: 0, gap: 0 })
-      });
-      return slots;
-    });
-    const nSlots = Math.max(1, ...perDept.map(x => x.length));
-
-    // ⚠ Only Joined and Joining Pending are split by role. Delta is drawn as ONE band per department, on the
-    // department's own figure — because Delta can be negative and the table clamps it at the DEPARTMENT
-    // level. Clamping it per role instead let a −5 role and a +5 role cancel in the table but both count in
-    // the chart, and the bar total stopped matching the row (SME - India read 53 against the table's 48).
     const METRICS = [
-      { key: 'joined', label: 'Joined', color: FULFIL_COLORS.joined, split: true },
-      { key: 'pending', label: 'Joining Pending', color: FULFIL_COLORS.pending, split: true },
+      { key: 'joined', label: 'Joined', color: FULFIL_COLORS.joined },
+      { key: 'pending', label: 'Joining Pending', color: FULFIL_COLORS.pending },
       { key: 'gap', label: 'Delta', color: FULFIL_COLORS.gap, split: false }
     ];
-    const datasets = [];
-    METRICS.forEach(M => {
-      if (!M.split) {
-        const data = rows.map(r => Math.max(0, r.sum.gap));
-        if (data.some(v => v > 0)) datasets.push({
-          label: M.label, _m: M.key, _slot: 0, _titles: rows.map(() => 'across the department'),
-          data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR
-        });
-        return;
-      }
-      for (let k = 0; k < nSlots; k++) {
-        const data = perDept.map(slots => slots[k] ? val(slots[k].sp, M.key) : 0);
-        if (!data.some(v => v > 0)) continue;
-        datasets.push({
-          label: M.label, _m: M.key, _slot: k,
-          _titles: perDept.map(slots => slots[k] ? slots[k].title : ''),
-          data, backgroundColor: shadeOf(M.color, k, nSlots), stack: 'p', borderWidth: 0, ...HBAR
-        });
-      }
-    });
+    const chartRows = rows.map(r => ({
+      label: r.dept,
+      sum: { joined: r.sum.joined, pending: r.sum.pending, gap: r.sum.gap },
+      jobs: (r.jobs || []).map(x => ({ title: x.j.title, v: { joined: x.sp.joined, pending: x.sp.pending } }))
+    }));
 
     const opts = fulfilStackOpts('Positions');
-    opts.plugins.legend = {
-      position: 'top', align: 'end',
-      labels: {
-        usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 10 }, padding: 8,
-        generateLabels: (chart) => METRICS.map(M => ({
-          text: M.label, fillStyle: M.color, strokeStyle: M.color, lineWidth: 0,
-          hidden: !chart.data.datasets.some((d, i) => d._m === M.key && chart.isDatasetVisible(i)),
-          _m: M.key
-        }))
-      },
-      onClick: (e, item, legend) => {
-        const chart = legend.chart;
-        const on = chart.data.datasets.some((d, i) => d._m === item._m && chart.isDatasetVisible(i));
-        chart.data.datasets.forEach((d, i) => { if (d._m === item._m) chart.setDatasetVisibility(i, !on); });
-        chart.update();
-      }
-    };
-    opts.plugins.tooltip = {
-      // Dozens of datasets means dozens of tooltip rows, nearly all of them zero. Show only the bands that
-      // actually carry something, named by their role.
-      filter: (it) => (it.parsed.x || 0) > 0,
-      callbacks: {
-        label: (it) => `${it.dataset._titles[it.dataIndex] || 'role not recorded'} — ${it.dataset.label}: ${it.parsed.x}`,
-        footer: (items) => items.length ? `Total positions: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}` : ''
-      }
-    };
-
-    effFulfilCombined = new Chart(ctx, { type: 'bar', data: { labels: rows.map(r => r.dept), datasets }, options: opts });
+    opts.plugins.legend = metricLegend(METRICS);
+    opts.plugins.tooltip = roleBandTooltip('Total positions');
+    effFulfilCombined = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS) },
+      options: opts,
+      plugins: [metricGroupLabels(METRICS)]
+    });
   }
 
   // Per-department chart: Y = job, bars = Offered / Hired score for that job.

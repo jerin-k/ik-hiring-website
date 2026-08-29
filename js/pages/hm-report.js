@@ -1,7 +1,7 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
-import { HBAR, hbarHeight } from '../chart-style.js';
+import { HBAR, hbarHeight, roleBandDatasets, metricGroupLabels, roleBandTooltip, metricLegend } from '../chart-style.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -542,7 +542,13 @@ export function initHmFilters(data) {
     body.innerHTML = html;
     wireTree(body);
 
-    // Chart: department-wise stacked bar with value labels
+    // Chart: one bar per department, stacked Joined / Open / Missed — and each of those split again into
+    // the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29). Darkest band is
+    // the department's biggest role for that metric, palest the smallest; past ten roles the tail is pooled
+    // so nothing drops out of the bar.
+    // The number for Joined / Open / Missed is kept, drawn ONCE PER METRIC across its bands rather than on
+    // every band ("the data label for joined, open etc should be retained"). The role name is in the
+    // tooltip. Every figure comes from deptArr, the same rows the table above renders.
     const cDepts = deptArr.map(t => t.dept).slice().reverse();
     if (hm1ChartInstance) hm1ChartInstance.destroy();
     const ctx1 = document.getElementById('hm1Chart');
@@ -551,25 +557,38 @@ export function initHmFilters(data) {
       const wrap = document.getElementById('hm1ChartWrap');
       if (wrap) wrap.style.height = h + 'px';
       ctx1.style.maxHeight = h + 'px';   // override .chart-wrap canvas { max-height:300px } so the canvas fills the wrap
+      const METRICS = [
+        { key: 'joined', label: 'Joined', color: '#398AA2' },
+        { key: 'open', label: 'Open', color: '#4E6BA6' },
+        { key: 'missed', label: 'Missed', color: '#b45a72' }   // pastel --red, not the pre-2026-08-09 crimson
+      ];
+      const byDept = {}; deptArr.forEach(D => { byDept[D.dept] = D; });
+      const chartRows = cDepts.map(d => {
+        const D = byDept[d] || { jobs: [] };
+        const g = groups[d] || { joined: 0, open: 0, missed: 0 };
+        return {
+          label: d,
+          sum: { joined: g.joined, open: g.open, missed: g.missed },
+          jobs: (D.jobs || []).map(o => ({ title: o.title, v: { joined: o.joined, open: o.open, missed: o.missed } }))
+        };
+      });
       hm1ChartInstance = new Chart(ctx1, {
         type: 'bar',
-        data: {
-          labels: cDepts,
-          datasets: [
-            { label: 'Joined', data: cDepts.map(d => groups[d].joined), backgroundColor: '#398AA2', borderRadius: 4, ...HBAR },
-            { label: 'Open', data: cDepts.map(d => groups[d].open), backgroundColor: '#4E6BA6', borderRadius: 4, ...HBAR },
-            { label: 'Missed', data: cDepts.map(d => groups[d].missed), backgroundColor: '#b45a72', borderRadius: 4, ...HBAR }   // pastel --red, not the pre-2026-08-09 crimson
-          ]
-        },
+        data: { labels: cDepts, datasets: roleBandDatasets(chartRows, METRICS) },
         options: {
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          layout: { padding: { top: 4 } },
-          plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } } },
+          layout: { padding: { top: 4, right: 40 } },
+          plugins: {
+            valueLabels: false,   // the per-metric label below replaces it; one number per band would be noise
+            legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } }),
+            tooltip: roleBandTooltip('Total positions')
+          },
           scales: {
             x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions', font: { size: 11 }, color: '#64748b' } },
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
           }
-        }
+        },
+        plugins: [metricGroupLabels(METRICS)]
       });
     }
   }
