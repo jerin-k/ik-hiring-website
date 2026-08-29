@@ -65,7 +65,7 @@ function wireTreePath(tbody, expandAll) {
   }
 }
 
-let effFulfilCombined = null, effSourceChart = null;
+let effFulfilCombined = null, effSourceChart = null, effTpChart = null;
 
 export function renderEfficiency(data) {
   if (!data || !data.funnel) return '<p>No data available.</p>';
@@ -209,7 +209,8 @@ export function renderEfficiency(data) {
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
         ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
       </div>
-      <div class="eff-podcharts eff-2col" id="effTpPodCharts"></div>
+      <h3 class="subsection-title">Throughput by department — R1 to Documentation</h3>
+      <div class="chart-wrap" id="effTpChartWrap"><canvas id="effTpChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead id="effTpHead"></thead>
         <tbody id="effTpBody"></tbody>
@@ -719,6 +720,40 @@ export function initEfficiencyFilters(data) {
   // One bar per DEPARTMENT: solid progressed past R1, pale still at R1, together the number added.
   // Same store as the table.
   let effScreenChart = null;
+  // ===== ONE chart: department vs throughput (Jerin, 2026-08-30) =====
+  // The 13 per-department small multiples are gone; this asks one question of each department instead —
+  // of the people who reached R1, how many got as far as Documentation. Mirrors the Hiring Manager tab.
+  // 🚨 It deliberately does NOT sum "In" across stages: one person passing R1, R2 and R3 sits in three of
+  // them, so a total would count them three times. R1 → Documentation is a single span with no double
+  // counting. The per-stage detail stays in the table below.
+  function buildTpChartEff(q) {
+    const ctx = document.getElementById('effTpChart'); if (!ctx) return;
+    if (effTpChart) { effTpChart.destroy(); effTpChart = null; }
+    const wrap = document.getElementById('effTpChartWrap');
+    if (!tpByJob) { if (wrap) wrap.style.height = '0px'; return; }
+    const spanOf = (jid) => {
+      const t = tpByJob[jid] || {};
+      return { added: (t.r1 || {}).reached || 0, progressed: (t.docSub || {}).reached || 0 };
+    };
+    const rows = deptJobs(q).map(({ dept, jobs: js }) => {
+      const all = js.map(j => ({ title: j.title, ...spanOf(j.jid) }));
+      // ⚠ Aggregate over EVERY role, then filter only the hover list. Aggregating over the filtered list
+      // dropped any role with a Documentation entry but no R1 entry in the period — Operations read 9
+      // against the table's 10.
+      const agg = all.reduce((a, x) => ({ added: a.added + x.added, progressed: a.progressed + x.progressed }), { added: 0, progressed: 0 });
+      return { label: dept, ...agg, roles: all.filter(x => x.added > 0 || x.progressed > 0) };
+    }).filter(r => r.added > 0 || r.progressed > 0).sort((a, b) => b.added - a.added);
+    if (!rows.length) { if (wrap) wrap.style.height = '120px'; ctx.style.display = 'none'; return; }
+    ctx.style.display = '';
+    const h = hbarHeight(rows.length, 80, 220);
+    if (wrap) wrap.style.height = h + 'px';
+    ctx.style.maxHeight = h + 'px';
+    effTpChart = buildDumbbell(ctx, rows, {
+      xTitle: 'Candidates', colHeader: 'THROUGHPUT',
+      fromLabel: 'reached R1', toLabel: 'reached Documentation'
+    });
+  }
+
   function buildScreenChartEff() {
     const ctx = document.getElementById('effScreenChart'); if (!ctx) return;
     if (effScreenChart) { effScreenChart.destroy(); effScreenChart = null; }
@@ -926,6 +961,7 @@ export function initEfficiencyFilters(data) {
     });
     body.innerHTML = html || `<tr><td colspan="${vis.length * 3 + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
+    buildTpChartEff(q);
   }
 
   // Quarter keys the Year/Quarter selector covers; null = all-time. Separate from selQuarter(), which
@@ -1187,10 +1223,6 @@ export function initEfficiencyFilters(data) {
   // fit, so it is left ON everywhere except where a custom total label does the job instead.
   const LEGEND = { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 10 } };
   const TICKS = { font: { size: 11 } };
-  const hbarOpts = (stacked, xtitle) => ({ indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-    layout: { padding: { right: 26 } },
-    plugins: { legend: LEGEND },
-    scales: { x: { ...gridY, stacked, ticks: TICKS, title: xtitle ? { display: true, text: xtitle, font: { size: 11 }, color: '#64748b' } : undefined }, y: { stacked, grid: { display: false }, ticks: TICKS } } });
 
   // One small chart per pod. buildCfg(pod) → a Chart.js config (optional _h = fixed height px) or null (empty).
   function renderPodCharts(containerId, pods, buildCfg, emptyText) {
@@ -1335,22 +1367,6 @@ export function initEfficiencyFilters(data) {
   // 2026-08-29 — the panel now has ONE chart, a bar per department, built in renderScreening.
   // Per-pod Throughput chart: Added (reached) vs Cleared per stage, from throughputByJob over the pod's jobs.
   // Respects the stage toggle; shows only stages with any activity. Horizontal grouped bars. Null → placeholder.
-  const tpDeptCfg = ({ jobs }) => {
-    if (!tpByJob) return null;
-    const jids = jobs.map(j => j.jid);
-    if (!jids.length) return null;
-    const visKeys = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
-    const rows = visKeys.map(k => {
-      const t = jids.reduce((a, jid) => { const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: a.r + c.reached, c: a.c + c.cleared }; }, { r: 0, c: 0 });
-      return { label: TP_LABELS[k], r: t.r, c: t.c };
-    }).filter(x => x.r || x.c);
-    if (!rows.length) return null;
-    return { _h: hbarHeight(rows.length, 70, 170), type: 'bar',
-      data: { labels: rows.map(x => x.label), datasets: [
-        { label: 'Added', data: rows.map(x => x.r), backgroundColor: C.blue, borderRadius: 3, ...HBAR },
-        { label: 'Cleared', data: rows.map(x => x.c), backgroundColor: C.green, borderRadius: 3, ...HBAR }] },
-      options: hbarOpts(false, 'Candidates') };
-  };
 
   // Fulfilment charts: bars are STACKED Joined / Joining Pending / Gap, which add up to Total Positions —
   // so the bar and the table carry the same three numbers. A label at the end of each bar gives the total,
@@ -1426,19 +1442,6 @@ export function initEfficiencyFilters(data) {
 
   // Per-department chart: Y = job, bars = Offered / Hired score for that job.
   // One small chart per department (mirror of the old renderPodCharts, keyed on department).
-  function renderDeptCharts(containerId, rows, buildCfg, emptyText) {
-    const el = document.getElementById(containerId); if (!el) return;
-    (podCharts[containerId] || []).forEach(c => { try { c.destroy(); } catch (e) {} }); podCharts[containerId] = [];
-    el.innerHTML = rows.map((r, i) => `<div class="eff-podchart"><h5>${r.dept}</h5><div class="eff-podchart-body" id="${containerId}_b${i}" style="position:relative"><canvas id="${containerId}_${i}"></canvas></div></div>`).join('');
-    rows.forEach((r, i) => {
-      const cfg = buildCfg(r);
-      const host = document.getElementById(`${containerId}_b${i}`);
-      const cv = document.getElementById(`${containerId}_${i}`);
-      if (!cfg) { if (host) host.innerHTML = `<p style="font-size:11px;color:var(--muted);margin:0">${emptyText}</p>`; return; }
-      if (host) host.style.height = (cfg._h || 160) + 'px';
-      podCharts[containerId].push(new Chart(cv, { type: cfg.type, data: cfg.data, options: cfg.options, plugins: cfg.plugins || [] }));
-    });
-  }
 
   // Horizontal STACKED bar: one bar per source TYPE, segmented by the source NAMES within it (top ~12 names
   // globally + "Other"). Each source name belongs to one type, so the legend of real names maps cleanly and each
@@ -1493,7 +1496,7 @@ export function initEfficiencyFilters(data) {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
-    else if (activeTab === 'throughput') { renderThroughput(); renderDeptCharts('effTpPodCharts', deptJobs(selQuarter()), tpDeptCfg, 'No stage-transition activity in this department.'); }
+    else if (activeTab === 'throughput') renderThroughput();   // its chart is built inside renderThroughput
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
     else if (activeTab === 'joining') renderJoining();   // its chart is built inside renderJoining
     else if (activeTab === 'sourcing') renderSourcing();
