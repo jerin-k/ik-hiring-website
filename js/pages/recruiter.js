@@ -231,6 +231,15 @@ export function renderRecruiter(data) {
       .ms-opt { display:flex; align-items:center; gap:7px; padding:5px 8px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; white-space:nowrap; }
       .ms-opt:hover { background:var(--border-light); }
 
+      /* ===== Joining Conversion table (design pass 2026-08-29) =====
+         Six columns across the full width left each figure marooned in the middle of a very wide cell,
+         a long way from the header above it ("table alignment is off" — Jerin). Pin the numeric columns
+         to a readable width and let the name column absorb the slack, so a number sits under its heading. */
+      .join-table th:not(:first-child), .join-table td:not(:first-child) { width:118px; }
+      .join-table th:last-child, .join-table td:last-child { width:186px; }
+      .join-table td:first-child, .join-table th:first-child { width:auto; min-width:220px; }
+      .join-table td.gapcell { min-width:0; }
+
       /* Metric Configuration */
       .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }
       .cfg-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
@@ -316,8 +325,8 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="joining" style="display:none">
       ${defsBlock('rec-joining')}
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
-      <div class="scroll-table"><table class="metrics">
-        <thead><tr><th style="min-width:220px">Pod / Recruiter</th><th title="Joined + Joining Pending + Dropped.">Offered</th><th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th><th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th><th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th><th>Joining Conversion</th></tr></thead>
+      <div class="scroll-table"><table class="metrics join-table">
+        <thead><tr><th>Pod / Recruiter</th><th title="Joined + Joining Pending + Dropped.">Offered</th><th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th><th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th><th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
     </div>
@@ -2153,10 +2162,23 @@ export function initRecruiterFilters(data) {
             }
           });
         });
+        // Offered at the bar end, then the Joining Conversion beside it (Jerin, 2026-08-29: "need a
+        // Joining Conversion % at the end of each row in the chart"). Same arithmetic as the table's
+        // Joining Conversion column — (Joined + Joining Pending) / Offered — read off the same convMaps.
         const last = chart.getDatasetMeta(2);
         last.data.forEach((bar, i) => {
-          c.fillStyle = '#334155'; c.textAlign = 'left';
-          c.fillText(String(offered[i]), bar.x + 6, bar.y);
+          c.textAlign = 'left';
+          c.fillStyle = '#334155';
+          const offTxt = String(offered[i]);
+          c.fillText(offTxt, bar.x + 6, bar.y);
+          const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+          if (conv != null) {
+            const w = c.measureText(offTxt).width;
+            c.fillStyle = conv >= 90 ? '#0F6B62' : (conv >= 70 ? '#A16207' : '#A15568');
+            c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
+            c.fillText(conv + '%', bar.x + 12 + w, bar.y);
+            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+          }
         });
         c.restore();
       }
@@ -2166,11 +2188,11 @@ export function initRecruiterFilters(data) {
         { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
         { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
         { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 44 } },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 86 } },
         plugins: { valueLabels: false, stackTotals: false,
-          tooltip: { callbacks: { afterBody: (items) => `Offered: ${offered[items[0].dataIndex]}` } },
+          tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People (number at the bar end = Offered)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People (at the bar end: Offered, then Joining Conversion)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
   // Fulfilment chart, rebuilt 2026-08-29 to Jerin's spec: "let target be the Goal, instead of capacity...
