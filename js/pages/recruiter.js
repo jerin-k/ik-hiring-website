@@ -231,14 +231,6 @@ export function renderRecruiter(data) {
       .ms-opt { display:flex; align-items:center; gap:7px; padding:5px 8px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; white-space:nowrap; }
       .ms-opt:hover { background:var(--border-light); }
 
-      /* ===== Joining Conversion table (design pass 2026-08-29) =====
-         Six columns across the full width left each figure marooned in the middle of a very wide cell,
-         a long way from the header above it ("table alignment is off" — Jerin). Pin the numeric columns
-         to a readable width and let the name column absorb the slack, so a number sits under its heading. */
-      .join-table th:not(:first-child), .join-table td:not(:first-child) { width:118px; }
-      .join-table th:last-child, .join-table td:last-child { width:186px; }
-      .join-table td:first-child, .join-table th:first-child { width:auto; min-width:220px; }
-      .join-table td.gapcell { min-width:0; }
 
       /* Metric Configuration */
       .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }

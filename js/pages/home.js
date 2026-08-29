@@ -207,7 +207,15 @@ export function initHomeFilters() {
             <div class="label">${hasCand ? 'Candidates Interviewed' : 'Total Interviews Managed'}</div>
             <div class="value">${(hasCand ? candInterviewed : interviewCount).toLocaleString()}</div>
             <div class="sub">${hasCand
-              ? `${panelPeople.toLocaleString()} interviewed · ${assessedPeople.toLocaleString()} assessed online`
+              ? (() => {
+                  // 🚨 These two sets OVERLAP — the headline is their union, not their sum. Printing them
+                  // as "578 interviewed · 93 assessed" invited the reader to add them and find 671 against
+                  // a headline of 643 (Jerin, 2026-08-29). Name the overlap so the arithmetic closes.
+                  const both = Math.max(0, panelPeople + assessedPeople - candInterviewed);
+                  return both > 0
+                    ? `${panelPeople.toLocaleString()} sat an interview, ${assessedPeople.toLocaleString()} took an assessment, ${both.toLocaleString()} did both`
+                    : `${panelPeople.toLocaleString()} sat an interview \u00b7 ${assessedPeople.toLocaleString()} took an assessment`;
+                })()
               : `${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}`}</div>
           </div>
           <div class="card">

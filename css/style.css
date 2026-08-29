@@ -692,3 +692,13 @@ details.defs.defs-full[open] > summary {
 .deltacell .track i.conv { background: var(--green); opacity: .9; }
 .deltacell .track i.conv.mid { background: var(--orange); }
 .deltacell .track i.conv.low { background: var(--red); }
+
+/* ===== Joining Conversion table (design pass 2026-08-29) =====
+   Used by BOTH Recruiter Efficiency and Overall Efficiency, so it lives here rather than in one page's
+   own <style> block — the Overall Efficiency page would otherwise render without it.
+   Six columns across the full width left every figure marooned mid-cell, a long way from the header above
+   it ("table alignment is off" — Jerin). Pin the numeric columns and let the name column absorb the slack. */
+.join-table th:not(:first-child), .join-table td:not(:first-child) { width: 118px; }
+.join-table th:last-child, .join-table td:last-child { width: 186px; }
+.join-table td:first-child, .join-table th:first-child { width: auto; min-width: 220px; }
+.join-table td.gapcell { min-width: 0; }
