@@ -713,13 +713,15 @@ details.defs.defs-full[open] > summary {
 .sheat-row { display: flex; align-items: center; gap: 3px; margin-bottom: 4px; }
 .sheat-name { width: 190px; min-width: 190px; font-size: 13px; color: var(--text); text-align: left;
   padding-left: 14px; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sheat-cell { flex: 1 1 0; min-width: 46px; height: 34px; border-radius: 4px; background: #f4f6f8;
-  font-size: 12.5px; font-weight: 500; display: flex; align-items: center; justify-content: center;
+.sheat-cell { flex: 1 1 0; min-width: 66px; height: 46px; border-radius: 4px; background: #f4f6f8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   color: #334155; }
+.sheat-cell .sh-flow { font-size: 11px; font-weight: 400; opacity: 0.85; letter-spacing: 0.01em; }
+.sheat-cell .sh-pct { font-size: 13px; font-weight: 600; }
 .sheat-cell.none { color: #cbd5e1; font-weight: 400; }
-.sheat-hd { font-size: 11px; color: var(--muted); height: 20px; background: none !important; font-weight: 500;
+.sheat-hd { font-size: 11px; color: var(--muted); height: 20px; flex-direction: row; background: none !important; font-weight: 500;
   text-align: center; line-height: 1.2; }
-.sheat-ov { width: 92px; min-width: 92px; border-radius: 4px; height: 34px; display: flex; align-items: center;
+.sheat-ov { width: 104px; min-width: 104px; border-radius: 4px; height: 46px; display: flex; align-items: center;
   justify-content: center; font-size: 13px; font-weight: 600; }
 .sheat-tip { position: absolute; z-index: 40; pointer-events: none; display: none; background: #fff;
   border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(15,23,42,0.13);

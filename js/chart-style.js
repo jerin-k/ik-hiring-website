@@ -445,8 +445,13 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     r.cells.forEach((c, ci) => {
       const v = pctOf(c);
       const s = shade(v);
+      // Each square carries the flow and the rate — "161 → 59" over "37%" (Jerin, 2026-08-30). The two
+      // raw numbers are what make the percentage trustworthy; a bare 37% hides whether it came from 161
+      // people or from 3.
       html += `<div class="sheat-cell${v == null ? ' none' : ''}" style="background:${s.bg};color:${s.fg}"`
-        + ` data-r="${ri}" data-c="${ci}">${v == null ? '·' : v + '%'}</div>`;
+        + ` data-r="${ri}" data-c="${ci}">`
+        + (v == null ? '·' : `<span class="sh-flow">${c.inN} \u2192 ${c.outN}</span><span class="sh-pct">${v}%</span>`)
+        + '</div>';
     });
     const ov = r.overall;
     html += `<div class="sheat-ov" style="color:${band(ov)}">${ov == null ? '—' : ov + '%'}</div></div>`;
