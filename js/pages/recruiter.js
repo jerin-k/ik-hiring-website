@@ -2067,7 +2067,8 @@ export function initRecruiterFilters(data) {
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
     const moved = recs.map(r => r.cleared);
     const still = recs.map(r => Math.max(0, r.added - r.cleared));
-    const h = Math.max(260, recs.length * 34 + 90);
+    // Bar thickness matches the Fulfilment chart (Jerin, 2026-08-29) — 46px a row, same bar/category split.
+    const h = Math.max(260, recs.length * 46 + 90);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
 
@@ -2077,11 +2078,28 @@ export function initRecruiterFilters(data) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
         const mMeta = chart.getDatasetMeta(0), eMeta = chart.getDatasetMeta(1);
+        // The percentage sits in its own column at the far right of the plot area — square under a heading,
+        // rather than floating wherever each bar happens to end (Jerin, 2026-08-29). The count stays with
+        // the bar, because that one belongs to the bar's length.
+        const colX = chart.chartArea.right + 46;
+        c.textAlign = 'center';
+        c.fillStyle = '#64748b';
+        c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.fillText('PROGRESSED', colX, chart.chartArea.top - 10);
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
         recs.forEach((r, i) => {
           const bar = mMeta.data[i]; if (!bar) return;
           if (r.cleared > 0 && (bar.x - bar.base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.cleared), (bar.base + bar.x) / 2, bar.y); }
           const end = eMeta.data[i];
-          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(r.added + ' · ' + pct(r.cleared, r.added) + '%', end.x + 5, end.y); }
+          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
+          if (r.added > 0) {
+            const v = pct(r.cleared, r.added);
+            c.textAlign = 'center';
+            c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
+            c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+            c.fillText(v + '%', colX, bar.y);
+            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+          }
         });
         c.restore();
       }
@@ -2090,11 +2108,11 @@ export function initRecruiterFilters(data) {
     recScreenChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Progressed past R1', data: moved, backgroundColor: SCREEN_SOLID, stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 },
-        { label: 'Still at R1', data: still, backgroundColor: SCREEN_PALE, stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 }
+        { label: 'Progressed past R1', data: moved, backgroundColor: SCREEN_SOLID, stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 },
+        { label: 'Still at R1', data: still, backgroundColor: SCREEN_PALE, stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 }
       ] },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 64 } },
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },

@@ -745,7 +745,8 @@ export function initEfficiencyFilters(data) {
       return { dept, ...agg };
     }).filter(r => r.added > 0).sort((a, b) => b.added - a.added);
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
-    const h = Math.max(240, rows.length * 32 + 90);
+    // Bar thickness matches the Fulfilment chart and the Recruiter tab's version of this panel.
+    const h = Math.max(260, rows.length * 46 + 90);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const moved = rows.map(r => r.cleared), still = rows.map(r => Math.max(0, r.added - r.cleared));
@@ -755,11 +756,26 @@ export function initEfficiencyFilters(data) {
         const c = chart.ctx; c.save();
         c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
         const mMeta = chart.getDatasetMeta(0), eMeta = chart.getDatasetMeta(1);
+        // Percentage in its own column at the far right of the plot area, under a heading — same treatment
+        // as the Recruiter tab's version of this chart.
+        const colX = chart.chartArea.right + 46;
+        c.textAlign = 'center'; c.fillStyle = '#64748b';
+        c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.fillText('PROGRESSED', colX, chart.chartArea.top - 10);
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
         rows.forEach((r, i) => {
           const bar = mMeta.data[i]; if (!bar) return;
           if (r.cleared > 0 && (bar.x - bar.base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.cleared), (bar.base + bar.x) / 2, bar.y); }
           const end = eMeta.data[i];
-          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(r.added + ' · ' + Math.round((r.cleared / r.added) * 100) + '%', end.x + 5, end.y); }
+          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(String(r.added), end.x + 5, end.y); }
+          if (r.added > 0) {
+            const v = Math.round((r.cleared / r.added) * 100);
+            c.textAlign = 'center';
+            c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
+            c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+            c.fillText(v + '%', colX, bar.y);
+            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+          }
         });
         c.restore();
       }
@@ -767,11 +783,11 @@ export function initEfficiencyFilters(data) {
     effScreenChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: rows.map(r => r.dept), datasets: [
-        { label: 'Progressed past R1', data: moved, backgroundColor: '#4E6BA6', stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 },
-        { label: 'Still at R1', data: still, backgroundColor: '#C5CFE5', stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 }
+        { label: 'Progressed past R1', data: moved, backgroundColor: '#4E6BA6', stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 },
+        { label: 'Still at R1', data: still, backgroundColor: '#C5CFE5', stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 }
       ] },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 64 } },
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
