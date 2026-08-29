@@ -410,3 +410,71 @@ export function buildDumbbell(ctx, rows, opts = {}) {
     plugins: [marks]
   });
 }
+
+// ===== Stage throughput heatmap (2026-08-30) =====
+// Jerin, on the single R1→Documentation dumbbell: "not enough dude — need stage wise throughput visualised
+// too." So the chart carries BOTH dimensions: department down the side, stage across the top, the
+// throughput percentage in each cell and the same figure in the shade. The final column is the overall
+// R1 → Documentation span, which is the one number that can be compared across departments without
+// double-counting.
+//
+// 🚨 The stage cells must never be added up. One person passing R1, R2 and R3 appears in all three; each
+// cell is only comparable to its own In. That is what the Overall column is for.
+//
+// rows: [{ label, cells: [{ inN, outN } | null], overall: number|null }]
+// cols: [stage label, ...]  - same length as each row's cells
+export function buildStageHeat(host, tip, rows, cols, opts = {}) {
+  const { overallLabel = 'R1 → DOC' } = opts;
+  if (!host) return;
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const pctOf = (c) => (c && c.inN > 0) ? Math.round((c.outN / c.inN) * 100) : null;
+  // Pale at nothing, deep at everything — the same teal ramp the Momentum heatmap uses.
+  const shade = (v) => {
+    if (v == null) return { bg: '#f4f6f8', fg: '#cbd5e1' };
+    const t = 0.14 + 0.86 * Math.min(1, v / 100);
+    const mix = (a, b) => Math.round(a + (b - a) * t);
+    return { bg: `rgb(${mix(238, 30)},${mix(244, 117)},${mix(246, 144)})`, fg: t > 0.55 ? '#fff' : '#334155' };
+  };
+  const band = (v) => v == null ? '#94a3b8' : (v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568'));
+
+  let html = '<div class="sheat-row"><div class="sheat-name sheat-hd"></div>'
+    + cols.map(c => `<div class="sheat-cell sheat-hd">${esc(c)}</div>`).join('')
+    + `<div class="sheat-ov sheat-hd">${esc(overallLabel)}</div></div>`;
+  rows.forEach((r, ri) => {
+    html += `<div class="sheat-row"><div class="sheat-name">${esc(r.label)}</div>`;
+    r.cells.forEach((c, ci) => {
+      const v = pctOf(c);
+      const s = shade(v);
+      html += `<div class="sheat-cell${v == null ? ' none' : ''}" style="background:${s.bg};color:${s.fg}"`
+        + ` data-r="${ri}" data-c="${ci}">${v == null ? '·' : v + '%'}</div>`;
+    });
+    const ov = r.overall;
+    html += `<div class="sheat-ov" style="color:${band(ov)}">${ov == null ? '—' : ov + '%'}</div></div>`;
+  });
+  host.innerHTML = html;
+
+  if (!tip) return;
+  host.onmouseover = (e) => {
+    const cell = e.target.closest('.sheat-cell');
+    if (!cell || cell.classList.contains('sheat-hd') || cell.dataset.r == null) return;
+    const r = rows[+cell.dataset.r], c = r.cells[+cell.dataset.c];
+    const v = pctOf(c);
+    tip.innerHTML = `<div class="tip-hd">${esc(r.label)} · <b>${esc(cols[+cell.dataset.c])}</b></div>`
+      + (c && c.inN > 0
+        ? `<div class="tip-row"><span>entered the stage</span><span>${c.inN}</span></div>`
+          + `<div class="tip-row"><span>moved past it</span><span>${c.outN}</span></div>`
+          + `<div class="tip-row"><span>throughput</span><span>${v}%</span></div>`
+        : '<div class="tip-row"><span>nobody entered this stage</span><span></span></div>');
+    tip.style.display = 'block';
+    const wrap = host.parentElement;
+    const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();
+    let left = cb.left - wb.left + cell.offsetWidth / 2 - tip.offsetWidth / 2;
+    left = Math.max(0, Math.min(left, wrap.clientWidth - tip.offsetWidth));
+    tip.style.left = left + 'px';
+    const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - 8;
+    tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + 8 : top) + 'px';
+  };
+  host.onmouseout = (e) => {
+    if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.sheat-cell')) tip.style.display = 'none';
+  };
+}
