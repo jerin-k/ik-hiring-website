@@ -2186,7 +2186,7 @@ export function initRecruiterFilters(data) {
             const w = c.measureText(offTxt).width;
             c.fillStyle = conv >= 90 ? '#0F6B62' : (conv >= 70 ? '#A16207' : '#A15568');
             c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText(conv + '%', bar.x + 12 + w, bar.y);
+            c.fillText('(' + conv + '%)', bar.x + 12 + w, bar.y);
             c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
           }
         });
@@ -2202,7 +2202,7 @@ export function initRecruiterFilters(data) {
         plugins: { valueLabels: false, stackTotals: false,
           tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People (at the bar end: Offered, then Joining Conversion)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
   // Fulfilment chart, rebuilt 2026-08-29 to Jerin's spec: "let target be the Goal, instead of capacity...
