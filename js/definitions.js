@@ -200,15 +200,10 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Rows', 'Pod \u2192 Recruiter \u2192 Role. Open a pod to see its recruiters, and a recruiter to see which roles the arrivals were on. Anybody with nothing in the window sits at the bottom of their pod, greyed.'],
-          ['Total', 'Everyone this row added over the whole window shown above \u2014 not the whole quarter.'],
-          ['Last 7d and Prev 7d', 'The most recent seven days, and the seven before them, so the two can be compared directly.'],
-          ['Trend', 'Last 7 days minus the 7 before. Up means more candidates are arriving. It says <em>no change</em> when the two are equal, and nothing at all when both are empty \u2014 there is no trend in nothing.'],
-          ['Active days', 'How many separate days this row added anybody. Two rows can share a total and be very different work: one busy afternoon, or steady progress.'],
-          ['Last 30 days', 'The daily shape, oldest on the left, same order as the chart. Hover a bar for the day and the count \u2014 that is where the day-by-day detail lives now.'],
+          ['Rows and columns', 'Pod \u2192 Recruiter \u2192 Job \u2192 the day columns. Open a recruiter to see the roles behind their numbers. The last 30 days of the selected range run across the top, most recent first.'],
+          ['Total \u00b7 30d', 'Everything in the 30 columns beside it added up \u2014 the row\u2019s arrivals for that window, not for the whole quarter.'],
           ['The From / To boxes', 'Momentum is the one panel driven by the <strong>From</strong> and <strong>To</strong> dates rather than the quarter selector. It always shows the last 30 days of that range.'],
-          ['Chart', 'One bar per <strong>day</strong> \u2014 the direct answer to how many were added on a particular day \u2014 stacked by pod so the day also shows where it came from. It reads the same figures as the table.'],
-          ['The four cards', 'The window total, the last 7 days against the 7 before, the busiest single day, and how many recruiters added anybody at all.'],
+          ['Chart', 'One bar per <strong>day</strong>, stacked by pod, and within a pod shaded by <strong>role</strong> \u2014 darkest block is that pod\u2019s busiest role in the window, palest the quietest. Hover any block for the pod, the role and the count. The legend is per pod; clicking one hides all of its roles at once.'],
         ]
       },
     ],
