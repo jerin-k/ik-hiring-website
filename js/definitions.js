@@ -168,7 +168,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart and the Cases list',
         items: [
-          ['Chart', 'One bar per recruiter, its full length their Capacity for the quarter: the solid part is what they achieved, the amber part the gap to capacity. Only recruiters with a capacity set appear. It reads off exactly the same figures as the table.'],
+          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. Two markers sit on it: a solid line at their <strong>Goal</strong> (the demand on their roles this quarter, which is what the bar is measured against) and a dashed line at their <strong>Capacity</strong> (the finishing line \u2014 what they could carry). Amber fills any shortfall to Goal. So a bar past its Goal line but well short of its Capacity line means somebody is meeting the demand in front of them while running below what they could take on. It reads off exactly the same figures as the table.'],
           ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
         ]
       },

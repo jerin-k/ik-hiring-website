@@ -601,6 +601,8 @@ export function initRecruiterFilters(data) {
     return (rj && rj[recName]) ? Object.keys(rj[recName]) : [];
   };
   let lastGroups = [], lastRecs = [], activeTab = 'fulfilment';
+  // Per-recruiter Fulfilment aggregates, written by the table render and read by its chart.
+  let lastFulfil = {};
 
   let msPod = null, msRec = null, msJob = null;
 
@@ -749,6 +751,10 @@ export function initRecruiterFilters(data) {
   function renderAll() {
     const recs = getFilteredRecs();
     const groups = groupByPod(recs, selQuarter());
+
+    // fulfilRows() runs once per table (Non-Sales, then Sales) and both write into lastFulfil, so it is
+    // cleared HERE — once per render — not inside fulfilRows, which would wipe the first table's rows.
+    lastFulfil = {};
 
     // Which period each panel is actually on. Two of them CANNOT follow a multi-quarter selection —
     // pods, capacity and the Fulfilment goal are set quarter by quarter — so say which quarter they used
@@ -1070,6 +1076,9 @@ export function initRecruiterFilters(data) {
                          jp: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } } };
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
+          // ONE source for the chart and the table. The chart used to recompute its own target, which is how
+          // it once ended up showing lifetime scores under a quarter heading. It now reads this.
+          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, sales: isSales };
           ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
@@ -2201,64 +2210,114 @@ export function initRecruiterFilters(data) {
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People (number at the bar end = Offered)', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
       plugins: [labelPlugin] });
   }
+  // Fulfilment chart, rebuilt 2026-08-29 to Jerin's spec: "let target be the Goal, instead of capacity...
+  // let capacity be a marker on the bar, like a finishing line of sorts. Even when Target is less than
+  // capacity, it will show that the person is meeting numbers but far from capacity utilization."
+  //   bar        = Achieved (Joined for Sales, Joined + Joining Pending for Non-Sales)
+  //   pink       = the shortfall to GOAL, when there is one
+  //   Goal line  = the demand they are accountable for this quarter
+  //   Cap line   = the finishing line: what they could carry
+  // 🚨 Every figure comes from lastFulfil, which the TABLE fills in as it renders. The chart must never
+  // recompute a target of its own — it did once, and showed lifetime scores under a quarter heading.
   function buildFulfilChart() {
     const ctx = document.getElementById('recFulfilChart'); if (!ctx) return;
     if (recFulfilChart) recFulfilChart.destroy();
-    // Y = recruiter, X = Score. Target = Capacity (interim, until Assigned Score lands → then min(Cap,Assigned)).
-    // Bar = Target; the Gap (shortfall to target) is the dark segment, Achieved the light. Labels on all.
     const q = selQuarter();
-    const OM = outcomeMaps(q);
-    const JPn = jpMaps(q, false);
-    // ⚠ Achieved MUST use the same basis as the table above, or the chart quietly tells a different story —
-    // this chart already once showed lifetime scores under a quarter heading. Sales = Joined; Non-Sales =
-    // Joined + Joining Pending (#24, Jerin 2026-08-24). Joined is OM.sales for both: accepted offers whose
-    // start date falls in the quarter.
     const recs = lastRecs.map(r => {
-      const sales = isSalesPod(podOf(r.name, q));
-      const joined = Math.round((OM.sales[r.name] || { sc: 0 }).sc);
-      const jp = sales ? 0 : Math.round((JPn.total[r.name] || { sc: 0 }).sc);
-      const achieved = joined + jp;
-      const target = capacityOf(r.name, q);
-      return { name: r.name, target, achieved, gap: Math.max(0, target - achieved) };
-    }).filter(r => r.target > 0).sort((a, b) => b.target - a.target);
+      const f = lastFulfil[r.name];
+      if (!f) return null;
+      const goal = Math.round(f.goalSc || 0), cap = Math.round(f.capSc || 0), achieved = Math.round(f.achievedSc || 0);
+      return { name: r.name, goal, cap, achieved, short: Math.max(0, goal - achieved) };
+    }).filter(r => r && (r.goal > 0 || r.cap > 0 || r.achieved > 0))
+      .sort((a, b) => b.achieved - a.achieved);
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    if (recs.length === 0) {
+    if (!recs.length) {
       if (recFulfilChart) { recFulfilChart.destroy(); recFulfilChart = null; }
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `No capacities set for ${q.replace('-', ' ')} — set them in Metric Configuration to populate this chart.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${q.replace('-', ' ')} — no goal, capacity or joiners on any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = '';
     if (emptyMsg) emptyMsg.style.display = 'none';
-    const h = Math.max(220, recs.length * 30 + 80);
-    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+    // Wider bars (Jerin): 46px a row rather than 30, and the bar filling most of its slot.
+    const h = Math.max(260, recs.length * 46 + 90);
+    if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    const labelPlugin = {
-      id: 'fulfilLabels',
+    const axisMax = Math.max(...recs.map(r => Math.max(r.achieved, r.goal, r.cap))) * 1.1;
+
+    const markers = {
+      id: 'fulfilMarkers',
       afterDatasetsDraw(chart) {
-        const c = chart.ctx; c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
-        const aMeta = chart.getDatasetMeta(0), gMeta = chart.getDatasetMeta(1);
+        const c = chart.ctx, meta = chart.getDatasetMeta(0), x = chart.scales.x;
+        c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.textBaseline = 'middle';
         recs.forEach((r, i) => {
-          if (r.achieved > 0 && (aMeta.data[i].x - aMeta.data[i].base) > 18) { c.fillStyle = '#334155'; c.textAlign = 'center'; c.fillText(String(r.achieved), (aMeta.data[i].base + aMeta.data[i].x) / 2, aMeta.data[i].y); }
-          if (r.gap > 0 && (gMeta.data[i].x - gMeta.data[i].base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.gap), (gMeta.data[i].base + gMeta.data[i].x) / 2, gMeta.data[i].y); }
-          if (r.target > 0) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText('Target ' + r.target, gMeta.data[i].x + 4, gMeta.data[i].y); }
+          const bar = meta.data[i]; if (!bar) return;
+          const half = (bar.height || 18) / 2;
+          const y0 = bar.y - half, y1 = bar.y + half;
+          // value inside the achieved segment
+          if (r.achieved > 0 && (bar.x - bar.base) > 22) {
+            c.fillStyle = '#fff'; c.textAlign = 'center';
+            c.fillText(String(r.achieved), (bar.base + bar.x) / 2, bar.y);
+          }
+          // GOAL — the target. Solid slate line, labelled above the bar.
+          if (r.goal > 0) {
+            const gx = x.getPixelForValue(r.goal);
+            c.strokeStyle = '#41506B'; c.lineWidth = 2; c.setLineDash([]);
+            c.beginPath(); c.moveTo(gx, y0 - 3); c.lineTo(gx, y1 + 3); c.stroke();
+            c.fillStyle = '#41506B'; c.textAlign = 'center';
+            c.fillText('Goal ' + r.goal, gx, y0 - 9);
+          }
+          // CAPACITY — the finishing line. Dashed, so it never reads as another target.
+          if (r.cap > 0) {
+            const cx = x.getPixelForValue(r.cap);
+            c.strokeStyle = '#A15568'; c.lineWidth = 2; c.setLineDash([3, 3]);
+            c.beginPath(); c.moveTo(cx, y0 - 3); c.lineTo(cx, y1 + 3); c.stroke();
+            c.setLineDash([]);
+            c.fillStyle = '#A15568'; c.textAlign = 'center';
+            c.fillText('Cap ' + r.cap, cx, y1 + 10);
+          }
         });
         c.restore();
       }
     };
-    recFulfilChart = new Chart(ctx, { type: 'bar',
-      data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Achieved — Joined + Joining Pending (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Delta to Capacity (Score)', data: recs.map(r => r.gap), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.72 }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 60 } },
-        plugins: { valueLabels: false, stackTotals: false,   // this chart draws its own labels (segment values
-          // + the Target marker at the bar end); the global plugins would print both a second time
-          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
-      plugins: [labelPlugin] });
+
+    recFulfilChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: recs.map(r => r.name),
+        datasets: [
+          { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 },
+          { label: 'Short of Goal (Score)', data: recs.map(r => r.short), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 }
+        ]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 40, top: 8, bottom: 8 } },
+        plugins: {
+          valueLabels: false, stackTotals: false,
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
+          tooltip: {
+            callbacks: {
+              afterBody: (items) => {
+                if (!items.length) return '';
+                const r = recs[items[0].dataIndex];
+                const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
+                const vs = r.goal > 0 ? (r.achieved >= r.goal ? `${r.achieved - r.goal} past goal` : `${r.goal - r.achieved} short of goal`) : 'no goal this quarter';
+                return [`Goal ${r.goal} · Capacity ${r.cap}`, vs, util];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ...gridY, stacked: true, suggestedMax: axisMax, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+        }
+      },
+      plugins: [markers]
+    });
   }
   function buildSourceChart() {
     const ctx = document.getElementById('recSourceChart'); if (!ctx) return;
