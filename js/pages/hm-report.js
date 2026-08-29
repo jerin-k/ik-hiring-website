@@ -1,7 +1,8 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
-import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
+         buildDumbbell } from '../chart-style.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -17,7 +18,6 @@ const TP_LABELS = {
   r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
   rc:'Ref Check', ds:'Doc Sub', offer:'Offer'
 };
-const FUNNEL_ORDER = ['helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // The HM tab uses Department only (team is intentionally not a dimension here).
@@ -80,13 +80,6 @@ function computeThroughput(p, total) {
     offer: { i: cum.offer || 0,     o: cum.hired || 0 },
     overall: (cum.r1 || 0) > 0 ? (cum.docSub || 0) / (cum.r1 || 1) : null
   };
-}
-
-function reachedFunnel(agg) {
-  const reached = {};
-  let running = 0;
-  for (let i = FUNNEL_ORDER.length - 1; i >= 0; i--) { running += (agg[FUNNEL_ORDER[i]] || 0); reached[FUNNEL_ORDER[i]] = running; }
-  return FUNNEL_ORDER.map(s => ({ key: s, label: STAGE_LABELS[s], value: reached[s] }));
 }
 
 // #6 (2026-08-22): the local `valueLabels` plugin that used to live here was a DUPLICATE of the global one
@@ -236,6 +229,9 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
       ${defsBlock('hm-throughput')}
+      <h3 class="subsection-title">Throughput by department — R1 to Documentation</h3>
+      <div class="chart-wrap" id="hm2ChartWrap"><canvas id="hm2Chart"></canvas></div>
+
       <p class="sub-note">Click a department to drill in.</p>
       <div class="hm-stages">
         <span class="lbl">Stages:</span>
@@ -247,12 +243,6 @@ export function renderHmReport(data) {
         <tbody id="hm2Body"></tbody>
       </table></div>
       <div class="heat-legend" id="hm2Legend"></div>
-
-      <h3 class="subsection-title">Stage Throughput (In vs Out)</h3>
-      <div class="chart-wrap" style="height:300px"><canvas id="hm2Chart"></canvas></div>
-
-      <h3 class="subsection-title">Pipeline Funnel — Total</h3>
-      <div class="chart-wrap" id="hm2FunnelWrap" style="height:360px"><canvas id="hm2Funnel"></canvas></div>
     </div>
 
     <!-- ===== PANEL: PIPELINE ===== -->
@@ -305,7 +295,6 @@ function dropRows(data) {
 
 let hm1ChartInstance = null;
 let hm2ChartInstance = null;
-let hm2FunnelInstance = null;
 
 export function initHmFilters(data) {
   if (!data) return;
@@ -720,47 +709,43 @@ export function initHmFilters(data) {
       + '<span><i class="sw none"></i>stage not used</span>'
       + '<span class="leg-note">Number = candidates who entered the stage.</span>';
 
-    // Chart 1: In vs Out by stage (Application excluded, labelled)
-    const chartLabels = [], chartIn = [], chartOut = [];
-    visStages.filter(sk => sk !== 'app').forEach(sk => {
-      chartLabels.push(TP_LABELS[sk]); chartIn.push(tpTotals[sk].i); chartOut.push(tpTotals[sk].o);
-    });
+    // ===== ONE chart: department vs throughput (Jerin, 2026-08-30) =====
+    // Replaces two org-wide charts — a per-stage In/Out column chart and a pipeline funnel — neither of
+    // which showed a department. This one puts the departments on the axis and asks a single question of
+    // each: of the people who reached R1, how many got as far as Documentation.
+    //
+    // 🚨 It deliberately does NOT sum "In" across stages. One person passing through R1, R2 and R3 appears
+    // in three stages, so a total would count them three times — the same units trap as the throughput
+    // dedupe. R1 → Documentation is one span with no double counting, and it is the measure the table's
+    // last column already reports, so the chart and the table agree by construction.
+    // The per-stage detail stays in the table above; this chart is for comparing departments.
     if (hm2ChartInstance) hm2ChartInstance.destroy();
     const ctx2 = document.getElementById('hm2Chart');
+    const wrap2 = document.getElementById('hm2ChartWrap');
     if (ctx2) {
-      hm2ChartInstance = new Chart(ctx2, {
-        type: 'bar',
-        data: { labels: chartLabels, datasets: [
-          { label: 'In', data: chartIn, backgroundColor: '#4E6BA6', borderRadius: 4, barPercentage: 0.75 },
-          { label: 'Out', data: chartOut, backgroundColor: '#398AA2', borderRadius: 4, barPercentage: 0.75 }
-        ] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } } },
-          scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-        }
-      });
-    }
-
-    // Chart 2: aggregate reached-stage funnel
-    const agg = {};
-    shown.forEach(({ j }) => { Object.keys(j.pipeline).forEach(k => { agg[k] = (agg[k] || 0) + (j.pipeline[k] || 0); }); });
-    const funnel = reachedFunnel(agg);
-    if (hm2FunnelInstance) hm2FunnelInstance.destroy();
-    const ctxF = document.getElementById('hm2Funnel');
-    if (ctxF) {
-      hm2FunnelInstance = new Chart(ctxF, {
-        type: 'bar',
-        data: { labels: funnel.map(f => f.label), datasets: [{
-          label: 'Reached', data: funnel.map(f => [-f.value / 2, f.value / 2]),
-          backgroundColor: '#4E6BA6', borderRadius: 3, ...HBAR
-        }] },
-        options: {
-          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => 'Reached: ' + Math.round(c.raw[1] - c.raw[0]) } } },
-          scales: { x: { display: false, grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } } }
-        }
-      });
+      const deptRows = Object.keys(groups).map(d => {
+        const per = aggTP(groups[d]);
+        return {
+          label: d,
+          added: per.r1.i,
+          progressed: per.ds.i,
+          roles: groups[d].map(({ job, t }) => ({ title: job.title, added: t.r1.i, progressed: t.ds.i }))
+            .filter(x => x.added > 0)
+        };
+      }).filter(r => r.added > 0).sort((a2, b2) => b2.added - a2.added);
+      if (!deptRows.length) {
+        if (wrap2) wrap2.style.height = '120px';
+        ctx2.style.display = 'none';
+      } else {
+        ctx2.style.display = '';
+        const h2 = hbarHeight(deptRows.length, 80, 220);
+        if (wrap2) wrap2.style.height = h2 + 'px';
+        ctx2.style.maxHeight = h2 + 'px';
+        hm2ChartInstance = buildDumbbell(ctx2, deptRows, {
+          xTitle: 'Candidates', colHeader: 'THROUGHPUT',
+          fromLabel: 'reached R1', toLabel: 'reached Documentation'
+        });
+      }
     }
   }
 

@@ -83,10 +83,9 @@ export const DEFINITIONS = {
         ]
       },
       {
-        heading: 'The two charts',
+        heading: 'The chart',
         items: [
-          ['Stage Throughput (In vs Out)', '<strong>In</strong> = candidates who entered the stage, <strong>Out</strong> = candidates who moved past it, added up across every role matching the filters.'],
-          ['Pipeline Funnel — Total', 'How many candidates reached each stage, across the same roles. The bars are centred so the shape reads as a funnel; the number on each is the count that reached it.'],
+          ['The chart', 'One row per <strong>department</strong>, asking a single question of each: of the people who reached <strong>R1</strong>, how many got as far as <strong>Documentation</strong>. The hollow dot is R1, the solid dot Documentation, and the line between them is everyone lost along the way. The rate sits in its own column on the right, and the line is coloured by it. Hover a row to see the roles behind it. It reads the same numbers as the table\u2019s last column.'],
         ]
       },
     ],
@@ -427,10 +426,12 @@ export const DEFINITIONS = {
           ['In', 'Candidates who entered the stage during the period.'],
           ['Out', 'Candidates who moved past it.'],
           ['Throughput %', 'Out ÷ In — what share of the queue got moved on.'],
+          ['The chart', 'One row per <strong>department</strong>: of the people who reached <strong>R1</strong>, how many got as far as <strong>Documentation</strong>. Hollow dot R1, solid dot Documentation, the line between them is everyone lost along the way, and the rate is in its own column on the right. Hover a row for the roles behind it. The 13 per-department charts it replaced are gone.'],
         ]
       },
     ],
     warnings: [
+      ['Do not add the stage columns together', 'One person passing through R1, R2 and R3 appears in all three, so a total across stages counts them three times. Each column is only comparable to its own In. That is also why the chart uses a single span, R1 to Documentation, rather than a sum.'],
       ['Online Assessment carries small numbers', 'Used, but thinly: 182 candidates in total (Q1 159, Q2 75, Q3 83 reached it). Treat a single role’s OA conversion as indicative, not solid.'],
     ]
   },
