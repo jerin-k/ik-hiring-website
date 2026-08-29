@@ -204,6 +204,8 @@ export const DEFINITIONS = {
           ['Total \u00b7 30d', 'Everything in the 30 columns beside it added up \u2014 the row\u2019s arrivals for that window, not for the whole quarter.'],
           ['The From / To boxes', 'Momentum is the one panel driven by the <strong>From</strong> and <strong>To</strong> dates rather than the quarter selector. It always shows the last 30 days of that range.'],
           ['Chart', 'One bar per <strong>day</strong>, stacked by pod, and within a pod shaded by <strong>role</strong> \u2014 darkest block is that pod\u2019s busiest role in the window, palest the quietest. Hover any block for the pod, the role and the count. The legend is per pod; clicking one hides all of its roles at once.'],
+          ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon, on the chart and underlined in the table. An empty bar on a Sunday is a weekend, not a bad day.'],
+          ['The small maroon mark under a bar', 'A <strong>weekday</strong> with no arrivals at all. Weekends do not get one \u2014 nothing happening on a Saturday is not news.'],
         ]
       },
     ],

@@ -194,6 +194,25 @@ export function renderRecruiter(data) {
       /* Velocity table — freeze the first two columns (Pod/Recruiter/Stage + Total-15) */
       .vel-table { width:auto; min-width:100%; border-collapse:separate; border-spacing:0; overflow:visible; }
       .vel-table th, .vel-table td { white-space:nowrap; }
+      /* ===== Momentum grid, design pass 2026-08-29 (look only — no columns, rows or figures changed) ===== */
+      /* Tighter rhythm: 30 day-columns at the global 8px/12px padding pushed the grid wider than it needed
+         to be and made the sparse cells feel emptier than they are. */
+      .vel-table th { padding:8px 9px; letter-spacing:0.02em; }
+      .vel-table td { padding:6px 9px; }
+      /* A real number should read louder than an empty cell. Dots stay faint; values get their weight back. */
+      .vel-table tbody td { color:var(--text-secondary); }
+      .vel-table tbody td:not(:first-child) { font-weight:500; font-variant-numeric:tabular-nums; }
+      .vel-table tbody td .zero { font-weight:400; }
+      /* Depth by weight and colour rather than indent alone: pod > recruiter > role. */
+      .vel-table tbody tr.lvl-pod td { font-size:12.5px; }
+      .vel-table tbody tr.lvl-job td:first-child { color:var(--muted); font-weight:400; white-space:normal; line-height:1.35; }
+      /* Someone with nothing in the window is still worth seeing, just not worth reading first. */
+      .vel-table tbody tr.lvl-quiet td { color:var(--muted); }
+      .vel-table tbody tr.lvl-quiet td:not(:first-child) { font-weight:400; }
+      /* Saturdays and Sundays: a soft maroon underline on the date, so a quiet weekend is not mistaken for
+         a quiet week (Jerin, 2026-08-29). Deliberately an underline and not a fill — the column is context,
+         not an alert. */
+      .vel-table th.wknd { box-shadow:inset 0 -2px 0 rgba(163,50,83,0.38); }
       .vel-table th:not(:first-child), .vel-table td:not(:first-child) { text-align:right; }
       .vel-table th:nth-child(n+3), .vel-table td:nth-child(n+3) { min-width:56px; }
       .vel-table th:nth-child(1), .vel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:250px; min-width:250px; max-width:250px; text-align:left; white-space:normal; }
@@ -1791,6 +1810,8 @@ export function initRecruiterFilters(data) {
     const sr = data.stageRollups || {};
     return { rec: sr.tofuByRecruiter || null, recJob: sr.tofuByRecruiterJob || null };
   }
+  // Pod colours, shared by the Momentum chart and the pod hairline in its table.
+  const POD_COLORS = ['#4E6BA6', '#398AA2', '#1E7590', '#938FB8', '#B5859A'];
   function renderVelocity() {
     const head = document.getElementById('recVelHead');
     const body = document.getElementById('recVelBody');
@@ -1803,7 +1824,10 @@ export function initRecruiterFilters(data) {
 
     if (head) {
       let h = `<tr><th style="min-width:240px">Pod / Recruiter / Job</th><th>Total · ${dates.length}d</th>`;
-      dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
+      dates.forEach(d => {
+        const wknd = d.getDay() === 0 || d.getDay() === 6;
+        h += `<th class="${wknd ? 'wknd' : ''}"${wknd ? ' title="Weekend"' : ''}>${MON[d.getMonth()]} ${d.getDate()}</th>`;
+      });
       head.innerHTML = h + '</tr>';
     }
     const ncol = dates.length + 2;
@@ -1825,8 +1849,11 @@ export function initRecruiterFilters(data) {
     groups.forEach((G, pi) => {
       const podArr = new Array(dkeys.length).fill(0); let podTotal = 0;
       const recSeries = G.recs.map(r => { const sres = series(tRec[r.name]); addInto(podArr, sres.per); podTotal += sres.t; return sres; });
-      html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
+      // The pod's own colour from the chart, as a hairline down its row — the table and the chart are
+      // reading the same pods, and this is the cheapest way to say so without adding a column.
+      const podColor = POD_COLORS[pi % POD_COLORS.length];
+      html += `<tr class="lvl-pod" data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600;box-shadow:inset 3px 0 0 ${podColor}">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
       G.recs.forEach((r, ri) => {
         const rp = `${pi}-${ri}`;
         const jobs = [];
@@ -1838,11 +1865,12 @@ export function initRecruiterFilters(data) {
           });
           jobs.sort((a, b) => b.t - a.t);
         }
-        html += `<tr data-path="${rp}"${jobs.length ? ' data-haschild data-exp="0"' : ''} style="display:none${jobs.length ? ';cursor:pointer' : ''}">
+        const quiet = recSeries[ri].t === 0 ? ' lvl-quiet' : '';
+        html += `<tr class="lvl-rec${quiet}" data-path="${rp}"${jobs.length ? ' data-haschild data-exp="0"' : ''} style="display:none${jobs.length ? ';cursor:pointer' : ''}">
           <td style="padding-left:26px;font-weight:500">${jobs.length ? CARET : ''}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recSeries[ri].t, recSeries[ri].per, false)}</tr>`;
         jobs.forEach((J, ji) => {
-          html += `<tr data-path="${rp}-${ji}" style="display:none">
-            <td style="padding-left:52px;color:var(--muted)">${J.title}</td>${numRow(J.t, J.per, false)}</tr>`;
+          html += `<tr class="lvl-job" data-path="${rp}-${ji}" style="display:none">
+            <td style="padding-left:52px">${J.title}</td>${numRow(J.t, J.per, false)}</tr>`;
         });
       });
     });
@@ -1869,7 +1897,6 @@ export function initRecruiterFilters(data) {
   // Reads the same tofuByRecruiter / tofuByRecruiterJob the table reads, over the same days: any arrival
   // whose role is unknown becomes that pod's palest "role not recorded" block, so the chart total and the
   // table total cannot drift apart.
-  const POD_COLORS = ['#4E6BA6', '#398AA2', '#1E7590', '#938FB8', '#B5859A'];
   function podShade(hex, i, n) {
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
     const t = n > 1 ? 0.62 * (i / (n - 1)) : 0;          // 0 = the pod's own colour, 0.62 = well toward white
@@ -1922,9 +1949,41 @@ export function initRecruiterFilters(data) {
     if (wrap) wrap.style.height = '420px';
     ctx.style.maxHeight = '420px';
 
+    // Every date gets a tick (Jerin, 2026-08-29) — 30 of them, so the day number carries the label and the
+    // month appears only when it changes. Rotating instead would have fitted too, but at the cost of the
+    // one thing this axis is for: reading a date at a glance.
+    const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
+    const tickLabels = chrono.map((d, i) => {
+      const showMonth = i === 0 || d.getMonth() !== chrono[i - 1].getMonth();
+      return showMonth ? [String(d.getDate()), MON[d.getMonth()]] : [String(d.getDate()), ''];
+    });
+    const dayTotals = chrono.map((_, i) => datasets.reduce((a, ds) => a + (ds.data[i] || 0), 0));
+    // A weekday with nothing on it is a fact worth seeing; a weekend with nothing on it is just a weekend.
+    // So the empty-day mark is drawn ONLY on Mon-Fri, and weekends say their piece through the tick colour.
+    const emptyWeekdayMarks = {
+      id: 'emptyWeekdayMarks',
+      afterDatasetsDraw(chart) {
+        const x = chart.scales.x, y = chart.scales.y;
+        if (!x || !y) return;
+        const base = y.getPixelForValue(0);
+        const c = chart.ctx;
+        c.save();
+        c.fillStyle = 'rgba(163,50,83,0.55)';
+        dayTotals.forEach((t, i) => {
+          if (t > 0 || isWknd[i]) return;
+          const px = x.getPixelForTick(i);
+          c.beginPath();
+          const w = 11, h = 3;
+          if (c.roundRect) c.roundRect(px - w / 2, base - h, w, h, 1.5); else c.rect(px - w / 2, base - h, w, h);
+          c.fill();
+        });
+        c.restore();
+      }
+    };
+
     recVelChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: chrono.map(d => `${MON[d.getMonth()]} ${d.getDate()}`), datasets },
+      data: { labels: tickLabels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
@@ -1958,6 +2017,12 @@ export function initRecruiterFilters(data) {
           tooltip: {
             itemSort: (a, b) => b.parsed.y - a.parsed.y,
             callbacks: {
+              title: (items) => {
+                if (!items.length) return '';
+                const d = chrono[items[0].dataIndex];
+                const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+                return `${wk} ${d.getDate()} ${MON[d.getMonth()]}`;
+              },
               label: (c) => `${c.dataset._pod} · ${c.dataset.label}: ${c.parsed.y}`,
               footer: (items) => {
                 if (!items.length) return '';
@@ -1969,10 +2034,19 @@ export function initRecruiterFilters(data) {
           }
         },
         scales: {
-          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+          x: {
+            stacked: true, grid: { display: false },
+            ticks: {
+              font: { size: 10 }, maxRotation: 0, minRotation: 0, autoSkip: false, padding: 2,
+              // Saturdays and Sundays in a soft maroon, so an empty bar on a Sunday reads as a weekend
+              // rather than as a bad day.
+              color: (c) => (isWknd[c.index] ? '#A15568' : '#64748b')
+            }
+          },
           y: { ...gridY, stacked: true, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } }
         }
-      }
+      },
+      plugins: [emptyWeekdayMarks]
     });
   }
   function buildScreenChart() {
