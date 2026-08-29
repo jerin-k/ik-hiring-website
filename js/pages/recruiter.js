@@ -167,22 +167,25 @@ export function renderRecruiter(data) {
       /* ===== Momentum heatmap (2026-08-30) — recruiter x day, one cell per day =====
          Deliberately HTML rather than a canvas chart: the cell grid IS a table of counts, and the hover
          needs to list every role behind a cell, which a canvas tooltip renders badly. */
+      /* Full content width — the cells stretch to fill, so the grid lines up with the table below it
+         (Jerin, 2026-08-30: "enlarge the chart to align with the rest of the content"). Cells keep a
+         minimum width, so on a narrow screen the wrap scrolls rather than crushing them. */
       .tofu-heat-wrap { position:relative; margin:0 0 22px; overflow-x:auto; }
-      .tofu-heat { display:inline-block; min-width:100%; }
-      .heat-row { display:flex; align-items:center; gap:2px; margin-bottom:3px; }
-      .heat-name { width:190px; min-width:190px; font-size:12.5px; color:var(--text); text-align:right;
-        padding-right:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .heat-cell { width:26px; height:26px; border-radius:3px; background:#f4f6f8; font-size:11px; font-weight:500;
-        display:flex; align-items:center; justify-content:center; color:#334155; flex:0 0 auto; }
+      .tofu-heat { display:block; min-width:100%; }
+      .heat-row { display:flex; align-items:center; gap:3px; margin-bottom:4px; }
+      .heat-name { width:210px; min-width:210px; font-size:13px; color:var(--text); text-align:right;
+        padding-right:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .heat-cell { flex:1 1 0; min-width:24px; height:34px; border-radius:4px; background:#f4f6f8;
+        font-size:13px; font-weight:500; display:flex; align-items:center; justify-content:center; color:#334155; }
       .heat-cell.has { cursor:default; }
       .heat-cell.wknd { background:#eef1f4; }
-      .heat-tot { width:44px; min-width:44px; text-align:center; font-size:13px; font-weight:600; color:var(--text); }
-      .heat-hd { font-size:10.5px; color:var(--muted); height:16px; }
+      .heat-tot { width:62px; min-width:62px; text-align:center; font-size:14px; font-weight:600; color:var(--text); }
+      .heat-hd { font-size:11.5px; color:var(--muted); height:18px; background:none !important; }
       .heat-hd.wknd { color:#C08497; }
-      .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:20px; }
-      .heat-foot .heat-name { font-size:11.5px; color:var(--muted); }
-      .heat-scale { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); margin-top:10px; padding-left:190px; }
-      .heat-scale i { width:18px; height:18px; border-radius:3px; display:inline-block; }
+      .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:24px; font-size:12px; }
+      .heat-foot .heat-name { font-size:12px; color:var(--muted); }
+      .heat-scale { display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:12px; padding-left:210px; }
+      .heat-scale i { width:20px; height:20px; border-radius:4px; display:inline-block; }
       .heat-tip { position:absolute; z-index:40; pointer-events:none; display:none; background:#fff;
         border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 18px rgba(15,23,42,0.13);
         padding:9px 11px; font-size:11.5px; color:var(--text); max-width:320px; }
