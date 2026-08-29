@@ -35,6 +35,8 @@ var STAGE_KEY_MAP = {
 // The three late stages. A candidate's FIRST entry into any of them marks the quarter whose opening they
 // were working against - the convention Drop is attributed by, since Ashby cannot supply the opening.
 var LATE_STAGES_ = { 'Reference Check': 1, 'Document Submission': 1, 'Offer': 1 };
+// Everything that counts as having moved PAST R1, for Screening Efficiency's Cleared column.
+var BEYOND_R1_ = { 'R2': 1, 'R3': 1, 'R4': 1, 'R5': 1, 'Reference Check': 1, 'Document Submission': 1, 'Offer': 1 };
 var PIPELINE_KEYS = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
 var RECRUITER_STAGES = ['hc','ta','hm','oa','r1','r2','r3','r4','r5','offer','hired'];
 var STAGEKEY_TO_RECKEY = { helloChristy:'hc', taScreen:'ta', hmReview:'hm', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', offer:'offer' };
@@ -260,6 +262,10 @@ function fetchAndProcessApps_(startTime, jobLookup) {
         // finer source NAME (e.g. "Indeed Listing", "LinkedIn"), nested under the source_type, per recruiter
         var srcName = (app.source && typeof app.source.title === 'string' && app.source.title) ? app.source.title : '(unspecified)';
         var nst = recruiterCounts[recName].srcNested; var nt = nst[srcType] || (nst[srcType] = {}); nt[srcName] = (nt[srcName] || 0) + 1;
+        // Carry the source on appMap so an OFFER can say where that candidate came from. Sourcing Mix
+        // counts applications by source; Jerin asked (2026-08-29) for the same cut restricted to people
+        // who actually joined, and an offer record had no source on it until now.
+        if (app.id && appMap[app.id]) { appMap[app.id].srcType = srcType; appMap[app.id].srcName = srcName; }
         // same source, bucketed per JOB as well: srcByJob {job8:{type:{name:count}}}. Sources were only ever
         // stored per recruiter, which left Overall Efficiency > Sourcing Mix unable to honour its Department
         // and Job filters. Keying by (recruiter x job) fixes that: pod attribution follows the recruiter,
@@ -680,6 +686,9 @@ function refreshDashboardData() {
     return { jobId8: e.jobId8, jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', level: jd ? jd.level : null, complexity: jd ? jd.complexity : null,
       employmentType: jd ? jd.employmentType : null,
       recruiter: e.recruiter, sourcer: e.sourcer, candidate: e.candidate, decidedAt: e.decidedAt, startDate: e.startDate, accepted: e.accepted,
+      // Where this candidate came from, copied off the application. Lets Sourcing Mix count JOINERS by
+      // source rather than applications by source.
+      srcType: amE ? (amE.srcType || null) : null, srcName: amE ? (amE.srcName || null) : null,
       // DROP needs three things the events did not carry: the application's own status (a drop is an ARCHIVED
       // application), the opening the offer was made against, and that opening's quarter.
       // ⚠ The opening link here comes from the OFFER VERSION (o.latestVersion.openingId), which is a historical
@@ -1037,11 +1046,11 @@ function backfillArchivedLateStage() {
     // done  = the original drop pass (late-stage arrivals). v2 = the same application re-read for its
     // HM Screening arrival, which ToFU needs and the first pass threw away. An application is skipped
     // only once BOTH passes have seen it, so adding v2 costs one more sweep and then nothing.
-    if (store.done[a.id] && store.v2 && store.v2[a.id]) continue;
+    if (store.done[a.id] && store.v2 && store.v2[a.id] && store.v3 && store.v3[a.id]) continue;
     try {
       var res = ashbyPost_('/application.listHistory', { applicationId: a.id });
       var hist = (res && (res.results || res.history)) || [];
-      var earliest = null, hmEarliest = null;
+      var earliest = null, hmEarliest = null, beyondR1 = null;
       for (var h = 0; h < hist.length; h++) {
         var ht = hist[h];
         if (!ht || !ht.enteredStageAt) continue;
@@ -1050,11 +1059,19 @@ function backfillArchivedLateStage() {
         // number shrinks every time somebody from July is rejected in August - the past quietly
         // rewriting itself, which is the one thing this metric must not do.
         if (STAGE_KEY_MAP[ht.title] === 'hmReview' && (!hmEarliest || String(ht.enteredStageAt) < String(hmEarliest))) hmEarliest = ht.enteredStageAt;
+        // Screening Efficiency asks whether a candidate got PAST R1. For someone since archived the live
+        // stage store holds nothing, so without this the answer defaults to 'no' — and 1,029 of 1,787 R1
+        // bookings are archived, so the rate would read about 23% when the truth is higher. Record the
+        // earliest stage beyond R1 here, on the same sweep that already has the history open.
+        if (BEYOND_R1_[ht.title] && (!beyondR1 || String(ht.enteredStageAt) < String(beyondR1))) beyondR1 = ht.enteredStageAt;
       }
       store.done[a.id] = 1;
       if (!store.v2) store.v2 = {};
       store.v2[a.id] = 1;
+      if (!store.v3) store.v3 = {};
+      store.v3[a.id] = 1;
       if (hmEarliest) { if (!store.tofuHm) store.tofuHm = {}; store.tofuHm[a.id] = String(hmEarliest).substring(0, 10); }
+      if (beyondR1) { if (!store.beyondR1) store.beyondR1 = {}; store.beyondR1[a.id] = String(beyondR1).substring(0, 10); }
       pulled++;
       // ONE record per application, so a candidate who bounced into Offer three times is counted once.
       if (earliest) { store.hits[a.id] = { r: a.r || null, j: a.j || null, e: String(earliest).substring(0, 10) }; kept++; }
