@@ -213,7 +213,7 @@ export function metricLegend(metrics, base = {}) {
       usePointStyle: true, pointStyle: 'rect', boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 10,
       ...(base.labels || {}),
       generateLabels: (chart) => metrics.map(M => ({
-        text: M.label, fillStyle: M.color, strokeStyle: M.color, lineWidth: 0,
+        text: M.label, fillStyle: M.color, strokeStyle: M.color, lineWidth: 0, pointStyle: 'rect',
         hidden: !chart.data.datasets.some((d, i) => d._m === M.key && chart.isDatasetVisible(i)),
         _m: M.key
       }))

@@ -79,7 +79,8 @@ async function onAuthSuccess(user) {
   // #4 (2026-08-22): a refresh used to dump you back on Overview. The active tab now lives in the URL hash,
   // so reloading returns you to where you were, and back/forward work. Falls back to Overview when the hash is
   // empty or names a page this user cannot see (navigateTo re-checks access anyway).
-  navigateTo(pageFromHash());
+  const opening = openingRoute();
+  navigateTo(opening.page, opening.sub);
 
   const lastUpdated = getLastUpdated();
   if (lastUpdated) {
@@ -146,20 +147,68 @@ function setupSignout() {
   document.getElementById('signout-btn').addEventListener('click', signOut);
 }
 
-function pageFromHash() {
-  return (location.hash || '').replace(/^#\/?/, '') || 'home';
+// The route is "page" or "page/sub-tab" — e.g. #recruiter/momentum. Reloading has to put you back exactly
+// where you were, sub-tab included (Jerin, 2026-08-30: "can refresh of a page land in the same page?
+// Today, it goes to the Home page; weird").
+// 🔑 The hash alone was not enough. It is the primary record, but it is also the thing that goes missing —
+// a link shared without it, a redirect, a browser restoring a bare URL — and when it is missing the app
+// falls back to Overview, which is the behaviour being complained about. So the last route is ALSO written
+// to localStorage and used whenever the hash is empty. The hash still wins when it is there, so a pasted
+// link opens what it says.
+const ROUTE_KEY = 'ik_last_route';
+
+function parseRoute(str) {
+  const raw = String(str || '').replace(/^#\/?/, '');
+  if (!raw) return null;
+  const [page, sub] = raw.split('/');
+  return page ? { page, sub: sub || null } : null;
+}
+
+function routeFromHash() { return parseRoute(location.hash); }
+
+function storedRoute() {
+  try { return parseRoute(localStorage.getItem(ROUTE_KEY)); } catch (e) { return null; }
+}
+
+function rememberRoute() {
+  try { localStorage.setItem(ROUTE_KEY, currentSub ? `${currentPage}/${currentSub}` : currentPage); } catch (e) { /* private window */ }
+}
+
+function openingRoute() {
+  return routeFromHash() || storedRoute() || { page: 'home', sub: null };
+}
+
+// The sub-tab strips on each page. They all carry the active tab in a data attribute; these are the only
+// two names in use.
+const SUBTAB_SEL = '.rec-subtab, .eff-subtab, .hm-subtab, .adm-subtab';
+const subKeyOf = (el) => el.dataset.tab || el.dataset.atab || null;
+
+function applySub(sub) {
+  currentSub = sub || null;
+  if (!sub) return;
+  const content = document.getElementById('page-content');
+  if (!content) return;
+  const btn = [...content.querySelectorAll(SUBTAB_SEL)].find(b => subKeyOf(b) === sub);
+  // Click rather than set classes: each page owns what showing a tab means (which panel, which chart to
+  // build). Skip it when that tab is already the active one, or the page would render itself twice.
+  if (btn && !btn.classList.contains('active')) btn.click();
 }
 
 let currentPage = null;
+let currentSub = null;
 
-function navigateTo(page) {
+function navigateTo(page, sub) {
   if (!canAccessPage(currentAccess, page)) {
     page = 'home';
+    sub = null;
   }
   currentPage = page;
+  currentSub = sub || null;
   // Keep the URL in step. The hashchange listener below compares against currentPage, so this assignment
   // cannot bounce back into navigateTo and loop.
-  if (pageFromHash() !== page) location.hash = page;
+  const want = currentSub ? `${page}/${currentSub}` : page;
+  if ((location.hash || '').replace(/^#\/?/, '') !== want) location.hash = want;
+  rememberRoute();
 
   document.querySelectorAll('[data-nav]').forEach(el => {
     el.classList.toggle('active', el.dataset.nav === page);
@@ -199,10 +248,25 @@ function navigateTo(page) {
       initAdminAccess(accessConfig);
       break;
   }
+
+  applySub(currentSub);
 }
 
 // Browser back/forward, and any hash typed by hand, route through the same entry point.
 window.addEventListener('hashchange', () => {
-  const p = pageFromHash();
-  if (p !== currentPage) navigateTo(p);
+  const r = routeFromHash() || { page: 'home', sub: null };
+  if (r.page !== currentPage) navigateTo(r.page, r.sub);
+  else if ((r.sub || null) !== currentSub) applySub(r.sub);
+});
+
+// Clicking a sub-tab writes it into the route, so a reload comes back to that panel and not to the page's
+// default one. Delegated, because every page rebuilds its own strip on render.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest(SUBTAB_SEL);
+  if (!btn || !document.getElementById('page-content').contains(btn)) return;
+  const sub = subKeyOf(btn);
+  if (!sub || sub === currentSub) return;
+  currentSub = sub;
+  location.hash = `${currentPage}/${sub}`;
+  rememberRoute();
 });

@@ -2068,6 +2068,10 @@ export function initRecruiterFilters(data) {
                   text: rec,
                   fillStyle: chart.data.datasets[i].backgroundColor,
                   strokeStyle: 'transparent',
+                  // ⚠ A custom generateLabels must SET pointStyle — Chart.js ignores labels.pointStyle here
+                  // and falls back to a circle. That is why this legend alone had round markers
+                  // (Jerin, 2026-08-30: "can we use square legends all across?").
+                  pointStyle: 'rect',
                   hidden: !chart.data.datasets.some((d, k) => d._rec === rec && chart.isDatasetVisible(k)),
                   datasetIndex: i
                 }));
