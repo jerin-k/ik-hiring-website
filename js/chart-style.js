@@ -59,26 +59,31 @@ export function drawConvColumn(chart, pcts, header = 'Conversion') {
   c.restore();
 }
 
-// ===== Role bands: a gradient inside each stacked segment (2026-08-29) =====
-// Jerin: "bring in the gradient to the department, each gradient being a job."
-// A bar is a department (or a recruiter). It stacks two or three metrics. Each of those metrics is split
-// again into the ROLES inside it, drawn in shades of that metric's colour — darkest = the biggest role,
-// palest = the smallest — so one bar answers "how many, of what, on which roles".
+// ===== Role bands: one solid colour, bevelled, roles marked by a chiselled groove (2026-08-29) =====
+// First built as a gradient — every role a different tint. Jerin: "the gradient is making it confusing;
+// can you change it to self coloured line separators?" So each metric is now ONE flat colour and the roles
+// inside it are divided by a thin line 12% darker than the bar.
+// Four designs were mocked up (flat 8%, flat 12%, a bevelled bar with chiselled grooves, and extruded
+// blocks). The bevel was chosen from the mock-up, built, and then dropped on sight of the real charts —
+// "that's looking ugly dude". The flat 12% line is what shipped. Do not reintroduce the bevel.
 //
 // 🔑 One implementation, used by every chart that does this, so they cannot drift apart. Callers pass the
 // rows they ALREADY rendered into their table; nothing here recomputes a metric.
 //
 // ⚠ A metric that can be NEGATIVE must be passed with split:false. The tables clamp such a metric at the
-// department level; splitting it lets a −5 role and a +5 role cancel in the table while both count in the
-// chart, which is exactly how the Overall Efficiency bar read 53 against its table's 48.
+// row level; splitting it lets a −5 role and a +5 role cancel in the table while both count in the chart,
+// which is exactly how the Overall Efficiency bar read 53 against its table's 48.
 
-export const ROLE_SLOTS = 10;   // roles drawn individually; the tail is pooled into one band
+export const ROLE_SLOTS = 10;         // roles drawn individually; the rest pool into one final band
+export const ROLE_MIN_SHARE = 0.03;   // a role under 3% of the row pools too — see below
+export const SEP_MIN_PX = 7;          // no separator closer than this to the last one — see roleBandOverlay
+export const SEP_DARKEN = 0.12;       // the separator, one shade darker than the bar (Jerin's pick)
 
-export function shadeOf(hex, i, n) {
+// One shade darker than the bar, for the separator line.
+export function darken(hex, f) {
   const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-  const t = n > 1 ? 0.6 * (i / (n - 1)) : 0;
-  const mix = (c) => Math.round(c + (255 - c) * t);
-  return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+  const d = (c) => Math.round(c * (1 - f));
+  return `rgb(${d(r)},${d(g)},${d(b)})`;
 }
 
 // rows:    [{ label, jobs: [{ title, v: {metricKey: number} }], sum: {metricKey: number} }]
@@ -89,12 +94,18 @@ export function roleBandDatasets(rows, metrics, extra = {}) {
   const size = (v) => splitKeys.reduce((s, k) => s + Math.max(0, v[k] || 0), 0);
   const perRow = rows.map(r => {
     const js = (r.jobs || []).filter(x => size(x.v) > 0).sort((a, b) => size(b.v) - size(a.v));
-    const head = js.slice(0, ROLE_SLOTS), tail = js.slice(ROLE_SLOTS);
+    // ⚠ Roles too thin to see are POOLED, not dropped (Jerin, 2026-08-29). Without this the tail of a long
+    // bar turns into hatching — SME - US had four roles of 2, 1, 1, 1 inside a section of 62. The pooled
+    // band keeps every person in the bar, so the totals are untouched and only the grooves get simpler.
+    const rowTotal = js.reduce((a, x) => a + size(x.v), 0);
+    const floor = rowTotal * ROLE_MIN_SHARE;
+    const head = js.filter((x, i) => i < ROLE_SLOTS && size(x.v) >= floor);
+    const tail = js.filter(x => head.indexOf(x) < 0);
     const slots = head.map(x => ({ title: x.title, v: x.v }));
     if (tail.length) {
       const v = {};
       splitKeys.forEach(k => { v[k] = tail.reduce((a, x) => a + Math.max(0, x.v[k] || 0), 0); });
-      slots.push({ title: `${tail.length} other role${tail.length > 1 ? 's' : ''}`, v });
+      slots.push({ title: `${tail.length} smaller role${tail.length > 1 ? 's' : ''}`, v });
     }
     return slots;
   });
@@ -105,7 +116,7 @@ export function roleBandDatasets(rows, metrics, extra = {}) {
     if (M.split === false) {
       const data = rows.map(r => Math.max(0, r.sum[M.key] || 0));
       if (data.some(v => v > 0)) datasets.push({
-        label: M.label, _m: M.key, _titles: rows.map(() => 'across the department'),
+        label: M.label, _m: M.key, _c: M.color, _titles: rows.map(() => 'across the whole row'),
         data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR, ...extra
       });
       return;
@@ -114,39 +125,62 @@ export function roleBandDatasets(rows, metrics, extra = {}) {
       const data = perRow.map(slots => slots[k] ? Math.max(0, slots[k].v[M.key] || 0) : 0);
       if (!data.some(v => v > 0)) continue;
       datasets.push({
-        label: M.label, _m: M.key, _slot: k,
+        label: M.label, _m: M.key, _slot: k, _c: M.color,
         _titles: perRow.map(slots => slots[k] ? slots[k].title : ''),
-        data, backgroundColor: shadeOf(M.color, k, nSlots), stack: 'p', borderWidth: 0, ...HBAR, ...extra
+        data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR, ...extra
       });
     }
   });
   return datasets;
 }
 
-// The number that used to sit inside each segment, kept — but drawn ONCE PER METRIC across all of that
-// metric's role bands, not once per band. Jerin, 2026-08-29: "the data label for joined, open etc should be
-// retained." Per-band labels would be unreadable at this width; the role name is in the tooltip.
-export function metricGroupLabels(metrics) {
+// Drawn on top of the bars:
+//   · a SEPARATOR at every internal role boundary, 12% darker than the bar itself;
+//   · the metric's NUMBER, once across all of that metric's bands rather than on each one.
+//
+// The number is kept per metric, not per band: "the data label for joined, open etc should be retained"
+// (Jerin, 2026-08-29), and one number per band is unreadable at this width. The role name is in the
+// tooltip.
+export function roleBandOverlay(metrics) {
   return {
-    id: 'metricGroupLabels',
+    id: 'roleBandOverlay',
     afterDatasetsDraw(chart) {
       const c = chart.ctx;
       c.save();
-      c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
       c.textBaseline = 'middle';
-      c.textAlign = 'center';
       const n = chart.data.labels.length;
       for (let i = 0; i < n; i++) {
         metrics.forEach(M => {
-          let lo = Infinity, hi = -Infinity, total = 0, y = 0;
+          let lo = Infinity, hi = -Infinity, total = 0, y = 0, h = 0;
+          const edges = [];
           chart.data.datasets.forEach((d, di) => {
             if (d._m !== M.key || !chart.isDatasetVisible(di)) return;
             const bar = chart.getDatasetMeta(di).data[i];
             if (!bar) return;
-            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y;
+            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y; h = bar.height || 18;
             total += d.data[i] || 0;
+            if ((d.data[i] || 0) > 0) edges.push(bar.x);
           });
-          if (!total || hi - lo < 22) return;
+          if (!total || hi <= lo) return;
+          const top = y - h / 2, bot = y + h / 2;
+
+          // ⚠ Guarded on PIXELS, not on the numbers. The 3% pooling above keeps a long bar's tail readable,
+          // but it is proportional — on a SHORT bar (Operations, 11 people against an axis of 100) five
+          // roles land 2px apart and the separators close up into hatching. A boundary is only drawn when
+          // there is real room since the last one; the roles are all still there, and the tooltip still
+          // names them. Found on the live chart, not in the mock-up.
+          let prev = lo;
+          c.lineWidth = 1.5;
+          c.strokeStyle = darken(M.color, SEP_DARKEN);
+          edges.sort((a, b) => a - b).slice(0, -1).forEach(x => {
+            if (x - prev < SEP_MIN_PX) return;
+            prev = x;
+            c.beginPath(); c.moveTo(x, top + 1); c.lineTo(x, bot - 1); c.stroke();
+          });
+
+          if (hi - lo < 22) return;
+          c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+          c.textAlign = 'center';
           c.fillStyle = '#fff';
           c.fillText(String(total), (lo + hi) / 2, y);
         });

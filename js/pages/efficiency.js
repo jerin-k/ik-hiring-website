@@ -3,7 +3,7 @@ import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
-import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, metricGroupLabels, roleBandTooltip, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleBandTooltip, metricLegend } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -797,7 +797,7 @@ export function initEfficiencyFilters(data) {
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [endLabels, metricGroupLabels(METRICS)]
+      plugins: [endLabels, roleBandOverlay(METRICS)]
     });
   }
 
@@ -942,7 +942,7 @@ export function initEfficiencyFilters(data) {
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
-      plugins: [endLabels, metricGroupLabels(METRICS)]
+      plugins: [endLabels, roleBandOverlay(METRICS)]
     });
   }
 
@@ -1463,7 +1463,7 @@ export function initEfficiencyFilters(data) {
       type: 'bar',
       data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS) },
       options: opts,
-      plugins: [metricGroupLabels(METRICS)]
+      plugins: [roleBandOverlay(METRICS)]
     });
   }
 
