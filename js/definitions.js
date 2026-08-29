@@ -365,14 +365,14 @@ export const DEFINITIONS = {
   'eff-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org \u2014 one row per person, not one per stage.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
     groups: [
       {
         heading: 'What counts as being added',
         items: [
           ['Whichever of these comes first', 'The candidate <strong>enters HM Screening</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>.'],
           ['R1 is dated when the interview was BOOKED', 'Not the day it is held.'],
-          ['Counted once per role, per quarter', 'Somebody already added is not counted again for that role in the same quarter. Moving them further along adds nothing \u2014 this counts people arriving, not steps taken. The count resets each quarter, so quarters do not add up to a year.'],
+          ['Counted once per role, per quarter', 'Somebody already added is not counted again for that role in the same quarter. The count resets each quarter, so quarters do not add up to a year.'],
           ['Cancelled does not count', 'A cancelled interview booking or assessment is removed, which can take a count back off a past day.'],
         ]
       },
@@ -381,35 +381,39 @@ export const DEFINITIONS = {
         items: [
           ['Rows and columns', 'Department \u2192 Role down the side, the last 30 days of the selected date range across the top.'],
           ['Total \u00b7 30d', 'The 30 columns beside it added up.'],
-          ['Charts', 'One per department, a bar per day, reading the same figures as the table.'],
+          ['Chart', 'One bar per <strong>day</strong>, stacked by department and shaded by <strong>role</strong> within it \u2014 darkest block is that department\u2019s busiest role in the window. The legend is per department; clicking one hides all of its roles.'],
+          ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon, on the chart and underlined in the table.'],
+          ['The small maroon mark under a bar', 'A <strong>weekday</strong> with no arrivals at all. Weekends do not get one.'],
         ]
       },
     ],
     warnings: [
-      ['This will not match Screening Efficiency', 'That panel counts arrivals at each stage separately, and counts a person again every time they re-enter one. This counts people, once. The two are not supposed to agree.'],
-      ['Assessments start on 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Screening or an R1 booking, because there were no assessments to see \u2014 nothing is missing from Q1 and Q2.'],
+      ['This will not match Screening Efficiency', 'That panel counts what happened at R1 specifically. This counts everyone entering the funnel, by whichever of the three signals came first.'],
+      ['Assessments start on 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Screening or an R1 booking \u2014 nothing is missing from Q1 and Q2.'],
     ]
   },
   'eff-screening': {
     summary: 'How these numbers are worked out',
-    intro: 'How much of what arrives at each screening stage moves on, <strong>Department → Job</strong>, from real stage transitions.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'What happens to candidates once they reach <strong>R1</strong>, by department \u2014 how many were put into an R1 round, and how many went further.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Added', 'Candidates who entered the stage in the period.'],
-          ['Cleared', 'Candidates who left it — reached the next stage.'],
-          ['%', 'Cleared ÷ Added.'],
-          ['Charts', 'One per department, Added against Cleared for each stage.'],
+          ['Added at R1', 'The candidate was <strong>actioned at R1</strong>: an <strong>interview was scheduled</strong> at R1, or an <strong>assignment was triggered</strong> while they sat at R1. Either counts; somebody with both counts once.'],
+          ['Progressed', 'Of those, the ones who reached <strong>R2 or beyond</strong> \u2014 any later round, Reference Check, Documentation or Offer \u2014 on or after that day.'],
+          ['%', 'Progressed \u00f7 Added at R1.'],
+          ['Rows', 'Department \u2192 Role. Only roles that saw R1 activity in the period are listed.'],
+          ['Counted once', 'One count per candidate per role per quarter. Cancelled interviews and cancelled assignments do not count at all.'],
+          ['Chart', 'One bar per department: the solid part progressed past R1, the pale part is still at R1, and together they are how many were added.'],
         ]
       },
     ],
     warnings: [
-      ['Added and Cleared can be different people', 'Each event is counted in the quarter it happened, so someone can be added in one quarter and clear in the next.'],
+      ['This will not match the old per-stage numbers', 'The panel used to show HM Screening, Online Assessment and R1 side by side, counting stage ENTRIES \u2014 which counted a candidate again every time they came back round. The figures are not comparable.'],
+      ['HM Screening and Online Assessment are not on this panel', 'By design \u2014 this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
     ]
   },
-
   'eff-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'The full funnel, stage by stage, <strong>Department → Job</strong>.',
@@ -451,23 +455,27 @@ export const DEFINITIONS = {
 
   'eff-joining': {
     summary: 'How these numbers are worked out',
-    intro: 'Offered → Hired, <strong>Department → Job</strong>.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'Everyone who reached an offer, by department, and what became of them. <strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Offered', 'Offers made on that role.'],
-          ['Hired', 'How many of those offers ended in a hire.'],
-          ['Conversion %', 'Hired ÷ Offered.'],
+          ['Offered', 'Joined + Joining Pending + Dropped \u2014 everyone who got as far as an offer.'],
+          ['Joined', 'People whose <strong>start date</strong> falls in the quarter, minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong>.'],
+          ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. The same rule the Hiring Manager Positions card uses.'],
+          ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and the Recruiter tab use.'],
+          ['Joining Conversion', '(Joined + Joining Pending) \u00f7 Offered \u2014 the share of everyone who reached an offer who has <strong>not</strong> fallen out.'],
+          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with Offered and the conversion printed at the end.'],
         ]
       },
     ],
     warnings: [
-      ['An offer counts in the quarter it was DECIDED, not raised', 'So every offer in the denominator has actually been answered, and the rate is not dragged down by offers still awaiting a reply.'],
+      ['This measures drop-out, not joining', 'Joined and Joining Pending sit on <em>both</em> sides of the fraction, so they cancel: the figure is arithmetically <strong>1 \u2212 Dropped \u00f7 Offered</strong>. That is the intended question \u2014 <em>who have we lost?</em>'],
+      ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in closing <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered \u2014 kept that way so the column matches the HM Positions card.'],
+      ['One deliberate difference from the Recruiter tab', 'There, the <em>Sales</em> pod\u2019s Joined takes no earlier-quarter subtraction. Sales is a pod, and pods do not exist on this tab, so the subtraction is applied to every department here.'],
     ]
   },
-
   'eff-sourcing': {
     summary: 'How these numbers are worked out',
     intro: 'Where candidates come from, <strong>Department → Job → Source type → Source</strong>.',

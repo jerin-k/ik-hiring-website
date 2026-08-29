@@ -98,6 +98,15 @@ export function renderEfficiency(data) {
       /* Velocity table — freeze the first two columns */
       .evel-table { width:auto; min-width:100%; border-collapse:separate; border-spacing:0; overflow:visible; }
       .evel-table th, .evel-table td { white-space:nowrap; }
+      /* Design pass 2026-08-29, mirroring the Recruiter grid: tighter rhythm, values louder than the dots,
+         weekends underlined in a soft maroon, departments with nothing in the window muted. */
+      .evel-table th { padding:8px 9px; letter-spacing:0.02em; }
+      .evel-table td { padding:6px 9px; }
+      .evel-table tbody td:not(:first-child) { font-weight:500; font-variant-numeric:tabular-nums; }
+      .evel-table tbody td .zero { font-weight:400; }
+      .evel-table tbody tr.lvl-quiet td { color:var(--muted); }
+      .evel-table tbody tr.lvl-quiet td:not(:first-child) { font-weight:400; }
+      .evel-table th.wknd { box-shadow:inset 0 -2px 0 rgba(163,50,83,0.38); }
       .evel-table th:not(:first-child), .evel-table td:not(:first-child) { text-align:right; }
       .evel-table th:nth-child(n+3), .evel-table td:nth-child(n+3) { min-width:56px; }
       .evel-table th:nth-child(1), .evel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:260px; min-width:260px; max-width:260px; text-align:left; white-space:normal; }
@@ -169,26 +178,31 @@ export function renderEfficiency(data) {
       </table></div>
     </div>
 
-    <!-- PANEL: Momentum (ex-"Submission Velocity", renamed 2026-08-21) -->
+    <!-- PANEL: Momentum — candidates added to ToFU, one column per day. Chart and grid mirror the Recruiter
+         tab since 2026-08-29: one bar per DAY stacked by department and shaded by role, every date on the
+         axis, weekends in maroon, a small mark on any weekday with nothing on it. -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
       ${defsBlock('eff-momentum')}
-      <div class="eff-podcharts eff-2col" id="effVelPodCharts"></div>
+      <div class="chart-wrap" id="effVelChartWrap" style="height:420px"><canvas id="effVelChart"></canvas></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
         <tbody id="effVelBody"></tbody>
       </table></div>
     </div>
 
-    <!-- PANEL: Screening Efficiency -->
+    <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29, mirroring the Recruiter tab.
+         HM Screening and Online Assessment columns were removed on purpose: this panel is about R1, and
+         both still count on Momentum through ToFU. -->
     <div class="eff-panel" data-panel="screening" style="display:none">
       ${defsBlock('eff-screening')}
-      <p class="sub-note">Added = reached the stage, Cleared = transitioned out (reached the next stage), from real stage history — live at <strong>Department → Job</strong> across the funnel; the per-department charts show Added vs Cleared per stage. Falls back to pending until the accumulator has run.</p>
-      <div class="eff-podcharts eff-2col" id="effScreenPodCharts"></div>
-      <div class="scroll-table"><table>
-        <thead>
-          <tr><th rowspan="2" style="min-width:260px">Department / Job</th><th colspan="3" class="stage-hdr">HM Screening</th><th colspan="3" class="stage-hdr">Online Assessment</th><th colspan="3" class="stage-hdr">R1</th></tr>
-          <tr><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th></tr>
-        </thead>
+      <div class="chart-wrap" id="effScreenChartWrap" style="height:300px"><canvas id="effScreenChart"></canvas></div>
+      <div class="scroll-table"><table class="metrics">
+        <thead><tr>
+          <th style="min-width:280px">Department / Job</th>
+          <th title="An interview scheduled at R1, or an assignment triggered at R1. One per candidate per role per quarter; cancellations excluded.">Added at R1</th>
+          <th title="Of those, the ones who reached R2 or beyond.">Progressed</th>
+          <th title="Progressed ÷ Added at R1.">%</th>
+        </tr></thead>
         <tbody id="effScreenBody"></tbody>
       </table></div>
     </div>
@@ -219,13 +233,22 @@ export function renderEfficiency(data) {
       </table></div>
     </div>
 
-    <!-- PANEL: Joining Conversion -->
+    <!-- PANEL: Joining Conversion — brought onto the settled definition 2026-08-29, mirroring the Recruiter
+         tab: Offered = Joined + Joining Pending + Dropped, so the row always closes, and the conversion is
+         (Joined + Joining Pending) / Offered. It used to read Offered / Hired / Conversion %, which was the
+         pre-26-August metric and disagreed with the same-named panel on the Recruiter tab. -->
     <div class="eff-panel" data-panel="joining" style="display:none">
       ${defsBlock('eff-joining')}
-      <p class="sub-note"><strong>Offered → Hired</strong> for the selected quarter, Department → Job. An offer belongs to the quarter its outcome was <strong>decided</strong> in, so every offer counted has actually been answered.</p>
-      <div class="eff-podcharts eff-2col" id="effJoinPodCharts"></div>
-      <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:260px">Department / Job</th><th>Offered</th><th>Hired</th><th>Conversion %</th></tr></thead>
+      <div class="chart-wrap" id="effJoinChartWrap" style="height:300px"><canvas id="effJoinChart"></canvas></div>
+      <div class="scroll-table"><table class="metrics join-table">
+        <thead><tr>
+          <th>Department / Job</th>
+          <th title="Joined + Joining Pending + Dropped.">Offered</th>
+          <th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th>
+          <th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th>
+          <th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th>
+          <th>Joining Conversion</th>
+        </tr></thead>
         <tbody id="effJoinBody"></tbody>
       </table></div>
     </div>
@@ -654,67 +677,258 @@ export function initEfficiencyFilters(data) {
 
   // Screening Added(reached)/Cleared(left)/% for HM / OA / R1. LIVE Pod→Dept→Job from throughputByJob when
   // present; else pod-level current-stage approximation (R1-cleared unknown).
+  // ===== Screening Efficiency — ONE R1 set (mirrors Recruiter Efficiency, 2026-08-29) =====
+  //   Added at R1 = the candidate was ACTIONED at R1: an interview scheduled there, or an assignment
+  //                 triggered while they sat there. Either counts; both together count once. Cancellations
+  //                 excluded. One per candidate per role per quarter.
+  //   Progressed  = of those, the ones who reached R2 or beyond.
+  // Computed in the pipeline (Tofu.gs → r1ByJob), because it needs candidate identity.
   function renderScreening() {
-    const q = selQuarter();
+    const per = tisPeriod();                       // the same period helper Time in Process uses
     const body = document.getElementById('effScreenBody'); if (!body) return;
-    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
-    const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
-    const SK = ['hmReview', 'oa', 'r1'];
-    let html = '';
-    if (tpByJob) {
-      const jobTriple = (jid) => { const t = tpByJob[jid] || {}; return SK.map(k => { const c = t[k] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; }); };
-      const cells = (tr) => tr.map(s => `<td>${s.r}</td><td>${s.c}</td><td class="${cls(pc(s.c, s.r))}">${pc(s.c, s.r)}%</td>`).join('');
-      const sumTr = (arrs) => SK.map((_, i) => arrs.reduce((a, t) => ({ r: a.r + t[i].r, c: a.c + t[i].c }), { r: 0, c: 0 }));
-      deptJobs(q).forEach(({ dept, jobs: js }, di) => {
-        const jtr = js.map(j => jobTriple(j.jid));
-        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(sumTr(jtr))}</tr>`;
-        js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(jtr[ji])}</tr>`; });
-      });
-    } else {
-      html += `<tr><td colspan="10" style="color:var(--muted);font-style:italic;padding:16px">Department → Job — awaiting the stage-history accumulator.</td></tr>`;
+    const store = (rollups && rollups.r1ByJob) || null;
+    const sumFor = (jid) => {
+      const byQ = store && store[(jid || '').slice(0, 8)]; const acc = { added: 0, cleared: 0 };
+      if (!byQ) return acc;
+      const keys = (per && per.length) ? per : Object.keys(byQ);
+      keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
+      return acc;
+    };
+    const pcv = (n, d) => d ? Math.round((n / d) * 100) : 0;
+    const cls = (v) => v >= 50 ? 'good' : v >= 20 ? 'pct' : v > 0 ? 'warn' : 'zero';
+    const cells = (v, bold) => {
+      const w = bold ? ' style="font-weight:600"' : '';
+      return `<td${w}>${v.added > 0 ? v.added : '<span class="zero">0</span>'}</td>`
+        + `<td${w}>${v.cleared > 0 ? v.cleared : '<span class="zero">0</span>'}</td>`
+        + `<td class="${v.added ? cls(pcv(v.cleared, v.added)) : 'zero'}">${v.added ? pcv(v.cleared, v.added) + '%' : DASH}</td>`;
+    };
+    if (!store) {
+      body.innerHTML = `<tr><td colspan="4" style="color:var(--muted);font-style:italic;padding:16px">R1 screening figures appear after the next stage-history refresh.</td></tr>`;
+      buildScreenChartEff();
+      return;
     }
-    body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
+    let html = '';
+    deptJobs(selQuarter()).forEach(({ dept, jobs }, di) => {
+      const js = jobs.map(j => ({ j, v: sumFor(j.jid) })).filter(x => x.v.added > 0 || x.v.cleared > 0)
+        .sort((a, b) => b.v.added - a.v.added);
+      if (!js.length) return;
+      const agg = js.reduce((a, x) => ({ added: a.added + x.v.added, cleared: a.cleared + x.v.cleared }), { added: 0, cleared: 0 });
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(agg, true)}</tr>`;
+      js.forEach(({ j, v }, ji) => {
+        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(v, false)}</tr>`;
+      });
+    });
+    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No R1 activity under these filters.</td></tr>`;
     wireTreePath(body, expandAll());
+    buildScreenChartEff();
   }
 
-  // Offered -> Hired for ONE quarter, keyed by 8-char job id.
-  // ⚠ This panel used to read the tree's lifetime j.offer / j.hired, so the Year/Quarter selector changed
-  // nothing at all here. An offer belongs to the quarter its outcome was DECIDED in, so every offer in the
-  // denominator has actually been answered.
-  let _cjQ = null, _cj = null;
-  function convByJob(q) {
-    if (_cjQ === q && _cj) return _cj;
-    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const m = {};
-    (data.offerEvents || []).forEach(e => {
-      if (qOf(e.decidedAt) !== q) return;
-      const k = e.jobId8 || ''; if (!k) return;
-      const a = m[k] || (m[k] = { o: 0, h: 0 });
-      a.o += 1; if (e.appStatus === 'Hired') a.h += 1;
+  // One bar per DEPARTMENT: solid progressed past R1, pale still at R1, together the number added.
+  // Same store as the table.
+  let effScreenChart = null;
+  function buildScreenChartEff() {
+    const ctx = document.getElementById('effScreenChart'); if (!ctx) return;
+    if (effScreenChart) { effScreenChart.destroy(); effScreenChart = null; }
+    const store = (rollups && rollups.r1ByJob) || null;
+    const wrap = document.getElementById('effScreenChartWrap');
+    if (!store) { if (wrap) wrap.style.height = '0px'; return; }
+    const per = tisPeriod();
+    const sumFor = (jid) => {
+      const byQ = store[(jid || '').slice(0, 8)]; const acc = { added: 0, cleared: 0 };
+      if (!byQ) return acc;
+      const keys = (per && per.length) ? per : Object.keys(byQ);
+      keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
+      return acc;
+    };
+    const rows = deptJobs(selQuarter()).map(({ dept, jobs }) => {
+      const agg = jobs.reduce((a, j) => { const v = sumFor(j.jid); return { added: a.added + v.added, cleared: a.cleared + v.cleared }; }, { added: 0, cleared: 0 });
+      return { dept, ...agg };
+    }).filter(r => r.added > 0).sort((a, b) => b.added - a.added);
+    if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
+    const h = Math.max(240, rows.length * 32 + 90);
+    if (wrap) wrap.style.height = h + 'px';
+    ctx.style.maxHeight = h + 'px';
+    const moved = rows.map(r => r.cleared), still = rows.map(r => Math.max(0, r.added - r.cleared));
+    const labelPlugin = {
+      id: 'effScreenLabels',
+      afterDatasetsDraw(chart) {
+        const c = chart.ctx; c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        const mMeta = chart.getDatasetMeta(0), eMeta = chart.getDatasetMeta(1);
+        rows.forEach((r, i) => {
+          const bar = mMeta.data[i]; if (!bar) return;
+          if (r.cleared > 0 && (bar.x - bar.base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.cleared), (bar.base + bar.x) / 2, bar.y); }
+          const end = eMeta.data[i];
+          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(r.added + ' · ' + Math.round((r.cleared / r.added) * 100) + '%', end.x + 5, end.y); }
+        });
+        c.restore();
+      }
+    };
+    effScreenChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: rows.map(r => r.dept), datasets: [
+        { label: 'Progressed past R1', data: moved, backgroundColor: '#4E6BA6', stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 },
+        { label: 'Still at R1', data: still, backgroundColor: '#C5CFE5', stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 }
+      ] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 64 } },
+        plugins: {
+          valueLabels: false, stackTotals: false,
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
+          tooltip: { callbacks: { footer: (items) => { const r = rows[items[0].dataIndex]; return `Added at R1: ${r.added} · progressed ${Math.round((r.cleared / r.added) * 100)}%`; } } }
+        },
+        scales: {
+          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added at R1', font: { size: 11 }, color: '#64748b' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+        }
+      },
+      plugins: [labelPlugin]
     });
-    _cjQ = q; _cj = m;
-    return m;
   }
-  const convOf = (q, jid) => convByJob(q)[(jid || '').slice(0, 8)] || { o: 0, h: 0 };
+
+  // convByJob / convOf (Offered -> Hired) were removed on 2026-08-29 with the old definition.
+
+  // ===== Joining Conversion, settled definition (mirrors Recruiter Efficiency, 2026-08-29) =====
+  //   Joined          = people whose START DATE falls in the quarter, minus anyone whose offer is linked to
+  //                     an EARLIER quarter's opening
+  //   Joining Pending = everyone in Ref Check / Documentation / Offer, minus earlier-quarter openings. LIVE,
+  //                     so the same people sit inside every quarter's Offered
+  //   Dropped         = the unified dropEvents list
+  //   Offered         = the three added, so the row always closes
+  // ⚠ The Recruiter tab applies a SALES exception — no earlier-quarter subtraction on Joined — because Sales
+  // is measured on joiners whenever the opening was raised. Sales is a POD, and pods do not exist on this
+  // tab, so the subtraction is applied uniformly here. That is the only deliberate difference between the
+  // two panels, and the definitions block says so.
+  let _jcQ = null, _jc = null;
+  function joinMapsEff(q) {
+    if (_jcQ === q && _jc) return _jc;
+    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const byKey = {};
+    const bump = (key, field) => { const a = byKey[key] || (byKey[key] = { o: 0, j: 0, p: 0, dr: 0 }); a[field] += 1; };
+    (data.offerEvents || []).forEach(e => {
+      if (!e.accepted || qOf(e.startDate) !== q) return;
+      if (e.openingQuarter && e.openingQuarter < q) return;
+      bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'j');
+    });
+    (data.joiningPendingCases || []).forEach(c => {
+      if (c.openingQuarter && c.openingQuarter < q) return;
+      bump(dkey(c.department) + '|' + (c.job || c.jobTitle || ''), 'p');
+    });
+    dropRows(data).forEach(e => {
+      if (e.quarter !== q) return;
+      bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'dr');
+    });
+    Object.values(byKey).forEach(a => { a.o = a.j + a.p + a.dr; });
+    _jcQ = q; _jc = byKey;
+    return byKey;
+  }
+  const ZJC = { o: 0, j: 0, p: 0, dr: 0 };
+  const jcOf = (q, dept, title) => joinMapsEff(q)[dept + '|' + (title || '')] || ZJC;
 
   function renderJoining() {
     const q = selQuarter();
     const body = document.getElementById('effJoinBody'); if (!body) return;
-    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
+    const convCell = (v) => {
+      if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
+      const p = Math.round(((v.j + v.p) / v.o) * 100);
+      const band = p >= 50 ? '' : (p >= 20 ? ' mid' : ' low');
+      return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${p}%"></i></span>`
+        + `<span class="dnum">${p}%</span></span><span class="sublab">${v.j + v.p} of ${v.o}</span></td>`;
+    };
+    const cells = (v, bold) => {
+      const w = bold ? ' style="font-weight:600"' : '';
+      return `<td${w}>${v.o || '<span class="zero">0</span>'}</td>`
+        + `<td${w} class="${v.j > 0 ? 'good' : 'zero'}">${v.j}</td>`
+        + `<td style="color:var(--orange)">${v.p || '<span class="zero">0</span>'}</td>`
+        + `<td class="${v.dr > 0 ? 'bad' : ''}">${v.dr || '<span class="zero">0</span>'}</td>`
+        + convCell(v);
+    };
+    const add = (a, b) => ({ o: a.o + b.o, j: a.j + b.j, p: a.p + b.p, dr: a.dr + b.dr });
     let html = '';
     deptJobs(q).forEach(({ dept, jobs }, di) => {
-      const js = jobs.map(j => ({ j, c: convOf(q, j.jid) })).filter(x => x.c.o > 0);
+      const js = jobs.map(j => ({ j, c: jcOf(q, dept, j.title) })).filter(x => x.c.o > 0)
+        .sort((a, b) => b.c.o - a.c.o);
       if (!js.length) return;
-      const dpo = js.reduce((a, x) => a + x.c.o, 0), dph = js.reduce((a, x) => a + x.c.h, 0);
+      const agg = js.reduce((a, x) => add(a, x.c), { o: 0, j: 0, p: 0, dr: 0 });
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td><td style="font-weight:600">${dpo || '<span class="zero">0</span>'}</td><td class="${dph > 0 ? 'good' : 'zero'}" style="font-weight:600">${dph}</td><td>${pc(dph, dpo)}%</td></tr>`;
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(agg, true)}</tr>`;
       js.forEach(({ j, c }, ji) => {
         html += `<tr data-path="${di}-${ji}" style="display:none">
-          <td style="padding-left:30px;color:var(--muted)">${j.title}</td><td>${c.o}</td><td class="${c.h > 0 ? 'good' : 'zero'}">${c.h}</td><td>${pc(c.h, c.o)}%</td></tr>`;
+          <td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(c, false)}</tr>`;
       });
     });
-    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No offers decided in this quarter under these filters.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody reached an offer under these filters.</td></tr>`;
     wireTreePath(body, expandAll());
+    buildJoinChartEff();
+  }
+
+  // One bar per DEPARTMENT — the department-centric mirror of the Recruiter tab's bar per recruiter.
+  // Joined / Joining Pending / Dropped stacked, with Offered and the Joining Conversion printed at the end,
+  // read off the same joinMapsEff the table uses.
+  let effJoinChart = null;
+  function buildJoinChartEff() {
+    const ctx = document.getElementById('effJoinChart'); if (!ctx) return;
+    if (effJoinChart) { effJoinChart.destroy(); effJoinChart = null; }
+    const q = selQuarter();
+    const rows = deptJobs(q).map(({ dept, jobs }) => {
+      const agg = jobs.reduce((a, j) => { const c = jcOf(q, dept, j.title); return { o: a.o + c.o, j: a.j + c.j, p: a.p + c.p, dr: a.dr + c.dr }; }, { o: 0, j: 0, p: 0, dr: 0 });
+      return { dept, ...agg };
+    }).filter(r => r.o > 0).sort((a, b) => b.o - a.o);
+    const wrap = document.getElementById('effJoinChartWrap');
+    if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
+    const h = Math.max(240, rows.length * 34 + 90);
+    if (wrap) wrap.style.height = h + 'px';
+    ctx.style.maxHeight = h + 'px';
+    const joined = rows.map(r => r.j), pending = rows.map(r => r.p), dropped = rows.map(r => r.dr), offered = rows.map(r => r.o);
+    const labelPlugin = {
+      id: 'effJoinLabels',
+      afterDatasetsDraw(chart) {
+        const c = chart.ctx; c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        [[0, joined], [1, pending], [2, dropped]].forEach(([di, arr]) => {
+          const meta = chart.getDatasetMeta(di);
+          meta.data.forEach((bar, i) => {
+            if (arr[i] > 0 && (bar.x - bar.base) > 20) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(arr[i]), (bar.base + bar.x) / 2, bar.y); }
+          });
+        });
+        chart.getDatasetMeta(2).data.forEach((bar, i) => {
+          c.textAlign = 'left'; c.fillStyle = '#334155';
+          const t = String(offered[i]);
+          c.fillText(t, bar.x + 6, bar.y);
+          const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+          if (conv != null) {
+            const w = c.measureText(t).width;
+            c.fillStyle = conv >= 90 ? '#0F6B62' : (conv >= 70 ? '#A16207' : '#A15568');
+            c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
+            c.fillText(conv + '%', bar.x + 12 + w, bar.y);
+            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+          }
+        });
+        c.restore();
+      }
+    };
+    effJoinChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: rows.map(r => r.dept), datasets: [
+        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
+        { label: 'Dropped', data: dropped, backgroundColor: '#A33253', stack: 'j', borderRadius: 2, barPercentage: 0.72 }
+      ] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 86 } },
+        plugins: {
+          valueLabels: false, stackTotals: false,
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
+          tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+            return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} · Joining Conversion ${conv}%`; } } }
+        },
+        scales: {
+          x: { ...gridY, stacked: true, title: { display: true, text: 'People (at the bar end: Offered, then Joining Conversion)', font: { size: 11 }, color: '#64748b' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+        }
+      },
+      plugins: [labelPlugin]
+    });
   }
 
   function renderThroughput() {
@@ -845,7 +1059,10 @@ export function initEfficiencyFilters(data) {
     const dkeys = dates.map(dkeyEff);
     if (head) {
       let h = `<tr><th style="min-width:260px">Department / Job</th><th>Total · ${dates.length}d</th>`;
-      dates.forEach(d => { h += `<th>${MON[d.getMonth()]} ${d.getDate()}</th>`; });
+      dates.forEach(d => {
+        const wknd = d.getDay() === 0 || d.getDay() === 6;
+        h += `<th class="${wknd ? 'wknd' : ''}"${wknd ? ' title="Weekend"' : ''}>${MON[d.getMonth()]} ${d.getDate()}</th>`;
+      });
       head.innerHTML = h + '</tr>';
     }
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
@@ -861,9 +1078,10 @@ export function initEfficiencyFilters(data) {
           const jArr = dkeys.map(dk => { const v = jm[dk] || 0; jTot += v; return v; });
           add(dArr, jArr); dTot += jTot; return { j, jArr, jTot };
         });
-        html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
+        const dc = DEPT_COLORS[di % DEPT_COLORS.length];
+        html += `<tr class="lvl-dept${dTot ? '' : ' lvl-quiet'}" data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600;box-shadow:inset 3px 0 0 ${dc}">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
         jd.forEach(({ j, jArr, jTot }, ji) => {
-          html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--text)">${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
+          html += `<tr class="lvl-job${jTot ? '' : ' lvl-quiet'}" data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--text)">${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
         });
       });
     } else {
@@ -873,7 +1091,7 @@ export function initEfficiencyFilters(data) {
     }
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
-    renderDeptCharts('effVelPodCharts', rows, velDeptCfg, 'No ToFU arrivals in range.');
+    buildVelChartEff();
   }
 
   // ===== Sourcing Mix — Department → Job → Source type → Source name =====
@@ -1036,57 +1254,123 @@ export function initEfficiencyFilters(data) {
   // there is no pod lookup left — Y = Job in every one.
   // Same quarter-scoped basis as the table — a chart on a different basis from the table under it is the
   // single most repeated bug on this dashboard.
-  const joinDeptCfg = ({ jobs }) => {
-    const q = selQuarter();
-    const js = jobs.map(j => ({ j, c: convOf(q, j.jid) })).filter(x => x.c.o > 0)
-      .sort((a, b) => b.c.o - a.c.o).slice(0, 10);
-    if (!js.length) return null;
-    return { type: 'bar', data: { labels: js.map(x => x.j.title), datasets: [
-      { label: 'Hired', data: js.map(x => x.c.h), backgroundColor: C.green, stack: 'j', borderRadius: 2 },
-      { label: 'Offered', data: js.map(x => Math.max(0, x.c.o - x.c.h)), backgroundColor: '#B4D3DC', stack: 'j', borderRadius: 2 }] }, options: hbarOpts(true, 'Candidates') };
-  };
+  // joinDeptCfg (the old per-department Offered/Hired chart) went with the definition change on
+  // 2026-08-29 — the panel now has ONE chart, a bar per department, built in renderJoining.
+
   // Momentum per department: candidates ADDED to ToFU per day. One series now, because the metric is one
   // number per candidate rather than three stage counts — see renderVelocity above for the definition.
   // Reads tofuByJob, the same field the table reads, so the chart cannot drift from the table beneath it.
-  const velDeptCfg = ({ jobs }) => {
-    if (!tofuByJob) return null;
-    const dates = velDates(), dk = dates.map(dkeyEff);
-    const jids = jobs.map(j => j.jid);
-    const dataPts = dk.map(k => jids.reduce((s2, jid) => s2 + (((tofuByJob[jid] || {})[k]) || 0), 0)).reverse();
-    if (dataPts.every(v => v === 0)) return null;
-    const labels = dates.map(d => `${MON[d.getMonth()]} ${d.getDate()}`).reverse();
-    return {
-      _h: 230,
+  // ===== Momentum chart (mirrors Recruiter Efficiency, 2026-08-29) =====
+  // ONE BAR PER DAY — the question the panel answers — stacked by DEPARTMENT and, within a department,
+  // shaded by ROLE: darkest block is that department's busiest role in the window. The legend stays at
+  // department level; the role is in the tooltip. Reads tofuByJob, the same field the table reads.
+  const DEPT_COLORS = ['#4E6BA6', '#398AA2', '#1E7590', '#938FB8', '#B5859A', '#5C8A6B', '#8A7B4E',
+                       '#6E6EA8', '#41506B', '#2F7F86', '#9A6A8B', '#4F7C9E', '#7A8C5A'];
+  function deptShade(hex, i, n) {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    const t = n > 1 ? 0.62 * (i / (n - 1)) : 0;
+    const mix = (c) => Math.round(c + (255 - c) * t);
+    return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+  }
+  let effVelChart = null;
+  function buildVelChartEff() {
+    const ctx = document.getElementById('effVelChart'); if (!ctx) return;
+    if (effVelChart) { effVelChart.destroy(); effVelChart = null; }
+    const wrap = document.getElementById('effVelChartWrap');
+    if (!tofuByJob) { if (wrap) wrap.style.height = '0px'; return; }
+    const chrono = [...velDates()].reverse();
+    const keys = chrono.map(dkeyEff);
+    const datasets = [];
+    deptJobs(selQuarter()).forEach(({ dept, jobs }, di) => {
+      const base = DEPT_COLORS[di % DEPT_COLORS.length];
+      const withData = jobs.map(j => {
+        const m = tofuByJob[(j.jid || '').slice(0, 8)] || tofuByJob[j.jid] || {};
+        const per = keys.map(k => m[k] || 0);
+        return { title: j.title, per, t: per.reduce((a, v) => a + v, 0) };
+      }).filter(x => x.t > 0).sort((a, b) => b.t - a.t);
+      withData.forEach((J, ji) => datasets.push({
+        label: J.title, _dept: dept, data: J.per, backgroundColor: deptShade(base, ji, withData.length),
+        stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
+      }));
+    });
+    if (!datasets.length) { if (wrap) wrap.style.height = '120px'; return; }
+    if (wrap) wrap.style.height = '420px';
+    ctx.style.maxHeight = '420px';
+
+    const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
+    const tickLabels = chrono.map((d, i) => {
+      const showMonth = i === 0 || d.getMonth() !== chrono[i - 1].getMonth();
+      return showMonth ? [String(d.getDate()), MON[d.getMonth()]] : [String(d.getDate()), ''];
+    });
+    const dayTotals = chrono.map((_, i) => datasets.reduce((a, ds) => a + (ds.data[i] || 0), 0));
+    const emptyWeekdayMarks = {
+      id: 'effEmptyWeekdayMarks',
+      afterDatasetsDraw(chart) {
+        const x = chart.scales.x, y = chart.scales.y; if (!x || !y) return;
+        const base = y.getPixelForValue(0), c = chart.ctx;
+        c.save(); c.fillStyle = 'rgba(163,50,83,0.55)';
+        dayTotals.forEach((t, i) => {
+          if (t > 0 || isWknd[i]) return;
+          const px = x.getPixelForTick(i);
+          c.beginPath();
+          const w = 11, hh = 3;
+          if (c.roundRect) c.roundRect(px - w / 2, base - hh, w, hh, 1.5); else c.rect(px - w / 2, base - hh, w, hh);
+          c.fill();
+        });
+        c.restore();
+      }
+    };
+
+    effVelChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels, datasets: [{ label: 'Added to ToFU', data: dataPts, backgroundColor: '#4E6BA6', stack: 's', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.9 }] },
+      data: { labels: tickLabels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: LEGEND,
-          tooltip: { callbacks: { footer: (its) => its.length ? `Total: ${its[0].chart.data.datasets.reduce((a, d) => a + (d.data[its[0].dataIndex] || 0), 0)}` : '' } }
+          valueLabels: false,
+          legend: {
+            position: 'top', align: 'center',
+            labels: {
+              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 11 },
+              generateLabels: (chart) => {
+                const seen = [];
+                chart.data.datasets.forEach((d, i) => { if (!seen.some(x => x.dept === d._dept)) seen.push({ dept: d._dept, i }); });
+                return seen.map(({ dept, i }) => ({ text: dept, fillStyle: chart.data.datasets[i].backgroundColor,
+                  strokeStyle: 'transparent', hidden: !chart.isDatasetVisible(i), datasetIndex: i }));
+              }
+            },
+            onClick: (e, item, legend) => {
+              const chart = legend.chart, dept = chart.data.datasets[item.datasetIndex]?._dept;
+              if (!dept) return;
+              const show = !chart.isDatasetVisible(item.datasetIndex);
+              chart.data.datasets.forEach((d, i) => { if (d._dept === dept) chart.setDatasetVisibility(i, show); });
+              chart.update();
+            }
+          },
+          tooltip: {
+            itemSort: (a, b) => b.parsed.y - a.parsed.y,
+            callbacks: {
+              title: (items) => { const d = chrono[items[0].dataIndex];
+                return `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`; },
+              label: (c2) => `${c2.dataset._dept} · ${c2.dataset.label}: ${c2.parsed.y}`,
+              footer: (items) => `Added that day: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}`
+            }
+          }
         },
         scales: {
-          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
-          y: { ...gridY, stacked: true, ticks: { ...TICKS, precision: 0 }, title: { display: true, text: 'Candidates added', font: { size: 11 }, color: '#64748b' } }
+          x: { stacked: true, grid: { display: false },
+               ticks: { font: { size: 10 }, maxRotation: 0, minRotation: 0, autoSkip: false, padding: 2,
+                        color: (c) => (isWknd[c.index] ? '#A15568' : '#64748b') } },
+          y: { ...gridY, stacked: true, ticks: { ...TICKS, precision: 0 },
+               title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } }
         }
-      }
-    };
-  };
-  const screenDeptCfg = ({ jobs }) => {
-    if (!tpByJob) return null;
-    const jids = jobs.map(j => j.jid);
-    const agg = (k) => jids.reduce((a, jid) => { const c = (tpByJob[jid] || {})[k] || { reached: 0, cleared: 0 }; return { r: a.r + c.reached, c: a.c + c.cleared }; }, { r: 0, c: 0 });
-    const hm = agg('hmReview'), oa = agg('oa'), r1 = agg('r1');
-    const hmR = hm.r, hmC = hm.c, oaR = oa.r, oaC = oa.c, r1R = r1.r, r1C = r1.c;
-    if (hmR + oaR + r1R === 0) return null;
-    return { _h: 220, type: 'bar', data: { labels: ['HM Screening', 'OA', 'R1'], datasets: [
-      { label: 'Added', data: [hmR, oaR, r1R], backgroundColor: C.blue, borderRadius: 3 },
-      { label: 'Cleared', data: [hmC, oaC, r1C], backgroundColor: C.green, borderRadius: 3 }] },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: LEGEND },
-        scales: { x: { grid: { display: false }, ticks: TICKS }, y: { ...gridY, ticks: { ...TICKS, precision: 0 }, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } } } } };
-  };
+      },
+      plugins: [emptyWeekdayMarks]
+    });
+  }
 
+  // screenDeptCfg (the old per-department Added/Cleared-per-stage chart) went with the single R1 set on
+  // 2026-08-29 — the panel now has ONE chart, a bar per department, built in renderScreening.
   // Per-pod Throughput chart: Added (reached) vs Cleared per stage, from throughputByJob over the pod's jobs.
   // Respects the stage toggle; shows only stages with any activity. Horizontal grouped bars. Null → placeholder.
   const tpDeptCfg = ({ jobs }) => {
@@ -1247,10 +1531,10 @@ export function initEfficiencyFilters(data) {
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
-    else if (activeTab === 'screening') { renderScreening(); renderDeptCharts('effScreenPodCharts', deptJobs(selQuarter()), screenDeptCfg, 'No stage activity in this department.'); }
+    else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
     else if (activeTab === 'throughput') { renderThroughput(); renderDeptCharts('effTpPodCharts', deptJobs(selQuarter()), tpDeptCfg, 'No stage-transition activity in this department.'); }
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
-    else if (activeTab === 'joining') { renderJoining(); renderDeptCharts('effJoinPodCharts', deptJobs(selQuarter()), joinDeptCfg, 'No offers yet in this department.'); }
+    else if (activeTab === 'joining') renderJoining();   // its chart is built inside renderJoining
     else if (activeTab === 'sourcing') renderSourcing();
   }
 
