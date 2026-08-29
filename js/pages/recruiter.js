@@ -292,15 +292,21 @@ export function renderRecruiter(data) {
       </table></div>
     </div>
 
-    <!-- PANEL: Screening Efficiency -->
+    <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29 (Jerin). HM Screening and Online
+         Assessment columns were removed on purpose: this panel is about R1 only, and both still count on
+         Momentum through ToFU. See the definitions block for what Added and Cleared mean. -->
     <div class="rec-panel" data-panel="screening" style="display:none">
       ${defsBlock('rec-screening')}
       <p class="sub-note" id="recScreenPeriod" style="font-weight:600"></p>
-      <div class="chart-wrap" style="height:280px"><canvas id="recScreenChart"></canvas></div>
+      <div class="chart-wrap" style="height:300px"><canvas id="recScreenChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:220px">Pod / Recruiter</th><th colspan="3" class="stage-hdr">HM Screening</th><th colspan="3" class="stage-hdr">Online Assessment</th><th colspan="3" class="stage-hdr">R1</th></tr>
-          <tr><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th><th class="stage-sub">Added</th><th class="stage-sub">Cleared</th><th class="stage-sub">%</th></tr>
+          <tr>
+            <th style="min-width:260px">Pod / Recruiter / Job</th>
+            <th title="An interview scheduled at R1, or an assignment triggered at R1. One per candidate per role per quarter; cancellations excluded.">Added at R1</th>
+            <th title="Of those, the ones who reached R2 or beyond.">Progressed</th>
+            <th title="Progressed ÷ Added at R1.">%</th>
+          </tr>
         </thead>
         <tbody id="recScreenBody"></tbody>
       </table></div>
@@ -547,59 +553,11 @@ export function initRecruiterFilters(data) {
 
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
   // else the current-stage approximation (R1-cleared unknown → null).
-  // Pulls one stage's {reached,cleared} for EVERY quarter the selector covers (null = all time, which is
-  // what the lifetime store holds — the two reconcile exactly, checked 2026-08-26: 209 stage entries, 0
-  // mismatches). throughputByRecruiterQ is keyed stage -> quarter; when it is absent (older rollups) the
-  // lifetime figure is used, and then the number genuinely IS lifetime whatever the selector says.
-  const ZERO = () => ({ reached: 0, cleared: 0 });
-  const addTp = (a, b) => ({ reached: a.reached + b.reached, cleared: (a.cleared == null || b.cleared == null) ? null : a.cleared + b.cleared });
-  const stageForPeriod = (byStageQ, byStageLifetime, stage, per) => {
-    if (byStageQ && per && per.length) {
-      const s = byStageQ[stage] || {};
-      return per.reduce((acc, q) => addTp(acc, s[q] || ZERO()), ZERO());
-    }
-    const t = byStageLifetime && byStageLifetime[stage];
-    if (t) return t;
-    if (byStageQ) return Object.values(byStageQ[stage] || {}).reduce((acc, v) => addTp(acc, v), ZERO());
-    return ZERO();
-  };
-  const screenTriple = (r) => {
-    const sr = data.stageRollups || {};
-    const per = selQuarters();
-    const perQ = sr.throughputByRecruiterQ && sr.throughputByRecruiterQ[r.name];
-    const life = sr.throughputByRecruiter && sr.throughputByRecruiter[r.name];
-    if (perQ || life) {
-      return {
-        hm: stageForPeriod(perQ, life, 'hmReview', per),
-        oa: stageForPeriod(perQ, life, 'oa', per),
-        r1: stageForPeriod(perQ, life, 'r1', per)
-      };
-    }
-    return { hm: { reached: r.hm || 0, cleared: Math.min(r.hm || 0, r.oa || 0) }, oa: { reached: r.oa || 0, cleared: Math.min(r.oa || 0, r.r1 || 0) }, r1: { reached: r.r1 || 0, cleared: null } };
-  };
-  // Per-job screening for one recruiter — the branch that used to render as em-dashes with
-  // "needs per-recruiter×job stage history". Quarter-keyed like the recruiter row above it,
-  // so an expanded recruiter's job rows add up to the recruiter's own numbers instead of
-  // mixing a quarter total with all-time children.
-  const screenTripleByJob = (recName, job8) => {
-    const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
-    const t = (rj && rj[recName] && rj[recName][job8]) || null;
-    if (!t) return null;
-    const per = selQuarters();
-    const pick = (stage) => {
-      const s = t[stage];
-      if (!s) return ZERO();
-      // quarter-keyed shape {stage:{quarter:{reached,cleared}}}; older rollups were flat
-      if (typeof s.reached === 'number') return s;
-      if (!per || !per.length) return Object.values(s).reduce((acc, v) => addTp(acc, v), ZERO());
-      return per.reduce((acc, q) => addTp(acc, s[q] || ZERO()), ZERO());
-    };
-    return { hm: pick('hmReview'), oa: pick('oa'), r1: pick('r1') };
-  };
-  const jobsForRecruiter = (recName) => {
-    const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
-    return (rj && rj[recName]) ? Object.keys(rj[recName]) : [];
-  };
+  // The per-stage throughput helpers (screenTriple / screenTripleByJob / jobsForRecruiter /
+  // stageForPeriod) were removed on 2026-08-29: Screening Efficiency moved to a single R1 set computed in
+  // the pipeline, and nothing else read them. throughputBy*Q is still emitted and still used by the HM and
+  // Overall Efficiency tabs.
+
   let lastGroups = [], lastRecs = [], activeTab = 'fulfilment';
   // Per-recruiter Fulfilment aggregates, written by the table render and read by its chart.
   let lastFulfil = {};
@@ -773,52 +731,72 @@ export function initRecruiterFilters(data) {
     // ===== Momentum (own POD/date filters) =====
     renderVelocity();
 
-    // ===== Screening Efficiency — Added = reached the stage, Cleared = left it (reached next stage) =====
-    const cell3 = (s) => { const a = s.reached, c = s.cleared; return `<td>${a}</td><td>${c == null ? DASH : c}</td><td class="${c == null ? 'zero' : pctClass(pct(c, a))}">${c == null ? DASH : pct(c, a) + '%'}</td>`; };
-    const screenCells = (t) => cell3(t.hm) + cell3(t.oa) + cell3(t.r1);
-    const hasTp = !!(data.stageRollups && data.stageRollups.throughputByRecruiter);
-    const sumTriple = (list) => {
-      const acc = { hm: { reached: 0, cleared: 0 }, oa: { reached: 0, cleared: 0 }, r1: { reached: 0, cleared: hasTp ? 0 : null } };
-      list.forEach(r => { const t = screenTriple(r); ['hm', 'oa', 'r1'].forEach(k => { acc[k].reached += t[k].reached; if (t[k].cleared != null && acc[k].cleared != null) acc[k].cleared += t[k].cleared; }); });
+    // ===== Screening Efficiency — ONE R1 set (Jerin, 2026-08-29) =====
+    //   Added at R1 = the candidate was ACTIONED at R1: an interview scheduled there, OR an assignment
+    //                 triggered while they sat there. Either counts; both together still count once.
+    //                 Cancellations excluded. One per candidate per role per quarter.
+    //   Progressed  = of those, the ones who reached R2 or beyond.
+    // 🚨 Computed in the PIPELINE (Tofu.gs), because it needs candidate identity — the rollups this file
+    // reads are only totals. HM Screening and Online Assessment columns were removed here deliberately:
+    // this panel is R1 only, and both still count on Momentum through ToFU.
+    // ⚠ It will NOT match the old per-stage 'Added', which counted stage ENTRIES and re-counted anyone who
+    // came back round, and it is not Momentum's R1 either — Momentum only credits R1 when it was the
+    // candidate's FIRST signal, so its R1 is a subset of this one.
+    const r1Store = (data.stageRollups && data.stageRollups.r1ByRecruiter) || null;
+    const r1JobStore = (data.stageRollups && data.stageRollups.r1ByRecruiterJob) || null;
+    const r1Sum = (byQ) => {
+      const acc = { added: 0, cleared: 0 };
+      if (!byQ) return acc;
+      if (per && per.length) per.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
+      else Object.keys(byQ).forEach(qq => { const c = byQ[qq]; acc.added += c.added || 0; acc.cleared += c.cleared || 0; });
       return acc;
     };
-    const dashScreen = `<td>${DASH}</td>`.repeat(9);
+    const r1Of = (name) => r1Sum(r1Store && r1Store[name]);
+    const r1OfJob = (name, j8) => r1Sum(r1JobStore && r1JobStore[name] && r1JobStore[name][j8]);
+    const r1Cells = (v, bold) => {
+      const w = bold ? ' style="font-weight:600"' : '';
+      return `<td${w}>${v.added > 0 ? v.added : '<span class="zero">0</span>'}</td>`
+        + `<td${w}>${v.cleared > 0 ? v.cleared : '<span class="zero">0</span>'}</td>`
+        + `<td class="${v.added ? pctClass(pct(v.cleared, v.added)) : 'zero'}">${v.added ? pct(v.cleared, v.added) + '%' : DASH}</td>`;
+    };
     const screenBody = document.getElementById('recScreenBody');
     if (screenBody) {
-      let html = '';
-      groups.forEach((G, pi) => {
-        html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${screenCells(sumTriple(G.recs))}</tr>`;
-        G.recs.forEach((r, ri) => {
-          const rk = `s${pi}-${ri}`;
-          html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${screenCells(screenTriple(r))}</tr>`;
-          // Per-job breakdown, now backed by throughputByRecruiterJob. Sorted by volume so the
-          // jobs a recruiter actually worked come first.
-          // jobsForRecruiter() lists every role this recruiter has EVER had stage history on. Under a
-          // quarter filter most of them did nothing, and listing them made a recruiter look like they were
-          // carrying eleven live roles when two were actually moving (Jerin, 2026-08-26: "I don't think
-          // Oshin has these many roles open in the quarter"). Keep only roles with activity in the period.
-          const jobActivity = (t) => t.hm.reached + t.oa.reached + t.r1.reached
-            + (t.hm.cleared || 0) + (t.oa.cleared || 0) + (t.r1.cleared || 0);
-          const jobRows = jobsForRecruiter(r.name)
-            .map(j8 => ({ j8, t: screenTripleByJob(r.name, j8) }))
-            .filter(x => x.t && jobActivity(x.t) > 0)
-            .sort((a, b) => (b.t.hm.reached + b.t.oa.reached + b.t.r1.reached) - (a.t.hm.reached + a.t.oa.reached + a.t.r1.reached));
-          if (jobRows.length) {
-            jobRows.forEach(({ j8, t }) => {
-              const jm = jobById[j8];
+      if (!r1Store) {
+        // No R1 field yet. Say so rather than falling back to the per-stage counts, which answer a
+        // different question and would sit under this heading as a lie.
+        screenBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">R1 screening figures appear after the next stage-history refresh.</td></tr>`;
+      } else {
+        let html = '';
+        groups.forEach((G, pi) => {
+          const podAgg = { added: 0, cleared: 0 };
+          const recVals = G.recs.map(r => { const v = r1Of(r.name); podAgg.added += v.added; podAgg.cleared += v.cleared; return v; });
+          html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+            <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${r1Cells(podAgg, true)}</tr>`;
+          G.recs.forEach((r, ri) => {
+            const rk = `s${pi}-${ri}`;
+            html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
+              <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${r1Cells(recVals[ri], false)}</tr>`;
+            // Only roles that actually saw R1 activity in the period — a recruiter's older roles are not
+            // listed as a column of zeros (Jerin, 2026-08-26: "I don't think Oshin has these many roles").
+            const mine = (r1JobStore && r1JobStore[r.name]) || {};
+            const jobRows = Object.keys(mine).map(j8 => ({ j8, v: r1OfJob(r.name, j8) }))
+              .filter(x => x.v.added > 0 || x.v.cleared > 0)
+              .sort((a, b) => b.v.added - a.v.added);
+            if (jobRows.length) {
+              jobRows.forEach(({ j8, v }) => {
+                const jm = jobById[j8];
+                html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
+                  <td style="padding-left:52px;color:var(--muted)">${(jm && jm.title) || j8}</td>${r1Cells(v, false)}</tr>`;
+              });
+            } else {
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-                <td style="padding-left:52px;color:var(--muted)">${(jm && jm.title) || j8}</td>${screenCells(t)}</tr>`;
-            });
-          } else {
-            html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-              <td style="padding-left:52px;color:var(--muted);font-style:italic">No role moved in this period</td>${dashScreen}</tr>`;
-          }
+                <td style="padding-left:52px;color:var(--muted);font-style:italic">No R1 activity in this period</td>${'<td>' + DASH + '</td>'.repeat(3)}</tr>`;
+            }
+          });
         });
-      });
-      screenBody.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
-      wireVelTree(screenBody);
+        screenBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+        wireVelTree(screenBody);
+      }
     }
 
     // ===== Joining Conversion =====
@@ -2058,48 +2036,51 @@ export function initRecruiterFilters(data) {
       plugins: [emptyWeekdayMarks]
     });
   }
+  // Screening chart. One bar per recruiter: the solid part progressed past R1, the pale part is still
+  // sitting at R1, and the two together are how many were added at R1 — the two things the legend names.
+  // Reads r1ByRecruiter, the same field the table reads, which the PIPELINE computes. Nothing is
+  // recalculated here, so the chart cannot drift from the table beneath it.
+  const SCREEN_SOLID = '#4E6BA6', SCREEN_PALE = '#C5CFE5';
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
     if (recScreenChart) recScreenChart.destroy();
-    const T = r => screenTriple(r);
-    const sumR = r => { const t = T(r); return t.hm.reached + t.oa.reached + t.r1.reached; };
-    const recs = [...lastRecs].sort((a, b) => sumR(b) - sumR(a));
-    const STAGES = [['hm', 'HM'], ['oa', 'OA'], ['r1', 'R1']];
-    const added = {}, moved = {}, still = {};
-    STAGES.forEach(([k]) => {
-      added[k] = recs.map(r => T(r)[k].reached);
-      moved[k] = recs.map(r => { const c = T(r)[k].cleared; return c == null ? 0 : c; });
-      still[k] = recs.map((r, i) => Math.max(0, added[k][i] - moved[k][i]));
-    });
-    const h = Math.max(240, recs.length * 48 + 80);
-    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+    const store = (data.stageRollups && data.stageRollups.r1ByRecruiter) || null;
+    const wrap = ctx.parentElement;
+    let emptyMsg = wrap && wrap.querySelector('.chart-empty');
+    const per = selQuarters();
+    const sumFor = (name) => {
+      const byQ = store && store[name]; const acc = { added: 0, cleared: 0 };
+      if (!byQ) return acc;
+      const keys = (per && per.length) ? per : Object.keys(byQ);
+      keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
+      return acc;
+    };
+    const recs = store ? [...lastRecs].map(r => ({ name: r.name, ...sumFor(r.name) }))
+      .filter(r => r.added > 0).sort((a, b) => b.added - a.added) : [];
+    if (!recs.length) {
+      ctx.style.display = 'none';
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (emptyMsg) { emptyMsg.textContent = store ? 'Nobody was added at R1 in this period.' : 'R1 screening figures appear after the next stage-history refresh.'; emptyMsg.style.display = 'flex'; }
+      return;
+    }
+    ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
+    const moved = recs.map(r => r.cleared);
+    const still = recs.map(r => Math.max(0, r.added - r.cleared));
+    const h = Math.max(260, recs.length * 34 + 90);
+    if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    const seg = (label, data, color, stack) => ({ label, data, backgroundColor: color, stack, borderRadius: 2, barPercentage: 0.9, categoryPercentage: 0.78 });
 
-    // Stage tag at the left of each bar + the arrival total at its end. Without the tag the three bars in
-    // a group are unlabelled, which is the complaint this chart just fixed.
     const labelPlugin = {
       id: 'screenLabels',
       afterDatasetsDraw(chart) {
-        const { ctx: c } = chart;
-        c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-        c.textBaseline = 'middle';
-        STAGES.forEach(([k, tag], si) => {
-          const movedMeta = chart.getDatasetMeta(si * 2);
-          const endMeta = chart.getDatasetMeta(si * 2 + 1);
-          movedMeta.data.forEach((bar, i) => {
-            c.fillStyle = '#64748b'; c.textAlign = 'right';
-            c.fillText(tag, bar.base - 6, bar.y);
-            if (moved[k][i] > 0 && (bar.x - bar.base) > 18) {
-              c.fillStyle = '#fff'; c.textAlign = 'center';
-              c.fillText(String(moved[k][i]), (bar.base + bar.x) / 2, bar.y);
-            }
-            if (added[k][i] > 0) {
-              c.fillStyle = '#334155'; c.textAlign = 'left';
-              c.fillText(String(added[k][i]), endMeta.data[i].x + 4, endMeta.data[i].y);
-            }
-          });
+        const c = chart.ctx; c.save();
+        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        const mMeta = chart.getDatasetMeta(0), eMeta = chart.getDatasetMeta(1);
+        recs.forEach((r, i) => {
+          const bar = mMeta.data[i]; if (!bar) return;
+          if (r.cleared > 0 && (bar.x - bar.base) > 18) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(r.cleared), (bar.base + bar.x) / 2, bar.y); }
+          const end = eMeta.data[i];
+          if (r.added > 0 && end) { c.fillStyle = '#334155'; c.textAlign = 'left'; c.fillText(r.added + ' · ' + pct(r.cleared, r.added) + '%', end.x + 5, end.y); }
         });
         c.restore();
       }
@@ -2107,43 +2088,25 @@ export function initRecruiterFilters(data) {
 
     recScreenChart = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: recs.map(r => r.name),
-        datasets: STAGES.flatMap(([k], si) => [
-          seg(si === 0 ? 'Moved forward' : '_moved' + k, moved[k], SCREEN_SOLID, k),
-          seg(si === 0 ? 'Still at this stage' : '_still' + k, still[k], SCREEN_PALE, k)
-        ])
-      },
+      data: { labels: recs.map(r => r.name), datasets: [
+        { label: 'Progressed past R1', data: moved, backgroundColor: SCREEN_SOLID, stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 },
+        { label: 'Still at R1', data: still, backgroundColor: SCREEN_PALE, stack: 'r1', borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.85 }
+      ] },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { left: 22, right: 28 } },
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 64 } },
         plugins: {
           valueLabels: false, stackTotals: false,
-          legend: {
-            position: 'top', align: 'center',
-            labels: {
-              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 },
-              filter: (item, d) => !(d.datasets[item.datasetIndex].label || '').startsWith('_')
+          legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },
+          tooltip: { callbacks: {
+            footer: (items) => {
+              if (!items.length) return '';
+              const r = recs[items[0].dataIndex];
+              return `Added at R1: ${r.added} · progressed ${pct(r.cleared, r.added)}%`;
             }
-          },
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                if (!items.length) return '';
-                const si = Math.floor(items[0].datasetIndex / 2);
-                return `${items[0].label} — ${['HM Screening', 'Online Assessment', 'R1'][si]}`;
-              },
-              label: (c2) => `${c2.datasetIndex % 2 === 0 ? 'Moved forward' : 'Still at this stage'}: ${c2.parsed.x}`,
-              footer: (items) => {
-                if (!items.length) return '';
-                const si = Math.floor(items[0].datasetIndex / 2), i = items[0].dataIndex;
-                const k = STAGES[si][0];
-                return `Added: ${added[k][i]}`;
-              }
-            }
-          }
+          } }
         },
         scales: {
-          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } },
+          x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates added at R1', font: { size: 11 }, color: '#64748b' } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
