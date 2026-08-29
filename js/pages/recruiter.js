@@ -2,7 +2,8 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
-import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
+         CATEGORY_COLORS, CATEGORY_MAX, CATEGORY_REST, darken, SEP_DARKEN } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -1915,20 +1916,14 @@ export function initRecruiterFilters(data) {
   const sumBy = (G, key) => G.recs.reduce((s, r) => s + (r[key] || 0), 0);
 
   // ToFU chart: ONE BAR PER DAY — the literal question this panel answers ("how many candidates got added
-  // on a particular day"). Each day's bar is stacked by POD, and within a pod by ROLE, using shades of that
-  // pod's colour (Jerin's ask, 2026-08-29): darkest block is the pod's busiest role in the window, palest
-  // the quietest. So a bar reads as "how many, from which pods, on which roles" without a second chart.
-  // The legend stays at POD level on purpose — one entry per role would be twenty entries of noise; the
-  // role is in the tooltip. Clicking a pod toggles every one of its role blocks together.
+  // on a particular day"). Each day's bar is stacked by RECRUITER (Jerin, 2026-08-30: "possible to plot it
+  // on recruiters than pods?"), one flat colour each, and inside a recruiter's block the ROLES are divided
+  // by a line one shade darker — the same treatment every other chart on the site now uses.
+  // The legend stays at RECRUITER level on purpose — one entry per role would be twenty entries of noise;
+  // the role is in the tooltip. Clicking a recruiter toggles every one of their role blocks together.
   // Reads the same tofuByRecruiter / tofuByRecruiterJob the table reads, over the same days: any arrival
-  // whose role is unknown becomes that pod's palest "role not recorded" block, so the chart total and the
-  // table total cannot drift apart.
-  function podShade(hex, i, n) {
-    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-    const t = n > 1 ? 0.62 * (i / (n - 1)) : 0;          // 0 = the pod's own colour, 0.62 = well toward white
-    const mix = (c) => Math.round(c + (255 - c) * t);
-    return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
-  }
+  // credited to a person but not to a role becomes their "role not recorded" block, so the chart total and
+  // the table total cannot drift apart.
   function buildVelChart() {
     const ctx = document.getElementById('recVelChart'); if (!ctx) return;
     if (recVelChart) { recVelChart.destroy(); recVelChart = null; }
@@ -1940,37 +1935,84 @@ export function initRecruiterFilters(data) {
     const groups = groupByPod(getFilteredRecs(), selQuarter());
     const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
 
+    // ONE COLOUR PER RECRUITER (Jerin, 2026-08-30: "possible to plot it on recruiters than pods?").
+    // Pods still group the tables; this chart answers "who added people, on which day", so the recruiter is
+    // the thing worth colouring. 7 recruiters carry arrivals in a typical 30-day window, 12 across a
+    // quarter — inside what stays tellable apart. Past CATEGORY_MAX the tail pools into one grey block
+    // rather than inventing colours nobody can distinguish.
+    // Inside a recruiter's block the ROLES are divided by a line one shade darker, the same treatment the
+    // horizontal charts use — see roleBandOverlay in chart-style.js.
+    const jobTitleOf8 = {}; (data.jobs || []).forEach(j => { jobTitleOf8[String(j.id).slice(0, 8)] = j.title; });
+    const visibleRecs = [];
+    groups.forEach(G => G.recs.forEach(r => visibleRecs.push({ name: r.name, pod: G.pod })));
+    const winTotal = (name) => { const rm = tRec[name] || {}; return keys.reduce((a, k) => a + (rm[k] || 0), 0); };
+    const ranked = visibleRecs.filter(r => winTotal(r.name) > 0).sort((a, b) => winTotal(b.name) - winTotal(a.name));
+    const named = ranked.slice(0, CATEGORY_MAX), pooled = ranked.slice(CATEGORY_MAX);
+
     const datasets = [];
-    groups.forEach((G, gi) => {
-      const base = POD_COLORS[gi % POD_COLORS.length];
-      // pod -> role -> per-day, and the pod's own per-day total from the recruiter store
-      const byJob = {}, podPer = new Array(keys.length).fill(0);
-      G.recs.forEach(r => {
-        const rm = tRec[r.name] || {};
-        keys.forEach((k, i) => { podPer[i] += rm[k] || 0; });
-        const mine = tRecJob && tRecJob[r.name];
+    const addRecruiter = (label, names, colour) => {
+      // role → per-day, plus the recruiters' own per-day total, so anything credited to a person but not to
+      // a role still stands in the bar and the chart keeps matching the table.
+      const byJob = {}, per = new Array(keys.length).fill(0);
+      names.forEach(nm => {
+        const rm = tRec[nm] || {};
+        keys.forEach((k, i) => { per[i] += rm[k] || 0; });
+        const mine = tRecJob && tRecJob[nm];
         if (!mine) return;
         Object.keys(mine).forEach(j8 => {
           const acc = byJob[j8] || (byJob[j8] = new Array(keys.length).fill(0));
           keys.forEach((k, i) => { acc[i] += (mine[j8] || {})[k] || 0; });
         });
       });
+      if (!per.some(v => v > 0)) return;
       const jobs = Object.keys(byJob)
         .map(j8 => ({ j8, per: byJob[j8], t: byJob[j8].reduce((a, v) => a + v, 0) }))
-        .filter(x => x.t > 0)
-        .sort((a, b) => b.t - a.t);
-      // Arrivals credited to the recruiter but not to a role: keep them, or the bars stop matching the table.
-      const rest = podPer.map((v, i) => Math.max(0, v - jobs.reduce((a, J) => a + J.per[i], 0)));
-      const n = jobs.length + (rest.some(v => v > 0) ? 1 : 0);
-      jobs.forEach((J, ji) => datasets.push({
-        label: jobTitleOf[J.j8] || J.j8, _pod: G.pod, data: J.per,
-        backgroundColor: podShade(base, ji, n), stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
-      }));
-      if (rest.some(v => v > 0)) datasets.push({
-        label: 'role not recorded', _pod: G.pod, data: rest,
-        backgroundColor: podShade(base, n - 1, n), stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
+        .filter(x => x.t > 0).sort((a, b) => b.t - a.t);
+      const rest = per.map((v, i) => Math.max(0, v - jobs.reduce((a, J) => a + J.per[i], 0)));
+      const push = (roleLabel, arr) => datasets.push({
+        label: roleLabel, _rec: label, _c: colour, data: arr,
+        backgroundColor: colour, stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
       });
-    });
+      jobs.forEach(J => push(jobTitleOf8[J.j8] || J.j8, J.per));
+      if (rest.some(v => v > 0)) push('role not recorded', rest);
+    };
+    named.forEach((r, i) => addRecruiter(r.name, [r.name], CATEGORY_COLORS[i % CATEGORY_COLORS.length]));
+    if (pooled.length) addRecruiter(`${pooled.length} other recruiters`, pooled.map(r => r.name), CATEGORY_REST);
+
+    // The role divisions, drawn on top: a horizontal line one shade darker at each internal boundary inside
+    // a recruiter's block. Vertical bars, so the geometry is the mirror of roleBandOverlay's; the colour
+    // rule and the reasoning are shared with it.
+    const roleSplits = {
+      id: 'recVelRoleSplits',
+      afterDatasetsDraw(chart) {
+        const c = chart.ctx;
+        c.save();
+        c.lineWidth = 1.2;
+        for (let i = 0; i < keys.length; i++) {
+          const seen = {};
+          chart.data.datasets.forEach((d, di) => {
+            if (!chart.isDatasetVisible(di) || !(d.data[i] > 0)) return;
+            const bar = chart.getDatasetMeta(di).data[i];
+            if (!bar) return;
+            (seen[d._rec] || (seen[d._rec] = { c: d._c, xs: [], w: bar.width || 10 })).xs.push({ y: bar.y, x: bar.x });
+          });
+          Object.values(seen).forEach(grp => {
+            if (grp.xs.length < 2) return;
+            grp.xs.sort((a, b) => a.y - b.y);
+            c.strokeStyle = darken(grp.c, SEP_DARKEN);
+            // every block's top edge except the topmost one in the group
+            grp.xs.slice(1).forEach(p => {
+              c.beginPath();
+              c.moveTo(p.x - grp.w / 2 + 1, p.y);
+              c.lineTo(p.x + grp.w / 2 - 1, p.y);
+              c.stroke();
+            });
+          });
+        }
+        c.restore();
+      }
+    };
+
     if (!datasets.length) { if (wrap) wrap.style.height = '120px'; return; }
     if (wrap) wrap.style.height = '420px';
     ctx.style.maxHeight = '420px';
@@ -2018,25 +2060,25 @@ export function initRecruiterFilters(data) {
             position: 'top', align: 'center',
             labels: {
               usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 16, font: { size: 12 },
-              // One entry per POD, in that pod's own colour, not one per role.
+              // One entry per RECRUITER, in that recruiter's own colour, not one per role.
               generateLabels: (chart) => {
                 const seen = [];
-                chart.data.datasets.forEach((d, i) => { if (!seen.some(x => x.pod === d._pod)) seen.push({ pod: d._pod, i }); });
-                return seen.map(({ pod, i }) => ({
-                  text: pod,
+                chart.data.datasets.forEach((d, i) => { if (!seen.some(x => x.rec === d._rec)) seen.push({ rec: d._rec, i }); });
+                return seen.map(({ rec, i }) => ({
+                  text: rec,
                   fillStyle: chart.data.datasets[i].backgroundColor,
                   strokeStyle: 'transparent',
-                  hidden: !chart.isDatasetVisible(i),
+                  hidden: !chart.data.datasets.some((d, k) => d._rec === rec && chart.isDatasetVisible(k)),
                   datasetIndex: i
                 }));
               }
             },
             onClick: (e, item, legend) => {
               const chart = legend.chart;
-              const pod = chart.data.datasets[item.datasetIndex]?._pod;
-              if (!pod) return;
-              const show = !chart.isDatasetVisible(item.datasetIndex);
-              chart.data.datasets.forEach((d, i) => { if (d._pod === pod) chart.setDatasetVisibility(i, show); });
+              const rec = chart.data.datasets[item.datasetIndex]?._rec;
+              if (!rec) return;
+              const show = !chart.data.datasets.some((d, i) => d._rec === rec && chart.isDatasetVisible(i));
+              chart.data.datasets.forEach((d, i) => { if (d._rec === rec) chart.setDatasetVisibility(i, show); });
               chart.update();
             }
           },
@@ -2049,7 +2091,7 @@ export function initRecruiterFilters(data) {
                 const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
                 return `${wk} ${d.getDate()} ${MON[d.getMonth()]}`;
               },
-              label: (c) => `${c.dataset._pod} · ${c.dataset.label}: ${c.parsed.y}`,
+              label: (c) => `${c.dataset._rec} \u00b7 ${c.dataset.label}: ${c.parsed.y}`,
               footer: (items) => {
                 if (!items.length) return '';
                 const i = items[0].dataIndex;
@@ -2072,7 +2114,7 @@ export function initRecruiterFilters(data) {
           y: { ...gridY, stacked: true, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } }
         }
       },
-      plugins: [emptyWeekdayMarks]
+      plugins: [emptyWeekdayMarks, roleSplits]
     });
   }
   // Screening chart. One bar per recruiter: the solid part progressed past R1, the pale part is still

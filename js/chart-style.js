@@ -226,3 +226,16 @@ export function metricLegend(metrics, base = {}) {
     }
   };
 }
+
+// ===== A colour per category, for charts stacked by recruiter (2026-08-30) =====
+// Jerin asked for Momentum to stack by RECRUITER rather than pod — "that many colours possible? :)"
+// Yes: 7 recruiters carry arrivals in a typical 30-day window and 12 across a quarter, which is inside what
+// stays tellable apart. Beyond that the eye gives up, so the caller names the top CATEGORY_MAX by volume and
+// pools the rest into CATEGORY_REST.
+// Muted on purpose — these sit beside the site's own palette, not on top of it.
+export const CATEGORY_COLORS = [
+  '#4E6BA6', '#398AA2', '#938FB8', '#C9A227', '#B45A72', '#5E8C6A',
+  '#1E7590', '#A97C50', '#7B79A8', '#C08457', '#6E8FA8', '#8FA65B'
+];
+export const CATEGORY_MAX = 12;
+export const CATEGORY_REST = '#94a3b8';
