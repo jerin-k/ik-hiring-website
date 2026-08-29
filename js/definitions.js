@@ -46,7 +46,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart',
         items: [
-          ['One bar per department', 'The bar length is the positions opened in the period, split into <strong>Joined</strong>, <strong>Open</strong> and <strong>Missed</strong> — the three states every position is in, so they always add up to Total Openings.'],
+          ['One bar per department', 'The bar length is the positions opened in the period, split into <strong>Joined</strong>, <strong>Open</strong> and <strong>Missed</strong> — the three states every position is in, so they always add up to Total Openings. Each of those three is split again into the <strong>roles</strong> inside the department, darkest band the biggest role, palest the smallest; past ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The number stays on the section as a whole, not on every band.'],
           ['Why Joining Pending and Dropped are not on it', 'Those two count people. Stacking them onto a bar made of positions would produce a total that means nothing.'],
         ]
       },
@@ -168,7 +168,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart and the Cases list',
         items: [
-          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. Two markers sit on it: a solid line at their <strong>Goal</strong> (the demand on their roles this quarter, which is what the bar is measured against) and a dashed line at their <strong>Capacity</strong> (the finishing line \u2014 what they could carry). Amber fills any shortfall to Goal. So a bar past its Goal line but well short of its Capacity line means somebody is meeting the demand in front of them while running below what they could take on. It reads off exactly the same figures as the table.'],
+          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. Two markers sit on it: a solid line at their <strong>Goal</strong> (the demand on their roles this quarter, which is what the bar is measured against) and a dashed line at their <strong>Capacity</strong> (the finishing line \u2014 what they could carry). Amber fills any shortfall to Goal. So a bar past its Goal line but well short of its Capacity line means somebody is meeting the demand in front of them while running below what they could take on. It reads off exactly the same figures as the table. The bar itself is split again into the <strong>roles</strong> behind it, darkest band the biggest role, palest the smallest; past ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The number stays on the section as a whole, not on every band.'],
           ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
         ]
       },
@@ -227,7 +227,7 @@ export const DEFINITIONS = {
           ['%', 'Progressed \u00f7 Added at R1.'],
           ['Rows', 'Pod \u2192 Recruiter \u2192 Role. Only roles that actually saw R1 activity in the period are listed \u2014 a recruiter\u2019s older roles are not shown as a row of zeros.'],
           ['Counted once', 'One count per candidate per role per quarter, however many times they were booked or re-booked. Cancelled interviews and cancelled assignments do not count at all.'],
-          ['Chart', 'One bar per recruiter: the solid part progressed past R1, the pale part is still sitting at R1, and the two together are how many were added. The number at the end of each bar is the total and the percentage.'],
+          ['Chart', 'One bar per recruiter: the solid part progressed past R1, the pale part is still sitting at R1, and the two together are how many were added. The number at the end of each bar is the total added, and the percentage sits in its own labelled column at the right. Each coloured section is split again into the <strong>roles</strong> behind it, darkest band the biggest role, palest the smallest; past ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The number stays on the section as a whole, not on every band.'],
         ]
       },
     ],
@@ -250,7 +250,7 @@ export const DEFINITIONS = {
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and both Fulfilment tables use.'],
           ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
-          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>. <strong>Offered</strong> \u2014 the sum of the three \u2014 sits at the end of the bar, and the <strong>Joining conversion</strong> has its own labelled column down the right-hand edge, the same percentage as the last column of the table.'],
+          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>. <strong>Offered</strong> \u2014 the sum of the three \u2014 sits at the end of the bar, and the <strong>Joining conversion</strong> has its own labelled column down the right-hand edge, the same percentage as the last column of the table. Each coloured section is split again into the <strong>roles</strong> behind it, darkest band the biggest role, palest the smallest; past ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The number stays on the section as a whole, not on every band.'],
         ]
       },
     ],
@@ -407,7 +407,7 @@ export const DEFINITIONS = {
           ['%', 'Progressed \u00f7 Added at R1.'],
           ['Rows', 'Department \u2192 Role. Only roles that saw R1 activity in the period are listed.'],
           ['Counted once', 'One count per candidate per role per quarter. Cancelled interviews and cancelled assignments do not count at all.'],
-          ['Chart', 'One bar per department: the solid part progressed past R1, the pale part is still at R1, and together they are how many were added.'],
+          ['Chart', 'One bar per department: the solid part progressed past R1, the pale part is still at R1, and together they are how many were added. Each coloured section is split again into the <strong>roles</strong> behind it, darkest band the biggest role, palest the smallest; past ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The number stays on the section as a whole, not on every band.'],
         ]
       },
     ],
@@ -468,7 +468,7 @@ export const DEFINITIONS = {
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. The same rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and the Recruiter tab use.'],
           ['Joining Conversion', '(Joined + Joining Pending) \u00f7 Offered \u2014 the share of everyone who reached an offer who has <strong>not</strong> fallen out.'],
-          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with <strong>Offered</strong> at the end of the bar and the <strong>Joining conversion</strong> in its own labelled column down the right-hand edge.'],
+          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with <strong>Offered</strong> at the end of the bar and the <strong>Joining conversion</strong> in its own labelled column down the right-hand edge. Each coloured section is split again into the <strong>roles</strong> behind it, darkest band the biggest role, palest the smallest; past ten roles the tail is pooled into one band so nothing is left out. Hover a band for the role name. The number stays on the section as a whole, not on every band.'],
         ]
       },
     ],
