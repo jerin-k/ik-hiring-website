@@ -2,7 +2,7 @@ import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
-         buildDumbbell } from '../chart-style.js';
+         buildStageHeat } from '../chart-style.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -229,8 +229,8 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
       ${defsBlock('hm-throughput')}
-      <h3 class="subsection-title">Throughput by department — R1 to Documentation</h3>
-      <div class="chart-wrap" id="hm2ChartWrap"><canvas id="hm2Chart"></canvas></div>
+      <h3 class="subsection-title">Throughput — department by stage</h3>
+      <div class="sheat-wrap"><div id="hm2Heat" class="sheat"></div><div id="hm2HeatTip" class="sheat-tip"></div></div>
 
       <p class="sub-note">Click a department to drill in.</p>
       <div class="hm-stages">
@@ -294,7 +294,6 @@ function dropRows(data) {
 }
 
 let hm1ChartInstance = null;
-let hm2ChartInstance = null;
 
 export function initHmFilters(data) {
   if (!data) return;
@@ -709,43 +708,30 @@ export function initHmFilters(data) {
       + '<span><i class="sw none"></i>stage not used</span>'
       + '<span class="leg-note">Number = candidates who entered the stage.</span>';
 
-    // ===== ONE chart: department vs throughput (Jerin, 2026-08-30) =====
+    // ===== ONE chart, both dimensions (Jerin, 2026-08-30) =====
     // Replaces two org-wide charts — a per-stage In/Out column chart and a pipeline funnel — neither of
-    // which showed a department. This one puts the departments on the axis and asks a single question of
-    // each: of the people who reached R1, how many got as far as Documentation.
+    // which showed a department. First attempt was a single R1 → Documentation dumbbell; Jerin: "not enough
+    // dude, need stage wise throughput visualised too". So: department down the side, stage across the top,
+    // the throughput percentage in every cell, and the R1 → Documentation span as the final column.
     //
-    // 🚨 It deliberately does NOT sum "In" across stages. One person passing through R1, R2 and R3 appears
-    // in three stages, so a total would count them three times — the same units trap as the throughput
-    // dedupe. R1 → Documentation is one span with no double counting, and it is the measure the table's
-    // last column already reports, so the chart and the table agree by construction.
-    // The per-stage detail stays in the table above; this chart is for comparing departments.
-    if (hm2ChartInstance) hm2ChartInstance.destroy();
-    const ctx2 = document.getElementById('hm2Chart');
-    const wrap2 = document.getElementById('hm2ChartWrap');
-    if (ctx2) {
-      const deptRows = Object.keys(groups).map(d => {
+    // 🚨 The stage cells must NEVER be added up. One person passing R1, R2 and R3 appears in all three, so a
+    // total counts them three times — the same units trap as the throughput dedupe. Each cell is comparable
+    // only to its own In, which is why the Overall column exists and why it is a single span.
+    // It reads the same aggregates the table below renders, so the two agree by construction.
+    const heatHost = document.getElementById('hm2Heat');
+    if (heatHost) {
+      const stageCols = visStages.filter(sk => sk !== 'app');
+      const heatRows = Object.keys(groups).map(d => {
         const per = aggTP(groups[d]);
         return {
           label: d,
-          added: per.r1.i,
-          progressed: per.ds.i,
-          roles: groups[d].map(({ job, t }) => ({ title: job.title, added: t.r1.i, progressed: t.ds.i }))
-            .filter(x => x.added > 0)
+          cells: stageCols.map(sk => (per[sk] && per[sk].i > 0) ? { inN: per[sk].i, outN: per[sk].o } : null),
+          overall: per.r1.i > 0 ? Math.round((per.ds.i / per.r1.i) * 100) : null,
+          _vol: per.r1.i
         };
-      }).filter(r => r.added > 0).sort((a2, b2) => b2.added - a2.added);
-      if (!deptRows.length) {
-        if (wrap2) wrap2.style.height = '120px';
-        ctx2.style.display = 'none';
-      } else {
-        ctx2.style.display = '';
-        const h2 = hbarHeight(deptRows.length, 80, 220);
-        if (wrap2) wrap2.style.height = h2 + 'px';
-        ctx2.style.maxHeight = h2 + 'px';
-        hm2ChartInstance = buildDumbbell(ctx2, deptRows, {
-          xTitle: 'Candidates', colHeader: 'THROUGHPUT',
-          fromLabel: 'reached R1', toLabel: 'reached Documentation'
-        });
-      }
+      }).sort((x, y) => y._vol - x._vol);
+      buildStageHeat(heatHost, document.getElementById('hm2HeatTip'), heatRows,
+        stageCols.map(sk => TP_LABELS[sk]), { overallLabel: 'R1 → DOC' });
     }
   }
 

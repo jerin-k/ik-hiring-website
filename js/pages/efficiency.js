@@ -4,7 +4,7 @@ import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
-         buildDumbbell } from '../chart-style.js';
+         buildDumbbell, buildStageHeat } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -65,7 +65,7 @@ function wireTreePath(tbody, expandAll) {
   }
 }
 
-let effFulfilCombined = null, effSourceChart = null, effTpChart = null;
+let effFulfilCombined = null, effSourceChart = null;
 
 export function renderEfficiency(data) {
   if (!data || !data.funnel) return '<p>No data available.</p>';
@@ -209,8 +209,8 @@ export function renderEfficiency(data) {
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
         ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
       </div>
-      <h3 class="subsection-title">Throughput by department — R1 to Documentation</h3>
-      <div class="chart-wrap" id="effTpChartWrap"><canvas id="effTpChart"></canvas></div>
+      <h3 class="subsection-title">Throughput — department by stage</h3>
+      <div class="sheat-wrap"><div id="effTpHeat" class="sheat"></div><div id="effTpHeatTip" class="sheat-tip"></div></div>
       <div class="scroll-table"><table>
         <thead id="effTpHead"></thead>
         <tbody id="effTpBody"></tbody>
@@ -720,38 +720,31 @@ export function initEfficiencyFilters(data) {
   // One bar per DEPARTMENT: solid progressed past R1, pale still at R1, together the number added.
   // Same store as the table.
   let effScreenChart = null;
-  // ===== ONE chart: department vs throughput (Jerin, 2026-08-30) =====
-  // The 13 per-department small multiples are gone; this asks one question of each department instead —
-  // of the people who reached R1, how many got as far as Documentation. Mirrors the Hiring Manager tab.
-  // 🚨 It deliberately does NOT sum "In" across stages: one person passing R1, R2 and R3 sits in three of
-  // them, so a total would count them three times. R1 → Documentation is a single span with no double
-  // counting. The per-stage detail stays in the table below.
-  function buildTpChartEff(q) {
-    const ctx = document.getElementById('effTpChart'); if (!ctx) return;
-    if (effTpChart) { effTpChart.destroy(); effTpChart = null; }
-    const wrap = document.getElementById('effTpChartWrap');
-    if (!tpByJob) { if (wrap) wrap.style.height = '0px'; return; }
-    const spanOf = (jid) => {
-      const t = tpByJob[jid] || {};
-      return { added: (t.r1 || {}).reached || 0, progressed: (t.docSub || {}).reached || 0 };
-    };
+  // ===== ONE chart, both dimensions (Jerin, 2026-08-30) — the mirror of the Hiring Manager tab =====
+  // The 13 per-department small multiples are gone. Department down the side, stage across the top, the
+  // throughput percentage in every cell, and the R1 -> Documentation span as the final column.
+  // 🚨 The stage cells must NEVER be added up: one person passing R1, R2 and R3 sits in all three. Each cell
+  // is comparable only to its own In, which is what the Overall column is for.
+  function buildTpChartEff(q, vis) {
+    const host = document.getElementById('effTpHeat'); if (!host) return;
+    if (!tpByJob) { host.innerHTML = ''; return; }
+    const stageCols = vis.filter(k => k !== 'app');
+    const cellOf = (jids, k) => jids.reduce((a, jid) => {
+      const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 };
+      return { inN: a.inN + c.reached, outN: a.outN + c.cleared };
+    }, { inN: 0, outN: 0 });
     const rows = deptJobs(q).map(({ dept, jobs: js }) => {
-      const all = js.map(j => ({ title: j.title, ...spanOf(j.jid) }));
-      // ⚠ Aggregate over EVERY role, then filter only the hover list. Aggregating over the filtered list
-      // dropped any role with a Documentation entry but no R1 entry in the period — Operations read 9
-      // against the table's 10.
-      const agg = all.reduce((a, x) => ({ added: a.added + x.added, progressed: a.progressed + x.progressed }), { added: 0, progressed: 0 });
-      return { label: dept, ...agg, roles: all.filter(x => x.added > 0 || x.progressed > 0) };
-    }).filter(r => r.added > 0 || r.progressed > 0).sort((a, b) => b.added - a.added);
-    if (!rows.length) { if (wrap) wrap.style.height = '120px'; ctx.style.display = 'none'; return; }
-    ctx.style.display = '';
-    const h = hbarHeight(rows.length, 80, 220);
-    if (wrap) wrap.style.height = h + 'px';
-    ctx.style.maxHeight = h + 'px';
-    effTpChart = buildDumbbell(ctx, rows, {
-      xTitle: 'Candidates', colHeader: 'THROUGHPUT',
-      fromLabel: 'reached R1', toLabel: 'reached Documentation'
-    });
+      const jids = js.map(j => j.jid);
+      const r1 = cellOf(jids, 'r1'), ds = cellOf(jids, 'ds');
+      return {
+        label: dept,
+        cells: stageCols.map(k => { const c = cellOf(jids, k); return c.inN > 0 ? c : null; }),
+        overall: r1.inN > 0 ? Math.round((ds.inN / r1.inN) * 100) : null,
+        _vol: r1.inN
+      };
+    }).filter(r => r.cells.some(Boolean)).sort((a, b) => b._vol - a._vol);
+    buildStageHeat(host, document.getElementById('effTpHeatTip'), rows,
+      stageCols.map(k => TP_LABELS[k]), { overallLabel: 'R1 \u2192 DOC' });
   }
 
   function buildScreenChartEff() {
@@ -961,7 +954,7 @@ export function initEfficiencyFilters(data) {
     });
     body.innerHTML = html || `<tr><td colspan="${vis.length * 3 + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
-    buildTpChartEff(q);
+    buildTpChartEff(q, vis);
   }
 
   // Quarter keys the Year/Quarter selector covers; null = all-time. Separate from selQuarter(), which
