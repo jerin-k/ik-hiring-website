@@ -1,7 +1,7 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
-import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleBandTooltip, metricLegend } from '../chart-style.js';
+import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend } from '../chart-style.js';
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -581,7 +581,8 @@ export function initHmFilters(data) {
           plugins: {
             valueLabels: false,   // the per-metric label below replaces it; one number per band would be noise
             legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } }),
-            tooltip: roleBandTooltip('Total positions')
+            // Hovering any part of a section lists every role behind that whole section (Jerin, 2026-08-30).
+            tooltip: roleSectionTooltip(METRICS, { totalLabel: 'Total positions' })
           },
           scales: {
             x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions', font: { size: 11 }, color: '#64748b' } },

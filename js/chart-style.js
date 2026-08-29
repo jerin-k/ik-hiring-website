@@ -190,6 +190,49 @@ export function roleBandOverlay(metrics) {
   };
 }
 
+// The popup for a role-banded chart. Hovering ANY part of a coloured section lists EVERY role behind that
+// whole section with a count against each — not just the band under the cursor (Jerin, 2026-08-30: "same
+// pop while hovering over any gradient of the color").
+// The separator lines stay: they are the at-a-glance hint that a section is made of several roles, and this
+// is the detail behind that hint. Jerin asked for both.
+//
+// metrics: the same array passed to roleBandDatasets. Returns a Chart.js tooltip config.
+export function roleSectionTooltip(metrics, opts = {}) {
+  const { totalLabel = 'Total', extra = null } = opts;
+  return {
+    // One entry per hovered ROW, not per band — otherwise a bar of twelve bands produces twelve lines.
+    filter: (it, i) => i === 0,
+    callbacks: {
+      title: (items) => items[0].chart.data.labels[items[0].dataIndex],
+      label: () => '',
+      afterBody: (items) => {
+        const chart = items[0].chart, i = items[0].dataIndex;
+        const out = [];
+        metrics.forEach(M => {
+          const bands = chart.data.datasets
+            .map((d, di) => ({ d, di }))
+            .filter(({ d, di }) => d._m === M.key && chart.isDatasetVisible(di) && (d.data[i] || 0) > 0);
+          const total = bands.reduce((a, { d }) => a + (d.data[i] || 0), 0);
+          if (!total) return;
+          out.push(`${M.label}: ${total}`);
+          bands
+            .map(({ d }) => ({ t: d._titles[i] || 'role not recorded', n: d.data[i] }))
+            .sort((a, b) => b.n - a.n)
+            .forEach(x => out.push(`   ${x.t} — ${x.n}`));
+        });
+        const ex = typeof extra === 'function' ? extra(i, chart) : null;
+        if (ex) out.push('', ex);
+        return out;
+      },
+      footer: (items) => {
+        const chart = items[0].chart, i = items[0].dataIndex;
+        const t = chart.data.datasets.reduce((a, d, di) => a + (chart.isDatasetVisible(di) ? (d.data[i] || 0) : 0), 0);
+        return `${totalLabel}: ${t}`;
+      }
+    }
+  };
+}
+
 // Tooltip for a role-banded chart: only the bands that carry something, named by their role.
 export function roleBandTooltip(rowTotalLabel = 'Total') {
   return {
@@ -239,3 +282,110 @@ export const CATEGORY_COLORS = [
 ];
 export const CATEGORY_MAX = 12;
 export const CATEGORY_REST = '#94a3b8';
+
+// ===== Dumbbell: two dots and the distance between them (2026-08-30) =====
+// Screening Efficiency was a stacked bar, which showed the split but hid the DROP. A dumbbell draws the
+// distance from "added" to "progressed" as a line, so a weak conversion reads as a long bar.
+//
+// 🚨 The x-axis is REVERSED on purpose (Jerin, 2026-08-30, confirmed): counts run DOWN left→right, which
+// puts *added* on the left and *progressed* on the right — funnel order, the way the stage actually runs.
+// Do not "fix" the axis to ascending.
+//
+// rows: [{ label, sub, added, progressed, roles: [{ title, added, progressed }] }]
+// One implementation, used by Recruiter Efficiency and Overall Efficiency, so the two cannot drift.
+export function buildDumbbell(ctx, rows, opts = {}) {
+  const {
+    solid = '#4E6BA6', pale = '#C5CFE5', link = '#dbe3ea',
+    xTitle = 'Candidates', colHeader = 'PROGRESSED',
+    fromLabel = 'added', toLabel = 'progressed'
+  } = opts;
+  const max = Math.max(1, ...rows.map(r => r.added));
+  const rate = (r) => r.added > 0 ? Math.round((r.progressed / r.added) * 100) : null;
+
+  const marks = {
+    id: 'dumbbellMarks',
+    afterDatasetsDraw(chart) {
+      const meta = chart.getDatasetMeta(0), x = chart.scales.x, c = chart.ctx;
+      if (!meta || !x) return;
+      c.save();
+      c.textBaseline = 'middle';
+      const colX = chart.chartArea.right + 46;
+      c.textAlign = 'center';
+      c.fillStyle = '#94a3b8';
+      c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
+      c.fillText(colHeader, colX, chart.chartArea.top - 12);
+      rows.forEach((r, i) => {
+        const bar = meta.data[i]; if (!bar) return;
+        const y = bar.y, xa = x.getPixelForValue(r.added), xp = x.getPixelForValue(r.progressed);
+        // progressed: solid, with its number inside when the dot is big enough to hold it
+        c.beginPath(); c.arc(xp, y, 8, 0, Math.PI * 2); c.fillStyle = solid; c.fill();
+        c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.fillStyle = '#fff';
+        if (r.progressed > 0) c.fillText(String(r.progressed), xp, y);
+        // added: hollow, its number outside on the axis side
+        c.beginPath(); c.arc(xa, y, 8, 0, Math.PI * 2);
+        c.fillStyle = '#fff'; c.fill();
+        c.lineWidth = 2; c.strokeStyle = solid; c.stroke();
+        c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.fillStyle = '#334155'; c.textAlign = 'right';
+        c.fillText(String(r.added), xa - 13, y);
+        // the rate, in its own labelled column at the right edge
+        const v = rate(r);
+        if (v != null) {
+          c.textAlign = 'center';
+          c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
+          c.font = '600 12px -apple-system, BlinkMacSystemFont, sans-serif';
+          c.fillText(v + '%', colX, y);
+        }
+      });
+      c.restore();
+    }
+  };
+
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.label),
+      datasets: [{
+        label: `${fromLabel} → ${toLabel}`,
+        data: rows.map(r => [Math.min(r.added, r.progressed), Math.max(r.added, r.progressed)]),
+        backgroundColor: link, borderWidth: 0, borderRadius: 3,
+        barPercentage: 0.16, categoryPercentage: HBAR.categoryPercentage
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 96, left: 26, top: 16 } },
+      // Hover anywhere on the row, not just on the thin connector — the dots are drawn by the plugin and
+      // are not hit-testable.
+      interaction: { axis: 'y', mode: 'index', intersect: false },
+      plugins: {
+        valueLabels: false, stackTotals: false,
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => rows[items[0].dataIndex].label,
+            label: (it) => {
+              const r = rows[it.dataIndex], v = rate(r);
+              return `${r.added} ${fromLabel} · ${r.progressed} ${toLabel}${v == null ? '' : ` · ${v}%`}`;
+            },
+            afterBody: (items) => {
+              const r = rows[items[0].dataIndex];
+              const list = (r.roles || []).filter(x => x.added > 0).sort((a, b) => b.added - a.added);
+              if (!list.length) return '';
+              return ['', ...list.map(x => `${x.title}: ${x.added} → ${x.progressed}`)];
+            }
+          }
+        }
+      },
+      scales: {
+        // ⚠ reverse — see the note at the top of this function
+        x: { reverse: true, beginAtZero: true, suggestedMax: max, grid: { color: '#f1f5f9' },
+             ticks: { font: { size: 11 }, precision: 0 },
+             title: { display: true, text: xTitle, font: { size: 11 }, color: '#64748b' } },
+        y: { grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+      }
+    },
+    plugins: [marks]
+  });
+}
