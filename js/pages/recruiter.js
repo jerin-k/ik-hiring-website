@@ -2,6 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
+import { HBAR, hbarHeight } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -365,7 +366,7 @@ export function renderRecruiter(data) {
       <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
-        <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Count</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
     </div>
@@ -1209,9 +1210,9 @@ export function initRecruiterFilters(data) {
         : '';
     }
 
-    // ===== Sourcing Mix — Pod → Recruiter → Source type → Source name (LIVE) =====
-    // recruiters[].sources = { sourceType: count }; recruiters[].srcNested = { sourceType: { sourceName: count } }
-    // (the finer Ashby `source` name). % = share within the parent. Org-wide totals live in Overall Efficiency.
+    // ===== Sourcing Mix — Pod → Recruiter → Source type → Source name =====
+    // Counts JOINERS (see joinerSources above), not applications. % = share within the parent row.
+    // Org-wide totals live in Overall Efficiency.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
       const perSrc = selQuarters();
@@ -1219,14 +1220,17 @@ export function initRecruiterFilters(data) {
       const recSrcTotal = r => Object.values(nestOf(r)).reduce((s, names) => s + Object.values(names).reduce((a, v) => a + v, 0), 0);
       const sn = document.getElementById('recSourceNote');
       if (sn) {
-        // Orange only when a period is asked for and the dated data isn't there — with nothing selected,
-        // all-time is what was asked for and there is nothing to warn about.
-        const stale = !!perSrc && !srcHasQ();
-        sn.style.display = stale ? '' : 'none';
-        sn.innerHTML = 'Heads up: these are <strong>all-time</strong> numbers, not the selected period. The dated source data appears after the next refresh.';
+        // The joiner cut needs the source ON THE OFFER RECORD, which the pipeline only started carrying on
+        // 2026-08-29. Against an older data file every joiner would silently land in "(source not
+        // recorded)", so say it plainly instead.
+        const anySrc = (data.offerEvents || []).some(e => e.srcType);
+        sn.style.display = anySrc ? 'none' : '';
+        sn.innerHTML = 'Heads up: this data file predates sources being carried onto offer records, so no joiner can be attributed to a source yet. It fills in at the next refresh.';
       }
       const spSrc = document.getElementById('recSourcePeriod');
-      if (spSrc) spSrc.textContent = `Showing ${periodLabel(perSrc)}.`;
+      if (spSrc) spSrc.textContent = perSrc && perSrc.length
+        ? `Showing where the people who joined in ${periodLabel(perSrc)} came from.`
+        : `Showing where everyone who has joined came from (all time).`;
       const grand = recs.reduce((s, r) => s + recSrcTotal(r), 0) || 1;
       let html = '';
       groups.forEach((G, pi) => {
@@ -1257,7 +1261,7 @@ export function initRecruiterFilters(data) {
             });
           } else {
             html += `<tr data-path="${pi}-${ri}-0" style="display:none">
-              <td style="padding-left:52px;color:var(--muted);font-style:italic">No sourced applications</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+              <td style="padding-left:52px;color:var(--muted);font-style:italic">Nobody joined in this period</td><td>${DASH}</td><td>${DASH}</td></tr>`;
           }
         });
       });
@@ -1364,22 +1368,40 @@ export function initRecruiterFilters(data) {
   // nothing else. The pipeline now emits recruiters[].srcQ {quarter:{type:{name:count}}}, bucketed by the
   // quarter the candidate APPLIED. Falls back to the undated srcNested when running against older data —
   // and says so on screen rather than passing lifetime numbers off as the quarter's.
-  const srcHasQ = () => (data.recruiters || []).some(r => r.srcQ && Object.keys(r.srcQ).length);
-  // Sources for one recruiter across EVERY quarter the selector covers. null period = all time, which is
-  // exactly what the undated srcNested holds (checked 2026-08-26: srcQ summed == srcNested for all 27
-  // recruiters, 54,501 = 54,501).
-  function srcNestedFor(r, per) {
-    if (!r.srcQ || !per || !per.length) return r.srcNested || {};
-    const out = {};
-    per.forEach(q => {
-      const byType = r.srcQ[q] || {};
-      for (const t in byType) {
-        const dst = out[t] || (out[t] = {});
-        for (const nm in byType[t]) dst[nm] = (dst[nm] || 0) + byType[t][nm];
-      }
+  // ===== Sourcing Mix counts JOINERS, not applications (Jerin, 2026-08-29) =====
+  // "Need this to be only for Hired folks." A source that brings 25,810 applications and 2 joiners was
+  // reading as the biggest channel on the tab; this asks the question worth asking — which sources produce
+  // people who actually start.
+  // Joiner = accepted offer whose START DATE falls in the selected period. The same rule "Joined" means
+  // everywhere else on the site, so this panel and Fulfilment count the same people.
+  // The source comes off the offer record (srcType / srcName), which the pipeline started carrying on
+  // 2026-08-29 — it was always on the application, it just was not travelling as far as the offer.
+  // ⚠ A joiner whose application has no source is kept under "(source not recorded)" rather than dropped,
+  // so the panel totals still reconcile with Joined. About 5% today.
+  const NO_SRC = '(source not recorded)';
+  let _jsQ = null, _js = null;
+  function joinerSources(per) {
+    const key = (per && per.length) ? per.join(',') : 'ALL';
+    if (_jsQ === key && _js) return _js;
+    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const inPeriod = (q) => !per || !per.length ? !!q : per.indexOf(q) >= 0;
+    const byRec = {};
+    (data.offerEvents || []).forEach(e => {
+      if (!e.accepted) return;
+      const q = qOf(e.startDate);
+      if (!q || !inPeriod(q)) return;
+      const rec = e.recruiter; if (!rec) return;
+      const t = e.srcType || NO_SRC;
+      const n = e.srcType ? (e.srcName || '(unspecified)') : NO_SRC;
+      const a = byRec[rec] || (byRec[rec] = {});
+      const b = a[t] || (a[t] = {});
+      b[n] = (b[n] || 0) + 1;
     });
-    return out;
+    _jsQ = key; _js = byRec;
+    return byRec;
   }
+  function srcNestedFor(r, per) { return joinerSources(per)[r.name] || {}; }
+
   // ===== Joining Conversion (spec settled with Jerin, 2026-08-26) =====
   //   Offered           = Joined + Joining Pending + Dropped
   //   Joined            = started in the quarter, MINUS anyone linked to an EARLIER quarter's opening
@@ -2068,7 +2090,7 @@ export function initRecruiterFilters(data) {
     const moved = recs.map(r => r.cleared);
     const still = recs.map(r => Math.max(0, r.added - r.cleared));
     // Bar thickness matches the Fulfilment chart (Jerin, 2026-08-29) — 46px a row, same bar/category split.
-    const h = Math.max(260, recs.length * 46 + 90);
+    const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
 
@@ -2108,8 +2130,8 @@ export function initRecruiterFilters(data) {
     recScreenChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Progressed past R1', data: moved, backgroundColor: SCREEN_SOLID, stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 },
-        { label: 'Still at R1', data: still, backgroundColor: SCREEN_PALE, stack: 'r1', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 }
+        { label: 'Progressed past R1', data: moved, backgroundColor: SCREEN_SOLID, stack: 'r1', borderRadius: 2, ...HBAR },
+        { label: 'Still at R1', data: still, backgroundColor: SCREEN_PALE, stack: 'r1', borderRadius: 2, ...HBAR }
       ] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 96, top: 14 } },
@@ -2154,7 +2176,7 @@ export function initRecruiterFilters(data) {
     const pending = recs.map(r => cOfC(r.name).p);
     const dropped = recs.map(r => cOfC(r.name).dr);
     const offered = recs.map(r => cOfC(r.name).o);
-    const h = Math.max(240, recs.length * 34 + 80);
+    const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const seg = (arr, i, meta, colour) => ({ arr, i, meta, colour });
@@ -2195,9 +2217,9 @@ export function initRecruiterFilters(data) {
     };
     recJoinChart = new Chart(ctx, { type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: [
-        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, barPercentage: 0.72 },
-        { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, barPercentage: 0.72 }] },
+        { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, ...HBAR },
+        { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, ...HBAR },
+        { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, ...HBAR }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 86 } },
         plugins: { valueLabels: false, stackTotals: false,
           tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
@@ -2237,7 +2259,7 @@ export function initRecruiterFilters(data) {
     ctx.style.display = '';
     if (emptyMsg) emptyMsg.style.display = 'none';
     // Wider bars (Jerin): 46px a row rather than 30, and the bar filling most of its slot.
-    const h = Math.max(260, recs.length * 46 + 90);
+    const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
     const axisMax = Math.max(...recs.map(r => Math.max(r.achieved, r.goal, r.cap))) * 1.1;
@@ -2285,8 +2307,8 @@ export function initRecruiterFilters(data) {
       data: {
         labels: recs.map(r => r.name),
         datasets: [
-          { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 },
-          { label: 'Short of Goal (Score)', data: recs.map(r => r.short), backgroundColor: C.amber, stack: 'f', borderRadius: 2, barPercentage: 0.62, categoryPercentage: 0.9 }
+          { label: 'Achieved (Score)', data: recs.map(r => r.achieved), backgroundColor: C.green, stack: 'f', borderRadius: 2, ...HBAR },
+          { label: 'Short of Goal (Score)', data: recs.map(r => r.short), backgroundColor: C.amber, stack: 'f', borderRadius: 2, ...HBAR }
         ]
       },
       options: {
@@ -2319,8 +2341,8 @@ export function initRecruiterFilters(data) {
     if (recSourceChart) { recSourceChart.destroy(); recSourceChart = null; }
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    // Recruiter-centric stacked bar: Y = recruiter (top 20 by sourced volume), stacked by source_type.
-    // Same quarter-scoped basis as the table below it.
+    // Recruiter-centric stacked bar: Y = recruiter (top 20 by joiners), stacked by source_type.
+    // Reads the SAME joiner map as the table below it — one source of truth, no recomputation.
     const perS = selQuarters();
     const typeTotals = (r) => { const out = {}; Object.entries(srcNestedFor(r, perS)).forEach(([t, names]) => { out[t] = Object.values(names).reduce((a, v) => a + v, 0); }); return out; };
     const srcTotal = r => Object.values(typeTotals(r)).reduce((s, v) => s + v, 0);
@@ -2328,7 +2350,7 @@ export function initRecruiterFilters(data) {
     if (withSrc.length === 0) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = 'No sourced applications for the current filter.'; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = 'Nobody joined under the current filter, so there is no source mix to show.'; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
@@ -2344,16 +2366,16 @@ export function initRecruiterFilters(data) {
     const cats = rest.length ? [...topTypes, REST] : topTypes;
     const palette = [C.blue, C.green, C.cyan, C.slate, C.amber, '#C5CFE5', '#94a3b8'];
     const datasets = cats.map((cat, ci) => ({
-      label: cat === REST ? 'All other types' : cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, barPercentage: 0.8,
+      label: cat === REST ? 'All other types' : cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, ...HBAR,
       data: withSrc.map(r => cat === REST ? rest.reduce((s, t) => s + (tt[r.name][t] || 0), 0) : (tt[r.name][cat] || 0))
     }));
-    const h = Math.max(240, withSrc.length * 30 + 90);
+    const h = hbarHeight(withSrc.length);
     if (wrap) wrap.style.height = h + 'px'; ctx.style.maxHeight = h + 'px';
     recSourceChart = new Chart(ctx, { type: 'bar',
       data: { labels: withSrc.map(r => r.name), datasets },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 11 } } } },
-        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Candidates', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
+        scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Joiners', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
   }
   function renderActiveChart() {
     if (activeTab === 'velocity') buildVelChart();
