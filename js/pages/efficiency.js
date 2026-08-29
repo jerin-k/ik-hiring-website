@@ -3,7 +3,7 @@ import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
-import { HBAR, hbarHeight } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -127,7 +127,7 @@ export function renderEfficiency(data) {
     </style>
 
     <h2 class="section-title">Overall Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">The Recruiter Efficiency views, aggregated <strong>without the recruiter</strong> — trees are <strong>Department → Job</strong>. Jobs are attributed to a pod via the recruiters who worked them. <strong>Fulfilment</strong>, <strong>Joining Conversion</strong>, <strong>Momentum</strong> (Dept→Job→Stage) and <strong>Throughput</strong> are live to the job level (both from real stage history); <strong>Screening / Sourcing</strong> are pod-level. Year/Quarter drives pod grouping + capacity.</p>
+    <p class="sub-note" style="margin-top:-8px;">The same measures as Recruiter Efficiency, asked of the <strong>department</strong> instead of the recruiter. Every tree is <strong>Department → Job</strong>; there is no pod dimension on this tab. Each panel explains itself in the amber line above it.</p>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
@@ -165,7 +165,7 @@ export function renderEfficiency(data) {
       </table></div>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:22px 0 6px">Joining Pending — Cases</h4>
-      <p class="sub-note" style="margin-top:0">Everyone with an offer in play: Reference Check, Documentation or Offer. Same list as the Hiring Manager tab, scoped to the Department/Job filters above. <strong>Unlinked</strong> rows have no opening attached in Ashby, so they are invisible to the position counts — fix those first.</p>
+      <p class="sub-note" style="margin-top:0"><strong>Live</strong> — everyone with an offer in play right now, scoped to the Department/Job filters above. The quarter selector does not apply to it.</p>
       <div class="scroll-table"><table>
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
@@ -204,7 +204,6 @@ export function renderEfficiency(data) {
     <!-- PANEL: Throughput (mirrors HM) -->
     <div class="eff-panel" data-panel="throughput" style="display:none">
       ${defsBlock('eff-throughput')}
-      <p class="sub-note"><strong>In</strong> = candidates who entered the stage, <strong>Out</strong> = candidates who moved past it, Throughput = Out/In % — from real stage history, live at <strong>Department → Job</strong>. Falls back to pending until the history accumulator has run.</p>
       <div style="display:flex;flex-wrap:wrap;gap:12px 16px;margin-bottom:12px;font-size:12px;align-items:center">
         <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
         ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
@@ -220,7 +219,6 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="timeinprocess" style="display:none">
       ${defsBlock('eff-tis')}
       <p class="sub-note" id="effTisNote" style="display:none"></p>
-      <p class="sub-note"><strong>Median days a candidate is parked in each stage</strong>, <strong>Department → Job</strong>. Cells <span style="color:var(--red);font-weight:600">turn red above 5 days</span>. Hover a cell for mean &amp; sample size. <strong>App Review</strong> counts everyone currently parked there (today − applied date, full coverage); <strong>TA Screen → Offer</strong> come from real stage-transition history. Median is used (not mean) so a few candidates stuck 150+ days in App Review don't skew the stage.</p>
       <div class="scroll-table"><table>
         <thead id="effTisHead"></thead>
         <tbody id="effTisBody"></tbody>
@@ -901,20 +899,14 @@ export function initEfficiencyFilters(data) {
             if (arr[i] > 0 && (bar.x - bar.base) > 20) { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(String(arr[i]), (bar.base + bar.x) / 2, bar.y); }
           });
         });
+        // Offered at the end of the bar; the Joining Conversion is its own labelled column at the right
+        // edge (Jerin, 2026-08-29) — same treatment as the Recruiter Efficiency version, same helper.
         chart.getDatasetMeta(2).data.forEach((bar, i) => {
           c.textAlign = 'left'; c.fillStyle = '#334155';
-          const t = String(offered[i]);
-          c.fillText(t, bar.x + 6, bar.y);
-          const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
-          if (conv != null) {
-            const w = c.measureText(t).width;
-            c.fillStyle = conv >= 90 ? '#0F6B62' : (conv >= 70 ? '#A16207' : '#A15568');
-            c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText('(' + conv + '%)', bar.x + 12 + w, bar.y);
-            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-          }
+          c.fillText(String(offered[i]), bar.x + 6, bar.y);
         });
         c.restore();
+        drawConvColumn(chart, offered.map((o, i) => o > 0 ? Math.round(((joined[i] + pending[i]) / o) * 100) : null), 'Joining conversion');
       }
     };
     effJoinChart = new Chart(ctx, {
@@ -925,7 +917,7 @@ export function initEfficiencyFilters(data) {
         { label: 'Dropped', data: dropped, backgroundColor: '#A33253', stack: 'j', borderRadius: 2, ...HBAR }
       ] },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 86 } },
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: CONV_PAD + 34, top: 20 } },
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } },

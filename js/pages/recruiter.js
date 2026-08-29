@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
-import { HBAR, hbarHeight } from '../chart-style.js';
+import { HBAR, hbarHeight, CONV_PAD, drawConvColumn } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -2194,25 +2194,18 @@ export function initRecruiterFilters(data) {
             }
           });
         });
-        // Offered at the bar end, then the Joining Conversion beside it (Jerin, 2026-08-29: "need a
-        // Joining Conversion % at the end of each row in the chart"). Same arithmetic as the table's
-        // Joining Conversion column — (Joined + Joining Pending) / Offered — read off the same convMaps.
+        // Offered sits at the end of the bar; the Joining Conversion is its own labelled column at the
+        // right edge (Jerin, 2026-08-29), so it reads straight down like a table column instead of as a
+        // suffix on each bar. Same arithmetic as the table's column — (Joined + Joining Pending) / Offered
+        // — read off the same convMaps.
         const last = chart.getDatasetMeta(2);
         last.data.forEach((bar, i) => {
           c.textAlign = 'left';
           c.fillStyle = '#334155';
-          const offTxt = String(offered[i]);
-          c.fillText(offTxt, bar.x + 6, bar.y);
-          const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
-          if (conv != null) {
-            const w = c.measureText(offTxt).width;
-            c.fillStyle = conv >= 90 ? '#0F6B62' : (conv >= 70 ? '#A16207' : '#A15568');
-            c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
-            c.fillText('(' + conv + '%)', bar.x + 12 + w, bar.y);
-            c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-          }
+          c.fillText(String(offered[i]), bar.x + 6, bar.y);
         });
         c.restore();
+        drawConvColumn(chart, offered.map((o, i) => o > 0 ? Math.round(((joined[i] + pending[i]) / o) * 100) : null), 'Joining conversion');
       }
     };
     recJoinChart = new Chart(ctx, { type: 'bar',
@@ -2220,7 +2213,7 @@ export function initRecruiterFilters(data) {
         { label: 'Joined', data: joined, backgroundColor: C.green, stack: 'j', borderRadius: 2, ...HBAR },
         { label: 'Joining Pending', data: pending, backgroundColor: '#C9A227', stack: 'j', borderRadius: 2, ...HBAR },
         { label: 'Dropped', data: dropped, backgroundColor: '#b45a72', stack: 'j', borderRadius: 2, ...HBAR }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 86 } },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: CONV_PAD + 34, top: 20 } },
         plugins: { valueLabels: false, stackTotals: false,
           tooltip: { callbacks: { afterBody: (items) => { const i = items[0].dataIndex; const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null; return conv == null ? `Offered: ${offered[i]}` : `Offered: ${offered[i]} \u00b7 Joining Conversion ${conv}%`; } } },
           legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } } },

@@ -39,6 +39,7 @@ function allMonthKeys(data) {
 }
 
 import { defsBlock } from '../definitions.js';
+import { HBAR, hbarHeight } from '../chart-style.js';
 
 export function renderInterviewer(data) {
   const ivs = (data && data.interviewers) || [];
@@ -82,7 +83,6 @@ export function renderInterviewer(data) {
 
     <div class="section-title">Interviewer Efficiency</div>
     ${defsBlock('interviewer')}
-    <p class="sub-note">Interview load and feedback turnaround per panelist. <strong>Feedback Coverage</strong> = interviews that have feedback attached ÷ that panelist’s interviews. <strong>Turnaround</strong> = time from the interview ending to feedback being submitted. <em>Interview Feedback</em> counts forms matched to one of that panelist’s scheduled interviews; the figure in brackets is every form they submitted, including application-review and screening feedback, which is why it can exceed their interview count and is deliberately never shown as a percentage.</p>
 
     <div class="iv-filters">
       <div class="fchip"><span class="lbl">Year</span><select id="ivYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
@@ -311,10 +311,10 @@ export function initInterviewer(data) {
       const t = useMonths.length > 1 ? 0.6 * (1 - i / (useMonths.length - 1)) : 0;
       const mix = (c) => Math.round(c + (255 - c) * t);
       return { label: bucketLabel(mk), stack: 'm', data: top.map(([, b]) => b.m[mk] || 0),
-        backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`, borderWidth: 0, barPercentage: 0.86, categoryPercentage: 0.86 };
+        backgroundColor: `rgb(${mix(rr)},${mix(gg)},${mix(bb)})`, borderWidth: 0, ...HBAR };
     });
 
-    const h = Math.max(220, top.length * 30 + 90);
+    const h = hbarHeight(top.length);
     if (wrap) wrap.style.height = h + 'px';
     const cn = document.getElementById('ivChartNote');
     const unit = hasMonths ? 'month' : 'quarter';
