@@ -3,7 +3,7 @@ import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
-         CATEGORY_COLORS, CATEGORY_MAX, CATEGORY_REST, darken, SEP_DARKEN } from '../chart-style.js';
+         darken, SEP_DARKEN } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -138,7 +138,7 @@ function saveTarget(name, type, val) {
   localStorage.setItem(T_KEY, JSON.stringify(t));
 }
 
-let recVelChart = null, recScreenChart = null, recJoinChart = null, recFulfilChart = null, recSourceChart = null;
+let recScreenChart = null, recJoinChart = null, recFulfilChart = null, recSourceChart = null;
 
 // Metric Configuration (pods/capacity/score grid/dept-family) now lives in Admin → Metric Configuration
 // (admin.js). This tab only READS pods + capacity via recruiter-pods.js.
@@ -163,6 +163,33 @@ export function renderRecruiter(data) {
         color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
       .rec-subtab:hover { color:var(--text); }
       .rec-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+
+      /* ===== Momentum heatmap (2026-08-30) — recruiter x day, one cell per day =====
+         Deliberately HTML rather than a canvas chart: the cell grid IS a table of counts, and the hover
+         needs to list every role behind a cell, which a canvas tooltip renders badly. */
+      .tofu-heat-wrap { position:relative; margin:0 0 22px; overflow-x:auto; }
+      .tofu-heat { display:inline-block; min-width:100%; }
+      .heat-row { display:flex; align-items:center; gap:2px; margin-bottom:3px; }
+      .heat-name { width:190px; min-width:190px; font-size:12.5px; color:var(--text); text-align:right;
+        padding-right:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .heat-cell { width:26px; height:26px; border-radius:3px; background:#f4f6f8; font-size:11px; font-weight:500;
+        display:flex; align-items:center; justify-content:center; color:#334155; flex:0 0 auto; }
+      .heat-cell.has { cursor:default; }
+      .heat-cell.wknd { background:#eef1f4; }
+      .heat-tot { width:44px; min-width:44px; text-align:center; font-size:13px; font-weight:600; color:var(--text); }
+      .heat-hd { font-size:10.5px; color:var(--muted); height:16px; }
+      .heat-hd.wknd { color:#C08497; }
+      .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:20px; }
+      .heat-foot .heat-name { font-size:11.5px; color:var(--muted); }
+      .heat-scale { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); margin-top:10px; padding-left:190px; }
+      .heat-scale i { width:18px; height:18px; border-radius:3px; display:inline-block; }
+      .heat-tip { position:absolute; z-index:40; pointer-events:none; display:none; background:#fff;
+        border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 18px rgba(15,23,42,0.13);
+        padding:9px 11px; font-size:11.5px; color:var(--text); max-width:320px; }
+      .heat-tip b { font-weight:600; }
+      .heat-tip .tip-hd { font-size:11px; color:var(--muted); margin-bottom:5px; }
+      .heat-tip .tip-row { display:flex; justify-content:space-between; gap:14px; line-height:1.6; }
+      .heat-tip .tip-row span:last-child { font-weight:600; }
 
       /* nested tab strip INSIDE Data Hygiene — pill style, deliberately distinct from the
          outer underline tabs so two levels of tabs don't read as one row */
@@ -288,7 +315,7 @@ export function renderRecruiter(data) {
          look here if it needs fixing; do not swap the day columns for derived metrics again. -->
     <div class="rec-panel" data-panel="velocity" style="display:none">
       ${defsBlock('rec-momentum')}
-      <div class="chart-wrap" id="recVelChartWrap" style="height:420px"><canvas id="recVelChart"></canvas></div>
+      <div class="tofu-heat-wrap" id="recVelHeatWrap"><div id="recVelHeat" class="tofu-heat"></div><div id="recVelHeatTip" class="heat-tip"></div></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
         <tbody id="recVelBody"></tbody>
@@ -1915,216 +1942,112 @@ export function initRecruiterFilters(data) {
   const podLabels = () => lastGroups.map(G => G.pod);
   const sumBy = (G, key) => G.recs.reduce((s, r) => s + (r[key] || 0), 0);
 
-  // ToFU chart: ONE BAR PER DAY — the literal question this panel answers ("how many candidates got added
-  // on a particular day"). Each day's bar is stacked by RECRUITER (Jerin, 2026-08-30: "possible to plot it
-  // on recruiters than pods?"), one flat colour each, and inside a recruiter's block the ROLES are divided
-  // by a line one shade darker — the same treatment every other chart on the site now uses.
-  // The legend stays at RECRUITER level on purpose — one entry per role would be twenty entries of noise;
-  // the role is in the tooltip. Clicking a recruiter toggles every one of their role blocks together.
-  // Reads the same tofuByRecruiter / tofuByRecruiterJob the table reads, over the same days: any arrival
-  // credited to a person but not to a role becomes their "role not recorded" block, so the chart total and
-  // the table total cannot drift apart.
+  // ===== Momentum heatmap — recruiter × day (2026-08-30) =====
+  // Was a stacked column per day. Jerin asked for a heatmap, on the condition that hovering a square lists
+  // the ROLES behind it with a count against each — which is exactly what the column chart could not do
+  // without a legend of twenty entries.
+  // Built as HTML, not canvas, on purpose: the grid IS a table of counts, and a multi-line role list renders
+  // badly in a canvas tooltip.
+  // Reads the same tofuByRecruiter / tofuByRecruiterJob as the table below it, over the same days, so the
+  // per-day and per-recruiter totals here are the table's own numbers.
+  const HEAT_LO = [238, 244, 246], HEAT_HI = [30, 117, 144];
+  function heatShade(v, mx) {
+    const t = 0.16 + 0.84 * (mx > 0 ? v / mx : 0);
+    const m = (i) => Math.round(HEAT_LO[i] + (HEAT_HI[i] - HEAT_LO[i]) * t);
+    return `rgb(${m(0)},${m(1)},${m(2)})`;
+  }
   function buildVelChart() {
-    const ctx = document.getElementById('recVelChart'); if (!ctx) return;
-    if (recVelChart) { recVelChart.destroy(); recVelChart = null; }
+    const host = document.getElementById('recVelHeat');
+    const tip = document.getElementById('recVelHeatTip');
+    if (!host) return;
     const { rec: tRec, recJob: tRecJob } = tofuStores();
-    const wrap = document.getElementById('recVelChartWrap');
-    if (!tRec) { if (wrap) wrap.style.height = '0px'; return; }
+    if (!tRec) { host.innerHTML = ''; return; }
     const chrono = [...velDates()].reverse();
     const keys = chrono.map(dkey);
-    const groups = groupByPod(getFilteredRecs(), selQuarter());
-    const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
-
-    // ONE COLOUR PER RECRUITER (Jerin, 2026-08-30: "possible to plot it on recruiters than pods?").
-    // Pods still group the tables; this chart answers "who added people, on which day", so the recruiter is
-    // the thing worth colouring. 7 recruiters carry arrivals in a typical 30-day window, 12 across a
-    // quarter — inside what stays tellable apart. Past CATEGORY_MAX the tail pools into one grey block
-    // rather than inventing colours nobody can distinguish.
-    // Inside a recruiter's block the ROLES are divided by a line one shade darker, the same treatment the
-    // horizontal charts use — see roleBandOverlay in chart-style.js.
-    const jobTitleOf8 = {}; (data.jobs || []).forEach(j => { jobTitleOf8[String(j.id).slice(0, 8)] = j.title; });
-    const visibleRecs = [];
-    groups.forEach(G => G.recs.forEach(r => visibleRecs.push({ name: r.name, pod: G.pod })));
-    const winTotal = (name) => { const rm = tRec[name] || {}; return keys.reduce((a, k) => a + (rm[k] || 0), 0); };
-    const ranked = visibleRecs.filter(r => winTotal(r.name) > 0).sort((a, b) => winTotal(b.name) - winTotal(a.name));
-    const named = ranked.slice(0, CATEGORY_MAX), pooled = ranked.slice(CATEGORY_MAX);
-
-    const datasets = [];
-    const addRecruiter = (label, names, colour) => {
-      // role → per-day, plus the recruiters' own per-day total, so anything credited to a person but not to
-      // a role still stands in the bar and the chart keeps matching the table.
-      const byJob = {}, per = new Array(keys.length).fill(0);
-      names.forEach(nm => {
-        const rm = tRec[nm] || {};
-        keys.forEach((k, i) => { per[i] += rm[k] || 0; });
-        const mine = tRecJob && tRecJob[nm];
-        if (!mine) return;
-        Object.keys(mine).forEach(j8 => {
-          const acc = byJob[j8] || (byJob[j8] = new Array(keys.length).fill(0));
-          keys.forEach((k, i) => { acc[i] += (mine[j8] || {})[k] || 0; });
-        });
-      });
-      if (!per.some(v => v > 0)) return;
-      const jobs = Object.keys(byJob)
-        .map(j8 => ({ j8, per: byJob[j8], t: byJob[j8].reduce((a, v) => a + v, 0) }))
-        .filter(x => x.t > 0).sort((a, b) => b.t - a.t);
-      const rest = per.map((v, i) => Math.max(0, v - jobs.reduce((a, J) => a + J.per[i], 0)));
-      const push = (roleLabel, arr) => datasets.push({
-        label: roleLabel, _rec: label, _c: colour, data: arr,
-        backgroundColor: colour, stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
-      });
-      jobs.forEach(J => push(jobTitleOf8[J.j8] || J.j8, J.per));
-      if (rest.some(v => v > 0)) push('role not recorded', rest);
-    };
-    named.forEach((r, i) => addRecruiter(r.name, [r.name], CATEGORY_COLORS[i % CATEGORY_COLORS.length]));
-    if (pooled.length) addRecruiter(`${pooled.length} other recruiters`, pooled.map(r => r.name), CATEGORY_REST);
-
-    // The role divisions, drawn on top: a horizontal line one shade darker at each internal boundary inside
-    // a recruiter's block. Vertical bars, so the geometry is the mirror of roleBandOverlay's; the colour
-    // rule and the reasoning are shared with it.
-    const roleSplits = {
-      id: 'recVelRoleSplits',
-      afterDatasetsDraw(chart) {
-        const c = chart.ctx;
-        c.save();
-        c.lineWidth = 1.2;
-        for (let i = 0; i < keys.length; i++) {
-          const seen = {};
-          chart.data.datasets.forEach((d, di) => {
-            if (!chart.isDatasetVisible(di) || !(d.data[i] > 0)) return;
-            const bar = chart.getDatasetMeta(di).data[i];
-            if (!bar) return;
-            (seen[d._rec] || (seen[d._rec] = { c: d._c, xs: [], w: bar.width || 10 })).xs.push({ y: bar.y, x: bar.x });
-          });
-          Object.values(seen).forEach(grp => {
-            if (grp.xs.length < 2) return;
-            grp.xs.sort((a, b) => a.y - b.y);
-            c.strokeStyle = darken(grp.c, SEP_DARKEN);
-            // every block's top edge except the topmost one in the group
-            grp.xs.slice(1).forEach(p => {
-              c.beginPath();
-              c.moveTo(p.x - grp.w / 2 + 1, p.y);
-              c.lineTo(p.x + grp.w / 2 - 1, p.y);
-              c.stroke();
-            });
-          });
-        }
-        c.restore();
-      }
-    };
-
-    if (!datasets.length) { if (wrap) wrap.style.height = '120px'; return; }
-    if (wrap) wrap.style.height = '420px';
-    ctx.style.maxHeight = '420px';
-
-    // Every date gets a tick (Jerin, 2026-08-29) — 30 of them, so the day number carries the label and the
-    // month appears only when it changes. Rotating instead would have fitted too, but at the cost of the
-    // one thing this axis is for: reading a date at a glance.
     const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
-    const tickLabels = chrono.map((d, i) => {
-      const showMonth = i === 0 || d.getMonth() !== chrono[i - 1].getMonth();
-      return showMonth ? [String(d.getDate()), MON[d.getMonth()]] : [String(d.getDate()), ''];
-    });
-    const dayTotals = chrono.map((_, i) => datasets.reduce((a, ds) => a + (ds.data[i] || 0), 0));
-    // A weekday with nothing on it is a fact worth seeing; a weekend with nothing on it is just a weekend.
-    // So the empty-day mark is drawn ONLY on Mon-Fri, and weekends say their piece through the tick colour.
-    const emptyWeekdayMarks = {
-      id: 'emptyWeekdayMarks',
-      afterDatasetsDraw(chart) {
-        const x = chart.scales.x, y = chart.scales.y;
-        if (!x || !y) return;
-        const base = y.getPixelForValue(0);
-        const c = chart.ctx;
-        c.save();
-        c.fillStyle = 'rgba(163,50,83,0.55)';
-        dayTotals.forEach((t, i) => {
-          if (t > 0 || isWknd[i]) return;
-          const px = x.getPixelForTick(i);
-          c.beginPath();
-          const w = 11, h = 3;
-          if (c.roundRect) c.roundRect(px - w / 2, base - h, w, h, 1.5); else c.rect(px - w / 2, base - h, w, h);
-          c.fill();
-        });
-        c.restore();
-      }
-    };
+    const jobTitleOf8 = {}; (data.jobs || []).forEach(j => { jobTitleOf8[String(j.id).slice(0, 8)] = j.title; });
 
-    recVelChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: tickLabels, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          valueLabels: false,
-          legend: {
-            position: 'top', align: 'center',
-            labels: {
-              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 16, font: { size: 12 },
-              // One entry per RECRUITER, in that recruiter's own colour, not one per role.
-              generateLabels: (chart) => {
-                const seen = [];
-                chart.data.datasets.forEach((d, i) => { if (!seen.some(x => x.rec === d._rec)) seen.push({ rec: d._rec, i }); });
-                return seen.map(({ rec, i }) => ({
-                  text: rec,
-                  fillStyle: chart.data.datasets[i].backgroundColor,
-                  strokeStyle: 'transparent',
-                  // ⚠ A custom generateLabels must SET pointStyle — Chart.js ignores labels.pointStyle here
-                  // and falls back to a circle. That is why this legend alone had round markers
-                  // (Jerin, 2026-08-30: "can we use square legends all across?").
-                  pointStyle: 'rect',
-                  hidden: !chart.data.datasets.some((d, k) => d._rec === rec && chart.isDatasetVisible(k)),
-                  datasetIndex: i
-                }));
-              }
-            },
-            onClick: (e, item, legend) => {
-              const chart = legend.chart;
-              const rec = chart.data.datasets[item.datasetIndex]?._rec;
-              if (!rec) return;
-              const show = !chart.data.datasets.some((d, i) => d._rec === rec && chart.isDatasetVisible(i));
-              chart.data.datasets.forEach((d, i) => { if (d._rec === rec) chart.setDatasetVisibility(i, show); });
-              chart.update();
-            }
-          },
-          tooltip: {
-            itemSort: (a, b) => b.parsed.y - a.parsed.y,
-            callbacks: {
-              title: (items) => {
-                if (!items.length) return '';
-                const d = chrono[items[0].dataIndex];
-                const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-                return `${wk} ${d.getDate()} ${MON[d.getMonth()]}`;
-              },
-              label: (c) => `${c.dataset._rec} \u00b7 ${c.dataset.label}: ${c.parsed.y}`,
-              footer: (items) => {
-                if (!items.length) return '';
-                const i = items[0].dataIndex;
-                const tot = items[0].chart.data.datasets.reduce((a, d) => a + (d.data[i] || 0), 0);
-                return `Added that day: ${tot}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            stacked: true, grid: { display: false },
-            ticks: {
-              font: { size: 10 }, maxRotation: 0, minRotation: 0, autoSkip: false, padding: 2,
-              // Saturdays and Sundays in a soft maroon, so an empty bar on a Sunday reads as a weekend
-              // rather than as a bad day.
-              color: (c) => (isWknd[c.index] ? '#A15568' : '#64748b')
-            }
-          },
-          y: { ...gridY, stacked: true, ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } }
-        }
-      },
-      plugins: [emptyWeekdayMarks, roleSplits]
+    // Only the recruiters this tab shows, busiest first — same population as the table.
+    const rows = [];
+    groupByPod(getFilteredRecs(), selQuarter()).forEach(G => G.recs.forEach(r => {
+      const per = keys.map(k => (tRec[r.name] || {})[k] || 0);
+      const total = per.reduce((a, v) => a + v, 0);
+      if (total > 0) rows.push({ name: r.name, pod: G.pod, per, total });
+    }));
+    rows.sort((a, b) => b.total - a.total);
+    if (!rows.length) {
+      host.innerHTML = '<p class="sub-note" style="margin:6px 0 0">Nobody was added to ToFU in this window for the recruiters shown.</p>';
+      return;
+    }
+
+    // Roles behind each (recruiter, day) — what the hover lists.
+    const roleAt = {};
+    rows.forEach(r => {
+      const mine = (tRecJob && tRecJob[r.name]) || {};
+      Object.keys(mine).forEach(j8 => {
+        keys.forEach((k, i) => {
+          const v = (mine[j8] || {})[k] || 0;
+          if (!v) return;
+          const cell = roleAt[`${r.name}|${i}`] || (roleAt[`${r.name}|${i}`] = []);
+          cell.push({ title: jobTitleOf8[j8] || j8, n: v });
+        });
+      });
     });
+
+    const mx = Math.max(...rows.map(r => Math.max(...r.per)));
+    const dayTot = keys.map((_, i) => rows.reduce((a, r) => a + r.per[i], 0));
+    const grand = dayTot.reduce((a, v) => a + v, 0);
+    const MONS = MON;
+    const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    let html = '<div class="heat-row"><div class="heat-name heat-hd">' + MONS[chrono[0].getMonth()] + '</div>'
+      + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">${d.getDate()}</div>`).join('')
+      + '<div class="heat-tot heat-hd">30d</div></div>';
+    rows.forEach((r, ri) => {
+      html += `<div class="heat-row"><div class="heat-name" title="${esc(r.pod)}">${esc(r.name)}</div>`;
+      r.per.forEach((v, i) => {
+        const cls = 'heat-cell' + (v ? ' has' : (isWknd[i] ? ' wknd' : ''));
+        const st = v ? ` style="background:${heatShade(v, mx)};color:${v / mx > 0.45 ? '#fff' : '#334155'}"` : '';
+        html += `<div class="${cls}"${st} data-r="${ri}" data-d="${i}">${v || ''}</div>`;
+      });
+      html += `<div class="heat-tot">${r.total}</div></div>`;
+    });
+    html += '<div class="heat-row heat-foot"><div class="heat-name">total</div>'
+      + dayTot.map(t => `<div class="heat-cell">${t || '·'}</div>`).join('')
+      + `<div class="heat-tot">${grand}</div></div>`;
+    html += '<div class="heat-scale">fewer'
+      + [1, 2, 3, 4, 5].map(k => `<i style="background:${heatShade(mx * k / 5, mx)}"></i>`).join('')
+      + `more<span style="margin-left:14px">darkest = ${mx} in a day</span></div>`;
+    host.innerHTML = html;
+
+    // Hover: the roles behind that square, with a count against each.
+    const wrap = document.getElementById('recVelHeatWrap');
+    host.onmouseover = (e) => {
+      const cell = e.target.closest('.heat-cell.has');
+      if (!cell || !tip) return;
+      const r = rows[+cell.dataset.r], i = +cell.dataset.d, d = chrono[i];
+      const list = (roleAt[`${r.name}|${i}`] || []).slice().sort((a, b) => b.n - a.n);
+      const named = list.reduce((a, x) => a + x.n, 0);
+      const rest = r.per[i] - named;
+      const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+      tip.innerHTML = `<div class="tip-hd">${wk} ${d.getDate()} ${MONS[d.getMonth()]} · <b>${esc(r.name)}</b> · ${r.per[i]} added</div>`
+        + list.map(x => `<div class="tip-row"><span>${esc(x.title)}</span><span>${x.n}</span></div>`).join('')
+        + (rest > 0 ? `<div class="tip-row" style="color:var(--muted)"><span>role not recorded</span><span>${rest}</span></div>` : '')
+        + (!list.length && rest <= 0 ? '<div class="tip-row" style="color:var(--muted)"><span>no role recorded</span><span></span></div>' : '');
+      tip.style.display = 'block';
+      const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();
+      const tw = tip.offsetWidth;
+      let left = cb.left - wb.left + cell.offsetWidth / 2 - tw / 2;
+      left = Math.max(0, Math.min(left, wrap.clientWidth - tw));
+      tip.style.left = left + 'px';
+      const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - 8;
+      tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + 8 : top) + 'px';
+    };
+    host.onmouseout = (e) => {
+      if (tip && !e.relatedTarget?.closest?.('.heat-cell.has')) tip.style.display = 'none';
+    };
   }
-  // Screening chart. One bar per recruiter: the solid part progressed past R1, the pale part is still
-  // sitting at R1, and the two together are how many were added at R1 — the two things the legend names.
-  // Reads r1ByRecruiter, the same field the table reads, which the PIPELINE computes. Nothing is
-  // recalculated here, so the chart cannot drift from the table beneath it.
+
   const SCREEN_SOLID = '#4E6BA6', SCREEN_PALE = '#C5CFE5';
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
