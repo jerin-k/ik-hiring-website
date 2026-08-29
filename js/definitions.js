@@ -85,7 +85,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart',
         items: [
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell is that stage\u2019s throughput \u2014 the number and the shade say the same thing, so a weak stage is visible without reading a digit. The last column is the overall <strong>R1 \u2192 Documentation</strong> span. A dot means nobody entered that stage, which is not the same as nobody getting through it. Hover a cell for how many entered, how many moved past, and the rate. It reads the same aggregates as the table below.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell reads <strong>entered \u2192 moved past</strong> with that stage\u2019s throughput below it, and the shade says the same thing as the percentage \u2014 so a weak stage is visible without reading a digit, and the two raw numbers show whether the rate rests on 161 people or on 3. The last column is the overall <strong>R1 \u2192 Documentation</strong> span. A dot means nobody entered that stage, which is not the same as nobody getting through it. Hover a cell for how many entered, how many moved past, and the rate. It reads the same aggregates as the table below.'],
         ]
       },
     ],
@@ -426,7 +426,7 @@ export const DEFINITIONS = {
           ['In', 'Candidates who entered the stage during the period.'],
           ['Out', 'Candidates who moved past it.'],
           ['Throughput %', 'Out ÷ In — what share of the queue got moved on.'],
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell that stage\u2019s throughput in both the number and the shade, and the overall <strong>R1 \u2192 Documentation</strong> span as the last column. A dot means nobody entered that stage. Hover a cell for how many entered, how many moved past, and the rate. The 13 per-department charts it replaced are gone.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell reading <strong>entered \u2192 moved past</strong> with that stage\u2019s throughput below it, the shade saying the same as the percentage, and the overall <strong>R1 \u2192 Documentation</strong> span as the last column. A dot means nobody entered that stage. Hover a cell for how many entered, how many moved past, and the rate. The 13 per-department charts it replaced are gone.'],
         ]
       },
     ],
