@@ -552,6 +552,7 @@ function refreshDashboardData() {
   var allOpenings = fetchOpenings_();
   var openingsByJob = {};
   var openingsNoOpenedAt = 0;
+  var openingsNoDate = [];
   allOpenings.forEach(function(o) { var ids = (o.latestVersion && o.latestVersion.jobIds) || []; ids.forEach(function(jid) { (openingsByJob[jid] || (openingsByJob[jid] = [])).push(o); }); });
   var openingsList = [];
   allJobs.forEach(function(j) {
@@ -573,7 +574,20 @@ function refreshDashboardData() {
     // latestVersion.createdAt — that dumps never-opened/migrated openings into whatever
     // quarter the record was last touched, inflating the current quarter's target.
     var iso = o.openedAt || null;
-    if (!iso) { openingsNoOpenedAt++; return; }
+    if (!iso) {
+      // An opening with no openedAt is not merely undated - the bucket loop skips it, so it never reaches
+      // Total Openings on HM Positions or Overall Efficiency Fulfilment. It is INVISIBLE, not late. Emit the
+      // rows so Data Hygiene can list them for fixing in Ashby. ONE ROW PER OPENING (not per opening x job)
+      // so the list length reconciles exactly with openingsNoOpenedAt.
+      openingsNoOpenedAt++;
+      var ndIds = (o.latestVersion && o.latestVersion.jobIds) || [];
+      var ndJob = jobLookup[ndIds[0]] || {};
+      openingsNoDate.push({ openingId: String(o.id || '').substring(0, 8),
+        jobId8: ndIds[0] ? String(ndIds[0]).substring(0, 8) : '',
+        title: ndJob.title || '', department: ndJob.department || '', team: ndJob.team || '',
+        status: ndJob.status || '', jobs: ndIds.length, closed: !!o.closedAt });
+      return;
+    }
     var dt = new Date(iso); if (isNaN(dt.getTime())) return;
     var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
     var cls; if (!o.closedAt) cls = 'open'; else if (cr === CR_HIRED) cls = 'joined'; else if (cr === CR_CARRYFWD) cls = 'missed'; else return; // closed w/ null/other reason (migration junk) = excluded from Total
@@ -931,7 +945,7 @@ function refreshDashboardData() {
     openings: openingsList.length > 0 ? openingsList : (existing.openings || []),
     jobs: jobsList, recruiters: recruitersList, sources: sourcesList,
     weeklyVelocity: velocity, quarterly: quarterly, avgTimeToHire: 0,
-    offerEvents: offerEvents, joiningPendingCases: joiningPendingCases, offerLinkGaps: offerLinkGaps, dataQuality: dataQuality,
+    offerEvents: offerEvents, joiningPendingCases: joiningPendingCases, offerLinkGaps: offerLinkGaps, openingsNoDate: openingsNoDate, dataQuality: dataQuality,
     appReviewDwellByJob: appResult.appReviewDwellByJob, appReviewDwellByRecruiter: appResult.appReviewDwellByRecruiter,
     interviewers: ivResult.interviewers, panelists: ivResult.panelists, totalInterviews: ivResult.totalInterviews, interviewsByQuarter: ivResult.interviewsByQuarter, interviewsByMonth: ivResult.interviewsByMonth || {},
     candidatesInterviewedByQuarter: candidatesInterviewedByQuarter, panelInterviewedByQuarter: panelByQ, assessedByQuarter: assessedByQ,
@@ -1159,6 +1173,14 @@ function refreshStageHistory() {
     var tofu = computeTofuRollups_(events);
     for (var tk in tofu) rollups[tk] = tofu[tk];
   } catch (eT) { Logger.log('ToFU pass FAILED (rollups still written without it): ' + eT.message); }
+  // ASSESSED / PROGRESSED (2026-08-30) — the throughput measure that replaces reached/cleared, which
+  // counted a rejection exactly like a promotion. Lives in Assess.gs; merged here so it travels in the
+  // same rollups file the frontend already fetches. Same try/catch reasoning as ToFU: it makes its own
+  // API calls, and a bad Ashby day should cost this field rather than the whole run.
+  try {
+    var assessed = computeAssessedRollups_(events);
+    for (var ak in assessed) rollups[ak] = assessed[ak];
+  } catch (eA) { Logger.log('ASSESSED pass FAILED (rollups still written without it): ' + eA.message); }
   saveDriveJson_('stage_rollups.json', rollups);
   pushFileToGitHub_('data/stage_rollups.json', JSON.stringify(rollups), 'Update stage rollups');
   saveDriveJson_('stage_history_state.json', { cursor: 0, scopedCount: scoped.length });   // reset -> re-pull next cycle
@@ -1169,6 +1191,7 @@ function refreshStageHistory() {
 function computeStageRollups_(events) {
   var minDay = dayKey_(Date.now() - ROLLUP_WINDOW_DAYS * 86400000), todayKey = dayKey_(Date.now());
   var velByRec = {}, velByJob = {}, velByRecJob = {}, tpByJob = {}, tpByRec = {}, tisJob = {}, tisRec = {}, tisJobQ = {}, tisRecQ = {};
+  var waitJob = {}, waitRec = {}, waitJobQ = {}, waitRecQ = {};
   // Added 2026-08-21 after the filter audit: the quarter selector was only regrouping
   // pods (stage numbers were lifetime), and per-job rows under Screening had no source.
   var tpByJobQ = {}, tpByRecQ = {}, tpByRecJob = {};
@@ -1207,16 +1230,25 @@ function computeStageRollups_(events) {
       // Time-in-stage dwell (days) — skip appReview (the main pull covers all still-parked App Review candidates).
       if (e && k !== 'appReview') {
         var dw = daysBetween_(e, l || todayKey); if (dw < 0) dw = 0; if (dw > 365) dw = 365;
-        if (j8) tis(tisJob, j8, k, dw);
-        if (rec) tis(tisRec, rec, k, dw);
-        if (j8 && qk) tisQ(tisJobQ, j8, k, qk, dw);
-        if (rec && qk) tisQ(tisRecQ, rec, k, qk, dw);
+        // FINISHED vs STILL-WAITING ARE KEPT APART (2026-08-30). Pooling them made the median measure the
+        // CALENDAR, not the process: 250 of Q1's 265 TA Screen candidates never left the stage, so each one
+        // contributed 'today minus entered' and the column read 192 days - one more every day, and impossible
+        // to compare across quarters (Q1 192d / Q2 109d tracked 'days since that quarter', not any speed change).
+        // timeInStageBy* is COMPLETED stays only. waitingBy* is how long the still-parked have been waiting.
+        var finished = !!l;
+        var sJob = finished ? tisJob : waitJob, sRec = finished ? tisRec : waitRec;
+        var sJobQ = finished ? tisJobQ : waitJobQ, sRecQ = finished ? tisRecQ : waitRecQ;
+        if (j8) tis(sJob, j8, k, dw);
+        if (rec) tis(sRec, rec, k, dw);
+        if (j8 && qk) tisQ(sJobQ, j8, k, qk, dw);
+        if (rec && qk) tisQ(sRecQ, rec, k, qk, dw);
       }
     }
   }
   return { schemaVersion: 1, generatedAt: new Date().toISOString(), windowDays: ROLLUP_WINDOW_DAYS,
     velocityByRecruiter: velByRec, velocityByJob: velByJob, velocityByRecruiterJob: velByRecJob, throughputByJob: tpByJob, throughputByRecruiter: tpByRec, throughputByJobQ: tpByJobQ, throughputByRecruiterQ: tpByRecQ, throughputByRecruiterJob: tpByRecJob,
-    timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ };
+    timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ,
+    tisSchema: 2, waitingByJob: waitJob, waitingByRecruiter: waitRec, waitingByJobQ: waitJobQ, waitingByRecruiterQ: waitRecQ };
 }
 
 function triggerStageHistoryNow() {
