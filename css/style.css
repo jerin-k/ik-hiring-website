@@ -177,7 +177,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   border: 1px solid var(--border);
   border-top: 0;
   border-radius: 0 0 10px 10px;
-  margin: -24px 0 0;
+  margin: 0;
   padding: 7px 10px;
 }
 .subtab-band .period { margin-left: auto; display: flex; align-items: center; gap: 7px; }
@@ -185,6 +185,11 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 /* ===== The filter row =====
    Was a tinted panel with a border, a shadow and ALL-CAPS accent labels — visually the loudest thing on a
    page whose job is showing numbers, and duplicated in four page modules. Now one quiet row, defined once. */
+.page-content > .rec-filters:first-child, .page-content > .eff-filters:first-child,
+.page-content > .hm-filters:first-child, .page-content > .iv-filters:first-child { padding-top: 14px !important; }
+/* Overview has no chrome at all — give its content a normal leading gap rather than butting it to the nav */
+#home-data-area { padding-top: 18px; }
+
 .rec-filters, .eff-filters, .hm-filters, .iv-filters {
   background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
   border-bottom: 1px solid var(--border) !important;
@@ -232,7 +237,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 28px;
+  padding: 0 28px 24px;
 }
 
 /* ===== Section Titles ===== */
