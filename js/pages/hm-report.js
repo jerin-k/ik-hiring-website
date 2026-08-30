@@ -14,7 +14,7 @@ const STAGE_LABELS = {
 };
 const TP_KEYS = ['app','hc','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
 const TP_LABELS = {
-  app:'Application', hc:'Hello Christy', ta:'TA Screen', hm:'HM Review', oa:'OA',
+  app:'App Review', hc:'Hello Christy', ta:'TA Screen', hm:'HM Review', oa:'OA',
   r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
   rc:'Ref Check', ds:'Doc Sub', offer:'Offer'
 };
@@ -211,7 +211,6 @@ export function renderHmReport(data) {
       </table></div>
 
       <h3 class="subsection-title">Joining Pending — Cases</h3>
-      <p class="sub-note"><strong>Live</strong> — everyone with an offer in play right now. The page date filter does not apply to this list.</p>
       <div class="filter-bar">
         <select id="hmJPMonth"><option value="">All DOJ Months</option>${jpMonths.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
         <span style="font-size:11px;color:var(--muted)">DOJ</span>
@@ -248,7 +247,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: PIPELINE ===== -->
     <div class="hm-panel" data-panel="pipeline" style="display:none">
       ${defsBlock('hm-pipeline')}
-      <p class="sub-note" style="color:var(--orange)">Live snapshot — counts show where candidates stand <strong>today</strong>, so the date filter does not change them. It does decide <strong>which roles are listed</strong>: only those with an opening in the selected period. Click a department to drill in.</p>
+      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — counts show where candidates stand today; the date filter does not change them. Click a department to drill in.</p>
       <div class="hm-stages">
         <span class="lbl">Stages:</span>
         ${STAGES_ORDER.map(k => `<label><input type="checkbox" class="hm3Stage" value="${k}" checked> ${STAGE_LABELS[k]}</label>`).join('\n        ')}
@@ -879,9 +878,8 @@ export function initHmFilters(data) {
       // missing an opening link — that is a hygiene problem sitting inside a real joining number.
       const unlinkedShown = list.filter(c => !c.linked).length;
       capEl.innerHTML = list.length
-        ? `<strong>${list.length}</strong> currently in Ref Check, Documentation or Offer.`
-          + (unlinkedShown ? ` <strong>${unlinkedShown}</strong> of them have no opening attached — a linking gap, not a joining one; they are listed under <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Offers Missing Opening Link</strong>.` : '')
-          + ` This count is <strong>live</strong> \u2014 the page date/quarter filter does not apply to it.`
+        ? `<strong>${list.length}</strong> in closing, <strong>live</strong> \u2014 the page date filter does not apply.`
+          + (unlinkedShown ? ` <strong>${unlinkedShown}</strong> have no opening attached (Data Hygiene \u2192 Offers Missing Opening Link).` : '')
         : '';
     }
 

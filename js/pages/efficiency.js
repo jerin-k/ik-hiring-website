@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
-         hasWaitSplit, tisPair, poolPairs, tisCellSplit, TIS_SPLIT_NOTE } from '../stage-time.js';
+         hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat } from '../chart-style.js';
@@ -37,7 +37,7 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 
 // Throughput stages (mirrors the HM tab)
 const TP_KEYS = ['app','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
-const TP_LABELS = { app:'Application', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
+const TP_LABELS = { app:'App Review', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
 const TP_TO_SK = { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' };
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
@@ -129,7 +129,6 @@ export function renderEfficiency(data) {
     </style>
 
     <h2 class="section-title">Overall Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">The same measures as Recruiter Efficiency, asked of the <strong>department</strong> instead of the recruiter. Every tree is <strong>Department → Job</strong>; there is no pod dimension on this tab. Each panel explains itself in the amber line above it.</p>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
@@ -167,7 +166,6 @@ export function renderEfficiency(data) {
       </table></div>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:22px 0 6px">Joining Pending — Cases</h4>
-      <p class="sub-note" style="margin-top:0"><strong>Live</strong> — everyone with an offer in play right now, scoped to the Department/Job filters above. The quarter selector does not apply to it.</p>
       <div class="scroll-table"><table>
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
@@ -254,7 +252,7 @@ export function renderEfficiency(data) {
       <p class="sub-note" id="effSourceNote"></p>
       <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-6px"></p>
       <h3 class="subsection-title">Channel mix — where joiners came from</h3>
-      <div class="chart-wrap" style="max-width:840px;margin:0 auto 20px;height:460px;position:relative"><canvas id="effSourceChart"></canvas></div>
+      <div class="chart-wrap" style="margin:0 0 20px;height:460px;position:relative"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
         <thead><tr><th style="min-width:340px" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
@@ -1027,7 +1025,7 @@ export function initEfficiencyFilters(data) {
       ? `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`
       : !tisSplit
       ? `Heads up: these medians still <strong>include candidates who have not left the stage yet</strong>, measured to today, so older quarters read higher for that reason alone. The split into finished vs still-waiting appears here after the next stage-history refresh.`
-      : `Showing <strong>${label}</strong> — candidates who <strong>entered</strong> each stage in that period. ${TIS_SPLIT_NOTE} <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`;
+      : `Showing <strong>${label}</strong>. <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`;
   }
 
   // ===== Time in Process (Department → Job; median days parked per stage, red > 5) =====

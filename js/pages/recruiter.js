@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
-         hasWaitSplit, tisPair, poolPairs, tisCellSplit, TIS_SPLIT_NOTE } from '../stage-time.js';
+         hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip } from '../chart-style.js';
 
@@ -290,7 +290,6 @@ export function renderRecruiter(data) {
     </style>
 
     <h2 class="section-title">Recruiter Efficiency</h2>
-    <p class="sub-note" style="margin-top:-8px;">Grouped by <strong>pod</strong> (set in <strong>Admin → Metric Configuration</strong>, per quarter). Click a pod to expand its recruiters. Year/Quarter drives pod grouping + capacity; From/To drives the <strong>Momentum</strong> window.<br>Recruiters with <strong>no pod set</strong> for the selected quarter are excluded from every row and every total here — they are listed in <strong>Data Hygiene → Pod Not Set</strong>.</p>
     <div class="rec-filters">
       <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
@@ -1250,10 +1249,9 @@ export function initRecruiterFilters(data) {
       wireTreePath(jpBody);
       const cap = document.getElementById('recJPCaption');
       if (cap) cap.innerHTML = shown
-        ? `<strong>${shown}</strong> currently in Ref Check, Documentation or Offer.`
-          + (orphanCount ? ` <strong>${orphanCount}</strong> of them sit in the last group — no recruiter tagged, or a recruiter this tab hides by default (past recruiter, no pod set, no applications). Everyone in closing is listed, so this table reconciles.` : '')
+        ? `<strong>${shown}</strong> in closing, <strong>live</strong> — the quarter selector does not apply.`
+          + (orphanCount ? ` <strong>${orphanCount}</strong> sit in the last group.` : '')
           + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
-          + ` This list is <strong>live</strong> — the quarter selector does not apply to it.`
         : '';
     }
 
@@ -1534,7 +1532,7 @@ export function initRecruiterFilters(data) {
       ? `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`
       : !tisSplit
       ? `Heads up: these medians still <strong>include candidates who have not left the stage yet</strong>, measured to today, so older quarters read higher for that reason alone. The split into finished vs still-waiting appears here after the next stage-history refresh.`
-      : `Showing <strong>${label}</strong> — candidates who <strong>entered</strong> each stage in that period. ${TIS_SPLIT_NOTE} <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`;
+      : `Showing <strong>${label}</strong>. <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`;
   }
 
   // Pod → Recruiter → Job, median days a candidate is parked per stage (red > 5). App Review = still-parked
