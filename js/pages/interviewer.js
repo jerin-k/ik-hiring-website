@@ -79,7 +79,6 @@ export function renderInterviewer(data) {
       .iv-chart-wrap canvas { max-height:none !important; }
     </style>
 
-    ${defsBlock('interviewer')}
 
     <div class="iv-filters">
       <div class="fchip"><span class="lbl">Year</span><select id="ivYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
@@ -91,13 +90,14 @@ export function renderInterviewer(data) {
       <div class="fchip"><label class="opt" style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="ivExpandAll" checked> Expand all</label></div>
     </div>
 
-    <p class="iv-grain" id="ivGrainNote" style="display:none"></p>
+    ${defsBlock('interviewer')}
+
 
     <div class="cards" style="margin-bottom:20px">
-      <div class="card"><div class="card-label" id="ivCardIntLabel">Total Interviews</div><div class="card-value" id="ivCardInterviews">—</div><div id="ivCardIntSub" style="font-size:11px;color:var(--muted);margin-top:2px"></div></div>
-      <div class="card"><div class="card-label" id="ivCardPanLabel">Panelists</div><div class="card-value" id="ivCardPanelists">—</div></div>
-      <div class="card"><div class="card-label">Feedback Coverage <span style="font-weight:400;text-transform:none;letter-spacing:0">(all-time)</span></div><div class="card-value" id="ivCardCoverage">—</div><div id="ivCardCoverageSub" style="font-size:11px;color:var(--muted);margin-top:2px"></div></div>
-      <div class="card"><div class="card-label">Avg Turnaround <span style="font-weight:400;text-transform:none;letter-spacing:0">(all-time)</span></div><div class="card-value" id="ivCardTurn">—</div></div>
+      <div class="card"><div class="label" id="ivCardIntLabel">Total Interviews</div><div class="value" id="ivCardInterviews">—</div><div class="sub" id="ivCardIntSub"></div></div>
+      <div class="card"><div class="label" id="ivCardPanLabel">Panelists</div><div class="value" id="ivCardPanelists">—</div></div>
+      <div class="card"><div class="label">Feedback Coverage <span style="font-weight:400;text-transform:none;letter-spacing:0">(all-time)</span></div><div class="value" id="ivCardCoverage">—</div><div class="sub" id="ivCardCoverageSub"></div></div>
+      <div class="card"><div class="label">Avg Turnaround <span style="font-weight:400;text-transform:none;letter-spacing:0">(all-time)</span></div><div class="value" id="ivCardTurn">—</div></div>
     </div>
 
     <h3 class="subsection-title" id="ivChartTitle">Top panelists by interview load</h3>
@@ -109,10 +109,10 @@ export function renderInterviewer(data) {
       <thead><tr>
         <th style="min-width:280px">Department / Panelist / Job</th>
         <th id="ivThInterviews">Interviews</th>
-        <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Org-wide per person, so it is shown on panelist rows only — summing it up the tree would double-count anyone who interviews for more than one job.">Feedback Coverage</th>
-        <th title="Interviews with no feedback attached yet (all-time, org-wide per person).">Awaiting Feedback</th>
-        <th title="Time from an interview ending to feedback being submitted (all-time average).">Avg Turnaround</th>
-        <th title="Feedback forms matched to one of this panelist's scheduled interviews. The bracketed figure is every form they submitted, including application-review and screening feedback.">Interview Feedback</th>
+        <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Org-wide per person, so it is shown on panelist rows only — summing it up the tree would double-count anyone who interviews for more than one job.">Feedback Coverage<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
+        <th title="Interviews with no feedback attached yet (all-time, org-wide per person).">Awaiting Feedback<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
+        <th title="Time from an interview ending to feedback being submitted (all-time average).">Avg Turnaround<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
+        <th title="Feedback forms matched to one of this panelist's scheduled interviews. The bracketed figure is every form they submitted, including application-review and screening feedback.">Interview Feedback<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
       </tr></thead>
       <tbody id="ivBody"></tbody>
     </table></div>`;
@@ -226,13 +226,7 @@ export function initInterviewer(data) {
     setText('ivChartTitle', label ? `Top panelists by interview load — ${label}` : 'Top panelists by interview load');
     setText('ivRowCount', `${people.size} of ${names.length} panelists · ${Object.keys(tree).length} departments`);
 
-    const note = document.getElementById('ivGrainNote');
-    if (note) {
-      if (label) {
-        note.style.display = '';
-        note.textContent = `Only Interviews follows the ${label} filter — the feedback columns are all-time.`;
-      } else { note.style.display = 'none'; }
-    }
+    // The all-time qualifier lives on the four column headers now, not in a note above the table.
 
     const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
     const body = document.getElementById('ivBody');

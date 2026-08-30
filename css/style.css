@@ -174,9 +174,11 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .subtab-band {
   display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
   background: #eef1f7;
-  border-bottom: 1px solid var(--border);
-  margin: -24px -28px 0;
-  padding: 7px 28px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  margin: -24px 0 0;
+  padding: 7px 10px;
 }
 .subtab-band .period { margin-left: auto; display: flex; align-items: center; gap: 7px; }
 
@@ -195,6 +197,18 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   text-transform: none; letter-spacing: 0;
 }
 .rec-filters .fdiv, .eff-filters .fdiv, .hm-filters .fdiv, .iv-filters .fdiv { background: var(--border) !important; }
+/* 🚨 A date input and a select do NOT inherit the page font — they fall back to the browser default, which
+   is why the From/To pickers were in a different typeface from everything around them. */
+.rec-filters select, .rec-filters input, .eff-filters select, .eff-filters input,
+.hm-filters select, .hm-filters input, .iv-filters select, .iv-filters input {
+  font-family: inherit;
+}
+/* the period pair reads as one control, at the end of the row */
+.rec-filters .fchip, .eff-filters .fchip, .hm-filters .fchip, .iv-filters .fchip { gap: 6px; }
+/* Year + Quarter are one control conceptually; keep them on the same line when the row wraps */
+.rec-filters .period, .eff-filters .period, .hm-filters .period, .iv-filters .period {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
 
 /* ===== Levels below the page: the same chip, tinted ===== */
 .subtab-chip {

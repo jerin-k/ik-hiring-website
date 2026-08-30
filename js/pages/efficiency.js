@@ -133,7 +133,7 @@ export function renderEfficiency(data) {
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
+    </div>
 
     <div class="eff-filters">
       <div class="fchip"><div class="ms" id="effMsDept"></div></div>
@@ -144,7 +144,7 @@ export function renderEfficiency(data) {
       <div class="fchip"><span class="lbl">To</span><input type="date" id="effVelTo"></div>
       
       
-    </div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
 
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">

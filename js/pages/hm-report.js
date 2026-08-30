@@ -173,7 +173,7 @@ export function renderHmReport(data) {
       <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
       <button class="hm-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
+    </div>
 
     <!-- ===== SUB-TAB STRIP ===== -->
     <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:var(--bg)">
@@ -190,7 +190,7 @@ export function renderHmReport(data) {
       
       
       <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all branches</label>
-    </div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
 
     <!-- ===== PANEL: POSITIONS ===== -->
     <div class="hm-panel" data-panel="positions">
