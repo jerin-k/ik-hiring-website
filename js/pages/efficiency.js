@@ -729,22 +729,48 @@ export function initEfficiencyFilters(data) {
     const host = document.getElementById('effTpHeat'); if (!host) return;
     if (!tpByJob) { host.innerHTML = ''; return; }
     const stageCols = vis.filter(k => k !== 'app');
+    const asJ2 = (rollups && rollups.assessedByJobQ) || null;
+    const spanQ = (rollups && rollups.assessedSpanByJobQ) || null;
     const cellOf = (jids, k) => jids.reduce((a, jid) => {
+      if (asJ2) {
+        const c = ((asJ2[jid] || {})[TP_TO_SK[k]] || {})[q] || {};
+        return { inN: a.inN + (c.a || 0), outN: a.outN + (c.b || 0) };
+      }
       const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 };
       return { inN: a.inN + c.reached, outN: a.outN + c.cleared };
     }, { inN: 0, outN: 0 });
+    // 🚨 The overall column is its OWN per-candidate span from the pipeline — assessed at R1 or OA
+    // (whichever first) through to Ref Check / Documentation / Offer (whichever first). Never one stage
+    // column divided by another: a person sits in several stages, so that double-counts and can exceed 100%.
+    const spanOf = (jids) => jids.reduce((acc, jid) => {
+      const v = (spanQ ? (spanQ[jid] || {})[q] : null) || null;
+      if (v) return { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) };
+      return acc;
+    }, { a: 0, b: 0 });
     const rows = deptJobs(q).map(({ dept, jobs: js }) => {
       const jids = js.map(j => j.jid);
       const r1 = cellOf(jids, 'r1'), ds = cellOf(jids, 'ds');
+      const sp = spanQ ? spanOf(jids) : null;
       return {
         label: dept,
-        cells: stageCols.map(k => { const c = cellOf(jids, k); return c.inN > 0 ? c : null; }),
-        overall: r1.inN > 0 ? Math.round((ds.inN / r1.inN) * 100) : null,
+        cells: stageCols.map(k => { const c = cellOf(jids, k);
+          if (!(c.inN > 0)) return null;
+          // Offer is the last stage — a rate there would always read 0%.
+          if (asJ2 && k === 'offer') c.noRate = true;
+          return c; }),
+        overall: sp ? (sp.a > 0 ? Math.round((sp.b / sp.a) * 100) : null)
+          : (r1.inN > 0 ? Math.round((ds.inN / r1.inN) * 100) : null),
+        ovIn: sp && sp.a > 0 ? sp.a : null,
+        ovOut: sp && sp.a > 0 ? sp.b : null,
         _vol: r1.inN
       };
     }).filter(r => r.cells.some(Boolean)).sort((a, b) => b._vol - a._vol);
     buildStageHeat(host, document.getElementById('effTpHeatTip'), rows,
-      stageCols.map(k => TP_LABELS[k]), { overallLabel: 'R1 \u2192 DOC' });
+      stageCols.map(k => TP_LABELS[k]), {
+        overallLabel: spanQ ? 'R1/OA \u2192 LATE' : 'R1 \u2192 DOC',
+        labels: asJ2 ? undefined
+          : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
+      });
   }
 
   function buildScreenChartEff() {
@@ -934,17 +960,35 @@ export function initEfficiencyFilters(data) {
       let r1 = '<tr><th rowspan="2" style="min-width:260px">Department / Job</th>';
       vis.forEach(k => { r1 += `<th colspan="3" class="stage-hdr">${TP_LABELS[k]}</th>`; });
       r1 += '</tr><tr>';
-      vis.forEach(() => { r1 += '<th class="stage-sub">In</th><th class="stage-sub">Out</th><th class="stage-sub">%</th>'; });
+      // The sub-headers name the measure. Under the rebuild they are "assessed" and "progressed"; the old
+      // In/Out wording described entering and leaving a stage, which counted a rejection as a pass.
+      const hasA = !!(rollups && rollups.assessedByJobQ);
+      const subIn = hasA ? 'Assessed' : 'In', subOut = hasA ? 'Progressed' : 'Out';
+      vis.forEach(() => { r1 += `<th class="stage-sub">${subIn}</th><th class="stage-sub">${subOut}</th><th class="stage-sub">%</th>`; });
       head.innerHTML = r1 + '</tr>';
     }
     const body = document.getElementById('effTpBody'); if (!body) return;
     if (!tpByJob) { podSkeletonBody('effTpBody', vis.length * 3, () => dashTds(vis.length * 3)); return; }
-    // LIVE: In = reached (entered the stage), Out = cleared (left it) — from stage history, Department → Job.
+    // Department → Job, from the stage-history rollups.
     const q = selQuarter();
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
     const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
-    const jobRC = (jid) => { const t = tpByJob[jid] || {}; return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; }); };
-    const cells = (rc) => rc.map(x => `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
+    // Prefers the rebuilt measure — A = assessed at the stage (an interview held there, an assignment
+    // triggered there, or a feedback form with no interview behind it), B = of those, the ones who then
+    // entered a LATER stage. The old reached/cleared counted a rejection exactly like a promotion, which is
+    // why App Review read 100%. The fallback only fires for a data file that predates the rebuild.
+    const asJ = (rollups && rollups.assessedByJobQ) || null;
+    const jobRC = (jid) => {
+      if (asJ) {
+        const t = asJ[jid] || {};
+        return vis.map(k => { const c = (t[TP_TO_SK[k]] || {})[q] || {}; return { r: c.a || 0, c: c.b || 0 }; });
+      }
+      const t = tpByJob[jid] || {};
+      return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; });
+    };
+    const cells = (rc) => rc.map((x, i) => (asJ && vis[i] === 'offer')
+      ? `<td>${x.r}</td><td class="zero">—</td><td class="zero" title="Offer is the last stage — nothing after it to progress to">—</td>`
+      : `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
     const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
     let html = '';
     deptJobs(q).forEach(({ dept, jobs: js }, di) => {

@@ -597,7 +597,37 @@ export function initHmFilters(data) {
   // In/Out per stage for one job, summed over the quarters in the report window. Uses real
   // stage transitions (reached / cleared) instead of the lifetime pipeline snapshot, which
   // is what made this table ignore the period filter entirely.
+  // ===== THE THROUGHPUT MEASURE (rebuilt 2026-08-30) =====
+  // Prefers `assessedByJobQ` — A = someone actually looked at the candidate at that stage (an interview held
+  // there, an assignment triggered there, or a feedback form with no interview behind it), B = of those, the
+  // ones who then entered a LATER stage.
+  // It replaces reached/cleared, where `cleared` only meant "no longer sitting in this stage" and so counted
+  // a rejection exactly like a promotion — App Review read 99 → 99 = 100%. Falls back to the old fields when
+  // the data file predates the rebuild, so an older cached file still renders rather than going blank.
+  const assessedByJobQ = () => (data.stageRollups && data.stageRollups.assessedByJobQ) || null;
+  const hasAssessed = () => !!assessedByJobQ();
+
   function throughputFor(j, quarters) {
+    const asJ = assessedByJobQ();
+    if (asJ && quarters.length) {
+      const st0 = asJ[j.id] || {};
+      const out = {};
+      TP_KEYS.forEach(k => {
+        const st = st0[TP_TO_STAGE[k]] || {};
+        let i = 0, o = 0;
+        quarters.forEach(q => { const v = st[q]; if (v) { i += v.a || 0; o += v.b || 0; } });
+        out[k] = { i: i, o: o };
+      });
+      // The headline span is its own per-candidate figure — assessed at R1 or OA, whichever came first,
+      // through to Ref Check / Documentation / Offer, whichever they reached first. Never a ratio of two
+      // stage counts: one person sits in several stages, so dividing one column by another double-counts.
+      const sp = (data.stageRollups.assessedSpanByJobQ || {})[j.id] || {};
+      let sa = 0, sb = 0;
+      quarters.forEach(q => { const v = sp[q]; if (v) { sa += v.a || 0; sb += v.b || 0; } });
+      out.span = { i: sa, o: sb };
+      out.overall = sa > 0 ? sb / sa : null;
+      return out;
+    }
     const byQ = data.stageRollups && data.stageRollups.throughputByJobQ && data.stageRollups.throughputByJobQ[j.id];
     // 🚨 #5 (2026-08-22): when a PERIOD is selected, a job with no rollup entry for those quarters has NO
     // throughput in the period and must read zero. It used to fall back to computeThroughput(j.pipeline,
@@ -649,7 +679,7 @@ export function initHmFilters(data) {
     // through, which makes a weak stage visible without reading a digit.
     let row1 = '<tr><th>Department</th>';
     visStages.forEach(s => { row1 += `<th class="stage-hdr">${TP_LABELS[s]}</th>`; });
-    row1 += '<th class="stage-hdr" style="background:#e0e7ff">Overall<br>R1→Doc</th></tr>';
+    row1 += '<th class="stage-hdr" style="background:#e0e7ff">Overall<br>' + (hasAssessed() ? 'R1/OA→Late' : 'R1→Doc') + '</th></tr>';
     document.getElementById('hm2Head').innerHTML = row1;
 
     const tpTotals = {};
@@ -663,24 +693,42 @@ export function initHmFilters(data) {
 
     function aggTP(list) {
       const acc = {}; TP_KEYS.forEach(k => acc[k] = { i: 0, o: 0 });
-      list.forEach(({ t }) => TP_KEYS.forEach(k => { acc[k].i += t[k].i; acc[k].o += t[k].o; }));
-      acc.overall = acc.r1.i > 0 ? acc.ds.i / acc.r1.i : null;
+      acc.span = { i: 0, o: 0 };
+      list.forEach(({ t }) => {
+        TP_KEYS.forEach(k => { acc[k].i += t[k].i; acc[k].o += t[k].o; });
+        if (t.span) { acc.span.i += t.span.i; acc.span.o += t.span.o; }
+      });
+      // 🚨 The overall figure is its OWN per-candidate span, summed across roles — never r1.i ÷ ds.i.
+      // One person sits in several stages, so dividing one stage column by another counts them twice and
+      // can read over 100%. Falls back to the old ratio only for a data file that predates the rebuild.
+      acc.overall = acc.span.i > 0 ? acc.span.o / acc.span.i
+        : (hasAssessed() ? null : (acc.r1.i > 0 ? acc.ds.i / acc.r1.i : null));
       return acc;
     }
     function tpCells(per) {
       let s = '';
+      const A = hasAssessed();
       visStages.forEach(sk => {
         const c = per[sk];
-        // A stage nobody entered is NOT a zero — several stages in this workspace are simply unused (OA has
-        // never had a candidate). Saying so beats printing 0 / 0 / — which reads as missing data.
-        if (!c || c.i === 0) { s += '<td class="heat none" title="no candidates entered this stage">—</td>'; return; }
+        // A stage nobody reached is NOT a zero — Hello Christy and HM Review carry very little traffic, and
+        // a role can skip a round entirely. Saying so beats printing 0 / 0 / — which reads as missing data.
+        if (!c || c.i === 0) { s += `<td class="heat none" title="${A ? 'nobody was assessed at this stage' : 'no candidates entered this stage'}">—</td>`; return; }
+        // Offer is the end of the ladder — there is no later stage to progress to, so it carries a count
+        // and no rate rather than a 0% that reads as everyone falling out.
+        if (A && sk === 'offer') {
+          s += `<td class="heat none" title="${c.i} assessed at Offer — the last stage, nothing after it to progress to">`
+            + `<span class="hv">${c.i}</span><span class="hp">—</span></td>`;
+          return;
+        }
         const pct = Math.round((c.o / c.i) * 100);
         const band = pct < 50 ? 'lo' : (pct < 70 ? 'mid' : 'hi');
-        s += `<td class="heat ${band}" title="${c.i} entered, ${c.o} moved past">`
+        s += `<td class="heat ${band}" title="${c.i} ${A ? 'assessed' : 'entered'}, ${c.o} ${A ? 'progressed' : 'moved past'}">`
           + `<span class="hv">${c.i}</span><span class="hp">${pct}%</span></td>`;
       });
       const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
-      s += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="${pctClass(ov)}">${ov}</span></td>`;
+      // The span column shows its own two numbers as well, so the rate is never a bare percentage.
+      const ovFlow = (per.span && per.span.i > 0) ? `<span class="hv">${per.span.i} → ${per.span.o}</span>` : '';
+      s += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600">${ovFlow}<span class="${pctClass(ov)}">${ov}</span></td>`;
       return s;
     }
 
@@ -702,11 +750,11 @@ export function initHmFilters(data) {
     wireTree(hm2Body);
     const legEl = document.getElementById('hm2Legend');
     if (legEl) legEl.innerHTML =
-      '<span><i class="sw lo"></i>under 50% moved past</span>'
+      `<span><i class="sw lo"></i>under 50% ${hasAssessed() ? 'progressed' : 'moved past'}</span>`
       + '<span><i class="sw mid"></i>50–70%</span>'
       + '<span><i class="sw hi"></i>over 70%</span>'
-      + '<span><i class="sw none"></i>stage not used</span>'
-      + '<span class="leg-note">Number = candidates who entered the stage.</span>';
+      + `<span><i class="sw none"></i>${hasAssessed() ? 'nobody assessed here' : 'stage not used'}</span>`
+      + `<span class="leg-note">Number = candidates ${hasAssessed() ? 'assessed at that stage' : 'who entered the stage'}.</span>`;
 
     // ===== ONE chart, both dimensions (Jerin, 2026-08-30) =====
     // Replaces two org-wide charts — a per-stage In/Out column chart and a pipeline funnel — neither of
@@ -720,18 +768,27 @@ export function initHmFilters(data) {
     // It reads the same aggregates the table below renders, so the two agree by construction.
     const heatHost = document.getElementById('hm2Heat');
     if (heatHost) {
+      const A = hasAssessed();
       const stageCols = visStages.filter(sk => sk !== 'app');
       const heatRows = Object.keys(groups).map(d => {
         const per = aggTP(groups[d]);
         return {
           label: d,
-          cells: stageCols.map(sk => (per[sk] && per[sk].i > 0) ? { inN: per[sk].i, outN: per[sk].o } : null),
-          overall: per.r1.i > 0 ? Math.round((per.ds.i / per.r1.i) * 100) : null,
-          _vol: per.r1.i
+          cells: stageCols.map(sk => (per[sk] && per[sk].i > 0)
+            ? { inN: per[sk].i, outN: per[sk].o, noRate: A && sk === 'offer' } : null),
+          overall: per.span && per.span.i > 0 ? Math.round((per.span.o / per.span.i) * 100)
+            : (hasAssessed() ? null : (per.r1.i > 0 ? Math.round((per.ds.i / per.r1.i) * 100) : null)),
+          ovIn: per.span && per.span.i > 0 ? per.span.i : null,
+          ovOut: per.span && per.span.i > 0 ? per.span.o : null,
+          _vol: (per.span && per.span.i) || per.r1.i
         };
       }).sort((x, y) => y._vol - x._vol);
       buildStageHeat(heatHost, document.getElementById('hm2HeatTip'), heatRows,
-        stageCols.map(sk => TP_LABELS[sk]), { overallLabel: 'R1 → DOC' });
+        stageCols.map(sk => TP_LABELS[sk]), {
+          overallLabel: hasAssessed() ? 'R1/OA → LATE' : 'R1 → DOC',
+          labels: hasAssessed() ? undefined
+            : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
+        });
     }
   }
 
