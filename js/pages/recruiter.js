@@ -292,7 +292,7 @@ export function renderRecruiter(data) {
       <button class="rec-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
       <button class="rec-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="rec-subtab subtab-chip" data-tab="hygiene">Data Hygiene</button>
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
+    </div>
 
     <div class="rec-filters">
       <div class="fchip"><div class="ms" id="msPod"></div></div>
@@ -307,7 +307,7 @@ export function renderRecruiter(data) {
       
       
       <p class="sub-note" id="recQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p>
-    </div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day.
          🚨 The day columns were replaced with summary columns (Total / Last 7d / Prev 7d / Trend / Active
