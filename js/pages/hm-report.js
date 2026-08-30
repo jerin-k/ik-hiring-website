@@ -1,4 +1,5 @@
 import { getData } from '../data.js';
+import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -176,7 +177,7 @@ export function renderHmReport(data) {
     </div>
 
     <!-- ===== SUB-TAB STRIP ===== -->
-    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:var(--bg)">
+    <div class="hm-filters">
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
       <div class="fchip"><div class="ms" id="msHmJob"></div></div>
@@ -258,15 +259,8 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: PANELISTS ===== -->
     <div class="hm-panel" data-panel="panelists" style="display:none">
-      ${defsBlock('hm-panelists')}
-      <p class="sub-note">Click a department to expand.</p>
-      <div class="filter-bar">
-        <div class="ms" id="msHmPanel"></div>
-      </div>
-      <div class="scroll-table"><table>
-        <thead><tr><th>Department</th><th>Job</th><th>Interview Count</th><th>Avg Time for Feedback</th></tr></thead>
-        <tbody id="hmPanelBody"></tbody>
-      </table></div>
+      <div class="filter-bar"><div class="ms" id="msHmPanel"></div></div>
+      <div id="hmPanelHost"></div>
     </div>
     </div>
   `;
@@ -788,48 +782,27 @@ export function initHmFilters(data) {
     }
   }
 
-  // ===== Panelist Dashboard (Department -> Panelist; pending pipeline data) =====
+  // ===== Panelists — the full Interviewer Efficiency panel, driven by THIS tab's filters =====
+  // It used to be a two-column subset of the same panelists[] data, and one of those columns
+  // (Avg Time for Feedback) is an ALL-TIME figure that sat unlabelled under a date filter.
+  let ivRefresh = null;
   function renderPanelist() {
-    const body = document.getElementById('hmPanelBody');
-    if (!body) return;
-    const deptG = gDept();
-    const fmtTurn = (hrs) => hrs == null ? '—' : (hrs >= 24 ? (hrs / 24).toFixed(1) + 'd' : hrs.toFixed(1) + 'h');
-    const nameSel = msHmPanel ? msHmPanel.getSelected() : [];
-    // Interview counts come from the panelist's per-quarter breakdown so the table follows
-    // the period selector; older data files without byQuarter keep their lifetime total.
-    const quarters = quartersInWindow(gFrom(), gTo());
-    const periodCount = (p) => {
-      if (!p.byQuarter) return p.interviews || 0;
-      if (!quarters.length) return p.interviews || 0;
-      return quarters.reduce((s, q) => s + (p.byQuarter[q] || 0), 0);
-    };
-    let list = (data.panelists || []).map(p => ({ ...p, _dept: deptOf(p.dept || p.department || ''), _count: periodCount(p) }));
-    list = list.filter(p => !deptG || p._dept === deptG);
-    // #7: the shared Job filter applies here as well — panelists carry the job they interviewed for.
-    const jobSel = selJobs();
-    if (jobSel.length) list = list.filter(p => jobSel.includes(p.jobTitle || p.job || ''));
-    if (nameSel.length) list = list.filter(p => nameSel.includes(p.name || p.panelist || ''));
-    list = list.filter(p => p._count > 0);
-    if (!list.length) {
-      body.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Data not yet available — the interviewer/panelist pipeline pass appears here after the next data refresh.</td></tr>`;
-      return;
+    const host = document.getElementById('hmPanelHost');
+    if (!host) return;
+    if (!ivRefresh) {
+      host.innerHTML = renderInterviewer(data, { embedded: true });
+      ivRefresh = initInterviewer(data, {
+        filters: {
+          year: () => document.getElementById('hmYear')?.value || '',
+          quarter: () => document.getElementById('hmQuarter')?.value || '',
+          depts: () => { const d = gDept(); return d ? [d] : []; },
+          jobs: () => selJobs(),
+          panelists: () => (msHmPanel ? msHmPanel.getSelected() : [])
+        }
+      }) || null;
+    } else {
+      ivRefresh();
     }
-    const groups = {};
-    list.forEach(p => { if (!groups[p._dept]) groups[p._dept] = []; groups[p._dept].push(p); });
-    let html = '';
-    Object.keys(groups).sort().forEach((dept, gi) => {
-      const arr = groups[dept].sort((a, b) => b._count - a._count);
-      const deptCount = arr.reduce((a, p) => a + p._count, 0);
-      html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}${cnt(arr.length)}</td><td></td><td style="font-weight:600">${deptCount}</td><td></td></tr>`;
-      arr.forEach(p => {
-        html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:30px;font-weight:500">${p.name || p.panelist || ''}</td>
-          <td style="max-width:300px">${p.jobTitle || p.job || ''}</td><td>${p._count}</td><td>${fmtTurn(p.avgTurnaroundHrs)}</td></tr>`;
-      });
-    });
-    body.innerHTML = html;
-    wireTree(body);
   }
 
   // ===== Joining Pending — Cases (candidate-level; pending pipeline data) =====
