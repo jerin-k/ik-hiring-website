@@ -77,11 +77,8 @@ export function renderEfficiency(data) {
 
   return `
     <style>
-      .eff-subtabs { display:flex; gap:2px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin-bottom:20px; }
-      .eff-subtab { appearance:none; background:none; border:none; padding:9px 16px; font-size:13px; font-weight:500;
-        color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-      .eff-subtab:hover { color:var(--text); }
-      .eff-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+      .eff-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .eff-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
       .eff-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
         display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
@@ -128,7 +125,16 @@ export function renderEfficiency(data) {
       .eff-podchart p { font-size:11px; color:var(--muted); margin:0; line-height:1.5; }
     </style>
 
-    <h2 class="section-title">Overall Efficiency</h2>
+
+    <div class="eff-subtabs">
+      <button class="eff-subtab subtab-chip active" data-tab="fulfilment">Fulfilment</button>
+      <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
+      <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
+      <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
+      <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
+      <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
+    </div>
 
     <div class="eff-filters">
       <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
@@ -139,16 +145,6 @@ export function renderEfficiency(data) {
       <div class="fchip"><span class="lbl">To</span><input type="date" id="effVelTo"></div>
       <div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
-    </div>
-
-    <div class="eff-subtabs">
-      <button class="eff-subtab active" data-tab="fulfilment">Fulfilment</button>
-      <button class="eff-subtab" data-tab="velocity">Momentum</button>
-      <button class="eff-subtab" data-tab="screening">Screening Efficiency</button>
-      <button class="eff-subtab" data-tab="throughput">Throughput</button>
-      <button class="eff-subtab" data-tab="timeinprocess">Time in Process</button>
-      <button class="eff-subtab" data-tab="joining">Joining Conversion</button>
-      <button class="eff-subtab" data-tab="sourcing">Sourcing Mix</button>
     </div>
 
     <!-- PANEL: Fulfilment -->

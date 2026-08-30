@@ -12,12 +12,8 @@ export function renderHome(access) {
   for (let y = endYear; y >= startYear; y--) sortedYears.push(String(y));
 
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:24px;">
+    <div id="home-period-holder" hidden>
       <div>
-        <h2 style="font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-0.01em;">Overview</h2>
-        <p style="color:var(--muted);font-size:12px;">Talent acquisition performance across InterviewKickstart.</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
         <select id="period-selector" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;background:var(--card);color:var(--text);cursor:pointer;min-width:110px;">
           ${sortedYears.map(y => `<option value="${y}">${y}</option>`).join('')}
           ${sortedYears.map(y => `
@@ -191,7 +187,10 @@ export function initHomeFilters() {
     container.innerHTML = `
       ${defsBlock('overview')}
       <div style="margin-bottom:24px;">
-        <h3 class="subsection-title" style="margin-top:0;">Key Metrics — ${periodLabel}</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px;">
+          <h3 class="subsection-title" style="margin:0;">Key Metrics — ${periodLabel}</h3>
+          <span id="home-period-slot" style="flex-shrink:0"></span>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
           <div class="card">
             <div class="label">Total Positions</div>
@@ -351,6 +350,10 @@ export function initHomeFilters() {
         </div>
       </div>
     `;
+    // The selector is rendered in the page shell so its listener can be bound once, then moved into the
+    // Key Metrics row here — same level as the heading, which is where Jerin asked for it.
+    const slot = document.getElementById('home-period-slot');
+    if (slot) slot.appendChild(sel);
   }
 
   sel.addEventListener('change', renderData);
