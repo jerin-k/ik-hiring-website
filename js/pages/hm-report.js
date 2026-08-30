@@ -759,7 +759,11 @@ export function initHmFilters(data) {
     const heatHost = document.getElementById('hm2Heat');
     if (heatHost) {
       const A = hasAssessed();
-      const stageCols = visStages.filter(sk => sk !== 'app');
+      // App Review used to be excluded here: under the OLD reached/cleared measure it read 99 → 99 = 100%
+      // (leaving a stage counted as passing it), so plotting it was noise. The 30-Aug rebuild made it a
+      // real figure — 65 assessed → 51 progressed — and the TABLE below shows it, as does the Stages
+      // checkbox. The exclusion survived the rebuild and silently dropped a ticked stage from the grid.
+      const stageCols = visStages.slice();
       const heatRows = Object.keys(groups).map(d => {
         const per = aggTP(groups[d]);
         return {
