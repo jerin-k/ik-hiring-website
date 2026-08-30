@@ -732,7 +732,9 @@ export function initEfficiencyFilters(data) {
   function buildTpChartEff(q, vis) {
     const host = document.getElementById('effTpHeat'); if (!host) return;
     if (!tpByJob) { host.innerHTML = ''; return; }
-    const stageCols = vis.filter(k => k !== 'app');
+    // App Review is kept — see the note on the same line in hm-report.js. It was excluded while throughput
+    // meant reached/cleared, which made the stage read 100% and worthless; it is a real figure now.
+    const stageCols = vis.slice();
     const asJ2 = (rollups && rollups.assessedByJobQ) || null;
     const spanQ = (rollups && rollups.assessedSpanByJobQ) || null;
     const cellOf = (jids, k) => jids.reduce((a, jid) => {
@@ -990,9 +992,14 @@ export function initEfficiencyFilters(data) {
       const t = tpByJob[jid] || {};
       return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; });
     };
+    // A stage nobody was assessed at printed "0 0 0.0%", which reads as "0% got through" when it means
+    // "nobody was here" — and the grid above shows the same cell as an empty dot. Match the grid (and the
+    // HM table, which already dashes it) so an empty stage cannot be mistaken for a total failure.
     const cells = (rc) => rc.map((x, i) => (asJ && vis[i] === 'offer')
       ? `<td>${x.r}</td><td class="zero">—</td><td class="zero" title="Offer is the last stage — nothing after it to progress to">—</td>`
-      : `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
+      : !x.r
+        ? `<td class="zero">—</td><td class="zero">—</td><td class="zero" title="Nobody was assessed at this stage in this period">—</td>`
+        : `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
     const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
     let html = '';
     deptJobs(q).forEach(({ dept, jobs: js }, di) => {
