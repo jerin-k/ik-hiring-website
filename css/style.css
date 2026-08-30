@@ -164,6 +164,38 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   font-weight: 600;
 }
 
+/* ===== The sub-tab band (Jerin, 2026-08-30) =====
+   A RECESSED strip locked to the underside of the nav — no gap, no card. It used to be a floating white
+   card with 14px of page background above it, which read as unrelated to the nav rather than one level
+   below it. The recess is what does the "inside this page" job, so the selected sub-tab only needs to be
+   WHITE — it does not have to shout.
+   ⚠ The negative margins cancel .container's 24px/28px padding so the band meets the nav edge-to-edge.
+   .container is max-width 1400, so above that width the band stops there while the nav keeps going. */
+.subtab-band {
+  display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+  background: #eef1f7;
+  border-bottom: 1px solid var(--border);
+  margin: -24px -28px 0;
+  padding: 7px 28px;
+}
+.subtab-band .period { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+
+/* ===== The filter row =====
+   Was a tinted panel with a border, a shadow and ALL-CAPS accent labels — visually the loudest thing on a
+   page whose job is showing numbers, and duplicated in four page modules. Now one quiet row, defined once. */
+.rec-filters, .eff-filters, .hm-filters, .iv-filters {
+  background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 12px 0 13px !important; margin: 0 0 16px !important;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+}
+.rec-filters .fchip > span.lbl, .eff-filters .fchip > span.lbl,
+.hm-filters .fchip > span.lbl, .iv-filters .fchip > span.lbl {
+  font-size: 11.5px; font-weight: 500; color: var(--muted);
+  text-transform: none; letter-spacing: 0;
+}
+.rec-filters .fdiv, .eff-filters .fdiv, .hm-filters .fdiv, .iv-filters .fdiv { background: var(--border) !important; }
+
 /* ===== Levels below the page: the same chip, tinted ===== */
 .subtab-chip {
   appearance: none; background: none; border: 0; font-family: inherit;
@@ -174,6 +206,10 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .subtab-chip:hover { color: var(--text); background: var(--border-light); }
 .subtab-chip.active,
 .subtab-chip.active:hover { background: var(--accent-light); color: var(--accent-deep); font-weight: 600; }
+/* on the recessed band the chip lifts off it in white; tinted would blend into the band */
+.subtab-band .subtab-chip:hover { background: #e3e8f1; }
+.subtab-band .subtab-chip.active,
+.subtab-band .subtab-chip.active:hover { background: #fff; color: var(--text); font-weight: 600; }
 
 /* legacy classes kept for JS compat */
 .nav-strip-home, .nav-strip-cards, .nav-strip-card { display: none; }

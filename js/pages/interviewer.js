@@ -62,8 +62,7 @@ export function renderInterviewer(data) {
 
   return `
     <style>
-      .iv-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
-        display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
+      /* .iv-filters look now lives in style.css — one quiet row, defined once */
       .iv-filters select { appearance:none; -webkit-appearance:none; height:34px; padding:0 28px 0 11px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -71,7 +70,7 @@ export function renderInterviewer(data) {
       .iv-filters select:hover { border-color:var(--muted); }
       .iv-filters select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
       .iv-filters .fchip { display:flex; align-items:center; gap:7px; }
-      .iv-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      /* .iv-filters label styling lives in style.css — quiet, sentence case */
       .iv-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
       .iv-grain { font-size:11px; color:var(--orange); margin:-8px 0 14px; }
       /* Chart spans the full content width rather than sitting in a narrow centred column. */

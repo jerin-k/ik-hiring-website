@@ -135,13 +135,13 @@ export function renderHmReport(data) {
       .hm-filters select:hover, .hm-filters input[type=date]:hover { border-color:var(--muted); }
       .hm-filters select:focus, .hm-filters input[type=date]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
       .hm-filters .fchip { display:flex; align-items:center; gap:7px; }
-      .hm-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      /* .hm-filters label styling lives in style.css — quiet, sentence case */
       .hm-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; }
       .hm-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
       .hm-report table td, .hm-report table th { vertical-align:middle; }
 
       /* sub-tabs */
-      .hm-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .hm-subtabs is the recessed .subtab-band — see style.css */
       /* .hm-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
       /* Department Summary: run edge to edge like every other table.
@@ -168,18 +168,18 @@ export function renderHmReport(data) {
 
     <div class="hm-report">
     <!-- ===== GLOBAL PAGE FILTERS ===== -->
-    <div class="hm-subtabs">
+    <div class="hm-subtabs subtab-band">
       <button class="hm-subtab subtab-chip active" data-tab="positions">Positions</button>
       <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
       <button class="hm-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
-    </div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
 
     <!-- ===== SUB-TAB STRIP ===== -->
-    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:#e4eaf4;border:1px solid #c3d0e8;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.06)">
+    <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:var(--bg)">
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
-      <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msHmJob"></div></div>
+      <div class="fchip"><div class="ms" id="msHmJob"></div></div>
       <div class="fchip"><span class="lbl">Status</span>
         <label class="opt"><input type="checkbox" class="hm1Status" value="Open" checked> Open</label>
         <label class="opt"><input type="checkbox" class="hm1Status" value="Closed" checked> Closed</label>
@@ -187,8 +187,8 @@ export function renderHmReport(data) {
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div>
-      <div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
-      <div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+      
+      
       <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all branches</label>
     </div>
 
