@@ -131,7 +131,17 @@ export function initHomeFilters() {
     const fillRate = totalPositions > 0 ? ((totalFilled / totalPositions) * 100).toFixed(1) : '0.0';
     const convRate = f.applied > 0 ? ((f.hired / f.applied) * 100).toFixed(1) : '0.0';
     const displayJobs = topJobs.slice(0, 5);
-    const allJobs = isQuarter ? topJobs : (data.jobs || []).filter(j => j.hired > 0);
+    // 🚨 quarterly[q].topJobs is the ten jobs with the most APPLICATIONS that quarter (the pipeline sorts by
+    // applied, then slices 10). Ranking THAT by hires answers "of the ten busiest roles, which hired most" —
+    // not "which roles hired most". Roles that hire well on few applicants never appear: SME India roles hire
+    // in double figures on <100 applications. For 2026-Q1 it hid 120 of the quarter's 159 hires and put two
+    // jobs with ZERO hires in a top-five-by-hired list. The pipeline now also emits topJobsByHired off the
+    // same jobCounts; until a refresh has run, drop the zero-hire rows rather than show a ranking we can't
+    // compute — the definitions block says the quarter view is limited to the busiest roles.
+    const qHired = isQuarter ? ((data.quarterly && data.quarterly[val] || {}).topJobsByHired || null) : null;
+    const allJobs = qHired ? qHired
+      : isQuarter ? topJobs.filter(j => j.hired > 0)
+      : (data.jobs || []).filter(j => j.hired > 0);
     const hiredJobs = [...allJobs].sort((a, b) => b.hired - a.hired).slice(0, 5);
 
     // Interviews are period-aware when the pipeline supplies interviewsByQuarter;
@@ -153,11 +163,19 @@ export function initHomeFilters() {
     // plenty of people do both in one quarter.
     // Until the next refresh has run these fields are absent — in that case the tile keeps its OLD name and
     // its old number rather than putting a people label on a count of events.
-    const periodSum = (m) => !m ? null
-      : (isQuarter ? (m[val] || 0) : Object.entries(m).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0));
-    const candInterviewed = periodSum(data.candidatesInterviewedByQuarter);
-    const panelPeople = periodSum(data.panelInterviewedByQuarter);
-    const assessedPeople = periodSum(data.assessedByQuarter);
+    // 🚨 These are DISTINCT-PEOPLE counts deduped WITHIN a quarter, so adding four quarters double-counts
+    // anyone assessed in two of them — while the card promises "counts once whether they sat one interview or
+    // five". The pipeline now also emits a year-level distinct count; prefer it, and when it is absent say on
+    // the card that the year figure is the quarters added up rather than passing a sum off as distinct people.
+    const periodSum = (m, y) => !m ? null
+      : isQuarter ? (m[val] || 0)
+      : (y && y[year] != null) ? y[year]
+      : Object.entries(m).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0);
+    const candInterviewed = periodSum(data.candidatesInterviewedByQuarter, data.candidatesInterviewedByYear);
+    const panelPeople = periodSum(data.panelInterviewedByQuarter, data.panelInterviewedByYear);
+    const assessedPeople = periodSum(data.assessedByQuarter, data.assessedByYear);
+    // true when a YEAR is showing and no year-level distinct count exists, i.e. the figure is a sum of quarters
+    const candIsQuarterSum = !isQuarter && !((data.candidatesInterviewedByYear || {})[year] != null);
     const hasCand = candInterviewed != null && Object.keys(data.candidatesInterviewedByQuarter || {}).length > 0;
 
     // Panelists for the selected period. Each panelist carries a per-quarter breakdown,
@@ -211,9 +229,12 @@ export function initHomeFilters() {
                   // as "578 interviewed · 93 assessed" invited the reader to add them and find 671 against
                   // a headline of 643 (Jerin, 2026-08-29). Name the overlap so the arithmetic closes.
                   const both = Math.max(0, panelPeople + assessedPeople - candInterviewed);
-                  return both > 0
+                  const split = both > 0
                     ? `${panelPeople.toLocaleString()} sat an interview, ${assessedPeople.toLocaleString()} took an assessment, ${both.toLocaleString()} did both`
                     : `${panelPeople.toLocaleString()} sat an interview \u00b7 ${assessedPeople.toLocaleString()} took an assessment`;
+                  // a year with no year-level distinct count is the quarters added up — say so rather than
+                  // letting "counts once" stand over a figure that counts a cross-quarter candidate twice
+                  return split + (candIsQuarterSum ? ' \u00b7 quarters added up' : '');
                 })()
               : `${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}`}</div>
           </div>
@@ -253,7 +274,7 @@ export function initHomeFilters() {
                 const openPct = Math.round((v.open / maxDeptTotal) * 100);
                 const missedPct = Math.round(((v.missed || 0) / maxDeptTotal) * 100);
                 return `
-                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);${i === Math.min(deptArr.length, 6) - 1 ? 'border:none;' : ''}">
+                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);${(i === Math.min(deptArr.length, 6) - 1 && deptArr.length <= 6) ? 'border:none;' : ''}">
                     <div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:10px;">
                       <span style="display:flex;gap:10px;min-width:0;">
                         <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;flex-shrink:0;">${i + 1}</span>
@@ -268,7 +289,17 @@ export function initHomeFilters() {
                     </div>
                   </div>
                 `;
-              }).join('')}
+              }).join('') + (() => {
+                // The list is capped at six. Without this line the six departments silently fall short of the
+                // Total Positions card sitting right beside them (40 of 45 for 2026-Q3), which reads as a bug.
+                const rest = deptArr.slice(6);
+                if (!rest.length) return '';
+                const rt = rest.reduce((s, [, v]) => s + v.total, 0);
+                const rj = rest.reduce((s, [, v]) => s + v.joined, 0);
+                return `<div style="padding:8px 12px 9px 38px;font-size:11.5px;color:var(--muted);">
+                  + ${rest.length} more department${rest.length > 1 ? 's' : ''} · <span class="good">${rj}</span> / ${rt}
+                </div>`;
+              })()}
           </div>
         </div>
 

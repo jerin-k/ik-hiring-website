@@ -273,7 +273,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Portal</em>) → the specific source (e.g. <em>Naukri</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
-          ['Joiners', 'People who accepted an offer and whose <strong>start date</strong> falls in the selected period, credited to that recruiter, counted against the source on their application. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
+          ['Joiners', 'People who accepted an offer and whose <strong>start date</strong> falls in the selected period, credited to that recruiter, counted against the source on their application. Every joiner counts, including anyone filling a position opened in an earlier quarter — so this can run slightly ahead of the Fulfilment table, which leaves those out. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
           ['%', 'Share of the level above it — a source’s share of its type, a type’s share of the recruiter, a recruiter’s share of the pod.'],
           ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
         ]
@@ -499,7 +499,7 @@ export const DEFINITIONS = {
   'eff-sourcing': {
     summary: 'How these numbers are worked out',
     intro: 'Where the people who actually <strong>joined</strong> came from, <strong>Department → Job → Source type → Source</strong>.',
-    confirmed: 'Definitions confirmed with Jerin · 29 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -513,14 +513,14 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This counts joiners, not applications', 'Deliberate (Jerin, 29 Aug 2026): a channel can bring tens of thousands of applications and produce almost no one who starts. Company marketing brought 25,810 applications in 2026 and 2 joiners; Job Portal brought far fewer and 44.'],
-      ['Counted by START DATE, like Joined everywhere else', 'Someone who accepted in June and starts in September counts in Q3, not Q2 — the same rule the Fulfilment tab uses, so the two panels count the same people.'],
+      ['Counted by START DATE, and every joiner counts', 'Someone who accepted in June and starts in September counts in Q3, not Q2. <strong>One deliberate difference from Fulfilment and Joining Conversion on this tab:</strong> those two leave out people filling a position that was opened in an earlier quarter, because they answer “did we fill this quarter’s demand”. This panel asks which channels bring us people, so a joiner counts however long ago their position was raised — which is why its total runs a little higher.'],
     ]
   },
 
   'interviewer': {
     summary: 'How these numbers are worked out',
     intro: 'Interview load and feedback per panelist, built from the interviews actually scheduled in Ashby and the feedback forms submitted against them.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'The columns',
@@ -536,7 +536,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['Three columns are blank on department and job rows on purpose', 'Feedback Coverage, Awaiting Feedback and Avg Turnaround are recorded <strong>per person across the whole org</strong>, not per role. Adding them up a tree that splits one person across several roles would count them twice, so they only appear where they mean something.'],
+      ['Three columns are blank on department and job rows on purpose', 'Feedback Coverage, Awaiting Feedback and Avg Turnaround are recorded <strong>per person across the whole org</strong>, not per role. Adding them up a tree that splits one person across several roles would count them twice, so they only appear where they mean something. The <strong>Feedback Coverage card</strong> above the table has the same limit: filter to one department and it still counts every interview those panelists sat anywhere, so it says so on the card rather than looking department-scoped.'],
       ['The bracketed feedback figure is not a completion rate', 'It counts every form a person submitted, which can easily exceed their interview count — one panelist has 440 forms against 2 interviews. That is why it is shown as a raw number and never as a percentage. Use <strong>Feedback Coverage</strong> for the rate.'],
       ['Avg Turnaround does not follow the period', 'It has no quarter breakdown in the data, unlike the interview count beside it.'],
     ]
@@ -566,14 +566,14 @@ export const DEFINITIONS = {
   'overview': {
     summary: 'How these numbers are worked out',
     intro: 'The one-page summary. Everything follows the Year/Quarter selector unless it says otherwise.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'The five cards',
         items: [
           ['Total Positions', 'Positions opened in the selected period, counted once each in the quarter they were opened. The line underneath splits them into joined, open and — where there are any — missed.'],
           ['Applications', 'Candidates who applied in the period.'],
-          ['Candidates Interviewed', 'Distinct <strong>people</strong> we assessed in the period. Someone counts once whether they sat one interview or five. It includes candidates who took an <strong>online assessment</strong> (HeyMilo, Trifle, HackerEarth) as well as those who met a panel — the two are combined by person, not added, because plenty of candidates do both. The line underneath splits them.'],
+          ['Candidates Interviewed', 'Distinct <strong>people</strong> we assessed in the period. Someone counts once whether they sat one interview or five — within a quarter. A whole year is the quarters added up unless the data file carries a year-level count, so somebody interviewed in two different quarters can count twice; the card says “quarters added up” when that is what you are looking at. It includes candidates who took an <strong>online assessment</strong> (HeyMilo, Trifle, HackerEarth) as well as those who met a panel — the two are combined by person, not added, because plenty of candidates do both. The line underneath splits them.'],
           ['Total Hired', 'Hires in the period, with the conversion from applications underneath.'],
           ['Fill Rate', 'Positions joined ÷ positions opened, for the period.'],
         ]
@@ -582,8 +582,8 @@ export const DEFINITIONS = {
         heading: 'The rest of the page',
         items: [
           ['Pipeline bar', 'Applied → Screened → Interviewed → Offered → Hired for the period. Each band is how many candidates reached that point, so the bands step down.'],
-          ['Positions by Department', 'The same positions as the Total Positions card, broken out by department.'],
-          ['Top Jobs by Hired / by Applications', 'The busiest roles in the period, by outcome and by inflow.'],
+          ['Positions by Department', 'The same positions as the Total Positions card, broken out by department. The six largest are listed and everything past them is summed on a final line, so the list always reconciles with the card above it.'],
+          ['Top Jobs by Hired / by Applications', 'The roles with the most hires, and the most applications, in the period. <strong>By Hired under a quarter</strong> reads every role once the data file carries the per-quarter hire ranking; against an older file it falls back to that quarter’s busiest roles, so a role that hires well on very few applicants can be missing from it.'],
           ['Top Panelists by Interview Count', 'Who carried the interviewing load in the period.'],
         ]
       },
