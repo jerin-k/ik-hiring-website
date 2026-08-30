@@ -106,16 +106,13 @@ export function renderAdmin(accessConfig, data) {
       .cfg-ref table { width:100%; font-size:12px; }
       .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
       .cfg-scroll { overflow-x:auto; }
-      .adm-subtabs { display:flex; gap:2px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin-bottom:22px; }
-      .adm-subtab { appearance:none; background:none; border:none; padding:9px 16px; font-size:13px; font-weight:500;
-        color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-      .adm-subtab:hover { color:var(--text); }
-      .adm-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+      .adm-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .adm-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
     </style>
 
     <div class="adm-subtabs">
-      <button class="adm-subtab active" data-atab="access">Access Management</button>
-      <button class="adm-subtab" data-atab="metric">Metric Configuration</button>
+      <button class="adm-subtab subtab-chip active" data-atab="access">Access Management</button>
+      <button class="adm-subtab subtab-chip" data-atab="metric">Metric Configuration</button>
     </div>
 
     <div class="adm-panel" data-apanel="access">

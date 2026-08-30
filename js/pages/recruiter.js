@@ -147,7 +147,6 @@ let recScreenChart = null, recJoinChart = null, recFulfilChart = null, recSource
 export function renderRecruiter(data) {
   if (!data || !data.recruiters || data.recruiters.length === 0) {
     return `
-      <h2 class="section-title">Recruiter Efficiency</h2>
       <div class="card" style="text-align:center;padding:2rem;">
         <p style="color:var(--muted);font-size:13px;">Recruiter data not yet available.</p>
       </div>`;
@@ -159,11 +158,8 @@ export function renderRecruiter(data) {
 
   return `
     <style>
-      .rec-subtabs { display:flex; gap:2px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin-bottom:20px; }
-      .rec-subtab { appearance:none; background:none; border:none; padding:9px 16px; font-size:13px; font-weight:500;
-        color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-      .rec-subtab:hover { color:var(--text); }
-      .rec-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+      .rec-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .rec-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
       /* ===== Momentum heatmap (2026-08-30) — recruiter x day, one cell per day =====
          Deliberately HTML rather than a canvas chart: the cell grid IS a table of counts, and the hover
@@ -203,10 +199,10 @@ export function renderRecruiter(data) {
       /* nested tab strip INSIDE Data Hygiene — pill style, deliberately distinct from the
          outer underline tabs so two levels of tabs don't read as one row */
       .hyg-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 16px; }
-      .hyg-tab { appearance:none; background:var(--card); border:1px solid var(--border); border-radius:999px;
-        padding:6px 14px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; }
-      .hyg-tab:hover { color:var(--text); border-color:#cbd5e1; }
-      .hyg-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+      .hyg-tab { appearance:none; background:none; border:0; border-radius:7px;
+        padding:5px 12px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; font-family:inherit; }
+      .hyg-tab:hover { color:var(--text); background:var(--border-light); }
+      .hyg-tab.active, .hyg-tab.active:hover { background:var(--accent-light); color:var(--accent-deep); font-weight:600; }
       .hyg-tab .n { font-weight:700; margin-left:6px; }
       .hyg-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin:0 0 6px; }
       .hyg-dl { appearance:none; background:var(--card); border:1px solid var(--border); border-radius:6px;
@@ -289,7 +285,16 @@ export function renderRecruiter(data) {
       .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
     </style>
 
-    <h2 class="section-title">Recruiter Efficiency</h2>
+    <div class="rec-subtabs">
+      <button class="rec-subtab subtab-chip active" data-tab="fulfilment">Fulfilment</button>
+      <button class="rec-subtab subtab-chip" data-tab="velocity">Momentum</button>
+      <button class="rec-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
+      <button class="rec-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
+      <button class="rec-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
+      <button class="rec-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
+      <button class="rec-subtab subtab-chip" data-tab="hygiene">Data Hygiene</button>
+    </div>
+
     <div class="rec-filters">
       <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
       <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
@@ -303,16 +308,6 @@ export function renderRecruiter(data) {
       <div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
       <p class="sub-note" id="recQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p>
-    </div>
-
-    <div class="rec-subtabs">
-      <button class="rec-subtab active" data-tab="fulfilment">Fulfilment</button>
-      <button class="rec-subtab" data-tab="velocity">Momentum</button>
-      <button class="rec-subtab" data-tab="screening">Screening Efficiency</button>
-      <button class="rec-subtab" data-tab="joining">Joining Conversion</button>
-      <button class="rec-subtab" data-tab="sourcing">Sourcing Mix</button>
-      <button class="rec-subtab" data-tab="timeinprocess">Time in Process</button>
-      <button class="rec-subtab" data-tab="hygiene">Data Hygiene</button>
     </div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day.

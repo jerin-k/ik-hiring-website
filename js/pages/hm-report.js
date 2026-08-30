@@ -141,11 +141,8 @@ export function renderHmReport(data) {
       .hm-report table td, .hm-report table th { vertical-align:middle; }
 
       /* sub-tabs */
-      .hm-subtabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:22px; }
-      .hm-subtab { appearance:none; background:none; border:none; padding:9px 16px; font-size:13px; font-weight:500;
-        color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-      .hm-subtab:hover { color:var(--text); }
-      .hm-subtab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+      .hm-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .hm-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
       /* Department Summary: run edge to edge like every other table.
          width:auto used to size the table to its content, which left a wide dead strip on the right of the
@@ -171,6 +168,14 @@ export function renderHmReport(data) {
 
     <div class="hm-report">
     <!-- ===== GLOBAL PAGE FILTERS ===== -->
+    <div class="hm-subtabs">
+      <button class="hm-subtab subtab-chip active" data-tab="positions">Positions</button>
+      <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <button class="hm-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
+      <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
+    </div>
+
+    <!-- ===== SUB-TAB STRIP ===== -->
     <div class="hm-filters" style="position:sticky;top:0;z-index:5;background:#e4eaf4;border:1px solid #c3d0e8;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(15,23,42,0.06)">
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
@@ -185,14 +190,6 @@ export function renderHmReport(data) {
       <div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
       <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all branches</label>
-    </div>
-
-    <!-- ===== SUB-TAB STRIP ===== -->
-    <div class="hm-subtabs">
-      <button class="hm-subtab active" data-tab="positions">Positions</button>
-      <button class="hm-subtab" data-tab="throughput">Throughput</button>
-      <button class="hm-subtab" data-tab="pipeline">Pipeline</button>
-      <button class="hm-subtab" data-tab="panelists">Panelists</button>
     </div>
 
     <!-- ===== PANEL: POSITIONS ===== -->

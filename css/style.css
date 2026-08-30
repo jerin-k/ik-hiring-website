@@ -8,6 +8,7 @@
   --muted: #6b7391;
   --accent: #4E6BA6;
   --accent-light: #eaeef6;
+  --accent-deep: #33507f;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
   --green: #398AA2;
   --green-light: #eaf2f4;
   --red: #b45a72;
@@ -129,11 +130,16 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .refresh-btn .spin { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ===== Nav Strip ===== */
+/* ===== Nav Strip =====
+   Two treatments, one shape (Jerin, 2026-08-30). LEVEL 1 (the page) is a SOLID 7px chip; every level below
+   it — sub-tabs, and the Data Hygiene lists — is the same 7px chip TINTED. Hierarchy is carried by fill
+   weight, not by a different mechanism. The page headings were removed at the same time, so these tabs are
+   the only thing telling you where you are: the old treatment (blue text + 2px underline) put the selected
+   tab at 5.28:1 against an unselected 4.68:1, a gap of 0.6, which read as "slightly bluer" not "selected". */
 .nav-strip {
   display: flex;
-  gap: 0;
-  padding: 0 28px;
+  gap: 3px;
+  padding: 8px 28px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
@@ -141,22 +147,33 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 }
 
 .nav-tab {
-  padding: 10px 16px;
+  padding: 6px 13px;
   font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color .15s, border-color .15s;
+  border-radius: 7px;
+  transition: color .15s, background-color .15s;
   white-space: nowrap;
-  margin-bottom: -1px;
 }
-.nav-tab:hover { color: var(--text); }
-.nav-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+.nav-tab:hover { color: var(--text); background: var(--border-light); }
+.nav-tab.active,
+.nav-tab.active:hover {
+  background: var(--accent);
+  color: #fff;
   font-weight: 600;
 }
+
+/* ===== Levels below the page: the same chip, tinted ===== */
+.subtab-chip {
+  appearance: none; background: none; border: 0; font-family: inherit;
+  padding: 5px 12px; font-size: 12.5px; font-weight: 500; color: var(--muted);
+  cursor: pointer; border-radius: 7px; white-space: nowrap;
+  transition: color .15s, background-color .15s;
+}
+.subtab-chip:hover { color: var(--text); background: var(--border-light); }
+.subtab-chip.active,
+.subtab-chip.active:hover { background: var(--accent-light); color: var(--accent-deep); font-weight: 600; }
 
 /* legacy classes kept for JS compat */
 .nav-strip-home, .nav-strip-cards, .nav-strip-card { display: none; }
