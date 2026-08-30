@@ -293,7 +293,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['The number on top', 'Median days for candidates who <strong>left</strong> the stage — how long that step actually took. This is the only figure on the table you can compare between quarters. Hover a cell for the average and how many candidates it is based on.'],
-          ['The amber figure below', 'The people <strong>still sitting</strong> in that stage — how many, and the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
+          ['The two amber lines below', 'The people <strong>still sitting</strong> in that stage: how many, and on the second line the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
           ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
           ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
           ['Rows', 'Pod → Recruiter → Job. Job rows cover everyone on that role, not only this recruiter.'],
@@ -454,7 +454,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['The number on top', 'Median days for candidates who <strong>left</strong> the stage — how long that step actually took. This is the only figure on the table you can compare between quarters. Hover a cell for the average and how many candidates it is based on.'],
-          ['The amber figure below', 'The people <strong>still sitting</strong> in that stage — how many, and the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
+          ['The two amber lines below', 'The people <strong>still sitting</strong> in that stage: how many, and on the second line the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
           ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
           ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
           ['Rows', 'Department → Job. Click a department to drill into its roles.'],

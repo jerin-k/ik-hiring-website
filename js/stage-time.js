@@ -133,16 +133,26 @@ export function tisCellSplit(pair, threshold) {
   const med = f.n
     ? `<span class="tis-med${f.median > threshold ? ' over' : ''}">${fmt(f.median)}</span>`
     : '<span class="tis-med none">—</span>';
-  // App Review's pile runs to tens of thousands, and "38255 · 120d" blows out a 13-column grid.
+  // 🚨 THE WAITING PILE IS TWO STACKED LINES, NOT "20 · 212.5d" ON ONE (Jerin, 2026-08-30).
+  // The middot read as a decimal point — "what does 20.212.5d even mean, dude?" — and he was right: two
+  // separate numbers separated by a dot is one number to anyone not already expecting two. Stacking them
+  // with the units spelled out makes it unmisreadable, and keeps the column narrow. Putting "waiting" on
+  // the same line instead would roughly double every column's width; across 13 stages that forces the
+  // whole table into sideways scrolling. Do not "tidy" this back onto one line.
   const cnt = (n) => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
-  const waitLine = w.n ? `<span class="tis-wait">${cnt(w.n)} · ${fmt(w.median)}d</span>` : '';
+  // The pile is measured in months, so the half-day is false precision — rounded. The median on top is a
+  // real processing time where half a day genuinely means something, so that one keeps its .5.
+  const wd = w.n ? Math.round(w.median) : 0;
+  const waitLine = w.n
+    ? `<span class="tis-wait">${cnt(w.n)} waiting</span><span class="tis-wait">${wd} ${wd === 1 ? 'day' : 'days'}</span>`
+    : '';
   const tip = [
     f.n ? `finished: median ${fmt(f.median)}d · mean ${f.mean.toFixed(1)}d · n=${f.n}`
         : 'nobody has finished this stage in the period',
-    w.n ? `still waiting: ${w.n} candidates, median ${fmt(w.median)}d so far` : ''
+    w.n ? `still waiting: ${w.n} ${w.n === 1 ? 'candidate' : 'candidates'}, median ${fmt(w.median)} days so far` : ''
   ].filter(Boolean).join(' — ');
   return `<td class="tis" title="${tip}">${med}${waitLine}</td>`;
 }
 
 // Said on both tabs, under the heading. The convention needs one line or the amber figure is a mystery.
-export const TIS_SPLIT_NOTE = 'Each cell: <strong>median days for candidates who finished the stage</strong>. Underneath in amber, <span style="color:var(--orange)">how many are still sitting there and how long they have waited</span>. A dash means nobody has finished it in this period.';
+export const TIS_SPLIT_NOTE = 'Each cell: <strong>median days for candidates who finished the stage</strong>, then two amber lines &mdash; <span style="color:var(--orange)">how many are still sitting there, and how long they have waited</span>. A dash on top means nobody has finished it in this period.';
