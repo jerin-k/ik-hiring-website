@@ -104,7 +104,7 @@ export function renderInterviewer(data) {
     </div>
 
     <h3 class="subsection-title" id="ivChartTitle">Top panelists by interview load</h3>
-    <p class="sub-note" style="margin-top:-4px" id="ivChartNote">Each bar is one panelist, stacked by month.</p>
+    <p class="sub-note" style="margin-top:-4px" id="ivChartNote"></p>
     <div class="iv-chart-wrap" id="ivChartWrap"><canvas id="ivTopChart"></canvas></div>
 
     <h3 class="subsection-title">Department → Panelist → Job <span id="ivRowCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></h3>
@@ -233,7 +233,7 @@ export function initInterviewer(data) {
     if (note) {
       if (label) {
         note.style.display = '';
-        note.textContent = `Only the interview count follows the ${label} filter. Feedback Coverage, Awaiting Feedback, Turnaround and Interview Feedback are all-time totals — the pipeline does not break feedback down by period.`;
+        note.textContent = `Only Interviews follows the ${label} filter — the feedback columns are all-time.`;
       } else { note.style.display = 'none'; }
     }
 
@@ -318,7 +318,13 @@ export function initInterviewer(data) {
     if (wrap) wrap.style.height = h + 'px';
     const cn = document.getElementById('ivChartNote');
     const unit = hasMonths ? 'month' : 'quarter';
-    if (cn) cn.textContent = `Each bar is one panelist, stacked by ${unit}${label ? ` across ${label}` : ''} — ${useMonths.length} ${unit}${useMonths.length === 1 ? '' : 's'} shown, oldest at the left.` + (hasMonths ? '' : ' Monthly detail appears after the next pipeline refresh.');
+    // Live state only — which period, and the one warning that changes what the bars mean. What the chart
+    // IS lives in the definitions block under "Chart".
+    if (cn) {
+      cn.textContent = (label ? `Showing ${label}, by ${unit}.` : `By ${unit}.`)
+        + (hasMonths ? '' : ' Monthly detail appears after the next pipeline refresh.');
+      cn.style.color = hasMonths ? '' : 'var(--orange)';
+    }
 
     ivChart = new Chart(ctx, {
       type: 'bar',

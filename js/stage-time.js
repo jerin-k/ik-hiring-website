@@ -81,7 +81,7 @@ export function tisHist(store, storeQ, key, stage, quarters) {
 // App Review dwell is "today − applied date for everyone CURRENTLY parked there" — a live snapshot with no
 // historical dimension, so it cannot be quarter-scoped at all. Panels mark the column and say this rather
 // than letting a live number sit unlabelled beside quarter-scoped ones.
-export const APP_REVIEW_LIVE_NOTE = 'App Review is a live snapshot (everyone parked there today) and does not follow the period — the other stages do.';
+export const APP_REVIEW_LIVE_NOTE = 'App Review is live — it does not follow the period.';
 
 // ===== Completed stays vs still waiting (added 2026-08-30) =====
 // 🚨 THE MEDIAN USED TO MEASURE THE CALENDAR, NOT THE PROCESS. The pipeline recorded a dwell for everyone
@@ -154,5 +154,3 @@ export function tisCellSplit(pair, threshold) {
   return `<td class="tis" title="${tip}">${med}${waitLine}</td>`;
 }
 
-// Said on both tabs, under the heading. The convention needs one line or the amber figure is a mystery.
-export const TIS_SPLIT_NOTE = 'Each cell: <strong>median days for candidates who finished the stage</strong>, then two amber lines &mdash; <span style="color:var(--orange)">how many are still sitting there, and how long they have waited</span>. A dash on top means nobody has finished it in this period.';

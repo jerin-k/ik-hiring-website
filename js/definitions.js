@@ -28,7 +28,7 @@ export const DEFINITIONS = {
           ['Open', 'Positions from that set still to fill.'],
           ['Missed', 'Positions closed with the reason <em>carry forward</em> — the hire did not happen in that quarter and moved to the next one.'],
           ['Joining Pending', 'Counts <strong>people</strong>, not positions: everyone sitting in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, minus anyone whose opening was raised in an earlier quarter. It is a <strong>live</strong> figure — changing the date filter does not change it.'],
-          ['Dropped', 'Someone who moved to <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> — they declined, they withdrew, or we closed it with the offer still open. Counted in the quarter they <strong>first reached those stages</strong> (earliest of the three), not the quarter the record was closed. Each person counts <strong>once</strong>, however many times they moved in and out of a stage. The small print underneath is Dropped ÷ (Joined + Joining Pending + Dropped).'],
+          ['Dropped', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Dropped \u00f7 Offered.'],
         ]
       },
       {
@@ -39,14 +39,14 @@ export const DEFINITIONS = {
           ['Joined', 'Positions closed as hired.'],
           ['Joining Pending', 'People currently in Ref Check, Documentation or Offer — same rule as the card.'],
           ['Dropped', 'As above — reached Ref Check, Documentation or Offer, then archived — with their share of all outcomes underneath.'],
-          ['Delta', 'Total Openings − Joined − Joining Pending. <strong>This can be negative, and that is allowed.</strong> A negative number means more people are in closing than there are positions recorded — which happens when an offer was never linked to an opening in Ashby. It shrinks as those links get fixed. The bar beside it fills with the shortfall, so the bar and the number always point the same way.'],
+          ['Delta', 'Total Openings \u2212 Joined \u2212 Joining Pending. <strong>It can go negative, and that is allowed</strong> \u2014 it means more people are in closing than positions recorded, which happens when an offer was never linked to an opening. It shrinks as those links get fixed.'],
           ['Missed', 'Positions carried forward to the next quarter.'],
         ]
       },
       {
         heading: 'The chart',
         items: [
-          ['One bar per department', 'The bar length is the positions opened in the period, split into <strong>Joined</strong>, <strong>Open</strong> and <strong>Missed</strong> — the three states every position is in, so they always add up to Total Openings. Each of those three is divided into the <strong>roles</strong> inside the department by a thin line one shade darker than the bar. Very small roles are pooled into the last division so the lines stay readable. Hover anywhere on a section and it lists every role behind it with a count against each. The number stays on the section as a whole, not on every division.'],
+          ['One bar per department', 'Bar length is the positions opened in the period, split into <strong>Joined</strong>, <strong>Open</strong> and <strong>Missed</strong> \u2014 the three states every position is in, so they add up to Total Openings. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them.'],
           ['Why Joining Pending and Dropped are not on it', 'Those two count people. Stacking them onto a bar made of positions would produce a total that means nothing.'],
         ]
       },
@@ -76,7 +76,7 @@ export const DEFINITIONS = {
         heading: 'The heat table',
         items: [
           ['One column per stage', 'The <strong>number</strong> is how many candidates were <em>assessed</em> at that stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists, with the share who then reached a <em>later</em> stage below it.'],
-          ['What the colour means', 'The <strong>shade is how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 not the percentage. Darkest is 100 or more. It used to shade by the rate, which pointed at the wrong stage: a 100% square covering 21 people was the darkest thing on the board while US Business at R1, which lost 144 people, was almost white. A rate cannot tell you whether it came from 500 people or from 3, so it cannot rank what to fix. <strong>The number in the square is still the throughput percentage</strong> \u2014 only the colour changed.'],
+          ['What the colour means', 'The <strong>shade is how many people that square lost</strong> \u2014 assessed there, then never reached a later stage. Darkest is 100 or more. <strong>The number in the square is still the throughput percentage.</strong> Colour ranks what to fix; the number tells you the rate.'],
           ['Rows', 'Department, then the individual roles inside it. Click a department to open it.'],
           ['Overall', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. It is counted per person, never one stage column divided by another — see the warning below.'],
           ['A blank cell', 'A dot or a dash means <strong>nobody was assessed</strong> at that stage in the period — several stages here carry very little traffic, and plenty of roles skip a round entirely. It is not a zero rate, and it is not missing data.'],
@@ -86,12 +86,12 @@ export const DEFINITIONS = {
       {
         heading: 'The chart',
         items: [
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell reads <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, and is <strong>shaded by how many people it lost</strong> \u2014 so the eye lands on where the most people fall out, while the number you read is still the rate. The two raw numbers show whether that rate rests on 161 people or on 3. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there, which is not the same as nobody getting through. Hover a cell for the counts, the rate and how many it lost. It reads the same aggregates as the table below.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Each cell reads <strong>assessed \u2192 progressed</strong> with the rate below it, shaded by how many people it lost. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there. Hover for the counts, the rate and the loss.'],
         ]
       },
     ],
     warnings: [
-      ['This measure changed on 30 August 2026, and the numbers fell', 'It used to count anyone who had <em>left</em> a stage as having got through it — so being rejected at R1 counted exactly like being promoted to R2, and App Review read 99 → 99 = 100%. It now counts only people who actually reached a later stage. Lower numbers here are the correction, not a decline in performance, and figures from before that date are not comparable.'],
+      ['This measure changed on 30 August 2026, and the numbers fell', 'It used to count anyone who <em>left</em> a stage as having got through it, so a rejection counted like a promotion. It now counts only people who reached a later stage. Lower numbers are the correction, and figures from before 30 Aug 2026 are not comparable.'],
       ['The columns are not a funnel — do not read them left to right', 'Each stage is measured on its own. One column’s <em>progressed</em> will not equal the next column’s <em>assessed</em>, and often will not come close. Three reasons, all real: candidates skip stages (most roles never use Hello Christy or HM Review), <em>progressed</em> means reaching <em>any</em> later stage rather than the next one, and each figure is dated by when the assessment happened — so somebody screened in June and interviewed in July lands in two different quarters. Compare a stage to itself over time, not to its neighbour.'],
       ['Offer shows a count and no rate', 'Offer is the last stage in the ladder, so there is nothing after it to progress to. Showing 0% there would read as everyone falling out at the final step. The number of people assessed at Offer is still shown.'],
       ['A role with no movement reads zero, not its history', 'If a role had no transitions in the selected period it shows zeros. It used to fall back to its all-time numbers, which made long-closed roles look busy — an all-time number under a quarter heading is impossible to spot by eye.'],
@@ -163,7 +163,7 @@ export const DEFINITIONS = {
           ['JP — Upcoming Qtr <span class="defs-tag">Non-Sales</span>', 'Their opening was raised this quarter but they join next quarter. Reads 0 today because offers only started carrying an opening link on 25 Jul 2026.'],
           ['JP — Prev Qtr Openings <span class="defs-tag">Sales</span>', 'Opening raised last quarter, candidate joining this quarter — last quarter’s work landing now.'],
           ['JP — Current Qtr Openings <span class="defs-tag">Sales</span>', 'Everyone else in closing.'],
-          ['Drop', 'Someone who moved to <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> — they declined, they withdrew, or we closed it with the offer still open. Counted in the quarter they <strong>first reached those stages</strong> (earliest of the three), not the quarter the record was closed. Each person counts <strong>once</strong>, however many times they moved in and out of a stage. The small print is Drop ÷ (Joined + JP + Drop).'],
+          ['Drop', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Drop \u00f7 (Joined + JP + Drop).'],
           ['Delta', 'Goal minus what was achieved, so it is the shortfall. The bar fills with that shortfall, so the bar and the number always agree. Never shown below zero.'],
           ['Capacity Utilisation', 'Achieved ÷ Capacity. <strong>The colour runs the opposite way to Delta on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
         ]
@@ -171,7 +171,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart and the Cases list',
         items: [
-          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. Two markers sit on it: a solid line at their <strong>Goal</strong> (the demand on their roles this quarter, which is what the bar is measured against) and a dashed line at their <strong>Capacity</strong> (the finishing line \u2014 what they could carry). Amber fills any shortfall to Goal. So a bar past its Goal line but well short of its Capacity line means somebody is meeting the demand in front of them while running below what they could take on. It reads off exactly the same figures as the table. The bar itself is divided into the <strong>roles</strong> behind it by a thin line one shade darker than the bar. Very small roles are pooled into the last division so the lines stay readable. Hover anywhere on a section and it lists every role behind it with a count against each. The <em>Short of Goal</em> part is deliberately not divided \u2014 it is a shortfall against the goal, not something any one role owns.'],
+          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. A solid line marks their <strong>Goal</strong>, a dashed line their <strong>Capacity</strong>, and amber fills any shortfall to Goal. Same figures as the table. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them. <em>Short of Goal</em> is not split \u2014 it belongs to no single role.'],
           ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
         ]
       },
@@ -206,7 +206,7 @@ export const DEFINITIONS = {
           ['Rows and columns', 'Pod \u2192 Recruiter \u2192 Job \u2192 the day columns. Open a recruiter to see the roles behind their numbers. The last 30 days of the selected range run across the top, most recent first.'],
           ['Total \u00b7 30d', 'Everything in the 30 columns beside it added up \u2014 the row\u2019s arrivals for that window, not for the whole quarter.'],
           ['The From / To boxes', 'Momentum is the one panel driven by the <strong>From</strong> and <strong>To</strong> dates rather than the quarter selector. It always shows the last 30 days of that range.'],
-          ['The heatmap', 'One row per <strong>recruiter</strong>, one square per <strong>day</strong>. The darker the square the more people that recruiter added that day; the number is in the square. <strong>Hover a square</strong> and it lists every role behind it with a count against each. Weekends are shaded so an empty Saturday reads as a weekend rather than a gap. The right-hand column is that recruiter\u2019s 30-day total and the bottom row is each day\u2019s total \u2014 the same numbers as the table below.'],
+          ['The heatmap', 'One row per <strong>recruiter</strong>, one square per <strong>day</strong>; darker means more people added, and the count is in the square. <strong>Hover a square</strong> to list the roles behind it. Weekends are shaded. The right-hand column is the 30-day total, the bottom row each day\u2019s total.'],
           ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon, on the chart and underlined in the table. An empty bar on a Sunday is a weekend, not a bad day.'],
           ['The small maroon mark under a bar', 'A <strong>weekday</strong> with no arrivals at all. Weekends do not get one \u2014 nothing happening on a Saturday is not news.'],
         ]
@@ -230,7 +230,7 @@ export const DEFINITIONS = {
           ['%', 'Progressed \u00f7 Added at R1.'],
           ['Rows', 'Pod \u2192 Recruiter \u2192 Role. Only roles that actually saw R1 activity in the period are listed \u2014 a recruiter\u2019s older roles are not shown as a row of zeros.'],
           ['Counted once', 'One count per candidate per role per quarter, however many times they were booked or re-booked. Cancelled interviews and cancelled assignments do not count at all.'],
-          ['Chart', 'A <strong>dumbbell</strong>: the hollow dot is how many were <strong>added at R1</strong>, the solid dot how many <strong>progressed past it</strong>, and the line between them is the drop-off \u2014 so a weak conversion reads as a long bar. The axis runs <strong>down</strong> left to right, which puts added first and progressed second, in the order the stage actually runs. The rate sits in its own labelled column on the right. Hover a row to list the roles behind it.'],
+          ['Chart', 'A <strong>dumbbell</strong>: hollow dot = <strong>added at R1</strong>, solid dot = <strong>progressed past it</strong>, and the line between them is the drop-off. <strong>The axis runs down left to right on purpose</strong>, so it reads added \u2192 progressed. The rate sits in its own column on the right. Hover a row to list its roles.'],
         ]
       },
     ],
@@ -253,12 +253,12 @@ export const DEFINITIONS = {
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and both Fulfilment tables use.'],
           ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
-          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>. <strong>Offered</strong> \u2014 the sum of the three \u2014 sits at the end of the bar, and the <strong>Joining conversion</strong> has its own labelled column down the right-hand edge, the same percentage as the last column of the table. Each coloured section is divided into the <strong>roles</strong> behind it by a thin line one shade darker than the bar. Very small roles are pooled into the last division so the lines stay readable — nobody is dropped, and the totals do not change. Hover anywhere on a section and it lists every role behind it with a count against each. The number stays on the section as a whole, not on every division.'],
+          ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>, with <strong>Offered</strong> (their sum) at the end and <strong>Joining conversion</strong> in its own column on the right. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them.'],
         ]
       },
     ],
     warnings: [
-      ['This measures drop-out, not joining', 'Joined and Joining Pending sit on <em>both</em> sides of the fraction, so they cancel: the figure is arithmetically <strong>1 − Dropped ÷ Offered</strong>. It will hover near 96% and move only when people fall out. A quarter where everyone joined and one where everyone is still waiting score the same. That is the intended question — <em>who have we lost?</em> — not a measure of how many started.'],
+      ['This measures drop-out, not joining', 'Joined and Joining Pending appear on both sides of the fraction, so they cancel: it is really <strong>1 \u2212 Dropped \u00f7 Offered</strong>. It sits near 96% and moves only when people fall out. That is the intended question \u2014 <em>who have we lost?</em>'],
       ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in Ref Check, Documentation or Offer <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered. Kept that way on purpose, so this column matches the HM Positions card instead of inventing a fifth definition.'],
       ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab — see <strong>Data Hygiene → Pod Not Set</strong>.'],
     ]
@@ -300,12 +300,12 @@ export const DEFINITIONS = {
           ['Rows', 'Pod → Recruiter → Job. Job rows cover everyone on that role, not only this recruiter.'],
           ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
           ['TA Screen → Offer', 'Measured from real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
-          ['App Review <span class="defs-tag">live</span>', 'Different from the rest, and entirely a waiting pile: it is everyone <strong>currently sitting</strong> in App Review, today minus the date they applied. Nobody in it has finished, so it always shows a dash over an amber figure. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you pick. Marked with an orange asterisk.'],
+          ['App Review <span class="defs-tag">live</span>', 'Entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure, and it cannot be split by quarter. Marked with an orange asterisk.'],
         ]
       },
     ],
     warnings: [
-      ['Why the two figures are kept apart', 'They used to be pooled into a single median, and that made the column measure the calendar instead of the process. In Q1, 250 of TA Screen’s 265 candidates never left the stage, so each one counted as “today minus the day they applied” and the column read <strong>192 days</strong> — one more every day, without anything happening. Quarters could not be compared either: Q1 read 192 days and Q2 109 days, which is simply how long ago each quarter was.'],
+      ['Why the two figures are kept apart', 'Pooled into one median the number measured the calendar, not the process: anyone who never left the stage counted as \u201ctoday minus the day they applied\u201d, so an older quarter always read higher just for being older.'],
       ['One column on this table is not on the same clock as the others', 'App Review is live; every other stage follows the period. That is why it carries the asterisk — do not read across the row as a single candidate’s journey.'],
     ]
   },
@@ -347,7 +347,7 @@ export const DEFINITIONS = {
           ['Total Positions', 'Distinct openings raised in the selected quarter, counted once each in the quarter they were opened.'],
           ['Joined', 'Those positions that have been filled.'],
           ['Joining Pending', 'Everyone parked in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone whose opening belongs to an earlier quarter. Counts <strong>people</strong>. Live — the quarter selector does not change it.'],
-          ['Drop', 'Someone who moved to <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> — they declined, they withdrew, or we closed it with the offer still open. Counted in the quarter they <strong>first reached those stages</strong> (earliest of the three), not the quarter the record was closed. Each person counts <strong>once</strong>, however many times they moved in and out of a stage. The small print is Drop ÷ (Joined + Joining Pending + Drop).'],
+          ['Drop', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Drop \u00f7 (Joined + Joining Pending + Drop).'],
           ['Delta', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
           ['Missed', 'Positions closed as <em>carry forward</em> to the next quarter.'],
           ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role with no Level or Complexity in Ashby is marked <em>unscored</em>: it still counts in HC but adds nothing to Score.'],
@@ -356,7 +356,7 @@ export const DEFINITIONS = {
       {
         heading: 'Charts and the Cases list',
         items: [
-          ['The chart', 'One bar per department, stacked Joined / Joining Pending / Delta with the total on the end — the same three numbers as the table. Each of those three is divided into the <strong>roles</strong> inside the department by a thin line one shade darker than the bar; very small roles are pooled into the last division so the lines stay readable. Hover anywhere on a section and it lists every role behind it with a count against each. The legend is at metric level — clicking one toggles that whole colour.'],
+          ['The chart', 'One bar per department, stacked Joined / Joining Pending / Delta with the total on the end — the same three numbers as the table. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them. The legend is at metric level — clicking one toggles that whole colour.'],
           ['A negative Delta on a chart', 'A bar cannot be drawn backwards, so the Delta segment stops at zero while the table keeps the negative number. The table is the honest version.'],
           ['Joining Pending — Cases', 'Every person with an offer in play, scoped to the Department and Job filters. <strong>Unlinked</strong> means no opening is attached in Ashby, so that person is invisible to the position counts above. Those are the ones to fix first.'],
         ]
@@ -413,7 +413,7 @@ export const DEFINITIONS = {
           ['%', 'Progressed \u00f7 Added at R1.'],
           ['Rows', 'Department \u2192 Role. Only roles that saw R1 activity in the period are listed.'],
           ['Counted once', 'One count per candidate per role per quarter. Cancelled interviews and cancelled assignments do not count at all.'],
-          ['Chart', 'A <strong>dumbbell</strong>: the hollow dot is how many were <strong>added at R1</strong>, the solid dot how many <strong>progressed past it</strong>, and the line between them is the drop-off \u2014 so a weak conversion reads as a long bar. The axis runs <strong>down</strong> left to right, which puts added first and progressed second, in the order the stage actually runs. The rate sits in its own labelled column on the right. Hover a row to list the roles behind it.'],
+          ['Chart', 'A <strong>dumbbell</strong>: hollow dot = <strong>added at R1</strong>, solid dot = <strong>progressed past it</strong>, and the line between them is the drop-off. <strong>The axis runs down left to right on purpose</strong>, so it reads added \u2192 progressed. The rate sits in its own column on the right. Hover a row to list its roles.'],
         ]
       },
     ],
@@ -433,14 +433,14 @@ export const DEFINITIONS = {
           ['Assessed', 'Candidates <strong>assessed</strong> at the stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. Someone who only sat in the queue does not count.'],
           ['Progressed', 'Of those, the ones who then reached a <strong>later stage</strong>. Being rejected or withdrawing does not count.'],
           ['%', 'Progressed ÷ Assessed — of the people actually assessed here, the share who moved forward. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell reading <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, and the <strong>R1/OA \u2192 late stage</strong> span as the last column. A dot means nobody was assessed there. Hover a cell for the counts, the rate and how many it lost.'],
-          ['What the colour means', 'The <strong>shade is how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 not the percentage. Darkest is 100 or more. It used to shade by the rate, which pointed at the wrong stage: a 100% square covering 21 people was the darkest thing on the board while US Business at R1, which lost 144 people, was almost white. A rate cannot tell you whether it came from 500 people or from 3, so it cannot rank what to fix. <strong>The number in the square is still the throughput percentage</strong> \u2014 only the colour changed.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Each cell reads <strong>assessed \u2192 progressed</strong> with the rate below it, shaded by how many people it lost. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there. Hover for the counts, the rate and the loss.'],
+          ['What the colour means', 'The <strong>shade is how many people that square lost</strong> \u2014 assessed there, then never reached a later stage. Darkest is 100 or more. <strong>The number in the square is still the throughput percentage.</strong> Colour ranks what to fix; the number tells you the rate.'],
         ]
       },
     ],
     warnings: [
       ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. Each column is only comparable to its own assessed figure. That is also why the Overall column is a single per-candidate span rather than a sum.'],
-      ['This measure changed on 30 August 2026, and the numbers fell', 'It used to count anyone who had <em>left</em> a stage as having got through it — so being rejected at R1 counted exactly like being promoted to R2, and App Review read 99 → 99 = 100%. It now counts only people who actually reached a later stage. Lower numbers here are the correction, not a decline in performance, and figures from before that date are not comparable.'],
+      ['This measure changed on 30 August 2026, and the numbers fell', 'It used to count anyone who <em>left</em> a stage as having got through it, so a rejection counted like a promotion. It now counts only people who reached a later stage. Lower numbers are the correction, and figures from before 30 Aug 2026 are not comparable.'],
       ['The columns are not a funnel — do not read them left to right', 'Each stage is measured on its own. One column’s <em>progressed</em> will not equal the next column’s <em>assessed</em>, and often will not come close. Three reasons, all real: candidates skip stages (most roles never use Hello Christy or HM Review), <em>progressed</em> means reaching <em>any</em> later stage rather than the next one, and each figure is dated by when the assessment happened — so somebody screened in June and interviewed in July lands in two different quarters. Compare a stage to itself over time, not to its neighbour.'],
       ['Offer shows a count and no rate', 'Offer is the last stage in the ladder, so there is nothing after it to progress to. Showing 0% there would read as everyone falling out at the final step. The number of people assessed at Offer is still shown.'],
       ['Online Assessment carries small numbers', 'Used, but thinly: 182 candidates in total (Q1 159, Q2 75, Q3 83 reached it). Treat a single role’s OA conversion as indicative, not solid.'],
@@ -462,12 +462,12 @@ export const DEFINITIONS = {
           ['Rows', 'Department → Job. Click a department to drill into its roles.'],
           ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
           ['TA Screen → Offer', 'From real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
-          ['App Review <span class="defs-tag">live</span>', 'Different from the rest, and entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you choose. Marked with an orange asterisk.'],
+          ['App Review <span class="defs-tag">live</span>', 'Entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure, and it cannot be split by quarter. Marked with an orange asterisk.'],
         ]
       },
     ],
     warnings: [
-      ['Why the two figures are kept apart', 'They used to be pooled into a single median, and that made the column measure the calendar instead of the process. In Q1, 250 of TA Screen’s 265 candidates never left the stage, so each one counted as “today minus the day they applied” and the column read <strong>192 days</strong> — one more every day, without anything happening. Quarters could not be compared either: Q1 read 192 days and Q2 109 days, which is simply how long ago each quarter was.'],
+      ['Why the two figures are kept apart', 'Pooled into one median the number measured the calendar, not the process: anyone who never left the stage counted as \u201ctoday minus the day they applied\u201d, so an older quarter always read higher just for being older.'],
       ['One column is not on the same clock as the others', 'App Review is live; every other stage follows the period. Do not read across a row as one candidate’s journey.'],
     ]
   },
@@ -485,7 +485,7 @@ export const DEFINITIONS = {
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. The same rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and the Recruiter tab use.'],
           ['Joining Conversion', '(Joined + Joining Pending) \u00f7 Offered \u2014 the share of everyone who reached an offer who has <strong>not</strong> fallen out.'],
-          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with <strong>Offered</strong> at the end of the bar and the <strong>Joining conversion</strong> in its own labelled column down the right-hand edge. Each coloured section is divided into the <strong>roles</strong> behind it by a thin line one shade darker than the bar. Very small roles are pooled into the last division so the lines stay readable — nobody is dropped, and the totals do not change. Hover anywhere on a section and it lists every role behind it with a count against each. The number stays on the section as a whole, not on every division.'],
+          ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with <strong>Offered</strong> at the end of the bar and the <strong>Joining conversion</strong> in its own labelled column down the right-hand edge. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them.'],
         ]
       },
     ],
