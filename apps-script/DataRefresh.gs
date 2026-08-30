@@ -689,7 +689,8 @@ function refreshDashboardData() {
   for (var qk in appResult.qData) { var q = appResult.qData[qk];
     var qJobs = []; for (var jt in q.jobCounts) qJobs.push(q.jobCounts[jt]); qJobs.sort(function(a, b) { return b.applied - a.applied; });
     var qSrc = []; for (var st in q.sourceCounts) qSrc.push(q.sourceCounts[st]); qSrc.sort(function(a, b) { return b.candidates - a.candidates; });
-    quarterly[qk] = { funnel: q.funnel, topJobs: qJobs.slice(0, 10), sources: qSrc }; }
+    var qJobsH = qJobs.slice(); qJobsH.sort(function(a, b) { return b.hired - a.hired; });
+        quarterly[qk] = { funnel: q.funnel, topJobs: qJobs.slice(0, 10), topJobsByHired: qJobsH.slice(0, 10), sources: qSrc }; }
 
   if (appResult.funnel.applied === 0) { Logger.log('WARNING: 0 scoped apps — keeping existing.'); return existing; }
 
@@ -896,6 +897,27 @@ function refreshDashboardData() {
     for (_k in _u) _c++;
     panelByQ[_q3] = _n1; assessedByQ[_q3] = _n2; candidatesInterviewedByQuarter[_q3] = _c;
   }
+  // Year-level DISTINCT counts. The per-quarter maps above dedupe WITHIN a quarter, so the frontend adding
+  // four quarters counted anyone assessed in two of them twice, under a card promising distinct people.
+  // Defensive: the three maps are declared outside the try so a failure costs the year figure, not the run.
+  var candidatesInterviewedByYear = {}, panelInterviewedByYear = {}, assessedByYear = {};
+  try {
+    var _yAcc = {};
+    for (var _qy in _allQ) {
+      var _yr = _qy.substring(0, 4);
+      var _acc = _yAcc[_yr] || (_yAcc[_yr] = { i: {}, o: {} });
+      var _si = _intByQ[_qy] || {}; for (var _k4 in _si) _acc.i[_k4] = 1;
+      var _so = oaAppsByQ[_qy] || {}; for (var _k5 in _so) _acc.o[_k5] = 1;
+    }
+    for (var _yr2 in _yAcc) {
+      var _uu = {}, _p = 0, _a = 0, _cc = 0, _k6;
+      for (_k6 in _yAcc[_yr2].i) { _uu[_k6] = 1; _p++; }
+      for (_k6 in _yAcc[_yr2].o) { _uu[_k6] = 1; _a++; }
+      for (_k6 in _uu) _cc++;
+      panelInterviewedByYear[_yr2] = _p; assessedByYear[_yr2] = _a; candidatesInterviewedByYear[_yr2] = _cc;
+    }
+    Logger.log('Candidates interviewed by YEAR (distinct across the year): ' + JSON.stringify(candidatesInterviewedByYear));
+  } catch (e) { Logger.log('year-level interviewed rollup failed: ' + e.message); }
   Logger.log('Candidates interviewed by quarter: ' + JSON.stringify(candidatesInterviewedByQuarter) + ' (panel ' + JSON.stringify(panelByQ) + ', assessed ' + JSON.stringify(assessedByQ) + ')');
 
   // ===== DROP, unified (2026-08-26) =====
@@ -949,6 +971,7 @@ function refreshDashboardData() {
     appReviewDwellByJob: appResult.appReviewDwellByJob, appReviewDwellByRecruiter: appResult.appReviewDwellByRecruiter,
     interviewers: ivResult.interviewers, panelists: ivResult.panelists, totalInterviews: ivResult.totalInterviews, interviewsByQuarter: ivResult.interviewsByQuarter, interviewsByMonth: ivResult.interviewsByMonth || {},
     candidatesInterviewedByQuarter: candidatesInterviewedByQuarter, panelInterviewedByQuarter: panelByQ, assessedByQuarter: assessedByQ,
+    candidatesInterviewedByYear: candidatesInterviewedByYear, panelInterviewedByYear: panelInterviewedByYear, assessedByYear: assessedByYear,
     dropEvents: dropEvents
   };
   saveDashboardJson_(dashboard);
