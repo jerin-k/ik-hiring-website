@@ -8,10 +8,10 @@
   --muted: #6b7391;
   --accent: #4E6BA6;
   --accent-light: #eaeef6;
-  --accent-deep: #33507f;
+  --accent-deep: #33507f;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
   --navy: #22344f;          /* the frozen header block */
   --navy-line: #33486a;
-  --navy-ink: #a8bcd8;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
+  --navy-ink: #a8bcd8;      /* muted text on the navy bar */
   --green: #398AA2;
   --green-light: #eaf2f4;
   --red: #b45a72;
