@@ -739,4 +739,7 @@ td.tis { text-align: right; white-space: nowrap; line-height: 1.25; }
 td.tis .tis-med { display: block; font-variant-numeric: tabular-nums; }
 td.tis .tis-med.over { color: var(--red); font-weight: 700; }
 td.tis .tis-med.none { color: var(--muted); }
-td.tis .tis-wait { display: block; font-size: 10px; color: var(--orange); font-variant-numeric: tabular-nums; }
+/* Two stacked lines, "20 waiting" over "213 days" — never one line with a separator: a middot between
+   them reads as a decimal point (Jerin, 2026-08-30). Tight leading keeps the three-line cell compact. */
+td.tis .tis-wait { display: block; font-size: 10px; line-height: 1.15; color: var(--orange); font-variant-numeric: tabular-nums; }
+td.tis .tis-wait + .tis-wait { opacity: 0.85; }
