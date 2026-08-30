@@ -75,7 +75,8 @@ export const DEFINITIONS = {
       {
         heading: 'The heat table',
         items: [
-          ['One column per stage', 'The <strong>number</strong> is how many candidates were <em>assessed</em> at that stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. The <strong>shade</strong> is what share of them then reached a <em>later</em> stage: pale under 50%, mid 50–70%, strong over 70%.'],
+          ['One column per stage', 'The <strong>number</strong> is how many candidates were <em>assessed</em> at that stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists, with the share who then reached a <em>later</em> stage below it.'],
+          ['What the colour means', 'The <strong>shade is how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 not the percentage. Darkest is 100 or more. It used to shade by the rate, which pointed at the wrong stage: a 100% square covering 21 people was the darkest thing on the board while US Business at R1, which lost 144 people, was almost white. A rate cannot tell you whether it came from 500 people or from 3, so it cannot rank what to fix. <strong>The number in the square is still the throughput percentage</strong> \u2014 only the colour changed.'],
           ['Rows', 'Department, then the individual roles inside it. Click a department to open it.'],
           ['Overall', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. It is counted per person, never one stage column divided by another — see the warning below.'],
           ['A blank cell', 'A dot or a dash means <strong>nobody was assessed</strong> at that stage in the period — several stages here carry very little traffic, and plenty of roles skip a round entirely. It is not a zero rate, and it is not missing data.'],
@@ -85,7 +86,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart',
         items: [
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell reads <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, and the shade says the same thing as the percentage \u2014 so a weak stage is visible without reading a digit, and the two raw numbers show whether the rate rests on 161 people or on 3. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there, which is not the same as nobody getting through. Hover a cell for the two counts and the rate. It reads the same aggregates as the table below.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell reads <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, and is <strong>shaded by how many people it lost</strong> \u2014 so the eye lands on where the most people fall out, while the number you read is still the rate. The two raw numbers show whether that rate rests on 161 people or on 3. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there, which is not the same as nobody getting through. Hover a cell for the counts, the rate and how many it lost. It reads the same aggregates as the table below.'],
         ]
       },
     ],
@@ -424,7 +425,7 @@ export const DEFINITIONS = {
   'eff-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'The full funnel, stage by stage, <strong>Department → Job</strong>. Of the people <strong>assessed</strong> at each stage, how many <strong>progressed</strong> to a later one.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'The columns',
@@ -432,7 +433,8 @@ export const DEFINITIONS = {
           ['Assessed', 'Candidates <strong>assessed</strong> at the stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. Someone who only sat in the queue does not count.'],
           ['Progressed', 'Of those, the ones who then reached a <strong>later stage</strong>. Being rejected or withdrawing does not count.'],
           ['%', 'Progressed ÷ Assessed — of the people actually assessed here, the share who moved forward. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell reading <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, the shade saying the same as the percentage, and the <strong>R1/OA \u2192 late stage</strong> span as the last column. A dot means nobody was assessed there. Hover a cell for the two counts and the rate. The 13 per-department charts it replaced are gone.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell reading <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, and the <strong>R1/OA \u2192 late stage</strong> span as the last column. A dot means nobody was assessed there. Hover a cell for the counts, the rate and how many it lost.'],
+          ['What the colour means', 'The <strong>shade is how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 not the percentage. Darkest is 100 or more. It used to shade by the rate, which pointed at the wrong stage: a 100% square covering 21 people was the darkest thing on the board while US Business at R1, which lost 144 people, was almost white. A rate cannot tell you whether it came from 500 people or from 3, so it cannot rank what to fix. <strong>The number in the square is still the throughput percentage</strong> \u2014 only the colour changed.'],
         ]
       },
     ],

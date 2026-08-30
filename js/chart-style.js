@@ -438,13 +438,29 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
   // which looks like a total collapse rather than the end of the road. Such a cell carries its count and no
   // rate (Jerin's rule: an unmeasurable figure is better left blank than filled with a misleading zero).
   const pctOf = (c) => (c && !c.noRate && c.inN > 0) ? Math.round((c.outN / c.inN) * 100) : null;
-  // Pale at nothing, deep at everything — the same teal ramp the Momentum heatmap uses.
-  const shade = (v) => {
-    if (v == null) return { bg: '#f4f6f8', fg: '#cbd5e1' };
-    const t = 0.14 + 0.86 * Math.min(1, v / 100);
-    const mix = (a, b) => Math.round(a + (b - a) * t);
-    return { bg: `rgb(${mix(238, 30)},${mix(244, 117)},${mix(246, 144)})`, fg: t > 0.55 ? '#fff' : '#334155' };
+  // 🚨 THE SQUARE IS SHADED BY PEOPLE LOST, NOT BY THROUGHPUT % (Jerin, 2026-08-30).
+  // It used to shade by the rate, which pointed the eye at the wrong stage: in 2026-Q3 the darkest square
+  // on the board was a 100% cell covering 21 people, while US Business at R1 — which lost 144 — was almost
+  // white. A rate cannot say whether it came from 500 people or from 3, so it cannot rank what to fix.
+  // The NUMBERS in the square are unchanged: the flow on top, the throughput % below it. Only the colour
+  // moved. Losing the % was considered and rejected — a bare "23" doesn't tell you Human Resource passes
+  // only 15% at R1.
+  // Fixed buckets rather than a relative scale, so a square means the same thing whatever the filter says.
+  const LOSS_STEPS = [
+    { max: 9, bg: '#eef2f7', fg: '#0f172a' },
+    { max: 29, bg: '#89a6cd', fg: '#0f172a' },
+    { max: 49, bg: '#6e93c4', fg: '#0f172a' },
+    { max: 99, bg: '#46689f', fg: '#ffffff' },
+    { max: Infinity, bg: '#27406b', fg: '#ffffff' }
+  ];
+  // ⚠ Every pairing above clears 4.5:1. The old ramp did not: it flipped the label to white at t > 0.55
+  // while the teal there was still light, so 17 of 60 live squares sat under 4.5:1 and 8 under 3:1 — the
+  // worst at 2.5:1. Re-check the contrast if these hexes are ever touched.
+  const shade = (lost) => {
+    if (lost == null) return { bg: '#f4f6f8', fg: '#cbd5e1' };
+    return LOSS_STEPS.find(s => lost <= s.max);
   };
+  const lostOf = (c) => (c && !c.noRate && c.inN > 0) ? Math.max(0, c.inN - c.outN) : null;
   const band = (v) => v == null ? '#94a3b8' : (v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568'));
 
   let html = '<div class="sheat-row"><div class="sheat-name sheat-hd"></div>'
@@ -457,7 +473,7 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
       const term = !!(c && c.noRate && c.inN > 0);
       // A terminal stage is not an empty one — give it a flat slate fill so it reads as "no rate here",
       // not as "nobody got this far".
-      const s = term ? { bg: '#e6ebf0', fg: '#475569' } : shade(v);
+      const s = term ? { bg: '#e6ebf0', fg: '#475569' } : shade(v == null ? null : lostOf(c));
       // Each square carries the flow and the rate — "161 → 59" over "37%" (Jerin, 2026-08-30). The two
       // raw numbers are what make the percentage trustworthy; a bare 37% hides whether it came from 161
       // people or from 3.
@@ -478,6 +494,11 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
           + `<span class="sh-pct">${ov}%</span>`)
       + '</div></div>';
   });
+  html += '<div class="sheat-legend"><span>PEOPLE LOST AT THE STAGE</span>'
+    + LOSS_STEPS.map((st, i) => `<i style="background:${st.bg}"></i><span>${
+        i === 0 ? '0\u20139' : i === LOSS_STEPS.length - 1 ? '100+'
+        : (LOSS_STEPS[i - 1].max + 1) + '\u2013' + st.max}</span>`).join('')
+    + '<span class="sheat-legend-note">the number in the square is still throughput %</span></div>';
   host.innerHTML = html;
 
   if (!tip) return;
@@ -494,6 +515,7 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
         ? `<div class="tip-row"><span>${esc(labels.inN)}</span><span>${c.inN}</span></div>`
           + `<div class="tip-row"><span>${esc(labels.outN)}</span><span>${c.outN}</span></div>`
           + `<div class="tip-row"><span>throughput</span><span>${v}%</span></div>`
+          + `<div class="tip-row"><span>lost here (the shading)</span><span>${c.inN - c.outN}</span></div>`
         : `<div class="tip-row"><span>${esc(labels.none)}</span><span></span></div>`);
     tip.style.display = 'block';
     const wrap = host.parentElement;

@@ -743,3 +743,13 @@ td.tis .tis-med.none { color: var(--muted); }
    them reads as a decimal point (Jerin, 2026-08-30). Tight leading keeps the three-line cell compact. */
 td.tis .tis-wait { display: block; font-size: 10px; line-height: 1.15; color: var(--orange); font-variant-numeric: tabular-nums; }
 td.tis .tis-wait + .tis-wait { opacity: 0.85; }
+
+/* Stage-heat legend (2026-08-30) — the squares are shaded by PEOPLE LOST, not by throughput %,
+   so the colour needs saying out loud. The number inside the square is still the percentage. */
+.sheat-legend { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 12px 0 2px;
+  padding-left: 14px; font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums; }
+.sheat-legend i { width: 20px; height: 10px; border-radius: 2px; display: inline-block; }
+.sheat-legend i + span { margin-right: 5px; }
+.sheat-legend .sheat-legend-note { margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--border);
+  letter-spacing: 0; font-style: italic; }
