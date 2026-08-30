@@ -245,7 +245,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: PIPELINE ===== -->
     <div class="hm-panel" data-panel="pipeline" style="display:none">
       ${defsBlock('hm-pipeline')}
-      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — counts show where candidates stand today; the date filter does not change them. Click a department to drill in.</p>
+      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — each job's counts show where candidates stand today, not in the selected period. The period decides which <em>jobs</em> are listed, so the department and total rows do move with it. Click a department to drill in.</p>
       <div class="hm-stages">
         <span class="lbl">Stages:</span>
         ${STAGES_ORDER.map(k => `<label><input type="checkbox" class="hm3Stage" value="${k}" checked> ${STAGE_LABELS[k]}</label>`).join('\n        ')}

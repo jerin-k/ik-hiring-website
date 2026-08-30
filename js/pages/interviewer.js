@@ -235,8 +235,14 @@ export function initInterviewer(data, opts = {}) {
     }
     setText('ivCardPanLabel', label ? `Panelists Active · ${label}` : 'Panelists');
     setText('ivCardPanelists', String(people.size));
+    // 🚨 Coverage is built from the ORG-WIDE per-person record — the only grain pendingFeedback has. Under a
+    // filter it therefore covers everything those panelists did ANYWHERE, not the filtered scope: Engineering
+    // reads 281 interviews where Engineering's own are 94 this quarter and 447 all-time, because 4 of its 10
+    // panelists also sit on other departments' panels. The table blanks this metric on department rows for
+    // exactly that reason, so the card must say what it is counting rather than look department-scoped.
     setText('ivCardCoverage', `${pct(covered, lifeInts)}%`);
-    setText('ivCardCoverageSub', `${covered.toLocaleString()} of ${lifeInts.toLocaleString()} interviews have feedback`);
+    setText('ivCardCoverageSub', `${covered.toLocaleString()} of ${lifeInts.toLocaleString()} interviews have feedback`
+      + (scoped ? ' — all their interviews, not only the filtered ones' : ''));
     setText('ivCardTurn', fmtTurn(avgTurn));
     setText('ivThInterviews', label ? `Interviews (${label})` : 'Interviews');
     setText('ivChartTitle', label ? `Top panelists by interview load — ${label}` : 'Top panelists by interview load');
