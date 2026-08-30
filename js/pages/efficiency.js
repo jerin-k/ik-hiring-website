@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
+import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
@@ -133,6 +134,7 @@ export function renderEfficiency(data) {
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
+      <button class="eff-subtab subtab-chip" data-tab="panelists">Panelists</button>
     </div>
 
     <div class="eff-filters">
@@ -252,6 +254,10 @@ export function renderEfficiency(data) {
         <thead><tr><th style="min-width:340px" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
+    </div>
+
+    <div class="eff-panel" data-panel="panelists" style="display:none">
+      <div id="effPanelHost"></div>
     </div>
   `;
 }
@@ -1544,11 +1550,34 @@ export function initEfficiencyFilters(data) {
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
     else if (activeTab === 'joining') renderJoining();   // its chart is built inside renderJoining
     else if (activeTab === 'sourcing') renderSourcing();
+    else if (activeTab === 'panelists') renderPanelists();
   }
 
   // Only the visible panel is rendered. This used to rebuild all seven, which was tolerable at 5 pod charts
   // and is not at 13 department charts (~91 Chart.js instances per filter change). showTab() re-renders on
   // switch, so nothing goes stale.
+  // ===== Panelists — the same Interviewer Efficiency panel Hiring Manager hosts, driven by THIS tab's
+  // filters. One implementation, two mounts; the standalone Interviewer tab is gone.
+  let ivRefresh = null;
+  function renderPanelists() {
+    const host = document.getElementById('effPanelHost');
+    if (!host) return;
+    if (!ivRefresh) {
+      host.innerHTML = renderInterviewer(data, { embedded: true });
+      ivRefresh = initInterviewer(data, {
+        filters: {
+          year: () => document.getElementById('effYear')?.value || '',
+          quarter: () => document.getElementById('effQuarter')?.value || '',
+          depts: () => (msDept ? msDept.getSelected() : []),
+          jobs: () => (msJob ? msJob.getSelected() : []),
+          panelists: () => []            // this tab has no panelist dimension
+        }
+      }) || null;
+    } else {
+      ivRefresh();
+    }
+  }
+
   function renderAll() { renderActive(); }
 
   function showTab(name) {

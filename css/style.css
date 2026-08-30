@@ -8,7 +8,10 @@
   --muted: #6b7391;
   --accent: #4E6BA6;
   --accent-light: #eaeef6;
-  --accent-deep: #33507f;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
+  --accent-deep: #33507f;
+  --navy: #161d29;          /* the frozen header block */
+  --navy-line: #26303f;
+  --navy-ink: #93a2b8;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
   --green: #398AA2;
   --green-light: #eaf2f4;
   --red: #b45a72;
@@ -62,10 +65,14 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .auth-note { font-size: 12px; color: var(--muted); }
 
 /* ===== Header ===== */
+/* ===== The frozen header block (Jerin, 2026-08-30) =====
+   The bar and the nav row are one dark navy block, pinned together so you can switch page from anywhere.
+   The sub-tab band deliberately does NOT stick — that would cost ~136px of every screen instead of ~92. */
 .header {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 16px 28px;
+  position: sticky; top: 0; z-index: 40;
+  background: var(--navy);
+  border-bottom: 0;
+  padding: 13px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -77,10 +84,10 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--text);
+  color: #fff;
 }
 .header-left .meta {
-  color: var(--muted);
+  color: var(--navy-ink);
   font-size: 11px;
   margin-top: 1px;
   font-weight: 400;
@@ -91,25 +98,25 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   align-items: center;
   gap: 16px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--navy-ink);
 }
 
 .header-right .user-email {
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #cbd5e1;
 }
 
 .btn-signout {
   background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  border: 1px solid var(--navy-line);
+  color: #cbd5e1;
   padding: 5px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 11px;
   transition: all .15s;
 }
-.btn-signout:hover { border-color: var(--text-secondary); color: var(--text-secondary); }
+.btn-signout:hover { border-color: #56637a; color: #fff; }
 
 .refresh-btn {
   padding: 5px 12px;
@@ -137,11 +144,12 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
    the only thing telling you where you are: the old treatment (blue text + 2px underline) put the selected
    tab at 5.28:1 against an unselected 4.68:1, a gap of 0.6, which read as "slightly bluer" not "selected". */
 .nav-strip {
+  position: sticky; top: 53px; z-index: 39;
   display: flex;
   gap: 3px;
-  padding: 8px 28px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
+  padding: 7px 28px;
+  background: var(--navy);
+  border-bottom: 1px solid var(--navy-line);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -156,11 +164,13 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   transition: color .15s, background-color .15s;
   white-space: nowrap;
 }
-.nav-tab:hover { color: var(--text); background: var(--border-light); }
+.nav-tab { color: var(--navy-ink); }
+.nav-tab:hover { color: #fff; background: #ffffff14; }
+/* white chip on the navy bar — the accent blue reads muddy against navy, both being blue */
 .nav-tab.active,
 .nav-tab.active:hover {
-  background: var(--accent);
-  color: #fff;
+  background: #fff;
+  color: var(--navy);
   font-weight: 600;
 }
 
@@ -228,7 +238,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 /* on the recessed band the chip lifts off it in white; tinted would blend into the band */
 .subtab-band .subtab-chip:hover { background: #e3e8f1; }
 .subtab-band .subtab-chip.active,
-.subtab-band .subtab-chip.active:hover { background: #fff; color: var(--text); font-weight: 600; }
+.subtab-band .subtab-chip.active:hover { background: var(--navy); color: #fff; font-weight: 600; }
 
 /* legacy classes kept for JS compat */
 .nav-strip-home, .nav-strip-cards, .nav-strip-card { display: none; }

@@ -41,7 +41,7 @@ function allMonthKeys(data) {
 import { defsBlock } from '../definitions.js';
 import { HBAR, hbarHeight } from '../chart-style.js';
 
-export function renderInterviewer(data) {
+export function renderInterviewer(data, opts = {}) {
   const ivs = (data && data.interviewers) || [];
 
   if (!ivs.length) {
@@ -80,6 +80,7 @@ export function renderInterviewer(data) {
     </style>
 
 
+    ${opts.embedded ? '' : `
     <div class="iv-filters">
       <div class="fchip"><span class="lbl">Year</span><select id="ivYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
       <div class="fchip"><span class="lbl">Quarter</span><select id="ivQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
@@ -88,7 +89,7 @@ export function renderInterviewer(data) {
       <div class="fchip"><span class="lbl">Job</span><div class="ms" id="ivMsJob"></div></div>
       <div class="fchip"><span class="lbl">Panelist</span><div class="ms" id="ivMsPanel"></div></div>
       <div class="fchip"><label class="opt" style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="ivExpandAll" checked> Expand all</label></div>
-    </div>
+    </div>`}
 
     ${defsBlock('interviewer')}
 
@@ -118,7 +119,12 @@ export function renderInterviewer(data) {
     </table></div>`;
 }
 
-export function initInterviewer(data) {
+// EMBEDDED MODE (2026-08-30). This panel is no longer a tab of its own — it is mounted inside Hiring
+// Manager and Overall Efficiency, driven by the HOST tab's filters. Pass opts.filters and it reads the
+// period and dimensions from there instead of its own controls, and returns its render function so the
+// host can refresh it when its filters change.
+export function initInterviewer(data, opts = {}) {
+  const F = opts.filters || null;
   const ivs = (data && data.interviewers) || [];
   if (!ivs.length) return;
   const panelists = (data && data.panelists) || [];
@@ -131,7 +137,13 @@ export function initInterviewer(data) {
   const jobList = [...new Set(panelists.map(p => p.jobTitle).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const orgByUser = {}; ivs.forEach(r => { if (r.userId) orgByUser[r.userId] = r; });
 
-  const sel = (id) => document.getElementById(id)?.value || '';
+  const sel = (id) => {
+    if (F) {
+      if (id === 'ivYear') return F.year() || '';
+      if (id === 'ivQuarter') return F.quarter() || '';
+    }
+    return document.getElementById(id)?.value || '';
+  };
 
   // Quarters covered by the Year/Quarter selection; null = all-time.
   function selQuarters() {
@@ -162,9 +174,9 @@ export function initInterviewer(data) {
   }
 
   function filteredPanelists(quarters, months) {
-    const dSel = msIvDept ? msIvDept.getSelected() : [];
-    const jSel = msIvJob ? msIvJob.getSelected() : [];
-    const nSel = msIvPanel ? msIvPanel.getSelected() : [];
+    const dSel = F ? (F.depts() || []) : (msIvDept ? msIvDept.getSelected() : []);
+    const jSel = F ? (F.jobs() || []) : (msIvJob ? msIvJob.getSelected() : []);
+    const nSel = F ? (F.panelists() || []) : (msIvPanel ? msIvPanel.getSelected() : []);
     return panelists
       .filter(p => !dSel.length || dSel.includes(p.dept))
       .filter(p => !jSel.length || jSel.includes(p.jobTitle))
@@ -204,7 +216,11 @@ export function initInterviewer(data) {
     const avgTurn = turnRows.length ? turnRows.reduce((s, r) => s + r.avgTurnaroundHrs, 0) / turnRows.length : null;
 
     const byQ = (data && data.interviewsByQuarter) || null;
-    const scoped = (msIvDept?.getSelected().length || msIvJob?.getSelected().length || msIvPanel?.getSelected().length);
+    // ⚠ Must read the SAME filter source the table used. When embedded these multiselects are null, so
+    // reading them directly left the tile on the org-wide count while the table showed one department.
+    const scoped = F
+      ? ((F.depts() || []).length || (F.jobs() || []).length || (F.panelists() || []).length)
+      : (msIvDept?.getSelected().length || msIvJob?.getSelected().length || msIvPanel?.getSelected().length);
     const distinct = scoped ? null : (!quarters ? ((data && data.totalInterviews) || null)
       : (byQ ? quarters.reduce((s, q) => s + (byQ[q] || 0), 0) : null));
 
@@ -340,21 +356,22 @@ export function initInterviewer(data) {
     });
   }
 
-  msIvDept = makeMultiSelect(document.getElementById('ivMsDept'), 'Department', depts, render);
-  msIvJob = makeMultiSelect(document.getElementById('ivMsJob'), 'Job', jobList, render);
-  msIvPanel = makeMultiSelect(document.getElementById('ivMsPanel'), 'Panelist', names, render);
-  document.getElementById('ivYear')?.addEventListener('change', render);
-  document.getElementById('ivQuarter')?.addEventListener('change', render);
-  document.getElementById('ivExpandAll')?.addEventListener('change', render);
+  if (!F) {
+    msIvDept = makeMultiSelect(document.getElementById('ivMsDept'), 'Department', depts, render);
+    msIvJob = makeMultiSelect(document.getElementById('ivMsJob'), 'Job', jobList, render);
+    msIvPanel = makeMultiSelect(document.getElementById('ivMsPanel'), 'Panelist', names, render);
+    document.getElementById('ivYear')?.addEventListener('change', render);
+    document.getElementById('ivQuarter')?.addEventListener('change', render);
+    document.getElementById('ivExpandAll')?.addEventListener('change', render);
 
-  // Default the period to the CURRENT quarter, matching Recruiter and Overall Efficiency.
-  // Landing on "All"/full-year mixed finished quarters with the one in progress, which is not the view
-  // anyone actually wants first — the live quarter is what gets worked on.
-  const ivY = document.getElementById('ivYear'), ivQ = document.getElementById('ivQuarter');
-  if (ivY) { const nowY = String(new Date().getFullYear()); if ([...ivY.options].some(o => o.value === nowY)) ivY.value = nowY; }
-  if (ivQ) ivQ.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+    // Default the period to the CURRENT quarter, matching Recruiter and Overall Efficiency.
+    const ivY = document.getElementById('ivYear'), ivQ = document.getElementById('ivQuarter');
+    if (ivY) { const nowY = String(new Date().getFullYear()); if ([...ivY.options].some(o => o.value === nowY)) ivY.value = nowY; }
+    if (ivQ) ivQ.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+  }
 
   render();
+  return render;   // the host calls this when ITS filters change
 }
 
 // Generic depth-agnostic collapse/expand over data-path rows (same scheme as the other tabs).

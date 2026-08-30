@@ -260,7 +260,7 @@ const acEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': 
 const AC_DEPTS = Object.keys(DEPT_TREE).sort();
 const AC_TEAMS = [...new Set(Object.values(DEPT_TREE).flat())].sort();
 // Tabs a restricted user can be granted (Overview is always on; Admin is admin-only, never offered here).
-const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency'], ['interviewer', 'Interviewer Efficiency']];
+const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency']];
 // Compact multi-select (native <details> + checkboxes). options = array of strings OR [value, label] pairs.
 function acMs(cls, i, selected, options, labelWord) {
   const opts = options.map(o => Array.isArray(o) ? o : [o, o]);

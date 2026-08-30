@@ -32,21 +32,21 @@ function buildAccess(user) {
     case 'admin':
       return {
         role: 'admin',
-        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'sourcing', 'interviewer', 'admin'],
+        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'sourcing', 'admin'],
         filters: null,
       };
 
     case 'full_access':
       return {
         role: 'full_access',
-        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'sourcing', 'interviewer'],
+        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'sourcing'],
         filters: null,
       };
 
     case 'restricted': {
       // Per-user tab grants (Overview always on; Admin never grantable). Legacy configs without `tabs`
       // fall back to hm-report + (recruiter if the old isRecruiter flag was set). Dept/Team scope the data.
-      const RESTRICTABLE = ['hm-report', 'recruiter', 'efficiency', 'interviewer'];
+      const RESTRICTABLE = ['hm-report', 'recruiter', 'efficiency'];
       const tabs = (user.tabs && user.tabs.length) ? user.tabs
         : ['hm-report'].concat(user.isRecruiter ? ['recruiter'] : []);
       const pages = ['home'];
