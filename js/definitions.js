@@ -326,6 +326,7 @@ export const DEFINITIONS = {
           ['Offers Missing Opening Link', 'Offers with no opening attached that are <strong>still in play</strong>. Without the link the offer cannot be tied to a position, which is why Delta on the HM tab goes negative.'],
           ['Hired Missing Opening Link', 'The same gap on people already hired or archived. Reference only — too late to fix usefully.'],
           ['Roles Missing Score Inputs', 'Roles with no Level or Complexity set in Ashby. They score zero, so they add headcount but no Score anywhere on the dashboard.'],
+          ['Openings Missing Opened Date', 'Openings with no <strong>opened date</strong> in Ashby. They are <strong>left out of Total Openings entirely</strong> \u2014 on Hiring Manager Positions and on Overall Efficiency \u2014 so they are invisible rather than merely undated. One row per opening. Set the date on the opening in Ashby.'],
           ['Capacity Not Set', 'Recruiters with candidates attributed to them but no capacity for the quarter, so they have no target and no utilisation figure.'],
           ['Other Anomalies', 'One-off attribution problems, including any Ashby stage name the pipeline does not recognise — the guard that catches a stage being renamed and silently dropped.'],
         ]

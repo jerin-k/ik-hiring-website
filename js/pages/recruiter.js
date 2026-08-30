@@ -431,6 +431,7 @@ export function renderRecruiter(data) {
         <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
         <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
         <button class="hyg-tab" data-h="unscored">Roles Missing Score Inputs<span class="n" id="hygNUnscored"></span></button>
+        <button class="hyg-tab" data-h="nodate">Openings Missing Opened Date<span class="n" id="hygNNoDate"></span></button>
         <button class="hyg-tab" data-h="nocap">Capacity Not Set<span class="n" id="hygNNoCap"></span></button>
         <button class="hyg-tab" data-h="anomalies">Other Anomalies<span class="n" id="hygNAnom"></span></button>
       </div>
@@ -528,6 +529,18 @@ export function renderRecruiter(data) {
         <div class="scroll-table"><table>
           <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
           <tbody id="hygUnscoredBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="nodate" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Openings missing an opened date</h4>
+          <p class="sub-note" style="margin:0">These openings have no <strong>opened date</strong> in Ashby, so they are <strong>left out of Total Openings entirely</strong> — on the Hiring Manager Positions tab and on Overall Efficiency. They are invisible, not simply undated. Set the opened date on the opening in Ashby and they appear at the next refresh.</p></div>
+          <button class="hyg-dl" data-dl="nodate">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Job status</th><th>Opening ID</th></tr></thead>
+          <tbody id="hygNoDateBody"></tbody>
         </table></div>
       </div>
 
@@ -1687,6 +1700,23 @@ export function initRecruiterFilters(data) {
       .map(j => ({ j, missing: [!j.level || j.level === 'NA' ? 'Level' : null, !j.complexity ? 'Complexity' : null].filter(Boolean) }))
       .filter(x => x.missing.length)
       .sort((a, b) => (b.j.total || 0) - (a.j.total || 0));
+    // Openings with no opened date. The pipeline emits ONE row per opening (not per opening x job), so
+    // this list reconciles exactly with dataQuality.openingsNoOpenedAt. An opening with no date is skipped
+    // by the bucket loop, so it never reaches Total Openings anywhere — invisible, not merely undated.
+    const noDate = (data.openingsNoDate || []).slice()
+      .sort((a, b) => (b.status === 'Open') - (a.status === 'Open')
+        || (a.department || '').localeCompare(b.department || '')
+        || (a.title || '').localeCompare(b.title || ''));
+    const ndBody = document.getElementById('hygNoDateBody');
+    if (ndBody) {
+      ndBody.innerHTML = noDate.map(o => `<tr>
+        <td style="font-weight:500">${esc(o.title || '(job not found)')}${o.jobs > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">+${o.jobs - 1} more job${o.jobs > 2 ? 's' : ''}</span>` : ''}</td>
+        <td>${esc(o.department || '—')}</td>
+        <td class="${o.status === 'Open' ? 'warn' : 'zero'}">${esc(o.status || '—')}</td>
+        <td>${mono(o.openingId || '')}</td></tr>`).join('')
+        || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">Every opening has an opened date. \u2713</td></tr>`;
+    }
+
     const usBody = document.getElementById('hygUnscoredBody');
     if (usBody) {
       usBody.innerHTML = unscored.map(({ j, missing }) => `<tr>
@@ -1798,6 +1828,7 @@ export function initRecruiterFilters(data) {
     setN('hygNOfferGap', gapLive.length, true);
     setN('hygNHiredGap', gapDone.length, false);
     setN('hygNUnscored', unscored.length, true);
+    setN('hygNNoDate', noDate.length, true);
     setN('hygNNoPod', noPod.length, true);
     setN('hygNNoCap', noCap.length, true);
     setN('hygNAnom', anomList.length, true);
@@ -1826,6 +1857,8 @@ export function initRecruiterFilters(data) {
         ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.doj || '', g.recruiter || ''])],
       hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'DOJ', 'Recruiter'],
         ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.doj || '', g.recruiter || ''])],
+      nodate: () => [['Job', 'Department', 'Job status', 'Opening ID', 'Jobs on this opening'],
+        ...noDate.map(o => [o.title || '', o.department || '', o.status || '', o.openingId || '', o.jobs || 1])],
       unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Missing', 'Applications'],
         ...unscored.map(({ j, missing }) => [j.title || '', j.department || '', j.level || '', j.complexity || '', missing.join(' + '), j.total || 0])],
       anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
