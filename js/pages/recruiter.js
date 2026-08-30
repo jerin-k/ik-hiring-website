@@ -158,7 +158,7 @@ export function renderRecruiter(data) {
 
   return `
     <style>
-      .rec-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .rec-subtabs is the recessed .subtab-band — see style.css */
       /* .rec-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
       /* ===== Momentum heatmap (2026-08-30) — recruiter x day, one cell per day =====
@@ -210,8 +210,7 @@ export function renderRecruiter(data) {
       .hyg-dl:hover { color:var(--text); border-color:#cbd5e1; }
 
       /* consolidated filter block (matches HM) */
-      .rec-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
-        display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
+      /* .rec-filters look now lives in style.css — one quiet row, defined once */
       .rec-filters select, .rec-filters input[type=date], .rec-filters input[type=text] {
         appearance:none; -webkit-appearance:none; height:34px; padding:0 11px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); }
@@ -221,7 +220,7 @@ export function renderRecruiter(data) {
       .rec-filters select:hover, .rec-filters input:hover { border-color:var(--muted); }
       .rec-filters select:focus, .rec-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
       .rec-filters .fchip { display:flex; align-items:center; gap:7px; }
-      .rec-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      /* .rec-filters label styling lives in style.css — quiet, sentence case */
       .rec-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text) }
       .rec-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
 
@@ -285,7 +284,7 @@ export function renderRecruiter(data) {
       .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
     </style>
 
-    <div class="rec-subtabs">
+    <div class="rec-subtabs subtab-band">
       <button class="rec-subtab subtab-chip active" data-tab="fulfilment">Fulfilment</button>
       <button class="rec-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="rec-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
@@ -293,20 +292,20 @@ export function renderRecruiter(data) {
       <button class="rec-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
       <button class="rec-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="rec-subtab subtab-chip" data-tab="hygiene">Data Hygiene</button>
-    </div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
 
     <div class="rec-filters">
-      <div class="fchip"><span class="lbl">POD</span><div class="ms" id="msPod"></div></div>
-      <div class="fchip"><span class="lbl">Recruiter</span><div class="ms" id="msRec"></div></div>
-      <div class="fchip"><span class="lbl">Job</span><div class="ms" id="msJob"></div></div>
+      <div class="fchip"><div class="ms" id="msPod"></div></div>
+      <div class="fchip"><div class="ms" id="msRec"></div></div>
+      <div class="fchip"><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
       <div class="fchip"><label class="opt" title="Past recruiter = no longer holds an elevated recruiter seat in Ashby. Their offers and hires still count toward history; tick this to bring them back into the view."><input type="checkbox" id="recInclInactive"> Include past recruiters</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="recVelTo"></div>
-      <div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
-      <div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+      
+      
       <p class="sub-note" id="recQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p>
     </div>
 

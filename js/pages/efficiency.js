@@ -77,11 +77,10 @@ export function renderEfficiency(data) {
 
   return `
     <style>
-      .eff-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .eff-subtabs is the recessed .subtab-band — see style.css */
       /* .eff-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
-      .eff-filters { background:#e4eaf4; border:1px solid #c3d0e8; border-radius:12px; padding:14px 18px; margin-bottom:18px;
-        display:flex; flex-wrap:wrap; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(15,23,42,0.06); }
+      /* .eff-filters look now lives in style.css — one quiet row, defined once */
       .eff-filters select, .eff-filters input[type=date] {
         appearance:none; -webkit-appearance:none; height:34px; padding:0 11px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); }
@@ -91,7 +90,7 @@ export function renderEfficiency(data) {
       .eff-filters select:hover, .eff-filters input:hover { border-color:var(--muted); }
       .eff-filters select:focus, .eff-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
       .eff-filters .fchip { display:flex; align-items:center; gap:7px; }
-      .eff-filters .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      /* .eff-filters label styling lives in style.css — quiet, sentence case */
       .eff-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text) }
       .eff-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
 
@@ -126,7 +125,7 @@ export function renderEfficiency(data) {
     </style>
 
 
-    <div class="eff-subtabs">
+    <div class="eff-subtabs subtab-band">
       <button class="eff-subtab subtab-chip active" data-tab="fulfilment">Fulfilment</button>
       <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
@@ -134,17 +133,17 @@ export function renderEfficiency(data) {
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
-    </div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
 
     <div class="eff-filters">
-      <div class="fchip"><span class="lbl">Department</span><div class="ms" id="effMsDept"></div></div>
-      <div class="fchip"><span class="lbl">Job</span><div class="ms" id="effMsJob"></div></div>
+      <div class="fchip"><div class="ms" id="effMsDept"></div></div>
+      <div class="fchip"><div class="ms" id="effMsJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all branches</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="effVelFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="effVelTo"></div>
-      <div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div>
-      <div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+      
+      
     </div>
 
     <!-- PANEL: Fulfilment -->

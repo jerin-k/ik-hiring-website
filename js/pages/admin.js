@@ -106,11 +106,11 @@ export function renderAdmin(accessConfig, data) {
       .cfg-ref table { width:100%; font-size:12px; }
       .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
       .cfg-scroll { overflow-x:auto; }
-      .adm-subtabs { display:flex; gap:4px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 8px; margin-bottom:14px; }
+      /* .adm-subtabs is the recessed .subtab-band — see style.css */
       /* .adm-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
     </style>
 
-    <div class="adm-subtabs">
+    <div class="adm-subtabs subtab-band">
       <button class="adm-subtab subtab-chip active" data-atab="access">Access Management</button>
       <button class="adm-subtab subtab-chip" data-atab="metric">Metric Configuration</button>
     </div>
