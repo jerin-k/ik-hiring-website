@@ -1046,11 +1046,15 @@ function backfillArchivedLateStage() {
     // done  = the original drop pass (late-stage arrivals). v2 = the same application re-read for its
     // HM Screening arrival, which ToFU needs and the first pass threw away. An application is skipped
     // only once BOTH passes have seen it, so adding v2 costs one more sweep and then nothing.
-    if (store.done[a.id] && store.v2 && store.v2[a.id] && store.v3 && store.v3[a.id]) continue;
+    if (store.done[a.id] && store.v2 && store.v2[a.id] && store.v3 && store.v3[a.id] && store.v4 && store.v4[a.id]) continue;
     try {
       var res = ashbyPost_('/application.listHistory', { applicationId: a.id });
       var hist = (res && (res.results || res.history)) || [];
       var earliest = null, hmEarliest = null, beyondR1 = null;
+      // v4 (2026-08-30): the whole stage timeline, not just the three dates the earlier passes
+      // kept. Throughput needs to know which stage an archived candidate was sitting in when a
+      // feedback form was submitted, and applicationFeedback carries no stage of its own.
+      var wins = [];
       for (var h = 0; h < hist.length; h++) {
         var ht = hist[h];
         if (!ht || !ht.enteredStageAt) continue;
@@ -1064,12 +1068,18 @@ function backfillArchivedLateStage() {
         // bookings are archived, so the rate would read about 23% when the truth is higher. Record the
         // earliest stage beyond R1 here, on the same sweep that already has the history open.
         if (BEYOND_R1_[ht.title] && (!beyondR1 || String(ht.enteredStageAt) < String(beyondR1))) beyondR1 = ht.enteredStageAt;
+        var wk = STAGE_KEY_MAP[ht.title];
+        if (wk) wins.push({ k: wk, e: String(ht.enteredStageAt).substring(0, 10),
+                            l: ht.leftStageAt ? String(ht.leftStageAt).substring(0, 10) : null });
       }
       store.done[a.id] = 1;
       if (!store.v2) store.v2 = {};
       store.v2[a.id] = 1;
       if (!store.v3) store.v3 = {};
       store.v3[a.id] = 1;
+      if (!store.v4) store.v4 = {};
+      store.v4[a.id] = 1;
+      if (wins.length) { if (!store.win) store.win = {}; store.win[a.id] = wins; }
       if (hmEarliest) { if (!store.tofuHm) store.tofuHm = {}; store.tofuHm[a.id] = String(hmEarliest).substring(0, 10); }
       if (beyondR1) { if (!store.beyondR1) store.beyondR1 = {}; store.beyondR1[a.id] = String(beyondR1).substring(0, 10); }
       pulled++;
