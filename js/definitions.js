@@ -286,22 +286,25 @@ export const DEFINITIONS = {
 
   'rec-tis': {
     summary: 'How these numbers are worked out',
-    intro: 'How long candidates sit waiting at each step — the number is the <strong>median days</strong>, so one stuck candidate cannot drag a whole column.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'How long each step actually takes. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['The numbers', 'Median days a candidate was parked in that stage. Hover a cell for the average and how many candidates it is based on.'],
-          ['Red', 'Above 5 days. Colour only — nothing is filtered out.'],
+          ['The number on top', 'Median days for candidates who <strong>left</strong> the stage — how long that step actually took. This is the only figure on the table you can compare between quarters. Hover a cell for the average and how many candidates it is based on.'],
+          ['The amber figure below', 'The people <strong>still sitting</strong> in that stage — how many, and the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
+          ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
+          ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
           ['Rows', 'Pod → Recruiter → Job. Job rows cover everyone on that role, not only this recruiter.'],
           ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
-          ['TA Screen → Offer', 'Measured from real stage history: when they entered the stage to when they left it, for candidates who entered during the selected period.'],
-          ['App Review <span class="defs-tag">live</span>', 'Different from the rest: it measures everyone <strong>currently sitting</strong> in App Review, today minus the date they applied. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you pick. It is marked with an orange asterisk.'],
+          ['TA Screen → Offer', 'Measured from real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
+          ['App Review <span class="defs-tag">live</span>', 'Different from the rest, and entirely a waiting pile: it is everyone <strong>currently sitting</strong> in App Review, today minus the date they applied. Nobody in it has finished, so it always shows a dash over an amber figure. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you pick. Marked with an orange asterisk.'],
         ]
       },
     ],
     warnings: [
+      ['Why the two figures are kept apart', 'They used to be pooled into a single median, and that made the column measure the calendar instead of the process. In Q1, 250 of TA Screen’s 265 candidates never left the stage, so each one counted as “today minus the day they applied” and the column read <strong>192 days</strong> — one more every day, without anything happening. Quarters could not be compared either: Q1 read 192 days and Q2 109 days, which is simply how long ago each quarter was.'],
       ['One column on this table is not on the same clock as the others', 'App Review is live; every other stage follows the period. That is why it carries the asterisk — do not read across the row as a single candidate’s journey.'],
     ]
   },
@@ -444,20 +447,25 @@ export const DEFINITIONS = {
 
   'eff-tis': {
     summary: 'How these numbers are worked out',
-    intro: 'How long candidates sit waiting at each step, <strong>Department → Job</strong>. The number is the <strong>median days</strong>, so a handful of stuck candidates cannot drag the whole column.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'How long each step actually takes, <strong>Department → Job</strong>. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['The numbers', 'Median days parked in that stage. Hover for the average and the number of candidates behind it.'],
-          ['Red', 'Above 5 days. Colour only — nothing is hidden.'],
-          ['TA Screen → Offer', 'From real stage history: entered to left, for candidates who entered during the selected period.'],
-          ['App Review <span class="defs-tag">live</span>', 'Everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you choose. Marked with an orange asterisk.'],
+          ['The number on top', 'Median days for candidates who <strong>left</strong> the stage — how long that step actually took. This is the only figure on the table you can compare between quarters. Hover a cell for the average and how many candidates it is based on.'],
+          ['The amber figure below', 'The people <strong>still sitting</strong> in that stage — how many, and the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
+          ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
+          ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
+          ['Rows', 'Department → Job. Click a department to drill into its roles.'],
+          ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
+          ['TA Screen → Offer', 'From real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
+          ['App Review <span class="defs-tag">live</span>', 'Different from the rest, and entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure. There is no history behind it, so it cannot be split by quarter and keeps its live value whatever period you choose. Marked with an orange asterisk.'],
         ]
       },
     ],
     warnings: [
+      ['Why the two figures are kept apart', 'They used to be pooled into a single median, and that made the column measure the calendar instead of the process. In Q1, 250 of TA Screen’s 265 candidates never left the stage, so each one counted as “today minus the day they applied” and the column read <strong>192 days</strong> — one more every day, without anything happening. Quarters could not be compared either: Q1 read 192 days and Q2 109 days, which is simply how long ago each quarter was.'],
       ['One column is not on the same clock as the others', 'App Review is live; every other stage follows the period. Do not read across a row as one candidate’s journey.'],
     ]
   },

@@ -1,7 +1,8 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
 import { scoreForRole } from '../score-model.js';
-import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE } from '../stage-time.js';
+import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
+         hasWaitSplit, tisPair, poolPairs, tisCellSplit, TIS_SPLIT_NOTE } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip } from '../chart-style.js';
 
@@ -581,6 +582,10 @@ export function initRecruiterFilters(data) {
   // Per-quarter dwell (bucketed by the quarter the candidate ENTERED the stage), added 2026-08-21.
   const tisRecQ = _sr.timeInStageByRecruiterQ || null, tisJobQ = _sr.timeInStageByJobQ || null;
   const tisHasQ = hasQuarterTis(_sr);
+  // Candidates still sitting in the stage, kept apart from completed stays (see stage-time.js).
+  const waitRec = _sr.waitingByRecruiter || null, waitJob = _sr.waitingByJob || null;
+  const waitRecQ = _sr.waitingByRecruiterQ || null, waitJobQ = _sr.waitingByJobQ || null;
+  const tisSplit = hasWaitSplit(_sr);
   const arDwellRec = data.appReviewDwellByRecruiter || null, arDwellJob = data.appReviewDwellByJob || null;
 
   // jobs[] is keyed by an 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
@@ -1524,10 +1529,12 @@ export function initRecruiterFilters(data) {
     if (!per) { el.style.display = 'none'; return; }
     const label = per.length === 1 ? per[0] : per[0].slice(0, 4);
     el.style.display = '';
-    el.style.color = tisHasQ ? 'var(--muted)' : 'var(--orange)';
-    el.innerHTML = tisHasQ
-      ? `Showing <strong>${label}</strong> — candidates who <strong>entered</strong> each stage in that period. <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`
-      : `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`;
+    el.style.color = (tisHasQ && tisSplit) ? 'var(--muted)' : 'var(--orange)';
+    el.innerHTML = !tisHasQ
+      ? `Heads up: these medians are <strong>all-time</strong>, not ${label}. The stage-history file predates the per-quarter breakdown — it appears here after the next stage-history refresh.`
+      : !tisSplit
+      ? `Heads up: these medians still <strong>include candidates who have not left the stage yet</strong>, measured to today, so older quarters read higher for that reason alone. The split into finished vs still-waiting appears here after the next stage-history refresh.`
+      : `Showing <strong>${label}</strong> — candidates who <strong>entered</strong> each stage in that period. ${TIS_SPLIT_NOTE} <span style="color:var(--orange)">*</span> ${APP_REVIEW_LIVE_NOTE}`;
   }
 
   // Pod → Recruiter → Job, median days a candidate is parked per stage (red > 5). App Review = still-parked
@@ -1548,10 +1555,21 @@ export function initRecruiterFilters(data) {
     const q = selQuarter();
     const groups = groupByPod(getFilteredRecs(), q);
     // App Review is a live snapshot with no historical dimension, so it never takes the period; the rest do.
-    const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellRec && arDwellRec[r.name]) || {}) : tisHist(tisRec, tisRecQ, r.name, sk, per));
-    const jobHists = (j8) => TIS_STAGES.map(([sk]) => sk === 'appReview' ? ((arDwellJob && arDwellJob[j8]) || {}) : tisHist(tisJob, tisJobQ, j8, sk, per));
-    const rowCells = (arr) => arr.map(hh => tisCell(hh, 5)).join('');
-    const poolCells = (arrs) => TIS_STAGES.map((_, i) => tisCell(poolHists(arrs.map(a => a[i])), 5)).join('');
+    // App Review is 100% still-waiting by construction (today − applied, for everyone parked there), so it
+    // has no completed-stay median at all — the cell reads "—" over its waiting pile. That is the honest
+    // shape of that column and always was; pooling simply disguised it as a processing time.
+    const arPair = (dw) => ({ fin: {}, wait: dw || {}, live: true });
+    const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview'
+      ? arPair(arDwellRec && arDwellRec[r.name])
+      : tisPair(tisRec, tisRecQ, waitRec, waitRecQ, r.name, sk, per, tisSplit));
+    const jobHists = (j8) => TIS_STAGES.map(([sk]) => sk === 'appReview'
+      ? arPair(arDwellJob && arDwellJob[j8])
+      : tisPair(tisJob, tisJobQ, waitJob, waitJobQ, j8, sk, per, tisSplit));
+    // On an older data file there is no split to show, so fall back to exactly the previous single-number
+    // cell rather than passing a pooled median off as a completed-stay time. tisNote says so on screen.
+    const cell = (p) => tisSplit ? tisCellSplit(p, 5) : tisCell(p.live ? p.wait : p.fin, 5);
+    const rowCells = (arr) => arr.map(cell).join('');
+    const poolCells = (arrs) => TIS_STAGES.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
     let html = '';
     groups.forEach((G, pi) => {
       html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${poolCells(G.recs.map(recHists))}</tr>`;

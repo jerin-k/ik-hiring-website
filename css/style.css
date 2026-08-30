@@ -730,3 +730,13 @@ details.defs.defs-full[open] > summary {
 .sheat-tip .tip-hd { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
 .sheat-tip .tip-row { display: flex; justify-content: space-between; gap: 14px; line-height: 1.6; }
 .sheat-tip .tip-row span:last-child { font-weight: 600; }
+
+/* ===== Time in Process cells (2026-08-30) =====
+   Two figures per cell: the median for candidates who FINISHED the stage, and under it in amber how many
+   are still sitting there and how long they have waited. Before this the two were pooled into one median,
+   which made the column measure how long ago the quarter was rather than how long the stage takes. */
+td.tis { text-align: right; white-space: nowrap; line-height: 1.25; }
+td.tis .tis-med { display: block; font-variant-numeric: tabular-nums; }
+td.tis .tis-med.over { color: var(--red); font-weight: 700; }
+td.tis .tis-med.none { color: var(--muted); }
+td.tis .tis-wait { display: block; font-size: 10px; color: var(--orange); font-variant-numeric: tabular-nums; }
