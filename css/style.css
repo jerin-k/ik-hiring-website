@@ -9,9 +9,9 @@
   --accent: #4E6BA6;
   --accent-light: #eaeef6;
   --accent-deep: #33507f;
-  --navy: #161d29;          /* the frozen header block */
-  --navy-line: #26303f;
-  --navy-ink: #93a2b8;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
+  --navy: #22344f;          /* the frozen header block */
+  --navy-line: #33486a;
+  --navy-ink: #a8bcd8;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
   --green: #398AA2;
   --green-light: #eaf2f4;
   --red: #b45a72;
@@ -80,6 +80,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   gap: 8px;
 }
 
+.header-left { display: flex; align-items: center; gap: 12px; }
+.ik-mark { height: 30px; width: auto; flex-shrink: 0; display: block; }
+
 .header-left h1 {
   font-size: 15px;
   font-weight: 600;
@@ -103,20 +106,20 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 
 .header-right .user-email {
   font-weight: 500;
-  color: #cbd5e1;
+  color: #dbe4f0;
 }
 
 .btn-signout {
   background: none;
   border: 1px solid var(--navy-line);
-  color: #cbd5e1;
+  color: #dbe4f0;
   padding: 5px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 11px;
   transition: all .15s;
 }
-.btn-signout:hover { border-color: #56637a; color: #fff; }
+.btn-signout:hover { border-color: #7d94b8; color: #fff; }
 
 .refresh-btn {
   padding: 5px 12px;
