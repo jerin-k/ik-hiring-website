@@ -12,6 +12,9 @@
   --navy: #22344f;          /* the frozen header block */
   --navy-line: #33486a;
   --navy-ink: #a8bcd8;      /* muted text on the navy bar */
+  --navy-sub: #27406b;      /* the active sub-tab chip. Lighter than --navy on purpose: the same
+                               ink sits on a pale band here, so it reads heavier than it does on
+                               the header. Do NOT collapse this back into --navy. */
   --green: #398AA2;
   --green-light: #eaf2f4;
   --red: #b45a72;
@@ -241,7 +244,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 /* on the recessed band the chip lifts off it in white; tinted would blend into the band */
 .subtab-band .subtab-chip:hover { background: #e3e8f1; }
 .subtab-band .subtab-chip.active,
-.subtab-band .subtab-chip.active:hover { background: var(--navy); color: #fff; font-weight: 600; }
+.subtab-band .subtab-chip.active:hover { background: var(--navy-sub); color: #fff; font-weight: 600; }
 
 /* legacy classes kept for JS compat */
 .nav-strip-home, .nav-strip-cards, .nav-strip-card { display: none; }
