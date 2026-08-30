@@ -447,17 +447,22 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
   // only 15% at R1.
   // Fixed buckets rather than a relative scale, so a square means the same thing whatever the filter says.
   const LOSS_STEPS = [
-    { max: 9, bg: '#eef2f7', fg: '#0f172a' },
+    { max: 9, bg: '#ffffff', fg: '#0f172a' },
     { max: 29, bg: '#89a6cd', fg: '#0f172a' },
     { max: 49, bg: '#6e93c4', fg: '#0f172a' },
     { max: 99, bg: '#46689f', fg: '#ffffff' },
     { max: Infinity, bg: '#27406b', fg: '#ffffff' }
   ];
+  // 🚨 The 0\u20139 step is WHITE and an empty cell is TRANSPARENT, which only reads because `.sheat-wrap`
+  // carries a pale blue ground (Jerin, 2026-08-30 \u2014 treatment B of the styling mock-ups). Before this the two
+  // were '#eef2f7' and '#f4f6f8', four points apart on a white page, so **nobody was assessed here** and
+  // **this went perfectly, nobody lost** looked identical. Do not put this grid back on a white ground
+  // without re-separating those two states.
   // ⚠ Every pairing above clears 4.5:1. The old ramp did not: it flipped the label to white at t > 0.55
   // while the teal there was still light, so 17 of 60 live squares sat under 4.5:1 and 8 under 3:1 — the
   // worst at 2.5:1. Re-check the contrast if these hexes are ever touched.
   const shade = (lost) => {
-    if (lost == null) return { bg: '#f4f6f8', fg: '#cbd5e1' };
+    if (lost == null) return { bg: 'transparent', fg: '#94a3b8' };
     return LOSS_STEPS.find(s => lost <= s.max);
   };
   const lostOf = (c) => (c && !c.noRate && c.inN > 0) ? Math.max(0, c.inN - c.outN) : null;
@@ -495,7 +500,7 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
       + '</div></div>';
   });
   html += '<div class="sheat-legend"><span>PEOPLE LOST AT THE STAGE</span>'
-    + LOSS_STEPS.map((st, i) => `<i style="background:${st.bg}"></i><span>${
+    + LOSS_STEPS.map((st, i) => `<i style="background:${st.bg}${i === 0 ? ';box-shadow:inset 0 0 0 1px #cbd5e1' : ''}"></i><span>${
         i === 0 ? '0\u20139' : i === LOSS_STEPS.length - 1 ? '100+'
         : (LOSS_STEPS[i - 1].max + 1) + '\u2013' + st.max}</span>`).join('')
     + '<span class="sheat-legend-note">the number in the square is still throughput %</span></div>';

@@ -708,22 +708,24 @@ details.defs.defs-full[open] > summary {
    Overall Efficiency throughput tabs so the two cannot drift — the number in the cell is the throughput
    percentage and the shade carries the same thing, so a weak stage is visible without reading a digit.
    HTML rather than canvas: it is a grid of numbers, and the hover needs to show more than one line. */
-.sheat-wrap { position: relative; margin: 0 0 18px; overflow-x: auto; }
+.sheat-wrap { position: relative; margin: 0 0 18px; overflow-x: auto;
+  background: #eef3fa; border-radius: 12px; padding: 16px 18px 12px; }
 .sheat { display: block; min-width: 100%; }
 .sheat-row { display: flex; align-items: center; gap: 3px; margin-bottom: 4px; }
-.sheat-name { width: 190px; min-width: 190px; font-size: 13px; color: var(--text); text-align: left;
-  padding-left: 14px; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sheat-cell { flex: 1 1 0; min-width: 66px; height: 46px; border-radius: 4px; background: #f4f6f8;
+.sheat-name { width: 190px; min-width: 190px; font-size: 13px; color: var(--text); text-align: right;
+  font-weight: 500; padding-left: 4px; padding-right: 14px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.sheat-cell { flex: 1 1 0; min-width: 66px; height: 46px; border-radius: 4px; background: transparent;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   color: #334155; }
 .sheat-cell .sh-flow, .sheat-ov .sh-flow { font-size: 11px; font-weight: 400; opacity: 0.85; letter-spacing: 0.01em; }
 .sheat-cell .sh-pct, .sheat-ov .sh-pct { font-size: 13px; font-weight: 600; }
-.sheat-cell.none { color: #cbd5e1; font-weight: 400; }
-.sheat-hd { font-size: 11px; color: var(--muted); height: 20px; flex-direction: row; background: none !important; font-weight: 500;
+.sheat-cell.none { color: #94a3b8; font-weight: 400; }
+.sheat-hd { font-size: 11px; color: #475569; height: 20px; flex-direction: row; background: none !important; font-weight: 500;
   text-align: center; line-height: 1.2; }
 .sheat-ov { width: 104px; min-width: 104px; border-radius: 4px; height: 46px; display: flex;
   flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  font-size: 13px; font-weight: 600; background: #f8fafc; }
+  font-size: 13px; font-weight: 600; background: #ffffff; }
 .sheat-tip { position: absolute; z-index: 40; pointer-events: none; display: none; background: #fff;
   border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(15,23,42,0.13);
   padding: 9px 11px; font-size: 11.5px; color: var(--text); max-width: 300px; }
@@ -747,7 +749,7 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 /* Stage-heat legend (2026-08-30) — the squares are shaded by PEOPLE LOST, not by throughput %,
    so the colour needs saying out loud. The number inside the square is still the percentage. */
 .sheat-legend { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 12px 0 2px;
-  padding-left: 14px; font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
+  padding-left: 14px; font-size: 11px; color: #475569; letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums; }
 .sheat-legend i { width: 20px; height: 10px; border-radius: 2px; display: inline-block; }
 .sheat-legend i + span { margin-right: 5px; }
