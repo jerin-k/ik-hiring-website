@@ -189,7 +189,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
   border-bottom: 1px solid var(--border) !important;
   padding: 12px 0 13px !important; margin: 0 0 16px !important;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
 }
 .rec-filters .fchip > span.lbl, .eff-filters .fchip > span.lbl,
 .hm-filters .fchip > span.lbl, .iv-filters .fchip > span.lbl {
@@ -601,6 +601,10 @@ hr.section-divider { border: none; border-top: 1px solid var(--border); margin: 
   padding: 6px 14px;
   border-radius: 6px;
   border: none;
+  /* 🚨 a <button> does NOT inherit the page font either — .btn set size, weight and padding but never
+     font-family, so every button on the site was rendering in the browser default (Arial on this Mac).
+     Same failure as the date pickers in the filter row. */
+  font-family: inherit;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -610,6 +614,14 @@ hr.section-divider { border: none; border-top: 1px solid var(--border); margin: 
 .btn-primary:hover { background: #3e5a92; }
 .btn-danger { background: var(--red); color: #fff; }
 .btn-sm { padding: 3px 8px; font-size: 11px; }
+/* 🚨 .btn-secondary was used in admin.js but never DEFINED, and those buttons were also missing the
+   base .btn class — so the Download buttons rendered as raw browser chrome beside a styled Publish
+   button. Same failure as .card-label on the Interviewer tiles: a class name that styles nothing. */
+.btn-secondary {
+  background: var(--card); color: var(--text-secondary);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.btn-secondary:hover { background: var(--border-light); color: var(--text); box-shadow: inset 0 0 0 1px var(--muted); }
 
 .badge {
   display: inline-block;

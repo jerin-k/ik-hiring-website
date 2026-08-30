@@ -542,6 +542,27 @@ export const DEFINITIONS = {
     ]
   },
 
+  'admin-metric': {
+    summary: 'How these numbers are worked out',
+    intro: 'The scoring and capacity model behind <strong>Recruiter Efficiency</strong> and <strong>Overall Efficiency</strong>. Everything here is stored <strong>per quarter</strong> and copies forward until someone changes it.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 30 Aug 2026',
+    groups: [
+      {
+        heading: 'Reading it',
+        items: [
+          ['A role\u2019s Score', '<strong>Family + Level + Complexity</strong> \u2192 the grid \u2192 points. Level and Complexity come from the job in Ashby; Family is derived from the department and job title.'],
+          ['Pod', 'Groups recruiters on the Recruiter Efficiency tab. \u26a0 A recruiter with <strong>no pod for the selected quarter is excluded from every row and total</strong> on that tab \u2014 they are listed under Data Hygiene \u2192 Pod Not Set.'],
+          ['Capacity', 'A Score, not a headcount \u2014 the ideal Fulfilment target for that recruiter in that quarter.'],
+          ['Status', '<strong>Read from the Ashby seat, not editable here.</strong> Active means the person holds an elevated recruiter seat. Remove the seat in Ashby and they show as Inactive at the next refresh; their past offers and hires still score.'],
+          ['Per quarter, copy-forward', 'A quarter with no explicit setting inherits the nearest earlier one. Editing a quarter only changes that quarter.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Edits are local until you publish', 'Changes apply in <strong>this browser</strong> immediately, and to nobody else. <strong>Publish to team</strong> writes the shared config everyone sees. The amber line above the buttons tells you when you have unpublished changes.'],
+    ]
+  },
+
   'overview': {
     summary: 'How these numbers are worked out',
     intro: 'The one-page summary. Everything follows the Year/Quarter selector unless it says otherwise.',

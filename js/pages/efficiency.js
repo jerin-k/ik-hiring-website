@@ -138,7 +138,7 @@ export function renderEfficiency(data) {
     <div class="eff-filters">
       <div class="fchip"><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all branches</label></div>
+      <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="effVelFrom"></div>
       <div class="fchip"><span class="lbl">To</span><input type="date" id="effVelTo"></div>

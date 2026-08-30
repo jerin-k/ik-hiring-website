@@ -1,3 +1,4 @@
+import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
 import { markDirty, isDirty, getMeta, publishConfig, configFileText } from '../metric-config.js';
@@ -116,10 +117,6 @@ export function renderAdmin(accessConfig, data) {
     </div>
 
     <div class="adm-panel" data-apanel="access">
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin:0 0 14px;">
-        Controls who can sign in and what they see. Edits apply immediately in this browser; click <strong>Publish access</strong> to make them live for everyone.
-      </p>
-
       <div class="cfg-card" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
         <div style="font-size:12px;line-height:1.6">
           <div id="acStatus" style="font-weight:700"></div>
@@ -127,7 +124,7 @@ export function renderAdmin(accessConfig, data) {
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button id="acPublishBtn" class="btn btn-primary">Publish access</button>
-          <button id="acDownloadBtn" class="btn-secondary" style="padding:8px 12px" title="Download access.json — fallback if publish is unavailable">Download</button>
+          <button id="acDownloadBtn" class="btn btn-secondary" title="Download access.json — fallback if publish is unavailable">Download</button>
         </div>
       </div>
 
@@ -172,11 +169,7 @@ export function renderAdmin(accessConfig, data) {
     <div class="adm-panel" data-apanel="metric" style="display:none">
     <div class="admin-section">
       <h3>Metric Configuration</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-        The scoring &amp; capacity model that drives Recruiter Efficiency and Overall Efficiency. Stored <strong>per quarter</strong>
-        (copy-forward). Edit below, then <strong>Publish to team</strong> to make it the shared config everyone sees.
-        A role's Score = Family + Level + Complexity → grid → points.
-      </p>
+      ${defsBlock('admin-metric')}
 
       <div class="cfg-card" id="mcPublishCard" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
         <div style="font-size:12px;line-height:1.6">
@@ -185,7 +178,7 @@ export function renderAdmin(accessConfig, data) {
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button id="mcPublishBtn" class="btn btn-primary">Publish to team</button>
-          <button id="mcDownloadBtn" class="btn-secondary" style="padding:8px 12px" title="Download metric_config.json — fallback if publish is unavailable">Download</button>
+          <button id="mcDownloadBtn" class="btn btn-secondary" title="Download metric_config.json — fallback if publish is unavailable">Download</button>
         </div>
       </div>
 
@@ -197,7 +190,7 @@ export function renderAdmin(accessConfig, data) {
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 8px">Recruiter → Pod &amp; Capacity</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Pod feeds grouping across the reports; Capacity (a Score) is the ideal Fulfilment target. <strong>Status is read from the Ashby seat</strong> and is not editable here: Active means the person holds an elevated recruiter seat (role <em>Recruiter</em> or <em>Recruiter Admin</em>). Remove that seat in Ashby and they show as Inactive on the next refresh. Historical offers/hires still score, and the reports still include past recruiters. This table lists <strong>current recruiters only</strong> — tick the box below to see the rest. (Pod &amp; Capacity are per-quarter.) Remember to <strong>Publish to team</strong> to share.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Current recruiters only — tick the box below to see the rest.</p>
         <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer" title="Past recruiters no longer hold a recruiter seat in Ashby. Their saved Pod and Capacity are kept either way — this only changes what is listed here.">
           <input type="checkbox" id="cfgShowPast"> Show past recruiters <span id="cfgPastCount" style="color:var(--muted)"></span>
         </label>
