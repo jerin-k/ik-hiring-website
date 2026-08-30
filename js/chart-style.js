@@ -425,9 +425,19 @@ export function buildDumbbell(ctx, rows, opts = {}) {
 // cols: [stage label, ...]  - same length as each row's cells
 export function buildStageHeat(host, tip, rows, cols, opts = {}) {
   const { overallLabel = 'R1 → DOC' } = opts;
+  // The hover words follow the measure. Under the rebuilt definition a cell is "assessed → progressed";
+  // under the old reached/cleared it was "entered → left", and calling that "moved past it" is exactly what
+  // made a rejection read as a pass. Callers pass the pair that matches the data they handed in.
+  const labels = Object.assign(
+    { inN: 'assessed at this stage', outN: 'progressed to a later stage', none: 'nobody was assessed here',
+      terminal: 'last stage \u2014 nothing after it to progress to' },
+    opts.labels || {});
   if (!host) return;
   const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const pctOf = (c) => (c && c.inN > 0) ? Math.round((c.outN / c.inN) * 100) : null;
+  // Offer is the last stage in the ladder, so "progressed" has nowhere to point — it would read 13 → 0 = 0%,
+  // which looks like a total collapse rather than the end of the road. Such a cell carries its count and no
+  // rate (Jerin's rule: an unmeasurable figure is better left blank than filled with a misleading zero).
+  const pctOf = (c) => (c && !c.noRate && c.inN > 0) ? Math.round((c.outN / c.inN) * 100) : null;
   // Pale at nothing, deep at everything — the same teal ramp the Momentum heatmap uses.
   const shade = (v) => {
     if (v == null) return { bg: '#f4f6f8', fg: '#cbd5e1' };
@@ -444,17 +454,29 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     html += `<div class="sheat-row"><div class="sheat-name">${esc(r.label)}</div>`;
     r.cells.forEach((c, ci) => {
       const v = pctOf(c);
-      const s = shade(v);
+      const term = !!(c && c.noRate && c.inN > 0);
+      // A terminal stage is not an empty one — give it a flat slate fill so it reads as "no rate here",
+      // not as "nobody got this far".
+      const s = term ? { bg: '#e6ebf0', fg: '#475569' } : shade(v);
       // Each square carries the flow and the rate — "161 → 59" over "37%" (Jerin, 2026-08-30). The two
       // raw numbers are what make the percentage trustworthy; a bare 37% hides whether it came from 161
       // people or from 3.
-      html += `<div class="sheat-cell${v == null ? ' none' : ''}" style="background:${s.bg};color:${s.fg}"`
+      html += `<div class="sheat-cell${v == null && !term ? ' none' : ''}" style="background:${s.bg};color:${s.fg}"`
         + ` data-r="${ri}" data-c="${ci}">`
-        + (v == null ? '·' : `<span class="sh-flow">${c.inN} \u2192 ${c.outN}</span><span class="sh-pct">${v}%</span>`)
+        + (c && c.noRate && c.inN > 0
+          ? `<span class="sh-flow">${c.inN} assessed</span><span class="sh-pct">\u2014</span>`
+          : v == null ? '\u00b7' : `<span class="sh-flow">${c.inN} \u2192 ${c.outN}</span><span class="sh-pct">${v}%</span>`)
         + '</div>';
     });
     const ov = r.overall;
-    html += `<div class="sheat-ov" style="color:${band(ov)}">${ov == null ? '—' : ov + '%'}</div></div>`;
+    // The last square carries the same two lines as the rest — the flow, then the rate (Jerin, 2026-08-30:
+    // "in the square, can we have X -> Y & the throughput % below it"). Older callers that pass only a
+    // percentage still render, just without the flow line.
+    html += `<div class="sheat-ov" style="color:${band(ov)}">`
+      + (ov == null ? '—'
+        : (r.ovIn != null ? `<span class="sh-flow">${r.ovIn} \u2192 ${r.ovOut}</span>` : '')
+          + `<span class="sh-pct">${ov}%</span>`)
+      + '</div></div>';
   });
   host.innerHTML = html;
 
@@ -465,11 +487,14 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     const r = rows[+cell.dataset.r], c = r.cells[+cell.dataset.c];
     const v = pctOf(c);
     tip.innerHTML = `<div class="tip-hd">${esc(r.label)} · <b>${esc(cols[+cell.dataset.c])}</b></div>`
-      + (c && c.inN > 0
-        ? `<div class="tip-row"><span>entered the stage</span><span>${c.inN}</span></div>`
-          + `<div class="tip-row"><span>moved past it</span><span>${c.outN}</span></div>`
+      + (c && c.noRate && c.inN > 0
+        ? `<div class="tip-row"><span>${esc(labels.inN)}</span><span>${c.inN}</span></div>`
+          + `<div class="tip-row"><span>${esc(labels.terminal)}</span><span></span></div>`
+        : c && c.inN > 0
+        ? `<div class="tip-row"><span>${esc(labels.inN)}</span><span>${c.inN}</span></div>`
+          + `<div class="tip-row"><span>${esc(labels.outN)}</span><span>${c.outN}</span></div>`
           + `<div class="tip-row"><span>throughput</span><span>${v}%</span></div>`
-        : '<div class="tip-row"><span>nobody entered this stage</span><span></span></div>');
+        : `<div class="tip-row"><span>${esc(labels.none)}</span><span></span></div>`);
     tip.style.display = 'block';
     const wrap = host.parentElement;
     const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();

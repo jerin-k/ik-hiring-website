@@ -69,27 +69,30 @@ export const DEFINITIONS = {
 
   'hm-throughput': {
     summary: 'How these numbers are worked out',
-    intro: 'Built from <strong>real stage transitions</strong> in Ashby — every time a candidate entered or left a stage — not from a snapshot of where people sit today. That is what lets it follow the period you selected.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'Of the people <strong>assessed</strong> at a stage, how many <strong>progressed</strong> to a later one. Built from real events in Ashby — interviews held, assignments triggered, feedback submitted — not from a snapshot of where people sit today.',
+    confirmed: 'Definition rebuilt with Jerin · 30 Aug 2026',
     groups: [
       {
         heading: 'The heat table',
         items: [
-          ['One column per stage', 'The <strong>number</strong> is how many candidates <em>entered</em> that stage during the selected period. The <strong>shade</strong> behind it is what share of them then <em>moved past</em> it: pale under 50%, mid 50–70%, strong over 70%.'],
+          ['One column per stage', 'The <strong>number</strong> is how many candidates were <em>assessed</em> at that stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. The <strong>shade</strong> is what share of them then reached a <em>later</em> stage: pale under 50%, mid 50–70%, strong over 70%.'],
           ['Rows', 'Department, then the individual roles inside it. Click a department to open it.'],
-          ['Overall', 'Doc Submission entries ÷ R1 entries — how much of what reaches the first interview makes it to paperwork.'],
-          ['“Stage not used”', 'The grey cell means this workspace has never put a candidate in that stage — it is not a zero, it is a stage nobody uses. It is a guard against reading a naming problem as a business fact.'],
+          ['Overall', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. It is counted per person, never one stage column divided by another — see the warning below.'],
+          ['A blank cell', 'A dot or a dash means <strong>nobody was assessed</strong> at that stage in the period — several stages here carry very little traffic, and plenty of roles skip a round entirely. It is not a zero rate, and it is not missing data.'],
           ['Stage tick-boxes and Hide zero-pipeline', 'The tick-boxes choose which stage columns appear. <em>Hide zero-pipeline</em> drops roles with no movement at all in the period.'],
         ]
       },
       {
         heading: 'The chart',
         items: [
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell reads <strong>entered \u2192 moved past</strong> with that stage\u2019s throughput below it, and the shade says the same thing as the percentage \u2014 so a weak stage is visible without reading a digit, and the two raw numbers show whether the rate rests on 161 people or on 3. The last column is the overall <strong>R1 \u2192 Documentation</strong> span. A dot means nobody entered that stage, which is not the same as nobody getting through it. Hover a cell for how many entered, how many moved past, and the rate. It reads the same aggregates as the table below.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Every cell reads <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, and the shade says the same thing as the percentage \u2014 so a weak stage is visible without reading a digit, and the two raw numbers show whether the rate rests on 161 people or on 3. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there, which is not the same as nobody getting through. Hover a cell for the two counts and the rate. It reads the same aggregates as the table below.'],
         ]
       },
     ],
     warnings: [
+      ['This measure changed on 30 August 2026, and the numbers fell', 'It used to count anyone who had <em>left</em> a stage as having got through it — so being rejected at R1 counted exactly like being promoted to R2, and App Review read 99 → 99 = 100%. It now counts only people who actually reached a later stage. Lower numbers here are the correction, not a decline in performance, and figures from before that date are not comparable.'],
+      ['The columns are not a funnel — do not read them left to right', 'Each stage is measured on its own. One column’s <em>progressed</em> will not equal the next column’s <em>assessed</em>, and often will not come close. Three reasons, all real: candidates skip stages (most roles never use Hello Christy or HM Review), <em>progressed</em> means reaching <em>any</em> later stage rather than the next one, and each figure is dated by when the assessment happened — so somebody screened in June and interviewed in July lands in two different quarters. Compare a stage to itself over time, not to its neighbour.'],
+      ['Offer shows a count and no rate', 'Offer is the last stage in the ladder, so there is nothing after it to progress to. Showing 0% there would read as everyone falling out at the final step. The number of people assessed at Offer is still shown.'],
       ['A role with no movement reads zero, not its history', 'If a role had no transitions in the selected period it shows zeros. It used to fall back to its all-time numbers, which made long-closed roles look busy — an all-time number under a quarter heading is impossible to spot by eye.'],
       ['Not the same as the Pipeline tab', 'This counts movement <em>during</em> a period. Pipeline counts people <em>sitting</em> somewhere today. The two will never tie out, and are not meant to.'],
     ]
@@ -417,21 +420,24 @@ export const DEFINITIONS = {
   },
   'eff-throughput': {
     summary: 'How these numbers are worked out',
-    intro: 'The full funnel, stage by stage, <strong>Department → Job</strong>.',
+    intro: 'The full funnel, stage by stage, <strong>Department → Job</strong>. Of the people <strong>assessed</strong> at each stage, how many <strong>progressed</strong> to a later one.',
     confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['In', 'Candidates who entered the stage during the period.'],
-          ['Out', 'Candidates who moved past it.'],
-          ['Throughput %', 'Out ÷ In — what share of the queue got moved on.'],
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell reading <strong>entered \u2192 moved past</strong> with that stage\u2019s throughput below it, the shade saying the same as the percentage, and the overall <strong>R1 \u2192 Documentation</strong> span as the last column. A dot means nobody entered that stage. Hover a cell for how many entered, how many moved past, and the rate. The 13 per-department charts it replaced are gone.'],
+          ['Assessed', 'Candidates <strong>assessed</strong> at the stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. Someone who only sat in the queue does not count.'],
+          ['Progressed', 'Of those, the ones who then reached a <strong>later stage</strong>. Being rejected or withdrawing does not count.'],
+          ['%', 'Progressed ÷ Assessed — of the people actually assessed here, the share who moved forward. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
+          ['The chart', 'Department down the side, <strong>stage across the top</strong>, every cell reading <strong>assessed \u2192 progressed</strong> with that stage\u2019s rate below it, the shade saying the same as the percentage, and the <strong>R1/OA \u2192 late stage</strong> span as the last column. A dot means nobody was assessed there. Hover a cell for the two counts and the rate. The 13 per-department charts it replaced are gone.'],
         ]
       },
     ],
     warnings: [
-      ['Do not add the stage columns together', 'One person passing through R1, R2 and R3 appears in all three, so a total across stages counts them three times. Each column is only comparable to its own In. That is also why the chart uses a single span, R1 to Documentation, rather than a sum.'],
+      ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. Each column is only comparable to its own assessed figure. That is also why the Overall column is a single per-candidate span rather than a sum.'],
+      ['This measure changed on 30 August 2026, and the numbers fell', 'It used to count anyone who had <em>left</em> a stage as having got through it — so being rejected at R1 counted exactly like being promoted to R2, and App Review read 99 → 99 = 100%. It now counts only people who actually reached a later stage. Lower numbers here are the correction, not a decline in performance, and figures from before that date are not comparable.'],
+      ['The columns are not a funnel — do not read them left to right', 'Each stage is measured on its own. One column’s <em>progressed</em> will not equal the next column’s <em>assessed</em>, and often will not come close. Three reasons, all real: candidates skip stages (most roles never use Hello Christy or HM Review), <em>progressed</em> means reaching <em>any</em> later stage rather than the next one, and each figure is dated by when the assessment happened — so somebody screened in June and interviewed in July lands in two different quarters. Compare a stage to itself over time, not to its neighbour.'],
+      ['Offer shows a count and no rate', 'Offer is the last stage in the ladder, so there is nothing after it to progress to. Showing 0% there would read as everyone falling out at the final step. The number of people assessed at Offer is still shown.'],
       ['Online Assessment carries small numbers', 'Used, but thinly: 182 candidates in total (Q1 159, Q2 75, Q3 83 reached it). Treat a single role’s OA conversion as indicative, not solid.'],
     ]
   },
