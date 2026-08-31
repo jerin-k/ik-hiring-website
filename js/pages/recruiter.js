@@ -4,7 +4,7 @@ import { scoreForRole } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
-         darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip } from '../chart-style.js';
+         darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -167,34 +167,6 @@ export function renderRecruiter(data) {
       /* Full content width — the cells stretch to fill, so the grid lines up with the table below it
          (Jerin, 2026-08-30: "enlarge the chart to align with the rest of the content"). Cells keep a
          minimum width, so on a narrow screen the wrap scrolls rather than crushing them. */
-      .tofu-heat-wrap { position:relative; margin:0 0 22px; overflow-x:auto; }
-      .tofu-heat { display:block; min-width:100%; }
-      .heat-row { display:flex; align-items:center; gap:3px; margin-bottom:4px; }
-      /* Left-aligned and the SAME WIDTH as the table's first column, so the two blocks line up down the
-         page (Jerin, 2026-08-30: "get the recruiter names left aligned, add some element to fill the gaps
-         & make it align"). The width is measured off the table at render time — see buildVelChart. */
-      .heat-name { width:210px; min-width:210px; font-size:13px; color:var(--text); text-align:left;
-        padding-left:14px; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .heat-cell { flex:1 1 0; min-width:24px; height:34px; border-radius:4px; background:#f4f6f8;
-        font-size:13px; font-weight:500; display:flex; align-items:center; justify-content:center; color:#334155; }
-      .heat-cell.has { cursor:default; }
-      .heat-cell.wknd { background:#eef1f4; }
-      /* Sits between the name and the day cells, exactly where the table puts TOTAL · 30D. */
-      .heat-tot { width:96px; min-width:96px; text-align:right; padding-right:14px; font-size:14px;
-        font-weight:600; color:var(--text); }
-      .heat-hd { font-size:11.5px; color:var(--muted); height:18px; background:none !important; }
-      .heat-hd.wknd { color:#C08497; }
-      .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:24px; font-size:12px; }
-      .heat-foot .heat-name { font-size:12px; color:var(--muted); }
-      .heat-scale { display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:12px; padding-left:14px; }
-      .heat-scale i { width:20px; height:20px; border-radius:4px; display:inline-block; }
-      .heat-tip { position:absolute; z-index:40; pointer-events:none; display:none; background:#fff;
-        border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 18px rgba(15,23,42,0.13);
-        padding:9px 11px; font-size:11.5px; color:var(--text); max-width:320px; }
-      .heat-tip b { font-weight:600; }
-      .heat-tip .tip-hd { font-size:11px; color:var(--muted); margin-bottom:5px; }
-      .heat-tip .tip-row { display:flex; justify-content:space-between; gap:14px; line-height:1.6; }
-      .heat-tip .tip-row span:last-child { font-weight:600; }
 
       /* nested tab strip INSIDE Data Hygiene — pill style, deliberately distinct from the
          outer underline tabs so two levels of tabs don't read as one row */
@@ -2001,12 +1973,6 @@ export function initRecruiterFilters(data) {
   // badly in a canvas tooltip.
   // Reads the same tofuByRecruiter / tofuByRecruiterJob as the table below it, over the same days, so the
   // per-day and per-recruiter totals here are the table's own numbers.
-  const HEAT_LO = [238, 244, 246], HEAT_HI = [30, 117, 144];
-  function heatShade(v, mx) {
-    const t = 0.16 + 0.84 * (mx > 0 ? v / mx : 0);
-    const m = (i) => Math.round(HEAT_LO[i] + (HEAT_HI[i] - HEAT_LO[i]) * t);
-    return `rgb(${m(0)},${m(1)},${m(2)})`;
-  }
   function buildVelChart() {
     const host = document.getElementById('recVelHeat');
     const tip = document.getElementById('recVelHeatTip');
@@ -2047,93 +2013,13 @@ export function initRecruiterFilters(data) {
       });
     });
 
-    const mx = Math.max(...rows.map(r => Math.max(...r.per)));
-    const dayTot = keys.map((_, i) => rows.reduce((a, r) => a + r.per[i], 0));
-    const grand = dayTot.reduce((a, v) => a + v, 0);
-    const MONS = MON;
-    const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-    let html = '<div class="heat-row"><div class="heat-name heat-hd">' + MONS[chrono[0].getMonth()] + '</div>'
-      + '<div class="heat-tot heat-hd">TOTAL \u00b7 30D</div>'
-      + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">${d.getDate()}</div>`).join('')
-      + '</div>';
-    rows.forEach((r, ri) => {
-      html += `<div class="heat-row"><div class="heat-name" title="${esc(r.pod)}">${esc(r.name)}</div>`
-        + `<div class="heat-tot">${r.total}</div>`;
-      r.per.forEach((v, i) => {
-        const cls = 'heat-cell' + (v ? ' has' : (isWknd[i] ? ' wknd' : ''));
-        const st = v ? ` style="background:${heatShade(v, mx)};color:${v / mx > 0.45 ? '#fff' : '#334155'}"` : '';
-        html += `<div class="${cls}"${st} data-r="${ri}" data-d="${i}">${v || ''}</div>`;
-      });
-      html += '</div>';
+    // One shared implementation with Overall Efficiency's Momentum (chart-style.js). Rows here are
+    // RECRUITERS; there they are DEPARTMENTS. Everything else - shading, totals, the role hover, the
+    // column alignment against the table - is identical by construction.
+    buildDayHeat(host, tip, wrapEl, rows, chrono, roleAt, {
+      alignSel: '.rec-panel[data-panel="velocity"] .vel-table thead th',
+      emptyMsg: 'Nobody was added to ToFU in this window for the recruiters shown.'
     });
-    html += '<div class="heat-row heat-foot"><div class="heat-name">total</div>'
-      + `<div class="heat-tot">${grand}</div>`
-      + dayTot.map(t => `<div class="heat-cell">${t || '·'}</div>`).join('')
-      + '</div>';
-    html += '<div class="heat-scale">fewer'
-      + [1, 2, 3, 4, 5].map(k => `<i style="background:${heatShade(mx * k / 5, mx)}"></i>`).join('')
-      + `more<span style="margin-left:14px">darkest = ${mx} in a day</span></div>`;
-    host.innerHTML = html;
-
-    // Line the name and total columns up with the TABLE's first two columns, measured rather than guessed —
-    // the table's first column sizes itself to the longest job title, so a fixed width would drift.
-    // ⚠ Alignment gives way to FITTING. On a narrower window the table's 250px first column leaves the 30 day
-    // cells needing about 1,150px, and the grid scrolls sideways — which reads as broken rather than as
-    // aligned (Jerin saw exactly this and blamed the legend; the legend is in its own row and cannot widen a
-    // column). So when the matched widths do not fit, the name and total columns shrink and the cells go to
-    // their smaller minimum, and the whole month stays on screen.
-    const th = document.querySelectorAll('.rec-panel[data-panel="velocity"] .vel-table thead th');
-    const avail = (wrapEl ? wrapEl.clientWidth : 0) || host.clientWidth;
-    let w1 = 210, w2 = 96, cellMin = 24;
-    if (th.length >= 2) {
-      const t1 = Math.round(th[0].getBoundingClientRect().width);
-      const t2 = Math.round(th[1].getBoundingClientRect().width);
-      if (t1 > 80 && t2 > 40) { w1 = t1; w2 = t2; }
-    }
-    // gaps sit BETWEEN cells, so there are n-1 of them, not n — counting one too many pushed the grid
-    // three pixels over its container and it still scrolled.
-    // The row is a flex with a 3px gap between EVERY child, so with 30 cells plus the name and total
-    // columns there are (30 + 1) gaps, not 29. Counting them short left the grid a few pixels over its
-    // container and it still scrolled.
-    const GAP = 3;
-    const needs = (n, t, c) => n + t + keys.length * c + (keys.length + 1) * GAP;
-    if (avail && needs(w1, w2, cellMin) > avail) {
-      cellMin = 20; w2 = 70;
-      w1 = Math.max(150, avail - (keys.length * cellMin + (keys.length + 1) * GAP) - w2 - 2);
-    }
-    host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
-    host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
-    if (cellMin !== 24) host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
-    // The colour scale describes the CELLS, so it starts under them rather than under the names.
-    const sc = host.querySelector('.heat-scale');
-    if (sc) sc.style.paddingLeft = (w1 + w2) + 'px';
-
-    // Hover: the roles behind that square, with a count against each.
-    host.onmouseover = (e) => {
-      const cell = e.target.closest('.heat-cell.has');
-      if (!cell || !tip) return;
-      const r = rows[+cell.dataset.r], i = +cell.dataset.d, d = chrono[i];
-      const list = (roleAt[`${r.name}|${i}`] || []).slice().sort((a, b) => b.n - a.n);
-      const named = list.reduce((a, x) => a + x.n, 0);
-      const rest = r.per[i] - named;
-      const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-      tip.innerHTML = `<div class="tip-hd">${wk} ${d.getDate()} ${MONS[d.getMonth()]} · <b>${esc(r.name)}</b> · ${r.per[i]} added</div>`
-        + list.map(x => `<div class="tip-row"><span>${esc(x.title)}</span><span>${x.n}</span></div>`).join('')
-        + (rest > 0 ? `<div class="tip-row" style="color:var(--muted)"><span>role not recorded</span><span>${rest}</span></div>` : '')
-        + (!list.length && rest <= 0 ? '<div class="tip-row" style="color:var(--muted)"><span>no role recorded</span><span></span></div>' : '');
-      tip.style.display = 'block';
-      const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();
-      const tw = tip.offsetWidth;
-      let left = cb.left - wb.left + cell.offsetWidth / 2 - tw / 2;
-      left = Math.max(0, Math.min(left, wrap.clientWidth - tw));
-      tip.style.left = left + 'px';
-      const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - 8;
-      tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + 8 : top) + 'px';
-    };
-    host.onmouseout = (e) => {
-      if (tip && !e.relatedTarget?.closest?.('.heat-cell.has')) tip.style.display = 'none';
-    };
   }
 
   const SCREEN_SOLID = '#4E6BA6', SCREEN_PALE = '#C5CFE5';

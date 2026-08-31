@@ -6,7 +6,7 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
-         buildDumbbell, buildStageHeat } from '../chart-style.js';
+         buildDumbbell, buildStageHeat, buildDayHeat } from '../chart-style.js';
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -174,7 +174,7 @@ export function renderEfficiency(data) {
          axis, weekends in maroon, a small mark on any weekday with nothing on it. -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
       ${defsBlock('eff-momentum')}
-      <div class="chart-wrap" id="effVelChartWrap" style="height:420px"><canvas id="effVelChart"></canvas></div>
+      <div class="tofu-heat-wrap" id="effVelHeatWrap"><div id="effVelHeat" class="tofu-heat"></div><div id="effVelHeatTip" class="heat-tip"></div></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
         <tbody id="effVelBody"></tbody>
@@ -963,18 +963,17 @@ export function initEfficiencyFilters(data) {
     const vis = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
     const head = document.getElementById('effTpHead');
     if (head) {
-      let r1 = '<tr><th rowspan="2" style="min-width:260px">Department / Job</th>';
-      vis.forEach(k => { r1 += `<th colspan="3" class="stage-hdr">${TP_LABELS[k]}</th>`; });
-      r1 += '</tr><tr>';
-      // The sub-headers name the measure. Under the rebuild they are "assessed" and "progressed"; the old
-      // In/Out wording described entering and leaving a stage, which counted a rejection as a pass.
+      // ONE column per stage, carrying the same "assessed → progressed" over "%" that the grid square
+      // shows (Jerin, 2026-08-31). It used to split every stage across three sub-columns, so a 12-stage
+      // table ran to 36 columns and matched neither the grid above it nor the Hiring Manager table.
       const hasA = !!(rollups && rollups.assessedByJobQ);
-      const subIn = hasA ? 'Assessed' : 'In', subOut = hasA ? 'Progressed' : 'Out';
-      vis.forEach(() => { r1 += `<th class="stage-sub">${subIn}</th><th class="stage-sub">${subOut}</th><th class="stage-sub">%</th>`; });
+      let r1 = '<tr><th style="min-width:260px">Department / Job</th>';
+      vis.forEach(k => { r1 += `<th class="stage-hdr">${TP_LABELS[k]}</th>`; });
+      r1 += `<th class="stage-hdr">Overall<span style="display:block;font-weight:400;font-size:10px;opacity:.75">${hasA ? 'R1/OA → Late' : 'R1 → Doc'}</span></th>`;
       head.innerHTML = r1 + '</tr>';
     }
     const body = document.getElementById('effTpBody'); if (!body) return;
-    if (!tpByJob) { podSkeletonBody('effTpBody', vis.length * 3, () => dashTds(vis.length * 3)); return; }
+    if (!tpByJob) { podSkeletonBody('effTpBody', vis.length + 1, () => dashTds(vis.length + 1)); return; }
     // Department → Job, from the stage-history rollups.
     const q = selQuarter();
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
@@ -995,19 +994,33 @@ export function initEfficiencyFilters(data) {
     // A stage nobody was assessed at printed "0 0 0.0%", which reads as "0% got through" when it means
     // "nobody was here" — and the grid above shows the same cell as an empty dot. Match the grid (and the
     // HM table, which already dashes it) so an empty stage cannot be mistaken for a total failure.
-    const cells = (rc) => rc.map((x, i) => (asJ && vis[i] === 'offer')
-      ? `<td>${x.r}</td><td class="zero">—</td><td class="zero" title="Offer is the last stage — nothing after it to progress to">—</td>`
-      : !x.r
-        ? `<td class="zero">—</td><td class="zero">—</td><td class="zero" title="Nobody was assessed at this stage in this period">—</td>`
-        : `<td>${x.r}</td><td>${x.c}</td><td class="${cls(pc(x.c, x.r))}">${pc(x.c, x.r)}%</td>`).join('');
+    const spQ = (rollups && rollups.assessedSpanByJobQ) || null;
+    const spanOf = (jids) => !spQ ? null : jids.reduce((acc, jid) => {
+      const v = (spQ[jid] || {})[q] || null;
+      return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) } : acc;
+    }, { a: 0, b: 0 });
+    const cells = (rc, sp) => rc.map((x, i) => {
+      if (asJ && vis[i] === 'offer' && x.r)
+        return `<td class="heat none" title="${x.r} assessed at Offer — the last stage, nothing after it to progress to">`
+             + `<span class="hv">${x.r} assessed</span><span class="hp">—</span></td>`;
+      if (!x.r) return `<td class="heat none" title="Nobody was assessed at this stage in this period">—</td>`;
+      const p = Math.round((x.c / x.r) * 100);
+      const band = p < 50 ? 'lo' : (p < 70 ? 'mid' : 'hi');
+      return `<td class="heat ${band}" title="${x.r} assessed, ${x.c} progressed">`
+           + `<span class="hv">${x.r} → ${x.c}</span><span class="hp">${p}%</span></td>`;
+    }).join('')
+      + (!sp || !(sp.a > 0)
+        ? `<td class="stage-cell" style="background:#f0f0ff;font-weight:600">—</td>`
+        : `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="hv">${sp.a} → ${sp.b}</span>`
+          + `<span class="hp">${Math.round((sp.b / sp.a) * 100)}%</span></td>`);
     const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
     let html = '';
     deptJobs(q).forEach(({ dept, jobs: js }, di) => {
       const jrc = js.map(j => jobRC(j.jid));
-      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(sumRC(jrc))}</tr>`;
-      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(jrc[ji])}</tr>`; });
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(sumRC(jrc), spanOf(js.map(j => j.jid)))}</tr>`;
+      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(jrc[ji], spanOf([j.jid]))}</tr>`; });
     });
-    body.innerHTML = html || `<tr><td colspan="${vis.length * 3 + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${vis.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
     buildTpChartEff(q, vis);
   }
@@ -1319,104 +1332,40 @@ export function initEfficiencyFilters(data) {
     const mix = (c) => Math.round(c + (255 - c) * t);
     return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
   }
-  let effVelChart = null;
+  // Momentum is the SAME heatmap as Recruiter Efficiency (Jerin, 2026-08-31) - one implementation in
+  // chart-style.js, two callers. Rows here are DEPARTMENTS; on the Recruiter tab they are recruiters.
+  // It replaced a stacked bar chart, which could not answer "which roles are behind this square" without
+  // a twenty-entry legend - the whole reason the Recruiter tab moved to a heatmap on 2026-08-30.
   function buildVelChartEff() {
-    const ctx = document.getElementById('effVelChart'); if (!ctx) return;
-    if (effVelChart) { effVelChart.destroy(); effVelChart = null; }
-    const wrap = document.getElementById('effVelChartWrap');
-    if (!tofuByJob) { if (wrap) wrap.style.height = '0px'; return; }
+    const host = document.getElementById('effVelHeat');
+    const tip = document.getElementById('effVelHeatTip');
+    const wrap = document.getElementById('effVelHeatWrap');
+    if (!host) return;
+    if (!tofuByJob) { host.innerHTML = ''; return; }
     const chrono = [...velDates()].reverse();
     const keys = chrono.map(dkeyEff);
-    const datasets = [];
-    deptJobs(selQuarter()).forEach(({ dept, jobs }, di) => {
-      const base = DEPT_COLORS[di % DEPT_COLORS.length];
-      const withData = jobs.map(j => {
+
+    const rows = [], roleAt = {};
+    deptJobs(selQuarter()).forEach(({ dept, jobs }) => {
+      const per = keys.map(() => 0);
+      jobs.forEach(j => {
         const m = tofuByJob[(j.jid || '').slice(0, 8)] || tofuByJob[j.jid] || {};
-        const per = keys.map(k => m[k] || 0);
-        return { title: j.title, per, t: per.reduce((a, v) => a + v, 0) };
-      }).filter(x => x.t > 0).sort((a, b) => b.t - a.t);
-      withData.forEach((J, ji) => datasets.push({
-        label: J.title, _dept: dept, data: J.per, backgroundColor: deptShade(base, ji, withData.length),
-        stack: 'd', borderWidth: 0, barPercentage: 0.95, categoryPercentage: 0.92
-      }));
-    });
-    if (!datasets.length) { if (wrap) wrap.style.height = '120px'; return; }
-    if (wrap) wrap.style.height = '420px';
-    ctx.style.maxHeight = '420px';
-
-    const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
-    const tickLabels = chrono.map((d, i) => {
-      const showMonth = i === 0 || d.getMonth() !== chrono[i - 1].getMonth();
-      return showMonth ? [String(d.getDate()), MON[d.getMonth()]] : [String(d.getDate()), ''];
-    });
-    const dayTotals = chrono.map((_, i) => datasets.reduce((a, ds) => a + (ds.data[i] || 0), 0));
-    const emptyWeekdayMarks = {
-      id: 'effEmptyWeekdayMarks',
-      afterDatasetsDraw(chart) {
-        const x = chart.scales.x, y = chart.scales.y; if (!x || !y) return;
-        const base = y.getPixelForValue(0), c = chart.ctx;
-        c.save(); c.fillStyle = 'rgba(163,50,83,0.55)';
-        dayTotals.forEach((t, i) => {
-          if (t > 0 || isWknd[i]) return;
-          const px = x.getPixelForTick(i);
-          c.beginPath();
-          const w = 11, hh = 3;
-          if (c.roundRect) c.roundRect(px - w / 2, base - hh, w, hh, 1.5); else c.rect(px - w / 2, base - hh, w, hh);
-          c.fill();
+        keys.forEach((k, i) => {
+          const v = m[k] || 0;
+          if (!v) return;
+          per[i] += v;
+          const cell = roleAt[`${dept}|${i}`] || (roleAt[`${dept}|${i}`] = []);
+          cell.push({ title: j.title, n: v });
         });
-        c.restore();
-      }
-    };
+      });
+      const total = per.reduce((a, v) => a + v, 0);
+      if (total > 0) rows.push({ name: dept, sub: dept, per, total });
+    });
+    rows.sort((a, b) => b.total - a.total);
 
-    effVelChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: tickLabels, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          // In-bar numbers (Jerin, 2026-08-30). The global plugin skips segments too thin to hold one, so a
-          // day with a single arrival in a department still reads cleanly.
-          valueLabels: true,
-          legend: {
-            position: 'top', align: 'center',
-            labels: {
-              usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 11 },
-              generateLabels: (chart) => {
-                const seen = [];
-                chart.data.datasets.forEach((d, i) => { if (!seen.some(x => x.dept === d._dept)) seen.push({ dept: d._dept, i }); });
-                // ⚠ pointStyle must be set on the LABEL — a custom generateLabels ignores labels.pointStyle
-                // and falls back to a circle.
-                return seen.map(({ dept, i }) => ({ text: dept, fillStyle: chart.data.datasets[i].backgroundColor,
-                  strokeStyle: 'transparent', pointStyle: 'rect', hidden: !chart.isDatasetVisible(i), datasetIndex: i }));
-              }
-            },
-            onClick: (e, item, legend) => {
-              const chart = legend.chart, dept = chart.data.datasets[item.datasetIndex]?._dept;
-              if (!dept) return;
-              const show = !chart.isDatasetVisible(item.datasetIndex);
-              chart.data.datasets.forEach((d, i) => { if (d._dept === dept) chart.setDatasetVisibility(i, show); });
-              chart.update();
-            }
-          },
-          tooltip: {
-            itemSort: (a, b) => b.parsed.y - a.parsed.y,
-            callbacks: {
-              title: (items) => { const d = chrono[items[0].dataIndex];
-                return `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`; },
-              label: (c2) => `${c2.dataset._dept} · ${c2.dataset.label}: ${c2.parsed.y}`,
-              footer: (items) => `Added that day: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}`
-            }
-          }
-        },
-        scales: {
-          x: { stacked: true, grid: { display: false },
-               ticks: { font: { size: 10 }, maxRotation: 0, minRotation: 0, autoSkip: false, padding: 2,
-                        color: (c) => (isWknd[c.index] ? '#A15568' : '#64748b') } },
-          y: { ...gridY, stacked: true, ticks: { ...TICKS, precision: 0 },
-               title: { display: true, text: 'Candidates added to ToFU', font: { size: 11 }, color: '#64748b' } }
-        }
-      },
-      plugins: [emptyWeekdayMarks]
+    buildDayHeat(host, tip, wrap, rows, chrono, roleAt, {
+      alignSel: '.eff-panel[data-panel="velocity"] .evel-table thead th',
+      emptyMsg: 'Nobody was added to ToFU in this window for the departments shown.'
     });
   }
 

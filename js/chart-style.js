@@ -535,3 +535,106 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.sheat-cell')) tip.style.display = 'none';
   };
 }
+
+// ===== Day heatmap (Momentum, both tabs) =====
+// Rows x 30 days, darker = more, the count in the square, and a hover that lists every ROLE behind that
+// square with a count against each. That hover was Jerin's condition for accepting the heatmap over the
+// stacked columns, and it is the thing a canvas tooltip renders badly — which is why this is HTML.
+// One implementation, two callers (Jerin, 2026-08-31): Recruiter Efficiency puts a RECRUITER on each row,
+// Overall Efficiency a DEPARTMENT. Before this the two tabs drew Momentum completely differently — a
+// heatmap on one, a stacked bar chart on the other.
+const HEAT_LO = [238, 244, 246], HEAT_HI = [30, 117, 144];
+export function heatShade(v, mx) {
+  const t = 0.16 + 0.84 * (mx > 0 ? v / mx : 0);
+  const m = (i) => Math.round(HEAT_LO[i] + (HEAT_HI[i] - HEAT_LO[i]) * t);
+  return `rgb(${m(0)},${m(1)},${m(2)})`;
+}
+
+const HEAT_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const heatEsc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// rows: [{ name, sub, per:[n per day], total }] — already ordered and filtered by the caller.
+// roleAt: { `${name}|${dayIndex}`: [{ title, n }] }  ·  alignSel: the table's thead th, to match columns.
+export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
+  if (!host) return;
+  const { alignSel = null, emptyMsg = 'Nothing arrived in this window.', rowLabel = 'added' } = opts;
+  if (!rows.length) { host.innerHTML = `<p class="sub-note" style="margin:6px 0 0">${emptyMsg}</p>`; return; }
+  const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
+  const mx = Math.max(...rows.map(r => Math.max(...r.per)));
+  const dayTot = chrono.map((_, i) => rows.reduce((a, r) => a + r.per[i], 0));
+  const grand = dayTot.reduce((a, v) => a + v, 0);
+
+  let html = '<div class="heat-row"><div class="heat-name heat-hd">' + HEAT_MON[chrono[0].getMonth()] + '</div>'
+    + '<div class="heat-tot heat-hd">TOTAL · 30D</div>'
+    + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">${d.getDate()}</div>`).join('')
+    + '</div>';
+  rows.forEach((r, ri) => {
+    html += `<div class="heat-row"><div class="heat-name" title="${heatEsc(r.sub || r.name)}">${heatEsc(r.name)}</div>`
+      + `<div class="heat-tot">${r.total}</div>`;
+    r.per.forEach((v, i) => {
+      const cls = 'heat-cell' + (v ? ' has' : (isWknd[i] ? ' wknd' : ''));
+      const st = v ? ` style="background:${heatShade(v, mx)};color:${v / mx > 0.45 ? '#fff' : '#334155'}"` : '';
+      html += `<div class="${cls}"${st} data-r="${ri}" data-d="${i}">${v || ''}</div>`;
+    });
+    html += '</div>';
+  });
+  html += '<div class="heat-row heat-foot"><div class="heat-name">total</div>'
+    + `<div class="heat-tot">${grand}</div>`
+    + dayTot.map(t => `<div class="heat-cell">${t || '·'}</div>`).join('')
+    + '</div>';
+  html += '<div class="heat-scale">fewer'
+    + [1, 2, 3, 4, 5].map(k => `<i style="background:${heatShade(mx * k / 5, mx)}"></i>`).join('')
+    + `more<span style="margin-left:14px">darkest = ${mx} in a day</span></div>`;
+  host.innerHTML = html;
+
+  // Match the table's first two columns, measured rather than guessed — the table's first column sizes
+  // itself to the longest title, so a fixed width would drift.
+  // ⚠ Alignment gives way to FITTING: when the matched widths do not fit, the name and total columns shrink
+  // and the cells go to their smaller minimum, so the whole month stays on screen instead of scrolling.
+  const th = alignSel ? document.querySelectorAll(alignSel) : [];
+  const avail = (wrap ? wrap.clientWidth : 0) || host.clientWidth;
+  let w1 = 210, w2 = 96, cellMin = 24;
+  if (th.length >= 2) {
+    const t1 = Math.round(th[0].getBoundingClientRect().width);
+    const t2 = Math.round(th[1].getBoundingClientRect().width);
+    if (t1 > 80 && t2 > 40) { w1 = t1; w2 = t2; }
+  }
+  // The row is a flex with a gap between EVERY child, so with n cells plus the name and total columns there
+  // are (n + 1) gaps, not n - 1. Counting them short left the grid a few pixels over its container.
+  const GAP = 3;
+  const needs = (n, t, c) => n + t + chrono.length * c + (chrono.length + 1) * GAP;
+  if (avail && needs(w1, w2, cellMin) > avail) {
+    cellMin = 20; w2 = 70;
+    w1 = Math.max(150, avail - (chrono.length * cellMin + (chrono.length + 1) * GAP) - w2 - 2);
+  }
+  host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
+  host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
+  if (cellMin !== 24) host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
+  const sc = host.querySelector('.heat-scale');   // the scale describes the CELLS, so it starts under them
+  if (sc) sc.style.paddingLeft = (w1 + w2) + 'px';
+
+  host.onmouseover = (e) => {
+    const cell = e.target.closest('.heat-cell.has');
+    if (!cell || !tip) return;
+    const r = rows[+cell.dataset.r], i = +cell.dataset.d, d = chrono[i];
+    const list = (roleAt[`${r.name}|${i}`] || []).slice().sort((a, b) => b.n - a.n);
+    const named = list.reduce((a, x) => a + x.n, 0);
+    const rest = r.per[i] - named;
+    const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+    tip.innerHTML = `<div class="tip-hd">${wk} ${d.getDate()} ${HEAT_MON[d.getMonth()]} · <b>${heatEsc(r.name)}</b> · ${r.per[i]} ${rowLabel}</div>`
+      + list.map(x => `<div class="tip-row"><span>${heatEsc(x.title)}</span><span>${x.n}</span></div>`).join('')
+      + (rest > 0 ? `<div class="tip-row" style="color:var(--muted)"><span>role not recorded</span><span>${rest}</span></div>` : '')
+      + (!list.length && rest <= 0 ? '<div class="tip-row" style="color:var(--muted)"><span>no role recorded</span><span></span></div>' : '');
+    tip.style.display = 'block';
+    const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();
+    const tw = tip.offsetWidth;
+    let left = cb.left - wb.left + cell.offsetWidth / 2 - tw / 2;
+    left = Math.max(0, Math.min(left, wrap.clientWidth - tw));
+    tip.style.left = left + 'px';
+    const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - 8;
+    tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + 8 : top) + 'px';
+  };
+  host.onmouseout = (e) => {
+    if (tip && !e.relatedTarget?.closest?.('.heat-cell.has')) tip.style.display = 'none';
+  };
+}
