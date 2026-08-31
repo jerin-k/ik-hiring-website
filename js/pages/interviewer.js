@@ -1,23 +1,31 @@
 // Interviewer Efficiency — per-panelist interview load + feedback turnaround.
 //
 // GRAIN: the TABLE is built from data.panelists[] ({dept, jobTitle, name, interviews, byQuarter, byMonth,
-// feedbackSubmitted, feedbackOnScheduled, avgTurnaroundHrs}), which is the only array carrying the
-// Department -> Job -> Panelist grain the tree needs. data.interviewers[] is org-wide per person and is used
-// ONLY for the two fields panelists[] cannot carry — pendingFeedback and therefore Feedback Coverage.
+// avgTurnaroundHrs}), which is the only array carrying the Department -> Job -> Panelist grain the tree
+// needs. data.interviewers[] is org-wide per person and is used ONLY for pendingFeedback, and therefore
+// for Feedback Coverage.
 //
-// GRAIN WARNING 1 — only interview counts have a period breakdown (byQuarter / byMonth). feedbackSubmitted,
-// feedbackOnScheduled, pendingFeedback and avgTurnaroundHrs are LIFETIME, so the period selector moves the
-// interview counts ONLY and every feedback figure is labelled all-time.
+// GRAIN WARNING 1 — only interview counts have a period breakdown (byQuarter / byMonth). pendingFeedback
+// and avgTurnaroundHrs are LIFETIME, so the period selector moves the interview counts ONLY and every
+// feedback figure is labelled all-time.
 //
-// GRAIN WARNING 2 — feedbackSubmitted counts every feedback FORM a person submitted, a wider population than
-// their panel interviews (one panelist has 440 forms against 2 interviews). feedbackOnScheduled counts only
-// the forms matched to one of their scheduled interviews and IS comparable to the interview count; the table
-// leads with that. Coverage is (interviews - pendingFeedback) / interviews, never forms / interviews.
+// GRAIN WARNING 2 — Feedback Coverage comes from the ORG-WIDE per-person record. Department rows roll up
+// their DISTINCT panelists so nobody is double-counted, but the figure still covers those people's work
+// outside the department; the header tooltip says so. Coverage is (interviews - pendingFeedback) /
+// interviews, and the cell now shows that pair in brackets — "75% (123/163)".
 //
-// GRAIN WARNING 3 — Feedback Coverage and Awaiting Feedback come from the ORG-WIDE per-person record, so they
-// are shown on panelist rows only and left blank on Department and Job rows. Summing them up a tree that
-// splits one person across several jobs would double-count.
-
+// 🚨 REMOVED 2026-08-31 (Jerin): the Awaiting Feedback and Interview Feedback columns.
+//   • Awaiting Feedback was the same fact as Coverage from the other side — interviews minus those with
+//     feedback — so it earned no column of its own once Coverage showed its own numerator and denominator.
+//   • Interview Feedback was actively misleading. It counted feedback forms the pipeline could MATCH back
+//     to a scheduled interview (same application + submitter, interview ended before the form was sent),
+//     because applicationFeedback records carry NO interview id. That match fails often: Ashby's own flag
+//     says 2,184 interviews have feedback, the matcher could only tie 1,340 forms to one — 39% unlinkable —
+//     and 83 of 114 panelists disagreed between the two columns (Randeep Singh: 123 vs 27). A reader
+//     naturally treated it as a second opinion on Coverage; it was a floor on a heuristic.
+//   ⚠ feedbackOnScheduled / feedbackSubmitted are STILL EMITTED by the pipeline and still on
+//     panelists[] / interviewers[]. Nothing here reads them. Do not resurrect them as a coverage measure —
+//     use pendingFeedback, which is Ashby's own per-interview flag.
 let ivChart = null;
 let msIvPanel = null, msIvDept = null, msIvJob = null;
 
@@ -110,10 +118,8 @@ export function renderInterviewer(data, opts = {}) {
       <thead><tr>
         <th style="min-width:280px">Department / Panelist / Job</th>
         <th id="ivThInterviews">Interviews</th>
-        <th title="Interviews that have feedback attached, as a share of this panelist's interviews. Org-wide per person, so it is shown on panelist rows only — summing it up the tree would double-count anyone who interviews for more than one job.">Feedback Coverage<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
-        <th title="Interviews with no feedback attached yet (all-time, org-wide per person).">Awaiting Feedback<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
+        <th title="Interviews that have feedback attached, as a share of this panelist's interviews — the bracketed pair is feedback received / interviews. Taken from Ashby's own flag on each interview. Org-wide per person, so a department row rolls up its DISTINCT panelists and still covers their work outside this department.">Feedback Coverage<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
         <th title="Time from an interview ending to feedback being submitted (all-time average).">Avg Turnaround<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
-        <th title="Feedback forms matched to one of this panelist's scheduled interviews. The bracketed figure is every form they submitted, including application-review and screening feedback.">Interview Feedback<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
       </tr></thead>
       <tbody id="ivBody"></tbody>
     </table></div>`;
@@ -262,55 +268,45 @@ export function initInterviewer(data, opts = {}) {
         // blank here because Feedback Coverage / Awaiting / Turnaround are recorded ORG-WIDE per person,
         // and adding up the JOB rows beneath would count anyone working two roles twice. Rolling up the
         // PANELIST rows instead counts each person exactly once, so the arithmetic is sound.
-        // ⚠ The scope caveat remains and is stated in the header + tooltip: those three still cover every
-        // interview these people sat anywhere, not only this department's. Interview Feedback has no such
-        // caveat — it is per department/job already, so its sum is exact.
+        // ⚠ The scope caveat remains and is stated in the header + tooltip: both still cover every
+        // interview these people sat anywhere, not only this department's.
         const dAgg = pNames.reduce((a, nm) => {
           const P = D.people[nm];
           const org = orgByUser[P.userId] || ivs.find(r => r.name === nm) || {};
           a.life += org.interviews || 0;
           a.pend += org.pendingFeedback || 0;
-          a.onSched += P.jobs.reduce((t, j) => t + (j.feedbackOnScheduled || 0), 0);
-          a.allForms += P.jobs.reduce((t, j) => t + (j.feedbackSubmitted || 0), 0);
           const tr = P.jobs.filter(j => j.avgTurnaroundHrs != null);
           if (tr.length) { a.turnSum += tr.reduce((t, j) => t + j.avgTurnaroundHrs, 0) / tr.length; a.turnN++; }
           return a;
-        }, { life: 0, pend: 0, onSched: 0, allForms: 0, turnSum: 0, turnN: 0 });
+        }, { life: 0, pend: 0, turnSum: 0, turnN: 0 });
         const dCov = dAgg.life ? pct(Math.max(0, dAgg.life - dAgg.pend), dAgg.life) : null;
         const dTurn = dAgg.turnN ? dAgg.turnSum / dAgg.turnN : null;
         html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${esc(dept)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${pNames.length}</span></td>
           <td style="font-weight:600">${D.total}</td>
-          <td class="${dCov != null ? cls(dCov) : ''}" style="font-weight:600" title="Across the ${pNames.length} panelist${pNames.length === 1 ? '' : 's'} in this department, counted once each. Covers every interview they sat anywhere, not only this department's.">${dCov != null ? dCov + '%' : '—'}</td>
-          <td style="font-weight:600" title="All their outstanding feedback, org-wide">${dAgg.pend ? `<span style="color:var(--orange)">${dAgg.pend}</span>` : '0'}</td>
-          <td style="font-weight:600" class="${dTurn != null && dTurn > 72 ? 'warn' : ''}" title="Mean of the panelists' own averages">${fmtTurn(dTurn)}</td>
-          <td style="font-weight:600;color:var(--muted)" title="Feedback on this department's interviews \u2014 exact, no org-wide mixing">${dAgg.onSched}${dAgg.allForms ? ` <span style="font-size:11px">(${dAgg.allForms})</span>` : ''}</td></tr>`;
+          <td class="${dCov != null ? cls(dCov) : ''}" style="font-weight:600" title="Across the ${pNames.length} panelist${pNames.length === 1 ? '' : 's'} in this department, counted once each. Covers every interview they sat anywhere, not only this department's.">${dCov != null ? `${dCov}% <span class="cov-n">(${(dAgg.life - dAgg.pend).toLocaleString()}/${dAgg.life.toLocaleString()})</span>` : '—'}</td>
+          <td style="font-weight:600" class="${dTurn != null && dTurn > 72 ? 'warn' : ''}" title="Mean of the panelists' own averages">${fmtTurn(dTurn)}</td></tr>`;
         pNames.forEach((nm, pi) => {
           const P = D.people[nm];
           const org = orgByUser[P.userId] || ivs.find(r => r.name === nm) || {};
           const life = org.interviews || 0, pend = org.pendingFeedback || 0;
           const cov = life ? pct(Math.max(0, life - pend), life) : 0;
-          const onSched = P.jobs.reduce((s, j) => s + (j.feedbackOnScheduled || 0), 0);
-          const allForms = P.jobs.reduce((s, j) => s + (j.feedbackSubmitted || 0), 0);
           const tRows = P.jobs.filter(j => j.avgTurnaroundHrs != null);
           const tAvg = tRows.length ? tRows.reduce((s, j) => s + j.avgTurnaroundHrs, 0) / tRows.length : null;
           html += `<tr data-path="${di}-${pi}" data-haschild data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:30px;font-weight:500">${CARET}${esc(nm)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${P.jobs.length}</span></td>
             <td>${P.total}</td>
-            <td class="${cls(cov)}">${life ? cov + '%' : '—'}</td>
-            <td>${pend ? `<span style="color:var(--orange)">${pend}</span>` : '0'}</td>
-            <td class="${tAvg != null && tAvg > 72 ? 'warn' : ''}">${fmtTurn(tAvg)}</td>
-            <td style="color:var(--muted)">${onSched}${allForms ? ` <span style="font-size:11px">(${allForms})</span>` : ''}</td></tr>`;
+            <td class="${cls(cov)}">${life ? `${cov}% <span class="cov-n">(${(life - pend).toLocaleString()}/${life.toLocaleString()})</span>` : '—'}</td>
+            <td class="${tAvg != null && tAvg > 72 ? 'warn' : ''}">${fmtTurn(tAvg)}</td></tr>`;
           P.jobs.slice().sort((a, b) => b._count - a._count).forEach((j, ji) => {
             html += `<tr data-path="${di}-${pi}-${ji}" style="display:none">
               <td style="padding-left:58px;color:var(--muted)">${esc(j.jobTitle || '(untitled)')}</td>
-              <td>${j._count}</td><td></td><td></td>
-              <td class="${j.avgTurnaroundHrs != null && j.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(j.avgTurnaroundHrs)}</td>
-              <td style="color:var(--muted)">${j.feedbackOnScheduled || 0}${j.feedbackSubmitted ? ` <span style="font-size:11px">(${j.feedbackSubmitted})</span>` : ''}</td></tr>`;
+              <td>${j._count}</td><td></td>
+              <td class="${j.avgTurnaroundHrs != null && j.avgTurnaroundHrs > 72 ? 'warn' : ''}">${fmtTurn(j.avgTurnaroundHrs)}</td></tr>`;
           });
         });
       });
-      body.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;font-size:12px">No panelist ran an interview under these filters.</td></tr>`;
+      body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px;font-size:12px">No panelist ran an interview under these filters.</td></tr>`;
       wireIvTree(body);
     }
 
