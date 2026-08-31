@@ -707,13 +707,16 @@ export function initHmFilters(data) {
         // and no rate rather than a 0% that reads as everyone falling out.
         if (A && sk === 'offer') {
           s += `<td class="heat none" title="${c.i} assessed at Offer — the last stage, nothing after it to progress to">`
-            + `<span class="hv">${c.i}</span><span class="hp">—</span></td>`;
+            + `<span class="hv">${c.i} assessed</span><span class="hp">—</span></td>`;
           return;
         }
         const pct = Math.round((c.o / c.i) * 100);
         const band = pct < 50 ? 'lo' : (pct < 70 ? 'mid' : 'hi');
+        // The cell carries the SAME two figures as the grid square above it — "145 → 98" over "68%"
+        // (Jerin, 2026-08-31). It used to print the assessed count alone, so the table and the grid
+        // disagreed on what a cell was, and the table's own Overall column already showed the flow.
         s += `<td class="heat ${band}" title="${c.i} ${A ? 'assessed' : 'entered'}, ${c.o} ${A ? 'progressed' : 'moved past'}">`
-          + `<span class="hv">${c.i}</span><span class="hp">${pct}%</span></td>`;
+          + `<span class="hv">${c.i} \u2192 ${c.o}</span><span class="hp">${pct}%</span></td>`;
       });
       const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
       // The span column shows its own two numbers as well, so the rate is never a bare percentage.

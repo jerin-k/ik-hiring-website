@@ -206,12 +206,28 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 /* Overview has no chrome at all — give its content a normal leading gap rather than butting it to the nav */
 #home-data-area { padding-top: 18px; }
 
+/* 🚨 The row SHRINKS, it does not wrap (Jerin, 2026-08-31). It used to `flex-wrap: wrap`, so zooming the
+   page — or any narrower viewport — dropped half the controls onto a second line and pushed the content
+   down. Now the multiselects give up width first, down to a floor, and `overflow-x: auto` is the last
+   resort so a very narrow window scrolls the row rather than clipping a control off the page.
+   ⚠ Do NOT do this with a blanket `min-width: 0; flex-shrink: 1` on the children — that lets every control
+   collapse to ZERO width the moment the row is narrower than its content, which is worse than the wrap. */
 .rec-filters, .eff-filters, .hm-filters, .iv-filters {
   background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
   border-bottom: 1px solid var(--border) !important;
   padding: 12px 0 13px !important; margin: 0 0 16px !important;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 10px clamp(8px, 0.9vw, 14px);
+  overflow-x: auto; scrollbar-width: thin;
 }
+/* Everything holds its size by default; only the multiselects are allowed to give. */
+.rec-filters > *, .eff-filters > *, .hm-filters > *, .iv-filters > * { flex: 0 0 auto; }
+.rec-filters .fchip:has(.ms), .eff-filters .fchip:has(.ms),
+.hm-filters .fchip:has(.ms), .iv-filters .fchip:has(.ms) { flex: 0 1 auto; min-width: 88px; }
+.rec-filters .ms, .eff-filters .ms, .hm-filters .ms, .iv-filters .ms { min-width: 88px; max-width: 100%; }
+.rec-filters .ms-btn, .eff-filters .ms-btn, .hm-filters .ms-btn, .iv-filters .ms-btn {
+  min-width: 88px; width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.rec-filters label, .eff-filters label, .hm-filters label, .iv-filters label { white-space: nowrap; }
 .rec-filters .fchip > span.lbl, .eff-filters .fchip > span.lbl,
 .hm-filters .fchip > span.lbl, .iv-filters .fchip > span.lbl {
   font-size: 11.5px; font-weight: 500; color: var(--muted);
@@ -855,3 +871,36 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 .sheat-legend i + span { margin-right: 5px; }
 .sheat-legend .sheat-legend-note { margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--border);
   letter-spacing: 0; font-style: italic; }
+
+/* ===== Momentum day heatmap (shared: Recruiter + Overall Efficiency) =====
+   Was defined inside recruiter.js's per-page <style>, so Overall Efficiency could only render it
+   correctly if the user had already visited the Recruiter tab. Shared here now (2026-08-31). */
+.tofu-heat-wrap { position:relative; margin:0 0 22px; overflow-x:auto; }
+.tofu-heat { display:block; min-width:100%; }
+.heat-row { display:flex; align-items:center; gap:3px; margin-bottom:4px; }
+/* Left-aligned and the SAME WIDTH as the table's first column, so the two blocks line up down the
+   page (Jerin, 2026-08-30: "get the recruiter names left aligned, add some element to fill the gaps
+   & make it align"). The width is measured off the table at render time — see buildVelChart. */
+.heat-name { width:210px; min-width:210px; font-size:13px; color:var(--text); text-align:left;
+  padding-left:14px; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.heat-cell { flex:1 1 0; min-width:24px; height:34px; border-radius:4px; background:#f4f6f8;
+  font-size:13px; font-weight:500; display:flex; align-items:center; justify-content:center; color:#334155; }
+.heat-cell.has { cursor:default; }
+.heat-cell.wknd { background:#eef1f4; }
+/* Sits between the name and the day cells, exactly where the table puts TOTAL · 30D. */
+.heat-tot { width:96px; min-width:96px; text-align:right; padding-right:14px; font-size:14px;
+  font-weight:600; color:var(--text); }
+.heat-hd { font-size:11.5px; color:var(--muted); height:18px; background:none !important; }
+.heat-hd.wknd { color:#C08497; }
+.heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:24px; font-size:12px; }
+.heat-foot .heat-name { font-size:12px; color:var(--muted); }
+.heat-scale { display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:12px; padding-left:14px; }
+.heat-scale i { width:20px; height:20px; border-radius:4px; display:inline-block; }
+.heat-tip { position:absolute; z-index:40; pointer-events:none; display:none; background:#fff;
+  border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 18px rgba(15,23,42,0.13);
+  padding:9px 11px; font-size:11.5px; color:var(--text); max-width:320px; }
+.heat-tip b { font-weight:600; }
+.heat-tip .tip-hd { font-size:11px; color:var(--muted); margin-bottom:5px; }
+.heat-tip .tip-row { display:flex; justify-content:space-between; gap:14px; line-height:1.6; }
+.heat-tip .tip-row span:last-child { font-weight:600; }
+

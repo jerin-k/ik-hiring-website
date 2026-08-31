@@ -115,6 +115,10 @@ const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/
 function setupRefreshButton() {
   const btn = document.getElementById('refreshBtn');
   if (!btn) return;
+  // Admins only (Jerin, 2026-08-31). The button kicks off a full Ashby pull on the shared pipeline, so it
+  // is not something every viewer should be able to fire. Removed from the DOM rather than disabled —
+  // a greyed-out control invites people to ask why they cannot use it.
+  if (!currentAccess || currentAccess.role !== 'admin') { btn.remove(); return; }
   btn.addEventListener('click', () => {
     btn.disabled = true;
     btn.innerHTML = '<span class="spin">&#x21bb;</span> Refreshing...';

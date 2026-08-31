@@ -258,9 +258,33 @@ export function initInterviewer(data, opts = {}) {
       dNames.forEach((dept, di) => {
         const D = tree[dept];
         const pNames = Object.keys(D.people).sort((a, b) => D.people[b].total - D.people[a].total);
+        // Department totals across its DISTINCT panelists (Jerin, 2026-08-31). These columns used to be
+        // blank here because Feedback Coverage / Awaiting / Turnaround are recorded ORG-WIDE per person,
+        // and adding up the JOB rows beneath would count anyone working two roles twice. Rolling up the
+        // PANELIST rows instead counts each person exactly once, so the arithmetic is sound.
+        // ⚠ The scope caveat remains and is stated in the header + tooltip: those three still cover every
+        // interview these people sat anywhere, not only this department's. Interview Feedback has no such
+        // caveat — it is per department/job already, so its sum is exact.
+        const dAgg = pNames.reduce((a, nm) => {
+          const P = D.people[nm];
+          const org = orgByUser[P.userId] || ivs.find(r => r.name === nm) || {};
+          a.life += org.interviews || 0;
+          a.pend += org.pendingFeedback || 0;
+          a.onSched += P.jobs.reduce((t, j) => t + (j.feedbackOnScheduled || 0), 0);
+          a.allForms += P.jobs.reduce((t, j) => t + (j.feedbackSubmitted || 0), 0);
+          const tr = P.jobs.filter(j => j.avgTurnaroundHrs != null);
+          if (tr.length) { a.turnSum += tr.reduce((t, j) => t + j.avgTurnaroundHrs, 0) / tr.length; a.turnN++; }
+          return a;
+        }, { life: 0, pend: 0, onSched: 0, allForms: 0, turnSum: 0, turnN: 0 });
+        const dCov = dAgg.life ? pct(Math.max(0, dAgg.life - dAgg.pend), dAgg.life) : null;
+        const dTurn = dAgg.turnN ? dAgg.turnSum / dAgg.turnN : null;
         html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${esc(dept)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${pNames.length}</span></td>
-          <td style="font-weight:600">${D.total}</td><td></td><td></td><td></td><td></td></tr>`;
+          <td style="font-weight:600">${D.total}</td>
+          <td class="${dCov != null ? cls(dCov) : ''}" style="font-weight:600" title="Across the ${pNames.length} panelist${pNames.length === 1 ? '' : 's'} in this department, counted once each. Covers every interview they sat anywhere, not only this department's.">${dCov != null ? dCov + '%' : '—'}</td>
+          <td style="font-weight:600" title="All their outstanding feedback, org-wide">${dAgg.pend ? `<span style="color:var(--orange)">${dAgg.pend}</span>` : '0'}</td>
+          <td style="font-weight:600" class="${dTurn != null && dTurn > 72 ? 'warn' : ''}" title="Mean of the panelists' own averages">${fmtTurn(dTurn)}</td>
+          <td style="font-weight:600;color:var(--muted)" title="Feedback on this department's interviews \u2014 exact, no org-wide mixing">${dAgg.onSched}${dAgg.allForms ? ` <span style="font-size:11px">(${dAgg.allForms})</span>` : ''}</td></tr>`;
         pNames.forEach((nm, pi) => {
           const P = D.people[nm];
           const org = orgByUser[P.userId] || ivs.find(r => r.name === nm) || {};
