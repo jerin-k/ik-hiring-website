@@ -432,6 +432,15 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     { inN: 'assessed at this stage', outN: 'progressed to a later stage', none: 'nobody was assessed here',
       terminal: 'last stage \u2014 nothing after it to progress to' },
     opts.labels || {});
+  // Ref Check, Documentation and Offer are administrative stages — nobody is assessed there, so those
+  // columns count candidates ADDED to the stage (Jerin, 2026-08-31). Same shape, honest wording.
+  const addedCols = opts.addedCols instanceof Set ? opts.addedCols : new Set();
+  // Offer's "progressed" is being HIRED, not reaching a later stage — Hired is deliberately not in the
+  // stage ladder, so saying "a later stage" there would be wrong rather than merely loose.
+  const hiredCol = (typeof opts.hiredCol === 'number') ? opts.hiredCol : -1;
+  const wIn = (ci) => addedCols.has(ci) ? 'candidates added to this stage' : labels.inN;
+  const wOut = (ci) => ci === hiredCol ? 'went on to be hired' : labels.outN;
+  const wNone = (ci) => addedCols.has(ci) ? 'nobody was added here' : labels.none;
   if (!host) return;
   const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // Offer is the last stage in the ladder, so "progressed" has nowhere to point — it would read 13 → 0 = 0%,
@@ -514,14 +523,14 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     const v = pctOf(c);
     tip.innerHTML = `<div class="tip-hd">${esc(r.label)} · <b>${esc(cols[+cell.dataset.c])}</b></div>`
       + (c && c.noRate && c.inN > 0
-        ? `<div class="tip-row"><span>${esc(labels.inN)}</span><span>${c.inN}</span></div>`
+        ? `<div class="tip-row"><span>${esc(wIn(+cell.dataset.c))}</span><span>${c.inN}</span></div>`
           + `<div class="tip-row"><span>${esc(labels.terminal)}</span><span></span></div>`
         : c && c.inN > 0
-        ? `<div class="tip-row"><span>${esc(labels.inN)}</span><span>${c.inN}</span></div>`
-          + `<div class="tip-row"><span>${esc(labels.outN)}</span><span>${c.outN}</span></div>`
+        ? `<div class="tip-row"><span>${esc(wIn(+cell.dataset.c))}</span><span>${c.inN}</span></div>`
+          + `<div class="tip-row"><span>${esc(wOut(+cell.dataset.c))}</span><span>${c.outN}</span></div>`
           + `<div class="tip-row"><span>throughput</span><span>${v}%</span></div>`
           + `<div class="tip-row"><span>lost here (the shading)</span><span>${c.inN - c.outN}</span></div>`
-        : `<div class="tip-row"><span>${esc(labels.none)}</span><span></span></div>`);
+        : `<div class="tip-row"><span>${esc(wNone(+cell.dataset.c))}</span><span></span></div>`);
     tip.style.display = 'block';
     const wrap = host.parentElement;
     const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();
