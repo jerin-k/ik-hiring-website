@@ -564,9 +564,12 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   const dayTot = chrono.map((_, i) => rows.reduce((a, r) => a + r.per[i], 0));
   const grand = dayTot.reduce((a, v) => a + v, 0);
 
-  let html = '<div class="heat-row"><div class="heat-name heat-hd">' + HEAT_MON[chrono[0].getMonth()] + '</div>'
+  // Every column names its own month (Jerin, 2026-08-31). The month used to appear once, in the corner
+  // label, so a 30-day window spanning two months left you counting columns to work out which was which.
+  let html = '<div class="heat-row"><div class="heat-name heat-hd"></div>'
     + '<div class="heat-tot heat-hd">TOTAL · 30D</div>'
-    + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">${d.getDate()}</div>`).join('')
+    + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">`
+        + `<span class="hd-d">${d.getDate()}</span><span class="hd-m">${HEAT_MON[d.getMonth()]}</span></div>`).join('')
     + '</div>';
   rows.forEach((r, ri) => {
     html += `<div class="heat-row"><div class="heat-name" title="${heatEsc(r.sub || r.name)}">${heatEsc(r.name)}</div>`
@@ -591,25 +594,24 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   // itself to the longest title, so a fixed width would drift.
   // ⚠ Alignment gives way to FITTING: when the matched widths do not fit, the name and total columns shrink
   // and the cells go to their smaller minimum, so the whole month stays on screen instead of scrolling.
+  // 🚨 CELL SIZE WINS OVER FITTING (Jerin, 2026-08-31: "lets widen the cells - let that lead to scrolling,
+  // its ok"). This used to do the opposite — squeeze the cells to ~20px and shrink the name column so the
+  // whole month stayed on screen — which made 30 columns of two-line headers unreadable. The cells now hold
+  // a comfortable width and .tofu-heat-wrap scrolls sideways when the month does not fit.
   const th = alignSel ? document.querySelectorAll(alignSel) : [];
-  const avail = (wrap ? wrap.clientWidth : 0) || host.clientWidth;
-  let w1 = 210, w2 = 96, cellMin = 24;
+  let w1 = 210, w2 = 96;
+  const cellMin = 42;
   if (th.length >= 2) {
     const t1 = Math.round(th[0].getBoundingClientRect().width);
     const t2 = Math.round(th[1].getBoundingClientRect().width);
     if (t1 > 80 && t2 > 40) { w1 = t1; w2 = t2; }
   }
-  // The row is a flex with a gap between EVERY child, so with n cells plus the name and total columns there
-  // are (n + 1) gaps, not n - 1. Counting them short left the grid a few pixels over its container.
-  const GAP = 3;
-  const needs = (n, t, c) => n + t + chrono.length * c + (chrono.length + 1) * GAP;
-  if (avail && needs(w1, w2, cellMin) > avail) {
-    cellMin = 20; w2 = 70;
-    w1 = Math.max(150, avail - (chrono.length * cellMin + (chrono.length + 1) * GAP) - w2 - 2);
-  }
+  // Trim the left block a little when it is wide — that is free horizontal room for the cells, and the
+  // month is what people came to read, not the row label.
+  w1 = Math.min(w1, 190);
   host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
   host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
-  if (cellMin !== 24) host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
+  host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
   const sc = host.querySelector('.heat-scale');   // the scale describes the CELLS, so it starts under them
   if (sc) sc.style.paddingLeft = (w1 + w2) + 'px';
 

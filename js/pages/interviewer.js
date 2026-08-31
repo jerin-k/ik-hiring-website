@@ -63,7 +63,7 @@ export function renderInterviewer(data, opts = {}) {
   return `
     <style>
       /* .iv-filters look now lives in style.css — one quiet row, defined once */
-      .iv-filters select { appearance:none; -webkit-appearance:none; height:34px; padding:0 28px 0 11px; border:1px solid var(--border);
+      .iv-filters select { appearance:none; -webkit-appearance:none; height:28px; padding:0 28px 0 11px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
         background-repeat:no-repeat; background-position:right 10px center; }

@@ -69,10 +69,14 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 
 /* ===== Header ===== */
 /* ===== The frozen header block (Jerin, 2026-08-30) =====
-   The bar and the nav row are one dark navy block, pinned together so you can switch page from anywhere.
-   The sub-tab band deliberately does NOT stick — that would cost ~136px of every screen instead of ~92. */
+   The bar and the nav row are one dark navy block inside .topbar, which is the single sticky element,
+   so you can switch page from anywhere. The sub-tab band deliberately does NOT stick — that would cost
+   ~136px of every screen instead of ~92. */
+/* ONE freeze for the whole top block (Jerin, 2026-08-31). .header and .nav-strip were each sticky, with
+   the nav pinned at a hard-coded top:53px — two freezes, and a magic number that breaks the moment the
+   header wraps at a narrow width. The wrapper sticks; the children are ordinary flow inside it. */
+.topbar { position: sticky; top: 0; z-index: 40; }
 .header {
-  position: sticky; top: 0; z-index: 40;
   background: var(--navy);
   border-bottom: 0;
   padding: 13px 28px;
@@ -150,7 +154,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
    the only thing telling you where you are: the old treatment (blue text + 2px underline) put the selected
    tab at 5.28:1 against an unselected 4.68:1, a gap of 0.6, which read as "slightly bluer" not "selected". */
 .nav-strip {
-  position: sticky; top: 53px; z-index: 39;
   display: flex;
   gap: 3px;
   padding: 7px 28px;
@@ -217,8 +220,13 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   border-bottom: 1px solid var(--border) !important;
   padding: 12px 0 13px !important; margin: 0 0 16px !important;
   display: flex; flex-wrap: nowrap; align-items: center; gap: 10px clamp(8px, 0.9vw, 14px);
-  overflow-x: auto; scrollbar-width: thin;
+  /* Scrollable, but with NO visible scrollbar — a horizontal scrollbar adds ~12px and would make the
+     row 52px against the band's 40 exactly when the page is zoomed, which is when the heights being
+     equal matters most. Trackpad and shift-wheel still scroll it. */
+  overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
 }
+.rec-filters::-webkit-scrollbar, .eff-filters::-webkit-scrollbar,
+.hm-filters::-webkit-scrollbar, .iv-filters::-webkit-scrollbar { height: 0; display: none; }
 /* Everything holds its size by default; only the multiselects are allowed to give. */
 .rec-filters > *, .eff-filters > *, .hm-filters > *, .iv-filters > * { flex: 0 0 auto; }
 .rec-filters .fchip:has(.ms), .eff-filters .fchip:has(.ms),
@@ -228,6 +236,17 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   min-width: 88px; width: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .rec-filters label, .eff-filters label, .hm-filters label, .iv-filters label { white-space: nowrap; }
+/* The filter row is the SAME HEIGHT as the sub-tab band above it (Jerin, 2026-08-31) — 40px, so the two
+   strips read as one piece of chrome instead of the filters towering over the tabs. The band is 25px chips
+   in 7px padding; the filters are 28px controls in 6px padding. Scoped to the filter rows so the 34px
+   control height still applies everywhere else on the site. */
+.rec-filters, .eff-filters, .hm-filters, .iv-filters { padding: 6px 0 !important; }
+.rec-filters .ms-btn, .eff-filters .ms-btn, .hm-filters .ms-btn, .iv-filters .ms-btn,
+.rec-filters select, .eff-filters select, .hm-filters select, .iv-filters select,
+.rec-filters input[type="date"], .eff-filters input[type="date"],
+.hm-filters input[type="date"], .iv-filters input[type="date"] {
+  height: 28px; padding-top: 0; padding-bottom: 0; line-height: 26px;
+}
 .rec-filters .fchip > span.lbl, .eff-filters .fchip > span.lbl,
 .hm-filters .fchip > span.lbl, .iv-filters .fchip > span.lbl {
   font-size: 11.5px; font-weight: 500; color: var(--muted);
@@ -391,7 +410,7 @@ tr:hover td { background: #f8fafc; }
 .stage-hdr { background: var(--border-light) !important; text-align: center !important; border-left: 1px solid var(--border);
   color: var(--text-secondary); }
 .stage-sub { text-align: center !important; font-size: 10px !important; font-weight: 500 !important; color: var(--muted); }
-td.stage-cell { text-align: center; border-left: 1px solid var(--border-light); }
+td.stage-cell { border-left: 1px solid var(--border-light); }
 td.stage-first { border-left: 1px solid var(--border); }
 
 /* ===== Metric tables (Fulfilment & friends) =====
@@ -729,9 +748,16 @@ td.gapcell { min-width: 150px; }
    how many moved past it. Tints are deliberately pale — the digits must stay the thing you read, not the
    background. Bands: under 50% / 50-70% / over 70%, plus an explicit "not used" for stages this workspace
    never runs (OA has never had a candidate, so a 0 there would read as missing data). */
-td.heat { text-align: center; padding: 5px 6px; white-space: nowrap; }
-td.heat .hv { display: block; font-weight: 600; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-td.heat .hp { display: block; font-size: 9.5px; font-weight: 500; opacity: .78; margin-top: 1px; }
+/* The Overall column and the terminal Offer cell are THE SAME SHAPE as every other throughput cell
+   (Jerin, 2026-08-31). They used to differ: .stage-cell had its own padding and left .hv inline, so the
+   flow and the rate ran together as "55 → 1323.6%" instead of stacking, and Offer borrowed .none — the
+   EMPTY-cell grey — even though it carries a real count. Both now mirror the grid squares above them. */
+td.heat, td.stage-cell { text-align: center; padding: 5px 6px; white-space: nowrap; }
+td.heat .hv, td.stage-cell .hv { display: block; font-weight: 600; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+td.heat .hp, td.stage-cell .hp { display: block; font-size: 9.5px; font-weight: 500; opacity: .78; margin-top: 1px; }
+/* A terminal stage is not an empty one — flat slate, the same fill the grid square uses, so it reads as
+   "no rate here" rather than "nobody got this far". */
+td.heat.term { background: #e6ebf0; color: #475569; font-weight: 500; }
 td.heat.lo   { background: color-mix(in srgb, var(--red) 12%, transparent);    color: var(--red); }
 td.heat.mid  { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
 td.heat.hi   { background: color-mix(in srgb, var(--green) 13%, transparent);  color: var(--green); }
@@ -890,7 +916,13 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 /* Sits between the name and the day cells, exactly where the table puts TOTAL · 30D. */
 .heat-tot { width:96px; min-width:96px; text-align:right; padding-right:14px; font-size:14px;
   font-weight:600; color:var(--text); }
-.heat-hd { font-size:11.5px; color:var(--muted); height:18px; background:none !important; }
+/* Two-line column header: the day, then its month underneath, so no column is ambiguous when a 30-day
+   window spans two months (Jerin, 2026-08-31). */
+.heat-hd { font-size:11.5px; color:var(--muted); height:30px; background:none !important;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.05; }
+.heat-cell.heat-hd .hd-d { font-size:12px; font-weight:600; color:var(--text); }
+.heat-cell.heat-hd .hd-m { font-size:9px; font-weight:500; letter-spacing:0.03em; text-transform:uppercase; opacity:0.75; }
+.heat-cell.heat-hd.wknd .hd-d { color:#C08497; }
 .heat-hd.wknd { color:#C08497; }
 .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:24px; font-size:12px; }
 .heat-foot .heat-name { font-size:12px; color:var(--muted); }
