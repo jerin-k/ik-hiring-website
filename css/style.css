@@ -898,6 +898,10 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 .sheat-legend .sheat-legend-note { margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--border);
   letter-spacing: 0; font-style: italic; }
 
+/* Feedback Coverage carries its own arithmetic — "75% (123/163)" — so the rate is never a bare
+   percentage you have to take on trust (Jerin, 2026-08-31). */
+.cov-n { font-weight: 400; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* ===== Momentum day heatmap (shared: Recruiter + Overall Efficiency) =====
    Was defined inside recruiter.js's per-page <style>, so Overall Efficiency could only render it
    correctly if the user had already visited the Recruiter tab. Shared here now (2026-08-31). */

@@ -519,26 +519,24 @@ export const DEFINITIONS = {
 
   'interviewer': {
     summary: 'How these numbers are worked out',
-    intro: 'Interview load and feedback per panelist, built from the interviews actually scheduled in Ashby and the feedback forms submitted against them.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
+    intro: 'Interview load and feedback turnaround per panelist, built from the interviews actually scheduled in Ashby.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 31 Aug 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
           ['Interviews', 'Interviews this panelist sat on during the selected period.'],
-          ['Feedback Coverage', 'Interviews that have feedback attached, as a share of that panelist’s interviews. Shown on <strong>panelist rows only</strong> — see below.'],
-          ['Awaiting Feedback', 'Interviews still with no feedback attached. All-time, per person.'],
+          ['Feedback Coverage', 'How often this panelist writes up an interview: the share of their interviews that have feedback attached, with <strong>feedback received / interviews</strong> in brackets so the rate is never a bare percentage. Taken from Ashby\u2019s own flag on each interview.'],
           ['Avg Turnaround', 'Average time from an interview ending to the feedback being submitted. All-time.'],
-          ['Interview Feedback', 'Feedback forms matched to one of that panelist’s <em>scheduled interviews</em>. The number in brackets is <strong>every</strong> form they submitted, including application review and screening feedback.'],
-          ['Rows', 'Department → Panelist → the roles they interviewed for.'],
+          ['Rows', 'Department \u2192 Panelist \u2192 the roles they interviewed for.'],
           ['Chart', 'One bar per panelist for the top interviewers, stacked by month.'],
         ]
       },
     ],
     warnings: [
-      ['Three columns are blank on department and job rows on purpose', 'Feedback Coverage, Awaiting Feedback and Avg Turnaround are recorded <strong>per person across the whole org</strong>, not per role. Adding them up a tree that splits one person across several roles would count them twice, so they only appear where they mean something. The <strong>Feedback Coverage card</strong> above the table has the same limit: filter to one department and it still counts every interview those panelists sat anywhere, so it says so on the card rather than looking department-scoped.'],
-      ['The bracketed feedback figure is not a completion rate', 'It counts every form a person submitted, which can easily exceed their interview count — one panelist has 440 forms against 2 interviews. That is why it is shown as a raw number and never as a percentage. Use <strong>Feedback Coverage</strong> for the rate.'],
-      ['Avg Turnaround does not follow the period', 'It has no quarter breakdown in the data, unlike the interview count beside it.'],
+      ['Only the interview count follows the period', 'Feedback Coverage and Avg Turnaround have no quarter breakdown in the data, so they are all-time and say so in the header. The interview count beside them does follow the Year/Quarter selector \u2014 which is why a department can show fewer interviews this quarter than it has feedback outstanding overall.'],
+      ['Feedback figures are per person across the whole org', 'Coverage is recorded per panelist, not per role. A department row rolls up its <strong>distinct</strong> panelists, so nobody is counted twice \u2014 but the figure still covers every interview those people sat anywhere, not only this department\u2019s. The card above the table has the same limit and says so.'],
+      ['Two columns were removed on 31 Aug 2026', '<strong>Awaiting Feedback</strong> was the same fact as Coverage seen from the other side, and Coverage now shows its own numerator and denominator. <strong>Interview Feedback</strong> counted only the forms that could be matched back to a specific interview \u2014 Ashby records no interview id on a feedback form, so 39% could not be linked, and the column read far lower than the true completion rate. Use <strong>Feedback Coverage</strong>.'],
     ]
   },
 
