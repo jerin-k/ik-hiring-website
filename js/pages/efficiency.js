@@ -762,7 +762,6 @@ export function initEfficiencyFilters(data) {
         cells: stageCols.map(k => { const c = cellOf(jids, k);
           if (!(c.inN > 0)) return null;
           // Offer is the last stage — a rate there would always read 0%.
-          if (asJ2 && k === 'offer') c.noRate = true;
           return c; }),
         overall: sp ? (sp.a > 0 ? Math.round((sp.b / sp.a) * 100) : null)
           : (r1.inN > 0 ? Math.round((ds.inN / r1.inN) * 100) : null),
@@ -771,8 +770,12 @@ export function initEfficiencyFilters(data) {
         _vol: r1.inN
       };
     }).filter(r => r.cells.some(Boolean)).sort((a, b) => b._vol - a._vol);
+    const addedCols = new Set();
+    stageCols.forEach((k, i) => { if (TP_ADDED[k]) addedCols.add(i); });
+    const hiredCol = stageCols.indexOf('offer');
     buildStageHeat(host, document.getElementById('effTpHeatTip'), rows,
       stageCols.map(k => TP_LABELS[k]), {
+        addedCols, hiredCol,
         overallLabel: spanQ ? 'R1/OA \u2192 LATE' : 'R1 \u2192 DOC',
         labels: asJ2 ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
@@ -959,6 +962,9 @@ export function initEfficiencyFilters(data) {
     });
   }
 
+  // Administrative stages: candidates ADDED, not assessed (Jerin, 2026-08-31).
+  const TP_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
+
   function renderThroughput() {
     const vis = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
     const head = document.getElementById('effTpHead');
@@ -1000,13 +1006,11 @@ export function initEfficiencyFilters(data) {
       return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) } : acc;
     }, { a: 0, b: 0 });
     const cells = (rc, sp) => rc.map((x, i) => {
-      if (asJ && vis[i] === 'offer' && x.r)
-        return `<td class="heat term" title="${x.r} assessed at Offer — the last stage, nothing after it to progress to">`
-             + `<span class="hv">${x.r} assessed</span><span class="hp">—</span></td>`;
-      if (!x.r) return `<td class="heat none" title="Nobody was assessed at this stage in this period">—</td>`;
+      const added = !!TP_ADDED[vis[i]];
+      if (!x.r) return `<td class="heat none" title="${added ? 'Nobody was added to this stage in this period' : 'Nobody was assessed at this stage in this period'}">—</td>`;
       const p = Math.round((x.c / x.r) * 100);
       const band = p < 50 ? 'lo' : (p < 70 ? 'mid' : 'hi');
-      return `<td class="heat ${band}" title="${x.r} assessed, ${x.c} progressed">`
+      return `<td class="heat ${band}" title="${x.r} ${added ? 'added' : 'assessed'}, ${x.c} progressed">`
            + `<span class="hv">${x.r} → ${x.c}</span><span class="hp">${p}%</span></td>`;
     }).join('')
       + (!sp || !(sp.a > 0)

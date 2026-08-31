@@ -43,6 +43,9 @@ function monthOf(dateStr) {
   return `${MON[m - 1]} ${y}`;
 }
 
+// Administrative stages: candidates ADDED, not assessed (Jerin, 2026-08-31).
+const TP_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
+
 function pctClass(val) {
   const n = parseFloat(val);
   if (isNaN(n)) return '';
@@ -702,20 +705,16 @@ export function initHmFilters(data) {
         const c = per[sk];
         // A stage nobody reached is NOT a zero — Hello Christy and HM Review carry very little traffic, and
         // a role can skip a round entirely. Saying so beats printing 0 / 0 / — which reads as missing data.
-        if (!c || c.i === 0) { s += `<td class="heat none" title="${A ? 'nobody was assessed at this stage' : 'no candidates entered this stage'}">—</td>`; return; }
+        if (!c || c.i === 0) { s += `<td class="heat none" title="${TP_ADDED[sk] ? 'nobody was added to this stage' : (A ? 'nobody was assessed at this stage' : 'no candidates entered this stage')}">—</td>`; return; }
         // Offer is the end of the ladder — there is no later stage to progress to, so it carries a count
         // and no rate rather than a 0% that reads as everyone falling out.
-        if (A && sk === 'offer') {
-          s += `<td class="heat term" title="${c.i} assessed at Offer — the last stage, nothing after it to progress to">`
-            + `<span class="hv">${c.i} assessed</span><span class="hp">—</span></td>`;
-          return;
-        }
         const pct = Math.round((c.o / c.i) * 100);
         const band = pct < 50 ? 'lo' : (pct < 70 ? 'mid' : 'hi');
         // The cell carries the SAME two figures as the grid square above it — "145 → 98" over "68%"
         // (Jerin, 2026-08-31). It used to print the assessed count alone, so the table and the grid
         // disagreed on what a cell was, and the table's own Overall column already showed the flow.
-        s += `<td class="heat ${band}" title="${c.i} ${A ? 'assessed' : 'entered'}, ${c.o} ${A ? 'progressed' : 'moved past'}">`
+        const verb = TP_ADDED[sk] ? 'added' : (A ? 'assessed' : 'entered');
+        s += `<td class="heat ${band}" title="${c.i} ${verb}, ${c.o} ${A ? 'progressed' : 'moved past'}">`
           + `<span class="hv">${c.i} \u2192 ${c.o}</span><span class="hp">${pct}%</span></td>`;
       });
       const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
@@ -772,7 +771,7 @@ export function initHmFilters(data) {
         return {
           label: d,
           cells: stageCols.map(sk => (per[sk] && per[sk].i > 0)
-            ? { inN: per[sk].i, outN: per[sk].o, noRate: A && sk === 'offer' } : null),
+            ? { inN: per[sk].i, outN: per[sk].o } : null),
           overall: per.span && per.span.i > 0 ? Math.round((per.span.o / per.span.i) * 100)
             : (hasAssessed() ? null : (per.r1.i > 0 ? Math.round((per.ds.i / per.r1.i) * 100) : null)),
           ovIn: per.span && per.span.i > 0 ? per.span.i : null,
@@ -780,8 +779,14 @@ export function initHmFilters(data) {
           _vol: (per.span && per.span.i) || per.r1.i
         };
       }).sort((x, y) => y._vol - x._vol);
+      // Ref Check / Documentation / Offer count candidates ADDED, not assessed — administrative stages
+      // where nobody is interviewed. The pipeline marks them from stage entry; these are the columns.
+      const addedCols = new Set();
+      stageCols.forEach((sk, i) => { if (TP_ADDED[sk]) addedCols.add(i); });
+    const hiredCol = stageCols.indexOf('offer');
       buildStageHeat(heatHost, document.getElementById('hm2HeatTip'), heatRows,
         stageCols.map(sk => TP_LABELS[sk]), {
+          addedCols, hiredCol,
           overallLabel: hasAssessed() ? 'R1/OA → LATE' : 'R1 → DOC',
           labels: hasAssessed() ? undefined
             : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
