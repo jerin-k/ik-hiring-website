@@ -26,6 +26,12 @@ var ASSESS_SPAN_END = { refCheck: 1, docSub: 1, offer: 1 };
 // The entry side: assessed at R1 or Online Assessment, whichever comes first.
 var ASSESS_SPAN_START = { r1: 1, oa: 1 };
 
+// Ref Check, Documentation and Offer are ADMINISTRATIVE stages - nobody is interviewed or assessed there,
+// so the three assessment signals barely touch them (all of 2026: refCheck 11, offer 39, docSub 52). For
+// these the measure is CANDIDATES ADDED - the day they entered the stage - against candidates who then
+// progressed. Same shape as every other cell, honest wording (Jerin, 2026-08-31).
+var ASSESS_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
+
 function assessQ_(day) {
   if (!day || day.length < 7) return null;
   return day.substring(0, 4) + '-Q' + (Math.floor((parseInt(day.substring(5, 7), 10) - 1) / 3) + 1);
@@ -153,7 +159,7 @@ function computeAssessedRollups_(events) {
   var win = {}, who = {};
   for (var id in events) {
     win[id] = events[id].ev || [];
-    who[id] = { r: events[id].r, j: events[id].j };
+    who[id] = { r: events[id].r, j: events[id].j, s: events[id].s || null };
   }
   var arch = loadDriveJson_('archived_late_stage.json') || {};
   var archWin = arch.win || {};
@@ -172,6 +178,13 @@ function computeAssessedRollups_(events) {
   }
   for (var ia in iv.byApp) for (var ks in iv.byApp[ia]) mark(ia, ks, iv.byApp[ia][ks]);
   for (var ib in asg) for (var kt in asg[ib]) mark(ib, kt, asg[ib][kt]);
+  // The added stages come from the stage window, not from an assessment signal.
+  for (var appAdd in win) {
+    var wAdd = win[appAdd] || [];
+    for (var iAdd = 0; iAdd < wAdd.length; iAdd++) {
+      if (ASSESS_ADDED[wAdd[iAdd].k] && wAdd[iAdd].e) mark(appAdd, wAdd[iAdd].k, wAdd[iAdd].e);
+    }
+  }
   var placed = 0, unplaceable = 0;
   fb.forEach(function (f) {
     var k = assessStageAt_(win[f.app], f.day);
@@ -188,6 +201,10 @@ function computeAssessedRollups_(events) {
       var j = ASSESS_IDX[w[i].k];
       if (j != null && j > idx && w[i].e && w[i].e >= day) return true;
     }
+    // Offer is the last rung of the ladder, so "a later stage" cannot answer it, and 'Hired' is
+    // deliberately NOT in STAGE_KEY_MAP so it never appears in a stage window. The application's own
+    // status is the only record that they went on from an offer.
+    if (stage === 'offer') { var mo = who[app]; if (mo && mo.s === 'Hired') return true; }
     return false;
   }
 
@@ -231,7 +248,8 @@ function computeAssessedRollups_(events) {
     assessedSpanByJobQ: spanByJobQ,
     assessedMeta: {
       generatedAt: new Date().toISOString(),
-      definition: 'A = interviewed at the stage, or an assignment triggered there, or feedback with no interview behind it. B = of those, entered a later stage afterwards.',
+      definition: 'A = interviewed at the stage, or an assignment triggered there, or feedback with no interview behind it. For Ref Check / Documentation / Offer, A = candidates ADDED to the stage, since nobody is assessed there. B = of those, entered a later stage afterwards; for Offer, B = went on to be Hired.',
+      addedStages: ['refCheck', 'docSub', 'offer'],
       dedupe: 'one application per stage per quarter; B is a subset of A',
       span: 'assessed at R1 or OA (whichever first) -> reached Ref Check, Documentation or Offer (whichever first)',
       assessedRows: nA, progressedRows: nB
