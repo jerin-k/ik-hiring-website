@@ -83,7 +83,7 @@ export function renderEfficiency(data) {
 
       /* .eff-filters look now lives in style.css — one quiet row, defined once */
       .eff-filters select, .eff-filters input[type=date] {
-        appearance:none; -webkit-appearance:none; height:34px; padding:0 11px; border:1px solid var(--border);
+        appearance:none; -webkit-appearance:none; height:28px; padding:0 11px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); }
       .eff-filters select { padding-right:28px; cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -1001,7 +1001,7 @@ export function initEfficiencyFilters(data) {
     }, { a: 0, b: 0 });
     const cells = (rc, sp) => rc.map((x, i) => {
       if (asJ && vis[i] === 'offer' && x.r)
-        return `<td class="heat none" title="${x.r} assessed at Offer — the last stage, nothing after it to progress to">`
+        return `<td class="heat term" title="${x.r} assessed at Offer — the last stage, nothing after it to progress to">`
              + `<span class="hv">${x.r} assessed</span><span class="hp">—</span></td>`;
       if (!x.r) return `<td class="heat none" title="Nobody was assessed at this stage in this period">—</td>`;
       const p = Math.round((x.c / x.r) * 100);
@@ -1010,8 +1010,8 @@ export function initEfficiencyFilters(data) {
            + `<span class="hv">${x.r} → ${x.c}</span><span class="hp">${p}%</span></td>`;
     }).join('')
       + (!sp || !(sp.a > 0)
-        ? `<td class="stage-cell" style="background:#f0f0ff;font-weight:600">—</td>`
-        : `<td class="stage-cell" style="background:#f0f0ff;font-weight:600"><span class="hv">${sp.a} → ${sp.b}</span>`
+        ? `<td class="stage-cell" style="background:#f0f0ff">—</td>`
+        : `<td class="stage-cell" style="background:#f0f0ff"><span class="hv">${sp.a} → ${sp.b}</span>`
           + `<span class="hp">${Math.round((sp.b / sp.a) * 100)}%</span></td>`);
     const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
     let html = '';
@@ -1342,7 +1342,8 @@ export function initEfficiencyFilters(data) {
     const wrap = document.getElementById('effVelHeatWrap');
     if (!host) return;
     if (!tofuByJob) { host.innerHTML = ''; return; }
-    const chrono = [...velDates()].reverse();
+    // Newest first, the same order the table below it uses (Jerin, 2026-08-31).
+    const chrono = [...velDates()];
     const keys = chrono.map(dkeyEff);
 
     const rows = [], roleAt = {};

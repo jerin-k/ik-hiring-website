@@ -184,7 +184,7 @@ export function renderRecruiter(data) {
       /* consolidated filter block (matches HM) */
       /* .rec-filters look now lives in style.css — one quiet row, defined once */
       .rec-filters select, .rec-filters input[type=date], .rec-filters input[type=text] {
-        appearance:none; -webkit-appearance:none; height:34px; padding:0 11px; border:1px solid var(--border);
+        appearance:none; -webkit-appearance:none; height:28px; padding:0 11px; border:1px solid var(--border);
         border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); }
       .rec-filters select { padding-right:28px; cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -228,7 +228,7 @@ export function renderRecruiter(data) {
 
       /* multi-select checkbox dropdown */
       .ms { position:relative; display:inline-block; }
-      .ms-btn { appearance:none; height:34px; padding:0 11px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-weight:500;
+      .ms-btn { appearance:none; height:28px; padding:0 11px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-weight:500;
         background:var(--card); color:var(--text); cursor:pointer; min-width:120px; text-align:left; white-space:nowrap; }
       .ms-btn:hover { border-color:var(--muted); }
       .ms-panel { position:absolute; top:38px; left:0; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:8px;
@@ -1981,7 +1981,8 @@ export function initRecruiterFilters(data) {
     if (!host) return;
     const { rec: tRec, recJob: tRecJob } = tofuStores();
     if (!tRec) { host.innerHTML = ''; return; }
-    const chrono = [...velDates()].reverse();
+    // Newest first, the same order the table below it uses (Jerin, 2026-08-31).
+    const chrono = [...velDates()];
     const keys = chrono.map(dkey);
     const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
     const jobTitleOf8 = {}; (data.jobs || []).forEach(j => { jobTitleOf8[String(j.id).slice(0, 8)] = j.title; });

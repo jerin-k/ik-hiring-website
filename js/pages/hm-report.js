@@ -125,7 +125,7 @@ export function renderHmReport(data) {
     <style>
       .hm-filters select, .hm-filters input[type=date] {
         appearance:none; -webkit-appearance:none;
-        height:34px; padding:0 30px 0 11px; border:1px solid var(--border); border-radius:8px;
+        height:28px; padding:0 30px 0 11px; border:1px solid var(--border); border-radius:8px;
         font-size:12px; font-weight:500; background:var(--card); color:var(--text); cursor:pointer;
       }
       .hm-filters input[type=date] { padding-right:11px; }
@@ -706,7 +706,7 @@ export function initHmFilters(data) {
         // Offer is the end of the ladder — there is no later stage to progress to, so it carries a count
         // and no rate rather than a 0% that reads as everyone falling out.
         if (A && sk === 'offer') {
-          s += `<td class="heat none" title="${c.i} assessed at Offer — the last stage, nothing after it to progress to">`
+          s += `<td class="heat term" title="${c.i} assessed at Offer — the last stage, nothing after it to progress to">`
             + `<span class="hv">${c.i} assessed</span><span class="hp">—</span></td>`;
           return;
         }
@@ -721,7 +721,7 @@ export function initHmFilters(data) {
       const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
       // The span column shows its own two numbers as well, so the rate is never a bare percentage.
       const ovFlow = (per.span && per.span.i > 0) ? `<span class="hv">${per.span.i} → ${per.span.o}</span>` : '';
-      s += `<td class="stage-cell" style="background:#f0f0ff;font-weight:600">${ovFlow}<span class="${pctClass(ov)}">${ov}</span></td>`;
+      s += `<td class="stage-cell" style="background:#f0f0ff">${ovFlow}<span class="hp ${pctClass(ov)}">${ov}</span></td>`;
       return s;
     }
 
