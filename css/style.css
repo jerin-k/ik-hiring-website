@@ -217,8 +217,15 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
    collapse to ZERO width the moment the row is narrower than its content, which is worse than the wrap. */
 .rec-filters, .eff-filters, .hm-filters, .iv-filters {
   background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
-  border-bottom: 1px solid var(--border) !important;
-  padding: 12px 0 13px !important; margin: 0 0 16px !important;
+  /* No hairline underneath, and a little air above (Jerin, 2026-08-31 — option G1). With the gap there
+     the strip already reads as separate from the table, so the rule was doing no work. */
+  border-bottom: 0 !important;
+  padding: 6px 0 !important; margin: 8px 0 16px !important;
+  /* 🔑 The blue border on the controls is applied by REDEFINING --border on the row, not by restyling each
+     control. Every control inside — .ms-btn from style.css, and the select / input[type=date] rules that
+     each page module declares in its own <style> — resolves `var(--border)` against this local value, so
+     one declaration reaches all of them and no per-page rule has to be chased. Option B. */
+  --border: #9db2d6;
   display: flex; flex-wrap: nowrap; align-items: center; gap: 10px clamp(8px, 0.9vw, 14px);
   /* Scrollable, but with NO visible scrollbar — a horizontal scrollbar adds ~12px and would make the
      row 52px against the band's 40 exactly when the page is zoomed, which is when the heights being
@@ -252,7 +259,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   font-size: 11.5px; font-weight: 500; color: var(--muted);
   text-transform: none; letter-spacing: 0;
 }
-.rec-filters .fdiv, .eff-filters .fdiv, .hm-filters .fdiv, .iv-filters .fdiv { background: var(--border) !important; }
+/* the divider is chrome, not a control — keep it neutral while the controls go blue */
+.rec-filters .fdiv, .eff-filters .fdiv, .hm-filters .fdiv, .iv-filters .fdiv { background: #dbe1ec !important; }
 /* 🚨 A date input and a select do NOT inherit the page font — they fall back to the browser default, which
    is why the From/To pickers were in a different typeface from everything around them. */
 .rec-filters select, .rec-filters input, .eff-filters select, .eff-filters input,
