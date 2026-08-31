@@ -12,9 +12,14 @@
   --navy: #22344f;          /* the frozen header block */
   --navy-line: #33486a;
   --navy-ink: #a8bcd8;      /* muted text on the navy bar */
-  --navy-sub: #27406b;      /* the active sub-tab chip. Lighter than --navy on purpose: the same
-                               ink sits on a pale band here, so it reads heavier than it does on
-                               the header. Do NOT collapse this back into --navy. */
+  --navy-sub: #2d4a7c;      /* the active sub-tab chip. Lighter than --navy on purpose: the same ink sits
+                               on a pale band here, so it reads heavier than it does on the header. Do NOT
+                               collapse this back into --navy. Stepped down one notch from #27406b on
+                               2026-08-31 (Jerin, option N1) once the filter controls below it went blue —
+                               it stays clearly heavier than their #9db2d6 border, which is the point: the
+                               chip and those borders are the only two blues in the chrome. White on it is
+                               8.82:1. Going further (#33548d, #395e9d) starts reading as a third blue
+                               rather than a darker relative of the navy header. */
   --green: #398AA2;
   --green-light: #eaf2f4;
   --red: #b45a72;
