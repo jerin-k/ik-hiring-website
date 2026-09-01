@@ -18,11 +18,11 @@
 // application id or the user id cannot create anything, so the probe is safe against real ids.
 // ============================================================================================
 
-// RIGHT NOW: the SOURCE write - the last 2 records of the re-tag (Ross Y, Kiran Lakkaraju).
-// Sets their source to Agencies / Bulls Eye. Idempotent: a row with a status is skipped.
+// RIGHT NOW: the OPENING/STATUS endpoint probe. Writes NOTHING - empty bodies only.
+// The 222 recruiter writes and the 2 source writes are COMPLETE.
 // The 222 recruiter writes are COMPLETE (222 done, 0 failed, verified by read-back).
 function runRetagWriteStep() {
-  retagWriteSource_();
+  retagProbeUpdateFields_();
 }
 
 var RETAG_TAB_W = 'Recruiter Re-tag Plan';
@@ -295,4 +295,66 @@ function retagWriteSource_() {
     Utilities.sleep(300);
   }
   Logger.log('src | DONE. ' + done + ' source(s) changed, ' + failed + ' failed.');
+}
+
+// ---- can we link an application to an opening, hire, or archive, via the API at all? ----
+// Ashby's published index lists NO application->opening link (only offer.create takes an openingId),
+// and NO hire/archive endpoint. But that index was already wrong once - it did not document the
+// addHiringTeamMember fields either - so ask the API directly.
+// An endpoint that does not exist answers differently from one that exists and is missing fields:
+//   exists  -> 200 {"success":false,"errors":["invalid_input"], ... names the fields it wants}
+//   absent  -> 404 / not_found / unknown endpoint
+// Every body is EMPTY, so nothing can be created or changed either way.
+function retagProbeOpening_() {
+  var eps = [
+    '/application.changeStage',
+    '/application.setOpening', '/application.linkOpening', '/application.update',
+    '/application.change', '/application.setStatus', '/application.hire',
+    '/application.archive', '/application.unarchive', '/application.setArchived',
+    '/offer.create', '/offer.update', '/offer.setOpening',
+    '/opening.addApplication', '/opening.list'
+  ];
+  var exists = [], absent = [];
+  for (var e = 0; e < eps.length; e++) {
+    var res = ashbyWrite_(eps[e], {});
+    var txt = res.text || '';
+    var msg = '';
+    try { var j = JSON.parse(txt); msg = (j.errorInfo && j.errorInfo.message) || (j.errors || []).join(',') || (j.success ? 'SUCCESS - returned data' : ''); } catch (x) { msg = txt.substring(0, 120); }
+    var gone = res.code === 404 || /not_found|unknown|no such|cannot .*(POST|find)/i.test(txt);
+    (gone ? absent : exists).push(eps[e] + '  [' + res.code + ']  ' + msg.substring(0, 260));
+    Utilities.sleep(150);
+  }
+  Logger.log('open | ENDPOINTS THAT EXIST:');
+  exists.forEach(function (l) { Logger.log('open |   ' + l); });
+  Logger.log('open | ENDPOINTS THAT DO NOT EXIST:');
+  absent.forEach(function (l) { Logger.log('open |   ' + l); });
+  Logger.log('open | done. Every body was empty - nothing was written to Ashby.');
+}
+
+// ---- what does application.update actually accept? ----
+// It exists (Ashby's published index does not list it) and demands only applicationId, so every other
+// field is optional - which makes it the only candidate for setting an opening or a status.
+// To find its schema WITHOUT any risk: send one candidate field at a time with a DELIBERATELY WRONG
+// TYPE and NO applicationId. A field in the schema is named back with a type error; one that is not
+// in the schema is silently ignored and only applicationId is reported missing. Nothing can be
+// written - there is no application id in any request.
+function retagProbeUpdateFields_() {
+  var fields = ['openingId', 'status', 'archived', 'archiveReasonId', 'archiveReason',
+                'sourceId', 'creditedToUserId', 'currentInterviewStageId', 'interviewStageId',
+                'hiredAt', 'startDate', 'customFields', 'applicationHistory'];
+  var recognised = [], ignored = [];
+  for (var i = 0; i < fields.length; i++) {
+    var body = {};
+    body[fields[i]] = 12345;                       // wrong type on purpose, and NO applicationId
+    var res = ashbyWrite_('/application.update', body);
+    var msg = '';
+    try { var j = JSON.parse(res.text); msg = (j.errorInfo && j.errorInfo.message) || ''; } catch (e) { msg = res.text.substring(0, 150); }
+    if (msg.indexOf(fields[i]) > -1) recognised.push(fields[i] + '  ::  ' + msg.substring(0, 200));
+    else ignored.push(fields[i]);
+    Utilities.sleep(150);
+  }
+  Logger.log('upd | FIELDS application.update RECOGNISES:');
+  recognised.forEach(function (l) { Logger.log('upd |   ' + l); });
+  Logger.log('upd | not in its schema: ' + ignored.join(', '));
+  Logger.log('upd | done. No applicationId was ever sent - nothing was written to Ashby.');
 }
