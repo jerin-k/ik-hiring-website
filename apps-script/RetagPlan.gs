@@ -320,3 +320,133 @@ function buildRetagPlan() {
              ' | ' + Math.round((new Date().getTime() - t0) / 1000) + 's');
   Logger.log('plan | NOTHING was written to Ashby.');
 }
+
+// ============================================================================================
+// JOB-FIRST GAP REPORT  ->  tab "Job Gaps"
+//
+// Employment Type, Level, Complexity and Job Name are properties of the JOB, not the candidate,
+// so 118 / 227 / 26 / 64 candidate-row mismatches collapse to 20 / 43 / 16 / 15 JOBS. Fixing the
+// job once clears every candidate under it. This tab is the validation list for the team; once
+// they fill the CORRECT columns it becomes the input for an API fix.
+//
+// Reads ONLY the "Tracker Candidates v2" tab plus dashboard.json from Drive for job ids.
+// Makes NO Ashby calls and writes NO other tab.
+// Re-runnable: anything the team has typed into the CORRECT / Notes columns is carried across,
+// keyed on the Ashby job name.
+// ============================================================================================
+var JOBGAP_TAB = 'Job Gaps';
+
+function buildJobGapReport() {
+  var out = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var src = out.getSheetByName(AUDIT_V2_TAB);
+  if (!src) throw new Error('"' + AUDIT_V2_TAB + '" not found - run runAuditV2Once() first');
+  var vals = src.getDataRange().getValues(), H = vals[0], i, r;
+
+  // The v2 tab is laid out as: email, then repeating [field, field - Ashby, Match?, Result].
+  function colOf(n) { for (var k = 1; k + 2 < H.length; k += 4) if (String(H[k]).trim() === n) return k; return -1; }
+  var C = { job: colOf('Job Name'), emp: colOf('Employment Type'),
+            lvl: colOf('Level'), cx: colOf('Complexity') };
+  for (var key in C) if (C[key] < 0) throw new Error('v2 column not found: ' + key);
+
+  // job id + department, by title, from dashboard.json
+  var meta = {};
+  try {
+    var dash = loadDriveJson_('dashboard.json');
+    (dash.jobs || []).forEach(function (j) {
+      if (j && j.title && !meta[j.title]) meta[j.title] = { id: j.id || '', dept: j.department || '' };
+    });
+  } catch (e) { Logger.log('jobgap | dashboard.json unreadable, no job ids: ' + e.message); }
+
+  var FIELDS = [['emp', 'Employment Type'], ['lvl', 'Level'], ['cx', 'Complexity'], ['job', 'Job Name']];
+  var jobs = {}, skipped = 0;
+  for (r = 1; r < vals.length; r++) {
+    var aj = String(vals[r][C.job + 1] || '').trim();
+    if (!aj) { skipped++; continue; }                    // candidate not in Ashby at all
+    if (!jobs[aj]) jobs[aj] = { n: 0, ash: {}, trk: {}, gap: {} };
+    var J = jobs[aj];
+    J.n++;
+    for (i = 0; i < FIELDS.length; i++) {
+      var k = C[FIELDS[i][0]], f = FIELDS[i][0];
+      var av = String(vals[r][k + 1] || '').trim() || '(blank)';
+      var tv = String(vals[r][k] || '').trim() || '(blank)';
+      J.ash[f] = J.ash[f] || {}; J.ash[f][av] = (J.ash[f][av] || 0) + 1;
+      if (String(vals[r][k + 2] || '').trim() !== 'No') continue;
+      J.gap[f] = (J.gap[f] || 0) + 1;
+      J.trk[f] = J.trk[f] || {}; J.trk[f][tv] = (J.trk[f][tv] || 0) + 1;
+    }
+  }
+
+  // "a > b (12)" style, biggest first, so one glance shows the dominant disagreement
+  function fmt(m) {
+    if (!m) return '';
+    return Object.keys(m).sort(function (a, b) { return m[b] - m[a]; })
+      .map(function (v) { return v + ' (' + m[v] + ')'; }).join(' | ');
+  }
+  function dominant(m) {
+    if (!m) return '';
+    var best = '', n = -1;
+    for (var v in m) if (m[v] > n) { n = m[v]; best = v; }
+    return best;
+  }
+
+  // carry the team's own columns across a rebuild
+  var prior = {};
+  var old = out.getSheetByName(JOBGAP_TAB);
+  if (old) {
+    var ov = old.getDataRange().getValues(), oh = ov[0] || [];
+    var oj = oh.indexOf('Job (Ashby)');
+    var keep = ['CORRECT Employment Type', 'CORRECT Level', 'CORRECT Complexity', 'CORRECT Job Name', 'Notes / validated by'];
+    if (oj >= 0) {
+      for (r = 1; r < ov.length; r++) {
+        var kj = String(ov[r][oj] || '').trim(); if (!kj) continue;
+        keep.forEach(function (h) {
+          var ci = oh.indexOf(h); if (ci < 0) return;
+          var v = String(ov[r][ci] == null ? '' : ov[r][ci]).trim();
+          if (v) { prior[kj] = prior[kj] || {}; prior[kj][h] = v; }
+        });
+      }
+    }
+  }
+
+  var head = ['Job (Ashby)', 'Job ID', 'Department', 'Candidates in scope', 'Gap rows (total)',
+              'Employment Type - Ashby', 'Employment Type - Tracker says', 'Emp Type gap rows',
+              'Level - Ashby', 'Level - Tracker says', 'Level gap rows',
+              'Complexity - Ashby', 'Complexity - Tracker says', 'Complexity gap rows',
+              'Job name(s) used in tracker', 'Job name gap rows',
+              'CORRECT Employment Type', 'CORRECT Level', 'CORRECT Complexity', 'CORRECT Job Name',
+              'Notes / validated by'];
+  var rows = [];
+  Object.keys(jobs).forEach(function (j) {
+    var J = jobs[j], m = meta[j] || { id: '', dept: '' };
+    var tot = (J.gap.emp || 0) + (J.gap.lvl || 0) + (J.gap.cx || 0) + (J.gap.job || 0);
+    var p = prior[j] || {};
+    rows.push([j, m.id, m.dept, J.n, tot,
+      dominant(J.ash.emp), fmt(J.trk.emp), J.gap.emp || 0,
+      dominant(J.ash.lvl), fmt(J.trk.lvl), J.gap.lvl || 0,
+      dominant(J.ash.cx), fmt(J.trk.cx), J.gap.cx || 0,
+      fmt(J.trk.job), J.gap.job || 0,
+      p['CORRECT Employment Type'] || '', p['CORRECT Level'] || '',
+      p['CORRECT Complexity'] || '', p['CORRECT Job Name'] || '', p['Notes / validated by'] || '']);
+  });
+  rows.sort(function (a, b) { return (b[4] - a[4]) || (b[3] - a[3]); });   // worst gaps first
+
+  var sh = out.getSheetByName(JOBGAP_TAB);
+  if (!sh) sh = out.insertSheet(JOBGAP_TAB);
+  sh.clear();
+  var all = [head].concat(rows);
+  sh.getRange(1, 1, all.length, head.length).setValues(all);
+  sh.setFrozenRows(1);
+  sh.setFrozenColumns(1);
+  sh.getRange(1, 1, 1, head.length).setFontWeight('bold');
+  sh.autoResizeColumns(1, head.length);
+
+  var withGap = 0, jg = { emp: 0, lvl: 0, cx: 0, job: 0 };
+  rows.forEach(function (x) { if (x[4] > 0) withGap++;
+    if (x[7] > 0) jg.emp++; if (x[10] > 0) jg.lvl++; if (x[13] > 0) jg.cx++; if (x[15] > 0) jg.job++; });
+  Logger.log('jobgap | jobs: ' + rows.length + ' | with at least one gap: ' + withGap +
+             ' | candidate rows not in Ashby (excluded): ' + skipped);
+  Logger.log('jobgap | jobs affected - Employment Type ' + jg.emp + ' | Level ' + jg.lvl +
+             ' | Complexity ' + jg.cx + ' | Job Name ' + jg.job);
+  Logger.log('jobgap | carried over ' + Object.keys(prior).length + ' job(s) of team-entered values');
+  Logger.log('jobgap | wrote tab "' + JOBGAP_TAB + '". No Ashby calls, no other tab touched.');
+}
