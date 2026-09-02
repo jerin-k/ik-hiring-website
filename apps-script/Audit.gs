@@ -537,6 +537,13 @@ function buildAuditV2() {
   var yn = SpreadsheetApp.newDataValidation().requireValueInList(['Yes','No','n/a'], true).setAllowInvalid(true).build();
   for (fi = 0; fi < FIELDS.length; fi++)
     if (t1.length > 1) sh.getRange(2, 4 + fi * 4, t1.length - 1, 1).setDataValidation(yn);
+  // Result dropdown (Jerin, 2026-09-02). Result sits at 5 + fi*4 - it was the one column with no
+  // validation, so a rebuild used to drop the options the team picks from.
+  var rv = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Fixed-Ashby', 'Pending', 'Fixed-HT', 'cant-be-done', 'Not actioning'], true)
+    .setAllowInvalid(true).build();
+  for (fi = 0; fi < FIELDS.length; fi++)
+    if (t1.length > 1) sh.getRange(2, 5 + fi * 4, t1.length - 1, 1).setDataValidation(rv);
   var STAT = ['Open','Joining Pending','Joined','Dropped - Offer','Dropped - Select','Role Shelved',
               'Carry Forward to Next Q','Yet to Open','Offer to be released','Offer Released'];
   var sv = SpreadsheetApp.newDataValidation().requireValueInList(STAT, true).setAllowInvalid(true).build();
