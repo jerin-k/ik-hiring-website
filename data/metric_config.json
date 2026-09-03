@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-30T16:59:11.488Z",
+  "updatedAt": "2026-09-03T08:04:48.204Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -54,10 +54,20 @@
       "Siva Sruthi V S": 220,
       "Smriti Das": 220,
       "Tabitha Anceline E": 220,
-      "Talent Acquisition Team": 220,
       "Tina Anisha Bibeiro": 220,
       "Unassigned": 220,
-      "V Pooja": 210
+      "V Pooja": 210,
+      "Leenita Joseph Albert": 0,
+      "Praveetha A": 0
+    },
+    "2026-Q1": {
+      "Aditya Singh": 225,
+      "Alokita Dhumne": 180,
+      "Deepti Leslie": 225,
+      "Mahima Agarwal": 180,
+      "Oshin Verma": 225,
+      "Rijo John": 180,
+      "Ritika Bhasin": 225
     }
   },
   "scoreGrid": {
