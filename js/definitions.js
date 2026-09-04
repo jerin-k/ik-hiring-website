@@ -157,7 +157,7 @@ export const DEFINITIONS = {
         items: [
           ['Goal — Joiners', 'The <strong>positions opened in the selected quarter</strong> on the roles this recruiter works — not every role they have ever touched. Where several recruiters work the same role, its positions are <strong>split equally</strong> between them, which is why some Goals show a decimal.'],
           ['Capacity', 'What this recruiter is expected to carry in the quarter, set by hand in <strong>Admin → Metric Configuration</strong>. Blank until somebody sets it.'],
-          ['Joined', 'Candidates whose <strong>start date</strong> falls in the quarter, from the individual offer records. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised.'],
+          ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised.'],
           ['JP Total', 'People currently in Ref Check, Documentation or Offer. It is always <strong>exactly the two columns beside it added together</strong> — never counted separately.'],
           ['JP — Current Qtr <span class="defs-tag">Non-Sales</span>', 'Everyone in closing, minus anyone on an earlier quarter’s opening, minus anyone joining next quarter.'],
           ['JP — Upcoming Qtr <span class="defs-tag">Non-Sales</span>', 'Their opening was raised this quarter but they join next quarter. Reads 0 today because offers only started carrying an opening link on 25 Jul 2026.'],
@@ -249,7 +249,7 @@ export const DEFINITIONS = {
         heading: 'The columns',
         items: [
           ['Offered', 'Joined + Joining Pending + Dropped — everyone who got as far as an offer.'],
-          ['Joined', 'People whose <strong>start date</strong> falls in the quarter, minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong> — that was last quarter\u2019s work landing now.'],
+          ['Joined', 'People <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong> (an accepted offer alone is not counted), minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong> — that was last quarter\u2019s work landing now.'],
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and both Fulfilment tables use.'],
           ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
@@ -273,7 +273,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Portal</em>) → the specific source (e.g. <em>Naukri</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
-          ['Joiners', 'People who accepted an offer and whose <strong>start date</strong> falls in the selected period, credited to that recruiter, counted against the source on their application. Every joiner counts, including anyone filling a position opened in an earlier quarter — so this can run slightly ahead of the Fulfilment table, which leaves those out. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
+          ['Joiners', 'People <strong>moved to the Hired stage</strong>, whose <strong>start date</strong> falls in the selected period, credited to that recruiter, counted against the source on their application. Every joiner counts, including anyone filling a position opened in an earlier quarter — so this can run slightly ahead of the Fulfilment table, which leaves those out. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
           ['%', 'Share of the level above it — a source’s share of its type, a type’s share of the recruiter, a recruiter’s share of the pod.'],
           ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
         ]
@@ -482,7 +482,7 @@ export const DEFINITIONS = {
         heading: 'The columns',
         items: [
           ['Offered', 'Joined + Joining Pending + Dropped \u2014 everyone who got as far as an offer.'],
-          ['Joined', 'People whose <strong>start date</strong> falls in the quarter, minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong>.'],
+          ['Joined', 'People <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong> (an accepted offer alone is not counted), minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong>.'],
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. The same rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and the Recruiter tab use.'],
           ['Joining Conversion', '(Joined + Joining Pending) \u00f7 Offered \u2014 the share of everyone who reached an offer who has <strong>not</strong> fallen out.'],
@@ -504,7 +504,7 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Joiners', 'People who accepted an offer for that role and whose <strong>start date</strong> falls in the selected quarter, counted against the source on their application.'],
+          ['Joiners', 'People <strong>moved to the Hired stage</strong> for that role, whose <strong>start date</strong> falls in the selected quarter, counted against the source on their application.'],
           ['%', 'Share of the level above — a source’s share of its type, a type’s share of the role, and so on.'],
           ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
           ['Chart', 'One bar per source type, split into the individual sources inside it. It reads the same rows as the table, so the two can never disagree.'],
