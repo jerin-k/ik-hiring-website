@@ -838,7 +838,7 @@ export function initEfficiencyFilters(data) {
     const byKey = {};
     const bump = (key, field) => { const a = byKey[key] || (byKey[key] = { o: 0, j: 0, p: 0, dr: 0 }); a[field] += 1; };
     (data.offerEvents || []).forEach(e => {
-      if (!e.accepted || qOf(e.startDate) !== q) return;
+      if (!e.accepted || e.appStatus !== 'Hired' || qOf(e.startDate) !== q) return; // Joined = moved to Hired, not just an accepted offer
       if (e.openingQuarter && e.openingQuarter < q) return;
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'j');
     });
@@ -1193,7 +1193,7 @@ export function initEfficiencyFilters(data) {
     if (_jsQ === (q || 'ALL') && _jsMap) return _jsMap;
     const out = {};
     (data.offerEvents || []).forEach(e => {
-      if (!e.accepted || !e.jobId8) return;
+      if (!e.accepted || e.appStatus !== 'Hired' || !e.jobId8) return; // Joined = moved to Hired, not just an accepted offer
       const eq = qOfDate(e.startDate);
       if (!eq) return;
       if (q && eq !== q) return;

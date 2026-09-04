@@ -908,7 +908,7 @@ export function initRecruiterFilters(data) {
       // ⚠ SALES deliberately takes NO subtraction: its goal is joiners regardless of when the opening was
       // raised (Jerin, 2026-08-26). Same word, two rules, on purpose — do not "fix" it.
       if (!isSales) (data.offerEvents || []).forEach(e => {
-        const rec = e.recruiter; if (!rec || !e.accepted) return;
+        const rec = e.recruiter; if (!rec || !e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
         if (qOf(e.startDate) !== q) return;
         if (e.openingQuarter && e.openingQuarter < q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
@@ -1411,7 +1411,7 @@ export function initRecruiterFilters(data) {
     const inPeriod = (q) => !per || !per.length ? !!q : per.indexOf(q) >= 0;
     const byRec = {};
     (data.offerEvents || []).forEach(e => {
-      if (!e.accepted) return;
+      if (!e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
       const q = qOf(e.startDate);
       if (!q || !inPeriod(q)) return;
       const rec = e.recruiter; if (!rec) return;
@@ -1457,7 +1457,7 @@ export function initRecruiterFilters(data) {
     // Joined - people, by start date, minus last quarter's carry-over.
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      if (!e.accepted || qOf(e.startDate) !== q) return;
+      if (!e.accepted || e.appStatus !== 'Hired' || qOf(e.startDate) !== q) return; // Joined = moved to Hired, not just an accepted offer
       if (e.openingQuarter && e.openingQuarter < q) return;
       bump(rec, 'j', e.jobTitle);
     });
@@ -1485,7 +1485,7 @@ export function initRecruiterFilters(data) {
       const rec = e.recruiter; if (!rec) return;
       const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
       const jk = rec + '|' + (e.jobId8 || '');
-      if (e.accepted && qOf(e.startDate) === q) {
+      if (e.accepted && e.appStatus === 'Hired' && qOf(e.startDate) === q) { // Joined = moved to Hired, not just an accepted offer
         const a = sales[rec] || (sales[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
         const aj = salesJob[jk] || (salesJob[jk] = { hc: 0, sc: 0 }); aj.hc += 1; aj.sc += sc;
       }
