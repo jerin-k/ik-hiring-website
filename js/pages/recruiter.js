@@ -1,6 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
-import { scoreForRole } from '../score-model.js';
+import { scoreForRole, familyForJob } from '../score-model.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
@@ -489,7 +489,7 @@ export function renderRecruiter(data) {
       <div class="hyg-panel" data-h="unscored" style="display:none">
         <div class="hyg-head">
           <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Roles missing score inputs</h4>
-          <p class="sub-note" style="margin:0">A role's Score needs <strong>Level</strong> and <strong>Complexity</strong> from Ashby. Without both, the role scores nothing — so it contributes nothing to its department's Fulfilment target, and the target reads lower than the real workload. Fill these in on the job in Ashby.</p></div>
+          <p class="sub-note" style="margin:0">A role scores zero when it can't be classified — usually a <strong>Tech/NonTech role missing its Level</strong>. (SME roles score on Complexity alone, and PA by title, so a blank Level doesn't flag them; a blank Complexity counts as Normal.) It still counts in HC but adds nothing to its department's Fulfilment target. Set the Level on the job in Ashby.</p></div>
           <button class="hyg-dl" data-dl="unscored">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -1658,13 +1658,20 @@ export function initRecruiterFilters(data) {
         || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nothing here.</td></tr>`;
     }
 
-    // --- Roles missing score inputs (Level and/or Complexity) ---
-    // Both fields come from Ashby job custom fields and are needed for the role Score. A role missing
-    // either scores nothing, which silently deflates its department's Fulfilment target — surfaced here
-    // rather than left to be discovered as a number that looks low for no visible reason.
+    // --- Roles that score zero for the selected quarter ---
+    // Ask the REAL scorer, not a crude "is a field blank?" test. A role scores zero when it can't be
+    // classified — for Tech/NonTech that means a missing Level; SME scores on Complexity alone (Level
+    // irrelevant) and PA scores by title, so neither is flagged for a blank Level. A missing Complexity
+    // defaults to Normal and does NOT zero a role. Exclude-dept roles (Test) score zero by design — skipped.
+    // A zero-Score role silently deflates its department's Fulfilment target, so it is surfaced here.
     const unscored = (data.jobs || [])
-      .map(j => ({ j, missing: [!j.level || j.level === 'NA' ? 'Level' : null, !j.complexity ? 'Complexity' : null].filter(Boolean) }))
-      .filter(x => x.missing.length)
+      .filter(j => scoreForRole(j, q) === 0 && familyForJob(j.department, j.title) !== 'Exclude')
+      .map(j => {
+        const fam = familyForJob(j.department, j.title);
+        const reason = (fam === 'Tech' || fam === 'NonTech') && (!j.level || j.level === 'NA') ? 'Level'
+          : !fam ? 'Department not mapped' : 'Not scored';
+        return { j, reason };
+      })
       .sort((a, b) => (b.j.total || 0) - (a.j.total || 0));
     // Openings with no opened date. The pipeline emits ONE row per opening (not per opening x job), so
     // this list reconciles exactly with dataQuality.openingsNoOpenedAt. An opening with no date is skipped
@@ -1685,14 +1692,14 @@ export function initRecruiterFilters(data) {
 
     const usBody = document.getElementById('hygUnscoredBody');
     if (usBody) {
-      usBody.innerHTML = unscored.map(({ j, missing }) => `<tr>
+      usBody.innerHTML = unscored.map(({ j, reason }) => `<tr>
         <td style="font-weight:500">${esc(j.title || '(untitled)')}</td>
         <td>${esc(j.department || '—')}</td>
-        <td class="${!j.level || j.level === 'NA' ? 'zero' : ''}">${esc(j.level || '—')}</td>
-        <td class="${!j.complexity ? 'zero' : ''}">${esc(j.complexity || '—')}</td>
-        <td style="color:var(--orange);font-weight:500">${missing.join(' + ')}</td>
+        <td class="${reason === 'Level' ? 'zero' : ''}">${esc(j.level || '—')}</td>
+        <td>${esc(j.complexity || '—')}</td>
+        <td style="color:var(--orange);font-weight:500">${reason}</td>
         <td>${j.total || 0}</td></tr>`).join('')
-        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every role has both Level and Complexity. ✓</td></tr>`;
+        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every role scores for this quarter. ✓</td></tr>`;
     }
 
     // --- Other anomalies ---
