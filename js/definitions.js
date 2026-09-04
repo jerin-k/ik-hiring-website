@@ -181,7 +181,7 @@ export const DEFINITIONS = {
       ['Drop includes people who never had an offer raised', 'Until 26 Aug it did not — Drop required an offer record, which silently excluded anyone archived out of Ref Check or Documentation before anyone raised one. Every archived application was checked: <strong>17 such people</strong> were invisible, and 2026-Q2 went from 20 drops to 30.'],
       ['Past recruiters are hidden by default', 'Their history still counts in the data; tick <em>Include past recruiters</em> to see them.'],
       ['Shared positions are split by convention, not measurement', 'The data cannot say who owns which position of a role several recruiters work, so the positions are divided equally. Treat a Goal on an evergreen role as approximate.'],
-      ['Roles with no Level or Complexity in Ashby score nothing', 'They still count in HC, but contribute 0 to Score — so Score understates the work until those fields are filled in. The list is in <strong>Data Hygiene → Roles Missing Score Inputs</strong>.'],
+      ['Roles that score zero for the quarter', 'They still count in HC but contribute 0 to Score — usually Tech/NonTech roles missing a Level (SME roles score on Complexity alone and PA by title, so neither needs a Level). Score understates the work until the Level is set. The list is in <strong>Data Hygiene → Roles Missing Score Inputs</strong>.'],
     ]
   },
 
@@ -325,7 +325,7 @@ export const DEFINITIONS = {
           ['Pod Not Set', 'Real recruiters with real numbers who have no pod for the selected quarter. <strong>They are excluded from every table and chart on this tab</strong> — this list is where their work is visible until somebody assigns them a pod.'],
           ['Offers Missing Opening Link', 'Offers with no opening attached that are <strong>still in play</strong>. Without the link the offer cannot be tied to a position, which is why Delta on the HM tab goes negative.'],
           ['Hired Missing Opening Link', 'The same gap on people already hired or archived. Reference only — too late to fix usefully.'],
-          ['Roles Missing Score Inputs', 'Roles with no Level or Complexity set in Ashby. They score zero, so they add headcount but no Score anywhere on the dashboard.'],
+          ['Roles Missing Score Inputs', 'Roles that score zero for the selected quarter — usually Tech/NonTech roles missing a Level. SME roles score on Complexity alone and PA by title, so a blank Level does not flag them; a blank Complexity counts as Normal. They add headcount but no Score anywhere on the dashboard.'],
           ['Openings Missing Opened Date', 'Openings with no <strong>opened date</strong> in Ashby. They are <strong>left out of Total Openings entirely</strong> \u2014 on Hiring Manager Positions and on Overall Efficiency \u2014 so they are invisible rather than merely undated. One row per opening. Set the date on the opening in Ashby.'],
           ['Capacity Not Set', 'Recruiters with candidates attributed to them but no capacity for the quarter, so they have no target and no utilisation figure.'],
           ['Other Anomalies', 'One-off attribution problems, including any Ashby stage name the pipeline does not recognise — the guard that catches a stage being renamed and silently dropped.'],
@@ -351,7 +351,7 @@ export const DEFINITIONS = {
           ['Drop', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Drop \u00f7 (Joined + Joining Pending + Drop).'],
           ['Delta', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
           ['Missed', 'Positions closed as <em>carry forward</em> to the next quarter.'],
-          ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role with no Level or Complexity in Ashby is marked <em>unscored</em>: it still counts in HC but adds nothing to Score.'],
+          ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is (Family + Level + Complexity, from <strong>Admin → Metric Configuration</strong>). A role that cannot be scored — usually a Tech/NonTech role with no Level — is marked <em>unscored</em>: it still counts in HC but adds nothing to Score.'],
         ]
       },
       {
