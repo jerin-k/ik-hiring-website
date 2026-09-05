@@ -587,3 +587,181 @@ function buildAuditV2() {
   Logger.log('AUDIT SHEET: ' + out.getUrl());
   return out.getUrl();
 }
+
+// ============================================================================================
+// buildAuditV3() - OPENING-FIRST audit. Spine = Hiring Tracker (source of truth), one row per
+// Q3-2026 position/opening (ALL statuses). Candidate-field audits fire only on CLOSURE rows
+// (where an Ashby offer matches by email). Writes ONLY the "Tracker Openings v3" tab; leaves
+// Tracker Candidates v2 and everything else untouched. Added 2026-09-04.
+// ============================================================================================
+function buildAuditV3() {
+  var TRACKER_ID = '1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A';
+  var V3_TAB = 'Tracker Openings v3';
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var TZ = 'UTC';
+  var DONT_ACTION = { 'Opening Quarter':1, 'DOJ':1, 'DOJ Month':1, 'DOJ Quarter':1, 'Offer Date':1, 'Offer Quarter':1 };
+  var TEAM_DASH = { 'Employment Type':1, 'Level':1, 'Complexity':1 };   // fields the team validated in Job Gaps
+
+  function d2s(v) {
+    if (!v) return '';
+    if (Object.prototype.toString.call(v) === '[object Date]') return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+    return String(v).trim();
+  }
+  function mth(s) { return (s && s.length >= 7) ? MON[parseInt(s.substring(5,7),10)-1] + '-' + s.substring(0,4) : ''; }
+  function qtr(s) { return (s && s.length >= 7) ? 'Q' + (Math.floor((parseInt(s.substring(5,7),10)-1)/3)+1) + ' ' + s.substring(0,4) : ''; }
+  function qc(a)  { return a ? 'Q' + a.charAt(a.length-1) + ' ' + a.substring(0,4) : ''; }
+  function nrm(e) { return String(e || '').replace(/\s+/g,'').toLowerCase(); }
+  function okEmail(e) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e); }
+  function words(s) { var t=String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/),o={};for(var i=0;i<t.length;i++)if(t[i])o[t[i]]=1;return o; }
+  function roleOk(a,b){ var x=words(a),y=words(b),kx=Object.keys(x),ky=Object.keys(y),n=0,i;if(!kx.length||!ky.length)return false;for(i=0;i<kx.length;i++)if(y[kx[i]])n++;return n>=2||n===kx.length||n===ky.length; }
+  function eq(a,b){ return String(a).trim().toLowerCase() === String(b).trim().toLowerCase() ? 'Yes' : 'No'; }
+  function nameTokens(s){ var t=String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/),o=[];for(var i=0;i<t.length;i++)if(t[i]&&t[i].length>1)o.push(t[i]);return o; }
+  function nameMatch(a,b){ var x=nameTokens(a),y=nameTokens(b);if(!x.length||!y.length)return false;var s=x.length<=y.length?x:y,l=x.length<=y.length?y:x,i;if(s.length===1)return s[0]===l[0];for(i=0;i<s.length;i++){var hit=false;for(var j=0;j<l.length;j++)if(l[j]===s[i]){hit=true;break;}if(!hit)return false;}return true; }
+
+  // ---- tracker: EVERY Q3-2026 position, all statuses ----
+  var trackerSS = SpreadsheetApp.openById(TRACKER_ID);
+  TZ = trackerSS.getSpreadsheetTimeZone() || 'UTC';
+  var vals = trackerSS.getSheetByName('Master').getDataRange().getValues();
+  var hdr = vals[0];
+  function col(n){ for (var i=0;i<hdr.length;i++) if (String(hdr[i]).trim() === n) return i; return -1; }
+  function colAny(list){ for (var i=0;i<list.length;i++){ var c=col(list[i]); if (c>=0) return c; } return -1; }
+  function at(row,idx){ return idx>=0 ? String(row[idx]==null?'':row[idx]).trim() : ''; }
+  var C = { date:col('Date'), jcq:col('Job Creation Quarter'), status:col('Overall Status'), dept:col('Department'),
+            job:col('Job Name'), rec:col('Recruiter'), name:col('Candidate Name'), email:col('Personal Email'),
+            offer:col('Date of Offer'), doj:col('DOJ'), jm:col('Joining Month'), jq:col('Joining Quarter'),
+            role:colAny(['Role Type','Type of Role']), loc:colAny(['Job Location','Location']),
+            emp:colAny(['Employment Type','Employment type','Emp Type','Type of Employment']),
+            lvl:colAny(['Level','Job Level','Grade']), cx:colAny(['Complexity','Role Complexity','Job Complexity']) };
+
+  var trk = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r];
+    var jcq = String(row[C.jcq] || '').trim();
+    if (jcq !== 'Q3 2026') continue;
+    var e = nrm(row[C.email]), dj = d2s(row[C.doj]), od = d2s(row[C.date]);
+    trk.push({ email: okEmail(e) ? e : '', name:String(row[C.name]||'').trim(),
+               job:at(row,C.job), opd:od, opq:jcq, doj:dj,
+               rec:at(row,C.rec), role:at(row,C.role), loc:at(row,C.loc),
+               emp:at(row,C.emp), lvl:at(row,C.lvl), cx:at(row,C.cx), offd:d2s(row[C.offer]),
+               djm:String(row[C.jm]||'').trim() || mth(dj), djq:String(row[C.jq]||'').trim() || qtr(dj),
+               status:String(row[C.status]||'').trim() });
+  }
+
+  // ---- Ashby offers by email (offer_contacts.json - same source as v2) ----
+  var it = DriveApp.getFilesByName('offer_contacts.json');
+  if (!it.hasNext()) throw new Error('offer_contacts.json not found - run refreshDashboardData first');
+  var ashRows = JSON.parse(it.next().getBlob().getDataAsString()).rows;
+  var byEmail = {};
+  for (var i = 0; i < ashRows.length; i++) { var e2 = nrm(ashRows[i].email); if (!okEmail(e2)) continue; (byEmail[e2] = byEmail[e2] || []).push(ashRows[i]); }
+  function offerDateOf(o){ return (o && (o.offerCreatedAt || o.decidedAt)) || ''; }
+  function aStat(o){ if(o.appStatus==='Hired')return 'Joined'; if(o.joiningPending)return 'Joining Pending'; if(o.appStatus==='Archived')return 'Dropped - Offer'; return 'Offer Released'; }
+  var multiRec = {};
+  try { var dash = loadDriveJson_('dashboard.json'); var mr=(dash&&dash.dataQuality&&dash.dataQuality.multiRecruiter)||[]; for(i=0;i<mr.length;i++) if(mr[i]&&mr[i].app) multiRec[mr[i].app]=mr[i].names||[]; } catch(eD){}
+  function ashRecruiterNames(m){ var names=multiRec[m.applicationId]; if(names&&names.length>1)return names; return m.recruiter?[m.recruiter]:[]; }
+  var LATE = { 'Reference Check':1,'Document Submission':1,'Offer':1,'Hired':1 };
+  function lastLateMove(appId){ if(!appId)return ''; try{ var h=ashbyPost_('/application.listHistory',{applicationId:appId}); var list=(h&&(h.results||h.history))||[],best=''; for(var q=0;q<list.length;q++){var ht=list[q]; if(!ht||!ht.enteredStageAt||!LATE[ht.title])continue; if(String(ht.enteredStageAt)>best)best=String(ht.enteredStageAt);} return best; }catch(eH){return '';} }
+  function fallbackDate(rc){ var cands=[rc.offerCreatedAt,rc.decidedAt,rc.startDate,rc.archivedAt],b=''; for(var q=0;q<cands.length;q++) if(cands[q]&&String(cands[q])>b)b=String(cands[q]); return b; }
+  function chooseRecord(list){ if(list.length===1)return list[0]; var hired=[],q; for(q=0;q<list.length;q++)if(list[q].appStatus==='Hired')hired.push(list[q]); var pool=hired.length?hired:list; if(pool.length===1)return pool[0]; var best=null,bestKey=''; for(q=0;q<pool.length;q++){var key=lastLateMove(pool[q].applicationId)||fallbackDate(pool[q]); if(!best||String(key)>bestKey){best=pool[q];bestKey=String(key);}} return best; }
+
+  // ---- fields (opening-first order); each -> value | Ashby | Match? | Result ----
+  var FIELDS = [
+    { name:'Opening Date',    t:function(t){return t.opd;},    a:function(m){return '';},                                        c:'na'    },
+    { name:'Opening Quarter', t:function(t){return t.opq;},    a:function(m){return qc(m.openingQuarter)||qc(m.attrQuarter);},   c:'eq'    },
+    { name:'Job Name',        t:function(t){return t.job;},    a:function(m){return m.jobTitle||'';},                            c:'role'  },
+    { name:'Role Type',       t:function(t){return t.role;},   a:function(m){return '';},                                        c:'na'    },
+    { name:'Employment Type', t:function(t){return t.emp;},    a:function(m){return m.employmentType||'';},                      c:'eq'    },
+    { name:'Level',           t:function(t){return t.lvl;},    a:function(m){return m.level||'';},                               c:'eq'    },
+    { name:'Complexity',      t:function(t){return t.cx;},     a:function(m){return m.complexity||'';},                          c:'eq'    },
+    { name:'Location',        t:function(t){return t.loc;},    a:function(m){return '';},                                        c:'na'    },
+    { name:'Recruiter (Owner)', t:function(t){return t.rec;},  a:function(m){return ashRecruiterNames(m).join(' + ');},          c:'rec'   },
+    { name:'Status',          t:function(t){return t.status;}, a:function(m){return aStat(m);},                                  c:'eq'    },
+    { name:'Candidate Name',  t:function(t){return t.name;},   a:function(m){return m.candidate||'';},                           c:'found' },
+    { name:'DOJ',             t:function(t){return t.doj;},    a:function(m){return m.startDate||'';},                           c:'eq'    },
+    { name:'DOJ Month',       t:function(t){return t.djm;},    a:function(m){return mth(m.startDate||'');},                      c:'eq'    },
+    { name:'DOJ Quarter',     t:function(t){return t.djq;},    a:function(m){return qtr(m.startDate||'');},                      c:'eq'    },
+    { name:'Offer Date',      t:function(t){return t.offd;},   a:function(m){return offerDateOf(m);},                            c:'eq'    },
+    { name:'Offer Quarter',   t:function(t){return qtr(t.offd);}, a:function(m){return qtr(offerDateOf(m));},                    c:'eq'    }
+  ];
+
+  function rowKey(t){ return t.email || ('OPEN|'+t.job+'|'+t.opd+'|'+t.rec); }
+
+  // ---- carry Result cells across from a previous V3 tab (keyed on row key + field) ----
+  var out = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  // Job Gaps team answers keyed on Ashby job name: '-' = Ashby already right / don't action.
+  var jobGaps = {};
+  try {
+    var jg = out.getSheetByName('Job Gaps');
+    if (jg) { var jv = jg.getDataRange().getValues();
+      for (var jr = 1; jr < jv.length; jr++) { var jn = String(jv[jr][0]||'').trim(); if (!jn) continue;
+        jobGaps[jn] = { 'Employment Type': String(jv[jr][16]||'').trim(), 'Level': String(jv[jr][17]||'').trim(), 'Complexity': String(jv[jr][18]||'').trim() }; } }
+  } catch (eJG) {}
+  var actionable = [], actCount = {};
+  var oldResult = {};
+  try {
+    var oldSheet = out.getSheetByName(V3_TAB);
+    if (oldSheet) {
+      var ov = oldSheet.getDataRange().getValues(); if (ov.length > 1) {
+        var oh = ov[0], keyCol = 0, lastField = '', resCol = {};
+        for (var cc = 0; cc < oh.length; cc++) { var hn=String(oh[cc]||'').trim(); if(!hn)continue;
+          if (hn.indexOf('Row key')===0){keyCol=cc;continue;} if(hn==='Match?')continue; if(hn.indexOf(' - Ashby')>-1)continue;
+          if (hn==='Result'){ if(lastField)resCol[lastField]=cc; continue; } lastField=hn; }
+        for (var rr=1; rr<ov.length; rr++){ var ok=String(ov[rr][keyCol]||'').trim(); if(!ok)continue;
+          for (var fn in resCol){ var vv=String(ov[rr][resCol[fn]]==null?'':ov[rr][resCol[fn]]).trim(); if(vv){ (oldResult[ok]=oldResult[ok]||{})[fn]=vv; } } }
+      }
+    }
+  } catch(eO){}
+
+  // ---- build rows ----
+  var head = ['Row key (email or job|date|recruiter)'], fi;
+  for (fi=0; fi<FIELDS.length; fi++) head.push(FIELDS[fi].name, FIELDS[fi].name+' - Ashby', 'Match?', 'Result');
+  head.push('Which Ashby record', 'Row status');
+  var t1 = [head], closures = 0, matched = 0;
+
+  for (i=0; i<trk.length; i++) {
+    var tr = trk[i], key = rowKey(tr);
+    var list = tr.email ? (byEmail[tr.email] || []) : [];
+    var m = list.length ? chooseRecord(list) : null;
+    if (m) matched++;
+    var isClosure = /Joined|Joining Pending|Dropped/.test(tr.status);
+    if (isClosure) closures++;
+    var line = [key];
+    var ajob = m ? (m.jobTitle || '') : '';
+    for (fi=0; fi<FIELDS.length; fi++) {
+      var f = FIELDS[fi], tv = f.t(tr), av = m ? f.a(m) : '', mm = '';
+      if (f.c === 'found')      mm = m ? 'Yes' : (isClosure ? 'No' : 'n/a');
+      else if (!m)              mm = (f.c === 'na') ? 'n/a' : 'n/a';
+      else if (f.c === 'na')    mm = 'n/a';
+      else if (f.c === 'role')  mm = roleOk(tv, av) ? 'Yes' : 'No';
+      else if (f.c === 'rec')   { var nm2 = ashRecruiterNames(m); mm = (nm2.length===1 && nameMatch(tv, nm2[0])) ? 'Yes' : 'No'; }
+      else                      mm = eq(tv, av);
+      var res = (oldResult[key] && oldResult[key][f.name]) || '';
+      if (!res && mm === 'No') {
+        if (DONT_ACTION[f.name]) res = 'Not actioning';
+        else if (TEAM_DASH[f.name] && ajob && jobGaps[ajob] && jobGaps[ajob][f.name] === '-') res = 'Not actioning';
+      }
+      if (mm === 'No' && !res) { actCount[f.name] = (actCount[f.name]||0) + 1;
+        if (actionable.length < 300) actionable.push(tr.status + ' | ' + tr.job + ' | ' + f.name + ': HT "' + tv + '" vs Ashby "' + av + '"'); }
+      line.push(tv, av, mm, res);
+    }
+    line.push(m ? (list.length>1?(list.length+' Ashby records'):'') : '', tr.status);
+    t1.push(line);
+  }
+
+  // ---- write ONLY the V3 tab ----
+  var sh = out.getSheetByName(V3_TAB);
+  if (!sh) sh = out.insertSheet(V3_TAB);
+  else { sh.clear().clearFormats(); sh.getRange(1,1,sh.getMaxRows(),sh.getMaxColumns()).clearDataValidations(); if(sh.getFrozenRows())sh.setFrozenRows(0); if(sh.getFrozenColumns())sh.setFrozenColumns(0); }
+  sh.getRange(1,1,t1.length,head.length).setValues(t1);
+  sh.getRange(1,1,1,head.length).setFontWeight('bold').setBackground('#334155').setFontColor('#ffffff');
+  sh.setFrozenRows(1); sh.setFrozenColumns(1);
+  for (fi=0; fi<FIELDS.length; fi++){ var aCol=3+fi*4; if(t1.length>1) sh.getRange(2,aCol,t1.length-1,1).setBackground('#f1f5f9'); sh.getRange(1,aCol).setBackground('#475569'); }
+  var yn = SpreadsheetApp.newDataValidation().requireValueInList(['Yes','No','n/a'],true).setAllowInvalid(true).build();
+  for (fi=0; fi<FIELDS.length; fi++) if(t1.length>1) sh.getRange(2,4+fi*4,t1.length-1,1).setDataValidation(yn);
+
+  var actTot = 0; for (var an in actCount) actTot += actCount[an];
+  Logger.log('v3 | ACTIONABLE (Match=No, Result blank): ' + actTot + ' | by field: ' + JSON.stringify(actCount));
+  for (var ax = 0; ax < actionable.length; ax++) Logger.log('ACT :: ' + actionable[ax]);
+  Logger.log('v3 | Q3-2026 opening rows: ' + (t1.length-1) + ' | closures: ' + closures + ' | matched to an Ashby offer: ' + matched);
+  Logger.log('AUDIT SHEET: ' + out.getUrl());
+  return out.getUrl();
+}
