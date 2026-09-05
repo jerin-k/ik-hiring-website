@@ -10,6 +10,7 @@
 // Future speed-up (only if a run ever exceeds ~25min as the year fills): layer syncToken deltas or a rolling window.
 
 var ASHBY_API_BASE = 'https://api.ashbyhq.com';
+var DASHBOARD_FOLDER_ID = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';  // restored 5 Sep: deployed copy had lost it -> pipeline crashed in saveDriveJson_
 var SCOPE_YEAR = Math.max(new Date().getFullYear(), 2026);
 var SCOPE_FROM_MS = new Date(SCOPE_YEAR + '-01-01T00:00:00.000Z').getTime();   // createdAfter value (Unix ms)
 var VELOCITY_DAYS = 35;
@@ -960,7 +961,7 @@ function refreshDashboardData() {
   } catch (eD) { Logger.log('late-stage drop merge skipped: ' + eD.message); }
 
   var dashboard = {
-    lastUpdated: new Date().toISOString(), schemaVersion: 4, scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
+    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
     openingPendingByJobQ: openingPendingByJobQ,
@@ -1306,4 +1307,50 @@ function triggerRefreshNow() {
 function testApiConnection() {
   try { Logger.log('key ' + getAshbyApiKey_().substring(0, 8) + '...'); Logger.log('job.list: ' + ((ashbyPost_('/job.list', { limit: 1 }).results || []).length)); Logger.log('application.list createdAfter: ' + ((ashbyPost_('/application.list', { limit: 3, createdAfter: SCOPE_FROM_MS }).results || []).length) + ' (first=' + ((ashbyPost_('/application.list', { limit: 1, createdAfter: SCOPE_FROM_MS }).results || [{}])[0].createdAt) + ')'); Logger.log('OK'); }
   catch (e) { Logger.log('FAIL: ' + e.message); }
+}
+
+
+// #1 opening-first reporting (2026-09): per recruiter x quarter x job8 count of the openings a recruiter
+// OWNS (the opening's native-Roles 'Recruiter'). The Recruiter tab derives Goal from this instead of the
+// equal-split-of-seats convention. Scope = open + filled + missed openings opened in the quarter (mirrors
+// openingBuckets Total). Shared openings (2+ Recruiter owners) split 1/n. Keyed by recruiter NAME resolved
+// via userId so it matches recruiters[].name (avoids Ashby display-name drift).
+function computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName) {
+  var RID = '22db8dc8-83f4-40de-8376-87efff4a6eb6';
+  var CR_HIRED = '2777221e-d3a7-40e6-95a3-6988ad60494d', CR_ONHOLD = '05105d39-d5f6-442c-b7bf-f6b055a50a43',
+      CR_SHELVED = '63d32633-3047-458b-a9a2-fbf2d04738f2', CR_CARRYFWD = '249988e6-c53c-4d6e-b60d-dc78e145520d';
+  var owned = {};
+  (allOpenings || []).forEach(function (o) {
+    var lv = o.latestVersion || {}, cr = o.closeReasonId;
+    if (cr === CR_ONHOLD || cr === CR_SHELVED) return;
+    var iso = o.openedAt; if (!iso) return;
+    var dt = new Date(iso); if (isNaN(dt.getTime())) return;
+    if (o.closedAt && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;
+    var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
+    var ht = lv.hiringTeam || [], owners = [];
+    ht.forEach(function (m) { if (m.role === 'Recruiter' || m.roleId === RID) { var nm = uidToName[m.userId]; if (nm) owners.push(nm); } });
+    if (!owners.length) return;
+    var n = owners.length, jobIds = lv.jobIds || [];
+    jobIds.forEach(function (jid) {
+      var j8 = String(jid).substring(0, 8);
+      owners.forEach(function (nm) { var bq = owned[nm] || (owned[nm] = {}); var bj = bq[q] || (bq[q] = {}); bj[j8] = Math.round(((bj[j8] || 0) + 1 / n) * 10000) / 10000; });
+    });
+  });
+  return owned;
+}
+
+// ONE-TIME (delete after running): ships ownedSeatsByRecruiterQ into the already-published dashboard.json
+// without a full re-pull. Reuses the same helper the pipeline now calls.
+function patchOwnedSeatsNow() {
+  var d = loadExistingDashboard_();
+  if (!d) { Logger.log('no dashboard.json'); return; }
+  var uidToName = {}; (d.recruiters || []).forEach(function (r) { if (r.userId) uidToName[r.userId] = r.name; });
+  var allOpenings = fetchOpenings_();
+  d.ownedSeatsByRecruiterQ = computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName);
+  d.schemaVersion = 5;
+  saveDashboardJson_(d);
+  var recs = Object.keys(d.ownedSeatsByRecruiterQ);
+  var q3 = recs.filter(function (nm) { return d.ownedSeatsByRecruiterQ[nm]['2026-Q3']; });
+  Logger.log('PATCHED owned recruiters=' + recs.length + ' | 2026-Q3 owners=' + q3.length + ' | schemaVersion=' + d.schemaVersion);
+  Logger.log('Q3 owners=' + JSON.stringify(q3.sort()));
 }
