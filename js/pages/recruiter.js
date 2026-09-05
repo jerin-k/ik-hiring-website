@@ -571,6 +571,16 @@ export function initRecruiterFilters(data) {
   // title/department when the job isn't in jobs[] — e.g. archived with no current apps).
   const jobById = {}; (data.jobs || []).forEach(j => { jobById[j.id] = j; });
   const jobMeta = (bj) => { const j = jobById[(bj.jobId || '').slice(0, 8)]; return { department: (j && j.department) || bj.department, title: (j && j.title) || bj.title, level: j && j.level, complexity: j && j.complexity }; };
+  const jobMetaById = (j8) => { const j = jobById[j8]; return j ? { department: j.department, title: j.title, level: j.level, complexity: j.complexity } : null; };
+
+  // #1 opening-first reporting (2026-09-06): the Fulfilment GOAL now derives from the openings a recruiter
+  // OWNS in Ashby — the opening's native-Roles "Recruiter" — emitted by the pipeline as
+  // ownedSeatsByRecruiterQ[name][quarter][jobId8] = count. This replaces the equal-split-of-seats convention
+  // (seatsOf, in fulfilRows). Ownership is exact, so a role two recruiters work no longer double-counts its
+  // positions. When the field is absent — an older refresh still on schema v4 — we fall back to the
+  // equal-split estimate so the tab still renders; useOwnedGoal says which basis is live.
+  const ownedByRecQ = data.ownedSeatsByRecruiterQ || null;
+  const useOwnedGoal = !!ownedByRecQ;
 
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
   // else the current-stage approximation (R1-cleared unknown → null).
@@ -1042,16 +1052,26 @@ export function initRecruiterFilters(data) {
       };
 
       const recFulfil = (r) => {
-        // Goal = seats OPENED IN THE SELECTED QUARTER on the jobs this recruiter works, not one point per job
-        // they have ever touched. Counting one per job made Goal a lifetime list under a quarter heading:
-        // Deepti Leslie read a Goal of 19 for Q3 when only 3 of her 19 jobs had a Q3 opening at all.
-        // ⚠ A job worked by two recruiters counts its seats for both — same attribution as before, but now
-        // it is seats being duplicated rather than a flat 1, so pod totals overstate where jobs are shared.
+        // #1 opening-first: Goal = Σ score of the openings this recruiter OWNS in the selected quarter (the
+        // opening's native-Roles Recruiter in Ashby) — NOT one point per job they have ever touched, and no
+        // longer an equal split of a role's seats. Ownership is exact, so a role two recruiters work counts
+        // each opening once, for its owner only.
+        // Fallback (no owned field yet): the old seats-OPENED-this-quarter figure, split equally across the
+        // recruiters who work the role — a convention, not a measurement, which is why some Goals showed a
+        // decimal. The owned basis removes both the split and the decimals.
         let aHC = 0, aSc = 0;
-        (r.byJob || []).forEach(bj => {
-          const seats = seatsOf(bj.jobId); if (!seats) return;
-          const sc = scoreForRole(jobMeta(bj), q); aHC += seats; aSc += seats * sc;
-        });
+        if (useOwnedGoal) {
+          const owned = (ownedByRecQ[r.name] && ownedByRecQ[r.name][q]) || {};
+          Object.keys(owned).forEach(j8 => {
+            const cnt = owned[j8]; if (!cnt) return;
+            aHC += cnt; aSc += cnt * scoreForRole(jobMetaById(j8) || jobMeta({ jobId: j8 }), q);
+          });
+        } else {
+          (r.byJob || []).forEach(bj => {
+            const seats = seatsOf(bj.jobId); if (!seats) return;
+            const sc = scoreForRole(jobMeta(bj), q); aHC += seats; aSc += seats * sc;
+          });
+        }
         const o = outOf(r.name), jn = joinOf(r.name), dr = dropOf(r.name), jp = jpOf(r.name);
         const capSc = capacityOf(r.name, q) || 0;
         // Outcome column = Joined on BOTH tables.
@@ -1090,7 +1110,12 @@ export function initRecruiterFilters(data) {
           const rk = `${mode}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
-          const jobs = (r.byJob || []).slice().sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
+          // #1: the per-job rows must include roles the recruiter OWNS openings on even where they never
+          // tagged an application, or the job Goals would not sum to the recruiter row above. Merge byJob
+          // with the owned-opening jobs for this quarter, then sort.
+          const bjByJ8 = {}; (r.byJob || []).forEach(bj => { const k = (bj.jobId || '').slice(0, 8); if (k) bjByJ8[k] = bj; });
+          if (useOwnedGoal) { const om = (ownedByRecQ[r.name] && ownedByRecQ[r.name][q]) || {}; Object.keys(om).forEach(j8 => { if (om[j8] && !bjByJ8[j8]) bjByJ8[j8] = { jobId: j8 }; }); }
+          const jobs = Object.values(bjByJ8).sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
           // The role split the Fulfilment chart shades its Achieved band with (Jerin, 2026-08-29). Collected
           // HERE, from the very rows the table prints, so the chart cannot end up on a different basis —
           // this chart has been on the wrong basis twice before.
@@ -1100,7 +1125,9 @@ export function initRecruiterFilters(data) {
               const m = jobMeta(bj), sc = scoreForRole(m, q);
               const jo = outOfJob(r.name, bj.jobId);   // dated, same basis as the recruiter row above
               const jj = joinOfJob(r.name, bj.jobId);
-              const seats = seatsOf(bj.jobId);
+              const seats = useOwnedGoal
+                ? ((ownedByRecQ[r.name] && ownedByRecQ[r.name][q] && ownedByRecQ[r.name][q][(bj.jobId || '').slice(0, 8)]) || 0)
+                : seatsOf(bj.jobId);
               const jd2 = dropOfJob(r.name, bj.jobId);
               const jjp = jpOfJob(r.name, m.title);
               // A job with no seats this quarter and nothing delivered, in closing or dropped is not this

@@ -143,7 +143,7 @@ export const DEFINITIONS = {
   'rec-fulfilment': {
     summary: 'How these numbers are worked out',
     intro: 'Two tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026',
     groups: [
       {
         heading: 'The two number types in every column',
@@ -155,7 +155,7 @@ export const DEFINITIONS = {
       {
         heading: 'The columns',
         items: [
-          ['Goal — Joiners', 'The <strong>positions opened in the selected quarter</strong> on the roles this recruiter works — not every role they have ever touched. Where several recruiters work the same role, its positions are <strong>split equally</strong> between them, which is why some Goals show a decimal.'],
+          ['Goal — Joiners', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. One owner per opening, so nothing is split and the Goal is a whole number — the only exception is an opening that still has more than one owner (see the note below).'],
           ['Capacity', 'What this recruiter is expected to carry in the quarter, set by hand in <strong>Admin → Metric Configuration</strong>. Blank until somebody sets it.'],
           ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised.'],
           ['JP Total', 'People currently in Ref Check, Documentation or Offer. It is always <strong>exactly the two columns beside it added together</strong> — never counted separately.'],
@@ -180,7 +180,7 @@ export const DEFINITIONS = {
       ['Recruiters with no pod set are left out entirely', 'Out of every row, total and chart on this tab. Their numbers are in <strong>Data Hygiene → Pod Not Set</strong> — worth a look, one of them carries real volume.'],
       ['Drop includes people who never had an offer raised', 'Until 26 Aug it did not — Drop required an offer record, which silently excluded anyone archived out of Ref Check or Documentation before anyone raised one. Every archived application was checked: <strong>17 such people</strong> were invisible, and 2026-Q2 went from 20 drops to 30.'],
       ['Past recruiters are hidden by default', 'Their history still counts in the data; tick <em>Include past recruiters</em> to see them.'],
-      ['Shared positions are split by convention, not measurement', 'The data cannot say who owns which position of a role several recruiters work, so the positions are divided equally. Treat a Goal on an evergreen role as approximate.'],
+      ['Openings with more than one owner are split and flagged', 'When two or more recruiters sit as <em>Recruiter</em> on the same opening in Ashby, its score is <strong>divided equally</strong> between them and the opening is listed in <strong>Data Hygiene</strong> so it can be given a single owner. This is the only place a Goal still shows a decimal, and it disappears as ownership is tidied up.'],
       ['Roles that score zero for the quarter', 'They still count in HC but contribute 0 to Score — usually Tech/NonTech roles missing a Level (SME roles score on Complexity alone and PA by title, so neither needs a Level). Score understates the work until the Level is set. The list is in <strong>Data Hygiene → Roles Missing Score Inputs</strong>.'],
     ]
   },
