@@ -1,31 +1,3 @@
-// ===== CONFIG =====
-var DASHBOARD_FOLDER_ID = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
-var CONFIG_SHEET_NAME = 'Dashboard Access Config';
-
-var ALL_TABS = [
-  { id: 'hm', label: '1. Hiring Manager Report' },
-  { id: 'recruiter', label: '2. Recruiter Efficiency' },
-  { id: 'efficiency', label: '3. Overall Hiring Efficiency' },
-  { id: 'sourcing', label: '4. Sourcing Mix' }
-];
-
-var ALL_DEPARTMENTS = [
-  'US Business', 'Business - India', 'SME - India', 'SME - US',
-  'Engineering', 'Operations', 'Talent Acquisition', 'Finance',
-  'Human Resource', 'Marketing', 'New Programs', 'Test'
-];
-
-var ALL_TEAMS = [
-  'Sales', 'Sales Training & Enablement', 'Software Development',
-  'Product Management (Tech)', 'Product Management (Curriculum)',
-  'Customer Success Management', 'Corporate Partnerships',
-  'HR Operations', 'Content', 'Delivery'
-];
-
-// Roles: admin, all_access, department, team, page
-var VALID_ROLES = ['admin', 'all_access', 'department', 'team', 'page'];
-
-// ===== MAIN ROUTER =====
 function doGet(e) {
   if (e && e.parameter && e.parameter.page === 'doPublishAccess') return publishAccessPage_(e, Session.getActiveUser().getEmail().toLowerCase());
   var page = (e && e.parameter && e.parameter.page) || 'dashboard';
