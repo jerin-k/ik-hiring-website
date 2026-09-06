@@ -16,12 +16,14 @@ const DIRTY_LS = 'ik_metric_config_dirty';   // '1' when this browser has unpubl
 const META_LS = 'ik_metric_config_meta';     // { updatedAt, updatedBy } of the loaded server config
 
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
-const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family' };
+// #11b: userType is the Agency|Freelancer toggle set beside the pod selector. It is NOT per-quarter — a user
+// either is an agency or is not — so it is a flat { name: 'Agency' | 'Freelancer' } map, unlike pods/capacity.
+const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type' };
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
 function readLS(key, dflt) { try { const v = localStorage.getItem(key); return v == null ? dflt : JSON.parse(v); } catch (e) { return dflt; } }
-function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily); }
+function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType); }
 
 // Fetch server config (with degradation ladder) and hydrate the runtime keys. Call once, before rendering.
 export async function loadMetricConfig() {
@@ -53,6 +55,7 @@ function hydrate(cfg) {
   if (cfg.capacity) localStorage.setItem(KEYS.capacity, JSON.stringify(cfg.capacity));
   if (cfg.scoreGrid) localStorage.setItem(KEYS.scoreGrid, JSON.stringify(cfg.scoreGrid));
   if (cfg.deptFamily) localStorage.setItem(KEYS.deptFamily, JSON.stringify(cfg.deptFamily));
+  if (cfg.userType) localStorage.setItem(KEYS.userType, JSON.stringify(cfg.userType));   // #11b
 }
 
 export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); }
@@ -61,12 +64,12 @@ export function getMeta() { return readLS(META_LS, null); }
 
 // Snapshot the runtime config into a publishable object.
 export function collectConfig() {
-  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}) };
+  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}) };
 }
 
 // Deep-equal of the meaningful config fields (for confirm-by-read).
 function sameConfig(a, b) {
-  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily'];
+  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType'];
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
@@ -138,4 +141,51 @@ export function configFileText(email) {
   c.updatedAt = new Date().toISOString();
   c.updatedBy = email || 'unknown';
   return JSON.stringify(c, null, 2);
+}
+
+
+// ===== #11b: Agency | Freelancer =====
+// Ashby's user.list tells us a user is an `External Recruiter` but NOT which kind, so the distinction is a
+// manual toggle in Admin -> Metric Configuration, published with the rest of the config.
+// 🚨 The default for an EXTERNAL user with no toggle set is FREELANCER, not Agency (Jerin, 7 Sep 2026).
+// An unreviewed setting can then only ever HALVE an SME recruiter's credit, never ZERO it. Defaulting to
+// Agency was rejected for exactly that reason.
+export function getUserTypes() { return readLS(KEYS.userType, {}) || {}; }
+export function setUserType(name, type) {
+  const m = getUserTypes();
+  if (type) m[name] = type; else delete m[name];
+  localStorage.setItem(KEYS.userType, JSON.stringify(m));
+  markDirty();
+}
+// 'Agency' | 'Freelancer' | 'Internal'. externalNames comes from dashboard.json's externalUsers, which the
+// pipeline fills from globalRole === 'External Recruiter'.
+export const USER_TYPES = ['Agency', 'Freelancer', 'Internal'];
+// 🚨 THREE-way, not two (Jerin, 7 Sep 2026). Ashby's `External Recruiter` role is NOT a clean agency signal:
+// of the four accounts carrying it today, two ('Deepti', 'Mashika') are duplicate accounts of IK's own
+// recruiters and one is a test account. Without an Internal option those false positives could not be cleared,
+// and under the Freelancer default a duplicate of a real recruiter would halve that recruiter's SME credit.
+export function userTypeOf(name, externalNames) {
+  if (!name) return 'Internal';
+  const set = externalNames instanceof Set ? externalNames : new Set(externalNames || []);
+  if (!set.has(name)) return 'Internal';          // not flagged External Recruiter in Ashby
+  const t = getUserTypes()[name];
+  return USER_TYPES.indexOf(t) >= 0 ? t : 'Freelancer';   // unreviewed external -> Freelancer (halves, never zeroes)
+}
+
+// #11 (Jerin, 7 Sep 2026): who belongs on the roster BESIDES data.recruiters.
+// data.recruiters is built from people tagged as RECRUITER on an application, so an agency or freelancer
+// tagged only as a SOURCER is invisible: no row, therefore no pod, therefore excluded from every table,
+// total and chart — and the credit routed to them would vanish without trace.
+// Jerin: they appear "once we either assign an opening to them or attribute a closure to them", which is
+// exactly the four sources below. ⚠ Used by BOTH the Recruiter tab and Admin -> Metric Configuration; keep
+// it here so the two rosters can never disagree about who exists.
+export function sourcerOnlyNames(data) {
+  if (!data) return [];
+  const known = new Set((data.recruiters || []).map(r => r.name));
+  const found = new Set();
+  Object.keys(data.ownedSeatsBySourcerQ || {}).forEach(n => found.add(n));
+  (data.offerEvents || []).forEach(e => { if (e.sourcer) found.add(e.sourcer); });
+  (data.joiningPendingCases || []).forEach(c => { if (c.sourcer) found.add(c.sourcer); });
+  (data.dropEvents || []).forEach(e => { if (e.sourcer) found.add(e.sourcer); });
+  return [...found].filter(n => n && n !== 'Unassigned' && !known.has(n)).sort();
 }
