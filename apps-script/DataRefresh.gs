@@ -849,6 +849,7 @@ function refreshDashboardData() {
       candidate: e.candidate || null,
       subStage: sub3,
       recruiter: e.recruiter || null,
+      sourcer: e.sourcer || null,   // #11 sourcer - the credit split needs it on JP too
       linked: e.offerOpeningId ? true : false
     };
   });
@@ -859,7 +860,7 @@ function refreshDashboardData() {
     if (!sub4) continue;
     if (am4.status === 'Hired' || am4.status === 'Archived') continue;
     var jd4 = am4.jobId ? jobLookup[am4.jobId] : null;
-    jpCaseByApp_[aid3] = { openingQuarter: null, month: null, doj: null, department: jd4 ? jd4.department : '', job: jd4 ? jd4.title : '', candidate: am4.candidate || null, subStage: sub4, recruiter: am4.recruiter || null, linked: false };
+    jpCaseByApp_[aid3] = { openingQuarter: null, month: null, doj: null, department: jd4 ? jd4.department : '', job: jd4 ? jd4.title : '', candidate: am4.candidate || null, subStage: sub4, recruiter: am4.recruiter || null, sourcer: am4.sourcer || null, linked: false };
   }
   var joiningPendingCases = Object.keys(jpCaseByApp_).map(function(k) { return jpCaseByApp_[k]; });
   joiningPendingCases.sort(function(a, b) {
@@ -982,7 +983,7 @@ function refreshDashboardData() {
     var aid = se && se.applicationId;
     if (aid) { if (seenDrop[aid]) return; seenDrop[aid] = 1; }
     dropEvents.push({ jobId8: ev.jobId8, jobTitle: ev.jobTitle, department: ev.department,
-      recruiter: ev.recruiter || null, level: ev.level, complexity: ev.complexity,
+      recruiter: ev.recruiter || null, sourcer: ev.sourcer || null, level: ev.level, complexity: ev.complexity,
       quarter: ev.attrQuarter || null, source: 'offer' });
   });
   try {
@@ -996,6 +997,9 @@ function refreshDashboardData() {
       var jd3 = hit.j ? jobLookup[hit.j] : null;
       dropEvents.push({ jobId8: hit.j ? String(hit.j).substring(0, 8) : '', jobTitle: jd3 ? jd3.title : '',
         department: jd3 ? jd3.department : '', recruiter: hit.r || null,
+        // #11 sourcer: archived_late_stage.json stores only {r,j,e} and re-running that 14k-id backfill to add
+        // one field is not worth it - recover it from appMap, which carries every in-scope application.
+        sourcer: (appResult.appMap[laid] && appResult.appMap[laid].sourcer) || null,
         level: jd3 ? jd3.level : null, complexity: jd3 ? jd3.complexity : null,
         quarter: qOfDate_(hit.e), source: 'stage' });
       added++;
@@ -1004,7 +1008,7 @@ function refreshDashboardData() {
   } catch (eD) { Logger.log('late-stage drop merge skipped: ' + eD.message); }
 
   var dashboard = {
-    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
+    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
     openingPendingByJobQ: openingPendingByJobQ,
