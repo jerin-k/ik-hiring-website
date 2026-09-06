@@ -142,8 +142,8 @@ export const DEFINITIONS = {
 
   'rec-fulfilment': {
     summary: 'How these numbers are worked out',
-    intro: 'Two tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026',
+    intro: 'Three tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> and <strong>Others</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026',
     groups: [
       {
         heading: 'The two number types in every column',
@@ -157,7 +157,9 @@ export const DEFINITIONS = {
         items: [
           ['Goal — Joiners', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. One owner per opening, so nothing is split and the Goal is a whole number — the only exception is an opening that still has more than one owner (see the note below).'],
           ['Capacity', 'What this recruiter is expected to carry in the quarter, set by hand in <strong>Admin → Metric Configuration</strong>. Blank until somebody sets it.'],
-          ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised.'],
+          ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised. On <strong>Sales</strong> and <strong>Others</strong> this appears as <strong>Joined Total</strong>, split across the two columns beside it.'],
+          ['Joined — Prev Qtr Openings <span class="defs-tag">Sales</span>', 'Of the people who joined this quarter, those filling an opening raised in an <strong>earlier</strong> quarter — carried-over demand finally landing. Needs the offer to carry an opening link.'],
+          ['Joined — Current Qtr Openings <span class="defs-tag">Sales</span>', 'Everyone else who joined — <strong>Joined Total minus the column beside it</strong>, so the two always add up. ⚠ Because it is a subtraction it also holds <strong>every joiner whose offer has no opening attached at all</strong>; that count is printed underneath the number. Most 2026 offers were never linked to an opening and now never will be, so this column means <em>“not known to be earlier”</em>, not <em>“raised this quarter”</em>.'],
           ['JP Total', 'People currently in Ref Check, Documentation or Offer. It is always <strong>exactly the two columns beside it added together</strong> — never counted separately.'],
           ['JP — Current Qtr <span class="defs-tag">Non-Sales</span>', 'Everyone in closing, minus anyone on an earlier quarter’s opening, minus anyone joining next quarter.'],
           ['JP — Upcoming Qtr <span class="defs-tag">Non-Sales</span>', 'Their opening was raised this quarter but they join next quarter. Reads 0 today because offers only started carrying an opening link on 25 Jul 2026.'],
