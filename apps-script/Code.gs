@@ -1,3 +1,35 @@
+// ===== CONFIG =====
+// RESTORED 2026-09-07. This whole block was deleted from the deployed Code.gs on 5 Sep 2026,
+// which broke "Publish Metric Config" with: ReferenceError: CONFIG_SHEET_NAME is not defined.
+// ALL_TABS / ALL_DEPARTMENTS / ALL_TEAMS / VALID_ROLES were lost in the same deletion and are
+// used by serveDashboard, adminSetUserAccess and the adminGet* helpers. Do not delete again.
+// DASHBOARD_FOLDER_ID is intentionally NOT here - it was restored into DataRefresh.gs on 5 Sep.
+var CONFIG_SHEET_NAME = 'Dashboard Access Config';
+
+var ALL_TABS = [
+  { id: 'hm', label: '1. Hiring Manager Report' },
+  { id: 'recruiter', label: '2. Recruiter Efficiency' },
+  { id: 'efficiency', label: '3. Overall Hiring Efficiency' },
+  { id: 'sourcing', label: '4. Sourcing Mix' }
+];
+
+var ALL_DEPARTMENTS = [
+  'US Business', 'Business - India', 'SME - India', 'SME - US',
+  'Engineering', 'Operations', 'Talent Acquisition', 'Finance',
+  'Human Resource', 'Marketing', 'New Programs', 'Test'
+];
+
+var ALL_TEAMS = [
+  'Sales', 'Sales Training & Enablement', 'Software Development',
+  'Product Management (Tech)', 'Product Management (Curriculum)',
+  'Customer Success Management', 'Corporate Partnerships',
+  'HR Operations', 'Content', 'Delivery'
+];
+
+// Roles: admin, all_access, department, team, page
+var VALID_ROLES = ['admin', 'all_access', 'department', 'team', 'page'];
+
+// ===== MAIN ROUTER =====
 function doGet(e) {
   if (e && e.parameter && e.parameter.page === 'doPublishAccess') return publishAccessPage_(e, Session.getActiveUser().getEmail().toLowerCase());
   var page = (e && e.parameter && e.parameter.page) || 'dashboard';
