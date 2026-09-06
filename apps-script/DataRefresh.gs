@@ -1004,7 +1004,7 @@ function refreshDashboardData() {
   } catch (eD) { Logger.log('late-stage drop merge skipped: ' + eD.message); }
 
   var dashboard = {
-    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
+    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
     openingPendingByJobQ: openingPendingByJobQ,
@@ -1359,8 +1359,20 @@ function testApiConnection() {
 // equal-split-of-seats convention. Scope = open + filled + missed openings opened in the quarter (mirrors
 // openingBuckets Total). Shared openings (2+ Recruiter owners) split 1/n. Keyed by recruiter NAME resolved
 // via userId so it matches recruiters[].name (avoids Ashby display-name drift).
+// #11 (Jerin, 7 Sep 2026) - the agency/sourcer credit split needs the opening's SOURCER as well as its
+// Recruiter. No sourcer-ownership data existed at all, so the GOAL half of the split could not be computed
+// and shipping the achievement half alone would have halved Achieved while Goal stayed full - a fake
+// collapse in Delta and Capacity Utilisation. Both roles count by identical rules: same quarter bucketing,
+// same close-reason filter, same equal split if an opening somehow carries two people in one role.
+// ⚠ Pass the FULL user map (userNameById) for the sourcer, NOT the recruiter roster - an agency is not a
+// recruiter, so a roster-only lookup would silently drop exactly the rows this rule exists to score.
 function computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName) {
-  var RID = '22db8dc8-83f4-40de-8376-87efff4a6eb6';
+  return computeOwnedSeatsByRoleQ_(allOpenings, uidToName, 'Recruiter', '22db8dc8-83f4-40de-8376-87efff4a6eb6');
+}
+function computeOwnedSeatsBySourcerQ_(allOpenings, uidToName) {
+  return computeOwnedSeatsByRoleQ_(allOpenings, uidToName, 'Sourcer', '952a945b-4f74-44cd-be85-2acba0248822');
+}
+function computeOwnedSeatsByRoleQ_(allOpenings, uidToName, roleName, RID) {
   var CR_HIRED = '2777221e-d3a7-40e6-95a3-6988ad60494d', CR_ONHOLD = '05105d39-d5f6-442c-b7bf-f6b055a50a43',
       CR_SHELVED = '63d32633-3047-458b-a9a2-fbf2d04738f2', CR_CARRYFWD = '249988e6-c53c-4d6e-b60d-dc78e145520d';
   var owned = {};
@@ -1372,7 +1384,7 @@ function computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName) {
     if (o.closedAt && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;
     var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
     var ht = lv.hiringTeam || [], owners = [];
-    ht.forEach(function (m) { if (m.role === 'Recruiter' || m.roleId === RID) { var nm = uidToName[m.userId]; if (nm) owners.push(nm); } });
+    ht.forEach(function (m) { if (m.role === roleName || m.roleId === RID) { var nm = uidToName[m.userId]; if (nm) owners.push(nm); } });
     if (!owners.length) return;
     var n = owners.length, jobIds = lv.jobIds || [];
     jobIds.forEach(function (jid) {
