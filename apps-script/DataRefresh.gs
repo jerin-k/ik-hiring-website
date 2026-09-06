@@ -316,7 +316,8 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
 
 // ===== OFFER PASS =====
 
-function fetchAndProcessOffers_(startTime, appMap) {
+function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
+  excludedJobIds_ = excludedJobIds_ || {};   // #37: sandbox job ids to skip
   var cursor = null, count = 0, byJob = {}, byRecruiter = {}, nowMs = Date.now(), events = [], recovered = 0;
   var lhCalls = 0, lhFound = 0, lhErr = 0;
   do {
@@ -358,6 +359,11 @@ function fetchAndProcessOffers_(startTime, appMap) {
       }
       am = am || {};
       var jobId = am.jobId, rec = am.recruiter, src = am.sourcer;
+      // #37: sandbox department. The application loop already skipped these, which is exactly why the
+      // recovery branch above re-fetched them from application.info and put them BACK into appMap - the
+      // exclusion defeated itself. Drop the offer HERE, after both paths have resolved a jobId, and undo
+      // the re-insert so nothing downstream of appMap sees it either.
+      if (jobId && excludedJobIds_[jobId]) { if (o.applicationId && appMap[o.applicationId]) delete appMap[o.applicationId]; continue; }
       var accepted = (o.acceptanceStatus === 'Accepted');
       var startDateStr = (o.latestVersion && o.latestVersion.startDate) ? o.latestVersion.startDate : null;
       var startMs = startDateStr ? new Date(startDateStr).getTime() : 0;
@@ -644,7 +650,7 @@ function refreshDashboardData() {
   saveDriveJson_('archived_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.archivedApps });
   Logger.log('archived_apps (for drop backfill): ' + appResult.archivedApps.length);
   Logger.log('scoped_apps (reached screening+): ' + appResult.histApps.length);
-  var offerResult = fetchAndProcessOffers_(startTime, appResult.appMap);
+  var offerResult = fetchAndProcessOffers_(startTime, appResult.appMap, excludedJobIds);
 
   for (var jid in jobLookup) { var oj = offerResult.byJob[jid]; if (oj) { jobLookup[jid].offeredReal = oj.offered; jobLookup[jid].accepted = oj.accepted; } }
 
