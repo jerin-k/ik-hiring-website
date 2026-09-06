@@ -154,7 +154,8 @@ function getWeekLabel_(dateStr) {
 
 // ===== APP PASS — createdAfter=SCOPE_FROM_MS returns only current-year apps =====
 
-function fetchAndProcessApps_(startTime, jobLookup) {
+function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
+  excludedJobIds_ = excludedJobIds_ || {};   // #37: sandbox job ids to skip (see EXCLUDED_DEPTS)
   var cursor = null, pageNum = 0, totalApps = 0, scopedApps = 0;
   var funnel = { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 };
   var recruiterCounts = {}, sourceCounts = {}, weekCounts = {}, qData = {}, appMap = {}, histApps = [];
@@ -191,8 +192,11 @@ function fetchAndProcessApps_(startTime, jobLookup) {
       var app = batch[i];
       var createdMs = app.createdAt ? new Date(app.createdAt).getTime() : 0;
       if (createdMs < SCOPE_FROM_MS) continue;   // defensive (createdAfter already scopes)
-      scopedApps++;
       var jobId = app.job && app.job.id;
+      // #37: sandbox department - skip BEFORE any counter. funnel / sourceCounts / recruiterCounts / appMap
+      // below all increment whether or not the job resolves, so filtering the job list alone leaves these in.
+      if (jobId && excludedJobIds_[jobId]) continue;
+      scopedApps++;
       var htr = getHiringTeamRoles_(app);
       var recruiter = htr.recruiters.length ? htr.recruiters[0].name : null;
       var sourcer = htr.sourcers.length ? htr.sourcers[0].name : null;
@@ -541,6 +545,26 @@ function refreshDashboardData() {
 
   function topDept(depId) { var d = deptMap[depId], g = 0; while (d && d.parentId && deptMap[d.parentId] && g++ < 8) d = deptMap[d.parentId]; return d ? d.name : ''; }
 
+  // ===== #37 (Jerin, 7 Sep 2026): the "Test" department is a SANDBOX, not real hiring =====
+  // It holds 'Test - Project Hello Christy - Sales PA' (43 candidates, 12 offer events, 2 'joiners') and a
+  // stray closed 'Program Advisor' (3). Left in, they inflate Total Openings, Sourcing Mix, the org-wide
+  // funnel and one recruiter's volume - most of what made Gopu Nair V look high-volume.
+  // 🚨 They must be dropped HERE, at ingestion, for two reasons a frontend filter cannot cover:
+  //   1. funnel / sourceCounts / recruiterCounts increment BEFORE the job lookup in the application loop,
+  //      so dropping the JOBS alone would leave their applications counted with no job attached.
+  //   2. sources / funnel / quarterly ship as PRE-COMPUTED totals - the frontend cannot un-count them.
+  // Every excluded job id is collected so stores that do not flow through the application loop (the
+  // archived-drop hits) can skip them too. Openings are filtered separately, just below.
+  var EXCLUDED_DEPTS = { 'Test': 1 };
+  var excludedJobIds = {};
+  var jobsBeforeExcl_ = allJobs.length;
+  allJobs = allJobs.filter(function (j) {
+    var lf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
+    if (EXCLUDED_DEPTS[topDept(j.departmentId) || lf] || EXCLUDED_DEPTS[lf]) { excludedJobIds[j.id] = 1; return false; }
+    return true;
+  });
+  Logger.log('#37 excluded department(s) [' + Object.keys(EXCLUDED_DEPTS).join(', ') + ']: ' + (jobsBeforeExcl_ - allJobs.length) + ' job(s) dropped, ' + allJobs.length + ' kept');
+
   var jobLookup = {};
   allJobs.forEach(function(j) {
     var leaf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
@@ -551,6 +575,17 @@ function refreshDashboardData() {
   });
 
   var allOpenings = fetchOpenings_();
+  // #37: drop openings that belong ONLY to an excluded (sandbox) job. Every openings consumer below reads
+  // this one array - openingBuckets, openingsNoDate, openingById_ (-> openingPendingByJobQ) and
+  // computeOwnedSeatsByRecruiterQ_ - so filtering here is the single choke point for all of them.
+  var openingsBeforeExcl_ = allOpenings.length;
+  allOpenings = allOpenings.filter(function (o) {
+    var ids = (o.latestVersion && o.latestVersion.jobIds) || [];
+    if (!ids.length) return true;
+    for (var z = 0; z < ids.length; z++) if (!excludedJobIds[ids[z]]) return true;
+    return false;
+  });
+  Logger.log('#37 openings dropped: ' + (openingsBeforeExcl_ - allOpenings.length) + ', ' + allOpenings.length + ' kept');
   var openingsByJob = {};
   var openingsNoOpenedAt = 0;
   var openingsNoDate = [];
@@ -602,7 +637,7 @@ function refreshDashboardData() {
     });
   });
 
-  var appResult = fetchAndProcessApps_(startTime, jobLookup);
+  var appResult = fetchAndProcessApps_(startTime, jobLookup, excludedJobIds);
   Logger.log('Apps: ' + appResult.total + ' fetched, ' + appResult.scoped + ' scoped, ' + Math.round((Date.now() - startTime) / 1000) + 's');
   // Hand the reached-screening+ apps to the stage-history accumulator (runs as its own trigger).
   saveDriveJson_('scoped_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.histApps });
@@ -951,6 +986,7 @@ function refreshDashboardData() {
       if (seenDrop[laid]) continue;
       seenDrop[laid] = 1;
       var hit = lateHits[laid];
+      if (hit && hit.j && excludedJobIds[hit.j]) continue;   // #37: sandbox department
       var jd3 = hit.j ? jobLookup[hit.j] : null;
       dropEvents.push({ jobId8: hit.j ? String(hit.j).substring(0, 8) : '', jobTitle: jd3 ? jd3.title : '',
         department: jd3 ? jd3.department : '', recruiter: hit.r || null,
