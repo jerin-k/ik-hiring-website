@@ -457,6 +457,22 @@ table.metrics td:first-child { box-shadow: 1px 0 0 var(--border); }
 /* Score sits beside its HC as the secondary number - lighten it so headcount reads first. */
 table.metrics td.score { color: var(--muted); font-weight: 400; }
 
+/* ===== #39 (2026-09-07): the Sales / Others Fulfilment tables carry 19 columns =====
+   Joined and Joining Pending are each a Total plus two HC/Score buckets, so the row crosses EIGHT numeric
+   pairs. At the shared 12px cell padding the table runs far wider than the page and the horizontal scroll
+   hides the columns on the right — Delta and Capacity Utilisation, the two people actually act on.
+   So: tighten the numeric cells, and let the long group headers WRAP rather than forcing their column out
+   to the width of the label. The .scroll-table wrapper still scrolls when it has to; this just means it
+   usually does not have to. Non-Sales keeps the roomier default — it has 16 columns and fits.
+   ⚠ The first column's width is an INLINE min-width in recruiter.js (inline beats this file), so it is set
+   to 200px there for these two tables. Change it in both places or not at all. */
+table.metrics.wide-fulfil th:not(:first-child),
+table.metrics.wide-fulfil td:not(:first-child) { padding-left: 5px; padding-right: 5px; }
+table.metrics.wide-fulfil th.stage-hdr { white-space: normal; max-width: 84px; line-height: 1.25; }
+table.metrics.wide-fulfil th.stage-sub { padding-top: 4px; padding-bottom: 6px; }
+/* Captions under a number ("12 not linked", "18% of outcomes") must not be what widens a column. */
+table.metrics.wide-fulfil td .sublab { white-space: nowrap; font-size: 9px; }
+
 /* ===== Filter Bar ===== */
 /* multi-select checkbox dropdown (shared: Recruiter + HM tabs) */
 .ms { position: relative; display: inline-block; }

@@ -342,19 +342,19 @@ export function renderRecruiter(data) {
       </table></div>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
-      <div class="scroll-table"><table class="metrics">
+      <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr" title="Everyone who started in the quarter. Sales counts joiners whenever the opening was raised — no earlier-quarter subtraction.">Joined<br>Total</th><th colspan="2" class="stage-hdr" title="Joined this quarter against an opening raised in an EARLIER quarter — carried-over demand. Needs the offer to carry an opening link.">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone who joined, minus the Joined — Prev Qtr Openings column beside it, so the two always add up to Joined Total. It therefore also holds every joiner whose offer carries no opening link at all — that count is printed under the number.">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
 
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Others (Hires)</h4>
-      <div class="scroll-table"><table class="metrics">
+      <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr" title="Everyone who started in the quarter. Sales counts joiners whenever the opening was raised — no earlier-quarter subtraction.">Joined<br>Total</th><th colspan="2" class="stage-hdr" title="Joined this quarter against an opening raised in an EARLIER quarter — carried-over demand. Needs the offer to carry an opening link.">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone who joined, minus the Joined — Prev Qtr Openings column beside it, so the two always add up to Joined Total. It therefore also holds every joiner whose offer carries no opening link at all — that count is printed under the number.">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOthersBody"></tbody>
       </table></div>
@@ -900,8 +900,10 @@ export function initRecruiterFilters(data) {
       const q = selQuarter();
       const isSales = mode === 'hire';
       // 1 label + Goal(2) + Capacity(1) + Joined(2) + JP total(1) + JP A(2) + JP B(2) + Drop(2) + Gap(2)
-      // + Utilisation(1). Both tables are the same shape now that Offered is gone from Non-Sales (#24).
-      const ncol = 16;
+      // + Utilisation(1) = 16 on Non-Sales.
+      // #39: the Sales/Others tables split Joined the way JP is split — Total(1) + A(2) + B(2) replaces the
+      // old Joined(2) — so they carry 3 more columns. Keep this in step with the <thead> of those tables.
+      const ncol = (mode === 'hire') ? 19 : 16;
 
       // 🚨 THE OUTCOME IS DATED FROM offerEvents, NOT FROM byJob (fixed 2026-08-22).
       // recruiters[].byJob carries {jobId,title,department,total,offer,hired} and NO date of any kind, so
@@ -921,6 +923,14 @@ export function initRecruiterFilters(data) {
       const outByRecJob = isSales ? OM.salesJob : OM.nonSalesJob;
       const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0 };
       const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
+      // #39: the Joined split, shaped exactly like jpOf/jpOfJob so the two blocks render through the same
+      // helper. Sales/Others only — Non-Sales keeps a single Joined pair (its own split is a different
+      // question entirely: it varies the START date, not the opening. See the header comments.)
+      const jxOf = (rec) => ({ t: outByRec[rec] || Z, a: (OM.salesA || {})[rec] || Z,
+                               b: (OM.salesB || {})[rec] || Z, u: (OM.salesU || {})[rec] || Z });
+      const jxOfJob = (rec, jid) => { const k = rec + '|' + (jid || '').slice(0, 8);
+        return { t: outByRecJob[k] || Z, a: (OM.salesAJob || {})[k] || Z,
+                 b: (OM.salesBJob || {})[k] || Z, u: (OM.salesUJob || {})[k] || Z }; };
 
       // Non-Sales also shows Joined · total — actual joiners, dated by START date, the same basis Sales uses.
       // Its two sub-columns (this-quarter vs later-quarter opening) split THIS number once offers carry an
@@ -1034,6 +1044,15 @@ export function initRecruiterFilters(data) {
         return `<td><span class="util ${cls}">${u}%</span><span class="sublab">${v.uSc} of ${v.capSc}</span></td>`;
       };
 
+      // #39: Joined, split the same way and rendered by the same shape as jpCells — Total, then the two
+      // buckets. The unlinked count rides under bucket B as a caption so the column never reads as measured.
+      const joinedCells = (v) => {
+        const j = v.jx || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } };
+        const pair = (x, sub) => `<td>${x.hc || `<span class="zero">0</span>`}${sub || ''}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
+        const unl = (j.u && j.u.hc) ? `<span class="sublab" title="Joiners with no opening attached to their offer. They sit in this column only because it is Total minus the column beside it.">${j.u.hc} unlinked</span>` : '';
+        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}</td>` + pair(j.a) + pair(j.b, unl);
+      };
+
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
       const jpCells = (v) => {
         const j = v.jp || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } };
@@ -1057,7 +1076,9 @@ export function initRecruiterFilters(data) {
         const w = bold ? ' style="font-weight:600"' : '';
         return `<td${w}>${c(seatFmt(v.aHC))}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
           + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
-          + `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`         // Joined
+          + (isSales                                                          // #39: Sales/Others split Joined
+              ? joinedCells(v)                                                  //   total + prev-qtr + current-qtr
+              : `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
           + jpCells(v)                                                          // Joining Pending: total + 2 buckets
           + dropCells(v)                                                        // Drop HC / Score + % subtext
           + `<td${w}>${c(seatFmt(v.gHC))}</td>` + gapCell(v)                     // Gap HC / Score + bar
@@ -1094,6 +1115,7 @@ export function initRecruiterFilters(data) {
         //   Non-Sales → Joined + Joining Pending  (the work is delivered once the person is in closing)
         const uHC = isSales ? xHC : xHC + jp.t.hc, uSc = isSales ? xSc : xSc + jp.t.sc;
         return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
+                 jx: isSales ? jxOf(r.name) : null,   // #39
                  gHC: Math.max(0, aHC - uHC), gSc: Math.max(0, aSc - uSc) };
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
@@ -1105,7 +1127,11 @@ export function initRecruiterFilters(data) {
       let html = '';
       gs.forEach((G, pi) => {
         const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0,
-                         jp: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } } };
+                         jp: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } },
+                         // #39: roll the Joined split up the same way as the JP one, or every pod row would
+                         // print 0 in three columns while its recruiters underneath show real numbers — the
+                         // exact bug the JP roll-up comment below was written about.
+                         jx: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } } };
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
@@ -1115,6 +1141,7 @@ export function initRecruiterFilters(data) {
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
           ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; });
+          if (a.jx) ['t', 'a', 'b', 'u'].forEach(k => { podAgg.jx[k].hc += a.jx[k].hc; podAgg.jx[k].sc += a.jx[k].sc; });   // #39
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -1150,6 +1177,7 @@ export function initRecruiterFilters(data) {
               const juHC = isSales ? jxHC : jxHC + jjp.t.hc, juSc = isSales ? jxSc : jxSc + jjp.t.sc;
               const jv = { aHC: seats, aSc: seats * sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
                            dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
+                           jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
                            gHC: Math.max(0, seats - juHC), gSc: Math.max(0, seats * sc - juSc) };
               roleAch.push({ title: m.title || '(untitled)', achievedSc: Math.round(juSc) });
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
@@ -1524,6 +1552,15 @@ export function initRecruiterFilters(data) {
   function outcomeMaps(q) {
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const sales = {}, nonSales = {}, salesJob = {}, nonSalesJob = {};
+    // #39 (Jerin, 7 Sep 2026): split Joined by the OPENING's quarter, mirroring the JP block beside it.
+    //   A = the opening was raised in an EARLIER quarter  -> "Joined — Prev Qtr Openings" (carried-over demand)
+    //   B = everyone else                                 -> "Joined — Current Qtr Openings"
+    // A + B always equals Joined Total, exactly as the JP columns do.
+    // 🚨 B therefore ABSORBS every joiner whose offer carries NO opening link. Coverage is thin and is NOT
+    // going to improve (#28 and #19 are both killed): on 2026-Q3 only 26 of 57 Sales joiners are linked at
+    // all. So B means "not known to be earlier", NOT "opened this quarter" — the column note on screen says
+    // so, and the unlinked count is printed under B rather than hidden. Do not restate B as a certainty.
+    const salesA = {}, salesB = {}, salesAJob = {}, salesBJob = {}, salesU = {}, salesUJob = {};
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
       const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
@@ -1531,13 +1568,22 @@ export function initRecruiterFilters(data) {
       if (e.accepted && e.appStatus === 'Hired' && qOf(e.startDate) === q) { // Joined = moved to Hired, not just an accepted offer
         const a = sales[rec] || (sales[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
         const aj = salesJob[jk] || (salesJob[jk] = { hc: 0, sc: 0 }); aj.hc += 1; aj.sc += sc;
+        // #39: bucket the same person by their opening's quarter. See the note above.
+        const oq = e.openingQuarter || null, earlier = !!(oq && oq < q);
+        const mR = earlier ? salesA : salesB, mJ = earlier ? salesAJob : salesBJob;
+        const s1 = mR[rec] || (mR[rec] = { hc: 0, sc: 0 }); s1.hc += 1; s1.sc += sc;
+        const s2 = mJ[jk] || (mJ[jk] = { hc: 0, sc: 0 }); s2.hc += 1; s2.sc += sc;
+        // How many of bucket B are there only because no opening is attached — printed under the column so
+        // nobody reads B as measured demand.
+        if (!oq) { const u1 = salesU[rec] || (salesU[rec] = { hc: 0, sc: 0 }); u1.hc += 1; u1.sc += sc;
+                   const u2 = salesUJob[jk] || (salesUJob[jk] = { hc: 0, sc: 0 }); u2.hc += 1; u2.sc += sc; }
       }
       if (qOf(e.decidedAt) === q) {
         const b = nonSales[rec] || (nonSales[rec] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
         const bj = nonSalesJob[jk] || (nonSalesJob[jk] = { hc: 0, sc: 0 }); bj.hc += 1; bj.sc += sc;
       }
     });
-    return { sales, nonSales, salesJob, nonSalesJob };
+    return { sales, nonSales, salesJob, nonSalesJob, salesA, salesB, salesAJob, salesBJob, salesU, salesUJob };
   }
 
   function tisPeriod() { return selQuarters(); }
