@@ -1,6 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
-import { scoreForRole, familyForJob } from '../score-model.js';
+import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
+import { userTypeOf, sourcerOnlyNames } from '../metric-config.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
@@ -99,9 +100,18 @@ function wireVelTree(tbody) {
   }
 }
 
+// #11: the pod a row actually RENDERS under. Agencies, freelancers and other sourcer-only people have no pod
+// until one is set for them in Metric Configuration; Jerin (7 Sep) put them under "Others" meanwhile.
+// 🚨 Everything that filters or groups by pod must use THIS, not podOf directly — otherwise a row is grouped
+// into Others but filtered out as 'Unassigned', and the credit that moved to them lands nowhere.
+export function effectivePod(r, quarter) {
+  const p = podOf(r.name, quarter);
+  return (r.sourcerOnly && (!p || p === 'Unassigned')) ? 'Others' : p;
+}
+
 function groupByPod(recs, quarter) {
   const g = {};
-  recs.forEach(r => { const p = podOf(r.name, quarter); (g[p] || (g[p] = [])).push(r); });
+  recs.forEach(r => { const p = effectivePod(r, quarter); (g[p] || (g[p] = [])).push(r); });
   return POD_ORDER.filter(p => g[p] && g[p].length).map(p => ({ pod: p, recs: g[p] }));
 }
 
@@ -548,7 +558,14 @@ export function renderRecruiter(data) {
 
 export function initRecruiterFilters(data) {
   if (!data || !data.recruiters) return;
-  const allRecs = data.recruiters;
+  // #11 (Jerin, 7 Sep 2026): the roster is no longer just data.recruiters. That list is built from people
+  // tagged as RECRUITER on an application, so an agency or freelancer tagged only as a SOURCER never appears —
+  // and with no row they have no pod, which means excluded from every row, total and chart, so their credit
+  // would silently vanish. Jerin: they surface "once we either assign an opening to them or attribute a
+  // closure to them". So: anyone who owns an opening as Sourcer, or is the sourcer on an outcome, joins the
+  // roster. They also appear in Admin → Metric Configuration, which is where a pod and capacity get set.
+  const allRecs = (data.recruiters || []).concat(
+    sourcerOnlyNames(data).map(name => ({ name, userId: null, byJob: [], total: 0, offer: 0, hired: 0, sourcerOnly: true })));
   const nDate = 7;
   // Inactive = the person no longer holds an elevated recruiter seat in Ashby (UI roles Recruiter /
   // Recruiter Admin). Identity is the Ashby USER RECORD (recruiters[].userId), so this is a direct lookup
@@ -590,6 +607,43 @@ export function initRecruiterFilters(data) {
   // equal-split estimate so the tab still renders; useOwnedGoal says which basis is live.
   const ownedByRecQ = data.ownedSeatsByRecruiterQ || null;
   const useOwnedGoal = !!ownedByRecQ;
+
+  // ===== #11 (Jerin, 7 Sep 2026): the recruiter / sourcer credit split =====
+  // ONE helper feeds Goal, Joined, Joining Pending and Drop. The rule itself lives in score-model.js
+  // (creditSplit) so there is a single place it can be wrong; this is only the accumulation.
+  // 🚨 Score divides by the fractions. The HEAD is never split — it goes whole to whoever creditSplit names
+  //    (the agency if there is one, else the recruiter), so Σ HC still equals the real number of people.
+  // ⚠ externalUsers comes from the pipeline (globalRole === 'External Recruiter'); userTypeOf() turns it into
+  //   Agency | Freelancer | Internal using the Admin toggle, defaulting an unreviewed external to Freelancer.
+  const externalSet = new Set(data.externalUsers || []);
+  const ownedBySrcQ = data.ownedSeatsBySourcerQ || null;
+  const splitOf = (dept, sourcer) => creditSplit(dept, sourcer, userTypeOf(sourcer, externalSet));
+  // job8 -> the person holding the SOURCER role on that job's openings in a quarter, from the pipeline's
+  // ownedSeatsBySourcerQ (inverted once, not per row). Empty today: no opening carries a Sourcer yet.
+  const srcByJobQ = (() => {
+    const m = {};
+    Object.entries(ownedBySrcQ || {}).forEach(([name, byQ]) =>
+      Object.entries(byQ || {}).forEach(([qq, byJob]) =>
+        Object.keys(byJob || {}).forEach(j8 => { m[qq + '|' + j8] = name; })));
+    return m;
+  })();
+  const openingSourcerOf = (j8, qq) => srcByJobQ[qq + '|' + j8] || null;
+  // Post one outcome worth `sc` points into the per-name and per-name|job maps, divided between the two parties.
+  const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc) => {
+    const sp = splitOf(dept, srcr);
+    const put = (name, f, head) => {
+      if (!name || (!f && !head)) return;
+      const a = mRec[name] || (mRec[name] = { hc: 0, sc: 0 });
+      a.hc += head ? 1 : 0; a.sc += sc * f;
+      if (mJob) {
+        const k = name + '|' + (job8 || '');
+        const b = mJob[k] || (mJob[k] = { hc: 0, sc: 0 });
+        b.hc += head ? 1 : 0; b.sc += sc * f;
+      }
+    };
+    put(rec, sp.rec, sp.hcTo === 'rec');
+    put(srcr, sp.src, sp.hcTo === 'src');
+  };
 
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
   // else the current-stage approximation (R1-cleared unknown → null).
@@ -734,13 +788,21 @@ export function initRecruiterFilters(data) {
       // total on this tab. An "Unassigned" pod row reads like a real team with a real workload, which it is
       // not. Nobody is lost — Data Hygiene → Pod Not Set carries their numbers, and the note under the
       // heading says the exclusion is happening.
-      if (podOf(r.name, q) === 'Unassigned') return false;
-      if (hideZero && (r.total || 0) === 0) return false;
+      // ⚠ #11 exception: a sourcer-only person (an agency, a freelancer) legitimately has no pod yet — they
+      // only just entered the roster by earning credit. Excluding them here would take credit off the
+      // recruiter and then drop it on the floor, so the pod totals would stop reconciling with the opening
+      // totals. groupByPod puts them under "Others" until a pod is set for them in Metric Configuration.
+      if (!r.sourcerOnly && podOf(r.name, q) === 'Unassigned') return false;
+      // ⚠ #11: the next two filters key off application-derived fields a sourcer-only person cannot have —
+      // `total` counts applications they were tagged as RECRUITER on (0 by definition), and the inactive test
+      // reads an Ashby recruiter seat they do not hold. Both would silently delete the very rows the credit
+      // split just created, so exempt them.
+      if (!r.sourcerOnly && hideZero && (r.total || 0) === 0) return false;
       // #14 (2026-08-23): default is now OFF. Past recruiters keep their history in the data and still score;
       // they just don't clutter the working view unless asked for.
-      if (!inclInactive && isRecInactive(r)) return false;
+      if (!r.sourcerOnly && !inclInactive && isRecInactive(r)) return false;
       if (names.length && !names.includes(r.name)) return false;
-      if (pods.length && !pods.includes(podOf(r.name, q))) return false;
+      if (pods.length && !pods.includes(effectivePod(r, q))) return false;   // #11: match how the row is grouped
       if (!recWorkedSelectedJob(r.name, jobIdsSelected)) return false;
       return true;
     });
@@ -945,9 +1007,7 @@ export function initRecruiterFilters(data) {
         if (qOf(e.startDate) !== q) return;
         if (e.openingQuarter && e.openingQuarter < q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
-        const a = joinByRec[rec] || (joinByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
-        const jk = rec + '|' + (e.jobId8 || '');
-        const b = joinByRecJob[jk] || (joinByRecJob[jk] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
+        addCredit(joinByRec, joinByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);   // #11
       });
       // Seats actually opened on a job in the SELECTED quarter, from openingBuckets — the only
       // quarter-scoped source of demand we have — SPLIT EQUALLY across the recruiters who work that job.
@@ -1006,9 +1066,10 @@ export function initRecruiterFilters(data) {
         const rec = e.recruiter; if (!rec) return;
         if (e.quarter !== q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
-        const a = dropByRec[rec] || (dropByRec[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
-        const jk = rec + '|' + (e.jobId8 || '');
-        const b = dropByRecJob[jk] || (dropByRecJob[jk] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
+        // #11: a sourcer carries their share of the bad news as well as the good ("split is everywhere").
+        // ⚠ Drops found via stage history have their sourcer recovered from appMap in the pipeline, so a few
+        // older archived rows can still be null — they then fall through as recruiter-only, which is correct.
+        addCredit(dropByRec, dropByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);
       });
       const dropOf = (rec) => dropByRec[rec] || { hc: 0, sc: 0 };
       const dropOfJob = (rec, jid) => dropByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
@@ -1095,10 +1156,31 @@ export function initRecruiterFilters(data) {
         // decimal. The owned basis removes both the split and the decimals.
         let aHC = 0, aSc = 0;
         if (useOwnedGoal) {
+          // #11: Goal divides between the opening's Recruiter and its Sourcer by the SAME rule the outcome
+          // side uses, or Delta would compare a full target against a split achievement. Two passes:
+          //   1. openings this person OWNS as Recruiter — they keep creditSplit's recruiter share
+          //   2. openings this person is the SOURCER on — they take the sourcer share
+          // ⚠ The head follows creditSplit.hcTo here too, so an agency-sourced opening moves its position to
+          //   the agency on BOTH sides and the HC Delta stays at zero instead of reading a fake shortfall.
+          // ⚠ ownedSeatsBySourcerQ is {} until recruiters start setting the opening's Sourcer in Ashby, so
+          //   pass 2 contributes nothing today — by design, not by failure. See the standing process in
+          //   HANDOVER.md; nothing in the data can derive it.
           const owned = (ownedByRecQ[r.name] && ownedByRecQ[r.name][q]) || {};
           Object.keys(owned).forEach(j8 => {
             const cnt = owned[j8]; if (!cnt) return;
-            aHC += cnt; aSc += cnt * scoreForRole(jobMetaById(j8) || jobMeta({ jobId: j8 }), q);
+            const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
+            const srcr = openingSourcerOf(j8, q);
+            const sp = splitOf(m && m.department, srcr);
+            aHC += (sp.hcTo === 'rec') ? cnt : 0;
+            aSc += cnt * scoreForRole(m, q) * sp.rec;
+          });
+          const ownedSrc = (ownedBySrcQ && ownedBySrcQ[r.name] && ownedBySrcQ[r.name][q]) || {};
+          Object.keys(ownedSrc).forEach(j8 => {
+            const cnt = ownedSrc[j8]; if (!cnt) return;
+            const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
+            const sp = splitOf(m && m.department, r.name);   // this person IS the sourcer on that opening
+            aHC += (sp.hcTo === 'src') ? cnt : 0;
+            aSc += cnt * scoreForRole(m, q) * sp.src;
           });
         } else {
           (r.byJob || []).forEach(bj => {
@@ -1122,7 +1204,12 @@ export function initRecruiterFilters(data) {
       // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
       // dHC is in the test too: a recruiter whose only activity this quarter was people dropping out has
       // had a real (bad) quarter, and hiding that row would quietly delete the worst news in the table.
-      const worthShowing = (v) => v.capSc > 0 || v.xHC > 0 || (v.jp && v.jp.t.hc > 0) || v.aHC > 0 || v.dHC > 0;
+      // ⚠ #11: this used to test HEADCOUNT only. Under the head rule a sourcer can earn real SCORE while the
+      // head stays with the recruiter (any Freelancer split, and every non-SME agency split), so a
+      // headcount-only test hid exactly the rows the credit had just moved to — the credit left the recruiter
+      // and appeared nowhere. Score counts as activity too.
+      const worthShowing = (v) => v.capSc > 0 || v.xHC > 0 || v.xSc > 0 || (v.jp && (v.jp.t.hc > 0 || v.jp.t.sc > 0))
+        || v.aHC > 0 || v.aSc > 0 || v.dHC > 0 || v.dSc > 0;
 
       let html = '';
       gs.forEach((G, pi) => {
@@ -1417,20 +1504,22 @@ export function initRecruiterFilters(data) {
     // Job-level too, keyed recruiter|job title. Job rows used to print a hard 0 in every JP column, which
     // reads as "nobody in closing on this role" when the real answer was "not worked out per job".
     const bucketAJ = {}, bucketBJ = {};
-    const add = (m, rec, sc) => { const a = m[rec] || (m[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc; };
+    // #11: the same addCredit used by Joined and Drop, so Joining Pending divides credit identically.
+    // ⚠ JP job keys are `name|JOB TITLE`, not `name|jobId8` — the cases carry no job id.
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
       const j = meta[c.job || c.jobTitle || ''] || {};
       const sc = scoreForRole({ department: c.department, title: c.job || c.jobTitle, level: j.level, complexity: j.complexity }, q);
       const oq = c.openingQuarter || null, dq = qOf(c.doj || c.startDate);
-      const jk = rec + '|' + (c.job || c.jobTitle || '');
+      const jt = c.job || c.jobTitle || '';
+      const bump = (mR, mJ) => addCredit(mR, mJ, jt, rec, c.sourcer, c.department, sc);
       // #27 (Jerin, 2026-08-24) — the settled definitions, one line each. Do not re-derive them.
       if (isSales) {
         // A: the opening was raised LAST quarter and the candidate joins THIS quarter (carried over).
         // B: everyone else in closing — i.e. the whole population MINUS A, so A + B is the total.
         // ⚠ B used to test `dq !== prevQ`, which is a different question entirely and read 85 of 153.
-        if (oq === prevQ && dq === q) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
-        else { add(bucketB, rec, sc); add(bucketBJ, jk, sc); }
+        if (oq === prevQ && dq === q) bump(bucketA, bucketAJ);
+        else bump(bucketB, bucketBJ);
       } else {
         // A: everyone except those sitting on an EARLIER quarter's opening (the HM card rule), MINUS anyone
         //    whose joining date falls in the NEXT quarter.
@@ -1438,8 +1527,8 @@ export function initRecruiterFilters(data) {
         // That last clause on A is what makes the two DISJOINT (Jerin, 2026-08-24). Without it everyone in B
         // was also in A — their opening is this quarter, so nothing excluded them — and Total = A + B counted
         // them twice. It reads 0 today only because no offer carried an opening link before 2026-07-25.
-        if (!(oq && oq < q) && dq !== nextQ) { add(bucketA, rec, sc); add(bucketAJ, jk, sc); }
-        if (oq === q && dq === nextQ) { add(bucketB, rec, sc); add(bucketBJ, jk, sc); }
+        if (!(oq && oq < q) && dq !== nextQ) bump(bucketA, bucketAJ);
+        if (oq === q && dq === nextQ) bump(bucketB, bucketBJ);
       }
     });
     // Total is the two sub-columns ADDED, never a separate count — that is what stops the three JP figures
@@ -1564,23 +1653,19 @@ export function initRecruiterFilters(data) {
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
       const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
-      const jk = rec + '|' + (e.jobId8 || '');
+      // #11: every one of these goes through addCredit, so the recruiter/sourcer division is identical
+      // across Joined and its two opening-quarter buckets — they can never drift apart.
       if (e.accepted && e.appStatus === 'Hired' && qOf(e.startDate) === q) { // Joined = moved to Hired, not just an accepted offer
-        const a = sales[rec] || (sales[rec] = { hc: 0, sc: 0 }); a.hc += 1; a.sc += sc;
-        const aj = salesJob[jk] || (salesJob[jk] = { hc: 0, sc: 0 }); aj.hc += 1; aj.sc += sc;
+        addCredit(sales, salesJob, e.jobId8, rec, e.sourcer, e.department, sc);
         // #39: bucket the same person by their opening's quarter. See the note above.
         const oq = e.openingQuarter || null, earlier = !!(oq && oq < q);
-        const mR = earlier ? salesA : salesB, mJ = earlier ? salesAJob : salesBJob;
-        const s1 = mR[rec] || (mR[rec] = { hc: 0, sc: 0 }); s1.hc += 1; s1.sc += sc;
-        const s2 = mJ[jk] || (mJ[jk] = { hc: 0, sc: 0 }); s2.hc += 1; s2.sc += sc;
+        addCredit(earlier ? salesA : salesB, earlier ? salesAJob : salesBJob, e.jobId8, rec, e.sourcer, e.department, sc);
         // How many of bucket B are there only because no opening is attached — printed under the column so
         // nobody reads B as measured demand.
-        if (!oq) { const u1 = salesU[rec] || (salesU[rec] = { hc: 0, sc: 0 }); u1.hc += 1; u1.sc += sc;
-                   const u2 = salesUJob[jk] || (salesUJob[jk] = { hc: 0, sc: 0 }); u2.hc += 1; u2.sc += sc; }
+        if (!oq) addCredit(salesU, salesUJob, e.jobId8, rec, e.sourcer, e.department, sc);
       }
       if (qOf(e.decidedAt) === q) {
-        const b = nonSales[rec] || (nonSales[rec] = { hc: 0, sc: 0 }); b.hc += 1; b.sc += sc;
-        const bj = nonSalesJob[jk] || (nonSalesJob[jk] = { hc: 0, sc: 0 }); bj.hc += 1; bj.sc += sc;
+        addCredit(nonSales, nonSalesJob, e.jobId8, rec, e.sourcer, e.department, sc);
       }
     });
     return { sales, nonSales, salesJob, nonSalesJob, salesA, salesB, salesAJob, salesBJob, salesU, salesUJob };

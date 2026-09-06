@@ -1,6 +1,7 @@
 import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
+import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames } from '../metric-config.js';   // #11b
 import { markDirty, isDirty, getMeta, publishConfig, configFileText } from '../metric-config.js';
 import { publishAccess, accessFileText } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
@@ -195,7 +196,7 @@ export function renderAdmin(accessConfig, data) {
           <input type="checkbox" id="cfgShowPast"> Show past recruiters <span id="cfgPastCount" style="color:var(--muted)"></span>
         </label>
         <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px">Status</th></tr></thead>
+          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px" title="Only editable for users Ashby marks as External Recruiter. Agency = the sourcer takes the credit on SME roles; Freelancer = it is shared; Internal = one of ours, tagged external by mistake.">Type</th><th style="width:150px">Status</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
         <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span><span style="margin-left:6px">· edits auto-save to this browser (team-wide sync is pending the pipeline).</span></div>
@@ -364,7 +365,10 @@ export function initAdminAccess(accessConfig) {
 
 // ===== Metric Configuration interactivity (called by app.js after renderAdmin) =====
 export function initAdminMetricConfig(data) {
-  const recs = (data && data.recruiters) || [];
+  // #11b: agencies, freelancers and other sourcer-only people must be configurable here too — that is where
+  // their pod and capacity get set. Same shared helper the Recruiter tab uses, so the two rosters agree.
+  const recs = ((data && data.recruiters) || []).concat(
+    sourcerOnlyNames(data).map(name => ({ name, userId: null, isActive: true, activeKnown: false, sourcerOnly: true })));
   const cfgQ = () => document.getElementById('cfgQuarter')?.value || currentQuarter();
 
   // ===== Admin sub-tabs (Access Management | Metric Configuration) =====
@@ -396,14 +400,26 @@ export function initAdminMetricConfig(data) {
     if (pc) pc.textContent = pastCount ? `(${pastCount})` : '';
     const sorted = showPast ? all : all.filter(r => r.isActive !== false);
     const podOpts = [...POD_OPTIONS, 'Unassigned'];
+    // #11b: only users Ashby flags as `External Recruiter` can be an Agency or a Freelancer. The list comes
+    // from the pipeline (dashboard.json externalUsers). Everyone else is shown as Internal and not editable —
+    // there is nothing to decide for them.
+    // 🚨 It is NOT a clean agency signal: of the four accounts carrying the role today, two are duplicate
+    // accounts of IK's own recruiters and one is a test user. That is exactly why `Internal` is one of the
+    // three options — so those false positives can be cleared rather than silently halving a real
+    // recruiter's SME credit under the Freelancer default.
+    const ext = new Set((data && data.externalUsers) || []);
     body.innerHTML = sorted.map(r => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false; return `<tr>
       <td style="font-weight:500">${name}</td>
       <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
       <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td>
+      <td>${ext.has(name)
+        ? `<select class="cfg-utype" data-name="${name}">${USER_TYPES.map(t => `<option value="${t}"${t === userTypeOf(name, ext) ? ' selected' : ''}>${t}</option>`).join('')}</select>`
+        : `<span style="font-size:11px;color:var(--text-muted)" title="Ashby does not mark this user as an External Recruiter, so they are one of ours.">Internal</span>`}</td>
       <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Active = holds an elevated recruiter seat in Ashby (Recruiter / Recruiter Admin).'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Inactive' : 'Active')}</span></td></tr>`; }).join('')
-      || `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'No current recruiters — tick “Show past recruiters” to see the ' + pastCount + ' who no longer hold a seat.' : 'No recruiters in the data yet.'}</td></tr>`;
+      || `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'No current recruiters — tick “Show past recruiters” to see the ' + pastCount + ' who no longer hold a seat.' : 'No recruiters in the data yet.'}</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
+    body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); }));   // #11b
     updatePodSummary();
   }
   function renderScoreGrid() {
