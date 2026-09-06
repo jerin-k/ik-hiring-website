@@ -1,4 +1,13 @@
 function computeOpeningShortfall(){
+  // 🚨 DEPRECATED / DISABLED — task #34, 7 Sep 2026.
+  // BUG: this resolves tracker rows to an Ashby job partly by CANDIDATE EMAIL, so rows belonging to a
+  // different job get counted into this job's target. Program Advisor read 15 when the true figure was 13.
+  // Its output tab '22g Openings To Create' has been deleted and task 22g is killed, so the function has no
+  // consumer. It is disabled rather than deleted so the aggregation logic survives if ever needed.
+  // If you revive it: resolve jobs by NAME first and only fall back to candidate email when the name fails,
+  // then de-duplicate per tracker row so one row can never be counted against two jobs.
+  throw new Error('computeOpeningShortfall is DISABLED (task #34): candidate-email job resolution inflates targets. See comment.');
+
   var aud = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
   var cw = aud.getSheetByName('Job Crosswalk (Tracker-Ashby)').getDataRange().getValues();
   var byJob = {};
