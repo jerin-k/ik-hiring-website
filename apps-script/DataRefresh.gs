@@ -554,7 +554,7 @@ function refreshDashboardData() {
   var openingsByJob = {};
   var openingsNoOpenedAt = 0;
   var openingsNoDate = [];
-  allOpenings.forEach(function(o) { var ids = (o.latestVersion && o.latestVersion.jobIds) || []; ids.forEach(function(jid) { (openingsByJob[jid] || (openingsByJob[jid] = [])).push(o); }); });
+  allOpenings.forEach(function(o) { if (o.isArchived) return; var ids = (o.latestVersion && o.latestVersion.jobIds) || []; ids.forEach(function(jid) { (openingsByJob[jid] || (openingsByJob[jid] = [])).push(o); }); });
   var openingsList = [];
   allJobs.forEach(function(j) {
     if (j.status !== 'Open') return;
@@ -569,6 +569,7 @@ function refreshDashboardData() {
       CR_SHELVED = '63d32633-3047-458b-a9a2-fbf2d04738f2', CR_CARRYFWD = '249988e6-c53c-4d6e-b60d-dc78e145520d';
   var openingBuckets = {};
   allOpenings.forEach(function (o) {
+    if (o.isArchived) return; // archived = gone: exclude from Total Openings, undated list & counts (Jerin 2026-09-06)
     var cr = o.closeReasonId;
     if (cr === CR_ONHOLD || cr === CR_SHELVED) return;
     // An opening with no openedAt was never actually opened. Do NOT fall back to
@@ -1337,20 +1338,4 @@ function computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName) {
     });
   });
   return owned;
-}
-
-// ONE-TIME (delete after running): ships ownedSeatsByRecruiterQ into the already-published dashboard.json
-// without a full re-pull. Reuses the same helper the pipeline now calls.
-function patchOwnedSeatsNow() {
-  var d = loadExistingDashboard_();
-  if (!d) { Logger.log('no dashboard.json'); return; }
-  var uidToName = {}; (d.recruiters || []).forEach(function (r) { if (r.userId) uidToName[r.userId] = r.name; });
-  var allOpenings = fetchOpenings_();
-  d.ownedSeatsByRecruiterQ = computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName);
-  d.schemaVersion = 5;
-  saveDashboardJson_(d);
-  var recs = Object.keys(d.ownedSeatsByRecruiterQ);
-  var q3 = recs.filter(function (nm) { return d.ownedSeatsByRecruiterQ[nm]['2026-Q3']; });
-  Logger.log('PATCHED owned recruiters=' + recs.length + ' | 2026-Q3 owners=' + q3.length + ' | schemaVersion=' + d.schemaVersion);
-  Logger.log('Q3 owners=' + JSON.stringify(q3.sort()));
 }
