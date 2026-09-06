@@ -976,6 +976,7 @@ function refreshDashboardData() {
     candidatesInterviewedByYear: candidatesInterviewedByYear, panelInterviewedByYear: panelInterviewedByYear, assessedByYear: assessedByYear,
     dropEvents: dropEvents
   };
+  assertDashboardComplete_(dashboard, existing);
   saveDashboardJson_(dashboard);
   Logger.log('=== Refresh v4 done: ' + appResult.funnel.applied + ' apps, ' + jobsList.length + ' jobs, ' + recruitersList.length + ' recruiters, ' + offerResult.count + ' offers, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
   // Mirror this project into the repo so the checked-in copy tracks what is actually running.
@@ -1338,4 +1339,25 @@ function computeOwnedSeatsByRecruiterQ_(allOpenings, uidToName) {
     });
   });
   return owned;
+}
+
+
+// ===== PUBLISH GUARD — refuse to overwrite good data with a partial build (added 2026-09-06) =====
+var GUARD_REQUIRED_KEYS = ['openingBuckets','ownedSeatsByRecruiterQ','openingPendingByJobQ','jobs','recruiters','sources','offerEvents','funnel','panelists','interviewers','dropEvents'];
+function _guardCount_(v){ return Array.isArray(v) ? v.length : (v && typeof v === 'object') ? Object.keys(v).length : 0; }
+function assertDashboardComplete_(next, prev){
+  var errs = [];
+  GUARD_REQUIRED_KEYS.forEach(function(k){ if (_guardCount_(next[k]) === 0) errs.push('missing/empty: ' + k); });
+  if (prev && Object.keys(prev).length){
+    [['jobs',0.5],['recruiters',0.5],['offerEvents',0.5],['openingBuckets',0.5]].forEach(function(p){
+      var was = _guardCount_(prev[p[0]]), now = _guardCount_(next[p[0]]);
+      if (was > 0 && now < was * p[1]) errs.push(p[0] + ' shrank ' + was + '->' + now);
+    });
+  }
+  if (errs.length){
+    var msg = 'PUBLISH GUARD BLOCKED (kept existing dashboard.json): ' + errs.join('; ');
+    Logger.log('GUARD ' + msg);
+    throw new Error(msg);
+  }
+  Logger.log('publish guard OK: all core sections present, no drastic shrink');
 }
