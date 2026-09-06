@@ -143,19 +143,19 @@ export const DEFINITIONS = {
   'rec-fulfilment': {
     summary: 'How these numbers are worked out',
     intro: 'Three tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> and <strong>Others</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026 · recruiter/sourcer credit split added 7 Sep 2026',
     groups: [
       {
         heading: 'The two number types in every column',
         items: [
           ['HC', 'Headcount — a count of people (or of positions, for Goal).'],
-          ['Score', 'The same thing weighted by how hard the role is: each role scores points from its Family, Level and Complexity, set in <strong>Admin → Metric Configuration</strong>. A senior niche hire is worth many times a vanilla one.'],
+          ['Score', 'The same thing weighted by how hard the role is: each role scores points from its Family, Level and Complexity, set in <strong>Admin → Metric Configuration</strong>. A senior niche hire is worth many times a vanilla one. <strong>Where a candidate or an opening has a Sourcer, these points are shared</strong> — see <em>How credit is shared with a Sourcer</em> below.'],
         ]
       },
       {
         heading: 'The columns',
         items: [
-          ['Goal — Joiners', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. One owner per opening, so nothing is split and the Goal is a whole number — the only exception is an opening that still has more than one owner (see the note below).'],
+          ['Goal — Joiners', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. Where an opening also has a <strong>Sourcer</strong>, its points are shared with them on the same rule the outcome side uses, so a Goal can show a half.'],
           ['Capacity', 'What this recruiter is expected to carry in the quarter, set by hand in <strong>Admin → Metric Configuration</strong>. Blank until somebody sets it.'],
           ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised. On <strong>Sales</strong> and <strong>Others</strong> this appears as <strong>Joined Total</strong>, split across the two columns beside it.'],
           ['Joined — Prev Qtr Openings <span class="defs-tag">Sales</span>', 'Of the people who joined this quarter, those filling an opening raised in an <strong>earlier</strong> quarter — carried-over demand finally landing. Needs the offer to carry an opening link.'],
@@ -168,6 +168,20 @@ export const DEFINITIONS = {
           ['Drop', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Drop \u00f7 (Joined + JP + Drop).'],
           ['Delta', 'Goal minus what was achieved, so it is the shortfall. The bar fills with that shortfall, so the bar and the number always agree. Never shown below zero.'],
           ['Capacity Utilisation', 'Achieved ÷ Capacity. <strong>The colour runs the opposite way to Delta on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
+        ]
+      },
+      {
+        heading: 'How credit is shared with a Sourcer',
+        items: [
+          ['The short version', 'If somebody is tagged as the <strong>Sourcer</strong> — on the candidate, or on the opening — the points for that role are shared with them. Who gets what depends on the <strong>department</strong>, not on anyone’s pod.'],
+          ['SME - India and SME - US', 'An <strong>agency</strong> sourcer takes the <strong>whole score</strong> and the recruiter gets nothing — on these roles the sourcing is the job. A <strong>freelancer</strong> splits it <strong>half and half</strong>. Anyone else — one of our own recruiters helping out — earns <strong>nothing</strong>, and the recruiter keeps the lot.'],
+          ['Every other department', 'Any sourcer splits the score <strong>half and half</strong> with the recruiter, whoever they are.'],
+          ['No sourcer tagged', 'The recruiter keeps the full score. This is the normal case today.'],
+          ['⚠ The headcount is never split', 'Only the <strong>Score</strong> divides. The <strong>HC</strong> — the person — goes to whoever did the finding: the <strong>agency</strong> if there was one, otherwise the <strong>recruiter</strong>. So the HC column still adds up to the real number of people, and an agency’s own row reads as the number you would bill against. <strong>This means HC and Score can disagree in the same row on purpose</strong> — a recruiter who placed ten people through agencies shows <strong>Joined HC 0</strong> next to half the points, and the agency’s row carries the ten. That is correct, not a bug.'],
+          ['Agencies and freelancers appear under <span class="defs-tag">Others</span>', 'They join the list the moment they own an opening or have a joiner attributed to them, and sit in <strong>Others</strong> until a pod is set for them in <strong>Admin → Metric Configuration</strong>. Without that their share of the credit would leave the recruiter and show up nowhere.'],
+          ['Who counts as an agency', 'Ashby marks some accounts as <em>External Recruiter</em>. Because that flag also catches duplicate accounts of our own people, each one is set by hand in <strong>Admin → Metric Configuration</strong> as <strong>Agency</strong>, <strong>Freelancer</strong> or <strong>Internal</strong>. Anything not yet reviewed is treated as a <strong>Freelancer</strong>, which can only ever halve someone’s credit, never wipe it.'],
+          ['Where the source of the candidate comes into it', '<strong>It does not.</strong> Whether someone came from an agency, a job board or a referral has <strong>no effect on the score</strong>. Only the tagged Sourcer moves credit.'],
+          ['Nothing is created or lost', 'The two shares always add back to the whole. Whatever leaves the recruiter turns up on the sourcer’s row — which is why the pod totals still reconcile with the openings.'],
         ]
       },
       {
