@@ -9,7 +9,11 @@
 // an explicit entry for that quarter only. Both are set in Recruiter Efficiency →
 // Metric Configuration (quarter toggle). localStorage; export bakes back to committed files.
 
-export const POD_OPTIONS = ['Sales', 'Lateral', 'SME-US', 'SME-India'];
+// 'Others' (added 2026-09-07, Jerin) is a DELIBERATE assignment for recruiters who work across pods —
+// e.g. Gopu Nair V. It is NOT the same as 'Unassigned', which means nobody has set a pod and stays
+// excluded from the Recruiter tab (decision #23, 2026-08-24). Others behaves like any other pod:
+// it groups, filters, charts and totals normally, and counts as Non-Sales in Fulfilment.
+export const POD_OPTIONS = ['Sales', 'Lateral', 'SME-US', 'SME-India', 'Others'];
 export const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
 // Committed baseline (quarter-agnostic default). Update via Metric Configuration → Export, then commit.

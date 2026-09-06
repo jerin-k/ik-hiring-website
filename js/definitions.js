@@ -177,7 +177,8 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['Recruiters with no pod set are left out entirely', 'Out of every row, total and chart on this tab. Their numbers are in <strong>Data Hygiene → Pod Not Set</strong> — worth a look, one of them carries real volume.'],
+      ['Fulfilment — Others', 'A third table for recruiters in the <strong>Others</strong> pod — people who work across pods rather than inside one. It uses the <strong>Sales counting rule</strong>: joiners count regardless of which quarter raised the opening, because that work is billed per joiner. Nobody appears in more than one table, so no total or chart double-counts.'],
+          ['Recruiters with no pod set are left out entirely', 'Out of every row, total and chart on this tab. Their numbers are in <strong>Data Hygiene → Pod Not Set</strong> — worth a look, one of them carries real volume. Someone who genuinely works across pods should be given the <strong>Others</strong> pod, which appears here like any other.'],
       ['Drop includes people who never had an offer raised', 'Until 26 Aug it did not — Drop required an offer record, which silently excluded anyone archived out of Ref Check or Documentation before anyone raised one. Every archived application was checked: <strong>17 such people</strong> were invisible, and 2026-Q2 went from 20 drops to 30.'],
       ['Past recruiters are hidden by default', 'Their history still counts in the data; tick <em>Include past recruiters</em> to see them.'],
       ['Openings with more than one owner are split and flagged', 'When two or more recruiters sit as <em>Recruiter</em> on the same opening in Ashby, its score is <strong>divided equally</strong> between them and the opening is listed in <strong>Data Hygiene</strong> so it can be given a single owner. This is the only place a Goal still shows a decimal, and it disappears as ownership is tidied up.'],
@@ -260,7 +261,7 @@ export const DEFINITIONS = {
     warnings: [
       ['This measures drop-out, not joining', 'Joined and Joining Pending appear on both sides of the fraction, so they cancel: it is really <strong>1 \u2212 Dropped \u00f7 Offered</strong>. It sits near 96% and moves only when people fall out. That is the intended question \u2014 <em>who have we lost?</em>'],
       ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in Ref Check, Documentation or Offer <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered. Kept that way on purpose, so this column matches the HM Positions card instead of inventing a fifth definition.'],
-      ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab — see <strong>Data Hygiene → Pod Not Set</strong>.'],
+      ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab — see <strong>Data Hygiene → Pod Not Set</strong>. Cross-pod recruiters belong in the <strong>Others</strong> pod, which is shown normally.'],
     ]
   },
 
@@ -322,7 +323,7 @@ export const DEFINITIONS = {
           ['Multiple Recruiters', 'More than one person tagged as Recruiter on one application. Scoring credits the first, so the team should leave a single Recruiter of record.'],
           ['Multiple Sourcers', 'An application should never have more than one Sourcer. Anything here is a straight data error.'],
           ['Recruiter Roster', 'Everyone the pipeline knows about, and whether Ashby still shows them holding a recruiter licence. <em>Past recruiter</em> means the licence is gone but their history still counts.'],
-          ['Pod Not Set', 'Real recruiters with real numbers who have no pod for the selected quarter. <strong>They are excluded from every table and chart on this tab</strong> — this list is where their work is visible until somebody assigns them a pod.'],
+          ['Pod Not Set', 'Real recruiters with real numbers who have no pod for the selected quarter. <strong>They are excluded from every table and chart on this tab</strong> — this list is where their work is visible until somebody assigns them a pod. If the person genuinely works across pods, assign <strong>Others</strong> rather than leaving them unset.'],
           ['Offers Missing Opening Link', 'Offers with no opening attached that are <strong>still in play</strong>. Without the link the offer cannot be tied to a position, which is why Delta on the HM tab goes negative.'],
           ['Hired Missing Opening Link', 'The same gap on people already hired or archived. Reference only — too late to fix usefully.'],
           ['Roles Missing Score Inputs', 'Roles that score zero for the selected quarter — usually Tech/NonTech roles missing a Level. SME roles score on Complexity alone and PA by title, so a blank Level does not flag them; a blank Complexity counts as Normal. They add headcount but no Score anywhere on the dashboard.'],
@@ -549,7 +550,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['A role\u2019s Score', '<strong>Family + Level + Complexity</strong> \u2192 the grid \u2192 points. Level and Complexity come from the job in Ashby; Family is derived from the department and job title.'],
-          ['Pod', 'Groups recruiters on the Recruiter Efficiency tab. \u26a0 A recruiter with <strong>no pod for the selected quarter is excluded from every row and total</strong> on that tab \u2014 they are listed under Data Hygiene \u2192 Pod Not Set.'],
+          ['Pod', 'Groups recruiters on the Recruiter Efficiency tab. \u26a0 A recruiter with <strong>no pod for the selected quarter is excluded from every row and total</strong> on that tab \u2014 they are listed under Data Hygiene \u2192 Pod Not Set. Use <strong>Others</strong> for anyone who works across pods \u2014 it groups and totals like a normal pod.'],
           ['Capacity', 'A Score, not a headcount \u2014 the ideal Fulfilment target for that recruiter in that quarter.'],
           ['Status', '<strong>Read from the Ashby seat, not editable here.</strong> Active means the person holds an elevated recruiter seat. Remove the seat in Ashby and they show as Inactive at the next refresh; their past offers and hires still score.'],
           ['Per quarter, copy-forward', 'A quarter with no explicit setting inherits the nearest earlier one. Editing a quarter only changes that quarter.'],

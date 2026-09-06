@@ -350,6 +350,15 @@ export function renderRecruiter(data) {
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
 
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Others (Hires)</h4>
+      <div class="scroll-table"><table class="metrics">
+        <thead>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+        </thead>
+        <tbody id="recFulfilOthersBody"></tbody>
+      </table></div>
+
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:22px 0 6px">Joining Pending — Cases</h4>
       <p class="sub-note" id="recJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table class="metrics">
@@ -453,7 +462,7 @@ export function renderRecruiter(data) {
       <div class="hyg-panel" data-h="nopod" style="display:none">
         <div class="hyg-head">
           <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Pod not set — excluded from every table on this tab</h4>
-          <p class="sub-note" style="margin:0">These are <strong>real recruiters with real numbers</strong> who have no pod assigned for the selected quarter. Everything below is <strong>left out</strong> of the pod rows, the pod totals and the charts on Fulfilment, Momentum, Screening, Joining Conversion and Sourcing — because a row labelled "Unassigned" reads like a team, and its totals silently inflate the tab. Fix it in <strong>Admin → Metric Configuration</strong> (Recruiter → Pod, per quarter); the numbers rejoin their pod on the next render.</p></div>
+          <p class="sub-note" style="margin:0">These are <strong>real recruiters with real numbers</strong> who have no pod assigned for the selected quarter. Everything below is <strong>left out</strong> of the pod rows, the pod totals and the charts on Fulfilment, Momentum, Screening, Joining Conversion and Sourcing — because a row labelled "Unassigned" reads like a team, and its totals silently inflate the tab. Fix it in <strong>Admin → Metric Configuration</strong> (Recruiter → Pod, per quarter); the numbers rejoin their pod on the next render. If someone genuinely works across pods rather than being unconfigured, give them the <strong>Others</strong> pod — it shows up like any other pod instead of being hidden.</p></div>
           <button class="hyg-dl" data-dl="nopod">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -868,8 +877,12 @@ export function initRecruiterFilters(data) {
     }
 
     // ===== Position Fulfilment (Non-Sales offers / Sales hires) =====
-    const salesGroups = groups.filter(G => isSalesPod(G.pod));
-    const nonSalesGroups = groups.filter(G => !isSalesPod(G.pod)); // includes Unassigned
+    // THREE sections (2026-09-07, Jerin). 'Others' is its own table using the SALES counting rule
+    // (no earlier-quarter subtraction) because that work is billed per joiner. Each recruiter sits in
+    // exactly ONE pod, so exactly one table — nothing is double-counted in any total or chart.
+    const salesGroups    = groups.filter(G => G.pod === 'Sales');
+    const othersGroups   = groups.filter(G => G.pod === 'Others');
+    const nonSalesGroups = groups.filter(G => G.pod !== 'Sales' && G.pod !== 'Others');
 
     // Funnel columns. Non-Sales (mode 'offer'): Assigned(HC|Score) · Target Score · Offered(HC|Score) ·
     // Joining Pending(HC|Score) · Gap Score. Sales (mode 'hire') adds Hired(HC|Score) before Gap.
@@ -1156,6 +1169,9 @@ export function initRecruiterFilters(data) {
     const hireBody = document.getElementById('recFulfilHireBody');
     if (offerBody) { offerBody.innerHTML = fulfilRows(nonSalesGroups, 'offer'); wireVelTree(offerBody); }
     if (hireBody) { hireBody.innerHTML = fulfilRows(salesGroups, 'hire'); wireVelTree(hireBody); }
+    // 'hire' mode = Sales counting: joiners regardless of which quarter raised the opening.
+    const othersBody = document.getElementById('recFulfilOthersBody');
+    if (othersBody) { othersBody.innerHTML = fulfilRows(othersGroups, 'hire'); wireVelTree(othersBody); }
 
     // ===== #20 (2026-08-23): Joining Pending — Cases, Pod → Recruiter → Candidate =====
     // Same population and same columns as the Hiring Manager cases table, re-cut by who owns the candidate
