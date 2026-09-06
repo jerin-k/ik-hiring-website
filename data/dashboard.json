@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-09-06T20:12:54.841Z",
+  "lastUpdated": "2026-09-06T20:29:50.355Z",
   "schemaVersion": 5,
   "ownedSeatsByRecruiterQ": {
     "Neha Vivekanand Pattar": {
@@ -6267,9 +6267,9 @@
         "Smriti Das",
         "Kaashvika Kashyap",
         "M Navya",
+        "Mahima Agarwal",
         "Rijo John",
         "Tina Anisha Bibeiro",
-        "Mahima Agarwal",
         "Tabitha Anceline E",
         "Leenita Joseph Albert"
       ]
@@ -14990,7 +14990,7 @@
     },
     {
       "name": "Oshin Verma",
-      "total": 849,
+      "total": 868,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -15060,7 +15060,7 @@
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Senior Associate, US HR Operations",
           "department": "Human Resource",
-          "total": 690,
+          "total": 709,
           "offer": 1,
           "hired": 0
         },
@@ -15082,23 +15082,22 @@
         }
       ],
       "sources": {
-        "Company marketing": 226,
-        "Third-party boards": 564,
+        "Company marketing": 234,
+        "Third-party boards": 577,
         "Referral": 5,
         "MyGreenhouse": 26,
-        "Inbound": 1,
-        "Job Portal": 22,
+        "Job Portal": 21,
         "Pre-identified": 1,
         "Agencies": 2
       },
       "srcNested": {
         "Company marketing": {
-          "Jobs page on your website": 225,
+          "Jobs page on your website": 233,
           "Internal Applicant": 1
         },
         "Third-party boards": {
-          "LinkedIn": 558,
-          "Naukri": 6
+          "LinkedIn": 570,
+          "Naukri": 7
         },
         "Referral": {
           "Referral": 5
@@ -15106,11 +15105,8 @@
         "MyGreenhouse": {
           "MyGreenhouse Jobs": 26
         },
-        "Inbound": {
-          "Naukri": 1
-        },
         "Job Portal": {
-          "Linkedin Outreach": 21,
+          "Linkedin Outreach": 20,
           "Naukri Inbound": 1
         },
         "Pre-identified": {
@@ -15191,21 +15187,18 @@
         },
         "d8a917ae": {
           "Company marketing": {
-            "Jobs page on your website": 147
+            "Jobs page on your website": 155
           },
           "Third-party boards": {
-            "LinkedIn": 505,
-            "Naukri": 6
+            "LinkedIn": 517,
+            "Naukri": 7
           },
           "MyGreenhouse": {
             "MyGreenhouse Jobs": 23
           },
-          "Inbound": {
-            "Naukri": 1
-          },
           "Job Portal": {
             "Naukri Inbound": 1,
-            "Linkedin Outreach": 5
+            "Linkedin Outreach": 4
           }
         },
         "60a32504": {
@@ -15240,10 +15233,10 @@
         },
         "2026-Q2": {
           "Third-party boards": {
-            "LinkedIn": 542
+            "LinkedIn": 554
           },
           "Company marketing": {
-            "Jobs page on your website": 172
+            "Jobs page on your website": 180
           },
           "Referral": {
             "Referral": 4
@@ -15255,13 +15248,10 @@
         "2026-Q3": {
           "Third-party boards": {
             "LinkedIn": 4,
-            "Naukri": 6
-          },
-          "Inbound": {
-            "Naukri": 1
+            "Naukri": 7
           },
           "Job Portal": {
-            "Linkedin Outreach": 21,
+            "Linkedin Outreach": 20,
             "Naukri Inbound": 1
           },
           "Pre-identified": {
@@ -15380,10 +15370,10 @@
         "d8a917ae": {
           "2026-Q2": {
             "Company marketing": {
-              "Jobs page on your website": 147
+              "Jobs page on your website": 155
             },
             "Third-party boards": {
-              "LinkedIn": 504
+              "LinkedIn": 516
             },
             "MyGreenhouse": {
               "MyGreenhouse Jobs": 23
@@ -15391,15 +15381,12 @@
           },
           "2026-Q3": {
             "Third-party boards": {
-              "Naukri": 6,
+              "Naukri": 7,
               "LinkedIn": 1
-            },
-            "Inbound": {
-              "Naukri": 1
             },
             "Job Portal": {
               "Naukri Inbound": 1,
-              "Linkedin Outreach": 5
+              "Linkedin Outreach": 4
             }
           }
         },
@@ -15422,7 +15409,7 @@
         }
       },
       "hc": 0,
-      "ta": 27,
+      "ta": 24,
       "hm": 5,
       "oa": 1,
       "r1": 5,
@@ -17022,7 +17009,7 @@
     },
     {
       "name": "Smriti Das",
-      "total": 233,
+      "total": 232,
       "byJob": [
         {
           "jobId": "df29da2f-edf6-4541-86cc-af4d9f0d7f05",
@@ -17044,7 +17031,7 @@
           "jobId": "092e9d9b-886b-4853-a476-c85896f42871",
           "title": "Program Advisor - India",
           "department": "Business - India",
-          "total": 11,
+          "total": 10,
           "offer": 7,
           "hired": 7
         },
@@ -17157,7 +17144,7 @@
         "Third-party boards": 83,
         "Referral": 3,
         "Company marketing": 138,
-        "Agencies": 8,
+        "Agencies": 7,
         "MyGreenhouse": 1
       },
       "srcNested": {
@@ -17172,7 +17159,7 @@
           "Jobs page on your website": 138
         },
         "Agencies": {
-          "Black Bull": 6,
+          "Black Bull": 5,
           "JobKreators": 2
         },
         "MyGreenhouse": {
@@ -17209,7 +17196,7 @@
         },
         "092e9d9b": {
           "Agencies": {
-            "Black Bull": 6,
+            "Black Bull": 5,
             "JobKreators": 2
           },
           "Third-party boards": {
@@ -17294,7 +17281,7 @@
             "Jobs page on your website": 3
           },
           "Agencies": {
-            "Black Bull": 6,
+            "Black Bull": 5,
             "JobKreators": 2
           }
         },
@@ -17352,7 +17339,7 @@
         "092e9d9b": {
           "2026-Q1": {
             "Agencies": {
-              "Black Bull": 6,
+              "Black Bull": 5,
               "JobKreators": 2
             },
             "Third-party boards": {
@@ -17468,7 +17455,7 @@
       "r5": 0,
       "offer": 23,
       "hired": 22,
-      "offeredReal": 42,
+      "offeredReal": 41,
       "joiningPending": 0,
       "accepted": 35,
       "userId": "53ee8081-4fdb-4e1d-916a-bd30fbd421ca",
@@ -17478,62 +17465,69 @@
     },
     {
       "name": "Gopu Nair V",
-      "total": 211,
+      "total": 192,
       "byJob": [
         {
           "jobId": "d8a917ae-7d2c-4009-b5a0-80951acc516b",
           "title": "Senior Associate, US HR Operations",
           "department": "Human Resource",
-          "total": 211,
+          "total": 192,
           "offer": 0,
           "hired": 0
         }
       ],
       "sources": {
-        "Company marketing": 58,
-        "Third-party boards": 134,
+        "Company marketing": 50,
+        "Third-party boards": 121,
         "MyGreenhouse": 4,
-        "Job Portal": 13
+        "Inbound": 1,
+        "Job Portal": 14
       },
       "srcNested": {
         "Company marketing": {
-          "Jobs page on your website": 58
+          "Jobs page on your website": 50
         },
         "Third-party boards": {
-          "LinkedIn": 131,
-          "Naukri": 3
+          "LinkedIn": 119,
+          "Naukri": 2
         },
         "MyGreenhouse": {
           "MyGreenhouse Jobs": 4
         },
+        "Inbound": {
+          "Naukri": 1
+        },
         "Job Portal": {
-          "Linkedin Outreach": 13
+          "Linkedin Outreach": 14
         }
       },
       "srcByJob": {
         "d8a917ae": {
           "Company marketing": {
-            "Jobs page on your website": 58
+            "Jobs page on your website": 50
           },
           "Third-party boards": {
-            "LinkedIn": 131,
-            "Naukri": 3
+            "LinkedIn": 119,
+            "Naukri": 2
           },
           "MyGreenhouse": {
             "MyGreenhouse Jobs": 4
           },
+          "Inbound": {
+            "Naukri": 1
+          },
           "Job Portal": {
-            "Linkedin Outreach": 13
+            "Linkedin Outreach": 14
           }
         }
       },
       "srcQ": {
         "2026-Q2": {
           "Company marketing": {
-            "Jobs page on your website": 58
+            "Jobs page on your website": 50
           },
           "Third-party boards": {
-            "LinkedIn": 131
+            "LinkedIn": 119
           },
           "MyGreenhouse": {
             "MyGreenhouse Jobs": 4
@@ -17541,10 +17535,13 @@
         },
         "2026-Q3": {
           "Third-party boards": {
-            "Naukri": 3
+            "Naukri": 2
+          },
+          "Inbound": {
+            "Naukri": 1
           },
           "Job Portal": {
-            "Linkedin Outreach": 13
+            "Linkedin Outreach": 14
           }
         }
       },
@@ -17552,10 +17549,10 @@
         "d8a917ae": {
           "2026-Q2": {
             "Company marketing": {
-              "Jobs page on your website": 58
+              "Jobs page on your website": 50
             },
             "Third-party boards": {
-              "LinkedIn": 131
+              "LinkedIn": 119
             },
             "MyGreenhouse": {
               "MyGreenhouse Jobs": 4
@@ -17563,16 +17560,19 @@
           },
           "2026-Q3": {
             "Third-party boards": {
-              "Naukri": 3
+              "Naukri": 2
+            },
+            "Inbound": {
+              "Naukri": 1
             },
             "Job Portal": {
-              "Linkedin Outreach": 13
+              "Linkedin Outreach": 14
             }
           }
         }
       },
       "hc": 0,
-      "ta": 4,
+      "ta": 7,
       "hm": 0,
       "oa": 0,
       "r1": 1,
@@ -17582,9 +17582,9 @@
       "r5": 0,
       "offer": 0,
       "hired": 0,
-      "offeredReal": 13,
+      "offeredReal": 1,
       "joiningPending": 0,
-      "accepted": 6,
+      "accepted": 1,
       "userId": "4165dd14-a187-4cc8-ba64-eda2782cdf7c",
       "activeKnown": true,
       "seatRole": "Organization Admin",
@@ -18490,7 +18490,7 @@
             "Jobs page on your website": 4
           },
           "Third-party boards": {
-            "LinkedIn": 29,
+            "LinkedIn": 30,
             "Naukri": 2
           },
           "Other": {
@@ -18515,7 +18515,7 @@
         },
         "2026-Q3": {
           "Third-party boards": {
-            "LinkedIn": 4
+            "LinkedIn": 3
           }
         }
       },
@@ -18561,12 +18561,7 @@
         "538f7111": {
           "2026-Q1": {
             "Third-party boards": {
-              "LinkedIn": 1
-            }
-          },
-          "2026-Q3": {
-            "Third-party boards": {
-              "LinkedIn": 1
+              "LinkedIn": 2
             }
           }
         },
@@ -18665,10 +18660,10 @@
       "ta": 0,
       "hm": 0,
       "oa": 17,
-      "r1": 16,
+      "r1": 17,
       "r2": 0,
       "r3": 2,
-      "r4": 1,
+      "r4": 0,
       "r5": 0,
       "offer": 18,
       "hired": 18,
@@ -19379,7 +19374,7 @@
     },
     {
       "name": "Mahima Agarwal",
-      "total": 71,
+      "total": 72,
       "byJob": [
         {
           "jobId": "3d31c20f-35df-4a46-b505-8dd5aea49978",
@@ -19401,7 +19396,7 @@
           "jobId": "092e9d9b-886b-4853-a476-c85896f42871",
           "title": "Program Advisor - India",
           "department": "Business - India",
-          "total": 4,
+          "total": 5,
           "offer": 3,
           "hired": 3
         },
@@ -19418,8 +19413,8 @@
         "Third-party boards": 40,
         "Referral": 7,
         "Other": 4,
+        "Agencies": 5,
         "Job Portal": 14,
-        "Agencies": 4,
         "Recruiter Networking": 2
       },
       "srcNested": {
@@ -19432,12 +19427,12 @@
         "Other": {
           "Recruiter Networking": 4
         },
+        "Agencies": {
+          "Black Bull": 5
+        },
         "Job Portal": {
           "Linkedin Inbound": 12,
           "Linkedin Outreach": 2
-        },
-        "Agencies": {
-          "Black Bull": 4
         },
         "Recruiter Networking": {
           "Recruiter Networking": 2
@@ -19471,6 +19466,9 @@
           }
         },
         "092e9d9b": {
+          "Agencies": {
+            "Black Bull": 1
+          },
           "Third-party boards": {
             "LinkedIn": 4
           }
@@ -19494,6 +19492,9 @@
           },
           "Other": {
             "Recruiter Networking": 3
+          },
+          "Agencies": {
+            "Black Bull": 1
           },
           "Job Portal": {
             "Linkedin Inbound": 1
@@ -19584,6 +19585,9 @@
         },
         "092e9d9b": {
           "2026-Q1": {
+            "Agencies": {
+              "Black Bull": 1
+            },
             "Third-party boards": {
               "LinkedIn": 3
             }
@@ -19616,7 +19620,7 @@
       "r5": 0,
       "offer": 54,
       "hired": 51,
-      "offeredReal": 69,
+      "offeredReal": 70,
       "joiningPending": 5,
       "accepted": 63,
       "userId": "d2c6ed43-a41f-4c04-8296-eb3fdc635698",
@@ -20349,7 +20353,7 @@
     },
     {
       "name": "Mashika De Almeida",
-      "total": 60,
+      "total": 61,
       "byJob": [
         {
           "jobId": "b0722dce-0c70-4087-b4b8-d1d3dfa979e9",
@@ -20411,7 +20415,7 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 2,
+          "total": 3,
           "offer": 0,
           "hired": 0
         }
@@ -20422,6 +20426,7 @@
         "Other": 1,
         "MyGreenhouse": 4,
         "Company marketing": 20,
+        "Referral": 1,
         "Job Portal": 1
       },
       "srcNested": {
@@ -20441,6 +20446,9 @@
         },
         "Company marketing": {
           "Jobs page on your website": 20
+        },
+        "Referral": {
+          "Referral": 1
         },
         "Job Portal": {
           "Linkedin Outreach": 1
@@ -20499,6 +20507,9 @@
           }
         },
         "538f7111": {
+          "Referral": {
+            "Referral": 1
+          },
           "Third-party boards": {
             "LinkedIn": 1
           },
@@ -20525,6 +20536,11 @@
           },
           "Company marketing": {
             "Jobs page on your website": 20
+          }
+        },
+        "2026-Q2": {
+          "Referral": {
+            "Referral": 1
           }
         },
         "2026-Q3": {
@@ -20603,6 +20619,11 @@
           }
         },
         "538f7111": {
+          "2026-Q2": {
+            "Referral": {
+              "Referral": 1
+            }
+          },
           "2026-Q3": {
             "Third-party boards": {
               "LinkedIn": 1
@@ -20620,7 +20641,7 @@
       "r1": 3,
       "r2": 1,
       "r3": 0,
-      "r4": 0,
+      "r4": 1,
       "r5": 0,
       "offer": 1,
       "hired": 1,
@@ -20736,7 +20757,7 @@
     },
     {
       "name": "Sanghamitra Moulik",
-      "total": 51,
+      "total": 50,
       "byJob": [
         {
           "jobId": "b6f031b3-3350-4aab-8296-da542fed4a0f",
@@ -20766,7 +20787,7 @@
           "jobId": "538f7111-2b24-4aac-a59c-bee93fccc500",
           "title": "Executive Technical Mentor - AI",
           "department": "SME - India",
-          "total": 13,
+          "total": 12,
           "offer": 0,
           "hired": 0
         },
@@ -20781,7 +20802,7 @@
       ],
       "sources": {
         "Third-party boards": 46,
-        "Referral": 2,
+        "Referral": 1,
         "Job Portal": 3
       },
       "srcNested": {
@@ -20789,7 +20810,7 @@
           "LinkedIn": 46
         },
         "Referral": {
-          "Referral": 2
+          "Referral": 1
         },
         "Job Portal": {
           "Linkedin Outreach": 3
@@ -20816,7 +20837,7 @@
             "LinkedIn": 8
           },
           "Referral": {
-            "Referral": 2
+            "Referral": 1
           },
           "Job Portal": {
             "Linkedin Outreach": 3
@@ -20831,12 +20852,12 @@
       "srcQ": {
         "2026-Q1": {
           "Third-party boards": {
-            "LinkedIn": 41
+            "LinkedIn": 40
           }
         },
         "2026-Q2": {
           "Referral": {
-            "Referral": 2
+            "Referral": 1
           },
           "Third-party boards": {
             "LinkedIn": 1
@@ -20844,7 +20865,7 @@
         },
         "2026-Q3": {
           "Third-party boards": {
-            "LinkedIn": 4
+            "LinkedIn": 5
           },
           "Job Portal": {
             "Linkedin Outreach": 3
@@ -20876,17 +20897,17 @@
         "538f7111": {
           "2026-Q1": {
             "Third-party boards": {
-              "LinkedIn": 4
+              "LinkedIn": 3
             }
           },
           "2026-Q2": {
             "Referral": {
-              "Referral": 2
+              "Referral": 1
             }
           },
           "2026-Q3": {
             "Third-party boards": {
-              "LinkedIn": 4
+              "LinkedIn": 5
             },
             "Job Portal": {
               "Linkedin Outreach": 3
@@ -20905,7 +20926,7 @@
       "ta": 0,
       "hm": 0,
       "oa": 0,
-      "r1": 8,
+      "r1": 7,
       "r2": 0,
       "r3": 0,
       "r4": 2,
@@ -27596,7 +27617,7 @@
       "level": "L2",
       "complexity": "Normal",
       "employmentType": "FTE",
-      "recruiter": "Smriti Das",
+      "recruiter": "Mahima Agarwal",
       "sourcer": null,
       "candidate": "Abhishek Jha",
       "decidedAt": "2026-01-28",
@@ -35870,156 +35891,6 @@
       "attrQuarter": null
     },
     {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test - Kaashvika Kashyap",
-      "decidedAt": "",
-      "startDate": "2026-07-11",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnCandidateResponse",
-      "acceptanceStatus": "Pending",
-      "offerCreatedAt": "2026-07-10",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test - Aditya",
-      "decidedAt": "2026-07-10",
-      "startDate": "2026-07-10",
-      "accepted": true,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "CandidateAccepted",
-      "acceptanceStatus": "Accepted",
-      "offerCreatedAt": "2026-07-10",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test - Oshin ",
-      "decidedAt": "",
-      "startDate": "2026-07-14",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnCandidateResponse",
-      "acceptanceStatus": "Pending",
-      "offerCreatedAt": "2026-07-10",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Ritika - Test",
-      "decidedAt": "",
-      "startDate": "2026-07-09",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnCandidateResponse",
-      "acceptanceStatus": "Pending",
-      "offerCreatedAt": "2026-07-10",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test Mahi",
-      "decidedAt": "2026-07-10",
-      "startDate": "2026-07-15",
-      "accepted": true,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Hired",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "CandidateAccepted",
-      "acceptanceStatus": "Accepted",
-      "offerCreatedAt": "2026-07-10",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
       "jobId8": "22fcd2e7",
       "jobTitle": "Program Advisor - US (AI Programs)",
       "department": "US Business",
@@ -36230,96 +36101,6 @@
       "attrQuarter": null
     },
     {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Jerin Kesavan test 3",
-      "decidedAt": "2026-07-16",
-      "startDate": "2026-07-23",
-      "accepted": true,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "CandidateAccepted",
-      "acceptanceStatus": "Accepted",
-      "offerCreatedAt": "2026-07-16",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test - G",
-      "decidedAt": "",
-      "startDate": "2026-07-24",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Archived",
-      "archivedAt": "2026-07-21",
-      "archiveReason": "Fraudulent Candidate",
-      "archiveReasonType": "RejectedByOrg",
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnApprovalStart",
-      "acceptanceStatus": "Created",
-      "offerCreatedAt": "2026-07-16",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": "2026-07-16",
-      "attrQuarter": "2026-Q3"
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test - Rijo",
-      "decidedAt": "2026-07-21",
-      "startDate": "2026-07-22",
-      "accepted": true,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "CandidateAccepted",
-      "acceptanceStatus": "Accepted",
-      "offerCreatedAt": "2026-07-21",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
       "jobId8": "e8867563",
       "jobTitle": "Intern, Talent Acquisition",
       "department": "Talent Acquisition",
@@ -36342,36 +36123,6 @@
       "openingQuarter": null,
       "offerStatus": "CandidateAccepted",
       "acceptanceStatus": "Accepted",
-      "offerCreatedAt": "2026-07-22",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test- Pooja",
-      "decidedAt": "",
-      "startDate": "2026-07-15",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnCandidateResponse",
-      "acceptanceStatus": "Pending",
       "offerCreatedAt": "2026-07-22",
       "verN": 1,
       "openingIdAny": null,
@@ -37370,36 +37121,6 @@
       "attrQuarter": null
     },
     {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Test - Loki",
-      "decidedAt": "",
-      "startDate": "2026-07-30",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": null,
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnCandidateResponse",
-      "acceptanceStatus": "Pending",
-      "offerCreatedAt": "2026-07-28",
-      "verN": 1,
-      "openingIdAny": null,
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
-    },
-    {
       "jobId8": "3c1dbb02",
       "jobTitle": "Part Time Instructor - Agentic AI (US)",
       "department": "SME - US",
@@ -37518,36 +37239,6 @@
       "openingQuarterAny": "2026-Q2",
       "lateEntryAt": null,
       "attrQuarter": "2026-Q2"
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Gopu - Test Cand",
-      "decidedAt": "2026-08-19",
-      "startDate": "2026-07-03",
-      "accepted": true,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Hired",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": "de67f788-f422-49ad-ae79-abb4e0613b07",
-      "openingQuarter": null,
-      "offerStatus": "CandidateAccepted",
-      "acceptanceStatus": "Accepted",
-      "offerCreatedAt": "2026-07-30",
-      "verN": 1,
-      "openingIdAny": "de67f788-f422-49ad-ae79-abb4e0613b07",
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
     },
     {
       "jobId8": "7c1706f1",
@@ -38268,36 +37959,6 @@
       "openingQuarterAny": "2026-Q3",
       "lateEntryAt": null,
       "attrQuarter": "2026-Q3"
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "level": null,
-      "complexity": null,
-      "employmentType": null,
-      "recruiter": "Gopu Nair V",
-      "sourcer": null,
-      "candidate": "Offer - Test",
-      "decidedAt": "",
-      "startDate": "2026-07-20",
-      "accepted": false,
-      "srcType": null,
-      "srcName": null,
-      "appStatus": "Active",
-      "archivedAt": null,
-      "archiveReason": null,
-      "archiveReasonType": null,
-      "openingId": "142a9e3b-d059-40ad-869a-e7c2a1808d4d",
-      "openingQuarter": null,
-      "offerStatus": "WaitingOnCandidateResponse",
-      "acceptanceStatus": "Pending",
-      "offerCreatedAt": "2026-08-10",
-      "verN": 1,
-      "openingIdAny": "142a9e3b-d059-40ad-869a-e7c2a1808d4d",
-      "openingQuarterAny": null,
-      "lateEntryAt": null,
-      "attrQuarter": null
     },
     {
       "jobId8": "00833127",
@@ -42672,17 +42333,6 @@
     },
     {
       "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-23",
-      "department": "",
-      "job": "",
-      "candidate": "Jerin Kesavan test 3",
-      "subStage": "Offer Accepted",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
       "month": null,
       "doj": null,
       "department": "US Business",
@@ -42771,17 +42421,6 @@
     },
     {
       "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-20",
-      "department": "",
-      "job": "",
-      "candidate": "Offer - Test",
-      "subStage": "Offer Sent",
-      "recruiter": "Gopu Nair V",
-      "linked": true
-    },
-    {
-      "openingQuarter": null,
       "month": "2025-09",
       "doj": "2025-09-10",
       "department": "US Business",
@@ -42811,17 +42450,6 @@
       "candidate": "R Peyman",
       "subStage": "Offer Sent",
       "recruiter": null,
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-09",
-      "department": "",
-      "job": "",
-      "candidate": "Ritika - Test",
-      "subStage": "Offer Sent",
-      "recruiter": "Gopu Nair V",
       "linked": false
     },
     {
@@ -42881,72 +42509,6 @@
     },
     {
       "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-10",
-      "department": "",
-      "job": "",
-      "candidate": "Test - Aditya",
-      "subStage": "Offer Accepted",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-11",
-      "department": "",
-      "job": "",
-      "candidate": "Test - Kaashvika Kashyap",
-      "subStage": "Offer Sent",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-30",
-      "department": "",
-      "job": "",
-      "candidate": "Test - Loki",
-      "subStage": "Offer Sent",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-14",
-      "department": "",
-      "job": "",
-      "candidate": "Test - Oshin ",
-      "subStage": "Offer Sent",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-22",
-      "department": "",
-      "job": "",
-      "candidate": "Test - Rijo",
-      "subStage": "Offer Accepted",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
-      "month": "2026-07",
-      "doj": "2026-07-15",
-      "department": "",
-      "job": "",
-      "candidate": "Test- Pooja",
-      "subStage": "Offer Sent",
-      "recruiter": "Gopu Nair V",
-      "linked": false
-    },
-    {
-      "openingQuarter": null,
       "month": null,
       "doj": null,
       "department": "SME - India",
@@ -42974,86 +42536,6 @@
       "department": "",
       "recruiter": "Aditya Singh",
       "doj": "2026-01-02",
-      "subStage": "Offer Sent",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Test - Loki",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-30",
-      "subStage": "Offer Sent",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Test- Pooja",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-15",
-      "subStage": "Offer Sent",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Test - Rijo",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-22",
-      "subStage": "Offer Accepted",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Jerin Kesavan test 3",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-23",
-      "subStage": "Offer Accepted",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Ritika - Test",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-09",
-      "subStage": "Offer Sent",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Test - Oshin ",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-14",
-      "subStage": "Offer Sent",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Test - Aditya",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-10",
-      "subStage": "Offer Accepted",
-      "appStatus": "Active",
-      "needsFix": true
-    },
-    {
-      "candidate": "Test - Kaashvika Kashyap",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-11",
       "subStage": "Offer Sent",
       "appStatus": "Active",
       "needsFix": true
@@ -43894,26 +43376,6 @@
       "department": "Engineering",
       "recruiter": "Deepti Leslie",
       "doj": "2025-12-17",
-      "subStage": "Offer Accepted",
-      "appStatus": "Hired",
-      "needsFix": false
-    },
-    {
-      "candidate": "Test - G",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-24",
-      "subStage": "Offer Created",
-      "appStatus": "Archived",
-      "needsFix": false
-    },
-    {
-      "candidate": "Test Mahi",
-      "job": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "doj": "2026-07-15",
       "subStage": "Offer Accepted",
       "appStatus": "Hired",
       "needsFix": false
@@ -53625,7 +53087,7 @@
       }
     ],
     "unassignedTotal": 48649,
-    "offerMissingLink": 426,
+    "offerMissingLink": 416,
     "openingsNoOpenedAt": 0,
     "excludedAsRecruiter": [],
     "multiRecruiter": [
@@ -53633,8 +53095,8 @@
         "app": "af696b0c-e2a5-437a-b459-cb9844649a8c",
         "job8": "092e9d9b",
         "names": [
-          "Smriti Das",
-          "Mahima Agarwal"
+          "Mahima Agarwal",
+          "Smriti Das"
         ]
       },
       {
@@ -53650,9 +53112,9 @@
         "app": "c783c116-672f-4d9b-9805-c5ad64ca99a1",
         "job8": "538f7111",
         "names": [
-          "Sanghamitra Moulik",
           "Ankita Kabra",
-          "Mashika De Almeida"
+          "Mashika De Almeida",
+          "Sanghamitra Moulik"
         ]
       },
       {
@@ -53742,8 +53204,8 @@
         "app": "3e303648-13a2-4202-8223-21a9f5e9c491",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -53774,8 +53236,8 @@
         "app": "e196800d-ba10-4aae-ae25-b34535481cbc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -53806,8 +53268,8 @@
         "app": "5db08b36-f53f-4bdb-868d-14ff8f0d6edc",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -53862,16 +53324,16 @@
         "app": "684b03b8-fb41-4dd3-b763-06ce15f07cc2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "7299b099-71f5-482e-9350-45ee72f24a7b",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -53886,8 +53348,8 @@
         "app": "e46691b1-3571-43cc-be15-abfb45fca259",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -53982,8 +53444,8 @@
         "app": "11abe852-4b09-48b0-996a-1f57518a2ae3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -53998,8 +53460,8 @@
         "app": "21b03ba4-5583-4ab6-b5ea-10454e50b621",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54046,8 +53508,8 @@
         "app": "0b15beac-d2bf-4387-880a-9dd49a3f19dd",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54062,8 +53524,8 @@
         "app": "bd17fdf5-0f21-4a8e-816a-8b605fda192a",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54094,8 +53556,8 @@
         "app": "3eaaa533-948e-430b-8a35-e85411caa26f",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54198,16 +53660,16 @@
         "app": "8c3c9bf3-7b2c-4625-a9ad-b203ab0c5dbc",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "93014b53-1102-4a34-b7d4-dfd808ac0180",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54222,8 +53684,8 @@
         "app": "a3163593-3101-474f-9ca7-820bba834d17",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54246,24 +53708,24 @@
         "app": "7b01588b-0513-40db-a6ae-59d9b6cee20f",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "c8c55921-c6c1-4ff7-a7cf-856e16a3c6dd",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "d8c57a52-cb7e-40d7-90a5-4b4ab595d9f2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54278,8 +53740,8 @@
         "app": "27a74319-c963-4b42-8677-6f7a3995d059",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54350,24 +53812,24 @@
         "app": "e956737d-b717-4982-a583-8392ba1e32d2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "19e2c8ac-e1cf-4be6-bc2c-e1ab0f6ff28e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "94650521-cc87-45ce-9bdb-a417a0cc3b46",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54382,8 +53844,8 @@
         "app": "5f3b9020-faa9-47d6-8b1a-f1bac64064f7",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54446,8 +53908,8 @@
         "app": "fe943be0-934e-41c0-8c6b-57913f3607e7",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54478,8 +53940,8 @@
         "app": "5bb894de-faf1-41f2-b39c-886b3b9c67d4",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54494,8 +53956,8 @@
         "app": "583ee996-b682-4e98-90c3-e4188c2ac587",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -54526,8 +53988,8 @@
         "app": "75377ab5-fb7e-4ad3-a8c1-1440a00694a3",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54566,8 +54028,8 @@
         "app": "3cbf56bd-1f21-437e-9d4a-0e49722d7fe6",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54606,16 +54068,16 @@
         "app": "6f6cd712-1cc6-461f-a4ef-e98bd07dfc7d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "59d67c45-ff51-40f0-b8ec-3cead018c391",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54670,8 +54132,8 @@
         "app": "8bc65cbb-7516-49a3-bd5e-8ffdeeb5aea8",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54718,16 +54180,16 @@
         "app": "3c4d1527-384a-40bd-a1b9-5428365eaf59",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
         "app": "af1e87d4-8c3c-4952-854f-912e4635a980",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54806,16 +54268,16 @@
         "app": "2f3af780-9cdc-4754-8477-3b571e5707c5",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "2aed3f92-78ed-4dc2-a358-0bd6f24928bb",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54862,8 +54324,8 @@
         "app": "e66054d1-757e-4f97-a72d-d69c587baf78",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54886,16 +54348,16 @@
         "app": "25a5ab77-b13e-4de3-adbf-ea3100f11145",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "4b505690-72b5-47c0-82d7-4628f44fd4f4",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -54918,24 +54380,24 @@
         "app": "e73eb319-75a6-4e3c-ba22-4e62e6c19ea7",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "aaaf600e-a2e5-466c-a211-6158279418cb",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "57d33c9a-3fe3-4c67-86bb-ccadee53089e",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -55046,8 +54508,8 @@
         "app": "af93ef81-2ec2-472e-852d-a1a21a36084d",
         "job8": "d8a917ae",
         "names": [
-          "Oshin Verma",
-          "Gopu Nair V"
+          "Gopu Nair V",
+          "Oshin Verma"
         ]
       },
       {
@@ -55086,16 +54548,16 @@
         "app": "51decdfb-91d6-4c27-bbbe-6c8c3631f5b3",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "b79bfa9e-8850-4adf-81fb-4233b3ff0588",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -55174,16 +54636,16 @@
         "app": "4c825903-b690-452c-949c-458682bd77d2",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
         "app": "692dda48-2168-4060-88ab-73795beb5043",
         "job8": "d8a917ae",
         "names": [
-          "Gopu Nair V",
-          "Oshin Verma"
+          "Oshin Verma",
+          "Gopu Nair V"
         ]
       },
       {
@@ -55255,31 +54717,31 @@
       "8": 2,
       "9": 1,
       "10": 6,
-      "11": 8,
-      "12": 7,
+      "11": 7,
+      "12": 8,
       "96": 8,
       "97": 8,
       "98": 3,
       "99": 5,
       "100": 6,
-      "101": 16,
-      "102": 32,
-      "103": 98,
-      "104": 105,
+      "101": 15,
+      "102": 33,
+      "103": 97,
+      "104": 106,
       "105": 2,
       "106": 5,
       "107": 10,
       "108": 10,
       "109": 13,
-      "110": 18,
-      "111": 14,
+      "110": 17,
+      "111": 15,
       "112": 8,
-      "113": 15,
-      "114": 31,
-      "115": 36,
-      "116": 73,
-      "117": 171,
-      "118": 331,
+      "113": 13,
+      "114": 33,
+      "115": 35,
+      "116": 72,
+      "117": 167,
+      "118": 337,
       "187": 1,
       "190": 2,
       "191": 1,
@@ -55305,8 +54767,8 @@
       "213": 16,
       "214": 16,
       "215": 39,
-      "216": 109,
-      "217": 40,
+      "216": 108,
+      "217": 41,
       "218": 9,
       "219": 3,
       "220": 3,
@@ -55322,11 +54784,11 @@
       "230": 16,
       "231": 3,
       "232": 2,
-      "233": 51,
-      "234": 59,
+      "233": 50,
+      "234": 60,
       "235": 80,
-      "236": 61,
-      "237": 10
+      "236": 60,
+      "237": 11
     },
     "52845468": {
       "2": 1,
@@ -55375,7 +54837,8 @@
       "155": 2,
       "156": 2,
       "157": 9,
-      "158": 6,
+      "158": 5,
+      "159": 1,
       "165": 3,
       "166": 1
     },
@@ -55398,39 +54861,39 @@
       "222": 1
     },
     "dd785a22": {
-      "215": 83,
+      "215": 82,
       "216": 133,
-      "217": 61,
-      "218": 84,
-      "219": 115,
-      "220": 146,
+      "217": 62,
+      "218": 83,
+      "219": 116,
+      "220": 145,
       "221": 139,
       "222": 136,
-      "223": 88,
-      "224": 82,
-      "225": 82,
+      "223": 87,
+      "224": 84,
+      "225": 81,
       "226": 114,
-      "227": 132,
+      "227": 133,
       "228": 102,
-      "229": 112,
-      "230": 116,
-      "231": 90,
-      "232": 134,
-      "233": 126,
-      "234": 112,
-      "235": 113,
+      "229": 111,
+      "230": 117,
+      "231": 88,
+      "232": 135,
+      "233": 124,
+      "234": 114,
+      "235": 114,
       "236": 178,
       "237": 261,
-      "238": 128,
-      "239": 228,
-      "240": 383,
-      "241": 249,
-      "242": 262,
-      "243": 620,
-      "244": 461,
-      "245": 23,
+      "238": 127,
+      "239": 229,
+      "240": 382,
+      "241": 248,
+      "242": 260,
+      "243": 621,
+      "244": 464,
+      "245": 22,
       "246": 100,
-      "247": 122,
+      "247": 123,
       "248": 25
     },
     "ad7e4c29": {
@@ -55451,24 +54914,24 @@
       "195": 14,
       "196": 7,
       "197": 11,
-      "198": 20,
+      "198": 19,
       "199": 31,
-      "200": 31,
+      "200": 32,
       "201": 35,
       "202": 30,
       "203": 14,
-      "204": 19,
-      "205": 9,
+      "204": 18,
+      "205": 10,
       "206": 21,
       "207": 26,
       "208": 21,
       "209": 23,
-      "210": 20,
+      "210": 19,
       "211": 13,
-      "212": 27,
-      "213": 31,
+      "212": 28,
+      "213": 30,
       "214": 37,
-      "215": 34,
+      "215": 35,
       "216": 44,
       "217": 30,
       "218": 26,
@@ -55479,11 +54942,11 @@
       "223": 17,
       "224": 35,
       "225": 6,
-      "242": 30,
-      "243": 32,
-      "244": 42,
-      "245": 52,
-      "246": 72,
+      "242": 28,
+      "243": 33,
+      "244": 43,
+      "245": 51,
+      "246": 73,
       "247": 32,
       "248": 12
     },
@@ -55505,8 +54968,8 @@
       "168": 10,
       "169": 30,
       "170": 5,
-      "171": 12,
-      "172": 1,
+      "171": 11,
+      "172": 2,
       "173": 6,
       "174": 4,
       "175": 2,
@@ -55526,15 +54989,15 @@
       "191": 4,
       "192": 7,
       "193": 8,
-      "194": 6,
-      "195": 5,
-      "196": 4,
-      "197": 2,
+      "194": 5,
+      "195": 6,
+      "196": 3,
+      "197": 3,
       "198": 11,
       "199": 8,
       "200": 9,
-      "201": 26,
-      "202": 38,
+      "201": 24,
+      "202": 40,
       "203": 1,
       "204": 3,
       "205": 3,
@@ -55557,8 +55020,8 @@
       "223": 4,
       "225": 3,
       "226": 3,
-      "227": 5,
-      "228": 4,
+      "227": 4,
+      "228": 5,
       "229": 6,
       "230": 6,
       "231": 3,
@@ -55574,10 +55037,10 @@
       "241": 19,
       "242": 14,
       "243": 21,
-      "244": 32,
+      "244": 31,
       "245": 9,
       "246": 16,
-      "247": 27,
+      "247": 28,
       "248": 3
     },
     "3c1dbb02": {
@@ -55604,8 +55067,8 @@
       "48": 1,
       "50": 1,
       "55": 4,
-      "56": 3,
-      "57": 3,
+      "56": 2,
+      "57": 4,
       "58": 4,
       "59": 2,
       "60": 3,
@@ -55727,8 +55190,7 @@
       "219": 3,
       "220": 1,
       "222": 1,
-      "224": 1,
-      "225": 1,
+      "225": 2,
       "227": 3,
       "229": 1,
       "232": 2,
@@ -55770,10 +55232,10 @@
       "22": 9,
       "23": 20,
       "24": 14,
-      "25": 14,
-      "26": 22,
-      "27": 58,
-      "28": 27,
+      "25": 13,
+      "26": 23,
+      "27": 56,
+      "28": 29,
       "29": 23,
       "30": 8,
       "31": 19,
@@ -55905,8 +55367,8 @@
       "195": 3,
       "243": 1,
       "245": 1,
-      "247": 2,
-      "248": 1
+      "247": 1,
+      "248": 2
     },
     "cac9b029": {
       "6": 2,
@@ -55999,29 +55461,29 @@
       "99": 15,
       "100": 37,
       "101": 44,
-      "102": 97,
-      "103": 206,
-      "104": 526,
-      "105": 202,
-      "106": 19,
+      "102": 92,
+      "103": 204,
+      "104": 523,
+      "105": 211,
+      "106": 20,
       "107": 17,
       "108": 23,
-      "109": 31,
+      "109": 30,
       "110": 46,
-      "111": 97,
-      "112": 72,
-      "113": 208,
-      "114": 296,
-      "115": 36,
-      "116": 71,
-      "117": 8,
+      "111": 96,
+      "112": 74,
+      "113": 196,
+      "114": 307,
+      "115": 35,
+      "116": 72,
+      "117": 9,
       "118": 2,
       "152": 19,
-      "153": 44,
+      "153": 43,
       "154": 20,
-      "155": 47,
-      "156": 318,
-      "157": 590,
+      "155": 48,
+      "156": 300,
+      "157": 608,
       "186": 3,
       "187": 6,
       "188": 1,
@@ -56036,11 +55498,11 @@
       "197": 15,
       "198": 19,
       "199": 19,
-      "200": 39,
+      "200": 37,
       "201": 128,
-      "202": 108,
-      "203": 8,
-      "204": 5,
+      "202": 110,
+      "203": 7,
+      "204": 6,
       "205": 6,
       "206": 11,
       "207": 12,
@@ -56050,9 +55512,9 @@
       "211": 10,
       "212": 20,
       "213": 19,
-      "214": 54,
+      "214": 53,
       "215": 76,
-      "216": 198,
+      "216": 199,
       "217": 9,
       "218": 7,
       "219": 5,
@@ -56133,8 +55595,7 @@
       "214": 1,
       "215": 2,
       "216": 3,
-      "217": 1,
-      "218": 3,
+      "218": 4,
       "219": 3,
       "220": 4,
       "221": 1,
@@ -56202,8 +55663,7 @@
       "54": 1,
       "55": 1,
       "56": 2,
-      "57": 1,
-      "58": 1,
+      "58": 2,
       "60": 2,
       "61": 1,
       "62": 3,
@@ -56230,7 +55690,7 @@
       "108": 1,
       "110": 1,
       "113": 2,
-      "114": 1,
+      "115": 1,
       "118": 1,
       "122": 1,
       "123": 2,
@@ -56290,7 +55750,7 @@
       "116": 2,
       "118": 2,
       "119": 1,
-      "120": 1,
+      "121": 1,
       "124": 1,
       "125": 3,
       "127": 1,
@@ -56303,8 +55763,7 @@
       "139": 2,
       "142": 2,
       "143": 3,
-      "144": 1,
-      "145": 2,
+      "145": 3,
       "151": 1,
       "152": 1,
       "153": 1,
@@ -56414,9 +55873,9 @@
       "184": 23,
       "185": 11,
       "186": 12,
-      "187": 22,
+      "187": 21,
       "188": 17,
-      "189": 7,
+      "189": 8,
       "190": 14,
       "191": 14,
       "192": 19,
@@ -56484,8 +55943,8 @@
       "129": 1,
       "130": 3,
       "131": 3,
-      "134": 2,
-      "135": 1,
+      "134": 1,
+      "135": 2,
       "136": 7,
       "137": 5,
       "138": 5,
@@ -56559,8 +56018,8 @@
       "41": 1,
       "42": 1,
       "43": 2,
-      "44": 2,
-      "45": 1,
+      "44": 1,
+      "45": 2,
       "46": 3,
       "47": 3,
       "48": 1,
@@ -56659,7 +56118,8 @@
       "100": 3,
       "101": 1,
       "102": 1,
-      "104": 2,
+      "104": 1,
+      "105": 1,
       "107": 1,
       "108": 3,
       "109": 2,
@@ -56686,8 +56146,8 @@
       "139": 2,
       "141": 1,
       "143": 2,
-      "145": 2,
-      "146": 3,
+      "145": 1,
+      "146": 4,
       "149": 3,
       "150": 3,
       "151": 3,
@@ -56741,7 +56201,8 @@
       "227": 1,
       "228": 3,
       "229": 1,
-      "231": 4,
+      "231": 3,
+      "232": 1,
       "233": 1,
       "234": 6,
       "235": 5,
@@ -56793,8 +56254,8 @@
       "229": 3,
       "231": 2,
       "232": 1,
-      "233": 3,
-      "234": 4,
+      "233": 2,
+      "234": 5,
       "236": 1,
       "237": 1,
       "241": 1,
@@ -56809,51 +56270,51 @@
       "182": 15,
       "183": 25,
       "184": 31,
-      "185": 28,
-      "186": 39,
-      "187": 43,
-      "188": 26,
+      "185": 27,
+      "186": 40,
+      "187": 42,
+      "188": 27,
       "189": 18,
       "190": 23,
       "191": 36,
       "192": 39,
       "193": 62,
       "194": 32,
-      "195": 40,
-      "196": 25,
-      "197": 27,
-      "198": 45,
-      "199": 50,
-      "200": 86,
+      "195": 39,
+      "196": 26,
+      "197": 26,
+      "198": 44,
+      "199": 52,
+      "200": 85,
       "201": 107,
-      "202": 111,
+      "202": 112,
       "203": 18,
       "204": 18,
-      "205": 62,
+      "205": 61,
       "206": 226,
       "207": 163,
       "208": 18,
-      "209": 2,
+      "209": 3,
       "210": 2,
       "211": 6,
       "212": 16,
       "213": 13,
       "214": 18,
-      "215": 42,
-      "216": 97,
+      "215": 39,
+      "216": 100,
       "217": 33,
       "218": 7,
       "219": 5,
       "220": 6,
-      "221": 4,
-      "222": 4,
+      "221": 3,
+      "222": 5,
       "223": 3,
       "224": 3,
       "225": 4,
       "226": 6,
       "227": 10,
-      "228": 9,
-      "229": 14,
+      "228": 8,
+      "229": 15,
       "230": 7,
       "231": 3,
       "232": 4,
@@ -56864,8 +56325,8 @@
       "237": 50,
       "238": 34,
       "239": 42,
-      "240": 76,
-      "241": 99,
+      "240": 75,
+      "241": 100,
       "242": 55
     },
     "3ea2b9d0": {
@@ -56886,8 +56347,8 @@
       "14": 2,
       "15": 3,
       "16": 9,
-      "17": 3,
-      "18": 4,
+      "17": 2,
+      "18": 5,
       "19": 2,
       "20": 3,
       "21": 2,
@@ -56895,14 +56356,14 @@
       "23": 3,
       "24": 17,
       "25": 25,
-      "26": 22,
-      "27": 33,
+      "26": 21,
+      "27": 34,
       "28": 32,
-      "29": 27,
-      "30": 44,
-      "31": 61,
-      "32": 153,
-      "33": 199,
+      "29": 26,
+      "30": 45,
+      "31": 60,
+      "32": 152,
+      "33": 201,
       "34": 4,
       "36": 1,
       "38": 1,
@@ -56917,22 +56378,22 @@
       "49": 1,
       "50": 3,
       "51": 2,
-      "53": 39,
-      "54": 113,
-      "55": 123,
-      "96": 14,
-      "97": 9,
+      "53": 37,
+      "54": 112,
+      "55": 126,
+      "96": 13,
+      "97": 10,
       "98": 11,
       "99": 14,
       "100": 27,
       "101": 27,
       "102": 31,
-      "103": 67,
-      "104": 68,
+      "103": 65,
+      "104": 70,
       "105": 10,
       "106": 14,
-      "107": 16,
-      "108": 25,
+      "107": 15,
+      "108": 26,
       "109": 16,
       "110": 28,
       "111": 28,
@@ -56955,19 +56416,19 @@
       "128": 13,
       "129": 14,
       "130": 19,
-      "131": 9,
-      "132": 14,
+      "131": 8,
+      "132": 15,
       "133": 9,
-      "134": 11,
-      "135": 22,
+      "134": 9,
+      "135": 24,
       "136": 32,
       "137": 19,
       "138": 18,
       "139": 14,
       "140": 6,
       "141": 7,
-      "142": 13,
-      "143": 12,
+      "142": 12,
+      "143": 13,
       "144": 10,
       "145": 18,
       "146": 10,
@@ -56989,8 +56450,8 @@
       "162": 4,
       "163": 5,
       "164": 10,
-      "165": 10,
-      "166": 15,
+      "165": 9,
+      "166": 16,
       "167": 16,
       "168": 4,
       "169": 11,
@@ -57009,8 +56470,8 @@
       "182": 7,
       "183": 11,
       "184": 13,
-      "185": 22,
-      "186": 13,
+      "185": 21,
+      "186": 14,
       "187": 7,
       "188": 20,
       "189": 10,
@@ -57021,63 +56482,63 @@
       "194": 21,
       "195": 21,
       "196": 12,
-      "197": 12,
-      "198": 18,
+      "197": 11,
+      "198": 19,
       "199": 23,
       "200": 27,
       "201": 41,
       "202": 35,
       "203": 12,
       "204": 4,
-      "205": 21,
-      "206": 21,
+      "205": 20,
+      "206": 22,
       "207": 17,
       "208": 25,
       "209": 29,
-      "210": 29,
+      "210": 28,
       "211": 30,
-      "212": 44,
+      "212": 45,
       "213": 83,
       "214": 63,
-      "215": 99,
-      "216": 112,
-      "217": 59,
+      "215": 95,
+      "216": 114,
+      "217": 61,
       "218": 31,
       "219": 32,
       "220": 40,
       "221": 42,
-      "222": 26,
-      "223": 21,
+      "222": 25,
+      "223": 22,
       "224": 18,
       "225": 16,
-      "226": 19,
-      "227": 37,
-      "228": 34,
-      "229": 43,
+      "226": 18,
+      "227": 38,
+      "228": 33,
+      "229": 44,
       "230": 37,
-      "231": 35,
-      "232": 32,
-      "233": 62,
+      "231": 34,
+      "232": 31,
+      "233": 63,
       "234": 96,
-      "235": 129,
-      "236": 174,
-      "237": 286,
-      "238": 220,
-      "239": 246,
-      "240": 597,
-      "241": 1130,
-      "242": 30
+      "235": 130,
+      "236": 171,
+      "237": 287,
+      "238": 222,
+      "239": 243,
+      "240": 591,
+      "241": 1136,
+      "242": 33
     },
     "50c7c938": {
-      "96": 2,
-      "97": 2,
+      "96": 1,
+      "97": 3,
       "98": 1,
       "99": 1,
       "100": 1,
       "101": 4,
       "102": 5,
-      "103": 3,
-      "104": 1,
+      "103": 2,
+      "104": 2,
       "106": 2,
       "110": 1,
       "111": 1,
@@ -57105,8 +56566,8 @@
       "139": 3,
       "141": 1,
       "142": 3,
-      "143": 3,
-      "144": 3,
+      "143": 2,
+      "144": 4,
       "145": 1,
       "146": 4,
       "147": 5,
@@ -57167,13 +56628,13 @@
       "218": 1,
       "219": 1,
       "220": 1,
-      "227": 3,
-      "228": 2,
+      "227": 2,
+      "228": 3,
       "231": 1,
       "232": 1,
       "233": 3,
-      "234": 3,
-      "235": 7,
+      "234": 2,
+      "235": 8,
       "236": 4,
       "237": 7,
       "238": 2,
@@ -57201,8 +56662,8 @@
       "207": 2,
       "208": 10,
       "209": 11,
-      "210": 6,
-      "211": 5,
+      "210": 5,
+      "211": 6,
       "212": 7,
       "213": 21,
       "214": 8,
@@ -57231,8 +56692,8 @@
       "184": 1,
       "185": 1,
       "186": 2,
-      "187": 4,
-      "188": 3,
+      "187": 3,
+      "188": 4,
       "189": 2,
       "190": 1,
       "191": 4,
@@ -57310,11 +56771,11 @@
       "108": 22,
       "109": 21,
       "110": 38,
-      "111": 51,
+      "111": 50,
       "112": 20,
-      "113": 21,
-      "114": 63,
-      "115": 57,
+      "113": 22,
+      "114": 62,
+      "115": 58,
       "168": 1,
       "171": 3,
       "172": 4,
@@ -57387,8 +56848,8 @@
       "212": 6,
       "213": 2,
       "214": 10,
-      "215": 11,
-      "216": 14,
+      "215": 10,
+      "216": 15,
       "217": 7,
       "218": 4,
       "219": 6,
@@ -57410,8 +56871,7 @@
       "193": 1,
       "194": 2,
       "195": 4,
-      "196": 1,
-      "197": 7,
+      "197": 8,
       "198": 8,
       "199": 19,
       "200": 6,
@@ -57426,11 +56886,11 @@
       "209": 13,
       "210": 8,
       "211": 6,
-      "212": 16,
-      "213": 10,
+      "212": 15,
+      "213": 11,
       "214": 11,
-      "215": 22,
-      "216": 18,
+      "215": 21,
+      "216": 19,
       "217": 7,
       "218": 10,
       "219": 19,
@@ -57474,8 +56934,8 @@
       "128": 2,
       "129": 6,
       "130": 2,
-      "131": 6,
-      "132": 4,
+      "131": 5,
+      "132": 5,
       "133": 3,
       "134": 2,
       "135": 3,
@@ -57487,12 +56947,12 @@
       "141": 2,
       "142": 1,
       "143": 3,
-      "144": 5,
-      "145": 5,
+      "144": 4,
+      "145": 6,
       "146": 1,
       "147": 1,
-      "148": 4,
-      "149": 3,
+      "148": 3,
+      "149": 4,
       "150": 5,
       "151": 6,
       "152": 1,
@@ -57504,12 +56964,12 @@
       "159": 2,
       "160": 5,
       "161": 1,
-      "162": 4,
-      "163": 2,
+      "162": 3,
+      "163": 3,
       "164": 1,
       "165": 3,
-      "166": 5,
-      "167": 2,
+      "166": 4,
+      "167": 3,
       "168": 1,
       "169": 1,
       "171": 2,
@@ -57546,15 +57006,15 @@
       "208": 23,
       "209": 24,
       "210": 21,
-      "211": 12,
+      "211": 11,
       "212": 25,
-      "213": 16,
+      "213": 17,
       "214": 36,
-      "215": 76,
-      "216": 78,
+      "215": 75,
+      "216": 79,
       "217": 38,
-      "218": 36,
-      "219": 47,
+      "218": 35,
+      "219": 48,
       "220": 2
     },
     "9c9f091d": {
@@ -57624,18 +57084,18 @@
       "122": 132,
       "123": 80,
       "124": 8,
-      "125": 7,
-      "126": 5,
+      "125": 6,
+      "126": 6,
       "127": 3,
       "128": 11,
-      "129": 57,
-      "130": 36,
+      "129": 56,
+      "130": 37,
       "131": 82,
-      "132": 74,
-      "133": 68,
+      "132": 72,
+      "133": 70,
       "134": 52,
-      "135": 68,
-      "136": 59,
+      "135": 67,
+      "136": 60,
       "137": 51,
       "138": 43,
       "139": 47,
@@ -57644,19 +57104,19 @@
       "142": 41,
       "143": 62,
       "144": 64,
-      "145": 79,
-      "146": 83,
+      "145": 77,
+      "146": 85,
       "147": 50,
       "148": 57,
       "149": 74,
       "150": 81,
-      "151": 84,
-      "152": 122,
+      "151": 82,
+      "152": 124,
       "153": 139,
-      "154": 144,
+      "154": 142,
       "155": 200,
-      "156": 487,
-      "157": 99,
+      "156": 488,
+      "157": 100,
       "158": 87
     },
     "b9a5a189": {
@@ -57714,15 +57174,15 @@
       "127": 4,
       "128": 2,
       "129": 9,
-      "130": 10,
-      "131": 4,
+      "130": 9,
+      "131": 5,
       "132": 18,
       "133": 3,
       "134": 5,
       "135": 9,
       "136": 10,
-      "137": 11,
-      "138": 9,
+      "137": 10,
+      "138": 10,
       "139": 9,
       "140": 7,
       "141": 8,
@@ -57735,11 +57195,11 @@
       "148": 3,
       "149": 2,
       "150": 5,
-      "151": 19,
-      "152": 20,
+      "151": 18,
+      "152": 21,
       "153": 27,
-      "154": 11,
-      "155": 12,
+      "154": 10,
+      "155": 13,
       "156": 22,
       "157": 10
     },
@@ -57759,8 +57219,8 @@
       "113": 3,
       "114": 2,
       "115": 3,
-      "116": 20,
-      "117": 28,
+      "116": 19,
+      "117": 29,
       "118": 16,
       "119": 16,
       "120": 9,
@@ -57768,11 +57228,11 @@
       "122": 11,
       "123": 28,
       "124": 16,
-      "125": 30,
-      "126": 11,
+      "125": 29,
+      "126": 12,
       "127": 10,
-      "128": 23,
-      "129": 29,
+      "128": 22,
+      "129": 30,
       "130": 28,
       "131": 46,
       "132": 38,
@@ -57780,8 +57240,8 @@
       "134": 19,
       "135": 30,
       "136": 28,
-      "137": 21,
-      "138": 26,
+      "137": 20,
+      "138": 27,
       "139": 34,
       "140": 18,
       "141": 17,
@@ -57810,15 +57270,15 @@
       "95": 3,
       "96": 5,
       "98": 8,
-      "99": 12,
-      "100": 14,
+      "99": 11,
+      "100": 15,
       "101": 17,
       "102": 17,
       "103": 14,
       "104": 17,
       "105": 14,
-      "106": 12,
-      "107": 16,
+      "106": 11,
+      "107": 17,
       "108": 19,
       "109": 12,
       "110": 14,
@@ -57826,20 +57286,20 @@
       "112": 5,
       "113": 9,
       "114": 12,
-      "115": 19,
-      "116": 27,
-      "117": 24,
-      "118": 15,
+      "115": 18,
+      "116": 28,
+      "117": 23,
+      "118": 16,
       "119": 18,
-      "120": 14,
-      "121": 18,
+      "120": 12,
+      "121": 20,
       "122": 21,
       "123": 24,
-      "124": 29,
-      "125": 71,
+      "124": 28,
+      "125": 72,
       "126": 60,
-      "127": 130,
-      "128": 44,
+      "127": 128,
+      "128": 46,
       "129": 18
     },
     "0a8f3127": {
@@ -57858,19 +57318,19 @@
       "120": 1,
       "121": 4,
       "123": 2,
-      "124": 5,
-      "125": 20,
+      "124": 4,
+      "125": 21,
       "126": 30,
       "127": 30,
-      "128": 9,
-      "129": 11
+      "128": 8,
+      "129": 12
     },
     "6307e77b": {
       "96": 1,
       "97": 8,
       "98": 1,
-      "99": 7,
-      "100": 12,
+      "99": 6,
+      "100": 13,
       "101": 10,
       "102": 27,
       "103": 19,
@@ -57894,8 +57354,8 @@
       "121": 11,
       "122": 9,
       "123": 20,
-      "124": 42,
-      "125": 32,
+      "124": 41,
+      "125": 33,
       "126": 19,
       "127": 32,
       "128": 21
@@ -57951,33 +57411,33 @@
     "2b670683": {
       "10": 1,
       "97": 1,
-      "117": 106,
-      "118": 568
+      "117": 95,
+      "118": 579
     },
     "ec941888": {
       "96": 7,
       "97": 13,
-      "98": 11,
-      "99": 10,
+      "98": 10,
+      "99": 11,
       "100": 18,
       "101": 14,
       "102": 21,
       "103": 28,
       "104": 13,
       "105": 11,
-      "106": 7,
+      "106": 6,
       "107": 18,
-      "108": 28,
-      "109": 26,
-      "110": 29,
+      "108": 29,
+      "109": 25,
+      "110": 30,
       "111": 34,
       "112": 27,
-      "113": 51,
+      "113": 50,
       "114": 81,
-      "115": 126,
-      "116": 372,
-      "117": 587,
-      "118": 971
+      "115": 125,
+      "116": 370,
+      "117": 563,
+      "118": 999
     },
     "2e7a56c6": {
       "53": 2
@@ -57986,8 +57446,8 @@
       "0": 34,
       "1": 40,
       "2": 40,
-      "3": 44,
-      "4": 16,
+      "3": 43,
+      "4": 17,
       "33": 3,
       "34": 2,
       "35": 7,
@@ -58021,8 +57481,8 @@
       "21": 2,
       "22": 4,
       "23": 15,
-      "24": 8,
-      "25": 18,
+      "24": 7,
+      "25": 19,
       "26": 5,
       "27": 7,
       "28": 4,
@@ -58043,8 +57503,8 @@
       "21": 6,
       "22": 8,
       "23": 12,
-      "24": 56,
-      "25": 25
+      "24": 55,
+      "25": 26
     },
     "9783f817": {
       "0": 4,
@@ -58077,15 +57537,15 @@
       "0": 18,
       "1": 23,
       "2": 40,
-      "3": 153,
-      "4": 55
+      "3": 151,
+      "4": 57
     },
     "cfc5ab55": {
-      "0": 164,
+      "0": 163,
       "1": 209,
-      "2": 461,
-      "3": 1143,
-      "4": 142
+      "2": 457,
+      "3": 1146,
+      "4": 144
     },
     "0798bc91": {
       "0": 6,
@@ -58096,40 +57556,40 @@
   },
   "appReviewDwellByRecruiter": {
     "Unassigned": {
-      "0": 244,
+      "0": 243,
       "1": 299,
-      "2": 608,
+      "2": 604,
       "3": 1409,
-      "4": 227,
+      "4": 232,
       "5": 22,
       "6": 17,
       "7": 20,
       "8": 18,
       "9": 13,
       "10": 28,
-      "11": 30,
-      "12": 25,
+      "11": 29,
+      "12": 26,
       "13": 66,
       "14": 35,
       "15": 19,
       "16": 16,
-      "17": 15,
-      "18": 19,
+      "17": 14,
+      "18": 20,
       "19": 12,
       "20": 24,
       "21": 14,
       "22": 25,
       "23": 56,
-      "24": 57,
+      "24": 56,
       "25": 68,
       "26": 66,
-      "27": 117,
-      "28": 74,
-      "29": 81,
-      "30": 90,
-      "31": 103,
-      "32": 220,
-      "33": 263,
+      "27": 116,
+      "28": 76,
+      "29": 80,
+      "30": 91,
+      "31": 102,
+      "32": 219,
+      "33": 265,
       "34": 10,
       "35": 8,
       "36": 3,
@@ -58149,12 +57609,12 @@
       "50": 8,
       "51": 3,
       "52": 1,
-      "53": 43,
-      "54": 118,
-      "55": 131,
+      "53": 41,
+      "54": 117,
+      "55": 134,
       "56": 2,
-      "57": 10,
-      "58": 5,
+      "57": 9,
+      "58": 6,
       "59": 4,
       "60": 4,
       "61": 3,
@@ -58191,77 +57651,77 @@
       "93": 8,
       "94": 2,
       "95": 9,
-      "96": 54,
-      "97": 66,
+      "96": 52,
+      "97": 68,
       "98": 51,
       "99": 52,
       "100": 102,
-      "101": 136,
-      "102": 202,
-      "103": 409,
+      "101": 135,
+      "102": 198,
+      "103": 403,
       "104": 740,
-      "105": 228,
-      "106": 49,
-      "107": 61,
-      "108": 91,
-      "109": 95,
-      "110": 161,
-      "111": 248,
-      "112": 154,
-      "113": 338,
-      "114": 544,
-      "115": 291,
-      "116": 575,
-      "117": 940,
-      "118": 1916,
+      "105": 238,
+      "106": 50,
+      "107": 60,
+      "108": 92,
+      "109": 94,
+      "110": 160,
+      "111": 247,
+      "112": 156,
+      "113": 324,
+      "114": 555,
+      "115": 290,
+      "116": 573,
+      "117": 902,
+      "118": 1961,
       "119": 13,
       "120": 20,
       "121": 56,
       "122": 160,
       "123": 110,
       "124": 45,
-      "125": 35,
-      "126": 21,
+      "125": 34,
+      "126": 22,
       "127": 12,
       "128": 30,
-      "129": 91,
+      "129": 90,
       "130": 100,
       "131": 108,
-      "132": 115,
-      "133": 84,
-      "134": 75,
-      "135": 105,
-      "136": 119,
-      "137": 95,
-      "138": 81,
+      "132": 114,
+      "133": 86,
+      "134": 72,
+      "135": 107,
+      "136": 120,
+      "137": 94,
+      "138": 82,
       "139": 104,
       "140": 73,
       "141": 66,
-      "142": 67,
+      "142": 66,
       "143": 91,
-      "144": 98,
-      "145": 123,
-      "146": 129,
+      "144": 99,
+      "145": 120,
+      "146": 132,
       "147": 70,
       "148": 81,
       "149": 98,
       "150": 126,
-      "151": 134,
-      "152": 201,
-      "153": 236,
-      "154": 196,
-      "155": 282,
-      "156": 882,
-      "157": 745,
-      "158": 109,
-      "159": 22,
+      "151": 131,
+      "152": 204,
+      "153": 235,
+      "154": 193,
+      "155": 284,
+      "156": 865,
+      "157": 764,
+      "158": 108,
+      "159": 23,
       "160": 24,
       "161": 11,
       "162": 12,
       "163": 13,
       "164": 19,
-      "165": 23,
-      "166": 24,
+      "165": 22,
+      "166": 25,
       "167": 28,
       "168": 11,
       "169": 19,
@@ -58280,70 +57740,70 @@
       "182": 46,
       "183": 71,
       "184": 86,
-      "185": 81,
-      "186": 90,
-      "187": 102,
-      "188": 86,
-      "189": 45,
+      "185": 79,
+      "186": 92,
+      "187": 99,
+      "188": 88,
+      "189": 46,
       "190": 63,
       "191": 106,
       "192": 126,
       "193": 125,
       "194": 124,
-      "195": 140,
-      "196": 84,
-      "197": 95,
-      "198": 131,
-      "199": 174,
-      "200": 251,
+      "195": 139,
+      "196": 85,
+      "197": 93,
+      "198": 130,
+      "199": 176,
+      "200": 249,
       "201": 358,
-      "202": 324,
-      "203": 72,
+      "202": 327,
+      "203": 71,
       "204": 63,
-      "205": 139,
-      "206": 318,
+      "205": 138,
+      "206": 319,
       "207": 280,
       "208": 109,
-      "209": 113,
-      "210": 80,
+      "209": 114,
+      "210": 78,
       "211": 85,
-      "212": 162,
-      "213": 217,
-      "214": 265,
-      "215": 465,
-      "216": 836,
-      "217": 279,
+      "212": 164,
+      "213": 216,
+      "214": 264,
+      "215": 457,
+      "216": 842,
+      "217": 282,
       "218": 188,
-      "219": 224,
-      "220": 320,
-      "221": 290,
+      "219": 225,
+      "220": 319,
+      "221": 289,
       "222": 241,
       "223": 165,
-      "224": 159,
-      "225": 137,
-      "226": 154,
-      "227": 207,
-      "228": 183,
-      "229": 203,
-      "230": 198,
-      "231": 144,
-      "232": 195,
-      "233": 289,
-      "234": 308,
-      "235": 392,
-      "236": 479,
-      "237": 643,
-      "238": 403,
-      "239": 540,
-      "240": 1102,
-      "241": 1546,
-      "242": 450,
-      "243": 745,
-      "244": 567,
-      "245": 93,
-      "246": 219,
+      "224": 161,
+      "225": 136,
+      "226": 153,
+      "227": 208,
+      "228": 182,
+      "229": 204,
+      "230": 199,
+      "231": 140,
+      "232": 196,
+      "233": 286,
+      "234": 311,
+      "235": 395,
+      "236": 475,
+      "237": 645,
+      "238": 404,
+      "239": 538,
+      "240": 1094,
+      "241": 1552,
+      "242": 449,
+      "243": 747,
+      "244": 571,
+      "245": 91,
+      "246": 220,
       "247": 210,
-      "248": 44
+      "248": 45
     },
     "Deepti Leslie": {
       "154": 4,
@@ -58363,8 +57823,8 @@
       "168": 10,
       "169": 30,
       "170": 5,
-      "171": 12,
-      "172": 1,
+      "171": 11,
+      "172": 2,
       "173": 6,
       "174": 4,
       "175": 2,
@@ -58384,15 +57844,15 @@
       "191": 4,
       "192": 7,
       "193": 8,
-      "194": 6,
-      "195": 5,
-      "196": 4,
-      "197": 2,
+      "194": 5,
+      "195": 6,
+      "196": 3,
+      "197": 3,
       "198": 11,
       "199": 8,
       "200": 9,
-      "201": 26,
-      "202": 38,
+      "201": 24,
+      "202": 40,
       "203": 1,
       "204": 3,
       "205": 3,
@@ -58415,8 +57875,8 @@
       "223": 4,
       "225": 3,
       "226": 3,
-      "227": 5,
-      "228": 4,
+      "227": 4,
+      "228": 5,
       "229": 6,
       "230": 6,
       "231": 3,
@@ -58432,10 +57892,10 @@
       "241": 19,
       "242": 14,
       "243": 21,
-      "244": 32,
+      "244": 31,
       "245": 9,
       "246": 16,
-      "247": 27,
+      "247": 28,
       "248": 3
     },
     "Aditya Singh": {
@@ -58462,8 +57922,8 @@
       "48": 1,
       "50": 1,
       "55": 4,
-      "56": 3,
-      "57": 3,
+      "56": 2,
+      "57": 4,
       "58": 4,
       "59": 2,
       "60": 3,
@@ -58585,8 +58045,7 @@
       "219": 3,
       "220": 1,
       "222": 1,
-      "224": 1,
-      "225": 1,
+      "225": 2,
       "227": 3,
       "229": 1,
       "232": 2,
@@ -58608,8 +58067,8 @@
       "96": 1,
       "97": 11,
       "98": 1,
-      "99": 7,
-      "100": 13,
+      "99": 6,
+      "100": 14,
       "101": 10,
       "102": 32,
       "103": 22,
@@ -58625,20 +58084,20 @@
       "113": 15,
       "114": 9,
       "115": 9,
-      "116": 28,
-      "117": 46,
+      "116": 27,
+      "117": 47,
       "118": 23,
       "119": 18,
       "120": 14,
       "121": 28,
       "122": 20,
       "123": 48,
-      "124": 58,
+      "124": 57,
       "125": 62,
-      "126": 30,
+      "126": 31,
       "127": 42,
-      "128": 44,
-      "129": 29,
+      "128": 43,
+      "129": 30,
       "130": 28,
       "131": 46,
       "132": 38,
@@ -58646,8 +58105,8 @@
       "134": 19,
       "135": 30,
       "136": 28,
-      "137": 21,
-      "138": 26,
+      "137": 20,
+      "138": 27,
       "139": 34,
       "140": 18,
       "141": 17,
@@ -58668,8 +58127,7 @@
       "193": 2,
       "194": 3,
       "195": 5,
-      "196": 1,
-      "197": 8,
+      "197": 9,
       "198": 8,
       "199": 21,
       "200": 13,
@@ -58682,13 +58140,13 @@
       "207": 12,
       "208": 27,
       "209": 24,
-      "210": 14,
-      "211": 11,
-      "212": 23,
-      "213": 31,
+      "210": 13,
+      "211": 12,
+      "212": 22,
+      "213": 32,
       "214": 19,
-      "215": 30,
-      "216": 23,
+      "215": 29,
+      "216": 24,
       "217": 11,
       "218": 13,
       "219": 20,
@@ -58713,45 +58171,46 @@
       "81": 2,
       "85": 1,
       "86": 1,
+      "87": 1,
       "88": 1,
       "90": 1,
-      "92": 1,
+      "92": 2,
       "93": 2,
       "94": 1,
-      "95": 2,
-      "96": 4,
-      "98": 7,
+      "95": 3,
+      "96": 3,
+      "98": 8,
       "99": 10,
-      "100": 13,
+      "100": 14,
       "101": 13,
-      "102": 13,
-      "103": 11,
+      "102": 12,
+      "103": 12,
       "104": 15,
-      "105": 13,
-      "106": 11,
-      "107": 13,
-      "108": 15,
-      "109": 10,
-      "110": 11,
+      "105": 14,
+      "106": 10,
+      "107": 11,
+      "108": 16,
+      "109": 11,
+      "110": 9,
       "111": 16,
-      "112": 2,
-      "113": 6,
+      "112": 4,
+      "113": 8,
       "114": 8,
-      "115": 18,
-      "116": 20,
+      "115": 15,
+      "116": 22,
       "117": 19,
-      "118": 14,
-      "119": 12,
-      "120": 11,
-      "121": 15,
-      "122": 21,
-      "123": 19,
-      "124": 23,
-      "125": 48,
-      "126": 47,
-      "127": 100,
-      "128": 36,
-      "129": 13,
+      "118": 15,
+      "119": 14,
+      "120": 12,
+      "121": 18,
+      "122": 17,
+      "123": 18,
+      "124": 22,
+      "125": 56,
+      "126": 48,
+      "127": 99,
+      "128": 42,
+      "129": 14,
       "130": 1,
       "131": 2,
       "132": 1,
@@ -58760,8 +58219,7 @@
       "139": 2,
       "142": 2,
       "143": 3,
-      "144": 1,
-      "145": 2,
+      "145": 3,
       "151": 1,
       "152": 1,
       "153": 1,
@@ -58835,8 +58293,8 @@
       "41": 1,
       "42": 1,
       "43": 2,
-      "44": 2,
-      "45": 1,
+      "44": 1,
+      "45": 2,
       "46": 3,
       "47": 3,
       "48": 1,
@@ -58928,8 +58386,8 @@
       "128": 2,
       "129": 6,
       "130": 2,
-      "131": 6,
-      "132": 4,
+      "131": 5,
+      "132": 5,
       "133": 3,
       "134": 2,
       "135": 3,
@@ -58941,12 +58399,12 @@
       "141": 2,
       "142": 1,
       "143": 3,
-      "144": 5,
-      "145": 5,
+      "144": 4,
+      "145": 6,
       "146": 1,
       "147": 1,
-      "148": 4,
-      "149": 3,
+      "148": 3,
+      "149": 4,
       "150": 5,
       "151": 6,
       "152": 1,
@@ -58958,12 +58416,12 @@
       "159": 2,
       "160": 5,
       "161": 1,
-      "162": 4,
-      "163": 2,
+      "162": 3,
+      "163": 3,
       "164": 1,
       "165": 3,
-      "166": 5,
-      "167": 2,
+      "166": 4,
+      "167": 3,
       "168": 1,
       "169": 1,
       "171": 2,
@@ -59000,15 +58458,15 @@
       "208": 23,
       "209": 24,
       "210": 21,
-      "211": 12,
+      "211": 11,
       "212": 25,
-      "213": 16,
+      "213": 17,
       "214": 36,
-      "215": 76,
-      "216": 78,
+      "215": 75,
+      "216": 79,
       "217": 38,
-      "218": 36,
-      "219": 47,
+      "218": 35,
+      "219": 48,
       "220": 2,
       "221": 1
     },
@@ -59035,12 +58493,12 @@
       "120": 1,
       "121": 4,
       "123": 2,
-      "124": 5,
-      "125": 20,
+      "124": 4,
+      "125": 21,
       "126": 30,
       "127": 30,
-      "128": 9,
-      "129": 11,
+      "128": 8,
+      "129": 12,
       "209": 1,
       "219": 1
     },
@@ -59066,65 +58524,61 @@
       "21": 6,
       "22": 8,
       "23": 12,
-      "24": 56,
-      "25": 25,
+      "24": 55,
+      "25": 26,
       "96": 7,
       "97": 13,
-      "98": 11,
-      "99": 10,
+      "98": 10,
+      "99": 11,
       "100": 18,
       "101": 14,
       "102": 21,
       "103": 28,
       "104": 13,
       "105": 11,
-      "106": 7,
+      "106": 6,
       "107": 18,
-      "108": 28,
-      "109": 26,
-      "110": 20,
+      "108": 29,
+      "109": 25,
+      "110": 21,
       "117": 1,
       "135": 1
     },
     "Gopu Nair V": {
-      "87": 1,
       "88": 1,
       "90": 1,
-      "92": 2,
+      "92": 1,
       "94": 1,
-      "95": 1,
-      "96": 1,
-      "98": 1,
-      "99": 2,
+      "96": 2,
+      "99": 1,
       "100": 1,
       "101": 4,
-      "102": 4,
-      "103": 3,
+      "102": 5,
+      "103": 2,
       "104": 2,
-      "105": 1,
       "106": 1,
-      "107": 3,
-      "108": 4,
-      "109": 2,
-      "110": 3,
+      "107": 6,
+      "108": 3,
+      "109": 1,
+      "110": 5,
       "111": 2,
-      "112": 3,
-      "113": 3,
+      "112": 1,
+      "113": 1,
       "114": 4,
-      "115": 1,
-      "116": 9,
-      "117": 5,
+      "115": 3,
+      "116": 8,
+      "117": 4,
       "118": 3,
-      "119": 7,
-      "120": 4,
+      "119": 5,
       "121": 3,
-      "123": 5,
+      "122": 4,
+      "123": 6,
       "124": 7,
-      "125": 26,
-      "126": 13,
-      "127": 31,
-      "128": 9,
-      "129": 5
+      "125": 19,
+      "126": 12,
+      "127": 30,
+      "128": 5,
+      "129": 4
     }
   },
   "interviewers": [
@@ -70391,7 +69845,7 @@
       "jobId8": "092e9d9b",
       "jobTitle": "Program Advisor - India",
       "department": "Business - India",
-      "recruiter": "Smriti Das",
+      "recruiter": "Mahima Agarwal",
       "level": "L2",
       "complexity": "Normal",
       "quarter": "2026-Q1",
@@ -70914,16 +70368,6 @@
       "recruiter": "Rijo John",
       "level": "L0",
       "complexity": "Complex",
-      "quarter": "2026-Q3",
-      "source": "offer"
-    },
-    {
-      "jobId8": "e38f7d54",
-      "jobTitle": "",
-      "department": "",
-      "recruiter": "Gopu Nair V",
-      "level": null,
-      "complexity": null,
       "quarter": "2026-Q3",
       "source": "offer"
     },
