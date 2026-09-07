@@ -21,7 +21,7 @@ var G22_PLAN = [
     recs: ['Tina Anisha Bibeiro'] }
 ];
 
-function run22g() { buildAuditV6(); }   // #47: V6 filled-vs-unfilled funnel, Q3 2026
+function run22g() { buildAuditV8(); }   // #51: V7 funnel, Q3 2026. probeJobFieldWrite() is #53, unrun.
 
 function g22_buildTab() {
   var jobs = ashbyListAll_('/job.list');
@@ -456,72 +456,195 @@ function buildAuditV4(opts) {
       if(s>bs){bs=s;best=o;} });
     if(best){ best.used=true; c.op=best; } });
 
-  // ================= #47 / V6 : Jerin's filled-vs-unfilled funnel (7 Sep 2026) =================
-  // V4/V5 asked "is there a spare opening on this job in this quarter?" and consumed one per tracker row.
-  // That guesses. V6 asks the questions in Jerin's order, and FOLLOWS THE LINK instead of guessing:
-  //   A (filled)   = tracker position that has a candidate on it
-  //     B          = that candidate found in Ashby BY EMAIL            gap = A - B
-  //     C          = the JOBS reached through B                        gap = B rows whose job will not resolve
-  //     D          = the OPENINGS reached through B's offer link       gap = B rows whose offer has no opening
-  //   E (unfilled) = tracker position with no candidate
-  //     F          = an Ashby opening found for it (job resolves, opening exists on that job)
-  //     G          = NOT found  ->  THE OPENINGS TO CREATE             G1 job live · G2 job closed/missing
-  // Field gaps are counted ONCE PER OBJECT (per job for C, per opening for D), not once per tracker position -
-  // V5 counted a job-level defect once for every position on that job, which inflated Level/Location/Department.
-  if (opts.mode === 'v6') {
-    var L = [], add = function(a,b,c,d){ L.push([a,b===undefined?'':b,c===undefined?'':c,d===undefined?'':d]); };
-    var filled = ctx.filter(function(c){ return !!(String(c.tr.name||'').trim() || String(c.tr.email||'').trim()); });
-    var unfilled = ctx.filter(function(c){ return !(String(c.tr.name||'').trim() || String(c.tr.email||'').trim()); });
-    var B = filled.filter(function(c){ return !!c.m; });
-    var Cids = {}, Cnojob = 0;
+  // ============ #51 / V7 : Jerin's funnel, REVISED 7 Sep 2026 (supersedes the V6 tab) ============
+  // Six revisions, each from something that actually bit while building V6:
+  //  0. SCOPE OUT rows that should not have an opening at all (Yet to Open / Role Shelved / Carry Forward).
+  //     In V6 these sat inside E and inflated the missing-openings number.
+  //  1. B's gap splits: no EMAIL to match on (tracker hygiene) vs email present but NO Ashby record (create).
+  //  2. D's gap splits THREE ways - and one of them feeds the create number, which V6 missed entirely:
+  //     D1 no link but the job has a free opening -> LINK it;  D2 no link and no free opening -> CREATE one;
+  //     D3 two positions pointing at the SAME opening -> a data error that was invisible before.
+  //  3. F is a COUNT test, and splits: F1 covered by a correctly-dated opening vs F2 covered by an UNDATED or
+  //     WRONG-QUARTER one -> that is a RE-DATE job, not a create job. Confusing the two is how duplicates get made.
+  //  4. OPENINGS TO CREATE = G + D2 (not G alone).
+  //  5. Every line carries its route, and the permanently-unfixable fields are named once instead of being
+  //     re-counted as a backlog every run (offer date has no write API; application status is unwritable).
+  // Allocation order is deliberate: openings proven by a LINK are consumed first, then unlinked filled rows,
+  // then unfilled rows. A filled position has evidence of association; an unfilled one only has a count.
+  // 🚨 The field-gap counts must use V4's OWN per-field comparators, not exact string equality. A first cut used
+  // eq() everywhere and reported 92 recruiter mismatches where V4's nameMatch() finds far fewer - names differ by
+  // spelling and word order constantly (Murali Manohar Krishna G = Murali Gopalachar). Same for role titles via
+  // roleOk(). Mirrors the mm logic in the main build so the two can never disagree about what counts as a gap.
+  function v7mismatch(f, c) {
+    var tv = f.t(c), av = f.a(c);
+    if (!String(tv).trim() || !String(av).trim()) return false;   // nothing to compare
+    if (f.k === 'role')  return !roleOk(tv, av);
+    if (f.k === 'loose') return !roleOk(tv, av);
+    if (f.k === 'dept')  return norm(tv) !== norm(av);
+    if (f.k === 'rec')   { var names = String(av).split(' + ').filter(String);
+                           return !(names.length === 1 && nameMatch(tv, names[0])); }
+    if (f.n === 'Candidate Name') return !nameMatch(tv, av);
+    return !eq(tv, av);
+  }
+  if (opts.mode === 'v7' || opts.mode === 'v8') {
+    var V8 = (opts.mode === 'v8');
+    var L=[], add=function(a,b,c,d){ L.push([a,b===undefined?'':b,c===undefined?'':c,d===undefined?'':d]); };
+    var NO_OPENING_EXPECTED={'Yet to Open':1,'Role Shelved':1,'Carry Forward to Next Q':1};
+    var inScope=[], X=[];
+    ctx.forEach(function(c){ var oos = !!NO_OPENING_EXPECTED[String(c.tr.status||'').trim()];
+      // V8 step-0 GUARD: a row with a candidate or an Ashby match is NOT out of scope, whatever the tracker says.
+      if (V8 && oos && (String(c.tr.name||'').trim() || c.m)) oos = false;
+      (oos ? X : inScope).push(c); });
+    var hasCand=function(c){ return !!(String(c.tr.name||'').trim()||String(c.tr.email||'').trim()); };
+    var A=inScope.filter(hasCand), E=inScope.filter(function(c){ return !hasCand(c); });
+    var B=A.filter(function(c){ return !!c.m; }), Bmiss=A.filter(function(c){ return !c.m; });
+    var B1=Bmiss.filter(function(c){ return !String(c.tr.email||'').trim(); }).length;
+    var B2=Bmiss.length-B1;
+    var Cids={}, Cnojob=0;
     B.forEach(function(c){ if(c.jr.id) Cids[c.jr.id]=c; else Cnojob++; });
-    var Dids = {}, Dnolink = 0, Dundated = 0, Dmissing = 0;
-    B.forEach(function(c){
-      var oid = c.m.openingId || c.m.openingIdAny || null;
-      if(!oid){ Dnolink++; return; }
-      var op = opsByIdAll[oid];
-      if(!op){ Dmissing++; return; }
-      if(!op.dated) Dundated++;
-      Dids[oid] = c;
-    });
-    add('TRACKER POSITIONS IN SCOPE', ctx.length, opts.onlyQuarter||'all 2026');
-    add('');
-    add('A = FILLED (has a candidate on the tracker row)', filled.length);
-    add('   B = candidate FOUND in Ashby by email', B.length, 'gap ' + (filled.length - B.length) + ' not found');
-    add('   C = distinct JOBS reached through B', Object.keys(Cids).length, 'gap ' + Cnojob + ' B-rows whose job will not resolve');
-    add('   D = distinct OPENINGS reached through B (via the offer link)', Object.keys(Dids).length,
-        'gap ' + Dnolink + ' B-rows whose offer carries NO opening link');
-    add('       of D, opening exists but is UNDATED', Dundated, 'invisible to every dashboard metric - needs a DATE, not a new opening');
-    add('       of D, link points at an opening we cannot read', Dmissing, 'archived or outside scope');
-    add('');
-    add('E = UNFILLED (no candidate on the tracker row)', unfilled.length);
-    var F=0, G1=0, G2=0;
-    unfilled.forEach(function(c){
+    // ---- D: follow the offer's opening link ----
+    var Dids={}, useCount={}, linked=[], unlinked=[];
+    B.forEach(function(c){ var oid=c.m.openingId||c.m.openingIdAny||null;
+      if(oid && opsByIdAll[oid]){ linked.push(c); useCount[oid]=(useCount[oid]||0)+1; Dids[oid]=c; } else unlinked.push(c); });
+    var D3=0; for(var uk in useCount) if(useCount[uk]>1) D3+=useCount[uk]-1;
+    // free pool = every non-archived opening not already claimed by a link
+    // 🚨 An opening that is CLOSED cannot cover a vacancy - it has already been used. Without this the
+    // allocator hands out openings that were closed-as-hired years ago: 2025-Q3 alone holds 494 openings,
+    // every one of them closed as Hired, sitting on 236 jobs. Those were being counted as 'cover' for unfilled
+    // 2026 positions, and re-dating one would move a 2025 hire's opening into 2026 and corrupt both quarters.
+    var freeByJob={}, alreadyClosed=0;
+    for(var ok2 in opsByIdAll){ var o2=opsByIdAll[ok2]; if(useCount[o2.id]) continue;
+      if(o2.cr){ alreadyClosed++; continue; }   // closed for any reason = not available
+      o2.jobIds.forEach(function(jid){ (freeByJob[jid]=freeByJob[jid]||[]).push(o2); }); }
+    var v8Claimed = {};
+    var take = function(jid){ var p = freeByJob[jid]; if(!p||!p.length) return null; var t = p.shift(); if(t) v8Claimed[t.id]=1; return t; };
+    var D1=0, D2=0;
+    unlinked.forEach(function(c){ if(!c.jr.id){ D2++; return; } var o=take(c.jr.id); if(o) D1++; else D2++; });
+    // ---- E branch: what is left over covers the unfilled positions ----
+    // F2 lumps three different problems together, and they are NOT the same job:
+    //   F2a UNDATED    - no openedAt at all. INVISIBLE to every dashboard metric. Needs a date typed in.
+    //   F2b WRONG QTR  - dated, but to another quarter. It IS counted, just in the wrong bucket.
+    //   F2c NO TRACKER QUARTER - the tracker row has no opening quarter to compare against, so this is a
+    //       TRACKER gap, not an Ashby one. Previously these were silently blamed on Ashby.
+    var F1=0, F2undated=0, F2wrongQ=0, F2noTrkQ=0, G1=0, G2=0, wrongQdetail={};
+    E.forEach(function(c){
       if(!c.jr.id){ G2++; return; }
-      var pool=[]; for(var k in opsByIdAll){ var o=opsByIdAll[k]; if(o.jobIds.indexOf(c.jr.id)>-1) pool.push(o); }
-      if(pool.length) F++;
-      else if(String(c.jr.jstatus||'').toLowerCase().indexOf('open')>-1) G1++;
-      else G2++;
+      var o=take(c.jr.id);
+      if(!o){ if(String(c.jr.jstatus||'').toLowerCase().indexOf('open')>-1) G1++; else G2++; return; }
+      if(!o.dated){ F2undated++; return; }
+      if(!c.tr.opq){ F2noTrkQ++; return; }
+      if(o.q===c.tr.opq){ F1++; return; }
+      F2wrongQ++;
+      var k=(c.tr.opq||'?')+' -> '+(o.q||'?'); wrongQdetail[k]=(wrongQdetail[k]||0)+1;
     });
-    add('   F = an Ashby opening exists on the matched job', F);
-    add('   G = NO opening found  ->  OPENINGS TO CREATE', G1+G2);
-    add('       G1 = job is LIVE in Ashby - create the opening', G1, 'unblocked');
-    add('       G2 = job closed / not found - reopen or create the JOB first', G2, 'blocked on a job');
+    var F2=F2undated+F2wrongQ+F2noTrkQ;
+    add('TRACKER POSITIONS', ctx.length, opts.onlyQuarter||'all 2026');
+    add('   X = should NOT have an opening (Yet to Open / Shelved / Carry fwd)', X.length, 'excluded by design - not a gap');
+    add('   IN SCOPE', inScope.length);
     add('');
-    add('FIELD GAPS - counted once per OBJECT, not per tracker position');
-    var jobGap={}, opGap={};
-    Object.keys(Cids).forEach(function(id){ var c=Cids[id];
-      F0.forEach(function(f){ if(f.obj!=='job') return; var tv=f.t(c), av=f.a(c);
-        if(String(tv).trim() && String(av).trim() && !eq(tv,av)) jobGap[f.n]=(jobGap[f.n]||0)+1; }); });
-    Object.keys(Dids).forEach(function(id){ var c=Dids[id];
-      F0.forEach(function(f){ if(f.obj!=='opening') return; var tv=f.t(c), av=f.a(c);
-        if(String(tv).trim() && String(av).trim() && !eq(tv,av)) opGap[f.n]=(opGap[f.n]||0)+1; }); });
-    add('   on JOBS (C) - of ' + Object.keys(Cids).length + ' jobs');
-    for(var jg in jobGap) add('      ' + jg, jobGap[jg]);
-    add('   on OPENINGS (D) - of ' + Object.keys(Dids).length + ' openings');
-    for(var og in opGap) add('      ' + og, opGap[og]);
-    var rows6=[['V6 - filled vs unfilled funnel','Count','Note','']].concat(L);
-    write(opts.tab||'Tracker Openings v6', rows6, false);
+    add('A = FILLED (a candidate is named on the row)', A.length);
+    add('   B = candidate FOUND in Ashby by email', B.length);
+    add('      B1 gap: tracker row has NO EMAIL to match on', B1, 'tracker hygiene');
+    add('      B2 gap: email present but NO Ashby record', B2, 'candidate must be created - UI/manual');
+    add('   C = distinct JOBS reached through B', Object.keys(Cids).length);
+    add('      C gap: job will not resolve even with the fuzzy list', Cnojob, 'add to V4 Job Mapping Review');
+    add('   D = distinct OPENINGS reached through B via the OFFER LINK', Object.keys(Dids).length);
+    add('      D1 gap: no link, but a free opening exists on the job', D1, 'LINK it');
+    add('      D2 gap: no link and NO free opening', D2, 'an opening must be CREATED');
+    add('      D3 gap: two positions share ONE opening', D3, 'data error - one opening cannot hold two hires');
+    add('');
+    add('E = UNFILLED (no candidate on the row)', E.length);
+    add('   (closed openings excluded from the free pool)', alreadyClosed, 'a closed opening has already been used - it cannot cover a vacancy');
+    add('   F1 = covered by a correctly dated opening', F1, 'correct - nothing to do');
+    add('   F2 = covered, but the opening needs attention', F2, 'RE-DATE - do NOT create a duplicate');
+    add('      F2a opening is UNDATED', F2undated, 'INVISIBLE to every dashboard metric - type a date in');
+    add('      F2b opening dated to the WRONG QUARTER', F2wrongQ, 'counted, but in the wrong bucket');
+    add('      F2c tracker row has NO opening quarter', F2noTrkQ, 'TRACKER gap, not an Ashby one');
+    for(var wq in wrongQdetail) add('         tracker ' + wq, wrongQdetail[wq]);
+    add('   G  = no opening at all', G1+G2, 'CREATE');
+    add('      G1 job is LIVE in Ashby', G1, 'unblocked');
+    add('      G2 job closed or not found', G2, 'reopen/create the JOB first');
+    add('');
+    add('>>> THE THREE NUMBERS TO ACT ON');
+    add('   OPENINGS TO CREATE  = G + D2', (G1+G2)+D2, 'UI only - opening.create is blocked by 4 required fields');
+    add('   OPENINGS TO RE-DATE = F2 + wrong-date gaps on D', F2, 'UI only - openedAt fails SILENTLY by API (+ see the date gap below)');
+    add('   OPENINGS TO LINK    = D1', D1, 'no API sets the opening on an existing offer - UI or at hire time');
+    add('');
+    add('FIELD GAPS - once per OBJECT, never per tracker position');
+    var ROUTE={'Candidate Name':'UI - candidate record','Personal Email':'UI - candidate record (or fix the tracker)','Status':'NOT FIXABLE - application status is unwritable at any level','DOJ Quarter':'UI - offer start date','Offer Quarter':'NOT FIXABLE - offerCreatedAt has no write API','Recruiter (Candidate)':'API - application.addHiringTeamMember','Job Name':'mapping artefact - not actionable','Department':'UI (job property)','Level':'UI (job custom field)',
+      'Location':'feasibility UNVERIFIED','Complexity':'API - customField.setValue (Opening)','Employment Type':'API - customField.setValue (Opening)',
+      'Role Type':'API - customField.setValue (Opening)','Opening Date':'UI ONLY - API fails silently','Opening Quarter':'UI ONLY - follows the date',
+      'Recruiter (Opening Owner)':'API - hiringTeam.addMember/removeMember','Opening Status':'API where shelved (opening.setArchived), else review'};
+    // CANDIDATE-level gaps were never computed at all (Jerin caught this). These are per PERSON, so unlike the
+    // job/opening blocks they are legitimately counted per row - one candidate, one record.
+    // 56f FIX: the funnel resolves an opening by FOLLOWING THE OFFER LINK, but the field accessors
+    // read c.op = V4's ALLOCATED opening. Different objects - 31 linked rows reported '-> No Opening'.
+    // Rebind c.op to the link-derived opening for the gap block only, then restore it below.
+    var v8Saved = [], v8Rebound = 0;
+    if (V8) { B.forEach(function(c){ var oid = c.m.openingId || c.m.openingIdAny || null;
+      if (oid && opsByIdAll[oid] && c.op !== opsByIdAll[oid]) { v8Saved.push([c, c.op]); c.op = opsByIdAll[oid]; v8Rebound++; } }); }
+    var candGap={}, jobGap={}, opGap={};
+    B.forEach(function(c){ F0.forEach(function(f){ if(f.obj!=='candidate') return;
+      if(v7mismatch(f,c)) candGap[f.n]=(candGap[f.n]||0)+1; }); });
+    Object.keys(Cids).forEach(function(id){ var c=Cids[id]; F0.forEach(function(f){ if(f.obj!=='job') return;
+      if(v7mismatch(f,c)) jobGap[f.n]=(jobGap[f.n]||0)+1; }); });
+    Object.keys(Dids).forEach(function(id){ var c=Dids[id]; F0.forEach(function(f){ if(f.obj!=='opening') return;
+      if(v7mismatch(f,c)) opGap[f.n]=(opGap[f.n]||0)+1; }); });
+    // 56f: compute the status split INSIDE the rebound window too, or it describes the old opening.
+      var stF=null; for(var z=0;z<F0.length;z++) if(F0[z].n==='Opening Status') stF=F0[z];
+      var stSplit={}, stTotal=0;
+      if(stF) Object.keys(Dids).forEach(function(sid){ var sc=Dids[sid];
+        if(v7mismatch(stF,sc)){ var k=(stF.t(sc)||'(blank)')+'  ->  '+(stF.a(sc)||'(no opening)');
+          stSplit[k]=(stSplit[k]||0)+1; stTotal++; } });
+    // 56f: put c.op back so nothing downstream sees the temporary rebinding.
+    if (V8) { v8Saved.forEach(function(pr){ pr[0].op = pr[1]; }); }
+    add('   on CANDIDATES (B) - of '+B.length+' matched people');
+    for(var cg in candGap) add('      '+cg, candGap[cg], ROUTE[cg]||'');
+    add('   on JOBS (C) - of '+Object.keys(Cids).length+' jobs');
+    for(var jg in jobGap) add('      '+jg, jobGap[jg], ROUTE[jg]||'');
+    add('   on OPENINGS (D) - of '+Object.keys(Dids).length+' openings');
+    for(var og in opGap) add('      '+og, opGap[og], ROUTE[og]||'');
+    add('');
+    add('NEVER FIXABLE - stop counting these as a backlog');
+    add('   Offer Quarter', '', 'offerCreatedAt has NO write API at any permission level');
+    add('   Status (application)', '', 'application status / hire / archive cannot be written at any level');
+    if (V8) {
+      var openTotal=0, unclaimed=0;
+      for (var rk in opsByIdAll){ var ro=opsByIdAll[rk]; if(ro.cr) continue; openTotal++;
+        if(!useCount[ro.id] && !v8Claimed[ro.id]) unclaimed++; }
+      var CREATE=G1+G2+D2+D3, REDATE=F2+(opGap['Opening Date']||0), LINK=D1;
+      var CORRECT_raw=0; for(var q1 in candGap)CORRECT_raw+=candGap[q1]; for(var q2 in jobGap)CORRECT_raw+=jobGap[q2]; for(var q3 in opGap)CORRECT_raw+=opGap[q3];
+      // 56c: the four outputs must be DISJOINT. RE-DATE owns Opening Date; never-fixable and mapping
+      // artefacts are not work. Subtract them and show the subtraction so nobody re-adds it.
+      var OWNED_BY_REDATE=(opGap['Opening Date']||0);
+      var NEVERFIX=(candGap['Status']||0)+(candGap['Offer Quarter']||0);
+      var NOTACTION=(jobGap['Job Name']||0);
+      var CORRECT=CORRECT_raw-OWNED_BY_REDATE-NEVERFIX-NOTACTION;
+      // 56d: Opening Status is the biggest bucket and is NOT actionable until split by what the
+      // tracker expects vs what Ashby has. Shelved-but-live is a safe archive; Open<->Filled is a probe.
+      add(''); add('THE FOUR OUTPUTS (V8)');
+      add('  CREATE an opening', CREATE, 'UI only. G '+(G1+G2)+' + D2 '+D2+' + shared-opening '+D3);
+      add('  RE-DATE an opening', REDATE, 'UI ONLY - openedAt fails silently (re-proven 7 Sep). unfilled '+F2+' + linked-wrong-date '+(opGap['Opening Date']||0));
+      add('  LINK an offer to an opening', LINK, 'no API sets the opening on an existing offer');
+      add('  CORRECT a field', CORRECT, 'ACTIONABLE only - per object, validated comparators');
+      add('    raw field gaps', CORRECT_raw, 'before the subtractions below');
+      add('    less: Opening Date', OWNED_BY_REDATE, 'counted in RE-DATE - do NOT count twice');
+      add('    less: never fixable', NEVERFIX, 'Status + Offer Quarter - no write API at any level');
+      add('    less: not actionable', NOTACTION, 'Job Name = mapping artefacts, not defects');
+      add('  field gaps re-pointed to the LINKED opening (56f)', v8Rebound, 'rows where the allocator disagreed with the offer link');
+      add(''); add('OPENING STATUS - split by tracker expects  ->  Ashby has', stTotal, 'NOT actionable as one number');
+      for(var sk in stSplit){ var route = /shelved|closed/i.test(sk.split('->')[0]) ? 'API - opening.setArchived (safe batch)' : (/open|filled/i.test(sk) ? 'PROBE FIRST - state flip may be impossible' : 'review'); add('    '+sk, stSplit[sk], route); }
+      add(''); add('REVERSE CHECK - Ashby openings NO tracker row claims', unclaimed, 'of '+openTotal+' non-closed openings');
+      add(''); add('ARITHMETIC (step 10)');
+      var ok1=(A.length+E.length+X.length)===ctx.length, ok2=(F1+F2+G1+G2)===E.length, ok3=(B.length+B1+B2)===A.length;
+      add('  filled + unfilled + out-of-scope = tracker total', ok1?'PASS':'FAIL');
+      add('  F1 + F2 + G = unfilled', ok2?'PASS':'FAIL');
+      add('  B + B1 + B2 = filled', ok3?'PASS':'FAIL');
+      add(''); add('NOT BUILT - Sourcer (field 18)', '', 'BLOCKED: the audit store carries no sourcer per application; needs a DataRefresh change');
+      if(!(ok1&&ok2&&ok3)) throw new Error('V8 arithmetic FAILED - refusing to publish');
+    }
+    var rows7 = [[(V8?'V8':'V7')+' - filled vs unfilled funnel','Count','Route / note','']].concat(L);
+    write(opts.tab||'Tracker Openings v7', rows7, false);
     L.forEach(function(x){ Logger.log(LBL+' | '+x[0]+(x[1]===''?'':'  ::  '+x[1])+(x[2]?'   ('+x[2]+')':'')); });
     return out.getUrl();
   }
@@ -1448,12 +1571,59 @@ function v5_actionables() {
 
 // #47: V6 - the filled-vs-unfilled funnel, scoped to Q3 2026 first (Jerin: Q1/Q2 later if it is cheap).
 // Change onlyQuarter to 'Q1 2026' / 'Q2 2026' to re-run, or drop it for all of 2026.
-function buildAuditV6() {
+function buildAuditV7() {
   return buildAuditV4({
-    mode: 'v6',
-    tab: 'Tracker Openings v6',
+    mode: 'v7',
+    tab: 'Tracker Openings v7',
     onlyQuarter: 'Q3 2026',
     carryFrom: 'Tracker Openings v5',
-    label: 'v6'
+    label: 'v7'
   });
 }
+
+
+// #53 PROBE (7 Sep 2026, Jerin): can JOB-level fields be written by API? customField.setValue with
+// objectType 'Opening' is proven (#12, 332 writes) but 'Job' was NEVER probed - the Job Gaps edits were done
+// by hand in the UI, which may have been a choice rather than a limit.
+// Method: the 403-vs-404 test plus an IDEMPOTENT write - set a job custom field to the value it ALREADY holds.
+// That proves capability without changing anything. Always include an invented endpoint as a control:
+// Ashby returns 404 for "does not exist" and 403 for "you lack the scope", so a 404 on the control proves the
+// test is meaningful.
+function probeJobFieldWrite() {
+  // 1. what custom fields exist on a JOB?
+  var jf = [];
+  try { jf = (ashbyPost_('/customField.list', { includeArchived: false }).results || [])
+    .filter(function (f) { return String(f.objectType || '') === 'Job'; }); } catch (e) { Logger.log('customField.list: ' + e.message); }
+  Logger.log('JOB custom fields: ' + jf.length);
+  jf.forEach(function (f) { Logger.log('   ' + f.title + '  | id ' + String(f.id).substring(0, 8) + '  | type ' + f.fieldType); });
+
+  // 2. find a job that already HAS a value for one of them, so the write is a no-op
+  var jobs = ashbyListAll_('/job.list');
+  Logger.log('jobs: ' + jobs.length + ' | keys on a job: ' + Object.keys(jobs[0] || {}).join(', '));
+  var target = null, tf = null;
+  for (var i = 0; i < jobs.length && !target; i++) {
+    var cfs = jobs[i].customFields || [];
+    for (var k = 0; k < cfs.length; k++) {
+      var v = cfs[k].value; if (v === null || v === undefined || v === '') continue;
+      target = jobs[i]; tf = cfs[k]; break;
+    }
+  }
+  if (!target) { Logger.log('no job with a populated custom field - cannot run an idempotent write'); return; }
+  Logger.log('IDEMPOTENT TARGET: job "' + target.title + '" field "' + (tf.title || tf.name) + '" (writing its EXISTING value back)');
+
+  // 3. the write - same value in, so nothing changes either way
+  try {
+    var r = ashbyWrite_('/customField.setValue', { objectType: 'Job', objectId: target.id, fieldId: tf.id, fieldValue: tf.value });
+    Logger.log('customField.setValue objectType=Job  ->  ' + JSON.stringify(r).substring(0, 300));
+  } catch (e2) { Logger.log('customField.setValue objectType=Job  ->  THREW ' + e2.message); }
+
+  // 4. does a job.update-style endpoint exist at all? 404 = no such thing, 403 = exists but no scope.
+  ['/job.update', '/job.setStatus', '/job.info', '/jobPosting.update', '/job.thisEndpointIsInvented'].forEach(function (ep) {
+    try { var rr = ashbyWrite_(ep, { jobId: target.id }); Logger.log('  ' + ep + ' -> ' + JSON.stringify(rr).substring(0, 160)); }
+    catch (e3) { Logger.log('  ' + ep + ' -> THREW ' + String(e3.message).substring(0, 160)); }
+  });
+}
+
+
+// #56 - V8 is a MODE of buildAuditV4, never a clone.
+function buildAuditV8(){ return buildAuditV4({ mode:'v8', onlyQuarter:'Q3 2026', tab:'Tracker Openings v8', label:'v8' }); }
