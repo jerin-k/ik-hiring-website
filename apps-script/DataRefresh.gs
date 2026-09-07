@@ -829,6 +829,10 @@ function refreshDashboardData() {
         recruiter: ev.recruiter, level: ev.level, complexity: ev.complexity, employmentType: ev.employmentType,
         offerCreatedAt: ev.offerCreatedAt,   // when the offer was MADE - decidedAt is when the candidate answered
         openingQuarter: ev.openingQuarter, offerStatus: ev.offerStatus, accepted: ev.accepted,
+        // #47 (V6): the audit could see an offer's opening QUARTER but not WHICH opening, so it could not
+        // follow the link and fell back to guessing an opening by job x quarter count. That manufactured
+        // 'no opening' rows for candidates that were correctly linked. Carry the id and the job id.
+        openingId: ev.openingId || null, openingIdAny: ev.openingIdAny || null, jobId8: ev.jobId8 || null,
         // Drive-only audit field, read by buildAuditSheet(): an accepted offer whose start date is still
         // ahead. This is NOT the dashboard's Joining Pending and never leaves Drive.
         joiningPending: se2.joiningPending };
