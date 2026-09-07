@@ -21,7 +21,7 @@ var G22_PLAN = [
     recs: ['Tina Anisha Bibeiro'] }
 ];
 
-function run22g() { task35_tidyTabs(); }
+function run22g() { v5_actionables(); }   // #42: read-only breakdown of the V5 tab
 
 function g22_buildTab() {
   var jobs = ashbyListAll_('/job.list');
@@ -235,9 +235,14 @@ function v4_scan() {
 // native hiring-team Recruiter), not just the candidate's offer record.
 // Opening-level verdicts are COUNT-TO-COUNT per job x quarter: openings are paired to
 // tracker positions greedily, because an opening cannot be tied to a specific position.
-function buildAuditV4() {
+// #42 (Jerin, 7 Sep 2026): V5 is the SAME audit scoped to one quarter, so it is a PARAMETER, not a clone -
+// a copied 500-line builder would drift from V4's method within a week and the two would stop being comparable.
+// opts: {tab, manualTab, mapTab, carryFrom, onlyQuarter, label}
+function buildAuditV4(opts) {
+  opts = opts || {};
+  var LBL = opts.label || 'v4';
   var TRACKER_ID='1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A';
-  var V4_TAB='Tracker Openings v4', MANUAL_TAB='V4 Manual Fixes', V3_TAB='Tracker Openings v3';
+  var V4_TAB=opts.tab||'Tracker Openings v4', MANUAL_TAB=opts.manualTab||'V4 Manual Fixes', V3_TAB=opts.carryFrom||'Tracker Openings v3';
   var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var TZ='UTC';
   var MANUAL={'Opening Quarter':1,'Status':1,'DOJ Quarter':1};
@@ -285,6 +290,7 @@ function buildAuditV4() {
   var trk=[];
   for(var r=1;r<vals.length;r++){ var row=vals[r], jcq=String(row[C.jcq]||'').trim();
     if(!/2026$/.test(jcq)) continue;
+    if(opts.onlyQuarter && String(jcq).trim()!==opts.onlyQuarter) continue;   // #42: quarter-scoped run
     var e=nrm(row[C.email]), dj=d2s(row[C.doj]);
     trk.push({ email:ok(e)?e:'', name:at(row,C.name), job:at(row,C.job), dept:at(row,C.dept),
       opd:d2s(row[C.date]), opq:jcq, doj:dj, rec:at(row,C.rec), role:at(row,C.role), loc:at(row,C.loc),
@@ -480,15 +486,15 @@ function buildAuditV4() {
     .sort(function(a,b){ return b.n-a.n; })
     .forEach(function(x){ mrows.push([x.tj,x.dept,x.aj,x.how,x.n, prevCorr[norm(x.tj)]||'']); });
   // 🚨 NEVER write 'V4 Job Mapping Review' - it is hand-edited by Jerin. Generated view goes elsewhere.
-  write('V4 Mapping (generated)',mrows,false);
-  Logger.log('v4 | distinct job mappings '+(mrows.length-1));
-  Logger.log('v4 | ALIASES THAT MATCH NO ASHBY JOB ('+badAlias.length+'): '+badAlias.join(' ;; '));
+  write(opts.mapTab||'V4 Mapping (generated)',mrows,false);
+  Logger.log(LBL+' | distinct job mappings '+(mrows.length-1));
+  Logger.log(LBL+' | ALIASES THAT MATCH NO ASHBY JOB ('+badAlias.length+'): '+badAlias.join(' ;; '));
   var tot=0; for(var a in act) tot+=act[a];
-  Logger.log('v4 | rows '+(t1.length-1)+' | matched to offer '+matched+' | no opening paired '+noOpening);
-  Logger.log('v4 | ACTIONABLE '+tot+' :: '+JSON.stringify(act));
-  Logger.log('v4 | manual-fix rows '+(manual.length-1));
+  Logger.log(LBL+' | rows '+(t1.length-1)+' | matched to offer '+matched+' | no opening paired '+noOpening);
+  Logger.log(LBL+' | ACTIONABLE '+tot+' :: '+JSON.stringify(act));
+  Logger.log(LBL+' | manual-fix rows '+(manual.length-1));
   var st={}; opsAll.forEach(function(o){ st[o.state||'(blank)']=(st[o.state||'(blank)']||0)+1; });
-  Logger.log('v4 | 2026 opening states :: '+JSON.stringify(st));
+  Logger.log(LBL+' | 2026 opening states :: '+JSON.stringify(st));
   return out.getUrl();
 }
 // READ-ONLY: exact shape of opening customFields entries and job department.
@@ -1278,4 +1284,70 @@ function task35_tidyTabs(){
   Logger.log('T35 | missing '+miss.length+' | refused '+ref.length);
   Logger.log('T35 | JOB GAPS PRESENT: '+(ss.getSheetByName('Job Gaps')?'YES':'NO - PROBLEM'));
   Logger.log('T35 | remaining ('+left.length+'): '+left.join(' | '));
+}
+
+// #42: the V4 audit, scoped to Q3 2026 openings. Writes 'Tracker Openings v5' + 'V5 Manual Fixes'
+// + 'V5 Mapping generated'. Carries the Result column across from V4 so decisions already made are kept.
+// Never writes V4 Manual Fixes / V4 Bullseye - Manual / V4 Candidate Recruiter Fix / V4 Job Mapping Review.
+function buildAuditV5() {
+  return buildAuditV4({
+    tab: 'Tracker Openings v5',
+    manualTab: 'V5 Manual Fixes',
+    mapTab: 'V5 Mapping (generated)',
+    carryFrom: 'Tracker Openings v4',
+    onlyQuarter: 'Q3 2026',
+    label: 'v5'
+  });
+}
+
+
+// #42 READ-ONLY: turn the V5 tab into the actionables list Jerin asked for - what, how many, and whether the
+// correction is API or UI. Writes nothing. Run after buildAuditV5().
+function v5_actionables() {
+  var out = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var sh = out.getSheetByName('Tracker Openings v5');
+  if (!sh) { Logger.log('no V5 tab - run buildAuditV5 first'); return; }
+  var v = sh.getDataRange().getValues(), h = v[0];
+  var fld = {}, last = '', trail = {};
+  for (var c = 0; c < h.length; c++) {
+    var n = String(h[c] || '').trim(); if (!n) continue;
+    if (n.indexOf('Row key') === 0) continue;
+    if (n === 'Match?') { if (last) fld[last].mm = c; continue; }
+    if (n === 'Result') { if (last) fld[last].res = c; continue; }
+    if (n.indexOf(' - Ashby') > -1) { var b = n.replace(' - Ashby',''); if (fld[b]) fld[b].ash = c; continue; }
+    if (['Which Ashby record','Row status','Job match method','Ashby job status','Opening matched?','Ashby team (leaf)','Ashby opening state'].indexOf(n) > -1) { trail[n] = c; continue; }
+    fld[n] = { trk: c }; last = n;
+  }
+  Logger.log('V5 rows: ' + (v.length - 1));
+  // per-field open actionables (Match?=No AND Result blank)
+  var order = [];
+  for (var f in fld) { var k = fld[f]; if (k.mm == null) continue; var n2 = 0;
+    for (var r = 1; r < v.length; r++) if (String(v[r][k.mm]).trim() === 'No' && !String(v[r][k.res] || '').trim()) n2++;
+    if (n2) order.push([f, n2]); }
+  order.sort(function(a,b){ return b[1]-a[1]; });
+  Logger.log('--- OPEN ACTIONABLES BY FIELD ---');
+  order.forEach(function(x){ Logger.log('   ' + x[0] + ' :: ' + x[1]); });
+  // the big one: what does Ashby actually say where Opening Status mismatches?
+  var os = fld['Opening Status'];
+  if (os) { var by = {};
+    for (var r2 = 1; r2 < v.length; r2++) {
+      if (String(v[r2][os.mm]).trim() !== 'No' || String(v[r2][os.res] || '').trim()) continue;
+      var key = (String(v[r2][os.trk] || '(blank)').trim()) + '  ->  ' + (String(v[r2][os.ash] || '(blank)').trim());
+      by[key] = (by[key] || 0) + 1; }
+    Logger.log('--- OPENING STATUS: tracker expects -> Ashby has ---');
+    Object.keys(by).sort(function(a,b){ return by[b]-by[a]; }).forEach(function(k){ Logger.log('   ' + k + ' :: ' + by[k]); }); }
+  // rows with no opening paired, by tracker status
+  if (trail['Opening matched?'] != null && trail['Row status'] != null) {
+    var noOp = {}, tot = 0;
+    for (var r3 = 1; r3 < v.length; r3++) if (String(v[r3][trail['Opening matched?']]).trim() === 'No') {
+      tot++; var st = String(v[r3][trail['Row status']] || '(blank)').trim(); noOp[st] = (noOp[st] || 0) + 1; }
+    Logger.log('--- NO OPENING PAIRED (' + tot + ') by tracker status ---');
+    Object.keys(noOp).sort(function(a,b){ return noOp[b]-noOp[a]; }).forEach(function(k){ Logger.log('   ' + k + ' :: ' + noOp[k]); }); }
+  // and by Ashby job status, to see how many sit on a closed/archived job
+  if (trail['Opening matched?'] != null && trail['Ashby job status'] != null) {
+    var js = {};
+    for (var r4 = 1; r4 < v.length; r4++) if (String(v[r4][trail['Opening matched?']]).trim() === 'No') {
+      var j = String(v[r4][trail['Ashby job status']] || '(none)').trim(); js[j] = (js[j] || 0) + 1; }
+    Logger.log('--- NO OPENING PAIRED, by Ashby JOB status ---');
+    Object.keys(js).sort(function(a,b){ return js[b]-js[a]; }).forEach(function(k){ Logger.log('   ' + k + ' :: ' + js[k]); }); }
 }
