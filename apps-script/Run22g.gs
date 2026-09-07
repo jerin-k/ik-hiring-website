@@ -21,7 +21,7 @@ var G22_PLAN = [
     recs: ['Tina Anisha Bibeiro'] }
 ];
 
-function run22g() { v5_actionables(); }   // #42: read-only breakdown of the V5 tab
+function run22g() { buildAuditV6(); }   // #47: V6 filled-vs-unfilled funnel, Q3 2026
 
 function g22_buildTab() {
   var jobs = ashbyListAll_('/job.list');
@@ -311,7 +311,24 @@ function buildAuditV4(opts) {
   var users=ashbyListAll_('/user.list'), uById={};
   users.forEach(function(u){ uById[u.id]=((u.firstName||'')+' '+(u.lastName||'')).trim()||u.name||''; });
   var locName={}; try{ ashbyListAll_('/location.list').forEach(function(l){ locName[l.id]=l.name||''; }); }catch(eL){}
-  var bucket={}, opsAll=[];
+  var bucket={}, opsAll=[], opsByIdAll={};
+  // #47 (V6): the loop below SKIPS every opening whose openedAt is not 2026 - which silently drops the ~53-58
+  // UNDATED openings too. An opening that genuinely exists but has no date was therefore reported as 'no
+  // opening', manufacturing a gap. Index EVERY non-archived opening here so V6 can tell 'missing' apart from
+  // 'exists but undated'. Leave the 2026 filter alone below - V4/V5 numbers must stay reproducible.
+  ashbyListAll_('/opening.list').forEach(function(o){
+    if(o.isArchived) return;
+    var lv2=o.latestVersion||{}, cf2={};
+    (lv2.customFields||[]).forEach(function(f){ var lab=(f.valueLabel==null||f.valueLabel==='')?(f.value==null?'':f.value):f.valueLabel; cf2[String(f.title||f.name||'')]=String(lab); });
+    var rc2=[]; (lv2.hiringTeam||[]).forEach(function(h){ if(/recruiter/i.test(String(h.role||h.roleName||''))) rc2.push(uById[h.userId]||h.name||''); });
+    var oa2=String(o.openedAt||'');
+    opsByIdAll[o.id]={ id:o.id, openedAt:oa2?oa2.substring(0,10):'', dated:!!oa2, q:oa2?qtr(oa2):'',
+      state:String(o.openingState||''), cr:String(o.closeReasonId||''),
+      cx:cxMap(cf2['Role Complexity (Opening)']||''), rt:rtMap(cf2['Role Type']||''),
+      emp:String(cf2['Employment Type']||''),
+      loc:(lv2.locationIds||[]).map(function(x){return locName[x]||'';}).filter(String).join(', '),
+      recs:rc2, jobIds:(lv2.jobIds||[]) };
+  });
   ashbyListAll_('/opening.list').forEach(function(o){
     if(o.isArchived) return; var oa=String(o.openedAt||''); if(oa.substring(0,4)!=='2026') return;
     var lv=o.latestVersion||{}, cf={};
@@ -386,6 +403,12 @@ function buildAuditV4(opts) {
    {n:'Offer Quarter',t:function(c){return qtr(c.tr.offd);},a:function(c){return qtr(c.m?(c.m.offerCreatedAt||''):'');},k:'eq'},
    {n:'Recruiter (Candidate)',t:function(c){return c.tr.rec;},a:function(c){return c.m?candRecs(c.m).join(' + '):'';},k:'rec'}
   ];
+  // #47 (V6): which OBJECT each field actually describes, so a job-level defect is counted once per job and an
+  // opening-level one once per opening - V5 counted both once per tracker POSITION, inflating Level/Location/Dept.
+  var F_OBJ={'Job Name':'job','Department':'job','Level':'job','Location':'opening','Complexity':'opening',
+    'Employment Type':'opening','Role Type':'opening','Opening Date':'opening','Opening Quarter':'opening',
+    'Recruiter (Opening Owner)':'opening','Opening Status':'opening'};
+  var F0=F.map(function(f){ return { n:f.n, t:f.t, a:f.a, k:f.k, obj:F_OBJ[f.n]||'candidate' }; });
   function rowKey(t){ return t.email || ('OPEN|'+t.job+'|'+t.opd+'|'+t.rec); }
 
   var out=SpreadsheetApp.openById(AUDIT_SHEET_ID);
@@ -432,6 +455,76 @@ function buildAuditV4(opts) {
       if(o.recs.length===1&&nameMatch(c.tr.rec,o.recs[0]))s++;
       if(s>bs){bs=s;best=o;} });
     if(best){ best.used=true; c.op=best; } });
+
+  // ================= #47 / V6 : Jerin's filled-vs-unfilled funnel (7 Sep 2026) =================
+  // V4/V5 asked "is there a spare opening on this job in this quarter?" and consumed one per tracker row.
+  // That guesses. V6 asks the questions in Jerin's order, and FOLLOWS THE LINK instead of guessing:
+  //   A (filled)   = tracker position that has a candidate on it
+  //     B          = that candidate found in Ashby BY EMAIL            gap = A - B
+  //     C          = the JOBS reached through B                        gap = B rows whose job will not resolve
+  //     D          = the OPENINGS reached through B's offer link       gap = B rows whose offer has no opening
+  //   E (unfilled) = tracker position with no candidate
+  //     F          = an Ashby opening found for it (job resolves, opening exists on that job)
+  //     G          = NOT found  ->  THE OPENINGS TO CREATE             G1 job live · G2 job closed/missing
+  // Field gaps are counted ONCE PER OBJECT (per job for C, per opening for D), not once per tracker position -
+  // V5 counted a job-level defect once for every position on that job, which inflated Level/Location/Department.
+  if (opts.mode === 'v6') {
+    var L = [], add = function(a,b,c,d){ L.push([a,b===undefined?'':b,c===undefined?'':c,d===undefined?'':d]); };
+    var filled = ctx.filter(function(c){ return !!(String(c.tr.name||'').trim() || String(c.tr.email||'').trim()); });
+    var unfilled = ctx.filter(function(c){ return !(String(c.tr.name||'').trim() || String(c.tr.email||'').trim()); });
+    var B = filled.filter(function(c){ return !!c.m; });
+    var Cids = {}, Cnojob = 0;
+    B.forEach(function(c){ if(c.jr.id) Cids[c.jr.id]=c; else Cnojob++; });
+    var Dids = {}, Dnolink = 0, Dundated = 0, Dmissing = 0;
+    B.forEach(function(c){
+      var oid = c.m.openingId || c.m.openingIdAny || null;
+      if(!oid){ Dnolink++; return; }
+      var op = opsByIdAll[oid];
+      if(!op){ Dmissing++; return; }
+      if(!op.dated) Dundated++;
+      Dids[oid] = c;
+    });
+    add('TRACKER POSITIONS IN SCOPE', ctx.length, opts.onlyQuarter||'all 2026');
+    add('');
+    add('A = FILLED (has a candidate on the tracker row)', filled.length);
+    add('   B = candidate FOUND in Ashby by email', B.length, 'gap ' + (filled.length - B.length) + ' not found');
+    add('   C = distinct JOBS reached through B', Object.keys(Cids).length, 'gap ' + Cnojob + ' B-rows whose job will not resolve');
+    add('   D = distinct OPENINGS reached through B (via the offer link)', Object.keys(Dids).length,
+        'gap ' + Dnolink + ' B-rows whose offer carries NO opening link');
+    add('       of D, opening exists but is UNDATED', Dundated, 'invisible to every dashboard metric - needs a DATE, not a new opening');
+    add('       of D, link points at an opening we cannot read', Dmissing, 'archived or outside scope');
+    add('');
+    add('E = UNFILLED (no candidate on the tracker row)', unfilled.length);
+    var F=0, G1=0, G2=0;
+    unfilled.forEach(function(c){
+      if(!c.jr.id){ G2++; return; }
+      var pool=[]; for(var k in opsByIdAll){ var o=opsByIdAll[k]; if(o.jobIds.indexOf(c.jr.id)>-1) pool.push(o); }
+      if(pool.length) F++;
+      else if(String(c.jr.jstatus||'').toLowerCase().indexOf('open')>-1) G1++;
+      else G2++;
+    });
+    add('   F = an Ashby opening exists on the matched job', F);
+    add('   G = NO opening found  ->  OPENINGS TO CREATE', G1+G2);
+    add('       G1 = job is LIVE in Ashby - create the opening', G1, 'unblocked');
+    add('       G2 = job closed / not found - reopen or create the JOB first', G2, 'blocked on a job');
+    add('');
+    add('FIELD GAPS - counted once per OBJECT, not per tracker position');
+    var jobGap={}, opGap={};
+    Object.keys(Cids).forEach(function(id){ var c=Cids[id];
+      F0.forEach(function(f){ if(f.obj!=='job') return; var tv=f.t(c), av=f.a(c);
+        if(String(tv).trim() && String(av).trim() && !eq(tv,av)) jobGap[f.n]=(jobGap[f.n]||0)+1; }); });
+    Object.keys(Dids).forEach(function(id){ var c=Dids[id];
+      F0.forEach(function(f){ if(f.obj!=='opening') return; var tv=f.t(c), av=f.a(c);
+        if(String(tv).trim() && String(av).trim() && !eq(tv,av)) opGap[f.n]=(opGap[f.n]||0)+1; }); });
+    add('   on JOBS (C) - of ' + Object.keys(Cids).length + ' jobs');
+    for(var jg in jobGap) add('      ' + jg, jobGap[jg]);
+    add('   on OPENINGS (D) - of ' + Object.keys(Dids).length + ' openings');
+    for(var og in opGap) add('      ' + og, opGap[og]);
+    var rows6=[['V6 - filled vs unfilled funnel','Count','Note','']].concat(L);
+    write(opts.tab||'Tracker Openings v6', rows6, false);
+    L.forEach(function(x){ Logger.log(LBL+' | '+x[0]+(x[1]===''?'':'  ::  '+x[1])+(x[2]?'   ('+x[2]+')':'')); });
+    return out.getUrl();
+  }
 
   // ---- build ----
   var head=['Row key (email or job|date|recruiter)'];
@@ -1350,4 +1443,17 @@ function v5_actionables() {
       var j = String(v[r4][trail['Ashby job status']] || '(none)').trim(); js[j] = (js[j] || 0) + 1; }
     Logger.log('--- NO OPENING PAIRED, by Ashby JOB status ---');
     Object.keys(js).sort(function(a,b){ return js[b]-js[a]; }).forEach(function(k){ Logger.log('   ' + k + ' :: ' + js[k]); }); }
+}
+
+
+// #47: V6 - the filled-vs-unfilled funnel, scoped to Q3 2026 first (Jerin: Q1/Q2 later if it is cheap).
+// Change onlyQuarter to 'Q1 2026' / 'Q2 2026' to re-run, or drop it for all of 2026.
+function buildAuditV6() {
+  return buildAuditV4({
+    mode: 'v6',
+    tab: 'Tracker Openings v6',
+    onlyQuarter: 'Q3 2026',
+    carryFrom: 'Tracker Openings v5',
+    label: 'v6'
+  });
 }
