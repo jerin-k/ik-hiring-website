@@ -21,7 +21,7 @@ var G22_PLAN = [
     recs: ['Tina Anisha Bibeiro'] }
 ];
 
-function run22g() { buildAuditV9(); }  // #58c milestone 1
+function run22g() { ownerGrain64_(); }
 
 function g22_buildTab() {
   var jobs = ashbyListAll_('/job.list');
@@ -267,7 +267,7 @@ function buildAuditV4(opts) {
   function roleOk(a,b){ var x=words(a),y=words(b),kx=Object.keys(x),ky=Object.keys(y),n=0; if(!kx.length||!ky.length)return false; for(var i=0;i<kx.length;i++) if(y[kx[i]])n++; return n>=2||n===kx.length||n===ky.length; }
   function eq(a,b){ return String(a).trim().toLowerCase()===String(b).trim().toLowerCase(); }
   function nameTok(s){ var t=norm(s).split(' '),o=[]; for(var i=0;i<t.length;i++) if(t[i]&&t[i].length>1)o.push(t[i]); return o; }
-  function nameMatch(a,b){ var x=nameTok(a),y=nameTok(b); if(!x.length||!y.length)return false; var s=x.length<=y.length?x:y,l=x.length<=y.length?y:x; if(s.length===1)return s[0]===l[0]; for(var i=0;i<s.length;i++){var h=false; for(var j=0;j<l.length;j++) if(l[j]===s[i]){h=true;break;} if(!h)return false;} return true; }
+  function nameMatch(a,b){ var x=nameTok(a),y=nameTok(b); if(!x.length||!y.length)return false; var s=x.length<=y.length?x:y,l=x.length<=y.length?y:x; for(var i=0;i<s.length;i++){var h=false; for(var j=0;j<l.length;j++) if(l[j]===s[i]){h=true;break;} if(!h)return false;} return true; }
   function cxMap(x){ var s=String(x||'').trim(); if(!s)return ''; var l=s.toLowerCase();
     if(l==='regular'||l==='normal')return 'Normal'; if(l==='complex')return 'Complex';
     if(l.replace(/\s+/g,'')==='ubercomplex')return 'Uber Complex'; return s; }
@@ -533,7 +533,10 @@ function buildAuditV4(opts) {
 
     // ---- 4. THE POOL, as a definition: not archived, not closed, not claimed. Built once. ----
     var opById = {}; opsAll.forEach(function(o){ opById[o.id] = o; });
-    var poolable = opsAll.filter(function(o){ return !o.cr; });   // a closed opening is spent, forever
+    // 🚨 8 Sep: THE POOL TESTS THE STATE, not the absence of a close reason. 1,996 openings are 'Filled'
+    // and some carry no closeReasonId, so the old test let filled openings into the free pool - V7 fault #4
+    // rebuilt. Only an opening Ashby itself calls Open can cover anything.
+    var poolable = opsAll.filter(function(o){ return String(o.state||'') === 'Open' && !o.cr; });
     var byJob = {};
     poolable.forEach(function(o){ (o.jobIds||[]).forEach(function(jid){ (byJob[jid] = byJob[jid] || []).push(o); }); });
 
@@ -686,8 +689,8 @@ function buildAuditV4(opts) {
     claims.forEach(function(x){ out9.push([x.aid, x.name, x.email, x.job, x.trackerQ, x.openingQ, x.rank, x.why, x.personJoin, x.jobTrust, x.openingId, '']); });
     write('V9 - Claim ledger', out9, true);
 
-    var fh = [['Object','audit-id','Who','Job','Field','Tracker says','Ashby says','Which is right','Route','Claim rank','Result']];
-    findings.forEach(function(x){ fh.push([x.obj, x.aid, x.who, x.job, x.field, x.tracker, x.ashby, x.auth, x.route, x.rank, '']); });
+    var fh = [['Object','Object id','audit-id','Who','Job','Field','Tracker says','Ashby says','Which is right','Route','Claim rank','Result']];
+    findings.forEach(function(x){ fh.push([x.obj, String(x.key||'').split('|')[1] || '', x.aid, x.who, x.job, x.field, x.tracker, x.ashby, x.auth, x.route, x.rank, '']); });
     write('V9 - Correct', fh, true);
 
     var ch = [['audit-id','Candidate','Job','Tracker Qtr','Why no opening','Result']];
@@ -2448,4 +2451,848 @@ function probeStore58c_(){
   Logger.log('STORE rows ' + rows.length + ' | keys ' + ks.length);
   Logger.log('KEYS :: ' + ks.join(', '));
   Logger.log('FILLED :: ' + ks.map(function(k){ return k + '=' + (filled[k]||0); }).join(' | '));
+}
+
+// ===== #58c milestone 3 | 8 Sep 2026 | stamp audit-id onto Ashby openings.
+// Reads the WRITTEN ledger tab, not in-memory state - an outside consumer of the artefact.
+// 🚨 BOUND PAIRS ONLY. A forced or chosen pairing is an inference and must never be baked into the key.
+// modes: 'dry' (default, read-only) | 'pilot' (one write + read-back) | 'run'.
+function task58c_stamp(mode){
+  mode = mode || 'dry';
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var sh = book.getSheetByName('V9 - Claim ledger');
+  if (!sh) throw new Error('no V9 - Claim ledger tab - run buildAuditV9() first');
+  var v = sh.getDataRange().getValues(), h = v[0];
+  var cA = h.indexOf('audit-id'), cR = h.indexOf('Claim rank'), cO = h.indexOf('Opening id'), cN = h.indexOf('Candidate');
+  if (cA < 0 || cR < 0 || cO < 0) throw new Error('ledger tab is missing a required column');
+  var pairs = [];
+  for (var i = 1; i < v.length; i++){
+    if (String(v[i][cR]||'').trim() !== 'bound') continue;
+    var aid = String(v[i][cA]||'').trim(), oid = String(v[i][cO]||'').trim();
+    if (!aid || !oid) continue;
+    pairs.push({ aid:aid, oid:oid, who:String(v[i][cN]||'') });
+  }
+  var fid = null;
+  ashbyListAll_('/customField.list').forEach(function(f){
+    if (String(f.title||f.name||'').trim().toLowerCase() === 'audit-id') fid = f.id; });
+  if (!fid) throw new Error('audit-id custom field not found in Ashby');
+  function readCurrent(){ var map = {};
+    ashbyListAll_('/opening.list').forEach(function(o){ var lv = o.latestVersion || {};
+      (lv.customFields||[]).forEach(function(f){
+        if (String(f.title||f.name||'').trim().toLowerCase() === 'audit-id')
+          map[o.id] = String(f.value == null ? '' : f.value).trim(); }); });
+    return map; }
+  var cur = readCurrent();
+  var todo = pairs.filter(function(p){ return (cur[p.oid]||'') !== p.aid; });
+  var conflict = pairs.filter(function(p){ var c = cur[p.oid]||''; return c && c !== p.aid; });
+  var seen = {}, dup = 0;
+  pairs.forEach(function(p){ if (seen[p.oid]) dup++; seen[p.oid] = 1; });
+  Logger.log('STAMP mode=' + mode + ' | bound pairs ' + pairs.length + ' | already correct ' + (pairs.length - todo.length) +
+    ' | to write ' + todo.length + ' | contested(excluded) ' + dup + ' | CONFLICT (already holds a different id) ' + conflict.length);
+  // A CONTESTED opening (two positions both holding a real offer link) is an Ashby data error with a known
+  // route: one of the two needs its own opening. It cannot carry a key, so it is EXCLUDED and named -
+  // not written, and not allowed to block the other pairs.
+  var multi = {}; pairs.forEach(function(p){ multi[p.oid] = (multi[p.oid]||0) + 1; });
+  var contestedPairs = pairs.filter(function(p){ return multi[p.oid] > 1; });
+  if (contestedPairs.length) Logger.log('CONTESTED - excluded from stamping, need a human decision :: ' +
+    contestedPairs.map(function(p){ return p.who + ' (' + p.aid + ')'; }).join(' ;; '));
+  todo = todo.filter(function(p){ return multi[p.oid] === 1; });
+  Logger.log('STAMP after exclusions | will write ' + todo.length + ' (was ' + (todo.length + contestedPairs.length) + ' before removing contested)');
+  if (conflict.length) throw new Error('REFUSING: ' + conflict.length + ' openings already carry a DIFFERENT audit-id - resolve by hand first');
+  if (mode === 'dry') { Logger.log('DRY - nothing written'); return; }
+  var batch = (mode === 'pilot') ? todo.slice(0,1) : todo;
+  var okN = 0, fail = [];
+  batch.forEach(function(p){
+    try { var r = ashbyWrite_('/customField.setValue', { objectType:'Opening', objectId:p.oid, fieldId:fid, fieldValue:p.aid });
+      if (r && r.success === false) fail.push(p.aid + ' :: ' + JSON.stringify(r.errors||r).slice(0,70)); else okN++; }
+    catch(e){ fail.push(p.aid + ' :: ' + String(e.message).slice(0,70)); } });
+  Logger.log('STAMP wrote ' + okN + ' | failed ' + fail.length + (fail.length ? ' :: ' + fail.slice(0,3).join(' ;; ') : ''));
+  var back = readCurrent();
+  var verified = batch.filter(function(p){ return back[p.oid] === p.aid; }).length;
+  var unver = batch.filter(function(p){ return back[p.oid] !== p.aid; });
+  Logger.log('STAMP READ-BACK verified ' + verified + ' of ' + batch.length + (unver.length ? ' - MISMATCH' : ' - ALL CONFIRMED'));
+  if (unver.length) Logger.log('UNVERIFIED :: ' + unver.map(function(p){
+    return p.who + ' | wanted ' + p.aid + ' | Ashby now holds "' + (back[p.oid] || '(empty)') + '"'; }).join(' ;; ').slice(0, 400));
+}
+
+// READ-ONLY | 8 Sep | what would "archive the stray openings" actually cost?
+// Stray = state Open, not archived, and NOT claimed by any Q3 position in the v9 ledger.
+function probeStray58_(){
+  var claimed = {}, byRank = {};
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var sh = book.getSheetByName('V9 - Claim ledger');
+  if (!sh) throw new Error('run buildAuditV9() first');
+  var v = sh.getDataRange().getValues(), h = v[0];
+  var cR = h.indexOf('Claim rank'), cO = h.indexOf('Opening id');
+  for (var i=1;i<v.length;i++){ var oid = String(v[i][cO]||"").trim();
+    var r = String(v[i][cR]||"").trim(); if (r) byRank[r] = (byRank[r]||0)+1;
+    if (oid) claimed[oid] = 1; }
+  var all=0, arch=0, byState={}, open=[];
+  ashbyListAll_('/opening.list').forEach(function(o){ all++;
+    if (o.isArchived) { arch++; return; }
+    var st = String(o.openingState||"(blank)"); byState[st]=(byState[st]||0)+1;
+    if (st === 'Open'){ var oa = String(o.openedAt||'');
+      open.push({ id:o.id, y: oa ? oa.substring(0,4) : '(undated)', claimed: claimed[o.id] ? 1 : 0 }); } });
+  var stray = open.filter(function(o){ return !o.claimed; });
+  var byYear = {}; stray.forEach(function(o){ byYear[o.y] = (byYear[o.y]||0)+1; });
+  var rowsOut = [['Measure','Value']];
+  rowsOut.push(['Openings total (all time)', all]);
+  rowsOut.push(['Archived already', arch]);
+  Object.keys(byState).sort().forEach(function(k){ rowsOut.push(['Live state: ' + k, byState[k]]); });
+  rowsOut.push(['OPEN and live', open.length]);
+  rowsOut.push(['-- of those, claimed by a Q3 position', open.length - stray.length]);
+  rowsOut.push(['-- STRAY: nothing claims them', stray.length]);
+  Object.keys(byYear).sort().forEach(function(k){ rowsOut.push(['STRAY opened in ' + k, byYear[k]]); });
+  Object.keys(byRank).sort().forEach(function(k){ rowsOut.push(['Q3 claim rank: ' + k, byRank[k]]); });
+  rowsOut.push(['COST IF THE POOL IS ARCHIVED', 'forced + chosen become HAND-CREATED openings (opening.create is blocked)']);
+  var t2 = book.getSheetByName('V9 - Stray probe') || book.insertSheet('V9 - Stray probe');
+  t2.clear(); t2.getRange(1,1,rowsOut.length,2).setValues(rowsOut);
+  t2.getRange(1,1,1,2).setFontWeight("bold");
+  Logger.log('stray probe written: ' + rowsOut.length + ' rows');
+}
+
+// ================= #58d | THE CHECKER | 8 Sep 2026 =================
+// Written OUTSIDE the builder, sharing none of its logic. Reads the PUBLISHED TABS and re-queries Ashby
+// and the tracker directly, so it never re-derives a number by the route that produced it.
+// Closure checks live in the builder and cannot fail on a bad match. THESE can.
+function check58d_(){
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  function tab(n){ var s = book.getSheetByName(n); if (!s) throw new Error("missing tab: " + n); return s.getDataRange().getValues(); }
+  function cols(v){ var h = v[0], o = {}; h.forEach(function(x,i){ o[String(x).trim()] = i; }); return o; }
+  var out = [["Check","Scope","Result","Detail"]];
+  function rec(n, sc, ok, d){ out.push([n, sc, ok ? "PASS" : "FAIL", d || ""]); }
+  var ops = {};
+  ashbyListAll_('/opening.list').forEach(function(o){
+    var lv = o.latestVersion || {}, aid = "";
+    (lv.customFields||[]).forEach(function(f){ if (String(f.title||f.name||'').trim().toLowerCase() === 'audit-id') aid = String(f.value == null ? '' : f.value).trim(); });
+    var oa = String(o.openedAt||'');
+    ops[o.id] = { state:String(o.openingState||''), archived:!!o.isArchived, aid:aid,
+      q: oa ? ('Q' + (Math.floor((parseInt(oa.substring(5,7),10)-1)/3)+1) + ' ' + oa.substring(0,4)) : '' }; });
+  var trkSS = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var trk = trkSS.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues(), tc = cols(tv), trkByAid = {};
+  for (var i=1;i<tv.length;i++){ var a = String(tv[i][tc['audit-id']]||'').trim(); if (a) trkByAid[a] = tv[i]; }
+  function tq(row, key){ if (tc[key] == null) return ""; var v = row[tc[key]]; if (!v) return "";
+    var d = (Object.prototype.toString.call(v) === "[object Date]") ? v : new Date(v);
+    if (isNaN(d.getTime())) return String(v).trim();
+    var s = Utilities.formatDate(d, trkSS.getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+    return 'Q' + (Math.floor((parseInt(s.substring(5,7),10)-1)/3)+1) + ' ' + s.substring(0,4); }
+  var lg = tab("V9 - Claim ledger"), lc = cols(lg);
+  var boundN = 0, boundBad = [], claimCount = {};
+  for (var r=1;r<lg.length;r++){ var oid = String(lg[r][lc["Opening id"]]||"").trim();
+    if (oid) claimCount[oid] = (claimCount[oid]||0)+1;
+    if (String(lg[r][lc["Claim rank"]]).trim() !== "bound") continue;
+    var aid = String(lg[r][lc["audit-id"]]||"").trim(); if (!aid || !oid) continue; boundN++;
+    var o = ops[oid];
+    if (!o) { boundBad.push(aid + ":opening not in Ashby"); continue; }
+    if (o.aid && o.aid !== aid) boundBad.push(aid + ":Ashby holds " + o.aid); }
+  var boundUnstamped = 0;
+  for (var rb=1;rb<lg.length;rb++){ if (String(lg[rb][lc["Claim rank"]]).trim() !== "bound") continue;
+    var ob = ops[String(lg[rb][lc["Opening id"]]||"").trim()]; if (ob && !ob.aid) boundUnstamped++; }
+  rec("Bound stamps read back from Ashby", boundN + " bound", boundBad.length === 0, boundBad.slice(0,5).join(" ;; "));
+  rec("COVERAGE: bound openings carrying no audit-id at all", boundN + " bound", boundUnstamped === 0,
+      boundUnstamped + " unstamped - expected to equal the contested pairs, which are excluded by design");
+  var rv = tab("V9 - Re-date"), rc = cols(rv), rdN = 0, rdBad = [];
+  for (var r2=1;r2<rv.length;r2++){ var a2 = String(rv[r2][rc["audit-id"]]||"").trim(); if (!a2) continue; rdN++;
+    var row = trkByAid[a2]; if (!row) { rdBad.push(a2 + ":not in tracker"); continue; }
+    var target = String(rv[r2][rc["Tracker Qtr"]]||"").trim();
+    var doj = tq(row, "DOJ"), off = tq(row, "Date of Offer");
+    if (doj && off && doj !== target && off !== target) rdBad.push(a2 + ":target " + target + " vs DOJ " + doj + " / offer " + off); }
+  var rdUnverifiable = 0;
+  for (var r6=1;r6<rv.length;r6++){ var a6 = String(rv[r6][rc["audit-id"]]||"").trim(); if (!a6) continue;
+    var row6 = trkByAid[a6]; if (!row6) continue;
+    if (!tq(row6,"DOJ") && !tq(row6,"Date of Offer")) rdUnverifiable++; }
+  rec("Re-date direction: the evidence sits in the target quarter", rdN + " re-dates", rdBad.length === 0, rdBad.slice(0,5).join(" ;; "));
+  rec("COVERAGE: re-dates with no date evidence to check against", rdN + " re-dates", rdUnverifiable === 0,
+      rdUnverifiable + " cannot be verified either way - they pass by absence, not by evidence");
+  var kv = tab("V9 - Link"), kc = cols(kv), lkN = 0, lkBad = [];
+  for (var r4=1;r4<kv.length;r4++){ var o2id = String(kv[r4][kc["Opening to link"]]||"").trim(); if (!o2id) continue; lkN++;
+    var o2 = ops[o2id];
+    if (!o2) { lkBad.push("target not in Ashby"); continue; }
+    if (o2.state !== "Open") lkBad.push("state " + o2.state);
+    else if (claimCount[o2id] > 1) lkBad.push("claimed " + claimCount[o2id] + " times"); }
+  rec("Link targets are Open and claimed exactly once", lkN + " links", lkBad.length === 0, lkBad.slice(0,5).join(" ;; "));
+  var cv = tab("V9 - Create"), cc = cols(cv), crN = 0, crBad = [], aidToOp = {};
+  Object.keys(ops).forEach(function(k){ if (ops[k].aid) aidToOp[ops[k].aid] = 1; });
+  for (var r5=1;r5<cv.length;r5++){ var a3 = String(cv[r5][cc["audit-id"]]||"").trim(); if (!a3) continue; crN++;
+    if (aidToOp[a3]) crBad.push(a3 + ":already stamped on an opening"); }
+  rec("Create list holds nobody who already owns an opening", crN + " creates", crBad.length === 0, crBad.slice(0,5).join(" ;; "));
+  var ghosts = [];
+  [["Create",cv,cc],["Re-date",rv,rc],["Link",kv,kc]].forEach(function(pr){ var vv = pr[1], cx = pr[2];
+    for (var i2=1;i2<vv.length;i2++){ var a4 = String(vv[i2][cx["audit-id"]]||"").trim();
+      if (a4 && !trkByAid[a4]) ghosts.push(pr[0] + ":" + a4); } });
+  rec("No worklist names an audit-id the tracker does not have", "all worklists", ghosts.length === 0, ghosts.slice(0,5).join(" ;; "));
+  var s2 = book.getSheetByName("V9 - Checker") || book.insertSheet("V9 - Checker");
+  s2.clear(); s2.getRange(1,1,out.length,4).setValues(out); s2.getRange(1,1,1,4).setFontWeight("bold");
+  var fails = out.slice(1).filter(function(x){ return x[2] === "FAIL"; }).length;
+  Logger.log("CHECKER checks " + (out.length-1) + " | FAILURES " + fails);
+}
+
+// READ-ONLY | 8 Sep | is CREATE 78 real? Break it down by REASON, then by job, against live Ashby.
+function spotCreate58_(){
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var lg = book.getSheetByName("V9 - Claim ledger").getDataRange().getValues();
+  var h = {}; lg[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var job = {}, claimedOid = {};
+  for (var i=1;i<lg.length;i++){
+    var j = String(lg[i][h["Job"]]||"(blank)").trim();
+    var r = String(lg[i][h["Claim rank"]]||"").trim();
+    var oid = String(lg[i][h["Opening id"]]||"").trim();
+    if (oid) claimedOid[oid] = 1;
+    if (!job[j]) job[j] = { total:0, bound:0, covered:0, create:0 };
+    job[j].total++;
+    if (r === "bound") job[j].bound++; else if (r === "forced" || r === "chosen") job[j].covered++;
+    else if (r === "none") job[j].create++; }
+  var jobTitle = {};
+  ashbyListAll_('/job.list').forEach(function(j2){ jobTitle[j2.id] = String(j2.title||''); });
+  // TRUE leftover: an Open opening on this job that NOBODY in the ledger claims - bound included.
+  var openTotal = {}, openFree = {};
+  ashbyListAll_('/opening.list').forEach(function(o){ if (o.isArchived) return;
+    if (String(o.openingState||'') !== 'Open') return;
+    var lv = o.latestVersion || {};
+    (lv.jobIds||[]).forEach(function(jid){ var tt = jobTitle[jid] || jid;
+      openTotal[tt] = (openTotal[tt]||0)+1;
+      if (!claimedOid[o.id]) openFree[tt] = (openFree[tt]||0)+1; }); });
+  var rows = [["Job","In-scope positions","bound","covered from pool","CREATE","Ashby OPEN total","OPEN that nobody claims","Verdict"]];
+  var bad = 0, reducible = 0;
+  Object.keys(job).sort(function(a,b){ return job[b].create - job[a].create; }).forEach(function(j){
+    var d = job[j], ot = openTotal[j]||0, of = openFree[j]||0, v;
+    if (d.create > 0 && of > 0) { v = "SUSPECT: " + of + " unclaimed open opening(s) while " + d.create + " ask to be created"; bad++; reducible += Math.min(of, d.create); }
+    else if (d.create > 0) v = "consistent: no unclaimed open opening on this job";
+    else v = "no creates";
+    rows.push([j, d.total, d.bound, d.covered, d.create, ot, of, v]); });
+  var s = book.getSheetByName("V9 - Create sanity") || book.insertSheet("V9 - Create sanity");
+  s.clear(); s.getRange(1,1,rows.length,8).setValues(rows); s.getRange(1,1,1,8).setFontWeight("bold");
+  Logger.log("CREATE SANITY v2 | jobs " + (rows.length-1) + " | SUSPECT jobs " + bad + " | CREATE reducible by at most " + reducible);
+}
+
+// READ-ONLY | the CREATE list broken down by job, for Jerin.
+function listCreateJobs58_(){
+  var v = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Create sanity").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var out = [];
+  for (var i=1;i<v.length;i++){
+    var c = Number(v[i][h["CREATE"]]||0); if (!c) continue;
+    out.push({ job:String(v[i][h["Job"]]||""), create:c,
+               pos:Number(v[i][h["In-scope positions"]]||0),
+               bound:Number(v[i][h["bound"]]||0),
+               cov:Number(v[i][h["covered from pool"]]||0),
+               open:Number(v[i][h["Ashby OPEN total"]]||0) });
+  }
+  out.sort(function(a,b){ return b.create - a.create; });
+  var tot = 0; out.forEach(function(o){ tot += o.create; });
+  // split the 78 by whether the position already has a person on it
+  var cvv = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Create").getDataRange().getValues();
+  var ch = {}; cvv[0].forEach(function(x,i){ ch[String(x).trim()] = i; });
+  var filled = 0, unfilled = 0, byJobFilled = {};
+  for (var k=1;k<cvv.length;k++){
+    var cand = String(cvv[k][ch["Candidate"]]||"").trim();
+    var jb = String(cvv[k][ch["Job"]]||"").trim();
+    if (cand && cand !== "(unfilled)") { filled++; byJobFilled[jb] = (byJobFilled[jb]||0)+1; } else unfilled++;
+  }
+  Logger.log("CREATE SPLIT :: FILLED (a real person, hired or in process, with no opening) = " + filled +
+    " | UNFILLED (a vacancy with no opening) = " + unfilled);
+  Logger.log("JOBS NEEDING CREATE: " + out.length + " | total " + tot);
+  out.forEach(function(o, i){
+    Logger.log((i+1) + ". " + o.job + " >> create " + o.create + " (of which FILLED " + (byJobFilled[o.job]||0) + ") | positions " + o.pos + ", own opening " + o.bound + ", covered " + o.cov + ", Ashby open " + o.open);
+  });
+}
+
+// ===== #59 | 8 Sep 2026 | archive the STRAY open openings.
+// Stray = state Open, not archived, and claimed by NOBODY in the v9 claim ledger.
+// Jerin asked for this directly. opening.setArchived is proven and REVERSIBLE (archive:false).
+// modes: 'dry' (default) | 'run'.
+function task59_archiveStrays(mode){
+  mode = mode || 'dry';
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var lg = book.getSheetByName("V9 - Claim ledger").getDataRange().getValues();
+  var h = {}; lg[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var claimed = {};
+  for (var i=1;i<lg.length;i++){ var o = String(lg[i][h["Opening id"]]||"").trim(); if (o) claimed[o] = 1; }
+  var jobTitle = {};
+  ashbyListAll_('/job.list').forEach(function(j){ jobTitle[j.id] = String(j.title||''); });
+  var stray = [];
+  ashbyListAll_('/opening.list').forEach(function(o){
+    if (o.isArchived) return;
+    if (String(o.openingState||'') !== 'Open') return;
+    if (claimed[o.id]) return;
+    var lv = o.latestVersion || {};
+    var titles = (lv.jobIds||[]).map(function(x){ return jobTitle[x] || '(unknown job)'; });
+    stray.push({ id:o.id, opened:String(o.openedAt||'').substring(0,10) || '(undated)', jobs:titles.join(' / ') }); });
+  var rows = [["Opening opened","Job(s)","Action"]];
+  stray.forEach(function(x){ rows.push([x.opened, x.jobs, mode === 'run' ? 'archiving' : 'would archive']); });
+  var s = book.getSheetByName("V9 - Strays archived") || book.insertSheet("V9 - Strays archived");
+  s.clear(); s.getRange(1,1,rows.length,3).setValues(rows); s.getRange(1,1,1,3).setFontWeight("bold");
+  Logger.log("STRAYS found " + stray.length + " | mode " + mode);
+  if (mode !== 'run') { Logger.log('DRY - nothing archived'); return; }
+  if (stray.length > 30) throw new Error('REFUSING: ' + stray.length + ' strays is more than expected - re-check first');
+  var ok = 0, fail = [];
+  stray.forEach(function(x){
+    try { var r = ashbyWrite_('/opening.setArchived', { openingId:x.id, archive:true });
+      if (r && r.success === false) fail.push(JSON.stringify(r.errors||r).slice(0,60)); else ok++; }
+    catch(e){ fail.push(String(e.message).slice(0,60)); } });
+  Logger.log("STRAYS archived " + ok + " | failed " + fail.length + (fail.length ? " :: " + fail.slice(0,3).join(" ;; ") : ""));
+  // independent read-back
+  var still = 0;
+  ashbyListAll_('/opening.list').forEach(function(o){ if (!o.isArchived && String(o.openingState||'') === 'Open' && !claimed[o.id]) still++; });
+  Logger.log("READ-BACK: unclaimed open openings remaining = " + still + (still === 0 ? " - ALL CLEARED" : ""));
+}
+// READ-ONLY | #60 | the findings broken down by field, authority and route - the basis of the exclusion register.
+function listFindings58_(){
+  var v = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Correct").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var agg = {};
+  for (var i=1;i<v.length;i++){
+    var f = String(v[i][h["Field"]]||"").trim();
+    var a = String(v[i][h["Which is right"]]||"").trim();
+    var r = String(v[i][h["Route"]]||"").trim();
+    var k = f + " | " + a + " | " + r;
+    agg[k] = (agg[k]||0)+1; }
+  var keys = Object.keys(agg).sort(function(x,y){ return agg[y]-agg[x]; });
+  Logger.log("FINDINGS by field | total " + (v.length-1) + " | distinct " + keys.length);
+  keys.forEach(function(k){ Logger.log("  " + k + " = " + agg[k]); });
+}
+// ================= #60 | THE EXCLUSION REGISTER + THE RESIDUAL CHECK | 8 Sep 2026 =================
+// Confirmed by Jerin 8 Sep. The residual check mock-applies every correction we would actually make and
+// asserts that what REMAINS is exactly this register - nothing more, nothing less.
+// 🚨 Pass condition is NOT zero. Extra = a gap. Missing = we are about to change something agreed untouched.
+var V9_EXCLUSIONS = [
+  { code:"never-fixable", why:"No write path exists in Ashby at any permission level. Will mismatch forever.",
+    fields:["Status","Offer Quarter"] },
+  { code:"ashby-wins", why:"Ashby is right, so the TRACKER moves. Tracker hygiene for the team, not an Ashby write.",
+    fields:["DOJ Quarter","Department","Candidate Name"] },
+  { code:"mapping", why:"Title differences between the two systems are mapping artefacts, settled in V3. Not a defect.",
+    fields:["Job Name"] },
+  { code:"same-quarter-date-drift", why:"Opening date is wrong but lands in the RIGHT quarter, so no dashboard number moves. Hand edits with zero reporting gain. Jerin, 8 Sep.",
+    fields:["Opening Date (same quarter both sides)"] }
+];
+function q_(s){ s = String(s||"").trim(); if (s.length < 7) return "";
+  var d = new Date(s); if (isNaN(d.getTime())) return "";
+  return "Q" + (Math.floor(d.getMonth()/3)+1) + " " + d.getFullYear(); }
+function residual58d_(){
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var v = book.getSheetByName("V9 - Correct").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var apply = 0, resid = {}, residRows = [];
+  for (var i=1;i<v.length;i++){
+    var f = String(v[i][h["Field"]]||"").trim();
+    var a = String(v[i][h["Which is right"]]||"").trim();
+    var r = String(v[i][h["Route"]]||"").trim();
+    var tvv = String(v[i][h["Tracker says"]]||"").trim();
+    var avv = String(v[i][h["Ashby says"]]||"").trim();
+    var code = null;
+    if (r === "never fixable") code = "never-fixable";
+    else if (a === "mapping") code = "mapping";
+    else if (a === "Ashby") code = "ashby-wins";
+    else if (f === "Opening Date") { var qa = q_(tvv), qb = q_(avv); if (qa && qb && qa === qb) code = "same-quarter-date-drift"; }
+    if (code) { resid[code + " :: " + f] = (resid[code + " :: " + f]||0)+1;
+      residRows.push([code, f, a, r, tvv, avv]); }
+    else apply++; }
+  // does every residual reason appear in the declared register?
+  var declared = {};
+  V9_EXCLUSIONS.forEach(function(e){ e.fields.forEach(function(fd){ declared[e.code] = 1; }); });
+  var undeclared = Object.keys(resid).filter(function(k){ return !declared[k.split(" :: ")[0]]; });
+  var rows = [["Code","Why it is excluded","Fields","Findings remaining"]];
+  V9_EXCLUSIONS.forEach(function(e){
+    var n = 0; Object.keys(resid).forEach(function(k){ if (k.split(" :: ")[0] === e.code) n += resid[k]; });
+    rows.push([e.code, e.why, e.fields.join(" · "), n]); });
+  rows.push(["", "", "TOTAL RESIDUAL", residRows.length]);
+  rows.push(["", "", "CORRECTIONS WE WOULD APPLY", apply]);
+  rows.push(["", "", "CHECKED AGAINST", (v.length-1) + " findings"]);
+  var s = book.getSheetByName("V9 - Exclusion register") || book.insertSheet("V9 - Exclusion register");
+  s.clear(); s.getRange(1,1,rows.length,4).setValues(rows); s.getRange(1,1,1,4).setFontWeight("bold");
+  if (residRows.length) { s.getRange(rows.length+2,1,1,6).setValues([["Code","Field","Which is right","Route","Tracker says","Ashby says"]]).setFontWeight("bold");
+    s.getRange(rows.length+3,1,residRows.length,6).setValues(residRows); }
+  Logger.log("RESIDUAL " + residRows.length + " | would apply " + apply + " | of " + (v.length-1) + " findings");
+  Object.keys(resid).sort().forEach(function(k){ Logger.log("  " + k + " = " + resid[k]); });
+  if (undeclared.length) throw new Error("RESIDUAL FAILED :: reasons not in the register :: " + undeclared.join(" ;; "));
+  if (apply + residRows.length !== v.length-1) throw new Error("RESIDUAL FAILED :: applied + residual does not equal total");
+  Logger.log("RESIDUAL PASS - everything left over is a declared exclusion, and the two sides sum");
+}
+// READ-ONLY | the 22 DOJ Quarter mismatches with the ACTUAL dates on both sides, so Jerin can see who is right.
+// 🚨 Tracker dates are midnight IST - formatted with the SHEET timezone, never UTC.
+function dojGap58_(){
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var v = book.getSheetByName("V9 - Correct").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var TZ = tss.getSpreadsheetTimeZone();
+  var trk = tss.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues(), tc = {};
+  tv[0].forEach(function(x,i){ tc[String(x).trim()] = i; });
+  var byAid = {};
+  for (var i=1;i<tv.length;i++){ var a = String(tv[i][tc['audit-id']]||'').trim(); if (a) byAid[a] = tv[i]; }
+  var it = DriveApp.getFilesByName('offer_contacts.json');
+  var store = {};
+  if (it.hasNext()) JSON.parse(it.next().getBlob().getDataAsString()).rows.forEach(function(r){
+    var e = String(r.email||'').replace(/\s+/g,'').toLowerCase(); if (e) store[e] = r; });
+  function d2s(x){ if (!x) return "";
+    var d = (Object.prototype.toString.call(x) === "[object Date]") ? x : new Date(x);
+    if (isNaN(d.getTime())) return String(x).trim();
+    return Utilities.formatDate(d, TZ, 'yyyy-MM-dd'); }
+  var rows = [["Candidate","Job","Tracker DOJ","Tracker says (qtr)","Ashby offer start date","Ashby says (qtr)","Gap (days)"]];
+  var n = 0;
+  for (var r=1;r<v.length;r++){
+    if (String(v[r][h["Field"]]||"").trim() !== "DOJ Quarter") continue;
+    var aid = String(v[r][h["audit-id"]]||"").trim();
+    var who = String(v[r][h["Who"]]||"").trim();
+    var job = String(v[r][h["Job"]]||"").trim();
+    var tq  = String(v[r][h["Tracker says"]]||"").trim();
+    var aq  = String(v[r][h["Ashby says"]]||"").trim();
+    var row = byAid[aid];
+    var tdoj = row ? d2s(row[tc["DOJ"]]) : "(row not found)";
+    var em = row ? String(row[tc['Personal Email']]||'').replace(/\s+/g,'').toLowerCase() : '';
+    var st = store[em] ? d2s(store[em].startDate) : "";
+    var gap = "";
+    if (tdoj && st && /^\d{4}-\d{2}-\d{2}$/.test(tdoj) && /^\d{4}-\d{2}-\d{2}$/.test(st))
+      gap = Math.round((new Date(st) - new Date(tdoj)) / 86400000);
+    rows.push([who, job, tdoj, tq, st, aq, gap]); n++; }
+  var s = book.getSheetByName("V9 - DOJ gaps") || book.insertSheet("V9 - DOJ gaps");
+  s.clear(); s.getRange(1,1,rows.length,7).setValues(rows); s.getRange(1,1,1,7).setFontWeight("bold");
+  Logger.log("DOJ GAPS " + n);
+  for (var k=1;k<rows.length;k++) Logger.log("  " + rows[k][0] + " | tracker " + rows[k][2] + " (" + rows[k][3] + ") | ashby " + rows[k][4] + " (" + rows[k][5] + ") | gap " + rows[k][6] + "d");
+}
+// READ-ONLY | prove the DOJ / Joining Quarter columns exist before believing a blank.
+function hdrProbe58_(){
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var trk = tss.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues(), hd = tv[0].map(function(x){ return String(x).trim(); });
+  var iD = hd.indexOf("DOJ"), iQ = hd.indexOf("Joining Quarter"), iE = hd.indexOf("Personal Email");
+  var filledD = 0, filledQ = 0, rows = 0;
+  for (var i=1;i<tv.length;i++){ if (!String(tv[i][iE]||"").trim()) continue; rows++;
+    if (String(tv[i][iD]||"").trim()) filledD++;
+    if (iQ > -1 && String(tv[i][iQ]||"").trim()) filledQ++; }
+  Logger.log("HEADER PROBE | DOJ at col " + (iD+1) + " | Joining Quarter at col " + (iQ+1) + " | Personal Email at col " + (iE+1));
+  Logger.log("Of " + rows + " rows with an email: DOJ filled " + filledD + " | Joining Quarter filled " + filledQ);
+}
+
+// READ-ONLY | do the 22 missing-DOJ rows cluster on a job or department?
+function dojJobs58_(){
+  var v = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - DOJ gaps").getDataRange().getValues();
+  var byJob = {};
+  for (var i=1;i<v.length;i++){ var j = String(v[i][1]||"(blank)").trim(); byJob[j] = (byJob[j]||0)+1; }
+  Logger.log("MISSING-DOJ by job:");
+  Object.keys(byJob).sort(function(a,b){ return byJob[b]-byJob[a]; }).forEach(function(k){ Logger.log("  " + k + " = " + byJob[k]); });
+}
+
+// ===== #61 | 8 Sep 2026 | fill the 22 missing joining dates in the TRACKER from Ashby.
+// Jerin asked for this directly. Ashby is authoritative on the start date; the tracker simply never
+// recorded it. All 22 are Part Time Instructors - a process gap, not 22 oversights.
+// modes: 'dry' (default) | 'run'. NEVER overwrites a non-empty cell.
+function task61_fillDOJ(mode){
+  mode = mode || 'dry';
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var v = book.getSheetByName("V9 - Correct").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var TZ = tss.getSpreadsheetTimeZone();
+  var trk = tss.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues(), tc = {};
+  tv[0].forEach(function(x,i){ tc[String(x).trim()] = i; });
+  var cAid = tc["audit-id"], cDoj = tc["DOJ"], cJq = tc["Joining Quarter"], cEm = tc["Personal Email"];
+  if (cAid == null || cDoj == null || cJq == null || cEm == null)
+    throw new Error("REFUSING: a required tracker column is missing");
+  // learn the Joining Quarter format from existing rows rather than assuming it
+  var samples = {};
+  for (var i=1;i<tv.length;i++){ var q = String(tv[i][cJq]||"").trim(); if (q) samples[q] = (samples[q]||0)+1; }
+  var topQ = Object.keys(samples).sort(function(a,b){ return samples[b]-samples[a]; }).slice(0,4);
+  Logger.log("Joining Quarter existing formats (top 4) :: " + topQ.join(" | "));
+  var rowByAid = {};
+  for (var i2=1;i2<tv.length;i2++){ var a = String(tv[i2][cAid]||"").trim(); if (a) rowByAid[a] = i2; }
+  var it = DriveApp.getFilesByName('offer_contacts.json'); var store = {};
+  if (it.hasNext()) JSON.parse(it.next().getBlob().getDataAsString()).rows.forEach(function(r){
+    var e = String(r.email||'').replace(/\s+/g,'').toLowerCase(); if (e) store[e] = r; });
+  var plan = [], skipped = [];
+  for (var r2=1;r2<v.length;r2++){
+    if (String(v[r2][h["Field"]]||"").trim() !== "DOJ Quarter") continue;
+    var aid = String(v[r2][h["audit-id"]]||"").trim();
+    var who = String(v[r2][h["Who"]]||"").trim();
+    var ri = rowByAid[aid];
+    if (ri == null) { skipped.push(who + ":no tracker row"); continue; }
+    if (String(tv[ri][cDoj]||"").trim()) { skipped.push(who + ":DOJ already set - NOT overwriting"); continue; }
+    var em = String(tv[ri][cEm]||'').replace(/\s+/g,'').toLowerCase();
+    var sd = store[em] ? String(store[em].startDate||"").substring(0,10) : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sd)) { skipped.push(who + ":no Ashby start date"); continue; }
+    var d = new Date(sd + "T12:00:00");
+    var q = "Q" + (Math.floor(d.getMonth()/3)+1) + " " + d.getFullYear();
+    plan.push({ row:ri+1, who:who, date:d, iso:sd, q:q }); }
+  Logger.log("FILL DOJ mode=" + mode + " | to write " + plan.length + " | skipped " + skipped.length +
+    (skipped.length ? " :: " + skipped.slice(0,5).join(" ;; ") : ""));
+  plan.slice(0,25).forEach(function(x){ Logger.log("  " + x.who + " -> " + x.iso + " (" + x.q + ")"); });
+  if (mode !== "run") { Logger.log("DRY - nothing written"); return; }
+  if (plan.length > 30) throw new Error("REFUSING: " + plan.length + " is more than expected");
+  plan.forEach(function(x){
+    trk.getRange(x.row, cDoj+1).setValue(x.date);
+    trk.getRange(x.row, cJq+1).setValue(x.q); });
+  SpreadsheetApp.flush();
+  // independent read-back
+  var fresh = trk.getDataRange().getValues(), ok = 0, bad = [];
+  plan.forEach(function(x){
+    var got = fresh[x.row-1][cDoj];
+    var s = got ? Utilities.formatDate(new Date(got), TZ, "yyyy-MM-dd") : "";
+    if (s === x.iso) ok++; else bad.push(x.who + ":" + s); });
+  Logger.log("READ-BACK verified " + ok + " of " + plan.length + (bad.length ? " :: " + bad.slice(0,4).join(" ;; ") : " - ALL CONFIRMED"));
+}
+// ===== #58e | 8 Sep 2026 | SOURCER as an audit field, and the writes it justifies.
+// Reads Ashby DIRECTLY (application.info per candidate) - not the pipeline file, which carries no sourcer.
+// 🚨 FILLED ROWS ONLY. The tracker Sourcer exists only for filled rows; comparing vacancies invents a finding each.
+// 🚨 Writes ONLY where the tracker name resolves to exactly ONE Ashby user (Jerin, 8 Sep). Names that resolve to
+//    no user are almost certainly AGENCIES - reported for task #62, never guessed at.
+// modes: 'dry' | 'pilot' | 'run'.
+var SOURCER_ROLE_ID = "952a945b-4f74-44cd-be85-2acba0248822";
+function task58e_sourcer(mode){
+  mode = mode || 'dry';
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var lg = book.getSheetByName("V9 - Claim ledger").getDataRange().getValues();
+  var h = {}; lg[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var trk = tss.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues(), tc = {};
+  tv[0].forEach(function(x,i){ tc[String(x).trim()] = i; });
+  var cSrc = tc["Sourcer"];
+  if (cSrc == null) throw new Error("PRECONDITION: the tracker has no Sourcer column");
+  var byAid = {};
+  for (var i=1;i<tv.length;i++){ var a = String(tv[i][tc['audit-id']]||'').trim(); if (a) byAid[a] = tv[i]; }
+  var it = DriveApp.getFilesByName('offer_contacts.json'); var store = {};
+  if (it.hasNext()) JSON.parse(it.next().getBlob().getDataAsString()).rows.forEach(function(r){
+    var e = String(r.email||'').replace(/\s+/g,'').toLowerCase(); if (e) store[e] = r; });
+  // 🚨 includeDeactivated - user.list returns only 451 active of 1021 without it (hard-won lesson #1)
+  var users = ashbyListAll_('/user.list', { includeDeactivated: true });
+  function nm(u){ return String(u.name || ((u.firstName||"") + " " + (u.lastName||"")).trim() || "").trim(); }
+  function resolve(name){ var hits = users.filter(function(u){ return nameMatch(name, nm(u)); });
+    return hits.length === 1 ? hits[0] : null; }
+  var already = 0, toWrite = [], different = [], unresolved = {}, noApp = 0, blank = 0, checked = 0;
+  for (var r=1;r<lg.length;r++){
+    var aid = String(lg[r][h["audit-id"]]||"").trim();
+    var who = String(lg[r][h["Candidate"]]||"").trim();
+    var email = String(lg[r][h["Email"]]||"").trim().toLowerCase();
+    if (!who || who === "(unfilled)" || !email) continue;   // FILLED ROWS ONLY
+    var row = byAid[aid]; if (!row) continue;
+    var src = String(row[cSrc]||"").trim();
+    if (!src) { blank++; continue; }                        // blank authority = nothing to copy
+    var rec = store[email]; if (!rec || !rec.applicationId) { noApp++; continue; }
+    checked++;
+    var info = null;
+    try { info = ashbyPost_('/application.info', { applicationId: rec.applicationId }); } catch(e){}
+    var team = (info && info.results && info.results.hiringTeam) || (info && info.hiringTeam) || [];
+    var cur = "";
+    team.forEach(function(x){ if (/sourcer/i.test(String(x.role||x.roleName||""))) cur = String(x.name || ((x.firstName||"")+" "+(x.lastName||"")).trim() || ""); });
+    var u = resolve(src);
+    if (!u) { unresolved[src] = (unresolved[src]||0)+1; continue; }
+    if (cur && nameMatch(cur, src)) { already++; continue; }
+    if (cur) { different.push(who + ": tracker " + src + " vs Ashby " + cur); continue; }
+    toWrite.push({ aid:aid, who:who, appId:rec.applicationId, userId:u.id, name:nm(u) });
+  }
+  var unresKeys = Object.keys(unresolved).sort(function(a,b){ return unresolved[b]-unresolved[a]; });
+  Logger.log("SOURCER mode=" + mode + " | filled+named " + checked + " | already correct " + already +
+    " | TO WRITE " + toWrite.length + " | differs " + different.length + " | no application " + noApp + " | tracker blank " + blank);
+  Logger.log("UNRESOLVED tracker sourcer names (likely AGENCIES - task #62) :: " +
+    unresKeys.map(function(k){ return k + " x" + unresolved[k]; }).join(" | ").slice(0, 400));
+  if (different.length) Logger.log("DIFFERS (not overwritten) :: " + different.slice(0,5).join(" ;; "));
+  var rows = [["audit-id","Candidate","Tracker Sourcer","Resolved Ashby user","Action"]];
+  toWrite.forEach(function(x){ rows.push([x.aid, x.who, "", x.name, mode === "run" ? "writing" : "would write"]); });
+  unresKeys.forEach(function(k){ rows.push(["", "", k, "(no Ashby user)", "task #62 - agency user needed"]); });
+  var s = book.getSheetByName("V9 - Sourcer") || book.insertSheet("V9 - Sourcer");
+  s.clear(); s.getRange(1,1,rows.length,5).setValues(rows); s.getRange(1,1,1,5).setFontWeight("bold");
+  // read current state first so a re-run only touches what is still wrong
+  var curOpen = {}, curJob = {};
+  function grab(o, into){ var lv = o.latestVersion || o; var mp = {};
+    (lv.customFields || o.customFields || []).forEach(function(f){
+      var lab = (f.valueLabel == null || f.valueLabel === "") ? (f.value == null ? "" : f.value) : f.valueLabel;
+      mp[String(f.title || f.name || "").trim()] = String(lab).trim(); }); into[o.id] = mp; }
+  ashbyListAll_('/opening.list').forEach(function(o){ grab(o, curOpen); });
+  ashbyListAll_('/job.list').forEach(function(j){ grab(j, curJob); });
+  var before = plan.length;
+  plan = plan.filter(function(x){
+    var src = (x.objectType === "Job") ? curJob : curOpen;
+    var got = (src[x.objectId] || {})[F2ASHBY[x.field]] || "";
+    return String(got).trim().toLowerCase() !== String(x.want).trim().toLowerCase(); });
+  Logger.log("ALREADY CORRECT " + (before - plan.length) + " | STILL TO WRITE " + plan.length);
+  if (mode === "dry") { Logger.log("DRY - nothing written"); return; }
+  var batch = (mode === "pilot") ? toWrite.slice(0,1) : toWrite;
+  var ok = 0, fail = [];
+  batch.forEach(function(x){
+    try { var res = ashbyWrite_('/application.addHiringTeamMember', { applicationId:x.appId, teamMemberId:x.userId, roleId:SOURCER_ROLE_ID });
+      if (res && res.success === false) fail.push(x.who + " :: " + JSON.stringify(res.errors||res).slice(0,60)); else ok++; }
+    catch(e){ fail.push(x.who + " :: " + String(e.message).slice(0,60)); } });
+  Logger.log("SOURCER wrote " + ok + " | failed " + fail.length + (fail.length ? " :: " + fail.slice(0,3).join(" ;; ") : ""));
+}
+// READ-ONLY | is the tracker Sourcer column real and populated anywhere?
+function srcProbe58_(){
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var trk = tss.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues();
+  var hd = tv[0].map(function(x){ return String(x).trim(); });
+  var cand = [];
+  hd.forEach(function(x,i){ if (/sourc/i.test(x)) cand.push(x + " @col" + (i+1)); });
+  Logger.log('Columns matching /sourc/i :: ' + (cand.join(' | ') || 'NONE'));
+  var i2 = hd.indexOf("Sourcer");
+  if (i2 < 0) { Logger.log("No exact Sourcer column"); return; }
+  var filled = 0, vals = {};
+  for (var r=1;r<tv.length;r++){ var v = String(tv[r][i2]||"").trim(); if (!v) continue; filled++;
+    vals[v] = (vals[v]||0)+1; }
+  var ks = Object.keys(vals).sort(function(a,b){ return vals[b]-vals[a]; });
+  Logger.log('Sourcer filled on ' + filled + ' of ' + (tv.length-1) + ' rows | distinct ' + ks.length);
+  Logger.log('Top values :: ' + ks.slice(0,12).map(function(k){ return k + ' x' + vals[k]; }).join(' | ').slice(0,400));
+}
+
+// READ-ONLY | the OTHER source columns - are they where the sourcing data actually lives?
+// And how many of the Q3 in-scope FILLED positions carry each?
+function srcProbe2_(){
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var trk = tss.getSheetByName('Master');
+  var tv = trk.getDataRange().getValues(), hd = tv[0].map(function(x){ return String(x).trim(); });
+  var tc = {}; hd.forEach(function(x,i){ tc[x] = i; });
+  var lg = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Claim ledger").getDataRange().getValues();
+  var lh = {}; lg[0].forEach(function(x,i){ lh[String(x).trim()] = i; });
+  var inScopeFilled = {};
+  for (var r=1;r<lg.length;r++){ var w = String(lg[r][lh["Candidate"]]||"").trim();
+    if (w && w !== "(unfilled)") inScopeFilled[String(lg[r][lh["audit-id"]]||"").trim()] = 1; }
+  var cols = ["Sourcer","Source Category","Source Name, if ER","Source name, if Vendor","Source Name, if Portal"];
+  cols.forEach(function(c){
+    var i2 = tc[c]; if (i2 == null) { Logger.log(c + " :: COLUMN MISSING"); return; }
+    var all = 0, scoped = 0, vals = {};
+    for (var r2=1;r2<tv.length;r2++){ var v = String(tv[r2][i2]||"").trim(); if (!v) continue; all++;
+      var aid = String(tv[r2][tc["audit-id"]]||"").trim();
+      if (inScopeFilled[aid]) { scoped++; vals[v] = (vals[v]||0)+1; } }
+    var ks = Object.keys(vals).sort(function(a,b){ return vals[b]-vals[a]; });
+    Logger.log(c + " :: filled " + all + " of " + (tv.length-1) + " | on Q3 in-scope FILLED " + scoped +
+      (ks.length ? " :: " + ks.slice(0,8).map(function(k){ return k + " x" + vals[k]; }).join(" | ") : ""));
+  });
+  Logger.log("Q3 in-scope filled positions = " + Object.keys(inScopeFilled).length);
+}
+
+// ===== #63 | 8 Sep 2026 | apply the API-fixable CUSTOM FIELD corrections.
+// Scope: Level (Job field) + Complexity / Employment Type / Role Type (Opening fields). Tracker-wins only.
+// 🚨 customField.setValue needs the option VALUE, never the label (hard-won lesson #2). A tracker value that
+//    matches no option is REPORTED and NOT written - never guessed at.
+// modes: 'dry' | 'pilot' | 'run'.
+var F2ASHBY = { "Complexity":"Role Complexity (Opening)", "Employment Type":"Employment Type",
+               "Role Type":"Role Type", "Level":"Level" };
+var F2OBJ = { "Complexity":"Opening", "Employment Type":"Opening", "Role Type":"Opening", "Level":"Job" };
+function task63_applyFields(mode){
+  mode = mode || 'dry';
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var v = book.getSheetByName("V9 - Correct").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  if (h["Object id"] == null) throw new Error("PRECONDITION: V9 - Correct has no Object id column - re-run buildAuditV9()");
+  var cf = {};
+  ashbyListAll_('/customField.list').forEach(function(f){
+    var title = String(f.title || f.name || "").trim();
+    var opts = {};
+    (f.selectableValues || f.options || f.values || []).forEach(function(o){
+      var lab = String((o && (o.label != null ? o.label : o.name != null ? o.name : o.value)) || "").trim();
+      var val = String((o && (o.value != null ? o.value : o.id)) || "").trim();
+      if (lab) opts[lab.toLowerCase()] = val || lab; });
+    cf[title] = { id:f.id, objectType:String(f.objectType||""), opts:opts, nOpts:Object.keys(opts).length,
+                  type:String(f.type||f.fieldType||"") }; });
+  var plan = [], unmapped = [], noField = [], seen = {};
+  for (var r=1;r<v.length;r++){
+    var field = String(v[r][h["Field"]]||"").trim();
+    if (!F2ASHBY[field]) continue;
+    if (String(v[r][h["Route"]]||"").trim() !== "API") continue;
+    if (String(v[r][h["Which is right"]]||"").trim() !== "Tracker") continue;
+    var oid = String(v[r][h["Object id"]]||"").trim();
+    var want = String(v[r][h["Tracker says"]]||"").trim();
+    var have = String(v[r][h["Ashby says"]]||"").trim();
+    if (!oid || !want) { unmapped.push(field + ": missing object id or value"); continue; }
+    var key = field + "|" + oid;
+    if (seen[key]) continue; seen[key] = 1;              // one write per object per field
+    var meta = cf[F2ASHBY[field]];
+    if (!meta) { noField.push(F2ASHBY[field]); continue; }
+    var val = want;
+    if (meta.nOpts) { var mapped = meta.opts[want.toLowerCase()];
+      if (!mapped) { unmapped.push(field + " :: \"" + want + "\" matches no option"); continue; }
+      val = mapped; }
+    plan.push({ field:field, objectType:F2OBJ[field], objectId:oid, fieldId:meta.id, value:val, want:want, have:have, ftype:meta.type }); }
+  var byF = {}; plan.forEach(function(x){ byF[x.field] = (byF[x.field]||0)+1; });
+  Logger.log("APPLY FIELDS mode=" + mode + " | to write " + plan.length + " :: " +
+    Object.keys(byF).map(function(k){ return k + "=" + byF[k]; }).join(" | "));
+  Object.keys(F2ASHBY).forEach(function(k){ var mm = cf[F2ASHBY[k]];
+    Logger.log("  field " + k + " -> \"" + F2ASHBY[k] + "\" " + (mm ? ("objectType=" + mm.objectType + " options=" + mm.nOpts) : "NOT FOUND")); });
+  if (unmapped.length) Logger.log("UNMAPPED (NOT written) " + unmapped.length + " :: " + unmapped.slice(0,6).join(" ;; "));
+  if (noField.length) Logger.log("CUSTOM FIELD NOT FOUND :: " + noField.join(" | "));
+  var rows = [["Field","Object type","Object id","Tracker wants","Ashby has","Option value to write","Result"]];
+  plan.forEach(function(x){ rows.push([x.field, x.objectType, x.objectId, x.want, x.have, x.value, ""]); });
+  unmapped.forEach(function(u){ rows.push(["(unmapped)", "", "", u, "", "", "NOT WRITTEN"]); });
+  var s = book.getSheetByName("V9 - Field writes") || book.insertSheet("V9 - Field writes");
+  s.clear(); s.getRange(1,1,rows.length,7).setValues(rows); s.getRange(1,1,1,7).setFontWeight("bold");
+  if (mode === "dry") { Logger.log("DRY - nothing written"); return; }
+  if (plan.length > 200) throw new Error("REFUSING: " + plan.length + " is more than expected");
+  var batch = (mode === "pilot") ? plan.slice(0,1) : plan;
+  var ok = 0, fail = [];
+  batch.forEach(function(x){
+    // 🚨 8 Sep: Level is a MultiValueSelect. Sent as a bare STRING it returns success and does NOT stick
+    //    (12 of 23 silently no-opped). Multi-value fields must receive an ARRAY.
+    var payloadValue = /multi/i.test(String(x.ftype||'')) ? [x.value] : x.value;
+    try { var res = ashbyWrite_('/customField.setValue', { objectType:x.objectType, objectId:x.objectId, fieldId:x.fieldId, fieldValue:payloadValue });
+      if (res && res.success === false) fail.push(x.field + " :: " + JSON.stringify(res.errors||res).slice(0,60)); else ok++; }
+    catch(e){ fail.push(x.field + " :: " + String(e.message).slice(0,60)); } });
+  Logger.log("APPLY FIELDS wrote " + ok + " | failed " + fail.length + (fail.length ? " :: " + fail.slice(0,4).join(" ;; ") : ""));
+  // ---- READ-BACK, from a fresh pull of Ashby. Bulk, one call per object type. ----
+  Utilities.sleep(20000);  // 🚨 Ashby list endpoints lag a write - 4s was NOT enough (pilot, 8 Sep).
+  // Even 20s is no guarantee: a MISMATCH here means 'check again later', NEVER 'the write failed'.
+  var nowOpen = {}, nowJob = {};
+  function harvest(o, into){ var lv = o.latestVersion || o; var map = {};
+    (lv.customFields || o.customFields || []).forEach(function(f){
+      var lab = (f.valueLabel == null || f.valueLabel === "") ? (f.value == null ? "" : f.value) : f.valueLabel;
+      map[String(f.title || f.name || "").trim()] = String(lab).trim(); });
+    into[o.id] = map; }
+  ashbyListAll_('/opening.list').forEach(function(o){ harvest(o, nowOpen); });
+  ashbyListAll_('/job.list').forEach(function(j){ harvest(j, nowJob); });
+  var good = 0, bad = [];
+  batch.forEach(function(x){
+    var src = (x.objectType === "Job") ? nowJob : nowOpen;
+    var got = (src[x.objectId] || {})[F2ASHBY[x.field]] || "";
+    // compare on the LABEL the tracker asked for, since read-back returns valueLabel
+    if (String(got).trim().toLowerCase() === String(x.want).trim().toLowerCase()) good++;
+    else bad.push(x.field + " wanted \"" + x.want + "\" got \"" + got + "\""); });
+  Logger.log("READ-BACK verified " + good + " of " + batch.length + (bad.length ? " :: " + bad.slice(0,5).join(" ;; ") : " - ALL CONFIRMED"));
+}
+// READ-ONLY | re-read the ONE opening the pilot wrote to. Lag, or a silent failure?
+function pilotCheck63_(){
+  var v = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Field writes").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var row = v[1];
+  var field = String(row[h["Field"]]||""), oid = String(row[h["Object id"]]||"").trim();
+  var want = String(row[h["Tracker wants"]]||""), sent = String(row[h["Option value to write"]]||"");
+  Logger.log("PILOT ROW :: field " + field + " | wanted \"" + want + "\" | sent value \"" + sent + "\"");
+  var found = null;
+  ashbyListAll_('/opening.list').forEach(function(o){ if (o.id !== oid) return;
+    var lv = o.latestVersion || {};
+    (lv.customFields||[]).forEach(function(f){ var tt = String(f.title||f.name||"").trim();
+      if (tt === "Role Type" || tt === "Role Complexity (Opening)" || tt === "Employment Type") {
+        var lab = (f.valueLabel == null || f.valueLabel === "") ? (f.value == null ? "" : f.value) : f.valueLabel;
+        Logger.log("  NOW :: " + tt + " = \"" + String(lab).trim() + "\" (raw value \"" + String(f.value==null?"":f.value).trim() + "\")");
+        if (tt === "Role Type") found = String(lab).trim(); } }); });
+  Logger.log(found === null ? "OPENING NOT FOUND" : (found.toLowerCase() === want.toLowerCase() ? "TOOK - it was read lag" : "STILL WRONG - the write did not stick"));
+  // what options does Role Type actually offer?
+  ashbyListAll_('/customField.list').forEach(function(f){
+    if (String(f.title||f.name||"").trim() !== "Role Type") return;
+    var os = (f.selectableValues || f.options || f.values || []).map(function(o){
+      return String(o.label!=null?o.label:o.name!=null?o.name:o.value) + " => " + String(o.value!=null?o.value:o.id); });
+    Logger.log("  Role Type options :: " + os.join(" | ").slice(0,400)); });
+}
+
+// READ-ONLY | why did 12 Level writes report success and not stick?
+function levelProbe63_(){
+  ashbyListAll_('/customField.list').forEach(function(f){
+    var ti = String(f.title||f.name||"").trim();
+    if (ti !== "Level") return;
+    Logger.log("Level field id " + f.id + " | objectType " + f.objectType + " | type " + (f.type||f.fieldType||"?"));
+    var raw = (f.selectableValues || f.options || f.values || []);
+    Logger.log("  option objects (first 3 raw) :: " + JSON.stringify(raw.slice(0,3)).slice(0,300));
+    Logger.log("  labels => values :: " + raw.map(function(o){
+      return String(o.label!=null?o.label:o.name!=null?o.name:o.value) + "=>" + String(o.value!=null?o.value:o.id);
+    }).join(" | ").slice(0,400)); });
+  // what do the affected jobs hold now?
+  var v = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Field writes").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var want = {};
+  for (var i2=1;i2<v.length;i2++){ if (String(v[i2][h["Field"]]||"") !== "Level") continue;
+    want[String(v[i2][h["Object id"]]||"").trim()] = String(v[i2][h["Tracker wants"]]||"").trim(); }
+  var n = 0;
+  ashbyListAll_('/job.list').forEach(function(j){ if (!want[j.id]) return; if (n >= 6) return; n++;
+    var got = "", rawv = "";
+    (j.customFields||[]).forEach(function(f){ if (String(f.title||f.name||"").trim() !== "Level") return;
+      got = String((f.valueLabel==null||f.valueLabel==="") ? (f.value==null?"":f.value) : f.valueLabel).trim();
+      rawv = String(f.value==null?"":f.value).trim(); });
+    Logger.log("  job wants \"" + want[j.id] + "\" | now label \"" + got + "\" raw \"" + rawv + "\""); });
+}
+
+// READ-ONLY | #64 | of the owner corrections, how many are ADD-to-empty vs REPLACE-an-existing-person?
+function ownerSplit64_(){
+  var v = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName("V9 - Correct").getDataRange().getValues();
+  var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var out = {};
+  var samples = { add:[], replace:[] };
+  for (var i=1;i<v.length;i++){
+    var f = String(v[i][h["Field"]]||"").trim();
+    if (f !== "Opening Owner" && f !== "Candidate Owner") continue;
+    var want = String(v[i][h["Tracker says"]]||"").trim();
+    var have = String(v[i][h["Ashby says"]]||"").trim();
+    var kind = have ? "REPLACE (Ashby already names someone)" : "ADD (Ashby has nobody)";
+    var k = f + " :: " + kind;
+    out[k] = (out[k]||0)+1;
+    var s = have ? samples.replace : samples.add;
+    if (s.length < 4) s.push(f.split(" ")[0] + ": tracker \"" + want + "\" vs Ashby \"" + (have||"(nobody)") + "\"");
+  }
+  Object.keys(out).sort().forEach(function(k){ Logger.log(k + " = " + out[k]); });
+  Logger.log("SAMPLE ADD :: " + samples.add.join(" ;; ").slice(0,300));
+  Logger.log("SAMPLE REPLACE :: " + samples.replace.join(" ;; ").slice(0,300));
+}
+
+// READ-ONLY | #64 | Jerin's test, 8 Sep: compare owner counts PER JOB, not row by row.
+// A forced/chosen pairing is partly arbitrary, so pairing position A to the wrong opening on the same job
+// manufactures TWO row-level mismatches that are not disagreements at all. If the per-job multiset of
+// owners matches, there is nothing to fix.
+// ⚠ nameMatch lives INSIDE buildAuditV4 and is not visible here. This is a DELIBERATE MIRROR of it,
+// character for character - not a hand-rolled comparator. If buildAuditV4 ever changes its matching,
+// this must change with it. (V7 fault #2 was using exact equality where nameMatch existed; copying the
+// SAME algorithm for an outside checker is the opposite of that mistake.)
+function nm64_(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+function nameMatch64_(a,b){
+  var x = nm64_(a).split(" ").filter(function(z){ return z && z.length > 1; });
+  var y = nm64_(b).split(" ").filter(function(z){ return z && z.length > 1; });
+  if (!x.length || !y.length) return false;
+  var s = x.length <= y.length ? x : y, l = x.length <= y.length ? y : x;
+  
+  for (var i=0;i<s.length;i++){ var h = false;
+    for (var j=0;j<l.length;j++) if (l[j] === s[i]) { h = true; break; }
+    if (!h) return false; }
+  return true; }
+function ownerGrain64_(){
+  var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
+  var lg = book.getSheetByName("V9 - Claim ledger").getDataRange().getValues();
+  var h = {}; lg[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var tss = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
+  var tv = tss.getSheetByName('Master').getDataRange().getValues(), tc = {};
+  tv[0].forEach(function(x,i){ tc[String(x).trim()] = i; });
+  var recByAid = {};
+  for (var i=1;i<tv.length;i++){ var a = String(tv[i][tc['audit-id']]||'').trim();
+    if (a) recByAid[a] = String(tv[i][tc['Recruiter']]||'').trim(); }
+  var uById = {};
+  ashbyListAll_('/user.list', { includeDeactivated:true }).forEach(function(u){
+    uById[u.id] = String(u.name || ((u.firstName||"")+" "+(u.lastName||"")).trim() || "").trim(); });
+  var ownerByOpening = {};
+  ashbyListAll_('/opening.list').forEach(function(o){ var lv = o.latestVersion || {}; var r = [];
+    (lv.hiringTeam||[]).forEach(function(x){ if (/recruiter/i.test(String(x.role||x.roleName||"")))
+      r.push(uById[x.userId] || String(x.name||"")); });
+    ownerByOpening[o.id] = r.filter(String).join(" + "); });
+  // build per-job multisets over the SAME set of paired rows
+  var jobs = {};
+  for (var r2=1;r2<lg.length;r2++){
+    var job = String(lg[r2][h["Job"]]||"").trim();
+    var oid = String(lg[r2][h["Opening id"]]||"").trim();
+    if (!job || !oid) continue;
+    var aid = String(lg[r2][h["audit-id"]]||"").trim();
+    var tr = recByAid[aid] || "";
+    var as = ownerByOpening[oid] || "";
+    if (!jobs[job]) jobs[job] = { trk:{}, ash:{}, n:0 };
+    jobs[job].n++;
+    if (tr) jobs[job].trk[tr.toLowerCase()] = (jobs[job].trk[tr.toLowerCase()]||0)+1;
+    if (as) jobs[job].ash[as.toLowerCase()] = (jobs[job].ash[as.toLowerCase()]||0)+1; }
+  // a tracker FIRST NAME should count against the Ashby full name - use nameMatch, never exact
+  var agree = 0, differ = 0, rows = [["Job","Paired positions","Tracker owners","Ashby owners","Verdict"]];
+  Object.keys(jobs).sort().forEach(function(j){
+    var d = jobs[j];
+    var tk = Object.keys(d.trk), ak = Object.keys(d.ash);
+    // match each tracker name to an Ashby name by nameMatch, then compare counts
+    var used = {}, ok = true;
+    tk.forEach(function(tn){
+      var hit = ak.filter(function(an){ return !used[an] && nameMatch64_(tn, an); })[0];
+      if (!hit) { ok = false; return; }
+      used[hit] = 1;
+      if (d.trk[tn] !== d.ash[hit]) ok = false; });
+    if (ak.filter(function(an){ return !used[an]; }).length) ok = false;
+    if (ok) agree++; else differ++;
+    rows.push([j, d.n,
+      tk.map(function(k){ return k + " x" + d.trk[k]; }).join(", "),
+      ak.map(function(k){ return k + " x" + d.ash[k]; }).join(", "),
+      ok ? "AGREE at job level - row mismatches are PAIRING ARTEFACTS" : "REAL DIFFERENCE"]); });
+  var s = book.getSheetByName("V9 - Owner by job") || book.insertSheet("V9 - Owner by job");
+  s.clear(); s.getRange(1,1,rows.length,5).setValues(rows); s.getRange(1,1,1,5).setFontWeight("bold");
+  Logger.log("OWNER BY JOB | jobs " + (agree+differ) + " | AGREE (artefact) " + agree + " | REAL DIFFERENCE " + differ);
+  rows.slice(1).forEach(function(r3){ if (String(r3[4]).indexOf("REAL") === 0)
+    Logger.log("  REAL :: " + r3[0] + " | tracker [" + r3[2] + "] vs ashby [" + r3[3] + "]"); });
 }
