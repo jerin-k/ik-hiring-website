@@ -23,6 +23,141 @@ var G22_PLAN = [
 
 function run22g() { ownerGrain64_(); }
 
+function workLog72_(){
+  var ss=SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
+  var TAB='V9 - Work log';
+  var sh=ss.getSheetByName(TAB); if(!sh) sh=ss.insertSheet(TAB);
+  var rows=[
+   ['Date','Task','What','Count','Method','Verified how','Status'],
+   ['2026-09-08','#58c','audit-id stamped on bound pairs (Ashby openings)',93,'customField.setValue','read-back','DONE'],
+   ['2026-09-08','#59','stray OPEN openings archived',14,'opening.setArchived','independent re-count: 0 unclaimed remain','DONE'],
+   ['2026-09-08','#61','missing joining dates written to the TRACKER',22,'Sheets write','read-back 22/22','DONE'],
+   ['2026-09-08','#63','custom-field corrections (Level 23, Emp Type 14, Complexity 14, Role Type 13)',64,'customField.setValue','read-back 64/64; Level re-verified live 23/23 under #67','DONE'],
+   ['2026-09-08','#64','OPENING OWNERS set to the tracker owner, one recruiter per opening',58,'hiringTeam.remove+addMember','verify64_ fresh opening.list: sole-and-correct 58/58','DONE'],
+   ['2026-09-08','#64','CANDIDATE OWNERS added (all 3 had nobody)',3,'application.addHiringTeamMember','application.info read-back: 3/3 correct','DONE'],
+   ['2026-09-08','#64','opening owner replace - tracker Praveetha, Ashby had Mahima Agarwal',1,'hiringTeam.remove+addMember','writer returned applied 1/failed 0; verify64_ still reads 5 correct / 1 wrong','UNCONFIRMED - re-run verify64_'],
+   ['2026-09-08','#63b','field values re-applied (1 real: Employment Type PTC - Direct; 6 were already correct)',7,'customField.setValue','audit re-run','DONE'],
+   ['','','','','','',''],
+   ['NOT DONE - MANUAL UI ONLY','','','','','',''],
+   ['','','create openings (64 of 75; 11 DROPPED excluded - the opening detaches from a dropped candidate)',64,'Ashby UI','','OPEN - needs approvals OFF'],
+   ['','','re-date openings (also fixes Opening Quarter - same openings)',10,'Ashby UI','','OPEN'],
+   ['','','opening status flips (5 Joined-but-Open, 2 Dropped-but-Filled)',7,'Ashby UI','','OPEN'],
+   ['','','link an existing opening to a candidate',10,'Ashby UI','application.setOpening is PROVEN ABSENT (404)','OPEN']
+  ];
+  sh.clear();
+  sh.getRange(1,1,rows.length,7).setValues(rows);
+  sh.getRange(1,1,1,7).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  Logger.log('W72 wrote '+(rows.length-1)+' rows to '+TAB);
+}
+
+function task64_candOwners(mode){
+  mode=mode||'dry';
+  var SS='1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA';
+  var ss=SpreadsheetApp.openById(SS);
+  var cor=ss.getSheetByName('V9 - Correct').getDataRange().getValues();
+  var cl=ss.getSheetByName('V9 - Claim ledger').getDataRange().getValues();
+  var emailByAid={};
+  for(var r=1;r<cl.length;r++){ var a=String(cl[r][0]||'').trim(); var e=String(cl[r][2]||'').trim().toLowerCase(); if(a&&e) emailByAid[a]=e; }
+  var st=JSON.parse(DriveApp.getFilesByName('offer_contacts.json').next().getBlob().getDataAsString()).rows||[];
+  var appByEmail={};
+  for(var i=0;i<st.length;i++){ var e=String(st[i].email||'').trim().toLowerCase(); if(e&&st[i].applicationId) appByEmail[e]=st[i].applicationId; }
+  var act=ashbyListAll_('/user.list',{}); var all=ashbyListAll_('/user.list',{includeDeactivated:true});
+  function nm(u){ return (u.name||((u.firstName||'')+' '+(u.lastName||'')).trim()); }
+  var uAll={}; for(var i=0;i<all.length;i++) uAll[all[i].id]=nm(all[i]);
+  var actIds={}; for(var i=0;i<act.length;i++) actIds[act[i].id]=1;
+  var ALIAS={'sanghamitra moulik':'Sangha'};
+  function resolve(t){ var q=ALIAS[String(t||'').toLowerCase().trim()]||t; var h=[]; for(var j=0;j<act.length;j++) if(nameMatch64_(q,nm(act[j]))) h.push(act[j]); return h.length===1?h[0]:null; }
+  var plan=[], noApp=0, unres=0;
+  for(var r=1;r<cor.length;r++){ if(String(cor[r][5]).trim()!=='Candidate Owner') continue;
+    var aid=String(cor[r][2]||'').trim(), trk=String(cor[r][6]||'').trim();
+    var u=resolve(trk); if(!u){ unres++; Logger.log('T64c UNRESOLVED | "'+trk+'"'); continue; }
+    var em=emailByAid[aid]; var appId=em?appByEmail[em]:null;
+    if(!appId){ noApp++; Logger.log('T64c NO APPLICATION FOUND | audit-id '+aid+' | emailKnown='+(em?'yes':'no')); continue; }
+    var resp=ashbyWrite_('/application.info',{applicationId:appId});
+    var body=(resp&&resp.json)||{};
+    if(!body.success){ Logger.log('T64c application.info FAILED | '+JSON.stringify(body.errors||'').slice(0,80)); continue; }
+    var ht=(body.results||{}).hiringTeam||[]; var cur=[];
+    for(var k=0;k<ht.length;k++){ if(/recruiter/i.test(String(ht[k].role||ht[k].roleName||''))) cur.push(ht[k].userId); }
+    var already=false, rm=[];
+    for(var k=0;k<cur.length;k++){ if(cur[k]===u.id) already=true; else rm.push(cur[k]); }
+    var label=[]; for(var k=0;k<cur.length;k++) label.push((uAll[cur[k]]||'?')+(actIds[cur[k]]?'':' [inactive]'));
+    if(already&&!rm.length){ Logger.log('T64c ALREADY CORRECT | "'+trk+'"'); continue; }
+    Logger.log('T64c '+(cur.length?'REPLACE':'ADD')+' | tracker "'+trk+'" -> '+nm(u)+' | live='+(label.length?label.join(' + '):'(nobody)'));
+    plan.push({appId:appId, u:u, rm:rm, add:!already}); }
+  Logger.log('T64c PLAN '+plan.length+' | unresolved '+unres+' | no application '+noApp);
+  if(mode==='dry'){ Logger.log('T64c DRY - nothing written'); return; }
+  if(plan.length>10){ Logger.log('T64c REFUSE - more than 10'); return; }
+  var ok=0, fail=0;
+  for(var i=0;i<plan.length;i++){ var p=plan[i];
+    try{ for(var k=0;k<p.rm.length;k++) ashbyWrite_('/application.removeHiringTeamMember',{applicationId:p.appId, teamMemberId:p.rm[k], roleId:V4_RECRUITER_ROLE});
+      if(p.add) ashbyWrite_('/application.addHiringTeamMember',{applicationId:p.appId, teamMemberId:p.u.id, roleId:V4_RECRUITER_ROLE});
+      ok++; }catch(e){ fail++; Logger.log('T64c FAIL '+String(e).slice(0,100)); } }
+  Logger.log('T64c '+mode.toUpperCase()+' applied '+ok+' | failed '+fail);
+}
+
+function phase1_(){
+  var SS='1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA';
+  var ss=SpreadsheetApp.openById(SS);
+  var cor=ss.getSheetByName('V9 - Correct').getDataRange().getValues();
+  var ops=ashbyListAll_('/opening.list',{}); var opById={};
+  for(var i=0;i<ops.length;i++) opById[ops[i].id]=ops[i];
+  var act=ashbyListAll_('/user.list',{});
+  function nm(u){ return (u.name||((u.firstName||'')+' '+(u.lastName||'')).trim()); }
+  var ALIAS={'sanghamitra moulik':'Sangha'};
+  function resolve(t){ var q=ALIAS[String(t||'').toLowerCase().trim()]||t; var h=[]; for(var j=0;j<act.length;j++) if(nameMatch64_(q,nm(act[j]))) h.push(act[j]); return h.length===1?h[0]:null; }
+  function cfv(o,pat){ var cf=((o.latestVersion||{}).customFields)||[]; for(var i=0;i<cf.length;i++){ if(pat.test(String(cf[i].title||''))){ var x=cf[i].valueLabel; if(x==null)x=cf[i].value; if(x instanceof Array)x=x.join('+'); return String(x==null?'':x); } } return '(field absent)'; }
+  // ---- P1a: the 7 field findings ----
+  var okc=0, real=0;
+  for(var r=1;r<cor.length;r++){ var f=String(cor[r][5]).trim();
+    if(f!=='Employment Type'&&f!=='Complexity'&&f!=='Role Type') continue;
+    var o=opById[String(cor[r][1]).trim()]; var trk=String(cor[r][6]).trim();
+    var pat = f==='Complexity'?/complexity/i:(f==='Role Type'?/role type/i:/employment type/i);
+    var live=o?cfv(o,pat):'(opening not found)';
+    if(live.toLowerCase()===trk.toLowerCase()){ okc++; Logger.log('P1a ALREADY CORRECT | '+f+' | '+trk); }
+    else { real++; Logger.log('P1a REAL | '+f+' | tracker='+trk+' | live='+live); } }
+  Logger.log('P1a RESULT | already correct '+okc+' | genuinely wrong '+real);
+  // ---- P1b: the residual Opening Owners ----
+  var b_ok=0,b_add=0,b_rep=0,b_un=0;
+  for(var r=1;r<cor.length;r++){ if(String(cor[r][5]).trim()!=='Opening Owner') continue;
+    var o=opById[String(cor[r][1]).trim()]; var trk=String(cor[r][6]).trim(); var u=resolve(trk);
+    if(!u){ b_un++; Logger.log('P1b UNRESOLVED | tracker="'+trk+'"'); continue; }
+    var ht=((o&&o.latestVersion&&o.latestVersion.hiringTeam)||[]); var cur=[];
+    for(var k=0;k<ht.length;k++) if(/recruiter/i.test(String(ht[k].role||''))) cur.push(ht[k].userId);
+    if(!cur.length){ b_add++; Logger.log('P1b NEEDS ADD | tracker="'+trk+'"'); }
+    else if(cur.length===1&&cur[0]===u.id){ b_ok++; Logger.log('P1b ALREADY CORRECT | "'+trk+'" (audit is stale)'); }
+    else { b_rep++; Logger.log('P1b NEEDS REPLACE | tracker="'+trk+'" | ashby has '+cur.length); } }
+  Logger.log('P1b RESULT | already correct '+b_ok+' | add '+b_add+' | replace '+b_rep+' | unresolved '+b_un);
+  // ---- P1c: what is Link ----
+  var lk=ss.getSheetByName('V9 - Link');
+  if(lk){ var lv=lk.getDataRange().getValues(); Logger.log('P1c Link headers | '+lv[0].join(' | ')); Logger.log('P1c Link rows '+(lv.length-1)); }
+  else Logger.log('P1c no V9 - Link tab');
+  // ---- P1d: firm up the create list ----
+  var cl=ss.getSheetByName('V9 - Claim ledger').getDataRange().getValues();
+  var claimed={}; for(var r=1;r<cl.length;r++){ for(var c=0;c<cl[r].length;c++){ var s=String(cl[r][c]||'').trim(); if(/^[0-9a-f]{8}-[0-9a-f-]{20,}$/i.test(s)) claimed[s]=1; } }
+  Logger.log('P1d claimed opening ids seen in ledger '+Object.keys(claimed).length);
+  var cr=ss.getSheetByName('V9 - Create').getDataRange().getValues();
+  var jobsWanted={}; var createAids={};
+  for(var r=1;r<cr.length;r++){ var j=String(cr[r][2]||'').trim(); if(j) jobsWanted[j]=(jobsWanted[j]||0)+1; var a=String(cr[r][0]||'').trim(); if(a) createAids[a]=1; }
+  var jl=ashbyListAll_('/job.list',{}); var byTitle={};
+  function nz(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+  for(var i=0;i<jl.length;i++) byTitle[nz(jl[i].title)]=jl[i].id;
+  var freeTotal=0, jobsNoMatch=0;
+  for(var jname in jobsWanted){ var jid=byTitle[nz(jname)];
+    if(!jid){ jobsNoMatch++; continue; }
+    var free=0;
+    for(var i=0;i<ops.length;i++){ var o=ops[i]; if(o.isArchived) continue; if(String(o.openingState||'')!=='Open') continue;
+      var jids=((o.latestVersion||{}).jobIds)||[]; if(jids.indexOf(jid)<0) continue; if(claimed[o.id]) continue; free++; }
+    if(free) Logger.log('P1d job with UNCLAIMED OPEN openings | '+jname+' | free '+free+' | asking to create '+jobsWanted[jname]);
+    freeTotal+=free; }
+  Logger.log('P1d RESULT | create rows '+(cr.length-1)+' | distinct jobs '+Object.keys(jobsWanted).length+' | jobs whose title did not match Ashby '+jobsNoMatch+' | TOTAL unclaimed OPEN openings on those jobs '+freeTotal);
+  var osIn=0, osOut=0;
+  for(var r=1;r<cor.length;r++){ if(String(cor[r][5]).trim()!=='Opening Status') continue;
+    if(String(cor[r][7]||'').trim().toLowerCase().indexOf('no opening')<0) continue;
+    if(createAids[String(cor[r][2]||'').trim()]) osIn++; else osOut++; }
+  Logger.log('P1d the no-opening status rows | ALSO in the create list '+osIn+' | NOT in it '+osOut);
+}
+
 function g22_buildTab() {
   var jobs = ashbyListAll_('/job.list');
   var jobBy = {};
@@ -308,8 +443,19 @@ function buildAuditV4(opts) {
   function deptOf(j){ return topDept_(j.departmentId)||leafDept_(j.departmentId); }
   function teamOf(j){ return leafDept_(j.departmentId); }
   jobs.forEach(function(j){ jobByTitle[norm(j.title)]={id:j.id,title:j.title||'',dept:deptOf(j),team:teamOf(j),status:j.status||''}; });
+  // #71 (8 Sep): Level is a JOB attribute, but it was read through c.m.level - a per-candidate field from the
+  // pipeline's offer_contacts.json - so it came back blank even when the tracker, the store AND live Ashby all
+  // agreed on the value, manufacturing a finding per position. Read it from the job, as the opening fields are
+  // read from the opening. Verified 8 Sep: all 23 Level 'findings' were already correct in Ashby.
+  var jobLevel={};
+  jobs.forEach(function(j){ var cf=j.customFields||[]; for(var q=0;q<cf.length;q++){ if(/^level$/i.test(String(cf[q].title||''))){ var x=cf[q].valueLabel; if(x==null) x=cf[q].value; if(x instanceof Array) x=x.join('+'); jobLevel[j.id]=String(x==null?'':x); } } });
   var users=ashbyListAll_('/user.list'), uById={};
   users.forEach(function(u){ uById[u.id]=((u.firstName||'')+' '+(u.lastName||'')).trim()||u.name||''; });
+  // #68 (8 Sep): resolve DEACTIVATED users too - the active-only list left departed recruiters as an EMPTY
+  // name, which read downstream as 'this opening has no recruiter' and mis-classified REPLACE work as ADD.
+  // A deactivated owner is marked so the comparison below cannot silently match it against the tracker.
+  var activeIds={}; users.forEach(function(u){ activeIds[u.id]=1; });
+  ashbyListAll_('/user.list',{includeDeactivated:true}).forEach(function(u){ var nx=((u.firstName||'')+' '+(u.lastName||'')).trim()||u.name||''; if(nx) uById[u.id]= nx + (activeIds[u.id]?'':' [inactive]'); });
   var locName={}; try{ ashbyListAll_('/location.list').forEach(function(l){ locName[l.id]=l.name||''; }); }catch(eL){}
   var bucket={}, opsAll=[], opsByIdAll={};
   // #47 (V6): the loop below SKIPS every opening whose openedAt is not 2026 - which silently drops the ~53-58
@@ -388,7 +534,7 @@ function buildAuditV4(opts) {
    {n:'Job Name',t:function(c){return c.tr.job;},a:function(c){return c.jr.title;},k:'role'},
    {n:'Department',t:function(c){return deptAlias(c.tr.dept);},a:function(c){return c.jr.dept;},k:'dept'},
    {n:'Location',t:function(c){return c.tr.loc;},a:function(c){return c.op?c.op.loc:'';},k:'loose'},
-   {n:'Level',t:function(c){return c.tr.lvl;},a:function(c){return c.m?(c.m.level||''):'';},k:'eq'},
+   {n:'Level',t:function(c){return c.tr.lvl;},a:function(c){return (c.jr&&jobLevel[c.jr.id])||'';},k:'eq'},
    {n:'Complexity',t:function(c){return cxMap(c.tr.cx);},a:function(c){return c.op?c.op.cx:'';},k:'need'},
    {n:'Employment Type',t:function(c){return c.tr.emp;},a:function(c){return c.op?c.op.emp:'';},k:'need'},
    {n:'Role Type',t:function(c){return rtMap(c.tr.role);},a:function(c){return c.op?c.op.rt:'';},k:'need'},
@@ -482,6 +628,7 @@ function buildAuditV4(opts) {
     if (f.k === 'loose') return !roleOk(tv, av);
     if (f.k === 'dept')  return norm(tv) !== norm(av);
     if (f.k === 'rec')   { var names = String(av).split(' + ').filter(String);
+      if (String(av).indexOf('[inactive]') > -1) return true; // #68: owner is a DEACTIVATED account - always a finding
                            return !(names.length === 1 && nameMatch(tv, names[0])); }
     if (f.n === 'Candidate Name') return !nameMatch(tv, av);
     return !eq(tv, av);
@@ -606,7 +753,7 @@ function buildAuditV4(opts) {
     function aSide(f, c){ var o = c.claim.openingId ? opById[c.claim.openingId] : null; var m2 = c.m;
       switch(f.n){
         case 'Job Name': return c.jr.title; case 'Department': return c.jr.dept;
-        case 'Level': return m2 ? (m2.level||'') : '';
+        case 'Level': return (c.jr && jobLevel[c.jr.id]) || '';  // #71: Level is a JOB field - read the job, not the pipeline record
         case 'Complexity': return o ? o.cx : ''; case 'Employment Type': return o ? o.emp : '';
         case 'Role Type': return o ? o.rt : ''; case 'Opening Date': return o ? o.openedAt : '';
         case 'Opening Quarter': return o ? o.q : ''; case 'Opening Status': return openLabel(o);
@@ -3295,4 +3442,70 @@ function ownerGrain64_(){
   Logger.log("OWNER BY JOB | jobs " + (agree+differ) + " | AGREE (artefact) " + agree + " | REAL DIFFERENCE " + differ);
   rows.slice(1).forEach(function(r3){ if (String(r3[4]).indexOf("REAL") === 0)
     Logger.log("  REAL :: " + r3[0] + " | tracker [" + r3[2] + "] vs ashby [" + r3[3] + "]"); });
+}
+function task64_applyOwners(mode){
+  mode = mode || 'dry';
+  var ALIAS = {'sanghamitra moulik':'Sangha'};              // confirmed by Jerin, 8 Sep 2026
+  var v = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA').getSheetByName('V9 - Correct').getDataRange().getValues();
+  var act = ashbyListAll_('/user.list',{});
+  function nm(u){ return (u.name||((u.firstName||'')+' '+(u.lastName||'')).trim()); }
+  function resolve(t){ var q=ALIAS[String(t||'').toLowerCase().trim()]||t; var h=[];
+    for(var j=0;j<act.length;j++) if(nameMatch64_(q,nm(act[j]))) h.push(act[j]);
+    return h.length===1?h[0]:null; }
+  var work=[], cand=0;
+  for(var r=1;r<v.length;r++){ var f=String(v[r][5]).trim();
+    if(f==='Candidate Owner'){ cand++; continue; }
+    if(f!=='Opening Owner') continue;
+    var trk=String(v[r][6]).trim();
+    work.push({id:String(v[r][1]).trim(), trk:trk, ash:String(v[r][7]).trim(), u:resolve(trk)}); }
+  var bad=[]; for(var i=0;i<work.length;i++) if(!work[i].u) bad.push(work[i]);
+  Logger.log('T64 mode='+mode+' | opening-owner rows '+work.length+' | candidate-owner rows DEFERRED '+cand+' | unresolved '+bad.length);
+  for(var i=0;i<bad.length;i++) Logger.log('T64 UNRESOLVED | "'+bad[i].trk+'"');
+  if(bad.length){ Logger.log('T64 HALT - unresolved names, nothing written'); return; }
+  if(work.length>80){ Logger.log('T64 REFUSE - '+work.length+' exceeds the 80 cap'); return; }
+  var ops={}; ashbyListAll_('/opening.list',{}).forEach(function(o){ ops[o.id]=o; });
+  var plan=[], missing=0;
+  for(var i=0;i<work.length;i++){ var w=work[i], o=ops[w.id];
+    if(!o){ missing++; continue; }
+    var ht=((o.latestVersion||{}).hiringTeam)||[], cur=[];
+    for(var k=0;k<ht.length;k++) if(/recruiter/i.test(String(ht[k].role||''))) cur.push(ht[k].userId);
+    var rm=[], already=false;
+    for(var k=0;k<cur.length;k++){ if(cur[k]===w.u.id) already=true; else rm.push(cur[k]); }
+    if(already && rm.length===0) continue;
+    plan.push({w:w, rm:rm, add:!already}); }
+  var totRm=0, totAdd=0;
+  for(var i=0;i<plan.length;i++){ totRm+=plan[i].rm.length; if(plan[i].add) totAdd++; }
+  Logger.log('T64 PLAN objects '+plan.length+' | removals '+totRm+' | adds '+totAdd+' | already correct '+(work.length-plan.length-missing)+' | opening not found '+missing);
+  for(var i=0;i<plan.length && i<8;i++) Logger.log('T64 e.g. tracker "'+plan[i].w.trk+'" -> '+nm(plan[i].w.u)+' | was "'+plan[i].w.ash+'" | remove '+plan[i].rm.length+' add '+(plan[i].add?'1':'0'));
+  if(mode==='dry'){ Logger.log('T64 DRY - nothing written'); return; }
+  var todo = (mode==='pilot') ? plan.slice(0,1) : plan;
+  var ok=0, fail=0;
+  for(var i=0;i<todo.length;i++){ var p=todo[i], w=p.w;
+    try{
+      for(var k=0;k<p.rm.length;k++) ashbyWrite_('/hiringTeam.removeMember',{openingId:w.id, teamMemberId:p.rm[k], roleId:V4_RECRUITER_ROLE});
+      if(p.add) ashbyWrite_('/hiringTeam.addMember',{openingId:w.id, teamMemberId:w.u.id, roleId:V4_RECRUITER_ROLE});
+      ok++;
+    }catch(e){ fail++; Logger.log('T64 FAIL | "'+w.trk+'" | '+String(e).slice(0,140)); } }
+  Logger.log('T64 '+mode.toUpperCase()+' applied '+ok+' | failed '+fail);
+}
+
+function verify64_(){
+  var v = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA').getSheetByName('V9 - Correct').getDataRange().getValues();
+  var ALIAS = {'sanghamitra moulik':'Sangha'};
+  var act = ashbyListAll_('/user.list',{});
+  function nm(u){ return (u.name||((u.firstName||'')+' '+(u.lastName||'')).trim()); }
+  function resolve(t){ var q=ALIAS[String(t||'').toLowerCase().trim()]||t; var h=[];
+    for(var j=0;j<act.length;j++) if(nameMatch64_(q,nm(act[j]))) h.push(act[j]); return h.length===1?h[0]:null; }
+  var ops={}; ashbyListAll_('/opening.list',{}).forEach(function(o){ ops[o.id]=o; });
+  var good=0, wrong=0, multi=0, none=0;
+  for(var r=1;r<v.length;r++){ if(String(v[r][5]).trim()!=='Opening Owner') continue;
+    var id=String(v[r][1]).trim(), u=resolve(String(v[r][6]).trim()); if(!u) continue;
+    var o=ops[id]; if(!o) continue;
+    var ht=((o.latestVersion||{}).hiringTeam)||[], cur=[];
+    for(var k=0;k<ht.length;k++) if(/recruiter/i.test(String(ht[k].role||''))) cur.push(ht[k].userId);
+    if(cur.length===0) none++;
+    else if(cur.length>1) multi++;
+    else if(cur[0]===u.id) good++;
+    else wrong++; }
+  Logger.log('VERIFY64 sole-and-correct '+good+' | still wrong '+wrong+' | still MULTIPLE recruiters '+multi+' | no recruiter '+none);
 }
