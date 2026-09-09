@@ -1,3 +1,20 @@
+// TEMP. Remove after use.
+function runProbe9(){
+  var T=['P-03371','P-03374','P-03417','P-03418','P-03410','P-03507'];
+  var au=SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
+  var v=au.getSheetByName('V9 - Create dry run').getDataRange().getValues();
+  var tz=SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A').getSpreadsheetTimeZone();
+  for(var i=1;i<v.length;i++){
+    var a=String(v[i][0]).trim();
+    if(T.indexOf(a)<0) continue;
+    var dt=(v[i][4] instanceof Date)?Utilities.formatDate(v[i][4],tz,'MMM d, yyyy'):String(v[i][4]).trim();
+    Logger.log('QS ' + a + ' ## ' + String(v[i][2]).trim() + ' ## ' + dt + ' ## emp=' + String(v[i][5]).trim() + ' ## rt=' + String(v[i][6]).trim() + ' ## cx=' + String(v[i][7]).trim() + ' ## rec=' + String(v[i][9]).trim());
+  }
+  var users=ashbyListAll_('/user.list',{includeDeactivated:true});
+  var k=users.filter(function(u){ return /kaashvika/i.test(((u.firstName||'')+' '+(u.lastName||'')).trim()); });
+  k.forEach(function(u){ Logger.log('QK ' + ((u.firstName||'')+' '+(u.lastName||'')).trim() + ' enabled=' + u.isEnabled + ' role=' + u.globalRole + ' idTail=' + String(u.id).slice(-6)); });
+  Logger.log('QK matches=' + k.length);
+}
 // ===== 22g - build the 'Openings to be created/checked' worklist tab =====
 // NO WRITES TO ASHBY. Read-only against Ashby; writes one tab in the Audit sheet.
 // Jerin, 6 Sep 2026: do not create the openings - hand the list to the team (Gopu).
@@ -1579,7 +1596,6 @@ function v4_pilotCheck(){
   });
 }
 
-
 // READ ONLY: what shape are the selectable options on the two failing fields?
 function v4_optProbe(){
   var fs=ashbyListAll_('/customField.list');
@@ -2141,7 +2157,6 @@ function buildAuditV5() {
   });
 }
 
-
 // #42 READ-ONLY: turn the V5 tab into the actionables list Jerin asked for - what, how many, and whether the
 // correction is API or UI. Writes nothing. Run after buildAuditV5().
 function v5_actionables() {
@@ -2193,7 +2208,6 @@ function v5_actionables() {
     Object.keys(js).sort(function(a,b){ return js[b]-js[a]; }).forEach(function(k){ Logger.log('   ' + k + ' :: ' + js[k]); }); }
 }
 
-
 // #47: V6 - the filled-vs-unfilled funnel, scoped to Q3 2026 first (Jerin: Q1/Q2 later if it is cheap).
 // Change onlyQuarter to 'Q1 2026' / 'Q2 2026' to re-run, or drop it for all of 2026.
 function buildAuditV7() {
@@ -2205,7 +2219,6 @@ function buildAuditV7() {
     label: 'v7'
   });
 }
-
 
 // #53 PROBE (7 Sep 2026, Jerin): can JOB-level fields be written by API? customField.setValue with
 // objectType 'Opening' is proven (#12, 332 writes) but 'Job' was NEVER probed - the Job Gaps edits were done
@@ -2249,10 +2262,8 @@ function probeJobFieldWrite() {
   });
 }
 
-
 // #56 - V8 is a MODE of buildAuditV4, never a clone.
 function buildAuditV8(){ return buildAuditV4({ mode:'v8', onlyQuarter:'Q3 2026', tab:'Tracker Openings v8', label:'v8' }); }
-
 
 // GROUND TRUTH: ask Ashby directly how many openings have no openedAt.
 // Independent of the 3 Sep census AND of the audit's own store.
@@ -2279,7 +2290,6 @@ function probeUndatedTruth(){
   Logger.log('  closed (any reason): '+closed);
   return 'see log';
 }
-
 
 // Four limits Jerin challenged. Idempotent or sandbox-only. Nothing on a production record.
 function probeFourLimits(){
@@ -2341,7 +2351,6 @@ function probeFourLimits(){
   return 'see log';
 }
 
-
 // READ-ONLY. Identifies the opening created by the empty-body probe. Archives nothing.
 function findStrayReadOnly(){
   var all=[], cursor=null, pages=0;
@@ -2361,7 +2370,6 @@ function findStrayReadOnly(){
   noJob.forEach(function(o){ Logger.log('     candidate id ends ...'+String(o.id).slice(-8)); });
   return 'see log';
 }
-
 
 // Jerin approved 7 Sep: archive the ONE stray opening created by the empty-body opening.create probe.
 // Re-identifies it by shape (Draft + undated + unarchived + NO job) and refuses if there is not exactly one.
@@ -2393,7 +2401,6 @@ function archiveStray(){
   Logger.log('strays remaining: '+left+'   (openings listed after: '+again.length+')');
   return 'done';
 }
-
 
 // PROPER tests, sandbox only, every write read back and undone.
 // 🚨 opening.create is NEVER called with an empty body - always a deliberate payload on the sandbox job.
@@ -2449,7 +2456,6 @@ function probeThreeProper(){
   L('=== DONE ===');
   return 'see log';
 }
-
 
 // Second stray: opening.create on the SANDBOX job succeeded but my probe truncated the response
 // to 300 chars, so the id never parsed and it was not archived. Find it on the sandbox job and archive.
