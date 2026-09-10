@@ -164,12 +164,19 @@ export const USER_TYPES = ['Agency', 'Freelancer', 'Internal'];
 // of the four accounts carrying it today, two ('Deepti', 'Mashika') are duplicate accounts of IK's own
 // recruiters and one is a test account. Without an Internal option those false positives could not be cleared,
 // and under the Freelancer default a duplicate of a real recruiter would halve that recruiter's SME credit.
+// 🚨 CHANGED 10 Sep 2026 (Jerin): an EXPLICIT choice now wins for ANYONE, not just accounts Ashby flags as
+//   External Recruiter. Before this, a stored type on a non-external was read back as 'Internal' and thrown
+//   away — so the Admin dropdown could be set and the score would quietly ignore it. Two gates had to move
+//   together: this one and the `ext.has(name)` render gate in pages/admin.js. Enabling only the dropdown
+//   would have been a silent no-op, which is the exact defect class this project keeps hitting.
+//   The DEFAULTS are unchanged: an unreviewed external is a Freelancer (halves, never zeroes), one of ours
+//   is Internal.
 export function userTypeOf(name, externalNames) {
   if (!name) return 'Internal';
   const set = externalNames instanceof Set ? externalNames : new Set(externalNames || []);
-  if (!set.has(name)) return 'Internal';          // not flagged External Recruiter in Ashby
   const t = getUserTypes()[name];
-  return USER_TYPES.indexOf(t) >= 0 ? t : 'Freelancer';   // unreviewed external -> Freelancer (halves, never zeroes)
+  if (USER_TYPES.indexOf(t) >= 0) return t;       // a deliberate choice always wins, external or not
+  return set.has(name) ? 'Freelancer' : 'Internal';   // unreviewed: external -> Freelancer, one of ours -> Internal
 }
 
 // #11 (Jerin, 7 Sep 2026): who belongs on the roster BESIDES data.recruiters.
