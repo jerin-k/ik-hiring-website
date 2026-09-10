@@ -105,11 +105,14 @@ export function scoreForRole(job, quarter) {
 // Confirmed rule. It keys off the ROLE'S DEPARTMENT, not the recruiter's pod — "SME India & SME US" means
 // those two departments, and "Sales & Lateral" means EVERY OTHER department (Jerin was explicit).
 //
-//   SME - India / SME - US        other sourcer -> recruiter full        (an internal colleague earns nothing)
-//                                 Agency        -> SOURCER full, recruiter ZERO
+//   SME - India / SME - US        Agency        -> SOURCER full, recruiter ZERO
 //                                 Freelancer    -> half / half
+//                                 Internal      -> half / half   (⚠ CHANGED 10 Sep 2026 — was 'earns nothing')
 //                                 no sourcer    -> recruiter full
 //   every other department        any sourcer   -> half / half
+// ⚠ After the 10 Sep change the ONLY special case left is an AGENCY on an SME role. Freelancer and Internal
+//   now behave identically everywhere, so the Agency|Freelancer|Internal toggle only changes the SCORE when
+//   the value is Agency — it still changes who the HEAD goes to (hcTo), which is a separate thing.
 //                                 no sourcer    -> recruiter full
 //
 // 🚨 It applies EVERYWHERE credit is counted — Goal, Joined, Joining Pending and Drop ("split is everywhere").
@@ -140,10 +143,12 @@ export function creditSplit(dept, sourcerName, sourcerType) {
   if (!sourcerName) return { rec: 1, src: 0, hcTo: 'rec' };
   const agency = sourcerType === 'Agency';
   const hcTo = agency ? 'src' : 'rec';
-  if (isSmeDept(dept)) {
-    if (agency) return { rec: 0, src: 1, hcTo };                       // agency does the sourcing: all of it
-    if (sourcerType === 'Freelancer') return { rec: 0.5, src: 0.5, hcTo };
-    return { rec: 1, src: 0, hcTo };                                    // internal colleague earns nothing here
-  }
-  return { rec: 0.5, src: 0.5, hcTo };                                  // every other department
+  // 🚨 CHANGED 10 Sep 2026 (Jerin): an INTERNAL sourcer now splits HALF/HALF in SME too — "internal person
+  //   going in as the sourcer should also get 50%". The old rule gave an internal colleague nothing and let
+  //   the recruiter keep the lot, which undercounted people who genuinely did the sourcing.
+  //   ⚠ Only ONE special case survives: an AGENCY sourcing an SME role takes all of it, because there the
+  //   sourcing IS the job. Everyone else — freelancer or internal — halves it, in every department.
+  //   ⚠ Rule 6: the wording in definitions.js ('How credit is shared with a Sourcer') moves WITH this.
+  if (isSmeDept(dept) && agency) return { rec: 0, src: 1, hcTo };       // agency does the sourcing: all of it
+  return { rec: 0.5, src: 0.5, hcTo };                                  // freelancer or internal, any department
 }

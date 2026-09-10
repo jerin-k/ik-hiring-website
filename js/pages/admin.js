@@ -196,7 +196,7 @@ export function renderAdmin(accessConfig, data) {
           <input type="checkbox" id="cfgShowPast"> Show past recruiters <span id="cfgPastCount" style="color:var(--muted)"></span>
         </label>
         <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px" title="Only editable for users Ashby marks as External Recruiter. Agency = the sourcer takes the credit on SME roles; Freelancer = it is shared; Internal = one of ours, tagged external by mistake.">Type</th><th style="width:150px">Status</th></tr></thead>
+          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px" title="Only editable for users Ashby marks as External Recruiter. Agency = the sourcer takes the whole score on SME roles, and the head; Freelancer and Internal both share the score half and half. Internal also means one of ours, tagged external by mistake.">Type</th><th style="width:150px">Status</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
         <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span><span style="margin-left:6px">· edits auto-save to this browser (team-wide sync is pending the pipeline).</span></div>
