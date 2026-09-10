@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-03T09:04:43.513Z",
+  "updatedAt": "2026-09-10T13:52:04.976Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -27,7 +27,9 @@
       "Sanghamitra Moulik": "Lateral",
       "Siva Sruthi V S": "Sales",
       "Praveetha A": "Sales",
-      "Leenita Joseph Albert": "Sales"
+      "Leenita Joseph Albert": "Sales",
+      "Sangha": "Others",
+      "Gopu Nair V": "Others"
     }
   },
   "capacity": {
@@ -59,8 +61,8 @@
       "Tina Anisha Bibeiro": 180,
       "Unassigned": 220,
       "V Pooja": 210,
-      "Leenita Joseph Albert": 0,
-      "Praveetha A": 0
+      "Leenita Joseph Albert": 90,
+      "Praveetha A": 84
     },
     "2026-Q1": {
       "Aditya Singh": 225,
@@ -128,5 +130,6 @@
     "Founder's Office": "NonTech",
     "B2B": "NonTech",
     "Test": "Exclude"
-  }
+  },
+  "userType": {}
 }
