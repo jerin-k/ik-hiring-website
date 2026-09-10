@@ -628,6 +628,87 @@ export function initRecruiterFilters(data) {
     return m;
   })();
   const openingSourcerOf = (j8, qq) => srcByJobQ[qq + '|' + j8] || null;
+  // ===== #100 (10 Sep 2026): the Goal must join the sourcer at the OPENING grain, not the JOB grain =====
+  // The two maps above say "this person holds this role on N openings of this job" — they never say WHICH
+  // openings. So when a sourcer worked only SOME of a job's openings, srcByJobQ applied their split to ALL of
+  // them: the recruiter handed over every opening on the job while the sourcer was credited for only theirs,
+  // and the difference fell on the floor. Measured on 2026-Q3: Oshin owned 6 openings on `7c1706f1` and
+  // Sangha sourced 4 — all 6 left Oshin, 4 reached Sangha, 2 vanished. In points the three shared SME roles
+  // are worth 102 but rendered 90 as Freelancer (live) and 78 as Agency.
+  // ownedSeatsPairQ[quarter][job8] = [{ r: recruiter, s: sourcer, n: openings }] reads BOTH roles off the SAME
+  // opening, so every opening sits in exactly one bucket whose two shares add to 1 and nothing can leak.
+  // ⚠ Absent until the pipeline has run once — pairFallback keeps the old behaviour so the tab still renders.
+  const pairsQ = data.ownedSeatsPairQ || null;
+  const usePairs = !!pairsQ;
+  // #100: THE one place a Goal is computed. `only8` restricts it to a single job, which is how the per-job
+  // drill-down rows are produced — same function, same split, so the sub-rows always sum to the row above.
+  // Returns { hc, sc }. Three bases, best first:
+  //   1. usePairs   — recruiter+sourcer read off the SAME opening. Exact; cannot leak.
+  //   2. useOwnedGoal — the old per-JOB maps. Still leaks (#100a) but now at least applies the split to the
+  //      per-job rows too, so #100b is fixed even before the pipeline has run.
+  //   3. neither    — the pre-#1 equal-split-of-seats convention.
+  const goalOf = (r, qq, only8) => {
+    let hc = 0, sc = 0;
+    if (usePairs) {
+      const byJob = pairsQ[qq] || {};
+      const keys = only8 ? (byJob[only8] ? [only8] : []) : Object.keys(byJob);
+      keys.forEach(j8 => {
+        const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
+        const pts = scoreForRole(m, qq);
+        (byJob[j8] || []).forEach(pr => {
+          const n = pr.n || 0; if (!n) return;
+          const isRec = pr.r === r.name, isSrc = pr.s === r.name;
+          if (!isRec && !isSrc) return;
+          const sp = splitOf(m && m.department, pr.s || null);
+          // ⚠ An opening carrying a Sourcer but NO Recruiter: the sourcer takes the whole of it. Otherwise the
+          //   recruiter's share would be credited to nobody and the two halves would stop adding back to one —
+          //   the very leak this field exists to close.
+          const orphan = !pr.r;
+          if (isRec) { hc += (sp.hcTo === 'rec') ? n : 0; sc += n * pts * sp.rec; }
+          if (isSrc) { hc += (orphan || sp.hcTo === 'src') ? n : 0; sc += n * pts * (orphan ? 1 : sp.src); }
+        });
+      });
+      return { hc, sc };
+    }
+    if (useOwnedGoal) {
+      const pick = (map) => { const o = (map && map[r.name] && map[r.name][qq]) || {};
+                              return only8 ? (o[only8] ? { [only8]: o[only8] } : {}) : o; };
+      const owned = pick(ownedByRecQ);
+      Object.keys(owned).forEach(j8 => {
+        const cnt = owned[j8]; if (!cnt) return;
+        const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
+        const sp = splitOf(m && m.department, openingSourcerOf(j8, qq));
+        hc += (sp.hcTo === 'rec') ? cnt : 0; sc += cnt * scoreForRole(m, qq) * sp.rec;
+      });
+      const ownedSrc = pick(ownedBySrcQ);
+      Object.keys(ownedSrc).forEach(j8 => {
+        const cnt = ownedSrc[j8]; if (!cnt) return;
+        const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
+        const sp = splitOf(m && m.department, r.name);   // this person IS the sourcer on that opening
+        hc += (sp.hcTo === 'src') ? cnt : 0; sc += cnt * scoreForRole(m, qq) * sp.src;
+      });
+      return { hc, sc };
+    }
+    (r.byJob || []).forEach(bj => {
+      if (only8 && (bj.jobId || '').slice(0, 8) !== only8) return;
+      const seats = seatsOf(bj.jobId); if (!seats) return;
+      hc += seats; sc += seats * scoreForRole(jobMeta(bj), qq);
+    });
+    return { hc, sc };
+  };
+  // Every job this person has a Goal on in a quarter — as Recruiter or as Sourcer. Feeds the drill-down rows,
+  // which must list a role the person only SOURCED or its Goals would not sum to the row above.
+  const goalJobsOf = (r, qq) => {
+    const out = {};
+    if (usePairs) {
+      Object.entries(pairsQ[qq] || {}).forEach(([j8, arr]) =>
+        (arr || []).forEach(pr => { if (pr.n && (pr.r === r.name || pr.s === r.name)) out[j8] = 1; }));
+    } else if (useOwnedGoal) {
+      [ownedByRecQ, ownedBySrcQ].forEach(map =>
+        Object.keys((map && map[r.name] && map[r.name][qq]) || {}).forEach(j8 => { out[j8] = 1; }));
+    }
+    return Object.keys(out);
+  };
   // Post one outcome worth `sc` points into the per-name and per-name|job maps, divided between the two parties.
   const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc) => {
     const sp = splitOf(dept, srcr);
@@ -1154,40 +1235,9 @@ export function initRecruiterFilters(data) {
         // Fallback (no owned field yet): the old seats-OPENED-this-quarter figure, split equally across the
         // recruiters who work the role — a convention, not a measurement, which is why some Goals showed a
         // decimal. The owned basis removes both the split and the decimals.
-        let aHC = 0, aSc = 0;
-        if (useOwnedGoal) {
-          // #11: Goal divides between the opening's Recruiter and its Sourcer by the SAME rule the outcome
-          // side uses, or Delta would compare a full target against a split achievement. Two passes:
-          //   1. openings this person OWNS as Recruiter — they keep creditSplit's recruiter share
-          //   2. openings this person is the SOURCER on — they take the sourcer share
-          // ⚠ The head follows creditSplit.hcTo here too, so an agency-sourced opening moves its position to
-          //   the agency on BOTH sides and the HC Delta stays at zero instead of reading a fake shortfall.
-          // ⚠ ownedSeatsBySourcerQ is {} until recruiters start setting the opening's Sourcer in Ashby, so
-          //   pass 2 contributes nothing today — by design, not by failure. See the standing process in
-          //   HANDOVER.md; nothing in the data can derive it.
-          const owned = (ownedByRecQ[r.name] && ownedByRecQ[r.name][q]) || {};
-          Object.keys(owned).forEach(j8 => {
-            const cnt = owned[j8]; if (!cnt) return;
-            const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
-            const srcr = openingSourcerOf(j8, q);
-            const sp = splitOf(m && m.department, srcr);
-            aHC += (sp.hcTo === 'rec') ? cnt : 0;
-            aSc += cnt * scoreForRole(m, q) * sp.rec;
-          });
-          const ownedSrc = (ownedBySrcQ && ownedBySrcQ[r.name] && ownedBySrcQ[r.name][q]) || {};
-          Object.keys(ownedSrc).forEach(j8 => {
-            const cnt = ownedSrc[j8]; if (!cnt) return;
-            const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
-            const sp = splitOf(m && m.department, r.name);   // this person IS the sourcer on that opening
-            aHC += (sp.hcTo === 'src') ? cnt : 0;
-            aSc += cnt * scoreForRole(m, q) * sp.src;
-          });
-        } else {
-          (r.byJob || []).forEach(bj => {
-            const seats = seatsOf(bj.jobId); if (!seats) return;
-            const sc = scoreForRole(jobMeta(bj), q); aHC += seats; aSc += seats * sc;
-          });
-        }
+        // #100: ONE helper computes the Goal for the recruiter row AND for each of its per-job rows, so the
+        // rows can never disagree with the row above them (Rule 3 — the table computes, everything else reads).
+        const g0 = goalOf(r, q, null); let aHC = g0.hc, aSc = g0.sc;
         const o = outOf(r.name), jn = joinOf(r.name), dr = dropOf(r.name), jp = jpOf(r.name);
         const capSc = capacityOf(r.name, q) || 0;
         // Outcome column = Joined on BOTH tables.
@@ -1241,7 +1291,9 @@ export function initRecruiterFilters(data) {
           // tagged an application, or the job Goals would not sum to the recruiter row above. Merge byJob
           // with the owned-opening jobs for this quarter, then sort.
           const bjByJ8 = {}; (r.byJob || []).forEach(bj => { const k = (bj.jobId || '').slice(0, 8); if (k) bjByJ8[k] = bj; });
-          if (useOwnedGoal) { const om = (ownedByRecQ[r.name] && ownedByRecQ[r.name][q]) || {}; Object.keys(om).forEach(j8 => { if (om[j8] && !bjByJ8[j8]) bjByJ8[j8] = { jobId: j8 }; }); }
+          // #100: merge in every job this person has a Goal on — as Recruiter OR as Sourcer. Sourced-only
+          // roles were missing before, so a sourcer's job rows could not add up to their row above.
+          goalJobsOf(r, q).forEach(j8 => { if (!bjByJ8[j8]) bjByJ8[j8] = { jobId: j8 }; });
           const jobs = Object.values(bjByJ8).sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
           // The role split the Fulfilment chart shades its Achieved band with (Jerin, 2026-08-29). Collected
           // HERE, from the very rows the table prints, so the chart cannot end up on a different basis —
@@ -1252,20 +1304,26 @@ export function initRecruiterFilters(data) {
               const m = jobMeta(bj), sc = scoreForRole(m, q);
               const jo = outOfJob(r.name, bj.jobId);   // dated, same basis as the recruiter row above
               const jj = joinOfJob(r.name, bj.jobId);
-              const seats = useOwnedGoal
-                ? ((ownedByRecQ[r.name] && ownedByRecQ[r.name][q] && ownedByRecQ[r.name][q][(bj.jobId || '').slice(0, 8)]) || 0)
-                : seatsOf(bj.jobId);
+              // #100b: the SAME helper the recruiter row uses, restricted to this job — so the Goal here is
+              // credit-split exactly as it is above and the rows sum. It used to read the raw owned count with
+              // no split at all, printing 102 points across Oshin's three shared roles under a row saying 51,
+              // while the Achieved beside it WAS split — which made this row's Delta wrong too.
+              const jg = goalOf(r, q, (bj.jobId || '').slice(0, 8));
+              const seats = jg.hc;
               const jd2 = dropOfJob(r.name, bj.jobId);
               const jjp = jpOfJob(r.name, m.title);
               // A job with no seats this quarter and nothing delivered, in closing or dropped is not this
               // quarter's work.
-              if (!seats && !jo.hc && !jj.hc && !jd2.hc && !jjp.t.hc) return;
+              // ⚠ #100: test the SCORE as well as the head. The head is never split, so a Freelancer/Internal
+              //   sourcer legitimately has Goal HC 0 with points — testing seats alone would silently drop
+              //   every sourced role from the drill-down.
+              if (!seats && !jg.sc && !jo.hc && !jj.hc && !jd2.hc && !jjp.t.hc) return;
               const jxHC = isSales ? jo.hc : jj.hc, jxSc = isSales ? jo.sc : jj.sc;
               const juHC = isSales ? jxHC : jxHC + jjp.t.hc, juSc = isSales ? jxSc : jxSc + jjp.t.sc;
-              const jv = { aHC: seats, aSc: seats * sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
+              const jv = { aHC: jg.hc, aSc: jg.sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
                            dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
-                           gHC: Math.max(0, seats - juHC), gSc: Math.max(0, seats * sc - juSc) };
+                           gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc) };
               roleAch.push({ title: m.title || '(untitled)', achievedSc: Math.round(juSc) });
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
