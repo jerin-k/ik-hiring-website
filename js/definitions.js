@@ -260,7 +260,7 @@ export const DEFINITIONS = {
   'rec-joining': {
     summary: 'How these numbers are worked out',
     intro: 'Everyone who reached an offer, and what became of them. <strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes.',
-    confirmed: 'Definitions confirmed with Jerin · 26 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 26 Aug 2026 · credit rule aligned with Fulfilment 10 Sep 2026',
     groups: [
       {
         heading: 'The columns',
@@ -269,6 +269,7 @@ export const DEFINITIONS = {
           ['Joined', 'People <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong> (an accepted offer alone is not counted), minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong> — that was last quarter\u2019s work landing now.'],
           ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived. The same list HM and both Fulfilment tables use.'],
+          ['Who each person is counted against', 'The <strong>same rule Fulfilment uses</strong>. Every number in this table is a <strong>count of people</strong>, so a person is never split in half: they go <strong>whole</strong> to the <strong>agency</strong> when an agency sourced the role, and to the <strong>recruiter</strong> in every other case — including when the sourcer is a freelancer or one of our own. <em>Aligned 10 Sep 2026; before that this panel always credited the recruiter, so it could disagree with Fulfilment on the same screen.</em>'],
           ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
           ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>, with <strong>Offered</strong> (their sum) at the end and <strong>Joining conversion</strong> in its own column on the right. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them.'],
         ]
