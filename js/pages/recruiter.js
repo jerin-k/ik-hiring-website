@@ -1614,24 +1614,37 @@ export function initRecruiterFilters(data) {
       const b = m[t] || (m[t] = { o: 0, j: 0, p: 0, dr: 0 });
       b[key] += 1;
     };
+    // ===== #43 (Jerin, 10 Sep 2026): this panel now obeys the SAME credit rule as Fulfilment =====
+    // 🚨 Every figure here — Offered, Joined, Joining Pending, Dropped — is a COUNT OF PEOPLE, so it follows
+    //    creditSplit's HEAD rule (`hcTo`), NOT the score fractions. The head goes WHOLE to one party: the
+    //    agency when one sourced the role, otherwise the recruiter. A person is never halved (Rule 1).
+    // Why this had to change: before it, the panel credited `e.recruiter` unconditionally while Fulfilment
+    // moved the head to the agency — so the same recruiter could show two different Joined figures in two
+    // panels of ONE tab. Latent until 10 Sep, when the first Sourcer was tagged and then set to Agency.
+    // ⚠ With a Freelancer or an Internal sourcer `hcTo` is 'rec', so nothing moves — this only bites for an
+    //   AGENCY, which is exactly when it should.
+    const headTo = (rec, srcr, dept) => {
+      const sp = splitOf(dept, srcr);
+      return (sp.hcTo === 'src' && srcr) ? srcr : rec;
+    };
     // Joined - people, by start date, minus last quarter's carry-over.
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
       if (!e.accepted || e.appStatus !== 'Hired' || qOf(e.startDate) !== q) return; // Joined = moved to Hired, not just an accepted offer
       if (e.openingQuarter && e.openingQuarter < q) return;
-      bump(rec, 'j', e.jobTitle);
+      bump(headTo(rec, e.sourcer, e.department), 'j', e.jobTitle);   // #43
     });
     // Joining Pending - identical rule to the HM Positions card, and LIVE.
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
       if (c.openingQuarter && c.openingQuarter < q) return;
-      bump(rec, 'p', c.job || c.jobTitle);
+      bump(headTo(rec, c.sourcer, c.department), 'p', c.job || c.jobTitle);   // #43
     });
     // Dropped - the one unified list, shared with HM and both Fulfilment tables.
     dropRows(data).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
       if (e.quarter !== q) return;
-      bump(rec, 'dr', e.job || e.jobTitle);
+      bump(headTo(rec, e.sourcer, e.department), 'dr', e.job || e.jobTitle);   // #43
     });
     Object.values(byRec).forEach(a => { a.o = a.j + a.p + a.dr; });
     Object.values(byRecJob).forEach(m => Object.values(m).forEach(a => { a.o = a.j + a.p + a.dr; }));
