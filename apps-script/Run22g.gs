@@ -21,7 +21,7 @@ var G22_PLAN = [
     recs: ['Tina Anisha Bibeiro'] }
 ];
 
-function run22g() { buildAuditV9(); check58d_(); }
+function run22g() { check58d_(); }  // read-only: the outside checker
 
 function workLog72_(){
   var ss=SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
@@ -4166,4 +4166,32 @@ function verify87_(){
     Logger.log('V87 ' + id + ' | expected ' + want[id] + ' | actual "' + aid + '" | field present ' + seen + ' | ' + (aid===want[id]?'MATCH':'MISMATCH'));
   });
   Logger.log('V87 done');
+}
+
+// #87 REVERT (10 Sep): GH-2180-398-398-8 is a CONTESTED pair (P-03411 dropped / P-03412 joined, both bound).
+// The stamper excludes contested pairs by design; my P-03412 stamp made it REFUSE to run and blocked 6
+// legitimate stamps. Put it back to blank. ⚠ An empty customField.setValue may return invalid_input - if so
+// this must be cleared in the UI.
+function revert87_(mode){
+  mode = mode || 'dry';
+  var TARGET='GH-2180-398-398-8', EXPECT='P-03412';
+  var fieldId=null;
+  ashbyListAll_('/customField.list', {}).forEach(function(f){
+    if(/audit-id/i.test(String(f.title||'')) && /opening/i.test(String(f.objectType||''))) fieldId=f.id; });
+  var o=null;
+  ashbyListAll_('/opening.list', {}).forEach(function(x){ if(String((x.latestVersion||{}).identifier||'')===TARGET) o=x; });
+  if(!o||!fieldId){ Logger.log('R87 HALT - opening or field not found'); return; }
+  var cur=''; ((o.latestVersion||{}).customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) cur=String(f.value||''); });
+  Logger.log('R87 current value "' + cur + '"');
+  if(cur===''){ Logger.log('R87 already blank - nothing to do'); return; }
+  if(cur!==EXPECT){ Logger.log('R87 GUARD FAILED - expected ' + EXPECT + ', found "' + cur + '". Nothing written.'); return; }
+  if(mode!=='run'){ Logger.log('R87 WOULD clear it back to blank'); return; }
+  var r=ashbyWrite_('/customField.setValue', {objectType:'Opening', objectId:o.id, fieldId:fieldId, fieldValue:''});
+  var body=(r&&r.json)||{};
+  Logger.log('R87 empty-write :: http ' + (r&&r.code) + ' success=' + body.success + ' errors=' + JSON.stringify(body.errors||'').slice(0,110));
+  if(!body.success){ Logger.log('R87 ⚠ API will not blank it — CLEAR IT IN THE ASHBY UI on ' + TARGET); return; }
+  Utilities.sleep(6000);
+  var after=''; ashbyListAll_('/opening.list', {}).forEach(function(x){ var lv=x.latestVersion||{};
+    if(String(lv.identifier||'')===TARGET) (lv.customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) after=String(f.value||''); }); });
+  Logger.log('R87 read-back "' + after + '" :: ' + (after===''?'CLEARED':'STILL SET'));
 }
