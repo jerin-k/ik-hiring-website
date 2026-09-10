@@ -1012,7 +1012,7 @@ function refreshDashboardData() {
   } catch (eD) { Logger.log('late-stage drop merge skipped: ' + eD.message); }
 
   var dashboard = {
-    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
+    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
     openingPendingByJobQ: openingPendingByJobQ,
@@ -1402,6 +1402,61 @@ function computeOwnedSeatsByRoleQ_(allOpenings, uidToName, roleName, RID) {
   });
   return owned;
 }
+
+// ===== #100 (10 Sep 2026): the recruiter AND the sourcer, read off the SAME opening =====
+// computeOwnedSeatsByRoleQ_ answers 'how many openings of this job does this person hold this role on' - it
+// never says WHICH openings. The Recruiter tab's Goal needs the pairing, because a sourcer who worked SOME of
+// a job's openings had their split applied to ALL of them: the recruiter handed over every opening on the job
+// while the sourcer was credited only for theirs, and the difference vanished. Measured on 2026-Q3: Oshin
+// owned 6 openings on 7c1706f1 and Sangha sourced 4 - all 6 left Oshin, 4 reached Sangha, 2 disappeared.
+//
+// Shape: ownedSeatsPairQ[quarter][job8] = [ { r: recruiterName, s: sourcerName, n: openings } ]
+// Every opening lands in exactly ONE bucket, so the two shares always add back to the whole.
+//
+// WARNING: IDENTICAL scoping rules to computeOwnedSeatsByRoleQ_ on purpose - same close-reason filter, same
+//   quarter bucketing from openedAt, same 1/n share when a role is held by more than one person. Change one,
+//   change both, or the Goal will stop reconciling with openingBuckets.
+// WARNING: recById is the RECRUITER ROSTER; allById is the FULL user map. An agency is not a recruiter, so
+//   looking the sourcer up in the roster would silently drop exactly the rows the credit split exists to score.
+// WARNING: '' is a real, meaningful key: { s: '' } means 'no sourcer, the recruiter keeps it all'; { r: '' }
+//   means an opening carrying a sourcer but no recruiter.
+function computeOwnedSeatsPairQ_(allOpenings, recById, allById) {
+  var CR_HIRED = '2777221e-d3a7-40e6-95a3-6988ad60494d', CR_ONHOLD = '05105d39-d5f6-442c-b7bf-f6b055a50a43',
+      CR_SHELVED = '63d32633-3047-458b-a9a2-fbf2d04738f2', CR_CARRYFWD = '249988e6-c53c-4d6e-b60d-dc78e145520d';
+  var RID_REC = '22db8dc8-83f4-40de-8376-87efff4a6eb6', RID_SRC = '952a945b-4f74-44cd-be85-2acba0248822';
+  var out = {};
+  (allOpenings || []).forEach(function (o) {
+    var lv = o.latestVersion || {}, cr = o.closeReasonId;
+    if (cr === CR_ONHOLD || cr === CR_SHELVED) return;
+    var iso = o.openedAt; if (!iso) return;
+    var dt = new Date(iso); if (isNaN(dt.getTime())) return;
+    if (o.closedAt && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;
+    var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
+    var ht = lv.hiringTeam || [], recs = [], srcs = [];
+    ht.forEach(function (mm) {
+      if (mm.role === 'Recruiter' || mm.roleId === RID_REC) { var a = recById[mm.userId]; if (a) recs.push(a); }
+      if (mm.role === 'Sourcer'   || mm.roleId === RID_SRC) { var b = allById[mm.userId]; if (b) srcs.push(b); }
+    });
+    if (!recs.length && !srcs.length) return;
+    if (!recs.length) recs = [''];
+    if (!srcs.length) srcs = [''];
+    var n = recs.length * srcs.length, jobIds = lv.jobIds || [];
+    jobIds.forEach(function (jid) {
+      var j8 = String(jid).substring(0, 8);
+      var bq = out[q] || (out[q] = {}), arr = bq[j8] || (bq[j8] = []);
+      recs.forEach(function (rn) {
+        srcs.forEach(function (sn) {
+          var hit = null;
+          for (var i = 0; i < arr.length; i++) if (arr[i].r === rn && arr[i].s === sn) { hit = arr[i]; break; }
+          if (!hit) { hit = { r: rn, s: sn, n: 0 }; arr.push(hit); }
+          hit.n = Math.round((hit.n + 1 / n) * 10000) / 10000;
+        });
+      });
+    });
+  });
+  return out;
+}
+
 
 
 // ===== PUBLISH GUARD — refuse to overwrite good data with a partial build (added 2026-09-06) =====
