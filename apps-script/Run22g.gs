@@ -3588,23 +3588,6 @@ function strayList82_(){
   Logger.log('STRAY matched ' + n + ' of ' + (orp.length-1) + ' | NOTHING WAS ARCHIVED');
 }
 
-// #85 probe (10 Sep): READ-ONLY. Which Ashby job actually holds the Software Engineer 2 openings?
-function probeSE2_(){
-  var jobs = ashbyListAll_('/job.list').filter(function(j){ return /software engineer 2/i.test(String(j.title||'')); });
-  var cnt = {}, open = {};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv = o.latestVersion || {};
-    (lv.jobIds || o.jobIds || []).forEach(function(jid){
-      cnt[jid] = (cnt[jid]||0) + 1;
-      if (String(o.openingState||o.state||'') === 'Open' && !o.isArchived) open[jid] = (open[jid]||0) + 1;
-    });
-  });
-  jobs.forEach(function(j){
-    Logger.log('SE2 :: [' + j.title + '] normKey [' + String(j.title||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim() + '] status ' + (j.status||'?') + ' | openings ' + (cnt[j.id]||0) + ' | Open ' + (open[j.id]||0));
-  });
-  Logger.log('SE2 jobs matched ' + jobs.length);
-}
-
 // #69 probe (10 Sep): READ-ONLY. Are the deactivated-recruiter openings PRE-Q3, or current?
 function probeDead69_(){
   var dead = {}, nameById = {};
@@ -3634,43 +3617,6 @@ function probeDead69_(){
   Logger.log('DEAD69 BY QUARTER :: ' + Object.keys(byQ).sort().map(function(k){ return k+'='+byQ[k]; }).join(' | '));
   Logger.log('DEAD69 BY STATE :: ' + Object.keys(byState).sort().map(function(k){ return k+'='+byState[k]; }).join(' | '));
   Logger.log('DEAD69 BY PERSON :: ' + Object.keys(byPerson).sort(function(a,b){return byPerson[b]-byPerson[a];}).map(function(k){ return k+'='+byPerson[k]; }).join(' | '));
-}
-
-// #69 follow-up (10 Sep, Jerin's question): are the 16 Q3-2026 deactivated-recruiter openings OPEN, and do
-// they have a candidate attached? READ-ONLY. Also dumps the opening object's KEYS to settle whether the API
-// exposes any candidate reference at all (#84 says it does not - this re-tests rather than assuming).
-function probeQ3Dead_(){
-  var dead = {};
-  ashbyListAll_('/user.list', { includeDeactivated:true }).forEach(function(u){
-    if (u.isEnabled === false) dead[u.id] = String(u.name || ((u.firstName||'')+' '+(u.lastName||'')).trim() || '').trim(); });
-  var jobsById = {};
-  ashbyListAll_('/job.list').forEach(function(j){ jobsById[j.id] = j.title || ''; });
-  var claimed = {};
-  try { var lg = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA')
-          .getSheetByName('V9 - Claim ledger').getDataRange().getValues();
-    var h={}; lg[0].forEach(function(x,i){ h[String(x).trim()]=i; });
-    for (var i=1;i<lg.length;i++){ var oid=String(lg[i][h['Opening id']]||'').trim();
-      if(oid) claimed[oid]=String(lg[i][h['audit-id']]||'')+' '+String(lg[i][h['Candidate']]||''); }
-  } catch(e){ Logger.log('Q3DEAD ledger read failed: '+e); }
-  var keysSeen = null, n = 0, byState = {};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    if (o.isArchived) return;
-    var lv = o.latestVersion || {};
-    var hit = null;
-    (lv.hiringTeam||[]).forEach(function(x){ if(/recruiter/i.test(String(x.role||x.roleName||'')) && dead[x.userId]) hit = x.userId; });
-    if (!hit) return;
-    var d = String(lv.openedAt || o.openedAt || '');
-    if (d.slice(0,4) !== '2026') return;
-    var mo = parseInt(d.slice(5,7),10); if (!(mo>=7 && mo<=9)) return;
-    n++;
-    if (!keysSeen) keysSeen = Object.keys(o).join(',') + ' || latestVersion: ' + Object.keys(lv).join(',');
-    var st = String(o.openingState||o.state||'?'); byState[st]=(byState[st]||0)+1;
-    var jn = []; (lv.jobIds||o.jobIds||[]).forEach(function(jid){ if(jobsById[jid]) jn.push(jobsById[jid]); });
-    Logger.log('Q3DEAD ' + n + ' :: ' + d.slice(0,10) + ' | state ' + st + ' | recruiter ' + dead[hit]
-      + ' | job ' + (jn.join(' + ')||'(none)') + ' | claimed-by ' + (claimed[o.id] || 'NOBODY'));
-  });
-  Logger.log('Q3DEAD total ' + n + ' | by state :: ' + Object.keys(byState).map(function(k){return k+'='+byState[k];}).join(' | '));
-  Logger.log('Q3DEAD opening KEYS :: ' + keysSeen);
 }
 
 // #69 follow-up (10 Sep, for Jerin): the OPEN openings whose Recruiter is a DEACTIVATED account.
@@ -3775,14 +3721,6 @@ function sanghaScan_(){
   Logger.log('SANGHA total live openings ' + (rows.length-1) + ' | ashby-side ' + nA + ' | tracker-side ' + nB + ' | NOTHING written to Ashby');
 }
 
-function roleProbe_(){
-  ashbyListAll_('/user.list', { includeDeactivated:true }).forEach(function(u){
-    var n=String(u.name || ((u.firstName||'')+' '+(u.lastName||'')).trim() || '').trim();
-    if(/^sangha|^sanghamitra|^oshin/i.test(n))
-      Logger.log('ROLE :: ' + n + ' | enabled ' + (u.isEnabled!==false) + ' | globalRole ' + (u.globalRole||'?') + ' | email ' + String(u.email||'').replace(/@.*/,'@...'));
-  });
-}
-
 // #93 (Jerin, 10 Sep): 'Sangha shouldnt be an owner for any live opening in Q3. All of it should sit with
 // Oshin & Sangha should be marked as Sourcer.' Oshin is doing the TRACKER side; this does ASHBY only.
 // Targets the 7 by IDENTIFIER, not uuid, and re-verifies state/quarter live before every write.
@@ -3870,194 +3808,6 @@ function verify93_(){
   Logger.log('V93 seen ' + seen + ' of ' + T93_IDS.length + ' | PASS ' + ok + ' | FAIL ' + bad);
 }
 
-// #88 (10 Sep): the three writers that between them cover the API-fixable worklist. Kept together so
-// nobody runs one and assumes the list is done - task63 does CUSTOM FIELDS only.
-function task88_all(mode){ mode = mode || 'dry';
-  Logger.log('=== T88 ' + mode + ' :: CUSTOM FIELDS ==='); try{ task63_applyFields(mode); }catch(e){ Logger.log('T88 fields ERROR ' + e); }
-  Logger.log('=== T88 ' + mode + ' :: OPENING OWNERS ==='); try{ task64_applyOwners(mode); }catch(e){ Logger.log('T88 openOwners ERROR ' + e); }
-  Logger.log('=== T88 ' + mode + ' :: CANDIDATE OWNERS ==='); try{ task64_candOwners(mode); }catch(e){ Logger.log('T88 candOwners ERROR ' + e); }
-}
-
-// #87 (10 Sep): one opening carries the WRONG tracker reference. READ-ONLY - looks at both positions and
-// both openings so we can see which side is wrong before touching anything.
-function probe87_(){
-  var ids = ['P-03411','P-03412'];
-  var uName={}; ashbyListAll_('/user.list',{includeDeactivated:true}).forEach(function(u){
-    uName[u.id]=String(u.name||((u.firstName||'')+' '+(u.lastName||'')).trim()||'').trim(); });
-  var jobsById={}; ashbyListAll_('/job.list').forEach(function(j){ jobsById[j.id]=j.title||''; });
-  // what the tracker says about each position
-  var tv=SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A').getSheetByName('Master').getDataRange().getValues();
-  var tc={}; tv[0].forEach(function(x,i){ tc[String(x).trim()]=i; });
-  for(var i=1;i<tv.length;i++){ var a=String(tv[i][tc['audit-id']]||'').trim();
-    if(ids.indexOf(a)<0) continue;
-    Logger.log('P87 TRACKER ' + a + ' | ' + String(tv[i][tc['Overall Status']]||'') + ' | job ' + String(tv[i][tc['Job Name']]||'')
-      + ' | candidate ' + String(tv[i][tc['Candidate Name']]||'') + ' | recruiter ' + String(tv[i][tc['Recruiter']]||'')
-      + ' | date ' + Utilities.formatDate(new Date(tv[i][tc['Date']]), 'Asia/Calcutta', 'yyyy-MM-dd')); }
-  // which opening in Ashby carries each reference
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{}; var aid='';
-    (lv.customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) aid=String(f.value||''); });
-    if(ids.indexOf(aid)<0) return;
-    var rec=[]; (lv.hiringTeam||[]).forEach(function(x){ if(/recruiter/i.test(String(x.role||x.roleName||''))) rec.push(uName[x.userId]||'?'); });
-    var jn=[]; (lv.jobIds||o.jobIds||[]).forEach(function(jid){ if(jobsById[jid]) jn.push(jobsById[jid]); });
-    Logger.log('P87 ASHBY  ' + aid + ' is on opening ' + (lv.identifier||'?') + ' | state ' + (o.openingState||o.state)
-      + ' | archived ' + !!o.isArchived + ' | opened ' + String(lv.openedAt||o.openedAt||'').slice(0,10)
-      + ' | job ' + (jn.join(' + ')||'(none)') + ' | recruiter ' + (rec.join(' + ')||'(nobody)')); });
-  Logger.log('P87 done - nothing written');
-}
-
-// 10 Sep: did the settled opening-name rule 'IK-Opening-NNN - <Recruiter Full Name>' actually get applied?
-// READ-ONLY.
-function probeNames_(){
-  var withName=0, bare=0, gh=0, other=0, created=0, createdWithName=0;
-  var samples=[], createdSamples=[];
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    if(o.isArchived) return;
-    var lv=o.latestVersion||{}; var id=String(lv.identifier||'');
-    var isNew = /^IK-Opening-(2[7-9][0-9]|3[0-4][0-9])$/.test(id.split(' - ')[0]);
-    if(/^IK-Opening-[-0-9]+\s+-\s+\S/.test(id)){ withName++; if(samples.length<4) samples.push(id); }
-    else if(/^IK-Opening-/.test(id)) bare++;
-    else if(/^GH-/.test(id)) gh++;
-    else { other++; if(samples.length<6) samples.push('OTHER:'+id); }
-    if(isNew){ created++; if(/\s+-\s+\S/.test(id)) createdWithName++; if(createdSamples.length<5) createdSamples.push(id); }
-  });
-  Logger.log('NAMES | follows the rule (has " - Name") ' + withName + ' | bare IK-Opening-NNN ' + bare + ' | GH- legacy ' + gh + ' | other ' + other);
-  Logger.log('NAMES | of the 9-Sep backfill range (275-349): ' + created + ' openings, ' + createdWithName + ' carry a recruiter name');
-  Logger.log('NAMES samples with a name :: ' + (samples.join(' | ')||'(none)'));
-  Logger.log('NAMES samples from backfill :: ' + createdSamples.join(' | '));
-}
-
-// 10 Sep: find a SAFE target for the opening-rename test. READ-ONLY.
-function probeTestJobs_(){
-  var deptMap={}; try{ deptMap=fetchDepartmentMap_(); }catch(e){}
-  function topDept(id){ var d=deptMap[id],g=0; while(d&&d.parentId&&deptMap[d.parentId]&&g++<8) d=deptMap[d.parentId]; return d?d.name:''; }
-  var hits=[];
-  ashbyListAll_('/job.list').forEach(function(j){
-    var t=String(j.title||''); var dep=topDept(j.departmentId)||'';
-    if(/test/i.test(t) || /test/i.test(dep) || /christy/i.test(t))
-      hits.push({id:j.id, title:t, dept:dep, status:j.status||''});
-  });
-  var byJob={};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{};
-    (lv.jobIds||o.jobIds||[]).forEach(function(jid){ (byJob[jid]=byJob[jid]||[]).push(
-      (lv.identifier||'?') + ' [' + (o.openingState||o.state||'?') + (o.isArchived?', ARCHIVED':'') + ']'); });
-  });
-  hits.forEach(function(h){
-    Logger.log('TESTJOB :: ' + h.title + ' | dept ' + (h.dept||'(none)') + ' | job status ' + h.status
-      + ' | openings ' + ((byJob[h.id]||[]).length ? (byJob[h.id]||[]).join(' , ') : '(none)')); });
-  Logger.log('TESTJOB total matched ' + hits.length);
-}
-
-// 10 Sep, Jerin: 'Test on a test job.' Can opening.update change the opening IDENTIFIER?
-// Target: an ARCHIVED opening on 'Test - Project Hello Christy - Sales PA' (Test dept, excluded by #37).
-// Captures the WHOLE object before and after, because opening.update may be replace-shaped and blank fields.
-function testRename_(mode){
-  mode = mode || 'dry';
-  var TARGET = 'IK-1 - Oshin Verma';
-  var NEWNAME = 'IK-1';   // restoring the original after the successful test
-  function grab(){
-    var found=null;
-    ashbyListAll_('/opening.list', {}).forEach(function(o){
-      var lv=o.latestVersion||{};
-      if(String(lv.identifier||'')===TARGET || String(lv.identifier||'')===NEWNAME) found=o; });
-    return found;
-  }
-  function shape(o){
-    if(!o) return '(not found)';
-    var lv=o.latestVersion||{};
-    return 'id=' + (lv.identifier||'') + ' state=' + (o.openingState||o.state||'') + ' archived=' + !!o.isArchived
-      + ' opened=' + String(lv.openedAt||o.openedAt||'').slice(0,10)
-      + ' desc=' + String(lv.description||'').slice(0,30)
-      + ' team=' + (lv.teamId?'set':'none') + ' jobs=' + ((lv.jobIds||[]).length)
-      + ' locs=' + ((lv.locationIds||[]).length) + ' hiringTeam=' + ((lv.hiringTeam||[]).length)
-      + ' customFields=' + ((lv.customFields||[]).length)
-      + ' targetHire=' + (lv.targetHireDate||'-') + ' empType=' + (lv.employmentType||'-');
-  }
-  var before = grab();
-  if(!before){ Logger.log('RENAME HALT - target ' + TARGET + ' not found'); return; }
-  Logger.log('RENAME BEFORE :: ' + shape(before));
-  if(mode !== 'run'){ Logger.log('RENAME DRY - would set identifier to "' + NEWNAME + '". Nothing written.'); return; }
-  var r = ashbyWrite_('/opening.update', { openingId: before.id, identifier: NEWNAME });
-  var body = (r && r.json) || {};
-  Logger.log('RENAME REPLY :: http ' + (r&&r.code) + ' | success=' + body.success
-    + ' | errors=' + JSON.stringify(body.errors||'').slice(0,120));
-  Utilities.sleep(6000);
-  var after = grab();
-  Logger.log('RENAME AFTER  :: ' + shape(after));
-  var okName = after && String((after.latestVersion||{}).identifier||'')===NEWNAME;
-  Logger.log('RENAME VERDICT :: identifier actually changed? ' + (okName ? 'YES' : 'NO')
-    + ' | anything else changed? compare the two lines above');
-}
-
-// 10 Sep, Jerin spotted openings with 'No Roles' and blank Employment Type. READ-ONLY, workspace-wide.
-// Also checks whether 'No Roles' in the UI actually means EMPTY, or a DEACTIVATED user the UI hides.
-function probeRoles_(){
-  var uName={}, uDead={};
-  ashbyListAll_('/user.list', { includeDeactivated:true }).forEach(function(u){
-    uName[u.id]=String(u.name||((u.firstName||'')+' '+(u.lastName||'')).trim()||'').trim();
-    uDead[u.id]=(u.isEnabled===false); });
-  var tot=0, noRec=0, recDead=0, recLive=0, noEmp=0, noRoleAtAll=0;
-  var watch={'IK-Opening-335':1,'IK-Opening-336':1,'IK-Opening-337':1,'IK-Opening-338':1,'IK-Opening-339':1,'IK-Opening-340':1};
-  var byState={};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    if(o.isArchived) return; tot++;
-    var lv=o.latestVersion||{}; var id=String(lv.identifier||'');
-    var rec=[], anyRole=(lv.hiringTeam||[]).length;
-    (lv.hiringTeam||[]).forEach(function(x){ if(/recruiter/i.test(String(x.role||x.roleName||''))) rec.push(x.userId); });
-    var emp=''; (lv.customFields||[]).forEach(function(f){ if(/employment type/i.test(String(f.title||''))) emp=String(f.valueLabel||f.value||''); });
-    if(!rec.length){ noRec++; var st=String(o.openingState||o.state||'?'); byState[st]=(byState[st]||0)+1; }
-    else if(rec.some(function(u){return uDead[u];})) recDead++; else recLive++;
-    if(!anyRole) noRoleAtAll++;
-    if(!emp) noEmp++;
-    if(watch[id]) Logger.log('WATCH ' + id + ' | roles ' + anyRole + ' | recruiters ' + (rec.map(function(u){return uName[u]+(uDead[u]?' [INACTIVE]':'');}).join(' + ')||'(NONE)') + ' | empType ' + (emp||'(BLANK)') + ' | state ' + (o.openingState||o.state));
-  });
-  Logger.log('ROLES | non-archived openings ' + tot + ' | NO recruiter ' + noRec + ' | recruiter is a DEAD account ' + recDead + ' | live recruiter ' + recLive);
-  Logger.log('ROLES | no hiring-team member of ANY role ' + noRoleAtAll + ' | blank Employment Type ' + noEmp);
-  Logger.log('ROLES | the NO-recruiter ones by state :: ' + Object.keys(byState).map(function(k){return k+'='+byState[k];}).join(' | '));
-}
-
-// 10 Sep: WHY does a recruiter show in the Ashby UI on one opening and not another?
-// Compare a KNOWN-VISIBLE one (IK-Opening-114, recruiter not set by us) against a KNOWN-BLANK one
-// (IK-Opening-275, recruiter set by hiringTeam.addMember). READ-ONLY.
-function probeShape_(){
-  var want={'IK-Opening-114':'VISIBLE in UI','IK-Opening-275':'BLANK in UI','IK-Opening-105':'set by API today'};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{}; var id=String(lv.identifier||'');
-    if(!want[id]) return;
-    Logger.log('SHAPE ' + id + ' (' + want[id] + ') | latestVersion keys :: ' + Object.keys(lv).join(','));
-    (lv.hiringTeam||[]).forEach(function(x,n){
-      Logger.log('   member' + n + ' keys :: ' + Object.keys(x).join(',')
-        + ' | role=' + (x.role||x.roleName||'?')
-        + ' | hasUserId=' + !!x.userId + ' | firstName=' + (x.firstName||'-') + ' | lastName=' + (x.lastName||'-')
-        + ' | email=' + String(x.email||'-').replace(/@.*/,'@..') );
-    });
-    var cf=[]; (lv.customFields||[]).forEach(function(f){
-      cf.push(String(f.title||'?').slice(0,26) + '=' + String(f.valueLabel||f.value||'(blank)').slice(0,18)); });
-    Logger.log('   customFields :: ' + cf.join(' | '));
-  });
-  Logger.log('SHAPE done');
-}
-
-// 10 Sep: is opening.list's hiringTeam the OPENING's own roles, or is it falling back to the JOB's team?
-// If every opening on one job reports the SAME recruiter, it is a job-level fallback and my 64 'verified'
-// recruiter writes never landed. READ-ONLY.
-function probeJobFallback_(){
-  var JOB='Part Time Instructor - Agentic AI (US)';
-  var jid=null; ashbyListAll_('/job.list').forEach(function(j){ if(String(j.title||'')===JOB) jid=j.id; });
-  if(!jid){ Logger.log('FB no job'); return; }
-  var rows=[];
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{};
-    if((lv.jobIds||o.jobIds||[]).indexOf(jid)<0) return;
-    var rec=[]; (lv.hiringTeam||[]).forEach(function(x){ rec.push((x.role||'?')+':'+(x.firstName||'')+' '+(x.lastName||'')); });
-    rows.push((lv.identifier||'?') + ' [' + (o.openingState||o.state||'?') + (o.isArchived?',ARCH':'') + '] -> ' + (rec.join(' , ')||'(NOBODY)'));
-  });
-  rows.sort();
-  rows.forEach(function(r){ Logger.log('FB ' + r); });
-  Logger.log('FB total openings on this job ' + rows.length);
-}
-
 function probe339_(){
   ashbyListAll_('/opening.list', {}).forEach(function(o){
     var lv=o.latestVersion||{}; var id=String(lv.identifier||'');
@@ -4077,26 +3827,6 @@ function uuid339_(){
     Logger.log('U339 partA ' + u.slice(0,18));
     Logger.log('U339 partB ' + u.slice(18));
   });
-}
-
-function probe87b_(){
-  // which opening does the claim ledger now bind to P-03412, and what audit-id does that opening carry?
-  var ss=SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
-  var lg=ss.getSheetByName('V9 - Claim ledger').getDataRange().getValues();
-  var target=null, why='';
-  for(var i=1;i<lg.length;i++){ if(String(lg[i][0]).trim()==='P-03412'){ target=String(lg[i][10]||'').trim(); why=String(lg[i][7]||''); } }
-  Logger.log('B87 ledger: P-03412 bound? ' + (target?'yes':'no') + ' | why ' + why);
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{}; var aid='';
-    (lv.customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) aid=String(f.value||''); });
-    var isTarget = (target && o.id===target);
-    if(!isTarget && aid!=='P-03411' && aid!=='P-03412') return;
-    var rec=[]; (lv.hiringTeam||[]).forEach(function(x){ if(/recruiter/i.test(String(x.role||x.roleName||''))) rec.push((x.firstName||'')+' '+(x.lastName||'')); });
-    Logger.log('B87 ' + (lv.identifier||'?') + (isTarget?'  <-- the one bound to P-03412':'')
-      + ' | stamped audit-id ' + (aid||'(none)') + ' | state ' + (o.openingState||o.state) + ' | archived ' + !!o.isArchived
-      + ' | opened ' + String(lv.openedAt||o.openedAt||'').slice(0,10) + ' | recruiter ' + (rec.join(' + ')||'(nobody)'));
-  });
-  Logger.log('B87 done');
 }
 
 function probeUnstamped_(){
@@ -4121,77 +3851,136 @@ function probeUnstamped_(){
   Logger.log('UNS total bound openings with NO audit-id: ' + n);
 }
 
-// #87 (Jerin's go, 10 Sep): fix the three audit-id stamps on openings.
-//   GH-2180-398-398-8  P-03411 -> P-03412  (Ashby's own offer links it to P-03412, who JOINED; P-03411 dropped)
-//   IK-Opening-240     (blank) -> P-03524  (single claimant, never stamped)
-//   IK-Opening-274     (blank) -> P-03595  (single claimant, never stamped)
-// The two CONTESTED openings are deliberately left unstamped. 'dry' by default.
-function task87_fixStamps(mode){
-  mode = mode || 'dry';
-  var PLAN = [ {id:'GH-2180-398-398-8', from:'P-03411', to:'P-03412'},
-               {id:'IK-Opening-240',    from:'',        to:'P-03524'},
-               {id:'IK-Opening-274',    from:'',        to:'P-03595'} ];
-  var fieldId=null, ftype='';
-  ashbyListAll_('/customField.list', {}).forEach(function(f){
-    if(/audit-id/i.test(String(f.title||'')) && /opening/i.test(String(f.objectType||''))){ fieldId=f.id; ftype=String(f.type||''); } });
-  if(!fieldId){ Logger.log('T87 HALT - audit-id field not found'); return; }
-  Logger.log('T87 field type ' + ftype + ' (String => send a bare string, not an array)');
-  var byIdent={};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{}; byIdent[String(lv.identifier||'')]=o; });
-  var wrote=0, skipped=0, fail=0;
-  PLAN.forEach(function(p){
-    var o=byIdent[p.id];
-    if(!o){ Logger.log('T87 HALT-ROW ' + p.id + ' not found'); fail++; return; }
-    var lv=o.latestVersion||{}; var cur='';
-    (lv.customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) cur=String(f.value||''); });
-    if(cur===p.to){ skipped++; Logger.log('T87 ' + p.id + ' ALREADY ' + p.to + ' - skipped'); return; }
-    if(cur!==p.from){ fail++; Logger.log('T87 GUARD FAILED ' + p.id + ' - expected "' + p.from + '" but found "' + cur + '". Nothing written.'); return; }
-    if(mode!=='run'){ wrote++; Logger.log('T87 WOULD set ' + p.id + ' :: "' + cur + '" -> ' + p.to); return; }
-    var r=ashbyWrite_('/customField.setValue', {objectType:'Opening', objectId:o.id, fieldId:fieldId, fieldValue:p.to});
-    var body=(r&&r.json)||{};
-    if(body.success){ wrote++; Logger.log('T87 WROTE ' + p.id + ' -> ' + p.to); }
-    else { fail++; Logger.log('T87 FAIL ' + p.id + ' :: ' + JSON.stringify(body.errors||'').slice(0,110)); }
+
+// ===== #103 (Jerin, 10 Sep 2026): set Employment Type + Role Type on Q3-2026 openings =====
+// RULES, verbatim: SME - India -> Emp 'PTC - Direct', Role 'As per AOP'
+//                 SME - US    -> Emp 'PTE',          Role 'As per AOP'
+//                 title contains 'Program Advisor' -> Role 'As per AOP' ONLY (Emp untouched)
+//
+// 🚨 THE OPENING'S 'Employment Type' SHOWS ONE WORD AND STORES ANOTHER. Measured 10 Sep from the opening's
+//    own payload (objectType 'opening_version', fieldType 'ValueSelect' — a plain STRING, never an array).
+//    Send the LABEL and Ashby returns success and changes NOTHING. Proof: IK-Opening-275 displays
+//    'PTC - Direct' while its stored value is 'Temporary'.
+// ⚠ A SECOND field, 'Employment Type - IK (Job)', carries all EIGHT of the same labels and stores them
+//    verbatim. The labels cannot tell them apart. That is why this matches the opening's own entry by
+//    EXACT title and then asserts the field id — never a regex, never an assumption.
+// ⚠ mode: omitted/'dry' = report only. 'run' = write. Dry is the default on purpose.
+function task103_fields(mode) {
+  var DRY = (String(mode || 'dry') !== 'run');
+  var SS = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
+  var EMP_ID  = '231c9f43-1f50-4c33-950a-0911c77f61de';
+  var ROLE_ID = 'c6fdde4f-3097-4df3-9702-6abec7061bea';
+  var EMP_VALUE = { 'FTE':'FullTime', 'FTC - Direct':'PartTime', 'FTC - External':'Intern',
+                    'PTE':'Contract', 'PTC - Direct':'Temporary',
+                    'PTC - External':'6e4716df-d5fa-45be-bdef-16bbaef867cb',
+                    'Intern':'4bda226f-c89e-47f2-98a9-752db3b05f6a',
+                    'Intern - PPO':'69720dad-3491-47c2-adf2-eecd1fca4bd2' };
+  var ROLE_OK = { 'Anticipation Of Exit':1, 'As per AOP':1, 'Buffer':1, 'New':1, 'Replacement':1 };
+
+  var dmap = fetchDepartmentMap_();
+  function deptOf(id) { var g=0; while (id && dmap[id] && dmap[id].parentId && g++ < 10) id = dmap[id].parentId;
+                        return (id && dmap[id]) ? dmap[id].name : ''; }
+  var jobs = {}; (ashbyListAll_('/job.list', {}) || []).forEach(function (j) {
+    jobs[j.id] = { title: j.title || '', dept: deptOf(j.departmentId) }; });
+
+  var rows = [['Opening uuid','Job title','Department','Field','Shows now','Should show','Value to send','Action','Result']];
+  var plan = [], skipped = 0;
+  (ashbyListAll_('/opening.list', {}) || []).forEach(function (o) {
+    if (o.isArchived) return;
+    var iso = o.openedAt; if (!iso) return;
+    var d = new Date(iso); if (isNaN(d.getTime())) return;
+    if (d.getUTCFullYear() !== 2026 || Math.floor(d.getUTCMonth()/3) + 1 !== 3) return;
+    var lv = o.latestVersion || {};
+    var j = jobs[(lv.jobIds || [])[0] || ''] || { title:'', dept:'' };
+    var wantEmp = '', wantRole = '';
+    if (j.dept === 'SME - India')   { wantEmp = 'PTC - Direct'; wantRole = 'As per AOP'; }
+    else if (j.dept === 'SME - US') { wantEmp = 'PTE';          wantRole = 'As per AOP'; }
+    if (/program advisor/i.test(j.title)) { wantRole = 'As per AOP'; wantEmp = ''; }   // Role Type only
+    if (!wantEmp && !wantRole) return;
+
+    var cfs = lv.customFields || [];
+    function entry(exactTitle) { for (var k=0;k<cfs.length;k++) if (String(cfs[k].title) === exactTitle) return cfs[k]; return null; }
+    [[wantEmp, 'Employment Type', EMP_ID, EMP_VALUE], [wantRole, 'Role Type', ROLE_ID, null]].forEach(function (spec) {
+      var want = spec[0], title = spec[1], fid = spec[2], map = spec[3];
+      if (!want) return;
+      var e = entry(title);
+      var shows = e ? String(e.valueLabel != null ? e.valueLabel : (e.value || '')) : '';
+      if (shows === want) { skipped++; return; }                       // already right
+      // 🚨 never assume the field id: if the opening exposes one, it must match
+      var seen = e ? (e.fieldId || e.id || '') : '';
+      if (seen && String(seen).indexOf(fid) !== 0) {
+        rows.push([o.id, j.title, j.dept, title, shows, want, '', 'SKIP - field id mismatch', String(seen).substring(0,20)]);
+        return; }
+      var send = map ? map[want] : want;
+      if (!send) { rows.push([o.id, j.title, j.dept, title, shows, want, '', 'SKIP - value not in the known list', '']); return; }
+      if (!map && !ROLE_OK[want]) { rows.push([o.id, j.title, j.dept, title, shows, want, '', 'SKIP - not a Role Type option', '']); return; }
+      plan.push({ openingId:o.id, job:j.title, dept:j.dept, title:title, fid:fid, shows:shows, want:want, send:send });
+    });
   });
-  Logger.log('T87 mode=' + mode + ' | wrote ' + wrote + ' | already-correct ' + skipped + ' | failures ' + fail);
+
+  var okC = 0, failC = 0;
+  plan.forEach(function (p) {
+    if (DRY) { rows.push([p.openingId, p.job, p.dept, p.title, p.shows, p.want, p.send, 'would write', '(dry run)']); return; }
+    var r = ashbyWrite_('/customField.setValue',
+      { objectType:'Opening', objectId:p.openingId, fieldId:p.fid, fieldValue:p.send });
+    var good = !!(r && r.json && r.json.success);
+    if (good) okC++; else failC++;
+    rows.push([p.openingId, p.job, p.dept, p.title, p.shows, p.want, p.send, 'WROTE',
+               good ? 'ok' : ('FAIL ' + String((r && r.json && JSON.stringify(r.json.errors)) || (r && r.code)).substring(0,60))]);
+  });
+
+  var sh = SS.getSheetByName('V9 - 103 field writes') || SS.insertSheet('V9 - 103 field writes');
+  sh.clear(); sh.getRange(1,1,rows.length,rows[0].length).setValues(rows);
+  Logger.log((DRY ? 'DRY RUN - nothing written. ' : 'LIVE RUN. ')
+    + 'planned ' + plan.length + ' | already correct ' + skipped
+    + (DRY ? '' : (' | wrote ' + okC + ' | failed ' + failC))
+    + ' | tab "V9 - 103 field writes"');
+  if (DRY) Logger.log('When the plan looks right, run again as: task103_fields("run")');
 }
 
-function verify87_(){
-  var want={'GH-2180-398-398-8':'P-03412','IK-Opening-240':'P-03524','IK-Opening-274':'P-03595'};
-  ashbyListAll_('/opening.list', {}).forEach(function(o){
-    var lv=o.latestVersion||{}; var id=String(lv.identifier||'');
-    if(!want[id]) return;
-    var aid='', seen=0;
-    (lv.customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))){ seen++; aid=String(f.value||''); } });
-    Logger.log('V87 ' + id + ' | expected ' + want[id] + ' | actual "' + aid + '" | field present ' + seen + ' | ' + (aid===want[id]?'MATCH':'MISMATCH'));
-  });
-  Logger.log('V87 done');
-}
 
-// #87 REVERT (10 Sep): GH-2180-398-398-8 is a CONTESTED pair (P-03411 dropped / P-03412 joined, both bound).
-// The stamper excludes contested pairs by design; my P-03412 stamp made it REFUSE to run and blocked 6
-// legitimate stamps. Put it back to blank. ⚠ An empty customField.setValue may return invalid_input - if so
-// this must be cleared in the UI.
-function revert87_(mode){
-  mode = mode || 'dry';
-  var TARGET='GH-2180-398-398-8', EXPECT='P-03412';
-  var fieldId=null;
-  ashbyListAll_('/customField.list', {}).forEach(function(f){
-    if(/audit-id/i.test(String(f.title||'')) && /opening/i.test(String(f.objectType||''))) fieldId=f.id; });
-  var o=null;
-  ashbyListAll_('/opening.list', {}).forEach(function(x){ if(String((x.latestVersion||{}).identifier||'')===TARGET) o=x; });
-  if(!o||!fieldId){ Logger.log('R87 HALT - opening or field not found'); return; }
-  var cur=''; ((o.latestVersion||{}).customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) cur=String(f.value||''); });
-  Logger.log('R87 current value "' + cur + '"');
-  if(cur===''){ Logger.log('R87 already blank - nothing to do'); return; }
-  if(cur!==EXPECT){ Logger.log('R87 GUARD FAILED - expected ' + EXPECT + ', found "' + cur + '". Nothing written.'); return; }
-  if(mode!=='run'){ Logger.log('R87 WOULD clear it back to blank'); return; }
-  var r=ashbyWrite_('/customField.setValue', {objectType:'Opening', objectId:o.id, fieldId:fieldId, fieldValue:''});
-  var body=(r&&r.json)||{};
-  Logger.log('R87 empty-write :: http ' + (r&&r.code) + ' success=' + body.success + ' errors=' + JSON.stringify(body.errors||'').slice(0,110));
-  if(!body.success){ Logger.log('R87 ⚠ API will not blank it — CLEAR IT IN THE ASHBY UI on ' + TARGET); return; }
-  Utilities.sleep(6000);
-  var after=''; ashbyListAll_('/opening.list', {}).forEach(function(x){ var lv=x.latestVersion||{};
-    if(String(lv.identifier||'')===TARGET) (lv.customFields||[]).forEach(function(f){ if(/audit-id/i.test(String(f.title||''))) after=String(f.value||''); }); });
-  Logger.log('R87 read-back "' + after + '" :: ' + (after===''?'CLEARED':'STILL SET'));
+// ===== ONE-OFF READ-ONLY, 11 Sep 2026 — the state of every Q3-2026 opening =====
+// WRITES NOTHING TO ASHBY. Adds one tab to the audit sheet.
+// Purpose: tell apart the four kinds of "open" Q3 opening —
+//   filled but never closed out · closed after a drop · a LIVE VACANCY · genuinely spare.
+// The audit's orphan rule cannot do this: it asks only whether a candidate-bearing tracker position
+// claims the opening, and a live vacancy has no candidate yet, so it is unclaimable by construction.
+// Delete with the other one-offs under #99.
+function q3State() {
+  var SS = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
+  var CR = { '2777221e-d3a7-40e6-95a3-6988ad60494d':'Hired',
+             '05105d39-d5f6-442c-b7bf-f6b055a50a43':'On hold',
+             '63d32633-3047-458b-a9a2-fbf2d04738f2':'Shelved',
+             '249988e6-c53c-4d6e-b60d-dc78e145520d':'Carry forward' };
+  var dmap = fetchDepartmentMap_();
+  function deptOf(id){ var g=0; while(id && dmap[id] && dmap[id].parentId && g++<10) id=dmap[id].parentId;
+                       return (id && dmap[id]) ? dmap[id].name : ''; }
+  var jobs = {}; (ashbyListAll_('/job.list', {}) || []).forEach(function(j){
+    jobs[j.id] = { title:j.title||'', dept:deptOf(j.departmentId) }; });
+
+  var rows = [['Ashby uuid','Identifier','Opened','Job title','Department','State','Close reason','audit-id stamp','Archived']];
+  var n = { open:0, closedHired:0, closedOther:0, archived:0 };
+  (ashbyListAll_('/opening.list', {}) || []).forEach(function(o){
+    var iso = o.openedAt; if (!iso) return;
+    var d = new Date(iso); if (isNaN(d.getTime())) return;
+    if (d.getUTCFullYear() !== 2026 || Math.floor(d.getUTCMonth()/3) + 1 !== 3) return;
+    var lv = o.latestVersion || {};
+    var j = jobs[(lv.jobIds||[])[0] || ''] || { title:'', dept:'' };
+    var stamp = '';
+    (lv.customFields || []).forEach(function(f){
+      if (String(f.title) === 'audit-id') stamp = String(f.value != null ? f.value : (f.valueLabel||'')); });
+    var reason = o.closeReasonId ? (CR[o.closeReasonId] || 'other') : '';
+    var state = o.closedAt ? ('Closed - ' + (reason || 'no reason')) : 'Open';
+    if (o.isArchived) n.archived++;
+    else if (!o.closedAt) n.open++;
+    else if (reason === 'Hired') n.closedHired++;
+    else n.closedOther++;
+    rows.push([o.id, o.identifier || (lv.identifier || ''), String(iso).substring(0,10),
+               j.title, j.dept, state, reason, stamp, o.isArchived ? 'yes' : '']);
+  });
+  var sh = SS.getSheetByName('V9 - Q3 opening state') || SS.insertSheet('V9 - Q3 opening state');
+  sh.clear(); sh.getRange(1,1,rows.length,rows[0].length).setValues(rows);
+  Logger.log('Q3-2026 openings ' + (rows.length-1) + ' | still Open ' + n.open
+    + ' | closed as Hired ' + n.closedHired + ' | closed other ' + n.closedOther
+    + ' | archived ' + n.archived + ' | tab "V9 - Q3 opening state". NOTHING written to Ashby.');
 }
