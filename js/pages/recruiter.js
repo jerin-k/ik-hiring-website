@@ -416,6 +416,7 @@ export function renderRecruiter(data) {
         <button class="hyg-tab" data-h="nopod">Pod Not Set<span class="n" id="hygNNoPod"></span></button>
         <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
         <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
+        <button class="hyg-tab" data-h="nosrc">Selected Candidates Missing Source<span class="n" id="hygNNoSrc"></span></button>
         <button class="hyg-tab" data-h="unscored">Roles Missing Score Inputs<span class="n" id="hygNUnscored"></span></button>
         <button class="hyg-tab" data-h="nodate">Openings Missing Opened Date<span class="n" id="hygNNoDate"></span></button>
         <button class="hyg-tab" data-h="nocap">Capacity Not Set<span class="n" id="hygNNoCap"></span></button>
@@ -503,6 +504,18 @@ export function renderRecruiter(data) {
         <div class="scroll-table"><table>
           <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>DOJ</th><th>Recruiter</th></tr></thead>
           <tbody id="hygHiredGapBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="hyg-panel" data-h="nosrc" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Selected candidates with no source in Ashby — <span id="hygNoSrcQ"></span></h4>
+          <p class="sub-note" style="margin:0">People who <strong>joined</strong>, are <strong>joining</strong> or <strong>dropped after an offer</strong> in the selected quarter, whose application in Ashby carries <strong>no source</strong> — the joiners are the ones Sourcing Mix shows under <em>(source not recorded)</em>. For selected candidates the <strong>Hiring Tracker is the source of truth</strong>: set the source on the application in Ashby to match it, and the row clears at the next refresh.</p></div>
+          <button class="hyg-dl" data-dl="nosrc">Download CSV</button>
+        </div>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Outcome</th><th>Start date</th><th>Recruiter</th></tr></thead>
+          <tbody id="hygNoSrcBody"></tbody>
         </table></div>
       </div>
 
@@ -2037,6 +2050,40 @@ export function initRecruiterFilters(data) {
       }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody with candidates attributed is missing a capacity for this quarter.</td></tr>`;
     }
 
+    // --- #105i (Jerin, 13 Sep 2026): selected candidates with no source in Ashby ---
+    // Selected = an offer that ended in Hired (Joined), is still live (Joining pending) or was archived after the
+    // offer (Dropped after offer), dated by the offer's START DATE — the date Joined uses everywhere, so the Joined
+    // rows here are exactly Sourcing Mix's "(source not recorded)" joiners for the quarter. A live or dropped offer
+    // with no start date falls back to the day the offer was created. ⚠ Joined is dated by start date ONLY: offers
+    // re-created in the 2 Sep backfill carry that creation date, which would drag long-past joiners into Q3.
+    // The Hiring Tracker is the source of truth for selected candidates — the fix is always in Ashby.
+    const qOfNs = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const NS_ORDER = { 'Joined': 0, 'Joining pending': 1, 'Dropped after offer': 2 };
+    const nsBest = {};
+    (data.offerEvents || []).forEach(e => {
+      if (e.srcType) return;
+      let outcome = null, when = null;
+      if (e.appStatus === 'Hired' && e.accepted) { outcome = 'Joined'; when = qOfNs(e.startDate); }
+      else if (e.appStatus === 'Active' && e.offerStatus !== 'CandidateRejected') { outcome = 'Joining pending'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
+      else if (e.appStatus === 'Archived') { outcome = 'Dropped after offer'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
+      if (!outcome || when !== q) return;
+      // one row per person per role — a second offer to the same person keeps the furthest-along outcome
+      const k = String(e.candidate || '').trim().toLowerCase() + '|' + (e.jobTitle || '');
+      if (!nsBest[k] || NS_ORDER[outcome] < NS_ORDER[nsBest[k].outcome]) nsBest[k] = { e, outcome };
+    });
+    const noSrc = Object.values(nsBest).sort((a, b) => NS_ORDER[a.outcome] - NS_ORDER[b.outcome]
+      || String(a.e.startDate || a.e.offerCreatedAt || '').localeCompare(String(b.e.startDate || b.e.offerCreatedAt || '')));
+    const nsBody = document.getElementById('hygNoSrcBody');
+    if (nsBody) {
+      const nsColour = { 'Joined': 'var(--green)', 'Joining pending': 'var(--orange)', 'Dropped after offer': 'var(--muted)' };
+      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr>
+        <td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td><td>${esc(e.department)}</td>
+        <td><span style="font-size:11px;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td>
+        <td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
+    }
+    const nsQ = document.getElementById('hygNoSrcQ'); if (nsQ) nsQ.textContent = q;
+
     // --- #23: pod not set — the numbers this tab is deliberately leaving out ---
     // getFilteredRecs() drops anyone whose pod resolves to "Unassigned", from rows AND totals. That is only
     // honest if the excluded work is visible somewhere, which is here. Data Hygiene ignores the tab filters
@@ -2108,6 +2155,7 @@ export function initRecruiterFilters(data) {
     setN('hygNDates', datesOut.length + datesNoEnd.length, true);   // #111: the no-start list is informational
     setN('hygNOfferGap', gapLive.length, true);
     setN('hygNHiredGap', gapDone.length, false);
+    setN('hygNNoSrc', noSrc.length, true);
     setN('hygNUnscored', unscored.length, true);
     setN('hygNNoDate', noDate.length, true);
     setN('hygNNoPod', noPod.length, true);
@@ -2143,6 +2191,8 @@ export function initRecruiterFilters(data) {
         ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.doj || '', g.recruiter || ''])],
       hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'DOJ', 'Recruiter'],
         ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.doj || '', g.recruiter || ''])],
+      nosrc: () => [['Candidate', 'Job', 'Department', 'Outcome', 'Start date', 'Offer created', 'Recruiter', 'Quarter'],
+        ...noSrc.map(({ e, outcome }) => [String(e.candidate || '').trim(), e.jobTitle || '', e.department || '', outcome, e.startDate || '', e.offerCreatedAt || '', e.recruiter || '', q])],
       nodate: () => [['Job', 'Department', 'Job status', 'Opening ID', 'Jobs on this opening'],
         ...noDate.map(o => [o.title || '', o.department || '', o.status || '', o.openingId || '', o.jobs || 1])],
       unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Missing', 'Applications'],
