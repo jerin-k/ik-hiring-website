@@ -2,7 +2,7 @@ import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
 import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter } from '../metric-config.js';   // #11b · #111
-import { markDirty, isDirty, getMeta, publishConfig, configFileText } from '../metric-config.js';
+import { markDirty, isDirty, getMeta, publishConfig, configFileText, collectConfig } from '../metric-config.js';
 import { publishAccess, accessFileText } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
 
@@ -76,7 +76,9 @@ function buildEffectiveConfig(data) {
   });
   if (!scoreGrid[q]) scoreGrid[q] = gridForQuarter(q);
   DEPT_FAMILY_DEFAULT.forEach(([dept]) => { if (deptFamily[dept] == null) deptFamily[dept] = familyOf(dept); });
-  return { schemaVersion: 1, pods, capacity, scoreGrid, deptFamily };
+  // Start from collectConfig() so every published key rides along — userType (#11b) and recruiterDates (#111) were
+  // silently dropped when this returned only the four baseline-filled keys, so neither ever reached the team.
+  return { ...collectConfig(), schemaVersion: 1, pods, capacity, scoreGrid, deptFamily };
 }
 
 export function renderAdmin(accessConfig, data) {
