@@ -90,7 +90,16 @@ export function renderAdmin(accessConfig, data) {
       .cfg-card .lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
       .cfg-card select, .cfg-card input[type=number], .cfg-card input[type=email], .cfg-card input[type=text] {
         appearance:none; -webkit-appearance:none; height:32px; padding:0 10px; border:1px solid var(--border);
-        border-radius:8px; font-size:12px; font-weight:500; background:var(--bg); color:var(--text); }
+        border-radius:8px; font-family:inherit; font-size:12px; font-weight:500; background:var(--bg); color:var(--text); }   /* font-family: these controls rendered in the browser's Arial */
+      /* #111: the date boxes match the Pod / Capacity controls beside them. A date input inherits neither the page
+         font nor the rule above, which is why it rendered as the raw browser box (CLAUDE.md Rule 12). */
+      .cfg-card input.cfg-date { height:32px; width:140px; padding:0 8px 0 10px; border:1px solid var(--border); border-radius:8px;
+        font-family:inherit; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; background:var(--bg); color:var(--text); cursor:pointer; }
+      .cfg-card input.cfg-date.is-empty { color:var(--muted); font-weight:400; }
+      .cfg-card input.cfg-date:hover { border-color:#9db2d6; }
+      .cfg-card input.cfg-date:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+      .cfg-card input.cfg-date::-webkit-calendar-picker-indicator { opacity:.45; cursor:pointer; }
+      .cfg-card input.cfg-date:hover::-webkit-calendar-picker-indicator { opacity:.8; }
       .ac-addrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
       .ac-addrow #new-email { flex:1; min-width:240px; }
       .ac-table { width:100%; border-collapse:collapse; }
@@ -426,8 +435,8 @@ export function initAdminMetricConfig(data) {
       <td><select class="cfg-utype" data-name="${name}" title="${ext.has(name)
         ? 'Ashby marks this account as an External Recruiter.'
         : 'Ashby does not mark this account as an External Recruiter, so it defaults to Internal — but you can still set it deliberately.'}">${USER_TYPES.map(t => `<option value="${t}"${t === userTypeOf(name, ext) ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-      <td><input type="date" class="cfg-date" data-name="${name}" data-f="start" value="${(dates[name] || {}).start || ''}" aria-label="Started on for ${name}"></td>
-      <td><input type="date" class="cfg-date" data-name="${name}" data-f="end" value="${(dates[name] || {}).end || ''}" aria-label="Left on for ${name}"></td>
+      <td><input type="date" class="cfg-date${(dates[name] || {}).start ? '' : ' is-empty'}" data-name="${name}" data-f="start" value="${(dates[name] || {}).start || ''}" aria-label="Started on for ${name}"></td>
+      <td><input type="date" class="cfg-date${(dates[name] || {}).end ? '' : ' is-empty'}" data-name="${name}" data-f="end" value="${(dates[name] || {}).end || ''}" aria-label="Left on for ${name}"></td>
       <td>${(() => { const s = here(r); const q0 = String(q).replace(/^(\d{4})-(Q\d)$/, '$2 $1');
         const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
         const col = !s.in ? 'var(--muted)' : (/left/.test(s.note) ? 'var(--orange)' : (/joined/.test(s.note) ? 'var(--green)' : 'var(--accent-deep)'));
@@ -438,7 +447,7 @@ export function initAdminMetricConfig(data) {
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
     body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); }));   // #11b
     // #111: dates are per person, not per quarter. Re-render on change so 'In quarter' and the list follow at once.
-    body.querySelectorAll('.cfg-date').forEach(inp => inp.addEventListener('change', () => { setRecruiterDate(inp.dataset.name, inp.dataset.f, inp.value); touched(); renderPodCapacity(); }));
+    body.querySelectorAll('.cfg-date').forEach(inp => inp.addEventListener('change', () => { inp.classList.toggle('is-empty', !inp.value); setRecruiterDate(inp.dataset.name, inp.dataset.f, inp.value); touched(); renderPodCapacity(); }));
     updatePodSummary();
   }
   function renderScoreGrid() {
