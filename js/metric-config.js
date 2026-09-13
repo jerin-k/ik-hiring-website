@@ -171,6 +171,8 @@ export const USER_TYPES = ['Agency', 'Freelancer', 'Internal'];
 //   would have been a silent no-op, which is the exact defect class this project keeps hitting.
 //   The DEFAULTS are unchanged: an unreviewed external is a Freelancer (halves, never zeroes), one of ours
 //   is Internal.
+// #108 (13 Sep 2026): the type is now a LABEL only — creditSplit treats every type the same, so nothing read
+//   from here moves a number any more.
 export function userTypeOf(name, externalNames) {
   if (!name) return 'Internal';
   const set = externalNames instanceof Set ? externalNames : new Set(externalNames || []);

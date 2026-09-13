@@ -608,29 +608,19 @@ export function initRecruiterFilters(data) {
   const ownedByRecQ = data.ownedSeatsByRecruiterQ || null;
   const useOwnedGoal = !!ownedByRecQ;
 
-  // ===== #11 (Jerin, 7 Sep 2026): the recruiter / sourcer credit split =====
-  // ONE helper feeds Goal, Joined, Joining Pending and Drop. The rule itself lives in score-model.js
-  // (creditSplit) so there is a single place it can be wrong; this is only the accumulation.
-  // 🚨 Score divides by the fractions. The HEAD is never split — it goes whole to whoever creditSplit names
-  //    (the agency if there is one, else the recruiter), so Σ HC still equals the real number of people.
+  // ===== #108 (Jerin, 13 Sep 2026): the recruiter / sourcer credit rule — replaces #11 of 7 Sep =====
+  // The rule itself lives in score-model.js (creditSplit) so there is a single place it can be wrong; this is only
+  // the accumulation. addCredit feeds Joined, Joining Pending and Drop; goalOf computes the Goal, which is NOT split.
+  // 🚨 Score divides by the fractions. The HEAD always goes to the RECRUITER, so Σ HC still equals the real number of
+  //    people. What a person sourced for someone else is counted on `so` and shown as the "+N sourced" second line.
   // ⚠ externalUsers comes from the pipeline (globalRole === 'External Recruiter'); userTypeOf() turns it into
   //   Agency | Freelancer | Internal using the Admin toggle, defaulting an unreviewed external to Freelancer.
   const externalSet = new Set(data.externalUsers || []);
   const ownedBySrcQ = data.ownedSeatsBySourcerQ || null;
   const splitOf = (dept, sourcer) => creditSplit(dept, sourcer, userTypeOf(sourcer, externalSet));
-  // job8 -> the person holding the SOURCER role on that job's openings in a quarter, from the pipeline's
-  // ownedSeatsBySourcerQ (inverted once, not per row). Empty today: no opening carries a Sourcer yet.
-  const srcByJobQ = (() => {
-    const m = {};
-    Object.entries(ownedBySrcQ || {}).forEach(([name, byQ]) =>
-      Object.entries(byQ || {}).forEach(([qq, byJob]) =>
-        Object.keys(byJob || {}).forEach(j8 => { m[qq + '|' + j8] = name; })));
-    return m;
-  })();
-  const openingSourcerOf = (j8, qq) => srcByJobQ[qq + '|' + j8] || null;
   // ===== #100 (10 Sep 2026): the Goal must join the sourcer at the OPENING grain, not the JOB grain =====
   // The two maps above say "this person holds this role on N openings of this job" — they never say WHICH
-  // openings. So when a sourcer worked only SOME of a job's openings, srcByJobQ applied their split to ALL of
+  // openings. So when a sourcer worked only SOME of a job's openings, the old per-job sourcer lookup applied their split to ALL of
   // them: the recruiter handed over every opening on the job while the sourcer was credited for only theirs,
   // and the difference fell on the floor. Measured on 2026-Q3: Oshin owned 6 openings on `7c1706f1` and
   // Sangha sourced 4 — all 6 left Oshin, 4 reached Sangha, 2 vanished. In points the three shared SME roles
@@ -642,13 +632,13 @@ export function initRecruiterFilters(data) {
   const usePairs = !!pairsQ;
   // #100: THE one place a Goal is computed. `only8` restricts it to a single job, which is how the per-job
   // drill-down rows are produced — same function, same split, so the sub-rows always sum to the row above.
-  // Returns { hc, sc }. Three bases, best first:
+  // Returns { hc, sc, so } — `so` = openings this person is tagged on as SOURCER (#108). Three bases, best first:
   //   1. usePairs   — recruiter+sourcer read off the SAME opening. Exact; cannot leak.
   //   2. useOwnedGoal — the old per-JOB maps. Still leaks (#100a) but now at least applies the split to the
   //      per-job rows too, so #100b is fixed even before the pipeline has run.
   //   3. neither    — the pre-#1 equal-split-of-seats convention.
   const goalOf = (r, qq, only8) => {
-    let hc = 0, sc = 0;
+    let hc = 0, sc = 0, so = 0;
     if (usePairs) {
       const byJob = pairsQ[qq] || {};
       const keys = only8 ? (byJob[only8] ? [only8] : []) : Object.keys(byJob);
@@ -659,16 +649,17 @@ export function initRecruiterFilters(data) {
           const n = pr.n || 0; if (!n) return;
           const isRec = pr.r === r.name, isSrc = pr.s === r.name;
           if (!isRec && !isSrc) return;
-          const sp = splitOf(m && m.department, pr.s || null);
-          // ⚠ An opening carrying a Sourcer but NO Recruiter: the sourcer takes the whole of it. Otherwise the
-          //   recruiter's share would be credited to nobody and the two halves would stop adding back to one —
-          //   the very leak this field exists to close.
+          // #108: the RECRUITER keeps the FULL Goal — every point and every head — whoever sourced the opening.
+          //   A sourcer earns no Goal points; their openings go on `so`, the "+N sourced" line under Goal.
+          // ⚠ Same person as Recruiter AND Sourcer: counted once, as the recruiter, with no "+N sourced" on themselves.
+          // ⚠ An opening carrying a Sourcer but NO Recruiter: the sourcer is its only owner, so they carry its Goal —
+          //   otherwise that opening's points would be credited to nobody. Never seen in live data (0 of 658).
           const orphan = !pr.r;
-          if (isRec) { hc += (sp.hcTo === 'rec') ? n : 0; sc += n * pts * sp.rec; }
-          if (isSrc) { hc += (orphan || sp.hcTo === 'src') ? n : 0; sc += n * pts * (orphan ? 1 : sp.src); }
+          if (isRec || orphan) { hc += n; sc += n * pts; }
+          else so += n;
         });
       });
-      return { hc, sc };
+      return { hc, sc, so };
     }
     if (useOwnedGoal) {
       const pick = (map) => { const o = (map && map[r.name] && map[r.name][qq]) || {};
@@ -677,24 +668,18 @@ export function initRecruiterFilters(data) {
       Object.keys(owned).forEach(j8 => {
         const cnt = owned[j8]; if (!cnt) return;
         const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
-        const sp = splitOf(m && m.department, openingSourcerOf(j8, qq));
-        hc += (sp.hcTo === 'rec') ? cnt : 0; sc += cnt * scoreForRole(m, qq) * sp.rec;
+        hc += cnt; sc += cnt * scoreForRole(m, qq);   // #108: the recruiter's Goal is never split
       });
       const ownedSrc = pick(ownedBySrcQ);
-      Object.keys(ownedSrc).forEach(j8 => {
-        const cnt = ownedSrc[j8]; if (!cnt) return;
-        const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
-        const sp = splitOf(m && m.department, r.name);   // this person IS the sourcer on that opening
-        hc += (sp.hcTo === 'src') ? cnt : 0; sc += cnt * scoreForRole(m, qq) * sp.src;
-      });
-      return { hc, sc };
+      Object.keys(ownedSrc).forEach(j8 => { so += ownedSrc[j8] || 0; });   // sourced openings: a count, no points
+      return { hc, sc, so };
     }
     (r.byJob || []).forEach(bj => {
       if (only8 && (bj.jobId || '').slice(0, 8) !== only8) return;
       const seats = seatsOf(bj.jobId); if (!seats) return;
       hc += seats; sc += seats * scoreForRole(jobMeta(bj), qq);
     });
-    return { hc, sc };
+    return { hc, sc, so };
   };
   // Every job this person has a Goal on in a quarter — as Recruiter or as Sourcer. Feeds the drill-down rows,
   // which must list a role the person only SOURCED or its Goals would not sum to the row above.
@@ -710,20 +695,18 @@ export function initRecruiterFilters(data) {
     return Object.keys(out);
   };
   // Post one outcome worth `sc` points into the per-name and per-name|job maps, divided between the two parties.
+  // #108: the recruiter always takes the head; the sourcer takes their share of the points plus one on `so`, the
+  // "+N sourced" count. The same person in both roles collects both halves and one head, and no sourced count.
   const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc) => {
     const sp = splitOf(dept, srcr);
-    const put = (name, f, head) => {
-      if (!name || (!f && !head)) return;
-      const a = mRec[name] || (mRec[name] = { hc: 0, sc: 0 });
-      a.hc += head ? 1 : 0; a.sc += sc * f;
-      if (mJob) {
-        const k = name + '|' + (job8 || '');
-        const b = mJob[k] || (mJob[k] = { hc: 0, sc: 0 });
-        b.hc += head ? 1 : 0; b.sc += sc * f;
-      }
+    const put = (name, f, head, sourced) => {
+      if (!name || (!f && !head && !sourced)) return;
+      const bump = (o) => { o.hc += head ? 1 : 0; o.sc += sc * f; o.so += sourced ? 1 : 0; };
+      bump(mRec[name] || (mRec[name] = { hc: 0, sc: 0, so: 0 }));
+      if (mJob) { const k = name + '|' + (job8 || ''); bump(mJob[k] || (mJob[k] = { hc: 0, sc: 0, so: 0 })); }
     };
-    put(rec, sp.rec, sp.hcTo === 'rec');
-    put(srcr, sp.src, sp.hcTo === 'src');
+    put(rec, sp.rec, sp.hcTo === 'rec', false);
+    put(srcr, sp.src, sp.hcTo === 'src', !!srcr && srcr !== rec);
   };
 
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
@@ -1058,14 +1041,14 @@ export function initRecruiterFilters(data) {
       const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
       const OM = outcomeMaps(q);
       const JP = jpMaps(q, isSales);
-      const Z = { hc: 0, sc: 0 };
+      const Z = { hc: 0, sc: 0, so: 0 };
       const jpOf = (rec) => ({ t: JP.total[rec] || Z, a: JP.bucketA[rec] || Z, b: JP.bucketB[rec] || Z });
       const jpOfJob = (rec, title) => { const k = rec + '|' + (title || '');
         return { t: JP.totalJ[k] || Z, a: JP.bucketAJ[k] || Z, b: JP.bucketBJ[k] || Z }; };
       const outByRec = isSales ? OM.sales : OM.nonSales;
       const outByRecJob = isSales ? OM.salesJob : OM.nonSalesJob;
-      const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0 };
-      const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
+      const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0, so: 0 };
+      const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
       // #39: the Joined split, shaped exactly like jpOf/jpOfJob so the two blocks render through the same
       // helper. Sales/Others only — Non-Sales keeps a single Joined pair (its own split is a different
       // question entirely: it varies the START date, not the opening. See the header comments.)
@@ -1152,10 +1135,10 @@ export function initRecruiterFilters(data) {
         // older archived rows can still be null — they then fall through as recruiter-only, which is correct.
         addCredit(dropByRec, dropByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);
       });
-      const dropOf = (rec) => dropByRec[rec] || { hc: 0, sc: 0 };
-      const dropOfJob = (rec, jid) => dropByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
-      const joinOf = (rec) => joinByRec[rec] || { hc: 0, sc: 0 };
-      const joinOfJob = (rec, jid) => joinByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0 };
+      const dropOf = (rec) => dropByRec[rec] || { hc: 0, sc: 0, so: 0 };
+      const dropOfJob = (rec, jid) => dropByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
+      const joinOf = (rec) => joinByRec[rec] || { hc: 0, sc: 0, so: 0 };
+      const joinOfJob = (rec, jid) => joinByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
       const c = x => (x == null ? DASH : x);
       const pctOf = (num, den) => (den > 0 ? Math.round((num / den) * 100) : null);
 
@@ -1186,20 +1169,24 @@ export function initRecruiterFilters(data) {
         return `<td><span class="util ${cls}">${u}%</span><span class="sublab">${v.uSc} of ${v.capSc}</span></td>`;
       };
 
+      // #108: the "+N sourced" second line — what this person SOURCED for someone else's row. Never added to the
+      //   figure above it, so every HC column still adds up to real people. Blank when there is nothing.
+      const srcSub = (n) => (n > 0 ? `<span class="sublab">+${seatFmt(n)} sourced</span>` : '');
+
       // #39: Joined, split the same way and rendered by the same shape as jpCells — Total, then the two
       // buckets. The unlinked count rides under bucket B as a caption so the column never reads as measured.
       const joinedCells = (v) => {
         const j = v.jx || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } };
         const pair = (x, sub) => `<td>${x.hc || `<span class="zero">0</span>`}${sub || ''}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
         const unl = (j.u && j.u.hc) ? `<span class="sublab" title="Joiners with no opening attached to their offer. They sit in this column only because it is Total minus the column beside it.">${j.u.hc} unlinked</span>` : '';
-        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}</td>` + pair(j.a) + pair(j.b, unl);
+        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>` + pair(j.a) + pair(j.b, unl);
       };
 
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
       const jpCells = (v) => {
         const j = v.jp || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } };
         const pair = (x) => `<td>${x.hc || `<span class="zero">0</span>`}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
-        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}</td>` + pair(j.a) + pair(j.b);
+        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>` + pair(j.a) + pair(j.b);
       };
       // Drop carries its rate as a caption: of everything that reached a conclusion or is about to, what
       // share fell out. Denominator includes Drop itself, per Jerin 2026-08-22.
@@ -1208,7 +1195,7 @@ export function initRecruiterFilters(data) {
         const den = (v.xHC || 0) + (j.t.hc || 0) + (v.dHC || 0);
         const pct = den > 0 ? Math.round(((v.dHC || 0) / den) * 100) : null;
         const sub = v.dHC > 0 && pct != null ? `<span class="sublab">${pct}% of outcomes</span>` : '';
-        return `<td class="${v.dHC > 0 ? 'bad' : ''}">${v.dHC ? v.dHC : `<span class="zero">0</span>`}${sub}</td>`
+        return `<td class="${v.dHC > 0 ? 'bad' : ''}">${v.dHC ? v.dHC : `<span class="zero">0</span>`}${srcSub(v.dSo)}${sub}</td>`
           + `<td class="score">${v.dSc ? Math.round(v.dSc) : `<span class="zero">0</span>`}</td>`;
       };
 
@@ -1216,14 +1203,14 @@ export function initRecruiterFilters(data) {
       // the outcome. Do not put Offered back.
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
-        return `<td${w}>${c(seatFmt(v.aHC))}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
+        return `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
           + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
           + (isSales                                                          // #39: Sales/Others split Joined
               ? joinedCells(v)                                                  //   total + prev-qtr + current-qtr
-              : `<td${w}>${c(v.xHC)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
+              : `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
           + jpCells(v)                                                          // Joining Pending: total + 2 buckets
           + dropCells(v)                                                        // Drop HC / Score + % subtext
-          + `<td${w}>${c(seatFmt(v.gHC))}</td>` + gapCell(v)                     // Gap HC / Score + bar
+          + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v)                     // Gap HC / Score + bar
           + utilCell(v);                                                          // Capacity Utilisation
       };
 
@@ -1246,39 +1233,46 @@ export function initRecruiterFilters(data) {
         //   Sales     → Joined
         //   Non-Sales → Joined + Joining Pending  (the work is delivered once the person is in closing)
         const uHC = isSales ? xHC : xHC + jp.t.hc, uSc = isSales ? xSc : xSc + jp.t.sc;
+        // #108: the "+N sourced" counts, on the SAME basis as the figures they sit under — so the Delta line is sourced
+        //   Goal minus sourced Achieved, exactly as Delta is Goal minus Achieved (Jerin: "Its the overall that matters -
+        //   not opening to opening gap").
+        const aSo = g0.so || 0, xSo = (isSales ? o.so : jn.so) || 0, uSo = isSales ? xSo : xSo + (jp.t.so || 0);
         return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
                  jx: isSales ? jxOf(r.name) : null,   // #39
-                 gHC: Math.max(0, aHC - uHC), gSc: Math.max(0, aSc - uSc) };
+                 gHC: Math.max(0, aHC - uHC), gSc: Math.max(0, aSc - uSc),
+                 aSo, xSo, uSo, dSo: dr.so || 0, gSo: Math.max(0, aSo - uSo) };
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
       // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
       // dHC is in the test too: a recruiter whose only activity this quarter was people dropping out has
       // had a real (bad) quarter, and hiding that row would quietly delete the worst news in the table.
       // ⚠ #11: this used to test HEADCOUNT only. Under the head rule a sourcer can earn real SCORE while the
-      // head stays with the recruiter (any Freelancer split, and every non-SME agency split), so a
+      // head stays with the recruiter (every split, since #108), so a
       // headcount-only test hid exactly the rows the credit had just moved to — the credit left the recruiter
       // and appeared nowhere. Score counts as activity too.
       const worthShowing = (v) => v.capSc > 0 || v.xHC > 0 || v.xSc > 0 || (v.jp && (v.jp.t.hc > 0 || v.jp.t.sc > 0))
-        || v.aHC > 0 || v.aSc > 0 || v.dHC > 0 || v.dSc > 0;
+        || v.aHC > 0 || v.aSc > 0 || v.dHC > 0 || v.dSc > 0
+        || v.aSo > 0 || v.xSo > 0 || v.dSo > 0 || (v.jp && v.jp.t.so > 0);   // #108: a sourcer-only row carries only these
 
       let html = '';
       gs.forEach((G, pi) => {
         const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0,
-                         jp: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } },
+                         aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
+                         jp: { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 } },
                          // #39: roll the Joined split up the same way as the JP one, or every pod row would
                          // print 0 in three columns while its recruiters underneath show real numbers — the
                          // exact bug the JP roll-up comment below was written about.
-                         jx: { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } } };
+                         jx: { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 }, u: { hc: 0, sc: 0, so: 0 } } };
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
           // it once ended up showing lifetime scores under a quarter heading. It now reads this.
           lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, sales: isSales };
-          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc'].forEach(k => podAgg[k] += a[k]);
+          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo'].forEach(k => podAgg[k] += a[k]);
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
-          ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; });
-          if (a.jx) ['t', 'a', 'b', 'u'].forEach(k => { podAgg.jx[k].hc += a.jx[k].hc; podAgg.jx[k].sc += a.jx[k].sc; });   // #39
+          ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; podAgg.jp[k].so += a.jp[k].so || 0; });
+          if (a.jx) ['t', 'a', 'b', 'u'].forEach(k => { podAgg.jx[k].hc += a.jx[k].hc; podAgg.jx[k].sc += a.jx[k].sc; podAgg.jx[k].so += a.jx[k].so || 0; });   // #39
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -1314,16 +1308,19 @@ export function initRecruiterFilters(data) {
               const jjp = jpOfJob(r.name, m.title);
               // A job with no seats this quarter and nothing delivered, in closing or dropped is not this
               // quarter's work.
-              // ⚠ #100: test the SCORE as well as the head. The head is never split, so a Freelancer/Internal
-              //   sourcer legitimately has Goal HC 0 with points — testing seats alone would silently drop
-              //   every sourced role from the drill-down.
-              if (!seats && !jg.sc && !jo.hc && !jj.hc && !jd2.hc && !jjp.t.hc) return;
+              // ⚠ #100/#108: test more than the head. A sourcer never holds the head — their roles carry only points
+              //   and "+N sourced" counts — so testing heads alone would silently drop every sourced role here.
+              const jx0 = isSales ? jo : jj;
+              if (!seats && !jg.sc && !jg.so && !jo.hc && !jj.hc && !jd2.hc && !jjp.t.hc
+                  && !jx0.sc && !jx0.so && !jd2.sc && !jd2.so && !jjp.t.sc && !jjp.t.so) return;
               const jxHC = isSales ? jo.hc : jj.hc, jxSc = isSales ? jo.sc : jj.sc;
               const juHC = isSales ? jxHC : jxHC + jjp.t.hc, juSc = isSales ? jxSc : jxSc + jjp.t.sc;
+              const jaSo = jg.so || 0, jxSo = jx0.so || 0, juSo = isSales ? jxSo : jxSo + (jjp.t.so || 0);
               const jv = { aHC: jg.hc, aSc: jg.sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
                            dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
-                           gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc) };
+                           gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc),
+                           aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: Math.max(0, jaSo - juSo) };   // #108
               roleAch.push({ title: m.title || '(untitled)', achievedSc: Math.round(juSc) });
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
@@ -1593,7 +1590,7 @@ export function initRecruiterFilters(data) {
     // on this tab from drifting apart again. It is why Non-Sales and Sales totals differ by the carried-over
     // person: Non-Sales is measured on offers, so last quarter's opening should not count toward it.
     const sum = (...ms) => { const out = {}; ms.forEach(m => Object.entries(m).forEach(([k, v]) => {
-      const t = out[k] || (out[k] = { hc: 0, sc: 0 }); t.hc += v.hc; t.sc += v.sc; })); return out; };
+      const t = out[k] || (out[k] = { hc: 0, sc: 0, so: 0 }); t.hc += v.hc; t.sc += v.sc; t.so += v.so || 0; })); return out; };
     return { total: sum(bucketA, bucketB), bucketA, bucketB,
              totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ };
   }
@@ -1672,15 +1669,12 @@ export function initRecruiterFilters(data) {
       const b = m[t] || (m[t] = { o: 0, j: 0, p: 0, dr: 0 });
       b[key] += 1;
     };
-    // ===== #43 (Jerin, 10 Sep 2026): this panel now obeys the SAME credit rule as Fulfilment =====
+    // ===== #43 (Jerin, 10 Sep 2026): this panel obeys the SAME credit rule as Fulfilment =====
     // 🚨 Every figure here — Offered, Joined, Joining Pending, Dropped — is a COUNT OF PEOPLE, so it follows
-    //    creditSplit's HEAD rule (`hcTo`), NOT the score fractions. The head goes WHOLE to one party: the
-    //    agency when one sourced the role, otherwise the recruiter. A person is never halved (Rule 1).
-    // Why this had to change: before it, the panel credited `e.recruiter` unconditionally while Fulfilment
-    // moved the head to the agency — so the same recruiter could show two different Joined figures in two
-    // panels of ONE tab. Latent until 10 Sep, when the first Sourcer was tagged and then set to Agency.
-    // ⚠ With a Freelancer or an Internal sourcer `hcTo` is 'rec', so nothing moves — this only bites for an
-    //   AGENCY, which is exactly when it should.
+    //    creditSplit's HEAD rule (`hcTo`), NOT the score fractions. A person is never halved (Rule 1).
+    // #108 (13 Sep 2026): the head now ALWAYS goes to the recruiter, whoever sourced the role, so this resolves to
+    //    the recruiter every time. It still routes through creditSplit so the rule lives in one place and this panel
+    //    can never disagree with the Fulfilment HC columns on the same tab.
     const headTo = (rec, srcr, dept) => {
       const sp = splitOf(dept, srcr);
       return (sp.hcTo === 'src' && srcr) ? srcr : rec;

@@ -407,6 +407,8 @@ export function initAdminMetricConfig(data) {
     // 'Internal' for non-externals, so opening this dropdown alone would have set a value the score ignored.
     // The Ashby flag still supplies the DEFAULT (external -> Freelancer, ours -> Internal); it no longer decides
     // who may be edited.
+    // #108 (13 Sep 2026): the type no longer moves ANY number — every type follows the same credit rule. It stays as
+    // a label (who is an agency), which is why the dropdown remains.
     // 🚨 It is NOT a clean agency signal: of the four accounts carrying the role today, two are duplicate
     // accounts of IK's own recruiters and one is a test user. That is exactly why `Internal` is one of the
     // three options — so those false positives can be cleared rather than silently halving a real

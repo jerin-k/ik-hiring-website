@@ -101,54 +101,26 @@ export function scoreForRole(job, quarter) {
   return pointsForClassification(classificationFor(fam, job.level, job.complexity, job.title), quarter);
 }
 
-// ===== #11 — the recruiter / sourcer CREDIT SPLIT (Jerin, 7 Sep 2026) =====
-// Confirmed rule. It keys off the ROLE'S DEPARTMENT, not the recruiter's pod — "SME India & SME US" means
-// those two departments, and "Sales & Lateral" means EVERY OTHER department (Jerin was explicit).
-//
-//   SME - India / SME - US        Agency        -> SOURCER full, recruiter ZERO
-//                                 Freelancer    -> half / half
-//                                 Internal      -> half / half   (⚠ CHANGED 10 Sep 2026 — was 'earns nothing')
-//                                 no sourcer    -> recruiter full
-//   every other department        any sourcer   -> half / half
-// ⚠ After the 10 Sep change the ONLY special case left is an AGENCY on an SME role. Freelancer and Internal
-//   now behave identically everywhere, so the Agency|Freelancer|Internal toggle only changes the SCORE when
-//   the value is Agency — it still changes who the HEAD goes to (hcTo), which is a separate thing.
-//                                 no sourcer    -> recruiter full
-//
-// 🚨 It applies EVERYWHERE credit is counted — Goal, Joined, Joining Pending and Drop ("split is everywhere").
-//    Splitting only some of them would make Achievement half-split and half-not, so Delta and Capacity
-//    Utilisation would silently mix two credit rules inside one number.
-// 🚨 The two halves ALWAYS sum to 1. Never discard the sourcer's share when the sourcer is external: that
-//    shrinks the org total and breaks the reconciliation the "Others" pod exists to preserve.
-// ⚠ Source (Agencies / Pre-identified / Employee Conversion) has NO effect on score. The 4 Sep source-based
-//   rules are DEAD — do not reintroduce them. [[project_score-source-sourcer-rules]]
+// ===== #108 — the recruiter / sourcer CREDIT RULE (Jerin, 13 Sep 2026 — replaces #11 of 7 Sep and #94 of 10 Sep) =====
+// ONE rule, identical in every department and for every type (Agency · Freelancer · Internal), in either role:
+//   no sourcer tagged    -> the recruiter takes the whole score
+//   any sourcer tagged   -> recruiter HALF, sourcer HALF
+// 🚨 This split applies to Joined, Joining Pending and Drop ONLY. The GOAL does not use it: the recruiter keeps the
+//    FULL Goal and a sourcer earns no Goal points (goalOf in pages/recruiter.js). Jerin: "through recruiter they shud
+//    be able to close more heads to land the score" — halving the Goal too cancelled that incentive out.
+// 🚨 HEADCOUNT always goes to the RECRUITER (hcTo === 'rec'), so HC still adds up to the real number of people.
+//    The sourcer's heads are not lost — they are counted separately and shown as a "+N sourced" second line.
+// 🚨 The two halves still sum to 1, so no points are created or lost on Joined / Joining Pending / Drop.
+// ⚠ DEAD — do not reintroduce: an agency taking the whole score on SME (#94) · the head moving to an agency (#11)
+//   · the Goal being halved · the 4 Sep source-based rules. The Agency|Freelancer|Internal setting is now a LABEL
+//   that moves no number. `dept` and `sourcerType` are still accepted so no caller has to change.
+//   [[project_score-source-sourcer-rules]]
 export const SME_DEPTS = { 'SME - India': 1, 'SME - US': 1 };
 
 export function isSmeDept(dept) { return !!SME_DEPTS[dept]; }
 
-// sourcerType: 'Agency' | 'Freelancer' | 'Internal' (from metric-config userTypeOf()).
-// Returns { rec, src, hcTo } where rec + src === 1 and hcTo says who the HEAD belongs to.
-//
-// 🚨 HEADCOUNT IS NEVER SPLIT (Jerin, 7 Sep 2026). Score divides; the head goes to ONE party:
-//     the AGENCY whenever the sourcer is an agency, otherwise the RECRUITER.
-//   Why: headcount is people, and half a person reads as broken. More importantly it makes the agency's
-//   own row the BILLING number — an agency that delivered 10 joiners reads 10, not 5 — which is the whole
-//   reason agencies sit in the "Others" pod at all. Splitting the head would have quietly undermined that.
-//   Exactly one party gets each head, so the totals still equal the real number of people.
-// ⚠ Head and Score therefore DISAGREE inside a row on purpose: a Sales recruiter who placed ten people
-//   through agencies reads Joined HC 0 with half the points, and the agency row carries the ten.
-// ⚠ Apply hcTo to GOAL as well as to Joined/JP/Drop. If the head leaves the recruiter on delivery but their
-//   Goal still counts it, every agency-sourced role shows a permanent shortfall in the HC column.
+// Returns { rec, src, hcTo } where rec + src === 1 and hcTo says who the HEAD belongs to — always the recruiter.
 export function creditSplit(dept, sourcerName, sourcerType) {
   if (!sourcerName) return { rec: 1, src: 0, hcTo: 'rec' };
-  const agency = sourcerType === 'Agency';
-  const hcTo = agency ? 'src' : 'rec';
-  // 🚨 CHANGED 10 Sep 2026 (Jerin): an INTERNAL sourcer now splits HALF/HALF in SME too — "internal person
-  //   going in as the sourcer should also get 50%". The old rule gave an internal colleague nothing and let
-  //   the recruiter keep the lot, which undercounted people who genuinely did the sourcing.
-  //   ⚠ Only ONE special case survives: an AGENCY sourcing an SME role takes all of it, because there the
-  //   sourcing IS the job. Everyone else — freelancer or internal — halves it, in every department.
-  //   ⚠ Rule 6: the wording in definitions.js ('How credit is shared with a Sourcer') moves WITH this.
-  if (isSmeDept(dept) && agency) return { rec: 0, src: 1, hcTo };       // agency does the sourcing: all of it
-  return { rec: 0.5, src: 0.5, hcTo };                                  // freelancer or internal, any department
+  return { rec: 0.5, src: 0.5, hcTo: 'rec' };
 }
