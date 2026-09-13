@@ -295,7 +295,7 @@ export const DEFINITIONS = {
           ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Portal</em>) → the specific source (e.g. <em>Naukri</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
           ['Joiners', 'People <strong>moved to the Hired stage</strong>, whose <strong>start date</strong> falls in the selected period, credited to that recruiter, counted against the source on their application. Every joiner counts, including anyone filling a position opened in an earlier quarter — so this can run slightly ahead of the Fulfilment table, which leaves those out. Leave Quarter on <em>All</em> and you get the whole year — the line above the table names the period being shown.'],
           ['%', 'Share of the level above it — a source’s share of its type, a type’s share of the recruiter, a recruiter’s share of the pod.'],
-          ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
+          ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today. They are listed by name — with the people still joining and those who dropped after an offer — in <strong>Recruiter Efficiency → Data Hygiene → Selected Candidates Missing Source</strong>.'],
         ]
       },
     ],
@@ -333,7 +333,7 @@ export const DEFINITIONS = {
   'rec-hygiene': {
     summary: 'What each of these lists is',
     intro: 'The compliance view: candidates and roles the pipeline could not attribute cleanly. These get fixed <strong>in Ashby</strong>, and the rows disappear at the next refresh. Every list downloads as CSV, and none of them are affected by the filters at the top of the tab — that is deliberate.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Selected Candidates Missing Source 13 Sep 2026',
     groups: [
       {
         heading: 'The lists',
@@ -346,6 +346,7 @@ export const DEFINITIONS = {
           ['Pod Not Set', 'Real recruiters with real numbers who have no pod for the selected quarter. <strong>They are excluded from every table and chart on this tab</strong> — this list is where their work is visible until somebody assigns them a pod. If the person genuinely works across pods, assign <strong>Others</strong> rather than leaving them unset.'],
           ['Offers Missing Opening Link', 'Offers with no opening attached that are <strong>still in play</strong>. Without the link the offer cannot be tied to a position, which is why Delta on the HM tab goes negative.'],
           ['Hired Missing Opening Link', 'The same gap on people already hired or archived. Reference only — too late to fix usefully.'],
+          ['Selected Candidates Missing Source', 'People who <strong>joined</strong>, are <strong>joining</strong> or <strong>dropped after an offer</strong> in the selected quarter whose application in Ashby has no source, dated by the offer’s start date (or the day the offer was made, when there is no start date). The joiners are the same people Sourcing Mix shows under <em>(source not recorded)</em>. For selected candidates the <strong>Hiring Tracker is the source of truth</strong> — set the source in Ashby to match it.'],
           ['Roles Missing Score Inputs', 'Roles that score zero for the selected quarter — usually Tech/NonTech roles missing a Level. SME roles score on Complexity alone and PA by title, so a blank Level does not flag them; a blank Complexity counts as Normal. They add headcount but no Score anywhere on the dashboard.'],
           ['Openings Missing Opened Date', 'Openings with no <strong>opened date</strong> in Ashby. They are <strong>left out of Total Openings entirely</strong> \u2014 on Hiring Manager Positions and on Overall Efficiency \u2014 so they are invisible rather than merely undated. One row per opening. Set the date on the opening in Ashby.'],
           ['Capacity Not Set', 'Recruiters with candidates attributed to them but no capacity for the quarter, so they have no target and no utilisation figure.'],
@@ -527,7 +528,7 @@ export const DEFINITIONS = {
         items: [
           ['Joiners', 'People <strong>moved to the Hired stage</strong> for that role, whose <strong>start date</strong> falls in the selected quarter, counted against the source on their application.'],
           ['%', 'Share of the level above — a source’s share of its type, a type’s share of the role, and so on.'],
-          ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today.'],
+          ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. About 1 in 20 today. They are listed by name — with the people still joining and those who dropped after an offer — in <strong>Recruiter Efficiency → Data Hygiene → Selected Candidates Missing Source</strong>.'],
           ['Chart', 'One bar per source type, split into the individual sources inside it. It reads the same rows as the table, so the two can never disagree.'],
         ]
       },
