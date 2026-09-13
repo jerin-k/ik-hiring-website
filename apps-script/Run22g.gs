@@ -457,7 +457,7 @@ function buildAuditV4(opts) {
   var activeIds={}; users.forEach(function(u){ activeIds[u.id]=1; });
   ashbyListAll_('/user.list',{includeDeactivated:true}).forEach(function(u){ var nx=((u.firstName||'')+' '+(u.lastName||'')).trim()||u.name||''; if(nx) uById[u.id]= nx + (activeIds[u.id]?'':' [inactive]'); });
   var locName={}; try{ ashbyListAll_('/location.list').forEach(function(l){ locName[l.id]=l.name||''; }); }catch(eL){}
-  var bucket={}, opsAll=[], opsByIdAll={};
+  var bucket={}, opsAll=[], opsByIdAll={}, opsArchived=[];   // #110g: archived 2026 openings, used only to cover Joined positions
   // #47 (V6): the loop below SKIPS every opening whose openedAt is not 2026 - which silently drops the ~53-58
   // UNDATED openings too. An opening that genuinely exists but has no date was therefore reported as 'no
   // opening', manufacturing a gap. Index EVERY non-archived opening here so V6 can tell 'missing' apart from
@@ -476,7 +476,7 @@ function buildAuditV4(opts) {
       recs:rc2, jobIds:(lv2.jobIds||[]) };
   });
   ashbyListAll_('/opening.list').forEach(function(o){
-    if(o.isArchived) return; var oa=String(o.openedAt||''); if(oa.substring(0,4)!=='2026') return;
+    var oa=String(o.openedAt||''); if(oa.substring(0,4)!=='2026') return;   // #110g: archived no longer skipped here - kept aside below
     var lv=o.latestVersion||{}, cf={};
     (lv.customFields||[]).forEach(function(f){ var lab=(f.valueLabel==null||f.valueLabel==='')?(f.value==null?'':f.value):f.valueLabel; cf[String(f.title||f.name||'')]=String(lab); });
     var recs=[]; (lv.hiringTeam||[]).forEach(function(h){ if(/recruiter/i.test(String(h.role||h.roleName||''))) recs.push(uById[h.userId]||h.name||''); });
@@ -485,6 +485,7 @@ function buildAuditV4(opts) {
       emp:String(cf['Employment Type']||''),
       loc:(lv.locationIds||[]).map(function(x){return locName[x]||'';}).filter(String).join(', '),
       recs:recs, used:false };
+    if(o.isArchived){ op.archived=true; opsArchived.push(op); return; }   // #110g: never enters opsAll, the pool or the orphan view
     opsAll.push(op);
     (lv.jobIds||[]).forEach(function(jid){ var k=jid+'|'+op.q; (bucket[k]=bucket[k]||[]).push(op); });
   });
@@ -683,7 +684,7 @@ function buildAuditV4(opts) {
     });
 
     // ---- 4. THE POOL, as a definition: not archived, not closed, not claimed. Built once. ----
-    var opById = {}; opsAll.forEach(function(o){ opById[o.id] = o; });
+    var opById = {}; opsAll.concat(opsArchived).forEach(function(o){ opById[o.id] = o; });   // #110g: archived too, so bound/covered claims resolve
     // 🚨 8 Sep: THE POOL TESTS THE STATE, not the absence of a close reason. 1,996 openings are 'Filled'
     // and some carry no closeReasonId, so the old test let filled openings into the free pool - V7 fault #4
     // rebuilt. Only an opening Ashby itself calls Open can cover anything.
@@ -717,6 +718,18 @@ function buildAuditV4(opts) {
       if (!c.jr.id) { claim(c, '', 'none', 'job did not resolve'); return; }
       var cand = free(c.jr.id, c.tr.opq);
       if (!cand.length) cand = free(c.jr.id, '');   // any quarter: Jerin 8 Sep - age is not a disqualifier
+      // #110g (Jerin, 13 Sep 2026): the team closes or archives an opening once its person JOINS, so a Joined position
+      //   with no free Open opening is COVERED, not a CREATE. First the opening carrying its own audit-id (any state),
+      //   else a closed/archived opening on the same job with no audit-id and no claim. Same quarter only - the date need
+      //   not match (Jerin: "date neednt match, if Quarter is matching"). Never used for unfilled or dropped positions.
+      if (!cand.length && String(c.tr.status||'').trim() === 'Joined') {
+        var onJob = function(o){ return !o.used && (o.jobIds||[]).indexOf(c.jr.id) >= 0 && (!c.tr.opq || o.q === c.tr.opq); };
+        var coverPool = opsAll.concat(opsArchived);
+        var own = coverPool.filter(function(o){ return onJob(o) && o.aid && o.aid === c.tr.aid; })[0];
+        if (own) { own.used = true; claim(c, own.id, 'covered', 'joined - own tagged opening (' + (own.archived ? 'archived' : (own.state || '?')) + ')'); return; }
+        var shut = coverPool.filter(function(o){ return onJob(o) && !o.aid && (o.archived || String(o.state||'') !== 'Open'); })[0];
+        if (shut) { shut.used = true; claim(c, shut.id, 'covered', 'joined - closed/archived opening on the job'); return; }
+      }
       if (!cand.length) { claim(c, '', 'none', 'no free opening on this job'); return; }
       cand.sort(function(a,b){ return String(a.openedAt||'zz').localeCompare(String(b.openedAt||'zz')) || String(a.id).localeCompare(String(b.id)); });
       var rank = cand.length === 1 ? 'forced' : 'chosen';
@@ -803,7 +816,7 @@ function buildAuditV4(opts) {
         case 'Offer Quarter': return qtr(m2 ? (m2.offerCreatedAt||'') : '');
       } return ''; }
     function same(f, a, b){
-      if (f.cmp === 'person'){ var ns = String(b).split(' + ').filter(String); return ns.length === 1 && nameMatch(a, ns[0]); }
+      if (f.cmp === 'person'){ var ns = String(b).split(' + ').filter(String); return ns.length === 1 && nameMatch(f.n === 'Candidate Name' ? a : ownerAlias_(a), ns[0]); }   // #110f (13 Sep): owner names go through ownerAlias_ (Sanghamitra Moulik = Sangha)
       if (f.cmp === 'role')  return roleOk(a, b);
       if (f.cmp === 'norm')  return norm(a) === norm(b);
       if (f.cmp === 'email') return nrm(a) === nrm(b);
@@ -864,7 +877,8 @@ function buildAuditV4(opts) {
     var lBound  = claims.filter(function(x){ return x.rank === 'bound'; });
     var lForced = claims.filter(function(x){ return x.rank === 'forced'; });
     var lChosen = claims.filter(function(x){ return x.rank === 'chosen'; });
-    var lLink   = inScope.filter(function(c){ return c.m && !c.bound && c.claim.openingId; }).map(function(c){ return c.claim; });
+    var lCovered = claims.filter(function(x){ return x.rank === 'covered'; });   // #110g
+    var lLink   = inScope.filter(function(c){ return c.m && !c.bound && c.claim.openingId && c.claim.rank !== 'covered'; }).map(function(c){ return c.claim; });   // #110g: a covered Joined needs no link
     var lRedate = claims.filter(function(x){ return x.openingId && x.trackerQ && x.openingQ && x.openingQ !== x.trackerQ; });
     var lUndated= claims.filter(function(x){ return x.openingId && !x.openingQ; });
     var lOrphan = poolable.filter(function(o){ return !o.used; });
@@ -876,7 +890,7 @@ function buildAuditV4(opts) {
     var chk = [];
     if (X.length + inScope.length !== rows.length) chk.push('scope split does not sum');
     if (claims.length !== inScope.length) chk.push('every in-scope position must make exactly one claim');
-    if (lBound.length + lForced.length + lChosen.length + lCreate.length + lDropped.length !== inScope.length) chk.push('claim ranks do not partition');
+    if (lBound.length + lForced.length + lChosen.length + lCovered.length + lCreate.length + lDropped.length !== inScope.length) chk.push('claim ranks do not partition');
     var seen9 = {}, dbl = 0;
     claims.forEach(function(x){ if (!x.openingId) return; if (seen9[x.openingId]) dbl++; seen9[x.openingId] = 1; });
     if (dbl !== contested.length) chk.push('double-claimed openings (' + dbl + ') not all reported contested (' + contested.length + ')');
@@ -916,7 +930,7 @@ function buildAuditV4(opts) {
     Logger.log('V9 FIELDS findings ' + findings.length + ' | CORRECT ' + lCorrect.length + ' (API-fixable ' + lFixable.length + ') | DECIDE ' + lDecide.length + ' | tracker self-conflicts ' + trackerSelfConflict.length);
     Logger.log('V9 GATE skipped :: chosen-opening ' + skipped.chosenOpening + ' | weak-job ' + skipped.weakJob + ' | no-person ' + skipped.noPerson + ' | dropped-opening ' + skipped.droppedOpening + ' | blank-authority ' + skipped.blankAuthority);
     Logger.log('V9 VIEWS create ' + lCreate.length + ' | re-date ' + (lRedate.length + lUndated.length) + ' | link ' + lLink.length + ' | orphan ' + lOrphan.length + ' | dropped (excluded from CREATE) ' + lDropped.length);
-    Logger.log('V9 CLAIMS bound ' + lBound.length + ' | forced ' + lForced.length + ' | chosen ' + lChosen.length + ' | none(CREATE) ' + lCreate.length + ' | dropped-no-claim ' + lDropped.length);
+    Logger.log('V9 CLAIMS bound ' + lBound.length + ' | forced ' + lForced.length + ' | chosen ' + lChosen.length + ' | covered(joined) ' + lCovered.length + ' | none(CREATE) ' + lCreate.length + ' | dropped-no-claim ' + lDropped.length);
     Logger.log('V9 re-date candidates ' + lRedate.length + ' | contested openings ' + contested.length + ' | unclaimed openings (ORPHAN, unscoped) ' + lOrphan.length);
     var whyCount = {};
     claims.forEach(function(x){ whyCount[x.why] = (whyCount[x.why]||0) + 1; });
@@ -2952,7 +2966,9 @@ var V9_EXCLUSIONS = [
   { code:"mapping", why:"Title differences between the two systems are mapping artefacts, settled in V3. Not a defect.",
     fields:["Job Name"] },
   { code:"same-quarter-date-drift", why:"Opening date is wrong but lands in the RIGHT quarter, so no dashboard number moves. Hand edits with zero reporting gain. Jerin, 8 Sep.",
-    fields:["Opening Date (same quarter both sides)"] }
+    fields:["Opening Date (same quarter both sides)"] },
+  { code:"set-by-rule-10-sep", why:"Role Type / Employment Type set on Q3 openings by Jerin's 10-Sep rule (#103): SME - India => PTC - Direct + As per AOP; SME - US => PTE + As per AOP; Program Advisor => As per AOP. Ashby is deliberately right; the tracker keeps its older values. Excluded by Jerin 13 Sep (#110e).",
+    fields:["Role Type","Employment Type"] }
 ];
 function q_(s){ s = String(s||"").trim(); if (s.length < 7) return "";
   var d = new Date(s); if (isNaN(d.getTime())) return "";
@@ -2961,6 +2977,7 @@ function residual58d_(){
   var book = SpreadsheetApp.openById(AUDIT_SHEET_ID);
   var v = book.getSheetByName("V9 - Correct").getDataRange().getValues();
   var h = {}; v[0].forEach(function(x,i){ h[String(x).trim()] = i; });
+  var deptByTitle = rule103Depts_();   // #110e
   var apply = 0, resid = {}, residRows = [];
   for (var i=1;i<v.length;i++){
     var f = String(v[i][h["Field"]]||"").trim();
@@ -2973,6 +2990,7 @@ function residual58d_(){
     else if (a === "mapping") code = "mapping";
     else if (a === "Ashby") code = "ashby-wins";
     else if (f === "Opening Date") { var qa = q_(tvv), qb = q_(avv); if (qa && qb && qa === qb) code = "same-quarter-date-drift"; }
+    else if ((f === "Role Type" || f === "Employment Type") && rule103Match_(f, String(v[i][h["Job"]]||"").trim(), avv, deptByTitle)) code = "set-by-rule-10-sep";   // #110e
     if (code) { resid[code + " :: " + f] = (resid[code + " :: " + f]||0)+1;
       residRows.push([code, f, a, r, tvv, avv]); }
     else apply++; }
@@ -2996,6 +3014,21 @@ function residual58d_(){
   if (undeclared.length) throw new Error("RESIDUAL FAILED :: reasons not in the register :: " + undeclared.join(" ;; "));
   if (apply + residRows.length !== v.length-1) throw new Error("RESIDUAL FAILED :: applied + residual does not equal total");
   Logger.log("RESIDUAL PASS - everything left over is a declared exclusion, and the two sides sum");
+}
+
+// #110e (Jerin, 13 Sep 2026): values written by the 10-Sep opening-field rule (#103) are EXPECTED, not corrections.
+// Keyed on the job's TOP department; only a row whose Ashby value equals the rule for that role is excluded.
+function rule103Depts_(){
+  var dmap = fetchDepartmentMap_(), out = {};
+  function top(id){ var g=0; while(id && dmap[id] && dmap[id].parentId && g++<10) id=dmap[id].parentId; return (id && dmap[id]) ? dmap[id].name : ""; }
+  (ashbyListAll_("/job.list", {}) || []).forEach(function(j){ var t = String(j.title||"").trim(); if (!t) return; (out[t] = out[t] || {})[top(j.departmentId)] = 1; });
+  return out;
+}
+function rule103Match_(field, jobTitle, ashbyValue, deptByTitle){
+  var d = deptByTitle[jobTitle] || {}, v = String(ashbyValue||"").trim();
+  if (field === "Role Type") return v === "As per AOP" && !!(d["SME - India"] || d["SME - US"] || /Program Advisor/i.test(jobTitle));
+  if (field === "Employment Type") return !!((d["SME - India"] && v === "PTC - Direct") || (d["SME - US"] && v === "PTE"));
+  return false;
 }
 // READ-ONLY | the 22 DOJ Quarter mismatches with the ACTUAL dates on both sides, so Jerin can see who is right.
 // 🚨 Tracker dates are midnight IST - formatted with the SHEET timezone, never UTC.
