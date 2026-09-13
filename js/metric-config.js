@@ -10,10 +10,16 @@
 
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/metric_config.json';
 const LOCAL_URL = '/data/metric_config.json';
+// #111b: confirm-by-read must NOT use LIVE_URL. raw.githubusercontent ignores the ?cb cache-buster and serves the old
+// file for up to 5 minutes (measured 13 Sep: two different ?cb values both x-cache HIT, max-age=300), so a publish that
+// succeeded read as "couldn't confirm" and a second Publish was refused as "Config changed meanwhile". The contents
+// API reads git directly and allows CORS.
+const CONFIRM_URL = 'https://api.github.com/repos/jerin-k/ik-hiring-website/contents/data/metric_config.json?ref=main';
 
 const CACHE_LS = 'ik_metric_config_cache';   // last-known-good server config (full object)
 const DIRTY_LS = 'ik_metric_config_dirty';   // '1' when this browser has unpublished edits
 const META_LS = 'ik_metric_config_meta';     // { updatedAt, updatedBy } of the loaded server config
+const PENDING_LS = 'ik_metric_config_pending';   // #111b: the payload Publish last sent, until it is confirmed
 
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
 // #11b: userType is the Agency|Freelancer toggle set beside the pod selector. It is NOT per-quarter — a user
@@ -37,6 +43,11 @@ export async function loadMetricConfig() {
   const meta = { updatedAt: cfg.updatedAt || null, updatedBy: cfg.updatedBy || null };
   localStorage.setItem(META_LS, JSON.stringify(meta));
 
+  // #111b: a browser left "unpublished" by a publish whose confirm falsely failed heals here — if the team config already
+  // equals this browser's edits, or the exact payload it last sent, nothing is unpublished.
+  if (isDirty() && (sameConfig(cfg, collectConfig()) || sameConfig(cfg, readLS(PENDING_LS, null)))) {
+    localStorage.removeItem(DIRTY_LS); localStorage.removeItem(PENDING_LS);
+  }
   const firstRun = !readLS(META_LS + '_synced', false);
   const hasLocal = !!(localStorage.getItem(KEYS.pods) || localStorage.getItem(KEYS.scoreGrid) || localStorage.getItem(KEYS.capacity));
   if (!isDirty()) {
@@ -59,7 +70,7 @@ function hydrate(cfg) {
   if (cfg.recruiterDates) localStorage.setItem(KEYS.recruiterDates, JSON.stringify(cfg.recruiterDates));   // #111
 }
 
-export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); }
+export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); localStorage.removeItem(PENDING_LS); }   // an edit after Publish makes the sent payload stale
 export function isDirty() { return localStorage.getItem(DIRTY_LS) === '1'; }
 export function getMeta() { return readLS(META_LS, null); }
 
@@ -99,6 +110,7 @@ export async function publishConfig(payloadOverride) {
 
   const w = window.open('', 'mcPublish', 'width=460,height=360');
   if (!w) return { ok: false, reason: 'Popup blocked — allow pop-ups for this site and retry, or use Download.' };
+  localStorage.setItem(PENDING_LS, JSON.stringify(payload));   // #111b: lets a reload heal if the confirm below times out
 
   // Drive the popup through each chunk in order (top-level GET = carries login). base rides on the LAST chunk.
   // NOTE: param names MUST be mc-prefixed — Apps Script silently 404s ("Page Not Found") on reserved short names
@@ -112,19 +124,29 @@ export async function publishConfig(payloadOverride) {
   }
 
   // Confirm-by-read: poll until the published file matches what we sent (or time out ~40s).
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 24; i++) {
     await new Promise(r => setTimeout(r, 2500));
-    let live = null;
-    try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) live = await r.json(); } catch (e) { }
+    const live = await fetchFreshConfig();
     if (live && sameConfig(live, payload)) {
       localStorage.setItem(CACHE_LS, JSON.stringify(live));
       localStorage.setItem(META_LS, JSON.stringify({ updatedAt: live.updatedAt || null, updatedBy: live.updatedBy || null }));
-      localStorage.removeItem(DIRTY_LS);   // server now matches → track server again
+      localStorage.removeItem(DIRTY_LS); localStorage.removeItem(PENDING_LS);   // server now matches → track server again
       try { w.close(); } catch (e) { }
       return { ok: true };
     }
   }
-  return { ok: false, reason: "Couldn't confirm the publish — check the popup window for an error (sign-in/not-authorized), or use Download. Your edits are kept locally." };
+  return { ok: false, reason: "Couldn't confirm the publish yet — check the popup for an error (sign-in / not authorized). If the popup said Published, reload in a minute: this page clears the warning once the team config matches. Your edits are kept locally." };
+}
+
+// #111b: read the published config without the raw CDN's 5-minute lag; fall back to LIVE_URL if the API refuses
+// (its unauthenticated limit is 60 requests an hour per IP — one publish uses at most 24).
+export async function fetchFreshConfig() {
+  try {
+    const r = await fetch(CONFIRM_URL + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' });
+    if (r.ok) return await r.json();
+  } catch (e) { }
+  try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { }
+  return null;
 }
 
 // gzip a string and return URL-safe base64 (matched by Apps Script Utilities.ungzip on the server).
