@@ -18,12 +18,12 @@ const META_LS = 'ik_metric_config_meta';     // { updatedAt, updatedBy } of the 
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
 // #11b: userType is the Agency|Freelancer toggle set beside the pod selector. It is NOT per-quarter — a user
 // either is an agency or is not — so it is a flat { name: 'Agency' | 'Freelancer' } map, unlike pods/capacity.
-const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type' };
+const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates' };   // #111: start/leaving dates, flat per person
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
 function readLS(key, dflt) { try { const v = localStorage.getItem(key); return v == null ? dflt : JSON.parse(v); } catch (e) { return dflt; } }
-function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType); }
+function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType || c.recruiterDates); }
 
 // Fetch server config (with degradation ladder) and hydrate the runtime keys. Call once, before rendering.
 export async function loadMetricConfig() {
@@ -56,6 +56,7 @@ function hydrate(cfg) {
   if (cfg.scoreGrid) localStorage.setItem(KEYS.scoreGrid, JSON.stringify(cfg.scoreGrid));
   if (cfg.deptFamily) localStorage.setItem(KEYS.deptFamily, JSON.stringify(cfg.deptFamily));
   if (cfg.userType) localStorage.setItem(KEYS.userType, JSON.stringify(cfg.userType));   // #11b
+  if (cfg.recruiterDates) localStorage.setItem(KEYS.recruiterDates, JSON.stringify(cfg.recruiterDates));   // #111
 }
 
 export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); }
@@ -64,12 +65,12 @@ export function getMeta() { return readLS(META_LS, null); }
 
 // Snapshot the runtime config into a publishable object.
 export function collectConfig() {
-  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}) };
+  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}) };
 }
 
 // Deep-equal of the meaningful config fields (for confirm-by-read).
 function sameConfig(a, b) {
-  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType'];
+  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates'];
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
@@ -156,6 +157,45 @@ export function setUserType(name, type) {
   if (type) m[name] = type; else delete m[name];
   localStorage.setItem(KEYS.userType, JSON.stringify(m));
   markDirty();
+}
+
+// ===== #111 (Jerin, 13 Sep 2026): recruiter START and LEAVING dates decide which quarters a recruiter counts in =====
+// Ashby records NO deactivation date and NO start date for a user (measured 13 Sep: the user fields are id, name,
+// email, globalRole, isEnabled, updatedAt — and updatedAt is the last change of any kind, not a deactivation). So the
+// dates are kept here by hand, ONCE per person, not per quarter: { name: { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } }.
+export function getRecruiterDates() { return readLS(KEYS.recruiterDates, {}) || {}; }
+export function setRecruiterDate(name, field, value) {
+  if (!name || (field !== 'start' && field !== 'end')) return;
+  const m = getRecruiterDates();
+  const v = /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : '';
+  const cur = Object.assign({}, m[name] || {});
+  if (v) cur[field] = v; else delete cur[field];
+  if (cur.start || cur.end) m[name] = cur; else delete m[name];
+  localStorage.setItem(KEYS.recruiterDates, JSON.stringify(m));
+  markDirty();
+}
+// 'YYYY-Qn' -> ['YYYY-MM-DD' first day, 'YYYY-MM-DD' last day], or null.
+export function quarterBounds(q) {
+  const mt = /^(\d{4})-Q([1-4])$/.exec(String(q || '')); if (!mt) return null;
+  const y = +mt[1], n = +mt[2], m0 = (n - 1) * 3 + 1, m1 = n * 3;
+  const last = new Date(Date.UTC(y, m1, 0)).getUTCDate();
+  const p2 = (x) => String(x).padStart(2, '0');
+  return [`${y}-${p2(m0)}-01`, `${y}-${p2(m1)}-${p2(last)}`];
+}
+// Does this recruiter count in quarter q? Rule: Started on <= last day of q AND (Left on blank OR >= first day of q).
+// 🚨 With NO dates set at all, today's Ashby account decides, exactly as before #111 — so nothing changes for anyone
+//    until their dates are entered, and Data Hygiene → Recruiter Dates lists who still needs them.
+// Returns { in, basis: 'dates' | 'account', note } — note is plain English for a tooltip or pill.
+export function recruiterInQuarter(name, q, accountActive) {
+  const d = getRecruiterDates()[name] || {};
+  const b = quarterBounds(q);
+  if ((!d.start && !d.end) || !b) return { in: accountActive !== false, basis: 'account', note: accountActive === false ? 'Ashby account disabled' : '' };
+  const [qs, qe] = b;
+  if (d.start && d.start > qe) return { in: false, basis: 'dates', note: 'starts ' + d.start };
+  if (d.end && d.end < qs) return { in: false, basis: 'dates', note: 'left ' + d.end };
+  if (d.end && d.end <= qe) return { in: true, basis: 'dates', note: 'left ' + d.end + ', still counts' };
+  if (d.start && d.start >= qs) return { in: true, basis: 'dates', note: 'joined ' + d.start };
+  return { in: true, basis: 'dates', note: '' };
 }
 // 'Agency' | 'Freelancer' | 'Internal'. externalNames comes from dashboard.json's externalUsers, which the
 // pipeline fills from globalRole === 'External Recruiter'.
