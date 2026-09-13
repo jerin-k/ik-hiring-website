@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-13T08:00:28.200Z",
+  "updatedAt": "2026-09-13T08:11:09.339Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -144,6 +144,9 @@
     },
     "Sangha": {
       "start": "2026-08-01"
+    },
+    "Kaashvika Kashyap": {
+      "end": "2026-07-31"
     }
   }
 }
