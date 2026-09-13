@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-10T13:52:04.976Z",
+  "updatedAt": "2026-09-13T08:00:28.200Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -62,7 +62,8 @@
       "Unassigned": 220,
       "V Pooja": 210,
       "Leenita Joseph Albert": 90,
-      "Praveetha A": 84
+      "Praveetha A": 84,
+      "Sangha": 0
     },
     "2026-Q1": {
       "Aditya Singh": 225,
@@ -131,5 +132,18 @@
     "B2B": "NonTech",
     "Test": "Exclude"
   },
-  "userType": {}
+  "userType": {
+    "Sangha": "Agency"
+  },
+  "recruiterDates": {
+    "Leenita Joseph Albert": {
+      "start": "2026-07-15"
+    },
+    "Praveetha A": {
+      "start": "2026-07-15"
+    },
+    "Sangha": {
+      "start": "2026-08-01"
+    }
+  }
 }
