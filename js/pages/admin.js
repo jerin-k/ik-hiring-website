@@ -1,7 +1,7 @@
 import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
-import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames } from '../metric-config.js';   // #11b
+import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter } from '../metric-config.js';   // #11b · #111
 import { markDirty, isDirty, getMeta, publishConfig, configFileText } from '../metric-config.js';
 import { publishAccess, accessFileText } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
@@ -191,12 +191,12 @@ export function renderAdmin(accessConfig, data) {
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 8px">Recruiter → Pod &amp; Capacity</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Current recruiters only — tick the box below to see the rest.</p>
-        <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer" title="Past recruiters no longer hold a recruiter seat in Ashby. Their saved Pod and Capacity are kept either way — this only changes what is listed here.">
-          <input type="checkbox" id="cfgShowPast"> Show past recruiters <span id="cfgPastCount" style="color:var(--muted)"></span>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Recruiters here in the selected quarter. <strong>Started on</strong> and <strong>Left on</strong> are set once per person, not per quarter.</p>
+        <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer" title="Recruiters who were not here in the selected quarter, going by their Started on / Left on dates — or, where no dates are set yet, a disabled Ashby account. Their saved Pod and Capacity are kept either way; this only changes what is listed here.">
+          <input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" style="color:var(--muted)"></span>
         </label>
         <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px" title="Editable for everyone. Agency = the sourcer takes the whole score on SME roles, and the head; Freelancer and Internal both share the score half and half. Ashby&#39;s External Recruiter flag only sets the default (external = Freelancer, ours = Internal).">Type</th><th style="width:150px">Status</th></tr></thead>
+          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px" title="Editable for everyone. Agency = the sourcer takes the whole score on SME roles, and the head; Freelancer and Internal both share the score half and half. Ashby&#39;s External Recruiter flag only sets the default (external = Freelancer, ours = Internal).">Type</th><th style="width:150px" title="Set once per person. With both dates blank, the Ashby account decides who counts, as before.">Started on</th><th style="width:150px" title="Last working day. Blank = still here. Someone who left mid-quarter still counts for that quarter.">Left on</th><th style="width:170px">In quarter</th><th style="width:110px">Ashby account</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
         <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span><span style="margin-left:6px">· edits auto-save to this browser (team-wide sync is pending the pipeline).</span></div>
@@ -382,10 +382,11 @@ export function initAdminMetricConfig(data) {
     const q = cfgQ(); const counts = {};
     const showPast = !!document.getElementById('cfgShowPast')?.checked;
     // Count what is actually listed, so pod sizes read as current headcount rather than an all-time tally.
-    const shown = recs.filter(r => r.name !== 'Unassigned' && (showPast || r.isActive !== false));
+    const here = (r) => recruiterInQuarter(r.name, q, r.isActive).in;   // #111: dates, else today's Ashby account
+    const shown = recs.filter(r => r.name !== 'Unassigned' && (showPast || here(r)));
     shown.forEach(r => { const p = podOf(r.name, q); counts[p] = (counts[p] || 0) + 1; });
-    const hidden = showPast ? 0 : recs.filter(r => r.name !== 'Unassigned' && r.isActive === false).length;
-    el.textContent = Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join('  ·  ') + (hidden ? `  ·  ${hidden} past hidden` : '');
+    const hidden = showPast ? 0 : recs.filter(r => r.name !== 'Unassigned' && !here(r)).length;
+    el.textContent = Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join('  ·  ') + (hidden ? `  ·  ${hidden} not here this quarter, hidden` : '');
   }
   function renderPodCapacity() {
     const body = document.getElementById('cfgPodBody'); if (!body) return;
@@ -395,10 +396,12 @@ export function initAdminMetricConfig(data) {
     // their historical work (Recruiter Efficiency defaults to including them, deliberately).
     const showPast = !!document.getElementById('cfgShowPast')?.checked;
     const all = [...recs].filter(r => r.name && r.name !== 'Unassigned').sort((a, b) => a.name.localeCompare(b.name));
-    const pastCount = all.filter(r => r.isActive === false).length;
+    const here = (r) => recruiterInQuarter(r.name, q, r.isActive);   // #111
+    const pastCount = all.filter(r => !here(r).in).length;
     const pc = document.getElementById('cfgPastCount');
     if (pc) pc.textContent = pastCount ? `(${pastCount})` : '';
-    const sorted = showPast ? all : all.filter(r => r.isActive !== false);
+    const sorted = showPast ? all : all.filter(r => here(r).in);
+    const dates = getRecruiterDates();
     const podOpts = [...POD_OPTIONS, 'Unassigned'];
     // #11b, WIDENED 10 Sep 2026 (Jerin): the type is now editable for EVERY recruiter, not only accounts Ashby
     // flags as `External Recruiter`. The flag was never a reliable gate — a genuine external can hold an
@@ -421,11 +424,19 @@ export function initAdminMetricConfig(data) {
       <td><select class="cfg-utype" data-name="${name}" title="${ext.has(name)
         ? 'Ashby marks this account as an External Recruiter.'
         : 'Ashby does not mark this account as an External Recruiter, so it defaults to Internal — but you can still set it deliberately.'}">${USER_TYPES.map(t => `<option value="${t}"${t === userTypeOf(name, ext) ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-      <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Active = holds an elevated recruiter seat in Ashby (Recruiter / Recruiter Admin).'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Inactive' : 'Active')}</span></td></tr>`; }).join('')
-      || `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'No current recruiters — tick “Show past recruiters” to see the ' + pastCount + ' who no longer hold a seat.' : 'No recruiters in the data yet.'}</td></tr>`;
+      <td><input type="date" class="cfg-date" data-name="${name}" data-f="start" value="${(dates[name] || {}).start || ''}" aria-label="Started on for ${name}"></td>
+      <td><input type="date" class="cfg-date" data-name="${name}" data-f="end" value="${(dates[name] || {}).end || ''}" aria-label="Left on for ${name}"></td>
+      <td>${(() => { const s = here(r); const q0 = String(q).replace(/^(\d{4})-(Q\d)$/, '$2 $1');
+        const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
+        const col = !s.in ? 'var(--muted)' : (/left/.test(s.note) ? 'var(--orange)' : (/joined/.test(s.note) ? 'var(--green)' : 'var(--accent-deep)'));
+        return `<span title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}" style="font-size:11px;font-weight:600;color:${col}">${txt}</span>`; })()}</td>
+      <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Enabled = holds an elevated recruiter seat in Ashby (Recruiter / Recruiter Admin). Only decides who counts when no dates are set.'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
+      || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'Nobody here this quarter — tick “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
     body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); }));   // #11b
+    // #111: dates are per person, not per quarter. Re-render on change so 'In quarter' and the list follow at once.
+    body.querySelectorAll('.cfg-date').forEach(inp => inp.addEventListener('change', () => { setRecruiterDate(inp.dataset.name, inp.dataset.f, inp.value); touched(); renderPodCapacity(); }));
     updatePodSummary();
   }
   function renderScoreGrid() {

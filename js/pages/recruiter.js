@@ -1,7 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
-import { userTypeOf, sourcerOnlyNames } from '../metric-config.js';
+import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
@@ -281,7 +281,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><div class="ms" id="msRec"></div></div>
       <div class="fchip"><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
-      <div class="fchip"><label class="opt" title="Past recruiter = no longer holds an elevated recruiter seat in Ashby. Their offers and hires still count toward history; tick this to bring them back into the view."><input type="checkbox" id="recInclInactive"> Past recruiters</label></div>
+      <div class="fchip"><label class="opt" title="Recruiters who weren't here in the selected quarter — by their Started on / Left on dates in Admin → Metric Configuration, or, with no dates set, a disabled Ashby account. Their work still counts in the data either way; tick this to bring them back into the view."><input type="checkbox" id="recInclInactive"> Not here this quarter</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
@@ -412,6 +412,7 @@ export function renderRecruiter(data) {
         <button class="hyg-tab" data-h="multirec">Multiple Recruiters<span class="n" id="hygNMultiRec"></span></button>
         <button class="hyg-tab" data-h="multisrc">Multiple Sourcers<span class="n" id="hygNMultiSrc"></span></button>
         <button class="hyg-tab" data-h="roster">Recruiter Roster<span class="n" id="hygNRoster"></span></button>
+        <button class="hyg-tab" data-h="dates">Recruiter Dates<span class="n" id="hygNDates"></span></button>
         <button class="hyg-tab" data-h="nopod">Pod Not Set<span class="n" id="hygNNoPod"></span></button>
         <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
         <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
@@ -459,12 +460,12 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="roster" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter roster — Active / Inactive</h4>
-          <p class="sub-note" style="margin:0"><strong>Active</strong> = current Ashby account enabled. <strong>Inactive</strong> = account disabled (departed) but retained so their historical offers/hires still score. Derived from Ashby <code>user.list</code> <code>isEnabled</code>.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter roster — who counts this quarter</h4>
+          <p class="sub-note" style="margin:0"><strong>Ashby account</strong> = whether they still hold a recruiter seat in Ashby. <strong>This quarter</strong> follows their <strong>Started on</strong> / <strong>Left on</strong> dates from Admin → Metric Configuration; with no dates set, the Ashby account decides. Their history still scores either way.</p></div>
           <button class="hyg-dl" data-dl="roster">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Ashby account</th><th>Started on</th><th>Left on</th><th>This quarter</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
           <tbody id="hygRosterBody"></tbody>
         </table></div>
       </div>
@@ -541,6 +542,26 @@ export function renderRecruiter(data) {
         </table></div>
       </div>
 
+      <div class="hyg-panel" data-h="dates" style="display:none">
+        <div class="hyg-head">
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter dates — checked against real work</h4>
+          <p class="sub-note" style="margin:0">Compares each recruiter's <strong>Started on</strong> / <strong>Left on</strong> dates (Admin → Metric Configuration) with the work credited to them — openings owned, joiners and drops — quarter by quarter across the selected year. A wrong or missing date quietly hides someone's work, so it shows up here.</p></div>
+          <button class="hyg-dl" data-dl="dates">Download CSV</button>
+        </div>
+        <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Quarter</th><th>Work found</th><th>Started on</th><th>Left on</th></tr></thead>
+          <tbody id="hygDatesOutBody"></tbody>
+        </table></div>
+        <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Ashby account disabled, no Left on date <span id="hygDatesNoEndN" style="color:var(--muted);font-weight:400"></span></h5>
+        <div class="scroll-table"><table>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Started on</th><th>Last quarter with work</th></tr></thead>
+          <tbody id="hygDatesNoEndBody"></tbody>
+        </table></div>
+        <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">No Started on date</h5>
+        <p class="sub-note" id="hygDatesNoStart" style="margin:0"></p>
+      </div>
+
       <div class="hyg-panel" data-h="anomalies" style="display:none">
         <div class="hyg-head">
           <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Other anomalies</h4>
@@ -577,9 +598,17 @@ export function initRecruiterFilters(data) {
   // plausible-looking wrong answer this dashboard has been bitten by before.
   const isRecInactive = (r) => !!(r && r.isActive === false);
   const isStatusUnknown = (r) => !!(r && r.activeKnown === false);
-  const inactiveTag = (r) => isRecInactive(r)
-    ? ' <span style="font-size:10px;color:var(--red);font-weight:600">· inactive</span>'
-    : (isStatusUnknown(r) ? ' <span title="No Ashby user record matched this name, so active/inactive is unknown" style="font-size:10px;color:var(--orange);font-weight:600">· status unknown</span>' : '');
+  // #111 (Jerin, 13 Sep 2026): who counts in a quarter follows the recruiter's Started on / Left on dates from Admin →
+  //   Metric Configuration. With NO dates set, today's Ashby account decides exactly as before, so nothing moves for
+  //   anyone until their dates are entered. Sourcer-only people hold no recruiter seat and no dates, so they always count.
+  const presentIn = (r, q) => !!(r && (r.sourcerOnly || recruiterInQuarter(r.name, q, r.isActive).in));
+  const inactiveTag = (r) => {
+    if (!r || r.sourcerOnly) return '';
+    const s = recruiterInQuarter(r.name, selQuarter(), r.isActive);
+    if (!s.in) return ` <span title="Not here in the selected quarter${s.note ? ' (' + s.note + ')' : ''}" style="font-size:10px;color:var(--red);font-weight:600">· not here this quarter</span>`;
+    if (s.basis === 'dates' && /left|joined/.test(s.note)) return ` <span style="font-size:10px;color:var(--muted);font-weight:600">· ${s.note}</span>`;
+    return isStatusUnknown(r) ? ' <span title="No Ashby user record matched this name, so active/inactive is unknown" style="font-size:10px;color:var(--orange);font-weight:600">· status unknown</span>' : '';
+  };
   // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
   const _sr = data.stageRollups || {};
   const tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
@@ -864,7 +893,7 @@ export function initRecruiterFilters(data) {
       if (!r.sourcerOnly && hideZero && (r.total || 0) === 0) return false;
       // #14 (2026-08-23): default is now OFF. Past recruiters keep their history in the data and still score;
       // they just don't clutter the working view unless asked for.
-      if (!r.sourcerOnly && !inclInactive && isRecInactive(r)) return false;
+      if (!r.sourcerOnly && !inclInactive && !presentIn(r, q)) return false;   // #111: by dates, else today's Ashby account
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(effectivePod(r, q))) return false;   // #11: match how the row is grouped
       if (!recWorkedSelectedJob(r.name, jobIdsSelected)) return false;
@@ -1377,7 +1406,7 @@ export function initRecruiterFilters(data) {
       const orphanWhy = (rec) => {
         const r = roster[rec];
         if (!r) return 'not on the recruiter roster';
-        if (isRecInactive(r)) return 'past recruiter';
+        if (!presentIn(r, q2)) return 'not here this quarter';   // #111
         if (isStatusUnknown(r)) return 'status unknown';
         if (podOf(rec, q2) === 'Unassigned') return 'no pod set';
         if (!(r.total || 0)) return 'no applications';
@@ -1813,7 +1842,7 @@ export function initRecruiterFilters(data) {
     const unassigned = dq.unassigned || [];
     const multiRec = dq.multiRecruiter || [];
     const multiSrc = dq.multiSourcer || [];
-    const inactiveCount = allRecs.filter(r => isRecInactive(r)).length;
+    const inactiveCount = allRecs.filter(r => r.name && r.name !== 'Unassigned' && !presentIn(r, q)).length;   // #111
 
     // --- summary cards ---
     const cards = document.getElementById('hygCards');
@@ -1825,7 +1854,7 @@ export function initRecruiterFilters(data) {
         card('Unassigned (all funnel)', (dq.unassignedTotal || 0).toLocaleString(), 'incl. App Review — not yet worked', 'var(--muted)') +
         card('Multi-Recruiter apps', multiRec.length, 'first is credited', multiRec.length ? 'var(--orange)' : 'var(--green)') +
         card('Multi-Sourcer apps', multiSrc.length, 'should be zero', multiSrc.length ? 'var(--red)' : 'var(--green)') +
-        card('Inactive recruiters', inactiveCount, 'departed, retained for history', 'var(--muted)');
+        card('Not here this quarter', inactiveCount, 'by dates, or a disabled Ashby account', 'var(--muted)');
     }
 
     // --- Unassigned: group by job, candidate rows ---
@@ -1863,17 +1892,21 @@ export function initRecruiterFilters(data) {
     // --- Active / Inactive roster ---
     const rBody = document.getElementById('hygRosterBody');
     if (rBody) {
+      const datesR = getRecruiterDates();
       const sorted = [...allRecs].filter(r => r.name && r.name !== 'Unassigned')
-        .sort((a, b) => (isRecInactive(a) - isRecInactive(b)) || a.name.localeCompare(b.name));
+        .sort((a, b) => (presentIn(b, q) - presentIn(a, q)) || a.name.localeCompare(b.name));
       rBody.innerHTML = sorted.map(r => {
         const unknown = isStatusUnknown(r), active = !isRecInactive(r);
-        const label = unknown ? 'Unknown' : (active ? 'Active' : 'Inactive');
+        const label = unknown ? 'Unknown' : (active ? 'Enabled' : 'Disabled');
         const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
-        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Active."' : (active ? ' title="Holds an elevated recruiter seat in Ashby."' : ' title="No longer holds an elevated recruiter seat in Ashby."');
+        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Enabled."' : (active ? ' title="Holds an elevated recruiter seat in Ashby."' : ' title="No longer holds an elevated recruiter seat in Ashby."');
+        const d = datesR[r.name] || {}; const s = r.sourcerOnly ? { in: true, note: 'sourcer' } : recruiterInQuarter(r.name, q, r.isActive);
+        const here = `<span style="font-size:11px;font-weight:600;color:${s.in ? 'var(--accent-deep)' : 'var(--muted)'}">${s.in ? 'Yes' : 'No'}${s.note ? ' · ' + esc(s.note) : ''}</span>`;
         return `<tr><td style="font-weight:500">${esc(r.name)}</td>
           <td><span${tip} style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
+          <td>${esc(d.start || '—')}</td><td>${esc(d.end || '—')}</td><td>${here}</td>
           <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
-      }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No recruiters.</td></tr>`;
+      }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No recruiters.</td></tr>`;
     }
 
     // --- Opening-link gaps: one array from the pipeline, split by whether it is still
@@ -2028,6 +2061,41 @@ export function initRecruiterFilters(data) {
       }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Every recruiter has a pod set for this quarter — nothing is being excluded.</td></tr>`;
     }
 
+    // --- #111: recruiter Started on / Left on dates, checked against the work credited to them ---
+    const qOfD = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const yearQs = [1, 2, 3, 4].map(n => qKey(String(q).slice(0, 4), n)).filter(k => k <= currentQuarter());
+    const work = {};   // name -> quarter -> { open, joined, drops }
+    const addWork = (name, qq, k, n) => { if (!name || !qq || !n) return; const a = (work[name] = work[name] || {}); const b = (a[qq] = a[qq] || { open: 0, joined: 0, drops: 0 }); b[k] += n; };
+    Object.entries(data.ownedSeatsByRecruiterQ || {}).forEach(([name, byQ]) => Object.entries(byQ || {}).forEach(([qq, byJob]) =>
+      addWork(name, qq, 'open', Object.values(byJob || {}).reduce((s, v) => s + (+v || 0), 0))));
+    (data.offerEvents || []).forEach(e => { if (e.accepted && e.appStatus === 'Hired') addWork(e.recruiter, qOfD(e.startDate), 'joined', 1); });
+    dropRows(data).forEach(e => addWork(e.recruiter, e.quarter, 'drops', 1));
+    const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+    // shared owners hold part of an opening, so a fraction reads as 'a share of N openings'
+    const workTxt = (w) => [w.open ? (w.open % 1 ? 'a share of ' + plural(Math.ceil(w.open), 'opening') : plural(w.open, 'opening') + ' owned') : '', w.joined ? plural(w.joined, 'joiner') : '', w.drops ? plural(w.drops, 'drop') : ''].filter(Boolean).join(' · ');
+    const datesMap = getRecruiterDates();
+    const rosterRecs = allRecs.filter(r => r.name && r.name !== 'Unassigned' && !r.sourcerOnly);
+    const datesOut = [];
+    rosterRecs.forEach(r => { const d = datesMap[r.name]; if (!d || (!d.start && !d.end)) return;
+      yearQs.forEach(qq => { const w = (work[r.name] || {})[qq]; if (!w) return;
+        if (!recruiterInQuarter(r.name, qq, r.isActive).in) datesOut.push({ r, qq, w, d }); }); });
+    const lastWorkQ = (name) => Object.keys(work[name] || {}).sort().pop() || '';
+    const datesNoEnd = rosterRecs.filter(r => r.isActive === false && !(datesMap[r.name] || {}).end);
+    const datesNoStart = rosterRecs.filter(r => r.isActive !== false && !(datesMap[r.name] || {}).start);
+    const dOutBody = document.getElementById('hygDatesOutBody');
+    if (dOutBody) dOutBody.innerHTML = datesOut.map(({ r, qq, w, d }) => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc(qq)}</td><td>${esc(workTxt(w))}</td><td>${esc(d.start || '—')}</td><td>${esc(d.end || '—')}</td></tr>`).join('')
+      || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No work is credited outside anyone's dates.</td></tr>`;
+    const dNoEndBody = document.getElementById('hygDatesNoEndBody');
+    if (dNoEndBody) dNoEndBody.innerHTML = datesNoEnd.map(r => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc((datesMap[r.name] || {}).start || '—')}</td><td>${esc(lastWorkQ(r.name) || '—')}</td></tr>`).join('')
+      || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Every disabled Ashby account has a Left on date.</td></tr>`;
+    const setTxt = (id, s) => { const el = document.getElementById(id); if (el) el.textContent = s; };
+    setTxt('hygDatesOutN', datesOut.length ? '· ' + datesOut.length : '');
+    setTxt('hygDatesNoEndN', datesNoEnd.length ? '· ' + datesNoEnd.length : '');
+    const dNoStart = document.getElementById('hygDatesNoStart');
+    if (dNoStart) dNoStart.innerHTML = datesNoStart.length
+      ? `<strong>${datesNoStart.length}</strong> current recruiter${datesNoStart.length === 1 ? '' : 's'} with no Started on date — they count from the first quarter on record: ${datesNoStart.map(r => esc(r.name)).join(' · ')}`
+      : 'Every current recruiter has a Started on date.';
+
     // --- tab counts ---
     const setN = (id, n, warn) => {
       const el = document.getElementById(id);
@@ -2037,6 +2105,7 @@ export function initRecruiterFilters(data) {
     setN('hygNMultiRec', multiRec.length, true);
     setN('hygNMultiSrc', multiSrc.length, true);
     setN('hygNRoster', allRecs.filter(r => r.name && r.name !== 'Unassigned').length, false);
+    setN('hygNDates', datesOut.length + datesNoEnd.length, true);   // #111: the no-start list is informational
     setN('hygNOfferGap', gapLive.length, true);
     setN('hygNHiredGap', gapDone.length, false);
     setN('hygNUnscored', unscored.length, true);
@@ -2061,10 +2130,15 @@ export function initRecruiterFilters(data) {
         ...multiRec.map(m => [jobTitleBy8[m.job8] || m.job8 || '', (m.names || []).join(' | '), m.app || ''])],
       multisrc: () => [['Job', 'Sourcers tagged', 'Application ID'],
         ...multiSrc.map(m => [jobTitleBy8[m.job8] || m.job8 || '', (m.names || []).join(' | '), m.app || ''])],
-      roster: () => [['Recruiter', 'Status', 'Pod', 'Offers', 'Hired'],
+      roster: () => [['Recruiter', 'Ashby account', 'Started on', 'Left on', 'This quarter', 'Pod', 'Offers', 'Hired'],
         ...[...allRecs].filter(r => r.name && r.name !== 'Unassigned')
-          .sort((a, b) => (isRecInactive(a) - isRecInactive(b)) || a.name.localeCompare(b.name))
-          .map(r => [r.name, isRecInactive(r) ? 'Inactive' : 'Active', podOf(r.name, q), r.offer || 0, r.hired || 0])],
+          .sort((a, b) => (presentIn(b, q) - presentIn(a, q)) || a.name.localeCompare(b.name))
+          .map(r => { const d = datesMap[r.name] || {}; const s = r.sourcerOnly ? { in: true, note: 'sourcer' } : recruiterInQuarter(r.name, q, r.isActive);
+            return [r.name, isStatusUnknown(r) ? 'Unknown' : (isRecInactive(r) ? 'Disabled' : 'Enabled'), d.start || '', d.end || '', (s.in ? 'Yes' : 'No') + (s.note ? ' - ' + s.note : ''), podOf(r.name, q), r.offer || 0, r.hired || 0]; })],
+      dates: () => [['Check', 'Recruiter', 'Quarter', 'Work found', 'Started on', 'Left on'],
+        ...datesOut.map(({ r, qq, w, d }) => ['Work credited outside their dates', r.name, qq, workTxt(w), d.start || '', d.end || '']),
+        ...datesNoEnd.map(r => ['Ashby account disabled, no Left on date', r.name, lastWorkQ(r.name), '', (datesMap[r.name] || {}).start || '', '']),
+        ...datesNoStart.map(r => ['No Started on date', r.name, '', '', '', (datesMap[r.name] || {}).end || ''])],
       offergap: () => [['Candidate', 'Job', 'Department', 'Stage', 'DOJ', 'Recruiter'],
         ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.doj || '', g.recruiter || ''])],
       hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'DOJ', 'Recruiter'],
