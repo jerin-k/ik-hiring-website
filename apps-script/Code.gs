@@ -32,6 +32,7 @@ var VALID_ROLES = ['admin', 'all_access', 'department', 'team', 'page'];
 // ===== MAIN ROUTER =====
 function doGet(e) {
   if (e && e.parameter && e.parameter.page === 'doPublishAccess') return publishAccessPage_(e, Session.getActiveUser().getEmail().toLowerCase());
+  if (e && e.parameter && e.parameter.page === 'doSendInvite') return sendInvitePage_(e, Session.getActiveUser().getEmail().toLowerCase());   // #118
   var page = (e && e.parameter && e.parameter.page) || 'dashboard';
   // Handle manual refresh action
   var action = (e && e.parameter && e.parameter.action) || '';
@@ -481,4 +482,161 @@ function publishAccessPage_(e, userEmail) {
   } catch (err) {
     return page('<h2 style="color:#be123c">Publish failed</h2><p>' + String(err) + '</p><p>Close this and use the Download fallback in Admin.</p>');
   }
+}
+
+// ===== #118 SEND INVITE (Jerin, 14 Sep 2026) — admin-only; the email is written HERE from the PUBLISHED access =====
+// The Admin page's Send invite button opens this route in a popup after the admin confirms. Nothing is ever sent
+// automatically: one click, one person. The web app runs as the deployer, so the email leaves from that Gmail with the
+// display name TA Team and replies go back there. Only someone already in the PUBLISHED access.json can be invited, with
+// the access recorded there, so the route cannot be used to send arbitrary email. Each send is recorded in
+// access_invites.json (Drive + GitHub) so the row can show when and by whom. Admin = admin in access.json (not the old sheet).
+var INVITE_SITE_ = 'https://hiring.interviewkickstart.com';
+var INVITE_TABS_ = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency']];
+function inviteListAnd_(xs) { return xs.length <= 1 ? (xs[0] || '') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1]; }
+// The one line that differs per person (wording: Jerin, 14 Sep 2026).
+function inviteAccessLine_(u) {
+  if (u.role === 'admin') return 'You can see every tab, plus the Admin page.';
+  if (u.role === 'full_access') return 'You can see every tab: Overview, Hiring Manager, Recruiter Efficiency and Overall Efficiency.';
+  var labels = INVITE_TABS_.filter(function (t) { return (u.tabs || []).indexOf(t[0]) >= 0; }).map(function (t) { return t[1]; });
+  if (!labels.length) return 'You can see the Overview tab.';
+  var line = 'You can see ' + inviteListAnd_(['Overview'].concat(labels)) + ' tabs';
+  var depts = u.departments || [];
+  if (depts.length) line += '; the figures on ' + inviteListAnd_(labels) + (labels.length > 1 ? ' sections' : ' section') + ' cover ' + inviteListAnd_(depts);
+  return line + '.';
+}
+function inviteEmailText_(u) {
+  return ['Hi,', '',
+    'You now have access to the IK Hiring Dashboard, where the TA team tracks hiring across Interview Kickstart.', '',
+    'Open it here: ' + INVITE_SITE_,
+    'Sign in with your Interview Kickstart Google account (' + u.email + ').', '',
+    inviteAccessLine_(u), '',
+    'Each table has a short "How these numbers are worked out" note that explains the figures.', '',
+    'If anything looks wrong or you cannot get in, reply to this email.', '',
+    'Thanks,', 'TA Team'].join('\n');
+}
+function sendInvitePage_(e, userEmail) {
+  var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
+  var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Send Invite'); };
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var access = null;
+  try { access = loadDriveJson_('access.json'); } catch (eA) { return page('<h2 style="color:#be123c">Not sent</h2><p>Could not read the published access: ' + esc(eA) + '</p>'); }
+  var users = (access && access.users) || [];
+  var find = function (em) { em = String(em || '').toLowerCase(); for (var i = 0; i < users.length; i++) if (String(users[i].email || '').toLowerCase() === em) return users[i]; return null; };
+  var me = find(userEmail);
+  if (!me || me.role !== 'admin') return page('<h2 style="color:#be123c">Not authorized</h2><p>' + esc(userEmail) + ' is not an admin in the published access list.</p>');
+  var to = String((e && e.parameter && e.parameter.to) || '').toLowerCase().replace(/^\s+|\s+$/g, '');
+  var u = find(to);
+  if (!u || !u.role || u.role === 'none') return page('<h2 style="color:#be123c">Not sent</h2><p>' + esc(to) + ' has no published access yet. Publish access first.</p>');
+  if (!/@interviewkickstart\.com$/.test(to)) return page('<h2 style="color:#be123c">Not sent</h2><p>Invites go only to @interviewkickstart.com addresses.</p>');
+  var inv = null;
+  try { inv = loadDriveJson_('access_invites.json'); } catch (eI) { inv = null; }
+  inv = inv || {}; inv.invites = inv.invites || {};
+  var prev = inv.invites[to];
+  if (prev && prev.at && (Date.now() - new Date(prev.at).getTime()) < 120000) return page('<h2>Already sent</h2><p>An invite went to ' + esc(to) + ' less than two minutes ago.</p>');
+  try {
+    MailApp.sendEmail({ to: u.email, subject: inviteEmailSubject_(), body: inviteEmailText_(u), htmlBody: inviteEmailHtml_(u), name: 'TA Team' });   // #118: designed email, plain text as the fallback
+  } catch (eM) { return page('<h2 style="color:#be123c">Invite failed</h2><p>' + esc(eM) + '</p>'); }
+  var rec = { at: new Date().toISOString(), by: userEmail, count: ((prev && prev.count) || 0) + 1 };
+  inv.invites[to] = rec; inv.updatedAt = rec.at;
+  try {
+    saveDriveJson_('access_invites.json', inv);
+    pushFileToGitHub_('data/access_invites.json', JSON.stringify(inv, null, 2), 'Invite sent to ' + to + ' by ' + userEmail);
+  } catch (eR) { return page('<h2 style="color:#a16207">Invite sent — not recorded</h2><p>The email went to ' + esc(u.email) + ', but saving the record failed: ' + esc(eR) + '</p>'); }
+  return page('<h2 style="color:#0f766e">Invite sent</h2><p>To ' + esc(u.email) + '. You can close this window.</p><script>setTimeout(function(){try{window.close()}catch(x){}},2500)<\/script>');
+}
+
+// #118 (Jerin, 14 Sep 2026): the invite as a designed HTML email. The plain-text inviteEmailText_ stays as the fallback body.
+// Email-safe on purpose: tables, inline styles, no images (Gmail does not show the SVG logo), no scripts, no web fonts.
+// It describes ONLY the access this person has — the same rule as the plain-text version.
+var INVITE_TAB_BLURB_ = {
+  'Overview': 'A company-wide snapshot of positions, applications, joiners and interviews.',
+  'Hiring Manager': 'Open and filled positions, candidates in the final stages, the hiring pipeline by stage and the interview panel.',
+  'Recruiter Efficiency': 'Each recruiter’s goals and results, screening, time spent at each stage and where joiners came from.',
+  'Overall Efficiency': 'Team-wide fulfilment, throughput, time in process and sourcing.'
+};
+function inviteEmailSubject_() { return 'Your access to the IK Hiring Dashboard is ready'; }
+function inviteEmailHtml_(u) {
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  var full = u.role === 'full_access' || u.role === 'admin';
+  var tabs = full ? ['Overview', 'Hiring Manager', 'Recruiter Efficiency', 'Overall Efficiency']
+    : ['Overview'].concat(INVITE_TABS_.filter(function (t) { return (u.tabs || []).indexOf(t[0]) >= 0; }).map(function (t) { return t[1]; }));
+  var depts = full ? [] : (u.departments || []);
+  var scoped = tabs.slice(1);   // the tabs a restriction applies to (never Overview)
+  var levelLabel = u.role === 'admin' ? 'Admin' : full ? 'Full access' : 'Hiring Manager view';
+  var coverage = full ? 'Everything, across the whole company'
+    : (depts.length ? inviteListAnd_(depts) : 'The whole company');
+  var chip = function (t) { return '<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;background:#ffffff;border:1px solid #dbe1ec;font:600 12px/16px ' + FONT + ';color:#33507f">' + esc(t) + '</span>'; };
+  var row = function (label, value) {
+    return '<tr><td style="padding:10px 0;border-top:1px solid #dbe1ec;font:600 12px/18px ' + FONT + ';color:#6b7391;width:104px;padding-right:12px;vertical-align:top">' + label + '</td>'
+      + '<td style="padding:10px 0;border-top:1px solid #dbe1ec;font:400 14px/20px ' + FONT + ';color:#0f172a;vertical-align:top">' + value + '</td></tr>';
+  };
+  var find = tabs.map(function (t) {
+    return '<tr><td style="padding:0 0 12px 0;vertical-align:top;width:18px;font:700 14px/20px ' + FONT + ';color:#4E6BA6">&#8250;</td>'
+      + '<td style="padding:0 0 12px 0;font:400 14px/21px ' + FONT + ';color:#334155"><strong style="color:#0f172a">' + esc(t) + '</strong> &mdash; '
+      + esc(INVITE_TAB_BLURB_[t]) + (!full && t !== 'Overview' && depts.length ? ' Covers ' + esc(inviteListAnd_(depts)) + '.' : '') + '</td></tr>';
+  }).join('');
+  var notes = [
+    'Every table has a <strong style="color:#0f172a">How these numbers are worked out</strong> note that explains the figures.',
+    'The numbers refresh twice a day, around 6 AM and 6 PM IST.'
+  ];
+  if (!full && depts.length) notes.push('Your view is limited to ' + esc(inviteListAnd_(depts)) + '. The Overview page shows the whole company.');
+  var noteRows = notes.map(function (n) {
+    return '<tr><td style="padding:0 0 8px 0;vertical-align:top;width:18px;font:700 14px/20px ' + FONT + ';color:#6b7391">&bull;</td>'
+      + '<td style="padding:0 0 8px 0;font:400 13px/20px ' + FONT + ';color:#334155">' + n + '</td></tr>';
+  }).join('');
+  var preheader = 'Sign in with your Interview Kickstart Google account to open the IK Hiring Dashboard.';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>' + esc(inviteEmailSubject_()) + '</title></head>'
+    + '<body style="margin:0;padding:0;background:#f4f6fb">'
+    + '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' + esc(preheader) + '</div>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6fb"><tr><td align="center" style="padding:32px 16px">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #dbe1ec;border-radius:12px;overflow:hidden">'
+    // header band
+    + '<tr><td style="background:#22344f;padding:22px 32px">'
+    + '<div style="font:600 11px/14px ' + FONT + ';letter-spacing:1.5px;text-transform:uppercase;color:#a8bcd8">Interview Kickstart</div>'
+    + '<div style="font:700 18px/24px ' + FONT + ';color:#ffffff;margin-top:4px">Hiring Dashboard</div>'
+    + '</td></tr>'
+    // title + intro + button
+    + '<tr><td style="padding:32px 32px 8px 32px">'
+    + '<h1 style="margin:0 0 14px 0;font:700 24px/31px ' + FONT + ';color:#0f172a">Your access is ready</h1>'
+    + '<p style="margin:0 0 14px 0;font:400 15px/23px ' + FONT + ';color:#334155">Hi,</p>'
+    + '<p style="margin:0 0 24px 0;font:400 15px/23px ' + FONT + ';color:#334155">The TA team has given you access to the <strong style="color:#0f172a">IK Hiring Dashboard</strong> &mdash; one place to follow hiring '
+    + (full ? 'across Interview Kickstart' : 'for ' + esc(inviteListAnd_(depts.length ? depts : ['Interview Kickstart'])))
+    + ': open positions, candidates in the final stages, the hiring pipeline and interview activity.</p>'
+    + '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:8px;background:#4E6BA6">'
+    + '<a href="' + INVITE_SITE_ + '" style="display:inline-block;padding:13px 26px;font:600 15px/20px ' + FONT + ';color:#ffffff;text-decoration:none;border-radius:8px">Open the Hiring Dashboard</a>'
+    + '</td></tr></table>'
+    + '<p style="margin:14px 0 0 0;font:400 13px/20px ' + FONT + ';color:#6b7391">Sign in with your Interview Kickstart Google account &mdash; <span style="color:#0f172a">' + esc(u.email) + '</span>. Other Google accounts will not work.</p>'
+    + '</td></tr>'
+    // access card
+    + '<tr><td style="padding:24px 32px 8px 32px">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eaeef6;border-radius:10px"><tr><td style="padding:18px 20px 8px 20px">'
+    + '<div style="font:700 12px/16px ' + FONT + ';letter-spacing:.6px;text-transform:uppercase;color:#33507f;margin-bottom:10px">Your access</div>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+    + row('Access level', esc(levelLabel))
+    + row('Tabs', tabs.map(chip).join('') + (u.role === 'admin' ? chip('Admin') : ''))
+    + row('Figures cover', esc(coverage))
+    + '</table></td></tr></table>'
+    + '</td></tr>'
+    // what you'll find
+    + '<tr><td style="padding:24px 32px 4px 32px">'
+    + '<div style="font:700 15px/20px ' + FONT + ';color:#0f172a;margin-bottom:12px">What you will find</div>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' + find + '</table>'
+    + '</td></tr>'
+    // good to know
+    + '<tr><td style="padding:12px 32px 8px 32px">'
+    + '<div style="font:700 15px/20px ' + FONT + ';color:#0f172a;margin-bottom:10px">Good to know</div>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' + noteRows + '</table>'
+    + '</td></tr>'
+    // sign-off
+    + '<tr><td style="padding:16px 32px 30px 32px">'
+    + '<p style="margin:0 0 18px 0;font:400 14px/22px ' + FONT + ';color:#334155">Questions, or trouble signing in? Just reply to this email.</p>'
+    + '<p style="margin:0;font:400 14px/22px ' + FONT + ';color:#334155">Warm regards,<br><strong style="color:#0f172a">TA Team</strong><br><span style="color:#6b7391">Interview Kickstart</span></p>'
+    + '</td></tr>'
+    + '</table>'
+    // footer
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px"><tr><td style="padding:16px 32px 0 32px;font:400 11px/17px ' + FONT + ';color:#6b7391;text-align:center">'
+    + 'You are receiving this because a dashboard admin gave your Interview Kickstart account access. The dashboard is for internal use only.'
+    + '</td></tr></table>'
+    + '</td></tr></table></body></html>';
 }
