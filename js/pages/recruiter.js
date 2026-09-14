@@ -1,5 +1,5 @@
-import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
-import { defsBlock } from '../definitions.js';
+import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
+import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData } from '../data.js';   // #120a: the Job filter narrows every number
@@ -181,18 +181,89 @@ export function renderRecruiter(data) {
          (Jerin, 2026-08-30: "enlarge the chart to align with the rest of the content"). Cells keep a
          minimum width, so on a narrow screen the wrap scrolls rather than crushing them. */
 
-      /* nested tab strip INSIDE Data Hygiene — pill style, deliberately distinct from the
-         outer underline tabs so two levels of tabs don't read as one row */
-      .hyg-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 16px; }
-      .hyg-tab { appearance:none; background:none; border:0; border-radius:7px;
-        padding:5px 12px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; font-family:inherit; }
-      .hyg-tab:hover { color:var(--text); background:var(--border-light); }
-      .hyg-tab.active, .hyg-tab.active:hover { background:var(--accent-light); color:var(--accent-deep); font-weight:600; }
-      .hyg-tab .n { font-weight:700; margin-left:6px; }
-      .hyg-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin:0 0 6px; }
-      .hyg-dl { appearance:none; background:var(--card); border:1px solid var(--border); border-radius:6px;
-        padding:5px 12px; font-size:11px; font-weight:600; color:var(--muted); cursor:pointer; white-space:nowrap; }
-      .hyg-dl:hover { color:var(--text); border-color:#cbd5e1; }
+      /* ===== Data Hygiene side list (#13, Jerin 14 Sep 2026 — mock-up B1) =====
+         The list of lists sits on the left and the chosen list on the right. State lives in form, not only in numbers: a dot and a
+         count badge per list (rose = needs a fix, slate = for the record, teal = nothing to fix) and a bar that sums the three. */
+      .hy-split { display:grid; grid-template-columns:300px minmax(0,1fr); border:1px solid var(--border); border-radius:12px;
+        background:var(--card); overflow:hidden; margin-top:4px; }
+      .hy-rail { background:#f7f9fc; border-right:1px solid var(--border); display:flex; flex-direction:column; }
+      .hy-rail-head { padding:14px 14px 12px; border-bottom:1px solid var(--border); background:var(--card); display:grid; gap:8px; }
+      .hy-rail-title { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+      .hy-rail-title strong { font-size:13px; font-weight:700; color:var(--text); }
+      .hy-rail-title span { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .hy-statebar { display:flex; gap:2px; height:6px; border-radius:999px; overflow:hidden; }
+      .hy-statebar i { display:block; height:100%; }
+      .hy-statebar .s-fix { background:var(--red); }
+      .hy-statebar .s-record { background:#b5bccf; }
+      .hy-statebar .s-clear { background:var(--green); }
+      .hy-statebar .s-wait { background:var(--border); }
+      .hy-legend { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11.5px; color:var(--muted); }
+      .hy-legend span { display:inline-flex; align-items:center; gap:5px; }
+      .hy-legend b { color:var(--text-secondary); font-weight:600; font-variant-numeric:tabular-nums; }
+      .hy-rail-body { padding:6px 8px 12px; display:grid; gap:2px; align-content:start; }
+      .hy-grp { display:flex; align-items:center; justify-content:space-between; padding:12px 8px 5px; }
+      .hy-grp:first-child { padding-top:6px; }
+      .hy-grp span { font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9aa3bd; }
+      .hy-grp em { font-style:normal; font-size:11px; color:#9aa3bd; font-variant-numeric:tabular-nums; }
+      .hy-row { appearance:none; width:100%; text-align:left; cursor:pointer; background:transparent; font-family:inherit;
+        border:1px solid transparent; border-radius:9px; padding:8px 10px; color:var(--text-secondary);
+        display:grid; grid-template-columns:10px minmax(0,1fr) auto; column-gap:10px; align-items:center;
+        transition:background-color .14s, border-color .14s, box-shadow .14s; }
+      .hy-row:hover { background:#eef2f8; }
+      .hy-row[aria-selected="true"] { background:var(--card); border-color:var(--border);
+        box-shadow:0 1px 2px rgba(15,23,42,.06), 0 4px 12px -6px rgba(34,52,79,.18); }
+      .hy-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+      .hy-dot { width:8px; height:8px; border-radius:50%; justify-self:center; }
+      .hy-dot.fix { background:var(--red); box-shadow:0 0 0 3px var(--red-light); }
+      .hy-dot.record { background:#b5bccf; box-shadow:0 0 0 3px #eef0f5; }
+      .hy-dot.clear { background:var(--green); box-shadow:0 0 0 3px var(--green-light); }
+      .hy-dot.wait { background:var(--border); box-shadow:0 0 0 3px var(--border-light); }
+      .hy-name { font-size:13px; font-weight:550; line-height:1.3; }
+      .hy-row[aria-selected="true"] .hy-name { color:var(--navy); font-weight:650; }
+      .hy-sub { grid-column:2 / 4; font-size:11.5px; line-height:1.35; color:var(--muted); margin-top:2px; }
+      .hy-n { font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; line-height:1; padding:4px 8px; border-radius:999px;
+        white-space:nowrap; border:1px solid transparent; }
+      .hy-n.fix { background:var(--red-light); color:var(--red); border-color:#ecd3db; }
+      .hy-n.record { background:#eef0f5; color:var(--muted); border-color:#dde1ea; }
+      .hy-n.clear { background:var(--green-light); color:var(--green); border-color:#cfe3e9; display:inline-flex; align-items:center; gap:3px; }
+      .hy-n.wait { background:var(--border-light); color:var(--muted); }
+      .hy-n svg { width:10px; height:10px; }
+      .hy-main { padding:20px 22px 22px; min-width:0; display:grid; gap:16px; align-content:start; }
+      .hy-top { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; }
+      .hy-title { display:grid; gap:6px; min-width:0; }
+      .hy-crumb { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#9aa3bd; }
+      .hy-title h3 { margin:0; font-size:19px; line-height:1.2; letter-spacing:-.01em; color:var(--navy); font-weight:700; text-transform:none; }
+      .hy-pills { display:flex; flex-wrap:wrap; gap:6px; }
+      .hy-pill { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px;
+        border:1px solid var(--border); color:var(--text-secondary); background:var(--card); white-space:nowrap; }
+      .hy-pill.fix { background:var(--red-light); border-color:#ecd3db; color:var(--red); }
+      .hy-pill.record { background:#eef0f5; border-color:#dde1ea; color:var(--muted); }
+      .hy-pill.clear { background:var(--green-light); border-color:#cfe3e9; color:var(--green); }
+      .hy-pill svg { width:12px; height:12px; }
+      .hy-side { display:flex; align-items:center; gap:14px; }
+      .hy-big { display:grid; justify-items:end; line-height:1; }
+      .hy-big b { font-size:28px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--navy); }
+      .hy-big span { font-size:10.5px; color:var(--muted); margin-top:5px; text-transform:uppercase; letter-spacing:.05em; }
+      .hyg-dl { appearance:none; display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1px solid var(--border);
+        border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; white-space:nowrap; font-family:inherit; }
+      .hyg-dl:hover { color:var(--text); border-color:#b9c4d8; }
+      .hyg-dl svg { width:13px; height:13px; }
+      .hy-facts { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:12px; }
+      .hy-fact { border:1px solid var(--border-light); background:#f7f9fc; border-radius:10px; padding:11px 14px; display:grid; gap:6px; align-content:start; }
+      .hy-fact h4 { margin:0; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9aa3bd; }
+      .hy-fact p { margin:0; font-size:13px; color:var(--text-secondary); }
+      .hy-path { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+      .hy-path span { font-size:12px; font-weight:600; color:var(--accent-deep); background:var(--card); border:1px solid var(--border);
+        border-radius:6px; padding:2px 7px; white-space:nowrap; }
+      .hy-path svg { width:10px; height:10px; color:#9aa3bd; flex:none; }
+      .hy-main .scroll-table { margin-bottom:0; }
+      @media (max-width: 900px) {
+        .hy-split { grid-template-columns:1fr; }
+        .hy-rail { border-right:0; border-bottom:1px solid var(--border); }
+        .hy-sub { display:none; }
+        .hy-facts { grid-template-columns:1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) { .hy-row { transition:none; } }
 
       /* consolidated filter block (matches HM) */
       /* .rec-filters look now lives in style.css — one quiet row, defined once */
@@ -405,176 +476,115 @@ export function renderRecruiter(data) {
       </table></div>
     </div>
 
-    <!-- PANEL: Data Hygiene (LIVE — surfaces data.dataQuality from the attribution pass) -->
+    <!-- PANEL: Data Hygiene (LIVE — surfaces data.dataQuality from the attribution pass).
+         #13 (Jerin, 14 Sep 2026): a side list (mock-up B1). The five summary boxes and Recruiter Roster were removed; the list
+         names, reminders, "why" and "where to fix" live as data in definitions.js (HYGIENE_LISTS). -->
     <div class="rec-panel" data-panel="hygiene" style="display:none">
       ${defsBlock('rec-hygiene')}
-      <div class="cards" id="hygCards" style="margin-bottom:18px"></div>
+      <div class="hy-split" id="hySplit">
+        <aside class="hy-rail">
+          <div class="hy-rail-head">
+            <div class="hy-rail-title"><strong>Data Hygiene</strong><span id="hyRailCount"></span></div>
+            <div class="hy-statebar" id="hyStateBar" aria-hidden="true"></div>
+            <div class="hy-legend" id="hyLegend"></div>
+          </div>
+          <div class="hy-rail-body" id="hyRail" role="listbox" aria-label="Data Hygiene lists"></div>
+        </aside>
+        <div class="hy-main">
+          <div id="hyHead"></div>
 
-      <div class="hyg-tabs" id="hygTabs">
-        <button class="hyg-tab active" data-h="unassigned">Unassigned<span class="n" id="hygNUnassigned"></span></button>
-        <button class="hyg-tab" data-h="multirec">Multiple Recruiters<span class="n" id="hygNMultiRec"></span></button>
-        <button class="hyg-tab" data-h="multisrc">Multiple Sourcers<span class="n" id="hygNMultiSrc"></span></button>
-        <button class="hyg-tab" data-h="roster">Recruiter Roster<span class="n" id="hygNRoster"></span></button>
-        <button class="hyg-tab" data-h="dates">Recruiter Dates<span class="n" id="hygNDates"></span></button>
-        <button class="hyg-tab" data-h="nopod">Pod Not Set<span class="n" id="hygNNoPod"></span></button>
-        <button class="hyg-tab" data-h="offergap">Offers Missing Opening Link<span class="n" id="hygNOfferGap"></span></button>
-        <button class="hyg-tab" data-h="hiredgap">Hired Missing Opening Link<span class="n" id="hygNHiredGap"></span></button>
-        <button class="hyg-tab" data-h="nosrc">Selected Candidates Missing Source<span class="n" id="hygNNoSrc"></span></button>
-        <button class="hyg-tab" data-h="unscored">Roles Missing Score Inputs<span class="n" id="hygNUnscored"></span></button>
-        <button class="hyg-tab" data-h="nodate">Openings Missing Opened Date<span class="n" id="hygNNoDate"></span></button>
-        <button class="hyg-tab" data-h="nocap">Capacity Not Set<span class="n" id="hygNNoCap"></span></button>
-        <button class="hyg-tab" data-h="anomalies">Other Anomalies<span class="n" id="hygNAnom"></span></button>
-      </div>
+          <div class="hyg-panel" data-h="unassigned">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:300px">Department / Job / Candidate</th><th>Stage</th><th>Applied</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <tbody id="hygUnassignedBody"></tbody>
+            </table></div>
+          </div>
 
-      <div class="hyg-panel" data-h="unassigned">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Unassigned — reached TA Screen or later, no Recruiter tagged</h4></div>
-          <button class="hyg-dl" data-dl="unassigned">Download CSV</button>
+          <div class="hyg-panel" data-h="multirec" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:200px">Job</th><th>Candidate</th><th style="min-width:240px">Recruiters tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <tbody id="hygMultiRecBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="multisrc" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:200px">Job</th><th>Candidate</th><th style="min-width:240px">Sourcers tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <tbody id="hygMultiSrcBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="nosrc" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Outcome</th><th>Start date</th><th>Recruiter</th></tr></thead>
+              <tbody id="hygNoSrcBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="dates" style="display:none">
+            <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:0 0 6px">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:240px">Recruiter</th><th>Quarter</th><th>Work found</th><th>Started on</th><th>Left on</th></tr></thead>
+              <tbody id="hygDatesOutBody"></tbody>
+            </table></div>
+            <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Ashby account disabled, no Left on date <span id="hygDatesNoEndN" style="color:var(--muted);font-weight:400"></span></h5>
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:240px">Recruiter</th><th>Started on</th><th>Last quarter with work</th></tr></thead>
+              <tbody id="hygDatesNoEndBody"></tbody>
+            </table></div>
+            <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">No Started on date</h5>
+            <p class="sub-note" id="hygDatesNoStart" style="margin:0"></p>
+          </div>
+
+          <div class="hyg-panel" data-h="nopod" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:240px">Recruiter</th><th>Applications (all-time)</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
+              <tbody id="hygNoPodBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="nocap" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:240px">Recruiter</th><th>Pod</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
+              <tbody id="hygNoCapBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="offergap" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+              <tbody id="hygOfferGapBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="hiredgap" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+              <tbody id="hygHiredGapBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="nodate" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Job status</th><th>Opening ID</th></tr></thead>
+              <tbody id="hygNoDateBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="unscored" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
+              <tbody id="hygUnscoredBody"></tbody>
+            </table></div>
+          </div>
+
+          <div class="hyg-panel" data-h="anomalies" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:280px">Anomaly</th><th style="min-width:240px">Detail</th><th>What to do</th></tr></thead>
+              <tbody id="hygAnomBody"></tbody>
+            </table></div>
+          </div>
         </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:280px">Job / Candidate</th><th>Stage</th><th>Applied</th><th>Application ID</th></tr></thead>
-          <tbody id="hygUnassignedBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="multirec" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Recruiters on one application</h4></div>
-          <button class="hyg-dl" data-dl="multirec">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Recruiters tagged</th><th>Application ID</th></tr></thead>
-          <tbody id="hygMultiRecBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="multisrc" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Sourcers on one application — data error</h4></div>
-          <button class="hyg-dl" data-dl="multisrc">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:200px">Job</th><th style="min-width:320px">Sourcers tagged</th><th>Application ID</th></tr></thead>
-          <tbody id="hygMultiSrcBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="roster" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter roster — who counts this quarter</h4></div>
-          <button class="hyg-dl" data-dl="roster">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Ashby account</th><th>Started on</th><th>Left on</th><th>This quarter</th><th>Pod (this quarter)</th><th>Offers (all-time)</th><th>Hired (all-time)</th></tr></thead>
-          <tbody id="hygRosterBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="nopod" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Pod not set — excluded from every table on this tab</h4></div>
-          <button class="hyg-dl" data-dl="nopod">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Applications (all-time)</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th><th>Capacity</th></tr></thead>
-          <tbody id="hygNoPodBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="offergap" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Offers missing an opening link — still in play</h4></div>
-          <button class="hyg-dl" data-dl="offergap">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>DOJ</th><th>Recruiter</th></tr></thead>
-          <tbody id="hygOfferGapBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="hiredgap" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Hired / closed, missing an opening link</h4></div>
-          <button class="hyg-dl" data-dl="hiredgap">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>DOJ</th><th>Recruiter</th></tr></thead>
-          <tbody id="hygHiredGapBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="nosrc" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Selected candidates with no source in Ashby — <span id="hygNoSrcQ"></span></h4></div>
-          <button class="hyg-dl" data-dl="nosrc">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Outcome</th><th>Start date</th><th>Recruiter</th></tr></thead>
-          <tbody id="hygNoSrcBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="unscored" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Roles missing score inputs</h4></div>
-          <button class="hyg-dl" data-dl="unscored">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
-          <tbody id="hygUnscoredBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="nodate" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Openings missing an opened date</h4></div>
-          <button class="hyg-dl" data-dl="nodate">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Job status</th><th>Opening ID</th></tr></thead>
-          <tbody id="hygNoDateBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="nocap" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Capacity not set — but candidates attributed</h4></div>
-          <button class="hyg-dl" data-dl="nocap">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Capacity</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
-          <tbody id="hygNoCapBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="hyg-panel" data-h="dates" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter dates — checked against real work</h4></div>
-          <button class="hyg-dl" data-dl="dates">Download CSV</button>
-        </div>
-        <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Quarter</th><th>Work found</th><th>Started on</th><th>Left on</th></tr></thead>
-          <tbody id="hygDatesOutBody"></tbody>
-        </table></div>
-        <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Ashby account disabled, no Left on date <span id="hygDatesNoEndN" style="color:var(--muted);font-weight:400"></span></h5>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Started on</th><th>Last quarter with work</th></tr></thead>
-          <tbody id="hygDatesNoEndBody"></tbody>
-        </table></div>
-        <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">No Started on date</h5>
-        <p class="sub-note" id="hygDatesNoStart" style="margin:0"></p>
-      </div>
-
-      <div class="hyg-panel" data-h="anomalies" style="display:none">
-        <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Other anomalies</h4></div>
-          <button class="hyg-dl" data-dl="anomalies">Download CSV</button>
-        </div>
-        <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:280px">Anomaly</th><th style="min-width:240px">Detail</th><th>What to do</th></tr></thead>
-          <tbody id="hygAnomBody"></tbody>
-        </table></div>
       </div>
     </div>
   `;
@@ -1929,101 +1939,148 @@ export function initRecruiterFilters(baseData) {
     bindData(baseData);
     try { return renderHygieneOn(); } finally { bindData(narrowedData); }
   }
+  // #13 (Jerin, 14 Sep 2026): Data Hygiene is a side list (mock-up B1). hygActive = the list on screen (kept across re-renders and
+  // reloads); hygCounts is filled by renderHygieneOn() and drives the dots, badges and state bar. A null count means the data is from
+  // before the pipeline change and that list waits for the next refresh.
+  const HYG_IDS = HYGIENE_LISTS.map(l => l.id);
+  let hygActive = (() => { try { const v = localStorage.getItem('ik_hyg_list'); return HYG_IDS.includes(v) ? v : HYG_IDS[0]; } catch (e) { return HYG_IDS[0]; } })();
+  let hygCounts = {}, hygScopeLabel = {};
+  const HY_TICK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.4l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const HY_CHEV = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3.5 1.8L6.7 5 3.5 8.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const HY_CAL = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="2.5" width="9" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 5h9M4 1.3v2.2M8 1.3v2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  const HY_DL = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v7M4 6.5L7 9.5l3-3M2.5 11.5h9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const HY_LABEL = { fix: 'Needs a fix', record: 'For the record', clear: 'Nothing to fix', wait: 'Next refresh' };
+  const hyEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hyState = l => { const n = hygCounts[l.id]; return n == null ? 'wait' : n === 0 ? 'clear' : (l.record ? 'record' : 'fix'); };
+  const hyBadge = l => {
+    const st = hyState(l), n = hygCounts[l.id];
+    if (st === 'clear') return `<span class="hy-n clear">${HY_TICK}0</span>`;
+    if (st === 'wait') return '<span class="hy-n wait">—</span>';
+    return `<span class="hy-n ${st}">${n.toLocaleString()}</span>`;
+  };
+  function renderHygRail() {
+    const rail = document.getElementById('hyRail'); if (!rail) return;
+    const tally = { fix: 0, record: 0, clear: 0, wait: 0 };
+    HYGIENE_LISTS.forEach(l => { tally[hyState(l)]++; });
+    const setHtml = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
+    setHtml('hyRailCount', `${HYGIENE_LISTS.length} lists`);
+    setHtml('hyStateBar', ['fix', 'record', 'clear', 'wait'].filter(k => tally[k]).map(k => `<i class="s-${k}" style="flex:${tally[k]}"></i>`).join(''));
+    setHtml('hyLegend', ['fix', 'record', 'clear'].map(k => `<span><i class="hy-dot ${k}"></i><b>${tally[k]}</b> ${HY_LABEL[k].toLowerCase()}</span>`).join(''));
+    const groups = [...new Set(HYGIENE_LISTS.map(l => l.group))];
+    rail.innerHTML = groups.map(g => {
+      const items = HYGIENE_LISTS.filter(l => l.group === g);
+      const toFix = items.filter(l => hyState(l) === 'fix').length;
+      return `<div class="hy-grp"><span>${hyEsc(g)}</span><em>${toFix ? toFix + ' to fix' : 'all clear'}</em></div>` +
+        items.map(l => `<button type="button" class="hy-row" role="option" data-id="${l.id}" aria-selected="${l.id === hygActive}" tabindex="${l.id === hygActive ? 0 : -1}"><i class="hy-dot ${hyState(l)}"></i><span class="hy-name">${hyEsc(l.name)}</span>${hyBadge(l)}<span class="hy-sub">${hyEsc(l.sub)}</span></button>`).join('');
+    }).join('');
+  }
+  function renderHygHead() {
+    const head = document.getElementById('hyHead'); if (!head) return;
+    const l = HYGIENE_LISTS.find(x => x.id === hygActive) || HYGIENE_LISTS[0];
+    const st = hyState(l), n = hygCounts[l.id];
+    head.innerHTML = `
+      <div class="hy-top">
+        <div class="hy-title">
+          <div class="hy-crumb">${hyEsc(l.group)}</div>
+          <h3>${hyEsc(l.name)}</h3>
+          <div class="hy-pills"><span class="hy-pill ${st}">${st === 'clear' ? HY_TICK : ''}${HY_LABEL[st]}</span><span class="hy-pill">${HY_CAL}${hyEsc(hygScopeLabel[l.id] || '')}</span></div>
+        </div>
+        <div class="hy-side">
+          <div class="hy-big"><b>${n == null ? '—' : n.toLocaleString()}</b><span>${hyEsc(l.unit)}</span></div>
+          <button type="button" class="hyg-dl" data-dl="${l.id}">${HY_DL}<span>Download CSV</span></button>
+        </div>
+      </div>
+      <div class="hy-facts">
+        <div class="hy-fact"><h4>Why it matters</h4><p>${hyEsc(l.why)}</p></div>
+        <div class="hy-fact"><h4>Where to fix it</h4><div class="hy-path">${l.fix.map(x => `<span>${hyEsc(x)}</span>`).join(HY_CHEV)}</div></div>
+      </div>`;
+    document.querySelectorAll('.hyg-panel').forEach(pn => { pn.style.display = pn.dataset.h === l.id ? '' : 'none'; });
+  }
+  function selectHyg(id, focus) {
+    if (!HYG_IDS.includes(id)) return;
+    hygActive = id;
+    try { localStorage.setItem('ik_hyg_list', id); } catch (e) { /* a per-viewer convenience only */ }
+    renderHygRail(); renderHygHead();
+    const row = document.querySelector(`#hyRail .hy-row[data-id="${id}"]`);
+    if (row && focus) row.focus();
+  }
+
   function renderHygieneOn() {
     const data = baseData, allRecs = rosterOf(baseData);
     const dq = data.dataQuality || {};
     const q = selQuarter();
-    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const esc = hyEsc;
     const mono = s => `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted)">${esc(s)}</span>`;
-    const unassigned = dq.unassigned || [];
-    const multiRec = dq.multiRecruiter || [];
-    const multiSrc = dq.multiSourcer || [];
-    const inactiveCount = allRecs.filter(r => r.name && r.name !== 'Unassigned' && !presentIn(r, q)).length;   // #111
+    // #13: Unassigned / Multiple Recruiters / Multiple Sourcers are cut to the date floor BY THE PIPELINE (added, interviewed or assessed
+    // on or after it). Data from before that change carries no floor, so those three wait for the next refresh instead of showing the
+    // old oldest-first rows under the new heading. The two opening-link lists are cut here, from the same floor.
+    const floor = dq.hygieneFloor || null;
+    const FLOOR = floor || '2026-07-01';
+    const FLOOR_LONG = (() => { const [y, m, d] = FLOOR.split('-').map(Number); return `${d} ${MON[m - 1]} ${y}`; })();
+    const waitRow = cols => `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:16px">This list starts on ${FLOOR_LONG} from the next data refresh.</td></tr>`;
+    const unassigned = floor ? (dq.unassigned || []) : [];
+    const multiRec = floor ? (dq.multiRecruiter || []) : [];
+    const multiSrc = floor ? (dq.multiSourcer || []) : [];
+    const byLast = (a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || ''));
+    const jobBy8 = {}; (data.jobs || []).forEach(j => { jobBy8[j.id] = j; });
 
-    // --- summary cards ---
-    const cards = document.getElementById('hygCards');
-    if (cards) {
-      cards.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:12px';
-      const card = (label, value, sub, color) => `<div class="card"><div class="label">${label}</div><div class="value"${color ? ` style="color:${color}"` : ''}>${value}</div><div class="sub">${sub}</div></div>`;
-      cards.innerHTML =
-        card('Unassigned (screening+)', unassigned.length, '', unassigned.length ? 'var(--orange)' : 'var(--green)') +
-        card('Unassigned (all funnel)', (dq.unassignedTotal || 0).toLocaleString(), '', 'var(--muted)') +
-        card('Multi-Recruiter apps', multiRec.length, '', multiRec.length ? 'var(--orange)' : 'var(--green)') +
-        card('Multi-Sourcer apps', multiSrc.length, '', multiSrc.length ? 'var(--red)' : 'var(--green)') +
-        card('Not here this quarter', inactiveCount, '', 'var(--muted)');
-    }
-
-    // --- Unassigned: group by job, candidate rows ---
+    // --- Unassigned: Department -> Job -> Candidate (Jerin: "listed department-wise") ---
     const uBody = document.getElementById('hygUnassignedBody');
     if (uBody) {
-      const byJob = {};
-      unassigned.forEach(u => { const k = u.jobTitle || u.job8 || '(unknown job)'; (byJob[k] || (byJob[k] = [])).push(u); });
-      const jobs = Object.keys(byJob).sort((a, b) => byJob[b].length - byJob[a].length);
-      let html = '';
-      jobs.forEach((jt, ji) => {
-        const rows = byJob[jt];
-        html += `<tr class="pod-header" data-g="u${ji}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${rows.length}</span></td>
-          <td colspan="3" style="color:var(--muted);font-size:11px">${rows.length} candidate${rows.length === 1 ? '' : 's'} awaiting recruiter tag</td></tr>`;
-        rows.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || '')).forEach(u => {
-          html += `<tr class="leaf" data-g="u${ji}" style="display:none">
-            <td style="padding-left:30px">${esc(u.candidate || '(candidate name not captured)')}</td>
-            <td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
+      if (!floor) uBody.innerHTML = waitRow(5);
+      else {
+        const byDept = {};
+        unassigned.forEach(u => {
+          const jd = jobBy8[u.job8] || {};
+          const dept = u.department || jd.department || '(no department)';
+          const job = u.jobTitle || jd.title || u.job8 || '(unknown job)';
+          const d = byDept[dept] || (byDept[dept] = {});
+          (d[job] || (d[job] = [])).push(u);
         });
-      });
-      uBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">No unassigned candidates in active screening — the roster is clean. ✓</td></tr>`;
-      wirePodTree(uBody);
+        const sizeOf = o => Object.values(o).reduce((n, a) => n + a.length, 0);
+        let html = '';
+        Object.keys(byDept).sort((a, b) => sizeOf(byDept[b]) - sizeOf(byDept[a]) || a.localeCompare(b)).forEach((dn, di) => {
+          const jobs = byDept[dn], nD = sizeOf(jobs), nJ = Object.keys(jobs).length;
+          html += `<tr class="lvl-pod" data-pod="u${di}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${esc(dn)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${nD}</span></td><td colspan="4" style="color:var(--muted);font-size:11px">${nD} candidate${nD === 1 ? '' : 's'} across ${nJ} job${nJ === 1 ? '' : 's'}</td></tr>`;
+          Object.keys(jobs).sort((a, b) => jobs[b].length - jobs[a].length || a.localeCompare(b)).forEach((jt, ji) => {
+            const rk = `u${di}-${ji}`, rows = jobs[jt];
+            html += `<tr class="lvl-rec" data-pod="u${di}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:26px;font-weight:500">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${rows.length}</span></td><td colspan="4"></td></tr>`;
+            rows.slice().sort(byLast).forEach(u => {
+              html += `<tr class="lvl-stage" data-pod="u${di}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px">${esc(u.candidate || '(candidate name not captured)')}</td><td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${esc(u.lastActivity || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
+            });
+          });
+        });
+        const total = dq.unassignedSinceFloor != null ? dq.unassignedSinceFloor : unassigned.length;
+        if (html && total > unassigned.length) html += `<tr><td colspan="5" style="color:var(--muted);font-size:11px">Showing the ${unassigned.length.toLocaleString()} with the most recent activity, of ${total.toLocaleString()}. The CSV holds the same rows.</td></tr>`;
+        uBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Nobody unassigned since ${FLOOR_LONG}. ✓</td></tr>`;
+        wireVelTree(uBody);
+      }
     }
 
-    // --- Multi-Recruiter / Multi-Sourcer anomaly tables ---
+    // --- Multiple Recruiters / Multiple Sourcers ---
     const jobTitleBy8 = {}; (data.jobs || []).forEach(j => { jobTitleBy8[j.id] = j.title; });
-    const anomalyRows = (list) => list.map(m =>
-      `<tr><td>${esc(jobTitleBy8[m.job8] || m.job8 || '')}</td>
-        <td>${(m.names || []).map(esc).join(', ')}</td><td>${mono(m.app)}</td></tr>`).join('');
+    const anomalyRows = list => list.slice().sort(byLast).map(m =>
+      `<tr><td>${esc(jobTitleBy8[m.job8] || m.job8 || '')}</td><td>${esc(m.candidate || '—')}</td><td>${(m.names || []).map(esc).join(', ')}</td><td>${esc(m.lastActivity || '')}</td><td>${mono(m.app)}</td></tr>`).join('');
     const mrBody = document.getElementById('hygMultiRecBody');
-    if (mrBody) mrBody.innerHTML = anomalyRows(multiRec) || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No multi-recruiter applications. ✓</td></tr>`;
+    if (mrBody) mrBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiRec) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">No application has more than one Recruiter since ${FLOOR_LONG}. ✓</td></tr>`);
     const msBody = document.getElementById('hygMultiSrcBody');
-    if (msBody) msBody.innerHTML = anomalyRows(multiSrc) || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No multi-sourcer applications. ✓</td></tr>`;
+    if (msBody) msBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiSrc) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">No application has more than one Sourcer since ${FLOOR_LONG}. ✓</td></tr>`);
 
-    // --- Active / Inactive roster ---
-    const rBody = document.getElementById('hygRosterBody');
-    if (rBody) {
-      const datesR = getRecruiterDates();
-      const sorted = [...allRecs].filter(r => r.name && r.name !== 'Unassigned')
-        .sort((a, b) => (presentIn(b, q) - presentIn(a, q)) || a.name.localeCompare(b.name));
-      rBody.innerHTML = sorted.map(r => {
-        const unknown = isStatusUnknown(r), active = !isRecInactive(r);
-        const label = unknown ? 'Unknown' : (active ? 'Enabled' : 'Disabled');
-        const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
-        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Enabled."' : (active ? ' title="Holds an elevated recruiter licence in Ashby."' : ' title="No longer holds an elevated recruiter licence in Ashby."');
-        const d = datesR[r.name] || {}; const s = r.sourcerOnly ? { in: true, note: 'sourcer' } : recruiterInQuarter(r.name, q, r.isActive);
-        const here = `<span style="font-size:11px;font-weight:600;color:${s.in ? 'var(--accent-deep)' : 'var(--muted)'}">${s.in ? 'Yes' : 'No'}${s.note ? ' · ' + esc(s.note) : ''}</span>`;
-        return `<tr><td style="font-weight:500">${esc(r.name)}</td>
-          <td><span${tip} style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
-          <td>${esc(d.start || '—')}</td><td>${esc(d.end || '—')}</td><td>${here}</td>
-          <td>${esc(podOf(r.name, q))}</td><td>${r.offer || 0}</td><td class="${(r.hired || 0) > 0 ? 'good' : 'zero'}">${r.hired || 0}</td></tr>`;
-      }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No recruiters.</td></tr>`;
-    }
-
-    // --- Opening-link gaps: one array from the pipeline, split by whether it is still
-    // actionable. Both tabs read the same rows so the tab counts can never disagree. ---
-    const gaps = data.offerLinkGaps || [];
+    // --- Opening-link gaps: one array from the pipeline, split by whether it is still actionable. #13: an offer counts when it was
+    // MADE or the person JOINS on or after the floor (Jerin: "offers in Q3 or DOJ in Q3 - or later"). ---
+    const onFloor = g => (g.offerCreatedAt && g.offerCreatedAt >= FLOOR) || (g.doj && g.doj >= FLOOR);
+    const gaps = (data.offerLinkGaps || []).filter(onFloor);
     const gapLive = gaps.filter(g => g.needsFix);
     const gapDone = gaps.filter(g => !g.needsFix);
-
     const ogBody = document.getElementById('hygOfferGapBody');
     if (ogBody) {
-      ogBody.innerHTML = gapLive.map(g => `<tr>
-        <td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td>
-        <td>${esc(g.subStage)}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every live offer has an opening attached. ✓</td></tr>`;
+      ogBody.innerHTML = gapLive.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:16px">Every live offer since ${FLOOR_LONG} has an opening attached. ✓</td></tr>`;
     }
     const hgBody = document.getElementById('hygHiredGapBody');
     if (hgBody) {
-      hgBody.innerHTML = gapDone.map(g => `<tr>
-        <td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td>
-        <td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nothing here.</td></tr>`;
+      hgBody.innerHTML = gapDone.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Nothing here since ${FLOOR_LONG}.</td></tr>`;
     }
 
     // --- Roles that score zero for the selected quarter ---
@@ -2031,7 +2088,6 @@ export function initRecruiterFilters(baseData) {
     // classified — for Tech/NonTech that means a missing Level; SME scores on Complexity alone (Level
     // irrelevant) and PA scores by title, so neither is flagged for a blank Level. A missing Complexity
     // defaults to Normal and does NOT zero a role. Exclude-dept roles (Test) score zero by design — skipped.
-    // A zero-Score role silently deflates its department's Fulfilment target, so it is surfaced here.
     const unscored = (data.jobs || [])
       .filter(j => scoreForRole(j, q) === 0 && familyForJob(j.department, j.title) !== 'Exclude')
       .map(j => {
@@ -2041,9 +2097,8 @@ export function initRecruiterFilters(baseData) {
         return { j, reason };
       })
       .sort((a, b) => (b.j.total || 0) - (a.j.total || 0));
-    // Openings with no opened date. The pipeline emits ONE row per opening (not per opening x job), so
-    // this list reconciles exactly with dataQuality.openingsNoOpenedAt. An opening with no date is skipped
-    // by the bucket loop, so it never reaches Total Openings anywhere — invisible, not merely undated.
+    // Openings with no opened date. The pipeline emits ONE row per opening (not per opening x job), so this list reconciles exactly
+    // with dataQuality.openingsNoOpenedAt. An opening with no date is skipped by the bucket loop, so it never reaches Total Openings.
     const noDate = (data.openingsNoDate || []).slice()
       .sort((a, b) => (b.status === 'Open') - (a.status === 'Open')
         || (a.department || '').localeCompare(b.department || '')
@@ -2055,9 +2110,8 @@ export function initRecruiterFilters(baseData) {
         <td>${esc(o.department || '—')}</td>
         <td class="${o.status === 'Open' ? 'warn' : 'zero'}">${esc(o.status || '—')}</td>
         <td>${mono(o.openingId || '')}</td></tr>`).join('')
-        || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">Every opening has an opened date. \u2713</td></tr>`;
+        || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">Every opening has an opened date. ✓</td></tr>`;
     }
-
     const usBody = document.getElementById('hygUnscoredBody');
     if (usBody) {
       usBody.innerHTML = unscored.map(({ j, reason }) => `<tr>
@@ -2077,14 +2131,9 @@ export function initRecruiterFilters(baseData) {
       detail: n,
       fix: 'Correct the recruiter attribution in Ashby — this person is a dedicated interviewer, not a recruiter.'
     }));
-    // A stage title Ashby uses that the pipeline has no mapping for is dropped from EVERY count, silently.
-    // That is how "Online Assessment" reported zero for months while candidates sat in it — the map only
-    // knew the literal string 'OA'. Surfacing it here means the next stage rename shows up as a row instead
-    // of as a column that quietly stops counting.
-    // Two titles are unmapped BY DESIGN and must not be raised as anomalies: 'Hired' is counted from the
-    // application's status rather than its stage, and 'Archived' means rejected/withdrawn, correctly absent
-    // from live pipeline counts. They are also the two biggest (14,023 + 309) — left in, they would bury the
-    // real signal and train everyone to ignore this list.
+    // A stage title Ashby uses that the pipeline has no mapping for is dropped from EVERY count, silently. That is how "Online
+    // Assessment" reported zero for months while candidates sat in it. 'Hired' and 'Archived' are unmapped BY DESIGN (status, not
+    // stage) and the two biggest, so they sit in a muted footnote rather than burying the real signal.
     const EXPECTED_UNMAPPED = { Hired: 'counted from application status, not stage', Archived: 'rejected/withdrawn — deliberately outside the live pipeline' };
     const unmapped = Object.entries(dq.unmappedStages || {}).sort((a, b) => b[1] - a[1]);
     unmapped.filter(([stage]) => !EXPECTED_UNMAPPED[stage]).forEach(([stage, n]) => anomList.push({
@@ -2097,53 +2146,34 @@ export function initRecruiterFilters(baseData) {
     if (anBody) {
       let ah = anomList.map(a => `<tr><td style="font-weight:500">${esc(a.what)}</td><td>${esc(a.detail)}</td><td style="color:var(--muted)">${esc(a.fix)}</td></tr>`).join('')
         || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No anomalies. ✓</td></tr>`;
-      // Shown, but as a muted footnote rather than an alert — so it is on the record that these were seen
-      // and consciously excluded, not that the check missed them.
       if (expectedSeen.length) {
-        ah += `<tr><td colspan="3" style="color:var(--muted);font-size:11px;padding-top:10px;border-top:1px solid var(--border-light)">`
-          + `Also outside the stage map, as expected: `
-          + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()})`).join(' · ')
-          + `.</td></tr>`;
+        ah += `<tr><td colspan="3" style="color:var(--muted);font-size:11px;padding-top:10px;border-top:1px solid var(--border-light)">Also outside the stage map, as expected: `
+          + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()})`).join(' · ') + `.</td></tr>`;
       }
       anBody.innerHTML = ah;
     }
 
-    // People in closing per recruiter, from the live Joining Pending list. #120 (14 Sep 2026): these columns read
-    // `r.joiningPending`, which the data never carries, so they always showed 0.
+    // People in closing per recruiter, from the live Joining Pending list.
     const jpCount = {}; (data.joiningPendingCases || []).forEach(c => { if (c.recruiter) jpCount[c.recruiter] = (jpCount[c.recruiter] || 0) + 1; });
     const jpCountOf = (name) => jpCount[name] || 0;
-    // --- Capacity not set, but candidates attributed ---
-    // Capacity 0 is legitimate for people who carry no req load (admins, coordinators). It is only a problem
-    // when candidates ARE attributed to them, because Fulfilment then shows work with no target to measure it
-    // against — and the Fulfilment row-hiding rule deliberately keeps them visible rather than dropping the work.
+
+    // --- Capacity Not Set. #13 (Jerin, 14 Sep 2026): only people who count in the quarter AND sit in a real pod (no pod and Others are
+    // left out) whose capacity was never ENTERED. An entered 0 is a decision, not a gap — capacityOf() cannot tell the two apart. ---
     const noCap = allRecs
-      .filter(r => r.name && r.name !== 'Unassigned')
-      .map(r => ({ r, cap: capacityOf(r.name, q) || 0,
-                   offers: r.offer || 0, hired: r.hired || 0, jp: jpCountOf(r.name) }))
-      .filter(x => x.cap === 0 && (x.offers > 0 || x.hired > 0 || x.jp > 0))
-      .sort((a, b) => (b.offers + b.hired) - (a.offers + a.hired));
+      .filter(r => r.name && r.name !== 'Unassigned' && presentIn(r, q))
+      .map(r => ({ r, pod: effectivePod(r, q), offers: r.offer || 0, hired: r.hired || 0, jp: jpCountOf(r.name) }))
+      .filter(x => x.pod !== 'Unassigned' && x.pod !== 'Others' && !capacityIsSet(x.r.name, q))
+      .sort((a, b) => a.pod.localeCompare(b.pod) || a.r.name.localeCompare(b.r.name));
     const noCapBody = document.getElementById('hygNoCapBody');
     if (noCapBody) {
-      noCapBody.innerHTML = noCap.map(({ r, cap, offers, hired, jp }) => {
-        const unknown = isStatusUnknown(r), active = !isRecInactive(r);
-        const label = unknown ? 'Unknown' : (active ? 'Active' : 'Inactive');
-        const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
-        return `<tr><td style="font-weight:500">${esc(r.name)}</td>
-          <td><span style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
-          <td>${esc(podOf(r.name, q))}</td>
-          <td><span style="color:var(--red);font-weight:600">${cap}</span></td>
-          <td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td>
-          <td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td></tr>`;
-      }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody with candidates attributed is missing a capacity for this quarter.</td></tr>`;
+      noCapBody.innerHTML = noCap.map(({ r, pod, offers, hired, jp }) => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc(pod)}</td><td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td><td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td></tr>`).join('')
+        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Everyone in a pod has a capacity for this quarter. ✓</td></tr>`;
     }
 
     // --- #105i (Jerin, 13 Sep 2026): selected candidates with no source in Ashby ---
-    // Selected = an offer that ended in Hired (Joined), is still live (Joining pending) or was archived after the
-    // offer (Dropped after offer), dated by the offer's START DATE — the date Joined uses everywhere, so the Joined
-    // rows here are exactly Sourcing Mix's "(source not recorded)" joiners for the quarter. A live or dropped offer
-    // with no start date falls back to the day the offer was created. ⚠ Joined is dated by start date ONLY: offers
-    // re-created in the 2 Sep backfill carry that creation date, which would drag long-past joiners into Q3.
-    // The Hiring Tracker is the source of truth for selected candidates — the fix is always in Ashby.
+    // Selected = an offer that ended in Hired (Joined), is still live (Joining pending) or was archived after the offer (Dropped after
+    // offer), dated by the offer's START DATE — the date Joined uses everywhere, so the Joined rows here are exactly Sourcing Mix's
+    // "(source not recorded)" joiners for the quarter. A live or dropped offer with no start date falls back to the day it was created.
     const qOfNs = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const NS_ORDER = { 'Joined': 0, 'Joining pending': 1, 'Dropped after offer': 2 };
     const nsBest = {};
@@ -2154,7 +2184,6 @@ export function initRecruiterFilters(baseData) {
       else if (e.appStatus === 'Active' && e.offerStatus !== 'CandidateRejected') { outcome = 'Joining pending'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
       else if (e.appStatus === 'Archived') { outcome = 'Dropped after offer'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
       if (!outcome || when !== q) return;
-      // one row per person per role — a second offer to the same person keeps the furthest-along outcome
       const k = String(e.candidate || '').trim().toLowerCase() + '|' + (e.jobTitle || '');
       if (!nsBest[k] || NS_ORDER[outcome] < NS_ORDER[nsBest[k].outcome]) nsBest[k] = { e, outcome };
     });
@@ -2163,36 +2192,21 @@ export function initRecruiterFilters(baseData) {
     const nsBody = document.getElementById('hygNoSrcBody');
     if (nsBody) {
       const nsColour = { 'Joined': 'var(--green)', 'Joining pending': 'var(--orange)', 'Dropped after offer': 'var(--muted)' };
-      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr>
-        <td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td><td>${esc(e.department)}</td>
-        <td><span style="font-size:11px;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td>
-        <td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
+      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr><td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td><td>${esc(e.department)}</td><td><span style="font-size:11px;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td><td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
         || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
     }
-    const nsQ = document.getElementById('hygNoSrcQ'); if (nsQ) nsQ.textContent = q;
 
-    // --- #23: pod not set — the numbers this tab is deliberately leaving out ---
-    // getFilteredRecs() drops anyone whose pod resolves to "Unassigned", from rows AND totals. That is only
-    // honest if the excluded work is visible somewhere, which is here. Data Hygiene ignores the tab filters
-    // by design, so past recruiters are listed too.
+    // --- Pod Not Set: the numbers this tab deliberately leaves out. getFilteredRecs() drops anyone whose pod resolves to "Unassigned"
+    // from rows AND totals, which is only honest if their work shows here. #13 (Jerin, 14 Sep 2026): only people who count in the
+    // quarter ("active folks") — a departed recruiter with no pod is not a gap. ---
     const noPod = allRecs
-      .filter(r => r.name && r.name !== 'Unassigned' && podOf(r.name, q) === 'Unassigned')
-      .map(r => ({ r, cap: capacityOf(r.name, q) || 0, total: r.total || 0,
-                   offers: r.offer || 0, hired: r.hired || 0, jp: jpCountOf(r.name) }))
+      .filter(r => r.name && r.name !== 'Unassigned' && presentIn(r, q) && podOf(r.name, q) === 'Unassigned')
+      .map(r => ({ r, total: r.total || 0, offers: r.offer || 0, hired: r.hired || 0, jp: jpCountOf(r.name) }))
       .sort((a, b) => (b.offers + b.hired) - (a.offers + a.hired) || a.r.name.localeCompare(b.r.name));
     const noPodBody = document.getElementById('hygNoPodBody');
     if (noPodBody) {
-      noPodBody.innerHTML = noPod.map(({ r, cap, total, offers, hired, jp }) => {
-        const unknown = isStatusUnknown(r), active = !isRecInactive(r);
-        const label = unknown ? 'Unknown' : (active ? 'Active' : 'Past recruiter');
-        const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
-        return `<tr><td style="font-weight:500">${esc(r.name)}</td>
-          <td><span style="font-size:11px;font-weight:600;color:${colour}">${label}</span></td>
-          <td>${total.toLocaleString()}</td>
-          <td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td>
-          <td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td>
-          <td class="${cap > 0 ? '' : 'zero'}">${cap}</td></tr>`;
-      }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Every recruiter has a pod set for this quarter — nothing is being excluded.</td></tr>`;
+      noPodBody.innerHTML = noPod.map(({ r, total, offers, hired, jp }) => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${total.toLocaleString()}</td><td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td><td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td></tr>`).join('')
+        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Everyone who counts this quarter has a pod — nothing is being left out. ✓</td></tr>`;
     }
 
     // --- #111: recruiter Started on / Left on dates, checked against the work credited to them ---
@@ -2201,11 +2215,10 @@ export function initRecruiterFilters(baseData) {
     const work = {};   // name -> quarter -> { open, joined, drops }
     const addWork = (name, qq, k, n) => { if (!name || !qq || !n) return; const a = (work[name] = work[name] || {}); const b = (a[qq] = a[qq] || { open: 0, joined: 0, drops: 0 }); b[k] += n; };
     Object.entries(data.ownedSeatsByRecruiterQ || {}).forEach(([name, byQ]) => Object.entries(byQ || {}).forEach(([qq, byJob]) =>
-      addWork(name, qq, 'open', Object.values(byJob || {}).reduce((s, v) => s + (+v || 0), 0))));
+      addWork(name, qq, 'open', Object.values(byJob || {}).reduce((sum, v) => sum + (+v || 0), 0))));
     (data.offerEvents || []).forEach(e => { if (e.accepted && e.appStatus === 'Hired') addWork(e.recruiter, qOfD(e.startDate), 'joined', 1); });
     dropRows(data).forEach(e => addWork(e.recruiter, e.quarter, 'drops', 1));
     const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
-    // shared owners hold part of an opening, so a fraction reads as 'a share of N openings'
     const workTxt = (w) => [w.open ? (w.open % 1 ? 'a share of ' + plural(Math.ceil(w.open), 'opening') : plural(w.open, 'opening') + ' owned') : '', w.joined ? plural(w.joined, 'joiner') : '', w.drops ? plural(w.drops, 'drop') : ''].filter(Boolean).join(' · ');
     const datesMap = getRecruiterDates();
     const rosterRecs = allRecs.filter(r => r.name && r.name !== 'Unassigned' && !r.sourcerOnly);
@@ -2222,7 +2235,7 @@ export function initRecruiterFilters(baseData) {
     const dNoEndBody = document.getElementById('hygDatesNoEndBody');
     if (dNoEndBody) dNoEndBody.innerHTML = datesNoEnd.map(r => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc((datesMap[r.name] || {}).start || '—')}</td><td>${esc(lastWorkQ(r.name) || '—')}</td></tr>`).join('')
       || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Every disabled Ashby account has a Left on date.</td></tr>`;
-    const setTxt = (id, s) => { const el = document.getElementById(id); if (el) el.textContent = s; };
+    const setTxt = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
     setTxt('hygDatesOutN', datesOut.length ? '· ' + datesOut.length : '');
     setTxt('hygDatesNoEndN', datesNoEnd.length ? '· ' + datesNoEnd.length : '');
     const dNoStart = document.getElementById('hygDatesNoStart');
@@ -2230,59 +2243,52 @@ export function initRecruiterFilters(baseData) {
       ? `<strong>${datesNoStart.length}</strong> current recruiter${datesNoStart.length === 1 ? '' : 's'} with no Started on date — they count from the first quarter on record: ${datesNoStart.map(r => esc(r.name)).join(' · ')}`
       : 'Every current recruiter has a Started on date.';
 
-    // --- tab counts ---
-    const setN = (id, n, warn) => {
-      const el = document.getElementById(id);
-      if (el) { el.textContent = n; el.style.color = el.closest('.hyg-tab').classList.contains('active') ? '' : (warn && n > 0 ? 'var(--red)' : ''); }
+    // --- the side list: counts, date scopes, then draw ---
+    const sinceFloor = (key, rows) => floor ? (dq[key] != null ? dq[key] : rows.length) : null;
+    hygCounts = {
+      unassigned: sinceFloor('unassignedSinceFloor', unassigned),
+      multirec: sinceFloor('multiRecruiterSinceFloor', multiRec),
+      multisrc: sinceFloor('multiSourcerSinceFloor', multiSrc),
+      nosrc: noSrc.length,
+      dates: datesOut.length + datesNoEnd.length,   // #111: the no-start list is informational
+      nopod: noPod.length,
+      nocap: noCap.length,
+      offergap: gapLive.length,
+      hiredgap: gapDone.length,
+      nodate: noDate.length,
+      unscored: unscored.length,
+      anomalies: anomList.length,
     };
-    setN('hygNUnassigned', unassigned.length, true);
-    setN('hygNMultiRec', multiRec.length, true);
-    setN('hygNMultiSrc', multiSrc.length, true);
-    setN('hygNRoster', allRecs.filter(r => r.name && r.name !== 'Unassigned').length, false);
-    setN('hygNDates', datesOut.length + datesNoEnd.length, true);   // #111: the no-start list is informational
-    setN('hygNOfferGap', gapLive.length, true);
-    setN('hygNHiredGap', gapDone.length, false);
-    setN('hygNNoSrc', noSrc.length, true);
-    setN('hygNUnscored', unscored.length, true);
-    setN('hygNNoDate', noDate.length, true);
-    setN('hygNNoPod', noPod.length, true);
-    setN('hygNNoCap', noCap.length, true);
-    setN('hygNAnom', anomList.length, true);
+    const qParts = String(q).split('-Q');
+    const SCOPE_TXT = { floor: `Since ${FLOOR_LONG}`, quarter: `Q${qParts[1]} ${qParts[0]}`, year: `Year ${qParts[0]}`, all: 'All openings', live: 'Live' };
+    hygScopeLabel = Object.fromEntries(HYGIENE_LISTS.map(l => [l.id, SCOPE_TXT[l.scope] || '']));
+    renderHygRail();
+    renderHygHead();
 
-    // --- CSV export per tab (client-side; no backend) ---
+    // --- CSV export per list (client-side; no backend) ---
     hygCsv = {
-      nopod: () => [['Recruiter', 'Status', 'Applications', 'Offers', 'Hired', 'Joining pending', 'Capacity'],
-        ...noPod.map(({ r, cap, total, offers, hired, jp }) => [r.name,
-          (isStatusUnknown(r) ? 'Unknown' : (isRecInactive(r) ? 'Past recruiter' : 'Active')),
-          total, offers, hired, jp, cap])],
-      nocap: () => [['Recruiter', 'Status', 'Pod', 'Capacity', 'Offers', 'Hired', 'Joining pending'],
-        ...noCap.map(({ r, cap, offers, hired, jp }) => [r.name,
-          (r.activeKnown === false ? 'Unknown' : (r.isActive === false ? 'Inactive' : 'Active')),
-          podOf(r.name, q), cap, offers, hired, jp])],
-      unassigned: () => [['Job', 'Candidate', 'Stage', 'Applied', 'Application ID'],
-        ...unassigned.map(u => [u.jobTitle || u.job8 || '', u.candidate || '', u.stage || '', u.createdAt || '', u.applicationId || ''])],
-      multirec: () => [['Job', 'Recruiters tagged', 'Application ID'],
-        ...multiRec.map(m => [jobTitleBy8[m.job8] || m.job8 || '', (m.names || []).join(' | '), m.app || ''])],
-      multisrc: () => [['Job', 'Sourcers tagged', 'Application ID'],
-        ...multiSrc.map(m => [jobTitleBy8[m.job8] || m.job8 || '', (m.names || []).join(' | '), m.app || ''])],
-      roster: () => [['Recruiter', 'Ashby account', 'Started on', 'Left on', 'This quarter', 'Pod', 'Offers', 'Hired'],
-        ...[...allRecs].filter(r => r.name && r.name !== 'Unassigned')
-          .sort((a, b) => (presentIn(b, q) - presentIn(a, q)) || a.name.localeCompare(b.name))
-          .map(r => { const d = datesMap[r.name] || {}; const s = r.sourcerOnly ? { in: true, note: 'sourcer' } : recruiterInQuarter(r.name, q, r.isActive);
-            return [r.name, isStatusUnknown(r) ? 'Unknown' : (isRecInactive(r) ? 'Disabled' : 'Enabled'), d.start || '', d.end || '', (s.in ? 'Yes' : 'No') + (s.note ? ' - ' + s.note : ''), podOf(r.name, q), r.offer || 0, r.hired || 0]; })],
+      unassigned: () => [['Department', 'Job', 'Candidate', 'Stage', 'Applied', 'Last activity', 'Application ID'],
+        ...unassigned.slice().sort(byLast).map(u => { const jd = jobBy8[u.job8] || {}; return [u.department || jd.department || '', u.jobTitle || jd.title || u.job8 || '', u.candidate || '', u.stage || '', u.createdAt || '', u.lastActivity || '', u.applicationId || '']; })],
+      multirec: () => [['Job', 'Candidate', 'Recruiters tagged', 'Last activity', 'Application ID'],
+        ...multiRec.slice().sort(byLast).map(m => [jobTitleBy8[m.job8] || m.job8 || '', m.candidate || '', (m.names || []).join(' | '), m.lastActivity || '', m.app || ''])],
+      multisrc: () => [['Job', 'Candidate', 'Sourcers tagged', 'Last activity', 'Application ID'],
+        ...multiSrc.slice().sort(byLast).map(m => [jobTitleBy8[m.job8] || m.job8 || '', m.candidate || '', (m.names || []).join(' | '), m.lastActivity || '', m.app || ''])],
+      nosrc: () => [['Candidate', 'Job', 'Department', 'Outcome', 'Start date', 'Offer created', 'Recruiter', 'Quarter'],
+        ...noSrc.map(({ e, outcome }) => [String(e.candidate || '').trim(), e.jobTitle || '', e.department || '', outcome, e.startDate || '', e.offerCreatedAt || '', e.recruiter || '', q])],
       dates: () => [['Check', 'Recruiter', 'Quarter', 'Work found', 'Started on', 'Left on'],
         ...datesOut.map(({ r, qq, w, d }) => ['Work credited outside their dates', r.name, qq, workTxt(w), d.start || '', d.end || '']),
         ...datesNoEnd.map(r => ['Ashby account disabled, no Left on date', r.name, lastWorkQ(r.name), '', (datesMap[r.name] || {}).start || '', '']),
         ...datesNoStart.map(r => ['No Started on date', r.name, '', '', '', (datesMap[r.name] || {}).end || ''])],
-      offergap: () => [['Candidate', 'Job', 'Department', 'Stage', 'DOJ', 'Recruiter'],
-        ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.doj || '', g.recruiter || ''])],
-      hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'DOJ', 'Recruiter'],
-        ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.doj || '', g.recruiter || ''])],
-      nosrc: () => [['Candidate', 'Job', 'Department', 'Outcome', 'Start date', 'Offer created', 'Recruiter', 'Quarter'],
-        ...noSrc.map(({ e, outcome }) => [String(e.candidate || '').trim(), e.jobTitle || '', e.department || '', outcome, e.startDate || '', e.offerCreatedAt || '', e.recruiter || '', q])],
+      nopod: () => [['Recruiter', 'Applications (all-time)', 'Offers (all-time)', 'Hired (all-time)', 'Joining pending'],
+        ...noPod.map(({ r, total, offers, hired, jp }) => [r.name, total, offers, hired, jp])],
+      nocap: () => [['Recruiter', 'Pod', 'Offers (all-time)', 'Hired (all-time)', 'Joining pending'],
+        ...noCap.map(({ r, pod, offers, hired, jp }) => [r.name, pod, offers, hired, jp])],
+      offergap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Offer made', 'DOJ', 'Recruiter'],
+        ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
+      hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'Offer made', 'DOJ', 'Recruiter'],
+        ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
       nodate: () => [['Job', 'Department', 'Job status', 'Opening ID', 'Jobs on this opening'],
         ...noDate.map(o => [o.title || '', o.department || '', o.status || '', o.openingId || '', o.jobs || 1])],
-      // #120 (14 Sep 2026): the rows carry `reason`; reading `missing` threw, so this download never worked.
       unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Reason', 'Applications'],
         ...unscored.map(({ j, reason }) => [j.title || '', j.department || '', j.level || '', j.complexity || '', reason || '', j.total || 0])],
       anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
@@ -2787,20 +2793,27 @@ export function initRecruiterFilters(baseData) {
   }
   document.querySelectorAll('.rec-subtab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
-  // Nested tabs inside Data Hygiene — one data point per tab, each with its own export.
-  document.querySelectorAll('.hyg-tab').forEach(b => b.addEventListener('click', () => {
-    const h = b.dataset.h;
-    document.querySelectorAll('.hyg-tab').forEach(t => t.classList.toggle('active', t.dataset.h === h));
-    document.querySelectorAll('.hyg-panel').forEach(p => { p.style.display = p.dataset.h === h ? '' : 'none'; });
-  }));
-  document.querySelectorAll('.hyg-dl').forEach(b => b.addEventListener('click', () => {
-    const key = b.dataset.dl;
-    const build = hygCsv[key];
-    if (!build) return;
-    const rows = build();
-    if (rows.length <= 1) { b.textContent = 'Nothing to export'; setTimeout(() => { b.textContent = 'Download CSV'; }, 1600); return; }
-    downloadCsv(rows, `data-hygiene-${key}-${new Date().toISOString().slice(0, 10)}.csv`);
-  }));
+  // #13: the Data Hygiene side list — click a list (arrow keys move through it); the header's Download CSV exports the list on screen.
+  const hySplit = document.getElementById('hySplit');
+  if (hySplit) {
+    hySplit.addEventListener('click', (e) => {
+      const row = e.target.closest('.hy-row');
+      if (row) { selectHyg(row.dataset.id, false); return; }
+      const b = e.target.closest('.hyg-dl'); if (!b) return;
+      const key = b.dataset.dl, build = hygCsv[key];
+      if (!build) return;
+      const rows = build();
+      const label = b.querySelector('span');
+      if (rows.length <= 1) { if (label) { label.textContent = 'Nothing to export'; setTimeout(() => { label.textContent = 'Download CSV'; }, 1600); } return; }
+      downloadCsv(rows, `data-hygiene-${key}-${new Date().toISOString().slice(0, 10)}.csv`);
+    });
+    hySplit.addEventListener('keydown', (e) => {
+      if ((e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || !e.target.closest('.hy-row')) return;
+      e.preventDefault();
+      const i = HYG_IDS.indexOf(hygActive);
+      selectHyg(HYG_IDS[(i + (e.key === 'ArrowDown' ? 1 : -1) + HYG_IDS.length) % HYG_IDS.length], true);
+    });
+  }
 
   // Global filters (apply to all sub-tabs) — Pod / Recruiter / Job are multi-select
   msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_OPTIONS, renderAll);
