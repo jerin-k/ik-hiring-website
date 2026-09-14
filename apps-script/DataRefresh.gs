@@ -103,6 +103,15 @@ function fetchDepartmentMap_() {
 function fetchJobs_() { return ashbyListAll_('/job.list'); }
 function fetchOpenings_() { return ashbyListAll_('/opening.list'); }
 
+// #115 (14 Sep 2026): Ashby opening dates are set in India time and stored as UTC, so an opening opened on 1 Jul is
+// stored as 30 Jun 18:30Z. Reading the quarter with getUTCMonth() filed it in the PREVIOUS quarter (IK-Opening-202).
+// Every opening quarter is read through this one helper, in Asia/Kolkata. Returns null for a missing/bad date.
+function quarterIST_(iso) {
+  if (!iso) return null; var d = new Date(iso); if (isNaN(d.getTime())) return null;
+  var ym = Utilities.formatDate(d, 'Asia/Kolkata', 'yyyy-MM');
+  return ym.substring(0, 4) + '-Q' + (Math.floor((parseInt(ym.substring(5, 7), 10) - 1) / 3) + 1);
+}
+
 // ===== HELPERS =====
 
 function emptyPipeline_() { var p = {}; PIPELINE_KEYS.forEach(function(k) { p[k] = 0; }); return p; }
@@ -637,9 +646,11 @@ function refreshDashboardData() {
         status: ndJob.status || '', jobs: ndIds.length, closed: !!o.closedAt });
       return;
     }
-    var dt = new Date(iso); if (isNaN(dt.getTime())) return;
-    var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
-    var cls; if (!o.closedAt) cls = 'open'; else if (cr === CR_HIRED) cls = 'joined'; else if (cr === CR_CARRYFWD) cls = 'missed'; else return; // closed w/ null/other reason (migration junk) = excluded from Total
+    var q = quarterIST_(iso); if (!q) return;   // #115: India time
+    // #114 (14 Sep 2026): Ashby's own hire step marks the opening FILLED and stamps closedAt but leaves the close reason
+    // BLANK - only Greenhouse-synced openings carry reason Hired. Testing the reason alone threw 133 Q3 positions that
+    // people were hired into out of Total as 'migration junk'. Filled is the hire; the reason is only a fallback.
+    var cls; if (o.openingState === 'Filled' || (o.closedAt && cr === CR_HIRED)) cls = 'joined'; else if (!o.closedAt) cls = 'open'; else if (cr === CR_CARRYFWD) cls = 'missed'; else return; // closed, not Filled, null/other reason = excluded from Total
     var jobIds = (o.latestVersion && o.latestVersion.jobIds) || [];
     jobIds.forEach(function (jid) {
       var jd = jobLookup[jid] || {}; var j8 = jid.substring(0, 8);
@@ -682,8 +693,7 @@ function refreshDashboardData() {
   for (var opid_ in pendingOpeningSet_) {
     var o2 = openingById_[opid_]; if (!o2) continue;
     var iso2 = o2.openedAt || (o2.latestVersion && o2.latestVersion.createdAt) || o2.createdAt; if (!iso2) continue;
-    var dt2 = new Date(iso2); if (isNaN(dt2.getTime())) continue;
-    var q2 = dt2.getUTCFullYear() + '-Q' + (Math.floor(dt2.getUTCMonth() / 3) + 1);
+    var q2 = quarterIST_(iso2); if (!q2) continue;   // #115: India time
     ((o2.latestVersion && o2.latestVersion.jobIds) || []).forEach(function (jid2) {
       var j82 = jid2.substring(0, 8);
       var bb = openingPendingByJobQ[j82] || (openingPendingByJobQ[j82] = {});
@@ -797,8 +807,7 @@ function refreshDashboardData() {
   var openQuarterOf_ = function(opid) {
     var oo = opid ? openingById_[opid] : null; if (!oo) return null;
     var iso = oo.openedAt || (oo.latestVersion && oo.latestVersion.createdAt) || oo.createdAt; if (!iso) return null;
-    var dd = new Date(iso); if (isNaN(dd.getTime())) return null;
-    return dd.getUTCFullYear() + '-Q' + (Math.floor(dd.getUTCMonth() / 3) + 1);
+    return quarterIST_(iso);   // #115: India time
   };
   // offerEvents is a 1:1 map of offerResult.events, so index i lines up. Stamped here rather than inside the
   // map above because openQuarterOf_ is a var-assigned function and is not defined yet at that point.
@@ -1392,11 +1401,11 @@ function computeOwnedSeatsByRoleQ_(allOpenings, uidToName, roleName, RID) {
   var owned = {};
   (allOpenings || []).forEach(function (o) {
     var lv = o.latestVersion || {}, cr = o.closeReasonId;
+    if (o.isArchived) return;   // #114 (14 Sep 2026): archived = gone, exactly as openingBuckets (Jerin 6 Sep). This was missing, so 44 archived Q3 openings sat in the Goal.
     if (cr === CR_ONHOLD || cr === CR_SHELVED) return;
     var iso = o.openedAt; if (!iso) return;
-    var dt = new Date(iso); if (isNaN(dt.getTime())) return;
-    if (o.closedAt && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;
-    var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
+    var q = quarterIST_(iso); if (!q) return;   // #115: India time
+    if (o.closedAt && o.openingState !== 'Filled' && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;   // #114: Filled = hired, reason or not (same rule as openingBuckets)
     var ht = lv.hiringTeam || [], owners = [];
     ht.forEach(function (m) { if (m.role === roleName || m.roleId === RID) { var nm = uidToName[m.userId]; if (nm) owners.push(nm); } });
     if (!owners.length) return;
@@ -1433,11 +1442,11 @@ function computeOwnedSeatsPairQ_(allOpenings, recById, allById) {
   var out = {};
   (allOpenings || []).forEach(function (o) {
     var lv = o.latestVersion || {}, cr = o.closeReasonId;
+    if (o.isArchived) return;   // #114 (14 Sep 2026): archived = gone, exactly as openingBuckets (Jerin 6 Sep). This was missing, so 44 archived Q3 openings sat in the Goal.
     if (cr === CR_ONHOLD || cr === CR_SHELVED) return;
     var iso = o.openedAt; if (!iso) return;
-    var dt = new Date(iso); if (isNaN(dt.getTime())) return;
-    if (o.closedAt && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;
-    var q = dt.getUTCFullYear() + '-Q' + (Math.floor(dt.getUTCMonth() / 3) + 1);
+    var q = quarterIST_(iso); if (!q) return;   // #115: India time
+    if (o.closedAt && o.openingState !== 'Filled' && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;   // #114: Filled = hired, reason or not (same rule as openingBuckets)
     var ht = lv.hiringTeam || [], recs = [], srcs = [];
     ht.forEach(function (mm) {
       if (mm.role === 'Recruiter' || mm.roleId === RID_REC) { var a = recById[mm.userId]; if (a) recs.push(a); }
