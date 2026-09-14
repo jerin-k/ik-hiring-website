@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-14T11:51:14.905Z",
+  "updatedAt": "2026-09-14T11:56:19.246Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
     {
       "email": "jerin@interviewkickstart.com",
-      "role": "admin"
+      "role": "admin",
+      "userType": "Admin"
     },
     {
       "email": "gopu.nair@interviewkickstart.com",
@@ -15,71 +16,88 @@
         "hm-report"
       ],
       "departments": [],
-      "teams": []
+      "teams": [],
+      "userType": "Recruitment Team"
     },
     {
       "email": "aditya.s@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "alokita.dhumne@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "deepti@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "leenita.albert@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "mahima.agarwal@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "oshin.verma@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "praveetha.a@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "rijo@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "ritika.bhasin@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "tina.anisha@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "v.pooja@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Recruitment Team"
     },
     {
       "email": "g.darshan@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Others"
     },
     {
       "email": "peopleops@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Others"
     },
     {
       "email": "hr@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Others"
     },
     {
       "email": "ryan@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Others"
     },
     {
       "email": "soham@interviewkickstart.com",
-      "role": "full_access"
+      "role": "full_access",
+      "userType": "Others"
     },
     {
       "email": "burhan@interviewkickstart.com",
@@ -90,7 +108,8 @@
       "departments": [
         "US Business",
         "Marketing"
-      ]
+      ],
+      "userType": "Hiring Manager"
     },
     {
       "email": "raghav@interviewkickstart.com",
@@ -100,7 +119,8 @@
       ],
       "departments": [
         "Business - India"
-      ]
+      ],
+      "userType": "Hiring Manager"
     },
     {
       "email": "manish.chawla@interviewkickstart.com",
@@ -110,7 +130,8 @@
       ],
       "departments": [
         "Engineering"
-      ]
+      ],
+      "userType": "Hiring Manager"
     },
     {
       "email": "sreejit@interviewkickstart.com",
@@ -121,7 +142,8 @@
       "departments": [
         "Operations",
         "New Programs"
-      ]
+      ],
+      "userType": "Hiring Manager"
     },
     {
       "email": "kushal@interviewkickstart.com",
@@ -131,7 +153,19 @@
       ],
       "departments": [
         "Finance"
-      ]
+      ],
+      "userType": "Hiring Manager"
+    },
+    {
+      "email": "talent@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "Engineering"
+      ],
+      "userType": "Hiring Manager"
     }
   ]
 }
