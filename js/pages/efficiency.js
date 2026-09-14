@@ -5,6 +5,7 @@ import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { scoreForRole } from '../score-model.js';
+import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat } from '../chart-style.js';
 
@@ -414,8 +415,13 @@ export function initEfficiencyFilters(data) {
   // [{dept, jobs:[...]}] honouring the Department/Job multi-selects, sorted by department load.
   // withOpeningOnly adds the jobs that exist only as openings (no candidate activity in scope). Fulfilment
   // needs them to reach its true position count; every other sub-tab would just gain permanently empty rows.
-  function deptJobs(q, withOpeningOnly) {
+  function deptJobs(q, withOpeningOnly, openedInPeriod) {
     const dsel = selDepts(), jsel = selJobs();
+    // #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter". Momentum, Screening
+    // Efficiency, Throughput and Time in Process pass openedInPeriod: only jobs with an opening OPENED in the Year/Quarter period.
+    // Fulfilment, Joining Conversion and Sourcing Mix do not. Year and Quarter both on All ⇒ every job.
+    const perO = openedInPeriod ? tisPeriod() : null;
+    const openIds = perO ? jobsWithOpeningIn(data, qq => perO.includes(qq)) : null;
     const t = deptTree(q);
     const out = [];
     Object.keys(t).forEach(dept => {
@@ -423,6 +429,7 @@ export function initEfficiencyFilters(data) {
       const arr = Object.values(t[dept])
         .filter(j => withOpeningOnly || !j.openingOnly)
         .filter(j => !jsel.length || jsel.includes(j.title))
+        .filter(j => !openIds || openIds.has(String(j.jid).slice(0, 8)))
         .map(j => ({ ...j, openings: openingsOf(j.jid, q), scoreable: isScoreable(j) }))
         .sort((a, b) => (b.total || 0) - (a.total || 0));
       if (arr.length) out.push({ dept, jobs: arr });
@@ -721,7 +728,7 @@ export function initEfficiencyFilters(data) {
       return;
     }
     let html = '';
-    deptJobs(selQuarter()).forEach(({ dept, jobs }, di) => {
+    deptJobs(selQuarter(), false, true).forEach(({ dept, jobs }, di) => {   // #125
       const js = jobs.map(j => ({ j, v: sumFor(j.jid) })).filter(x => x.v.added > 0 || x.v.cleared > 0)
         .sort((a, b) => b.v.added - a.v.added);
       if (!js.length) return;
@@ -788,7 +795,7 @@ export function initEfficiencyFilters(data) {
       };
     };
     const moved = (r) => r.cells.some(Boolean);
-    const rows = deptJobs(q).map(({ dept, jobs: js }) => {
+    const rows = deptJobs(q, false, true).map(({ dept, jobs: js }) => {   // #125
       const jids = js.map(j => j.jid);
       return Object.assign(toRow(dept, jids), {
         _jids: jids,
@@ -828,7 +835,7 @@ export function initEfficiencyFilters(data) {
       keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
       return acc;
     };
-    const rows = deptJobs(selQuarter()).map(({ dept, jobs }) => {
+    const rows = deptJobs(selQuarter(), false, true).map(({ dept, jobs }) => {   // #125
       const per = jobs.map(j => ({ title: j.title, v: sumFor(j.jid) })).filter(x => x.v.added > 0);
       const agg = per.reduce((a, x) => ({ added: a.added + x.v.added, cleared: a.cleared + x.v.cleared }), { added: 0, cleared: 0 });
       return { dept, ...agg, per };
@@ -1082,8 +1089,13 @@ export function initEfficiencyFilters(data) {
     const rowCells = (histArr) => histArr.map(cell).join('');
     const poolCells = (arrs) => TIS_STAGES.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
     let html = '';
-    deptJobs(q).forEach(({ dept, jobs: js }, di) => {
-      const jh = js.map(j => jobHists(j.jid));
+    // #125: only jobs with an opening opened in the period, and no empty rows — a job with nobody finished or waiting at any stage is
+    // left out, and so is a department left with none. The department row pools exactly the jobs listed under it.
+    const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
+    deptJobs(q, false, true).forEach(({ dept, jobs: jsAll }, di) => {
+      const kept = jsAll.map(j => ({ j, h: jobHists(j.jid) })).filter(x => x.h.some(p => hasAny(p.fin) || hasAny(p.wait)));
+      if (!kept.length) return;
+      const js = kept.map(x => x.j), jh = kept.map(x => x.h);
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${poolCells(jh)}</tr>`;
       js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
     });
@@ -1144,16 +1156,19 @@ export function initEfficiencyFilters(data) {
     const numRow = (t, pd, bold) => `<td${bold ? ' style="font-weight:600"' : ''}>${t > 0 ? t : '<span class="zero">0</span>'}</td>` + pd.map(v => `<td>${v > 0 ? v : '<span class="zero">·</span>'}</td>`).join('');
     const add = (dst, src) => { for (let i = 0; i < dst.length; i++) dst[i] += src[i]; };
     let html = '';
-    const rows = deptJobs(q);
+    const rows = deptJobs(q, false, true);   // #125: only jobs with an opening opened in the Year/Quarter period
     if (tofuByJob) {
       rows.forEach(({ dept, jobs: js }, di) => {
         const dArr = new Array(dkeys.length).fill(0); let dTot = 0;
+        // #125: no empty rows — a job with nobody added in the days shown is left out, and so is a department left with none.
         const jd = js.map(j => {
           const jm = tofuByJob[j.jid] || {};
           let jTot = 0;
           const jArr = dkeys.map(dk => { const v = jm[dk] || 0; jTot += v; return v; });
-          add(dArr, jArr); dTot += jTot; return { j, jArr, jTot };
-        });
+          return { j, jArr, jTot };
+        }).filter(x => x.jTot > 0);
+        if (!jd.length) return;
+        jd.forEach(x => { add(dArr, x.jArr); dTot += x.jTot; });
         const dc = DEPT_COLORS[di % DEPT_COLORS.length];
         html += `<tr class="lvl-dept${dTot ? '' : ' lvl-quiet'}" data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600;box-shadow:inset 3px 0 0 ${dc}">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
         jd.forEach(({ j, jArr, jTot }, ji) => {
@@ -1165,7 +1180,7 @@ export function initEfficiencyFilters(data) {
       // different question and would sit under this heading as a lie.
       html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">Arrivals appear after the next stage-history refresh.</td></tr>`;
     }
-    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">Nobody was added in these days on jobs with an opening in the period.</td></tr>`;
     wireTreePath(body, expandAll());
     buildVelChartEff();
   }
@@ -1352,7 +1367,7 @@ export function initEfficiencyFilters(data) {
     const keys = chrono.map(dkeyEff);
 
     const rows = [], roleAt = {};
-    deptJobs(selQuarter()).forEach(({ dept, jobs }) => {
+    deptJobs(selQuarter(), false, true).forEach(({ dept, jobs }) => {   // #125: the same jobs as the table
       const per = keys.map(() => 0);
       jobs.forEach(j => {
         const m = tofuByJob[(j.jid || '').slice(0, 8)] || tofuByJob[j.jid] || {};
@@ -1568,6 +1583,7 @@ export function initEfficiencyFilters(data) {
           quarter: () => document.getElementById('effQuarter')?.value || '',
           depts: () => (msDept ? msDept.getSelected() : []),
           jobs: () => (msJob ? msJob.getSelected() : []),
+          jobIds: () => { const per = tisPeriod(); return per ? jobsWithOpeningIn(data, qq => per.includes(qq)) : null; },   // #125
           panelists: () => [],           // this tab has no panelist dimension
           expandAll: () => expandAll()   // #120: Expand all reaches the Panelists tree too
         }
