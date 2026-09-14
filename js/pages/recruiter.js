@@ -308,7 +308,7 @@ export function renderRecruiter(data) {
       </table></div>
     </div>
 
-    <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29 (Jerin). HM Screening and Online
+    <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29 (Jerin). HM Review and Online
          Assessment columns were removed on purpose: this panel is about R1 only, and both still count on
          Momentum through ToFU. See the definitions block for what Added and Cleared mean. -->
     <div class="rec-panel" data-panel="screening" style="display:none">
@@ -934,7 +934,7 @@ export function initRecruiterFilters(data) {
     //                 Cancellations excluded. One per candidate per role per quarter.
     //   Progressed  = of those, the ones who reached R2 or beyond.
     // 🚨 Computed in the PIPELINE (Tofu.gs), because it needs candidate identity — the rollups this file
-    // reads are only totals. HM Screening and Online Assessment columns were removed here deliberately:
+    // reads are only totals. HM Review and Online Assessment columns were removed here deliberately:
     // this panel is R1 only, and both still count on Momentum through ToFU.
     // ⚠ It will NOT match the old per-stage 'Added', which counted stage ENTRIES and re-counted anyone who
     // came back round, and it is not Momentum's R1 either — Momentum only credits R1 when it was the
@@ -2255,7 +2255,7 @@ export function initRecruiterFilters(data) {
   // ===== ToFU (top of funnel) — rebuilt 2026-08-26 to Jerin's spec =====
   // "How many candidates got added to ToFU on a particular day. ToFU is HM or OA or R1, whichever comes
   //  first. Once a candidate is logged as added to ToFU they shouldn't be repeated in the same job."
-  // So this is ONE row per candidate, not three rows of stages. The three signals are HM Screening entry,
+  // So this is ONE row per candidate, not three rows of stages. The three signals are HM Review entry,
   // an assessment TRIGGERED while the candidate sat in the Online Assessment stage, and an R1 interview
   // being BOOKED (dated the day it was booked). Cancelled bookings and cancelled assessments do not count.
   // The deduplication happens in the PIPELINE — candidate identity exists nowhere in this file — and it

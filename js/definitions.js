@@ -204,7 +204,7 @@ export const DEFINITIONS = {
       {
         heading: 'What counts as being added',
         items: [
-          ['Whichever of these comes first', 'The candidate <strong>enters HM Screening</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>. The first of the three is the day they were added.'],
+          ['Whichever of these comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>. The first of the three is the day they were added.'],
           ['R1 is dated when the interview was BOOKED', 'Not the day it is held \u2014 booking is the piece of work, and the interview itself can be a week later.'],
           ['Counted once per role', 'Once somebody is logged as added, they are not counted again for that role. Moving them on afterwards does not add to the number \u2014 that is the point: this counts <em>people arriving</em>, not steps taken.'],
           ['The count resets each quarter', 'Somebody who arrives again in a later quarter counts again in that quarter. So the quarters do not add up to a year.'],
@@ -223,8 +223,8 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['This will not match Screening Efficiency', 'That panel counts what happened at R1 \u2014 every R1 action, including candidates who arrived earlier through HM Screening. This counts <em>people entering the funnel</em>, by whichever of the three signals came first. Two different questions \u2014 the numbers are not supposed to agree.'],
-      ['Assessments count from 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Screening or an R1 booking.'],
+      ['This will not match Screening Efficiency', 'That panel counts what happened at R1 \u2014 every R1 action, including candidates who arrived earlier through HM Review. This counts <em>people entering the funnel</em>, by whichever of the three signals came first. Two different questions \u2014 the numbers are not supposed to agree.'],
+      ['Assessments count from 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Review or an R1 booking.'],
     ]
   },
   'rec-screening': {
@@ -245,8 +245,8 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['It will not match Momentum\u2019s R1 either', 'Momentum only credits R1 when it was the candidate\u2019s <em>first</em> signal into the funnel. Here every R1 action counts, including candidates who arrived through HM Screening earlier. Momentum\u2019s R1 is a subset of this one.'],
-      ['HM Screening and Online Assessment are not on this panel', 'By design \u2014 this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
+      ['It will not match Momentum\u2019s R1 either', 'Momentum only credits R1 when it was the candidate\u2019s <em>first</em> signal into the funnel. Here every R1 action counts, including candidates who arrived through HM Review earlier. Momentum\u2019s R1 is a subset of this one.'],
+      ['HM Review and Online Assessment are not on this panel', 'By design \u2014 this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
     ]
   },
   'rec-joining': {
@@ -402,7 +402,7 @@ export const DEFINITIONS = {
       {
         heading: 'What counts as being added',
         items: [
-          ['Whichever of these comes first', 'The candidate <strong>enters HM Screening</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>.'],
+          ['Whichever of these comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is triggered</strong> while they are sitting in the Online Assessment stage, or an <strong>R1 interview is booked</strong>.'],
           ['R1 is dated when the interview was BOOKED', 'Not the day it is held.'],
           ['Counted once per role, per quarter', 'Somebody already added is not counted again for that role in the same quarter. The count resets each quarter, so quarters do not add up to a year.'],
           ['Cancelled does not count', 'A cancelled interview booking or assessment is removed, which can take a count back off a past day.'],
@@ -421,7 +421,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This will not match Screening Efficiency', 'That panel counts what happened at R1 specifically. This counts everyone entering the funnel, by whichever of the three signals came first.'],
-      ['Assessments count from 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Screening or an R1 booking.'],
+      ['Assessments count from 8 July 2026', 'That is when the team began sending assessments through Ashby. Before that date a candidate could only be added by HM Review or an R1 booking.'],
     ]
   },
   'eff-screening': {
@@ -442,7 +442,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['HM Screening and Online Assessment are not on this panel', 'By design \u2014 this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
+      ['HM Review and Online Assessment are not on this panel', 'By design \u2014 this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
     ]
   },
   'eff-throughput': {
@@ -621,7 +621,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['Nothing changes for anyone until you publish', '<strong>Publish access</strong> writes the shared file everyone reads. Edits made here are held on this page until then, and reloading the page loses them. <strong>Download</strong> saves access.json as a fallback.'],
+      ['Nothing changes for anyone until you publish', '<strong>Publish access</strong> writes the shared file everyone reads. Until then your edits are kept in <strong>this browser</strong> only: they survive a reload, nobody else sees them, and if someone else publishes access in the meantime they are dropped (the status line says so) rather than published over that change. <strong>Download</strong> saves access.json as a fallback.'],
     ]
   },
 

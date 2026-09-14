@@ -261,6 +261,7 @@ export function renderAdmin(accessConfig, data) {
 // ===== Access Management (functional; edits a working copy, publishes access.json team-wide) =====
 const AC_ROLE_OPTS = [['admin', 'Admin'], ['full_access', 'Full Access'], ['restricted', 'Restricted'], ['none', 'None (denied)']];
 const AC_DIRTY_LS = 'ik_access_dirty';
+const AC_WORK_LS = 'ik_access_work';   // #120d: the unpublished working copy itself, so a reload keeps it
 const acEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const AC_DEPTS = Object.keys(DEPT_TREE).sort();
 const AC_TEAMS = [...new Set(Object.values(DEPT_TREE).flat())].sort();
@@ -288,12 +289,35 @@ export function initAdminAccess(accessConfig) {
   // Migrate legacy restricted users (old isRecruiter flag) to the explicit per-user Tabs model.
   work.users.forEach(u => { if (u.role === 'restricted' && !Array.isArray(u.tabs)) { u.tabs = ['hm-report']; if (u.isRecruiter) u.tabs.push('recruiter'); } });
 
-  const isDirtyAc = () => localStorage.getItem(AC_DIRTY_LS) === '1';
-  const setDirtyAc = (v) => { if (v) localStorage.setItem(AC_DIRTY_LS, '1'); else localStorage.removeItem(AC_DIRTY_LS); refreshUI(); };
+  // 🚨 #120d (14 Sep 2026): the "unpublished" flag was kept in the browser but the edits were not, so a reload showed
+  // "Unpublished access changes" over a list that had silently gone back to the published one. The working copy is now
+  // saved beside the flag and restored, but only if it was saved AFTER the access file was last published. If someone
+  // published since, the copy is stale: it is dropped (and the status line says so) rather than published over them.
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
+  const publishedAt = (accessConfig && accessConfig.updatedAt) || '';
+  let droppedNote = '';
+  if (lsGet(AC_DIRTY_LS) === '1') {
+    let saved = null; try { saved = JSON.parse(lsGet(AC_WORK_LS) || 'null'); } catch (e) { saved = null; }
+    if (saved && Array.isArray(saved.users) && (!publishedAt || (saved.savedAt || '') > publishedAt)) {
+      work.users = saved.users; work.defaultRole = saved.defaultRole || work.defaultRole;
+    } else {
+      if (saved) droppedNote = 'Unpublished changes from this browser were dropped: the team’s access was published after them.';
+      lsSet(AC_DIRTY_LS, null); lsSet(AC_WORK_LS, null);
+    }
+  }
+
+  const isDirtyAc = () => lsGet(AC_DIRTY_LS) === '1';
+  const setDirtyAc = (v) => {
+    droppedNote = '';
+    if (v) { lsSet(AC_DIRTY_LS, '1'); lsSet(AC_WORK_LS, JSON.stringify({ savedAt: new Date().toISOString(), defaultRole: work.defaultRole, users: work.users })); }
+    else { lsSet(AC_DIRTY_LS, null); lsSet(AC_WORK_LS, null); }
+    refreshUI();
+  };
 
   function refreshUI() {
     const st = document.getElementById('acStatus'), pv = document.getElementById('acProvenance');
-    if (st) { st.textContent = isDirtyAc() ? '● Unpublished access changes on this browser' : '✓ In sync with the team'; st.style.color = isDirtyAc() ? 'var(--orange)' : 'var(--green)'; }
+    if (st) { const dirty = isDirtyAc(); st.textContent = dirty ? '● Unpublished access changes on this browser' : (droppedNote || '✓ In sync with the team'); st.style.color = (dirty || droppedNote) ? 'var(--orange)' : 'var(--green)'; }
     if (pv) pv.innerHTML = (accessConfig && accessConfig.updatedAt)
       ? `Access published ${new Date(accessConfig.updatedAt).toLocaleString()}${accessConfig.updatedBy ? ' · by ' + accessConfig.updatedBy : ''}`
       : 'Live access config — publish to update the shared file.';

@@ -186,7 +186,7 @@ export function renderEfficiency(data) {
     </div>
 
     <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29, mirroring the Recruiter tab.
-         HM Screening and Online Assessment columns were removed on purpose: this panel is about R1, and
+         HM Review and Online Assessment columns were removed on purpose: this panel is about R1, and
          both still count on Momentum through ToFU. -->
     <div class="eff-panel" data-panel="screening" style="display:none">
       ${defsBlock('eff-screening')}
@@ -1163,7 +1163,7 @@ export function initEfficiencyFilters(data) {
   // Pod-level daily submissions (OA/HM/R1), summed across pod members from recruiters[].daily. Dept/Job
   // per-day detail needs a job×stage×date rollup the pipeline doesn't emit → pending child row.
   // ===== ToFU (top of funnel) — rebuilt 2026-08-26, same definition as Recruiter → Momentum =====
-  // A candidate is added the first time they hit HM Screening, an assessment triggered while they sat in
+  // A candidate is added the first time they hit HM Review, an assessment triggered while they sat in
   // the Online Assessment stage, or an R1 interview being booked — whichever came first — and is not
   // counted again for that role in the same quarter. The pipeline does the deduplication and emits
   // tofuByJob; there is no candidate identity in this file to do it with.
