@@ -198,7 +198,7 @@ export function roleBandOverlay(metrics) {
 //
 // metrics: the same array passed to roleBandDatasets. Returns a Chart.js tooltip config.
 export function roleSectionTooltip(metrics, opts = {}) {
-  const { totalLabel = 'Total', extra = null } = opts;
+  const { totalLabel = 'Total', extra = null, total = null } = opts;   // total(i, chart): the TABLE's figure, when the bars do not add up to it (#120)
   return {
     // One entry per hovered ROW, not per band — otherwise a bar of twelve bands produces twelve lines.
     filter: (it, i) => i === 0,
@@ -226,7 +226,8 @@ export function roleSectionTooltip(metrics, opts = {}) {
       },
       footer: (items) => {
         const chart = items[0].chart, i = items[0].dataIndex;
-        const t = chart.data.datasets.reduce((a, d, di) => a + (chart.isDatasetVisible(di) ? (d.data[i] || 0) : 0), 0);
+        const t = typeof total === 'function' ? total(i, chart)
+          : chart.data.datasets.reduce((a, d, di) => a + (chart.isDatasetVisible(di) ? (d.data[i] || 0) : 0), 0);
         return `${totalLabel}: ${t}`;
       }
     }
@@ -296,7 +297,7 @@ export const CATEGORY_REST = '#94a3b8';
 export function buildDumbbell(ctx, rows, opts = {}) {
   const {
     solid = '#4E6BA6', pale = '#C5CFE5', link = '#dbe3ea',
-    xTitle = 'Candidates', colHeader = 'PROGRESSED',
+    xTitle = 'Candidates', colHeader = '% progressed',
     fromLabel = 'added', toLabel = 'progressed'
   } = opts;
   const max = Math.max(1, ...rows.map(r => r.added));
@@ -424,7 +425,7 @@ export function buildDumbbell(ctx, rows, opts = {}) {
 // rows: [{ label, cells: [{ inN, outN } | null], overall: number|null }]
 // cols: [stage label, ...]  - same length as each row's cells
 export function buildStageHeat(host, tip, rows, cols, opts = {}) {
-  const { overallLabel = 'R1 → DOC' } = opts;
+  const { overallLabel = 'R1 → Doc' } = opts;
   // The hover words follow the measure. Under the rebuilt definition a cell is "assessed → progressed";
   // under the old reached/cleared it was "entered → left", and calling that "moved past it" is exactly what
   // made a rejection read as a pass. Callers pass the pair that matches the data they handed in.
@@ -508,11 +509,11 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
           + `<span class="sh-pct">${ov}%</span>`)
       + '</div></div>';
   });
-  html += '<div class="sheat-legend"><span>PEOPLE LOST AT THE STAGE</span>'
+  html += '<div class="sheat-legend"><span>People lost at the stage</span>'
     + LOSS_STEPS.map((st, i) => `<i style="background:${st.bg}${i === 0 ? ';box-shadow:inset 0 0 0 1px #cbd5e1' : ''}"></i><span>${
         i === 0 ? '0\u20139' : i === LOSS_STEPS.length - 1 ? '100+'
         : (LOSS_STEPS[i - 1].max + 1) + '\u2013' + st.max}</span>`).join('')
-    + '<span class="sheat-legend-note">the number in the square is still throughput %</span></div>';
+    + '</div>';
   host.innerHTML = html;
 
   if (!tip) return;
@@ -576,7 +577,7 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   // Every column names its own month (Jerin, 2026-08-31). The month used to appear once, in the corner
   // label, so a 30-day window spanning two months left you counting columns to work out which was which.
   let html = '<div class="heat-row"><div class="heat-name heat-hd"></div>'
-    + '<div class="heat-tot heat-hd">TOTAL · 30D</div>'
+    + `<div class="heat-tot heat-hd">Total · ${chrono.length}d</div>`
     + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">`
         + `<span class="hd-d">${d.getDate()}</span><span class="hd-m">${HEAT_MON[d.getMonth()]}</span></div>`).join('')
     + '</div>';
