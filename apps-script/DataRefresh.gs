@@ -15,6 +15,11 @@ var SCOPE_YEAR = Math.max(new Date().getFullYear(), 2026);
 var SCOPE_FROM_MS = new Date(SCOPE_YEAR + '-01-01T00:00:00.000Z').getTime();   // createdAfter value (Unix ms)
 var VELOCITY_DAYS = 35;
 var TIMEOUT_MS = 1500000;                            // 25-min safety cutoff (trigger allows 30)
+// #13 (Jerin, 14 Sep 2026): Data Hygiene's Unassigned / Multiple Recruiters / Multiple Sourcers lists keep only applications
+// ADDED, INTERVIEWED or ASSESSED on or after this day. FIXED on purpose, not the quarter picker - Jerin: Q3 misses must stay
+// visible after Q4 starts. Midnight India time, like every other date the team works in.
+var HYGIENE_FLOOR = '2026-07-01';
+var HYGIENE_FLOOR_MS = new Date(HYGIENE_FLOOR + 'T00:00:00+05:30').getTime();
 var LEVEL_CF_ID = '4d1ff143-8066-4601-9492-9c8ac126e7ff';
 var COMPLEXITY_CF_ID = '883e744b-30c9-400d-9ec6-85adf401d3e0';
 
@@ -161,6 +166,14 @@ function getWeekLabel_(dateStr) {
   return M[mon.getMonth()] + ' ' + mon.getDate() + '-' + sun.getDate();
 }
 
+// #13: one Data Hygiene row for an application (Multiple Recruiters / Multiple Sourcers). department rides along so the
+// lists can group by it; createdAt is the 'added' day of the date floor above.
+function hygRow_(appId, jobId, jd, candName, createdAt) {
+  return { app: appId, job8: (jobId || '').substring(0, 8), candidate: candName, createdAt: (createdAt || '').substring(0, 10), department: jd ? jd.department : '' };
+}
+// #13: remember the LATEST day an application was interviewed or assessed ('YYYY-MM-DD' strings compare as dates).
+function hygAct_(map, appId, day) { if (appId && day && (!map[appId] || day > map[appId])) map[appId] = day; }
+
 // ===== APP PASS — createdAfter=SCOPE_FROM_MS returns only current-year apps =====
 
 function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
@@ -178,7 +191,7 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
   // Stage titles Ashby returned that STAGE_KEY_MAP has no entry for. An unmapped stage is dropped
   // from every count, which is exactly how 'Online Assessment' went unnoticed - so surface it.
   var unmappedStages = {};
-  var unassignedCases = [];   // reached-screening+ apps with NO recruiter (dashboard compliance list), capped
+  var unassignedCases = [];   // reached-screening+ apps with NO recruiter (dashboard compliance list); #13: only apps touched since HYGIENE_FLOOR
   // Time-in-App-Review dwell histograms {days:count} for candidates CURRENTLY parked in App Review (now - createdAt).
   // The stage-history accumulator can't see these (they never reached screening), so we capture them here — full coverage.
   var arDwellJob = {}, arDwellRec = {};
@@ -214,8 +227,6 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
       var sourcer = htr.sourcers.length ? htr.sourcers[0].name : null;
       var recName = recruiter || 'Unassigned';   // attribute null-recruiter apps to a visible "Unassigned" bucket
       if (recruiter && htr.recruiters[0].userId && !recruiterUserId[recruiter]) recruiterUserId[recruiter] = htr.recruiters[0].userId;
-      if (htr.recruiters.length > 1) anomalies.multiRecruiter.push({ app: app.id, job8: (jobId || '').substring(0, 8), names: htr.recruiters.map(function (r) { return r.name; }) });
-      if (htr.sourcers.length > 1) anomalies.multiSourcer.push({ app: app.id, job8: (jobId || '').substring(0, 8), names: htr.sourcers.map(function (r) { return r.name; }) });
       var candName = (app.candidate && (app.candidate.name || ((app.candidate.firstName || '') + ' ' + (app.candidate.lastName || '')).trim())) || null;
       // primaryEmailAddress is already in the application.list payload (confirmed against the reference
       // 2026-08-22). It is the ONLY reliable join key to the Hiring Tracker - names disagree constantly.
@@ -229,6 +240,11 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
       var isHired = (app.status === 'Hired');
       if (app.id && appMap[app.id]) { appMap[app.id].stage = stageName; appMap[app.id].status = app.status || null; appMap[app.id].archivedAt = app.archivedAt || null; appMap[app.id].archiveReason = (app.archiveReason && app.archiveReason.text) || null; appMap[app.id].archiveReasonType = (app.archiveReason && app.archiveReason.reasonType) || null; }
       var updatedMs = app.updatedAt ? new Date(app.updatedAt).getTime() : createdMs;
+      // #13: an interview or an assessment on or after HYGIENE_FLOOR also moves updatedAt, so this is a cheap SUPERSET of the
+      // floor. The exact test (added, interviewed or assessed since the floor) runs after the interview pass.
+      var hygMaybe = createdMs >= HYGIENE_FLOOR_MS || updatedMs >= HYGIENE_FLOOR_MS;
+      if (hygMaybe && htr.recruiters.length > 1) { var hygMr = hygRow_(app.id, jobId, jd, candName, app.createdAt); hygMr.names = htr.recruiters.map(function (r) { return r.name; }); anomalies.multiRecruiter.push(hygMr); }
+      if (hygMaybe && htr.sourcers.length > 1) { var hygMs = hygRow_(app.id, jobId, jd, candName, app.createdAt); hygMs.names = htr.sourcers.map(function (r) { return r.name; }); anomalies.multiSourcer.push(hygMs); }
 
       // Tag apps that reached screening+ (or hired) — the stage-history accumulator pulls listHistory for these.
       var reachedScreening = ((stageKey && stageKey !== 'appReview') || isHired);
@@ -238,7 +254,7 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
       // reach a late stage", status supplies "did they end archived"; a drop needs both.
       if (app.id && reachedScreening) histApps.push({ id: app.id, r: recruiter, j: jobId, s: app.status || null });
       if (app.id && app.status === 'Archived') archivedApps.push({ id: app.id, r: recruiter, j: jobId });
-      if (!recruiter && reachedScreening && unassignedCases.length < 800) unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
+      if (!recruiter && reachedScreening && hygMaybe) unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
 
       // App Review dwell: candidates sitting in App Review right now → days = today - createdAt (capped 0..365).
       if (stageKey === 'appReview' && createdMs) {
@@ -466,6 +482,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
   // interview', which is this. Keyed quarter -> {applicationId: 1}; only the counts ever leave the server.
   var intAppsByQ = {};        // userId totals / dept->title->userId
   var evEndByAppUser = {};            // (appId '|' userId) -> [event endMs, ...] — for feedback turnaround matching
+  var actByApp = {};                  // #13: appId -> latest day interviewed (a held interview) or given feedback
   function eu(uid) { if (!byUser[uid]) byUser[uid] = { interviews: 0, feedbackCount: 0, turnSum: 0, turnN: 0, byQuarter: {}, byMonth: {}, pending: 0 }; return byUser[uid]; }
   // #120b: rows are keyed dept -> JOB -> panelist. They were dept -> job TITLE -> panelist, which merged two jobs sharing a
   // title and could not be narrowed to one job. The title stays on the row; the site merges same-title rows for display.
@@ -487,6 +504,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
         var st = ev.startTime ? new Date(ev.startTime).getTime() : 0;
         if (st && st < SCOPE_FROM_MS) continue;
         var _uu = ev.interviewerUserIds || [], _hasReal = false; for (var _z = 0; _z < _uu.length; _z++) { if (_uu[_z] && _uu[_z] !== EXCLUDED_INTERVIEWER_ID) { _hasReal = true; break; } } if (!_hasReal) continue; evCount++; if (st) { var _qd = new Date(st); var _qk = _qd.getUTCFullYear() + '-Q' + (Math.floor(_qd.getUTCMonth() / 3) + 1); interviewsByQuarter[_qk] = (interviewsByQuarter[_qk] || 0) + 1; if (appId) { (intAppsByQ[_qk] || (intAppsByQ[_qk] = {}))[appId] = 1; } var _mk = _qd.getUTCFullYear() + '-' + ('0' + (_qd.getUTCMonth() + 1)).slice(-2); interviewsByMonth[_mk] = (interviewsByMonth[_mk] || 0) + 1; }
+        if (st && appId && st <= Date.now()) hygAct_(actByApp, appId, String(ev.startTime).substring(0, 10));   // #13: interviewed
         if (st) { if (ctx1.j8) { var _ijq = interviewsByJobQ[ctx1.j8] || (interviewsByJobQ[ctx1.j8] = {}); _ijq[_qk] = (_ijq[_qk] || 0) + 1; var _ijm = interviewsByJobM[ctx1.j8] || (interviewsByJobM[ctx1.j8] = {}); _ijm[_mk] = (_ijm[_mk] || 0) + 1; } else evNoJob++; }
         var endMs = ev.endTime ? new Date(ev.endTime).getTime() : 0;
         var uids = ev.interviewerUserIds || [];
@@ -526,6 +544,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
       var subMs = fb.submittedAt ? new Date(fb.submittedAt).getTime() : 0;
       if (subMs && subMs < SCOPE_FROM_MS) continue;
       fbCount++;
+      if (fb.submittedAt) hygAct_(actByApp, fb.applicationId, String(fb.submittedAt).substring(0, 10));   // #13: assessed
       eu(uid2).feedbackCount++;
       var ctx2 = jobCtx(fb.applicationId); var dju = edju(ctx2, uid2); dju.feedbackCount++;
       var ends = fb.applicationId ? evEndByAppUser[fb.applicationId + '|' + uid2] : null;
@@ -548,7 +567,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
   var panelists = [];
   for (var dp in byDJU) for (var tt in byDJU[dp]) for (var uu in byDJU[dp][tt]) { var x = byDJU[dp][tt][uu];
     panelists.push({ dept: dp, jobTitle: x.title, jobId8: x.j8 || null, name: nameOf(uu), userId: uu, interviews: x.interviews, byQuarter: x.byQuarter, byMonth: x.byMonth, feedbackSubmitted: x.feedbackCount, feedbackOnScheduled: x.fbOnSched || 0, pendingFeedback: x.pending, turnN: x.turnN, turnSumHrs: Math.round(x.turnSum * 10000) / 10000, avgTurnaroundHrs: x.turnN ? Math.round(x.turnSum / x.turnN * 10) / 10 : null }); }
-  return { interviewers: interviewers, panelists: panelists, totalInterviews: evCount, totalFeedback: fbCount, interviewsByQuarter: interviewsByQuarter, interviewsByMonth: interviewsByMonth, intAppsByQ: intAppsByQ, interviewsByJobQ: interviewsByJobQ, interviewsByJobM: interviewsByJobM, evNoJob: evNoJob };
+  return { interviewers: interviewers, panelists: panelists, totalInterviews: evCount, totalFeedback: fbCount, interviewsByQuarter: interviewsByQuarter, interviewsByMonth: interviewsByMonth, intAppsByQ: intAppsByQ, interviewsByJobQ: interviewsByJobQ, interviewsByJobM: interviewsByJobM, evNoJob: evNoJob, activityByApp: actByApp };
 }
 
 // Fast recon: verify createdAfter scoping + volume + shape on the two endpoints (run once before a full refresh).
@@ -916,6 +935,7 @@ function refreshDashboardData() {
       recruiter: e.recruiter || null,
       doj: e.startDate || null,
       subStage: OFFER_SUBSTAGE_[e.offerStatus || ''] || 'Offer',
+      offerCreatedAt: e.offerCreatedAt || null,   // #13: the date floor on the two opening-link lists (offer made OR DOJ)
       appStatus: (amg && amg.status) ? amg.status : 'Unknown',
       needsFix: jpCaseByApp_[e.applicationId] ? true : false
     });
@@ -926,7 +946,7 @@ function refreshDashboardData() {
   });
   Logger.log('offer link gaps: ' + offerLinkGaps.length + ' | needs fix: ' + offerLinkGaps.filter(function(r) { return r.needsFix; }).length);
   var uaRow = appResult.recruiterCounts['Unassigned'];
-  var dataQuality = { recruitersWithoutUserId: recruitersWithoutUserId, unassigned: appResult.unassignedCases, unassignedTotal: uaRow ? uaRow.total : 0, offerMissingLink: offerMissingLink, openingsNoOpenedAt: openingsNoOpenedAt, excludedAsRecruiter: recruitersList.filter(function (r) { return r.name === 'G Darshan' && (r.total || 0) > 0; }).map(function (r) { return r.name; }),
+  var dataQuality = { recruitersWithoutUserId: recruitersWithoutUserId, unassigned: appResult.unassignedCases.slice(0, 800), unassignedTotal: uaRow ? uaRow.total : 0, offerMissingLink: offerMissingLink, openingsNoOpenedAt: openingsNoOpenedAt, excludedAsRecruiter: recruitersList.filter(function (r) { return r.name === 'G Darshan' && (r.total || 0) > 0; }).map(function (r) { return r.name; }),
     multiRecruiter: appResult.anomalies.multiRecruiter.slice(0, 200), multiSourcer: appResult.anomalies.multiSourcer.slice(0, 200),
     unmappedStages: appResult.unmappedStages || {} };
   Logger.log('ATTRIBUTION: recruiters(incl Unassigned)=' + recruitersList.length + ' | Unassigned total=' + dataQuality.unassignedTotal +
@@ -949,6 +969,7 @@ function refreshDashboardData() {
   // The two sets are UNIONED by applicationId, never added - plenty of candidates do both in one quarter
   // and adding would count them twice. Only counts are emitted; no ids leave the server.
   var oaAppsByQ = {}, panelByQ = {}, assessedByQ = {}, candidatesInterviewedByQuarter = {};
+  var hygActivity = ivResult.activityByApp || {};   // #13: reaching Online Assessment counts as assessed too (below)
   try {
     var _se = loadDriveJson_('stage_events.json') || {};
     var _qk2 = function (ds) { if (!ds || ds.length < 7) return null; return ds.substring(0, 4) + '-Q' + (Math.floor((parseInt(ds.substring(5, 7), 10) - 1) / 3) + 1); };
@@ -956,6 +977,7 @@ function refreshDashboardData() {
       var _evs = (_se[_aid] && _se[_aid].ev) || [];
       for (var _n = 0; _n < _evs.length; _n++) {
         if (_evs[_n].k !== 'oa' || !_evs[_n].e) continue;
+        hygAct_(hygActivity, _aid, _evs[_n].e);   // #13: assessed
         var _q = _qk2(_evs[_n].e); if (!_q) continue;
         (oaAppsByQ[_q] || (oaAppsByQ[_q] = {}))[_aid] = 1;
       }
@@ -992,6 +1014,32 @@ function refreshDashboardData() {
     }
     Logger.log('Candidates interviewed by YEAR (distinct across the year): ' + JSON.stringify(candidatesInterviewedByYear));
   } catch (e) { Logger.log('year-level interviewed rollup failed: ' + e.message); }
+  // ===== #13 Data Hygiene date floor (Jerin, 14 Sep 2026) =====
+  // Unassigned / Multiple Recruiters / Multiple Sourcers keep only applications ADDED (createdAt), INTERVIEWED (a held interview)
+  // or ASSESSED (feedback submitted, or the Online Assessment stage entered) on or after HYGIENE_FLOOR. Each kept row carries
+  // lastActivity = the latest of those days; newest first. dataQuality above already holds capped fallbacks, so a failure here
+  // costs the floor (the site then says so) rather than the run.
+  try {
+    var hygKeep_ = function (rows, idKey, cap) {
+      var kept = [];
+      (rows || []).forEach(function (r) {
+        var last = r.createdAt || '', act = hygActivity[r[idKey]];
+        if (act && act > last) last = act;
+        if (last >= HYGIENE_FLOOR) { r.lastActivity = last; kept.push(r); }
+      });
+      kept.sort(function (a, b) { return a.lastActivity < b.lastActivity ? 1 : (a.lastActivity > b.lastActivity ? -1 : 0); });
+      return { rows: kept.slice(0, cap), total: kept.length };
+    };
+    var hygU = hygKeep_(appResult.unassignedCases, 'applicationId', 1500);
+    var hygR = hygKeep_(appResult.anomalies.multiRecruiter, 'app', 500);
+    var hygS = hygKeep_(appResult.anomalies.multiSourcer, 'app', 500);
+    dataQuality.unassigned = hygU.rows; dataQuality.unassignedSinceFloor = hygU.total;
+    dataQuality.multiRecruiter = hygR.rows; dataQuality.multiRecruiterSinceFloor = hygR.total;
+    dataQuality.multiSourcer = hygS.rows; dataQuality.multiSourcerSinceFloor = hygS.total;
+    dataQuality.hygieneFloor = HYGIENE_FLOOR;
+    Logger.log('#13 hygiene floor ' + HYGIENE_FLOOR + ': unassigned ' + hygU.total + ' | multi-recruiter ' + hygR.total + ' | multi-sourcer ' + hygS.total);
+  } catch (eHyg) { Logger.log('#13 hygiene floor failed: ' + eHyg.message); }
+
   Logger.log('Candidates interviewed by quarter: ' + JSON.stringify(candidatesInterviewedByQuarter) + ' (panel ' + JSON.stringify(panelByQ) + ', assessed ' + JSON.stringify(assessedByQ) + ')');
 
   // ===== DROP, unified (2026-08-26) =====
