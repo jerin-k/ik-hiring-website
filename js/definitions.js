@@ -18,13 +18,13 @@ export const DEFINITIONS = {
   'hm-positions': {
     summary: 'How these numbers are worked out',
     intro: 'Everything on this page is built from Ashby <strong>openings</strong> (the positions being filled) and <strong>offers</strong> (the people). Those two are counted differently, which is the single most common source of confusion here — see <em>Worth knowing</em> at the bottom.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026',
     groups: [
       {
         heading: 'The six cards at the top',
         items: [
           ['Total Positions', 'How many <strong>positions</strong> were opened in the period you have selected. Each opening counts once, in the quarter it was opened — so a role opened in Q2 keeps counting toward Q2 for as long as it stays open. Positions marked <em>On Hold</em> or <em>Shelved</em>, and positions with no opening date recorded in Ashby, are left out.'],
-          ['Joined', 'Positions from that set that have since been closed as <em>hired</em>.'],
+          ['Joined', 'Positions from that set that someone has been <strong>moved to Hired</strong> into \u2014 Ashby then marks the opening <em>Filled</em>. <em>Changed 14 Sep 2026: only openings closed with the reason Hired used to count, and Ashby never sets that reason when you hire, so most filled positions were missing from Joined and from Total.</em>'],
           ['Open', 'Positions from that set still to fill.'],
           ['Missed', 'Positions closed with the reason <em>carry forward</em> — the hire did not happen in that quarter and moved to the next one.'],
           ['Joining Pending', 'Counts <strong>people</strong>, not positions: everyone sitting in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, minus anyone whose opening was raised in an earlier quarter. It is a <strong>live</strong> figure — changing the date filter does not change it.'],
@@ -36,7 +36,7 @@ export const DEFINITIONS = {
         items: [
           ['Department', "Ashby's top-level department. Click the row to open the individual roles inside it."],
           ['Total Openings', 'Positions opened in the period, as above.'],
-          ['Joined', 'Positions closed as hired.'],
+          ['Joined', 'Positions someone has been moved to Hired into (Ashby marks the opening <em>Filled</em>).'],
           ['Joining Pending', 'People currently in Ref Check, Documentation or Offer — same rule as the card.'],
           ['Dropped', 'As above — reached Ref Check, Documentation or Offer, then archived — with their share of all outcomes underneath.'],
           ['Delta', 'Total Openings \u2212 Joined \u2212 Joining Pending. <strong>It can go negative, and that is allowed</strong> \u2014 it means more people are in closing than positions recorded, which happens when an offer was never linked to an opening. It shrinks as those links get fixed.'],
@@ -143,7 +143,7 @@ export const DEFINITIONS = {
   'rec-fulfilment': {
     summary: 'How these numbers are worked out',
     intro: 'Three tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> and <strong>Others</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026 · recruiter/sourcer credit rule replaced and the +N sourced line added 13 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026 · recruiter/sourcer credit rule replaced and the +N sourced line added 13 Sep 2026 · Goal counts filled openings and leaves out archived ones 14 Sep 2026',
     groups: [
       {
         heading: 'The two number types in every column',
@@ -155,7 +155,7 @@ export const DEFINITIONS = {
       {
         heading: 'The columns',
         items: [
-          ['Goal — Joiners', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. <strong>The Goal is never shared</strong>: even where an opening also has a Sourcer, the recruiter keeps its full points. Openings a person is tagged on as <strong>Sourcer</strong> show underneath as <strong>+N sourced</strong>, with no points attached.'],
+          ['Goal — Joiners', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. <strong>The Goal is never shared</strong>: even where an opening also has a Sourcer, the recruiter keeps its full points. Openings a person is tagged on as <strong>Sourcer</strong> show underneath as <strong>+N sourced</strong>, with no points attached. Openings still open, already filled or carried forward all count; <strong>archived</strong> openings do not. <em>Changed 14 Sep 2026: filled openings were being left out of the Goal and archived ones counted.</em>'],
           ['Capacity', 'What this recruiter is expected to carry in the quarter, set by hand in <strong>Admin → Metric Configuration</strong>. Blank until somebody sets it.'],
           ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales takes no such subtraction</strong>, deliberately: its goal is joiners whenever the opening was raised. On <strong>Sales</strong> and <strong>Others</strong> this appears as <strong>Joined Total</strong>, split across the two columns beside it.'],
           ['Joined — Prev Qtr Openings <span class="defs-tag">Sales</span>', 'Of the people who joined this quarter, those filling an opening raised in an <strong>earlier</strong> quarter — carried-over demand finally landing. Needs the offer to carry an opening link.'],
@@ -175,7 +175,7 @@ export const DEFINITIONS = {
         items: [
           ['The short version', 'If somebody is tagged as the <strong>Sourcer</strong> on a candidate, the points for <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Drop</strong> are split <strong>half and half</strong> with the recruiter. It is the same in every department, whoever the sourcer is.'],
           ['No sourcer tagged', 'The recruiter keeps the full score. This is the normal case today.'],
-          ['The Goal is never split', 'The recruiter keeps the <strong>full Goal</strong> even when an opening has a Sourcer, while what they achieve on a sourced role is half — so a shared role leaves a shortfall the recruiter closes by landing more people. A sourcer earns <strong>no Goal points</strong>. <em>Changed 13 Sep 2026: the Goal used to be halved as well.</em>'],
+          ['The Goal is never split', 'The recruiter keeps the <strong>full Goal</strong> even when an opening has a Sourcer, while what they achieve on a sourced role is half — so a shared role leaves a shortfall the recruiter closes by landing more people. A sourcer earns <strong>no Goal points</strong> \u2014 with one exception: an opening that has a Sourcer but <strong>no Recruiter</strong> gives its Goal to the sourcer, so its points are not lost. <em>Changed 13 Sep 2026: the Goal used to be halved as well.</em>'],
           ['The headcount always stays with the recruiter', 'Only the <strong>Score</strong> divides. The <strong>HC</strong> — the person — always counts on the <strong>recruiter’s</strong> row, so every HC column adds up to the real number of people. <em>Changed 13 Sep 2026: an agency used to take the head.</em>'],
           ['+N sourced', 'The small line under <strong>Goal</strong>, <strong>Joined</strong>, <strong>Joining Pending</strong>, <strong>Drop</strong> and <strong>Delta</strong> counts what that person <strong>sourced for someone else</strong>. It is never added to the figure above it. An agency’s billing count reads from here.'],
           ['Why the Goal and Joined lines can disagree', 'They come from two different tags in Ashby. Under <strong>Goal</strong> and <strong>Delta</strong> it is the Sourcer on the <strong>opening</strong> — who was briefed on the position. Under <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Drop</strong> it is the Sourcer on the <strong>candidate</strong> — who actually found the person. Someone can be tagged on openings and not have delivered anyone yet, or find people for openings they were never tagged on. Both are correct.'],
@@ -362,13 +362,13 @@ export const DEFINITIONS = {
   'eff-fulfilment': {
     summary: 'How these numbers are worked out',
     intro: 'The same picture as the Hiring Manager tab, cut <strong>Department → Job</strong> and with a <strong>Score</strong> beside every count. Everything follows the Year/Quarter selector except Joining Pending, which is live.',
-    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
           ['Total Positions', 'Distinct openings raised in the selected quarter, counted once each in the quarter they were opened.'],
-          ['Joined', 'Those positions that have been filled.'],
+          ['Joined', 'Those positions someone has been <strong>moved to Hired</strong> into \u2014 Ashby marks the opening <em>Filled</em>.'],
           ['Joining Pending', 'Everyone parked in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone whose opening belongs to an earlier quarter. Counts <strong>people</strong>. Live — the quarter selector does not change it.'],
           ['Drop', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Drop \u00f7 (Joined + Joining Pending + Drop).'],
           ['Delta', 'Total Positions − Joined − Joining Pending. <strong>It can be negative, and that is allowed</strong> — it means more people are in closing than there are positions recorded, which happens when an offer was never linked to an opening. The bar fills with the shortfall, so bar and number always agree.'],
@@ -589,7 +589,7 @@ export const DEFINITIONS = {
   'overview': {
     summary: 'How these numbers are worked out',
     intro: 'The one-page summary. Everything follows the Year/Quarter selector unless it says otherwise.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · Joined positions = moved to Hired 14 Sep 2026',
     groups: [
       {
         heading: 'The five cards',
@@ -598,7 +598,7 @@ export const DEFINITIONS = {
           ['Applications', 'Candidates who applied in the period.'],
           ['Candidates Interviewed', 'Distinct <strong>people</strong> we assessed in the period. Someone counts once whether they sat one interview or five — within a quarter. A whole year is the quarters added up unless the data file carries a year-level count, so somebody interviewed in two different quarters can count twice; the card says “quarters added up” when that is what you are looking at. It includes candidates who took an <strong>online assessment</strong> (HeyMilo, Trifle, HackerEarth) as well as those who met a panel — the two are combined by person, not added, because plenty of candidates do both. The line underneath splits them.'],
           ['Total Hired', 'Hires in the period, with the conversion from applications underneath.'],
-          ['Fill Rate', 'Positions joined ÷ positions opened, for the period.'],
+          ['Fill Rate', 'Positions joined ÷ positions opened, for the period. A position counts as joined once someone has been <strong>moved to Hired</strong> into it (Ashby marks the opening <em>Filled</em>).'],
         ]
       },
       {
