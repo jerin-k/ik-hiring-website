@@ -8,6 +8,10 @@
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/access.json';
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 const PUBLISH_CHUNK = 1500;
+// #118 (14 Sep 2026): confirm-by-read goes through the GitHub contents API. raw.githubusercontent IGNORES ?cb and can serve the
+// old file for up to 5 minutes, so a publish that had landed was reported as "Couldn't confirm" (the same fault metric-config.js
+// fixed with fetchFreshConfig on 13 Sep). One publish makes at most 16 reads; the unauthenticated limit is 60 an hour.
+const CONFIRM_API = 'https://api.github.com/repos/jerin-k/ik-hiring-website/contents/data/access.json?ref=main';
 
 // ===== #118 Send invite (Jerin, 14 Sep 2026): the web app writes and sends the email; this opens it for ONE person =====
 const INVITES_API = 'https://api.github.com/repos/jerin-k/ik-hiring-website/contents/data/access_invites.json?ref=main';
@@ -72,7 +76,8 @@ export async function publishAccess(payload) {
   for (let i = 0; i < 16; i++) {
     await new Promise(r => setTimeout(r, 2500));
     let live = null;
-    try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) live = await r.json(); } catch (e) { }
+    try { const r = await fetch(CONFIRM_API + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) live = await r.json(); } catch (e) { }
+    if (!live) { try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) live = await r.json(); } catch (e) { } }
     if (live && sameAccess(live, payload)) { try { w.close(); } catch (e) { } return { ok: true }; }
   }
   return { ok: false, reason: "Couldn't confirm the publish — check the popup for an error (sign-in/not-authorized), or use Download. Your edits are kept locally." };
