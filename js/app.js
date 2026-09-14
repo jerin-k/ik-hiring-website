@@ -239,7 +239,7 @@ function navigateTo(page, sub) {
     case 'admin':
       content.innerHTML = renderAdmin(accessConfig, data);
       initAdminMetricConfig(data);
-      initAdminAccess(accessConfig);
+      initAdminAccess(accessConfig, data);   // #120b: the department choices come from the data
       break;
   }
 

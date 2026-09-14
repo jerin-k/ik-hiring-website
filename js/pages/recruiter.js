@@ -2,6 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { defsBlock } from '../definitions.js';
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
+import { scopeData } from '../data.js';   // #120a: the Job filter narrows every number
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
@@ -579,16 +580,21 @@ export function renderRecruiter(data) {
   `;
 }
 
-export function initRecruiterFilters(data) {
-  if (!data || !data.recruiters) return;
+export function initRecruiterFilters(baseData) {
+  if (!baseData || !baseData.recruiters) return;
+  // #120a (Jerin, 14 Sep 2026): the Job filter narrows EVERY number, not just the list of recruiters. `baseData` is what the
+  // page was given (already narrowed to a Restricted user's departments); `data` is baseData narrowed again to the chosen jobs
+  // by scopeData(), and every panel reads `data`. Data Hygiene alone keeps reading baseData — the Job filter never applies there.
+  let data = baseData;
   // #11 (Jerin, 7 Sep 2026): the roster is no longer just data.recruiters. That list is built from people
   // tagged as RECRUITER on an application, so an agency or freelancer tagged only as a SOURCER never appears —
   // and with no row they have no pod, which means excluded from every row, total and chart, so their credit
   // would silently vanish. Jerin: they surface "once we either assign an opening to them or attribute a
   // closure to them". So: anyone who owns an opening as Sourcer, or is the sourcer on an outcome, joins the
   // roster. They also appear in Admin → Metric Configuration, which is where a pod and capacity get set.
-  const allRecs = (data.recruiters || []).concat(
-    sourcerOnlyNames(data).map(name => ({ name, userId: null, byJob: [], total: 0, offer: 0, hired: 0, sourcerOnly: true })));
+  const rosterOf = (d) => (d.recruiters || []).concat(
+    sourcerOnlyNames(d).map(name => ({ name, userId: null, byJob: [], total: 0, offer: 0, hired: 0, sourcerOnly: true })));
+  let allRecs = rosterOf(data);
   const nDate = 7;
   // Inactive = the person no longer holds an elevated recruiter seat in Ashby (UI roles Recruiter /
   // Recruiter Admin). Identity is the Ashby USER RECORD (recruiters[].userId), so this is a direct lookup
@@ -613,15 +619,18 @@ export function initRecruiterFilters(data) {
   };
   // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
   const _sr = data.stageRollups || {};
-  const tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
+  let tisRec = _sr.timeInStageByRecruiter || null, tisJob = _sr.timeInStageByJob || null;
   // Per-quarter dwell (bucketed by the quarter the candidate ENTERED the stage), added 2026-08-21.
-  const tisRecQ = _sr.timeInStageByRecruiterQ || null, tisJobQ = _sr.timeInStageByJobQ || null;
+  let tisRecQ = _sr.timeInStageByRecruiterQ || null, tisJobQ = _sr.timeInStageByJobQ || null;
+  // #120a: the same stays per RECRUITER x JOB x quarter (pipeline, 14 Sep) — the Time in Process job rows under a recruiter.
+  let tisRecJobQ = _sr.timeInStageByRecruiterJobQ || null, waitRecJobQ = _sr.waitingByRecruiterJobQ || null;
   const tisHasQ = hasQuarterTis(_sr);
   // Candidates still sitting in the stage, kept apart from completed stays (see stage-time.js).
-  const waitRec = _sr.waitingByRecruiter || null, waitJob = _sr.waitingByJob || null;
-  const waitRecQ = _sr.waitingByRecruiterQ || null, waitJobQ = _sr.waitingByJobQ || null;
+  let waitRec = _sr.waitingByRecruiter || null, waitJob = _sr.waitingByJob || null;
+  let waitRecQ = _sr.waitingByRecruiterQ || null, waitJobQ = _sr.waitingByJobQ || null;
   const tisSplit = hasWaitSplit(_sr);
-  const arDwellRec = data.appReviewDwellByRecruiter || null, arDwellJob = data.appReviewDwellByJob || null;
+  let arDwellRec = data.appReviewDwellByRecruiter || null, arDwellJob = data.appReviewDwellByJob || null;
+  let arDwellRecJob = data.appReviewDwellByRecruiterJob || null;   // #120a: App Review dwell per recruiter x job
 
   // jobs[] is keyed by an 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
   // jobMeta() yields {department,title,level,complexity} for the scoring engine (falls back to byJob's own
@@ -636,7 +645,7 @@ export function initRecruiterFilters(data) {
   // (seatsOf, in fulfilRows). Ownership is exact, so a role two recruiters work no longer double-counts its
   // positions. When the field is absent — an older refresh still on schema v4 — we fall back to the
   // equal-split estimate so the tab still renders; useOwnedGoal says which basis is live.
-  const ownedByRecQ = data.ownedSeatsByRecruiterQ || null;
+  let ownedByRecQ = data.ownedSeatsByRecruiterQ || null;
   const useOwnedGoal = !!ownedByRecQ;
 
   // ===== #108 (Jerin, 13 Sep 2026): the recruiter / sourcer credit rule — replaces #11 of 7 Sep =====
@@ -647,7 +656,7 @@ export function initRecruiterFilters(data) {
   // ⚠ externalUsers comes from the pipeline (globalRole === 'External Recruiter'); userTypeOf() turns it into
   //   Agency | Freelancer | Internal using the Admin toggle, defaulting an unreviewed external to Freelancer.
   const externalSet = new Set(data.externalUsers || []);
-  const ownedBySrcQ = data.ownedSeatsBySourcerQ || null;
+  let ownedBySrcQ = data.ownedSeatsBySourcerQ || null;
   const splitOf = (dept, sourcer) => creditSplit(dept, sourcer, userTypeOf(sourcer, externalSet));
   // ===== #100 (10 Sep 2026): the Goal must join the sourcer at the OPENING grain, not the JOB grain =====
   // The two maps above say "this person holds this role on N openings of this job" — they never say WHICH
@@ -659,8 +668,38 @@ export function initRecruiterFilters(data) {
   // ownedSeatsPairQ[quarter][job8] = [{ r: recruiter, s: sourcer, n: openings }] reads BOTH roles off the SAME
   // opening, so every opening sits in exactly one bucket whose two shares add to 1 and nothing can leak.
   // ⚠ Absent until the pipeline has run once — pairFallback keeps the old behaviour so the tab still renders.
-  const pairsQ = data.ownedSeatsPairQ || null;
+  let pairsQ = data.ownedSeatsPairQ || null;
   const usePairs = !!pairsQ;
+  // #120a: the stores above were read from the data once, at start-up. When the Job filter narrows `data`, read them again.
+  // The presence flags (tisHasQ, tisSplit, useOwnedGoal, usePairs) stay as baseData set them: a narrowed store can be empty,
+  // but it is never a different basis.
+  function bindData(d) {
+    data = d;
+    allRecs = rosterOf(d);
+    const sr = d.stageRollups || {};
+    tisRec = sr.timeInStageByRecruiter || null; tisJob = sr.timeInStageByJob || null;
+    tisRecQ = sr.timeInStageByRecruiterQ || null; tisJobQ = sr.timeInStageByJobQ || null;
+    tisRecJobQ = sr.timeInStageByRecruiterJobQ || null; waitRecJobQ = sr.waitingByRecruiterJobQ || null;
+    waitRec = sr.waitingByRecruiter || null; waitJob = sr.waitingByJob || null;
+    waitRecQ = sr.waitingByRecruiterQ || null; waitJobQ = sr.waitingByJobQ || null;
+    arDwellRec = d.appReviewDwellByRecruiter || null; arDwellJob = d.appReviewDwellByJob || null;
+    arDwellRecJob = d.appReviewDwellByRecruiterJob || null;
+    ownedByRecQ = d.ownedSeatsByRecruiterQ || null; ownedBySrcQ = d.ownedSeatsBySourcerQ || null;
+    pairsQ = d.ownedSeatsPairQ || null;
+    _jsQ = null; _js = null;   // the joiner-source cache is keyed by period only
+  }
+  // True while the Job filter or a department restriction narrows the numbers. The Pod and Recruiter filters narrow none.
+  const narrowed = () => !!data._scope;
+  const NARROW_CAP_NOTE = 'Capacity is set per person for the whole quarter, not per job or department, so it is blank while a filter narrows the numbers.';
+  // {job8: {stage: {quarter: hist}}} → {job8: {stage: hist}}: the all-time view of one recruiter's per-job stays.
+  const _allTime = new WeakMap();
+  const allTimeOf = (byJobQ) => {
+    if (!byJobQ) return null;
+    let o = _allTime.get(byJobQ); if (o) return o;
+    o = {};
+    for (const j8 in byJobQ) { o[j8] = {}; for (const st in byJobQ[j8]) o[j8][st] = poolHists(Object.values(byJobQ[j8][st])); }
+    _allTime.set(byJobQ, o); return o;
+  };
   // #100: THE one place a Goal is computed. `only8` restricts it to a single job, which is how the per-job
   // drill-down rows are produced — same function, same split, so the sub-rows always sum to the row above.
   // Returns { hc, sc, so } — `so` = openings this person is tagged on as SOURCER (#108). Three bases, best first:
@@ -835,20 +874,39 @@ export function initRecruiterFilters(data) {
     return { getSelected: () => [...selected] };
   }
 
-  // Job multi-select works off throughputByRecruiterJob: a recruiter stays in the list only if they have
-  // stage history on one of the selected jobs. Until that data existed this filter was wired but inert.
+  // #120a: the Job filter narrows every number (bindData / onJobChange). A title shared by two jobs selects both.
   function selectedJobIds() {
     const jobSel = msJob ? msJob.getSelected() : [];
     return jobSel.length
-      ? new Set((data.jobs || []).filter(j => jobSel.includes(j.title)).map(j => j.id))
+      ? new Set((baseData.jobs || []).filter(j => jobSel.includes(j.title)).map(j => j.id))
       : null;
   }
-  function recWorkedSelectedJob(name, jobIdsSelected) {
-    if (!jobIdsSelected) return true;
-    const rj = data.stageRollups && data.stageRollups.throughputByRecruiterJob;
-    const mine = rj && rj[name];
-    if (!mine) return false;
-    return Object.keys(mine).some(j8 => jobIdsSelected.has(j8));
+  // While the numbers are narrowed (Job filter or department restriction), a recruiter stays listed when they have ANY figure
+  // left in them — applications, an owned or sourced opening, stage history, an offer, a Joining Pending case or a drop, as
+  // recruiter or sourcer. It used to test stage history alone, which dropped someone who owns an opening on the job.
+  function namesWithFigures(d) {
+    const s = new Set();
+    const add = (n) => { if (n) s.add(n); };
+    const nonEmpty = (o) => !!o && Object.keys(o).length > 0;
+    (d.recruiters || []).forEach(r => { if ((r.byJob || []).length) add(r.name); });
+    [d.ownedSeatsByRecruiterQ, d.ownedSeatsBySourcerQ].forEach(m => { for (const n in (m || {})) if (Object.values(m[n] || {}).some(nonEmpty)) add(n); });
+    Object.values(d.ownedSeatsPairQ || {}).forEach(byJob => Object.values(byJob || {}).forEach(list => (list || []).forEach(p => { add(p.r); add(p.s); })));
+    const sr = d.stageRollups || {};
+    [sr.tofuByRecruiterJob, sr.r1ByRecruiterJob, sr.throughputByRecruiterJob, sr.timeInStageByRecruiterJobQ, sr.waitingByRecruiterJobQ, d.appReviewDwellByRecruiterJob]
+      .forEach(m => { for (const n in (m || {})) if (nonEmpty(m[n])) add(n); });
+    ['offerEvents', 'joiningPendingCases', 'dropEvents'].forEach(k => (d[k] || []).forEach(e => { add(e.recruiter); add(e.sourcer); }));
+    return s;
+  }
+  let _inScope = null, _inScopeOf = null;
+  function recWorkedSelectedJob(name) {
+    if (!narrowed()) return true;
+    if (_inScopeOf !== data) { _inScopeOf = data; _inScope = namesWithFigures(data); }
+    return _inScope.has(name);
+  }
+  function onJobChange() {
+    const ids = selectedJobIds();
+    bindData(ids ? scopeData(baseData, { jobIds: ids }) : baseData);
+    renderAll();
   }
 
   // Recruiters the user has EXPLICITLY filtered out with the Pod / Recruiter / Job multi-selects — as
@@ -860,7 +918,7 @@ export function initRecruiterFilters(data) {
     const names = msRec ? msRec.getSelected() : [];
     if (names.length && !names.includes(name)) return true;
     if (pods.length && !pods.includes(podOf(name, q))) return true;
-    if (!recWorkedSelectedJob(name, selectedJobIds())) return true;
+    if (!recWorkedSelectedJob(name)) return true;
     return false;
   }
 
@@ -869,7 +927,6 @@ export function initRecruiterFilters(data) {
     const hideZero = document.getElementById('recHideZero')?.checked;
     const pods = msPod ? msPod.getSelected() : [];
     const names = msRec ? msRec.getSelected() : [];
-    const jobIdsSelected = selectedJobIds();
     // Departed recruiters are hidden by default — their historical numbers are still in the
     // data (and still score), they just clutter the working view. The Data Hygiene roster
     // deliberately ignores this and always lists everyone; that tab exists to show the split.
@@ -898,7 +955,7 @@ export function initRecruiterFilters(data) {
       if (!r.sourcerOnly && !inclInactive && !presentIn(r, q)) return false;   // #111: by dates, else today's Ashby account
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(effectivePod(r, q))) return false;   // #11: match how the row is grouped
-      if (!recWorkedSelectedJob(r.name, jobIdsSelected)) return false;
+      if (!recWorkedSelectedJob(r.name)) return false;
       return true;
     });
   }
@@ -1194,6 +1251,7 @@ export function initRecruiterFilters(data) {
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
       const utilCell = (v) => {
+        if (narrowed()) return `<td title="${NARROW_CAP_NOTE}">${DASH}</td>`;   // #120a/#120b option C
         const u = pctOf(v.uSc, v.capSc);
         if (u == null) return `<td title="No capacity set for this quarter, so utilisation cannot be worked out.">${DASH}</td>`;
         const cls = u >= 100 ? 'over' : (u >= 70 ? 'well' : 'under');
@@ -1235,7 +1293,7 @@ export function initRecruiterFilters(data) {
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
         return `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
-          + `<td class="score">${c(v.capSc)}</td>`                               // Capacity Score
+          + (narrowed() ? `<td class="score" title="${NARROW_CAP_NOTE}">${DASH}</td>` : `<td class="score">${c(v.capSc)}</td>`)                               // Capacity Score
           + (isSales                                                          // #39: Sales/Others split Joined
               ? joinedCells(v)                                                  //   total + prev-qtr + current-qtr
               : `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
@@ -1257,7 +1315,11 @@ export function initRecruiterFilters(data) {
         // rows can never disagree with the row above them (Rule 3 — the table computes, everything else reads).
         const g0 = goalOf(r, q, null); let aHC = g0.hc, aSc = g0.sc;
         const o = outOf(r.name), jn = joinOf(r.name), dr = dropOf(r.name), jp = jpOf(r.name);
-        const capSc = capacityOf(r.name, q) || 0;
+        // #120a/#120b (Jerin, 14 Sep 2026 — option C): Capacity is one number per person per quarter and cannot be split by job
+        // or department, so while the numbers are narrowed Capacity and Capacity Utilisation both read "—" rather than set part of
+        // someone's work against all of their capacity. 0 also drops the chart's Capacity line (drawn only when cap > 0) and
+        // stops capacity alone from holding a row open.
+        const capSc = narrowed() ? 0 : (capacityOf(r.name, q) || 0);
         // Outcome column = Joined on BOTH tables.
         const xHC = isSales ? o.hc : jn.hc, xSc = isSales ? o.sc : jn.sc;
         // What Gap and Capacity Utilisation are measured against (Jerin, 2026-08-24):
@@ -1801,7 +1863,7 @@ export function initRecruiterFilters(data) {
   }
 
   // Pod → Recruiter → Job, median days a candidate is parked per stage (red > 5). App Review = still-parked
-  // dwell (main pull); TA Screen → Offer from stage history. Job rows are job-level (all recruiters on the job).
+  // dwell (main pull); TA Screen → Offer from stage history. Job rows are THAT recruiter's own candidates on the job (#120a).
   function renderTimeInProcess() {
     const body = document.getElementById('recTisBody'); if (!body) return;
     const head = document.getElementById('recTisHead');
@@ -1825,9 +1887,15 @@ export function initRecruiterFilters(data) {
     const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview'
       ? arPair(arDwellRec && arDwellRec[r.name])
       : tisPair(tisRec, tisRecQ, waitRec, waitRecQ, r.name, sk, per, tisSplit));
-    const jobHists = (j8) => TIS_STAGES.map(([sk]) => sk === 'appReview'
-      ? arPair(arDwellJob && arDwellJob[j8])
-      : tisPair(tisJob, tisJobQ, waitJob, waitJobQ, j8, sk, per, tisSplit));
+    // #120a (Jerin, 14 Sep 2026): a job row under a recruiter shows THAT recruiter's own candidates on the role, so the job rows
+    // add up to the recruiter row. They used to show everyone on the role. A file without the recruiter x job split leaves the
+    // row empty rather than put the whole role's figure under one person's name.
+    const recJobHists = (r, j8) => TIS_STAGES.map(([sk]) => {
+      if (sk === 'appReview') return arPair(arDwellRecJob ? (arDwellRecJob[r.name] || {})[j8] : null);
+      if (!tisRecJobQ) return { fin: {}, wait: tisSplit ? {} : null };
+      const fq = tisRecJobQ[r.name] || {}, wq = (waitRecJobQ || {})[r.name] || {};
+      return tisPair(allTimeOf(fq), fq, allTimeOf(wq), wq, j8, sk, per, tisSplit);
+    });
     // On an older data file there is no split to show, so fall back to exactly the previous single-number
     // cell rather than passing a pooled median off as a completed-stay time. tisNote says so on screen.
     const cell = (p) => tisSplit ? tisCellSplit(p, 5) : tisCell(p.live ? p.wait : p.fin, 5);
@@ -1841,7 +1909,7 @@ export function initRecruiterFilters(data) {
         html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${rowCells(recHists(r))}</tr>`;
         const jobs = (r.byJob || []).slice().sort((a, b) => (b.total || 0) - (a.total || 0));
         if (jobs.length) jobs.forEach(bj => {
-          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(jobHists((bj.jobId || '').slice(0, 8)))}</tr>`;
+          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(recJobHists(r, (bj.jobId || '').slice(0, 8)))}</tr>`;
         });
         else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted);font-style:italic">No jobs attributed</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
       });
@@ -1852,7 +1920,17 @@ export function initRecruiterFilters(data) {
   }
 
   // Surfaces data.dataQuality (the attribution pass's compliance payload) + the Active/Inactive roster.
+  // #120a: Data Hygiene never follows the Job filter (its definitions say so). It renders against baseData, with every store
+  // re-read from it for the duration and put back afterwards; `data` and `allRecs` are pinned inside so its CSV exports,
+  // which run later on a click, read baseData too.
   function renderHygiene() {
+    if (data === baseData) return renderHygieneOn();
+    const narrowedData = data;
+    bindData(baseData);
+    try { return renderHygieneOn(); } finally { bindData(narrowedData); }
+  }
+  function renderHygieneOn() {
+    const data = baseData, allRecs = rosterOf(baseData);
     const dq = data.dataQuality || {};
     const q = selQuarter();
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -2727,8 +2805,8 @@ export function initRecruiterFilters(data) {
   // Global filters (apply to all sub-tabs) — Pod / Recruiter / Job are multi-select
   msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_OPTIONS, renderAll);
   msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);
-  const jobNames = [...new Set((data.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, renderAll);
+  const jobNames = [...new Set((baseData.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, onJobChange);
   document.addEventListener('click', closeMsPanels);
   document.getElementById('recHideZero')?.addEventListener('change', renderAll);
   document.getElementById('recInclInactive')?.addEventListener('change', renderAll);
