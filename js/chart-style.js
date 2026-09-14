@@ -471,67 +471,123 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
   // ⚠ Every pairing above clears 4.5:1. The old ramp did not: it flipped the label to white at t > 0.55
   // while the teal there was still light, so 17 of 60 live squares sat under 4.5:1 and 8 under 3:1 — the
   // worst at 2.5:1. Re-check the contrast if these hexes are ever touched.
-  const shade = (lost) => {
-    if (lost == null) return { bg: 'transparent', fg: '#94a3b8' };
-    return LOSS_STEPS.find(s => lost <= s.max);
-  };
+  // 🎨 #122 (Jerin, 15 Sep 2026 — option C1): JOB rows use the same five steps in VIOLET, so a job reads as a job at a
+  // glance. Most job squares lose 0–9 people, so the palest step is TINTED here (a department's is white) and every job
+  // square carries a hairline edge — without both, the violet would barely show. Every pair clears 4.5:1.
+  const JOB_STEPS = [
+    { max: 9, bg: '#ebe7f6', fg: '#0f172a' },
+    { max: 29, bg: '#bdb5dd', fg: '#0f172a' },
+    { max: 49, bg: '#a197cc', fg: '#0f172a' },
+    { max: 99, bg: '#6b5fa6', fg: '#ffffff' },
+    { max: Infinity, bg: '#463b7d', fg: '#ffffff' }
+  ];
+  const JOB_EDGE = '#c9c1e5';
+  const shade = (lost, steps) => (lost == null ? { bg: 'transparent', fg: '#94a3b8' } : steps.find(s => lost <= s.max));
   const lostOf = (c) => (c && !c.noRate && c.inN > 0) ? Math.max(0, c.inN - c.outN) : null;
   const band = (v) => v == null ? '#94a3b8' : (v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568'));
+
+  if (tip) tip.style.display = 'none';
+  if (!rows.length) {
+    host.innerHTML = `<p class="sheat-empty">${esc(opts.emptyMsg || 'No departments match the filter.')}</p>`;
+    host.onclick = host.onmouseover = host.onmouseout = null;
+    return;
+  }
+  // #122: a row may carry `children` — its JOB rows, same shape — and `opts.total` is a Total row, drawn only when more
+  // than one department is showing (with one it would repeat that department). A department opens with Expand all,
+  // or on its own when it is the only one showing.
+  const kidsOf = (r) => (Array.isArray(r.children) ? r.children : []);
+  const anyKids = rows.some(r => kidsOf(r).length);
+  const openAll = !!opts.expandAll || rows.length === 1;
+  const total = rows.length > 1 && opts.total ? opts.total : null;
+  const pad = anyKids ? '<span class="sheat-caret-sp"></span>' : '';
+
+  // Each square carries the flow and the rate — "161 → 59" over "37%" (Jerin, 2026-08-30). The two raw numbers are
+  // what make the percentage trustworthy; a bare 37% hides whether it came from 161 people or from 3.
+  const cellHtml = (c, key, ci, isJob) => {
+    const v = pctOf(c);
+    // A terminal stage is not an empty one — give it a flat slate fill so it reads as "no rate here", not as
+    // "nobody got this far".
+    const term = !!(c && c.noRate && c.inN > 0);
+    const s = term ? { bg: '#e6ebf0', fg: '#475569' } : shade(v == null ? null : lostOf(c), isJob ? JOB_STEPS : LOSS_STEPS);
+    const edge = isJob && (v != null || term) ? `;box-shadow:inset 0 0 0 1px ${JOB_EDGE}` : '';
+    return `<div class="sheat-cell${v == null && !term ? ' none' : ''}" style="background:${s.bg};color:${s.fg}${edge}"`
+      + ` data-k="${key}" data-c="${ci}">`
+      + (term ? `<span class="sh-flow">${c.inN} assessed</span><span class="sh-pct">\u2014</span>`
+        : v == null ? '\u00b7' : `<span class="sh-flow">${c.inN} \u2192 ${c.outN}</span><span class="sh-pct">${v}%</span>`)
+      + '</div>';
+  };
+  // The last square carries the same two lines as the rest — the flow, then the rate (Jerin, 2026-08-30).
+  const ovHtml = (r) => `<div class="sheat-ov" style="color:${band(r.overall)}">`
+    + (r.overall == null ? '—'
+      : (r.ovIn != null ? `<span class="sh-flow">${r.ovIn} \u2192 ${r.ovOut}</span>` : '') + `<span class="sh-pct">${r.overall}%</span>`)
+    + '</div>';
 
   let html = '<div class="sheat-row"><div class="sheat-name sheat-hd"></div>'
     + cols.map(c => `<div class="sheat-cell sheat-hd">${esc(c)}</div>`).join('')
     + `<div class="sheat-ov sheat-hd">${esc(overallLabel)}</div></div>`;
   rows.forEach((r, ri) => {
-    html += `<div class="sheat-row"><div class="sheat-name">${esc(r.label)}</div>`;
-    r.cells.forEach((c, ci) => {
-      const v = pctOf(c);
-      const term = !!(c && c.noRate && c.inN > 0);
-      // A terminal stage is not an empty one — give it a flat slate fill so it reads as "no rate here",
-      // not as "nobody got this far".
-      const s = term ? { bg: '#e6ebf0', fg: '#475569' } : shade(v == null ? null : lostOf(c));
-      // Each square carries the flow and the rate — "161 → 59" over "37%" (Jerin, 2026-08-30). The two
-      // raw numbers are what make the percentage trustworthy; a bare 37% hides whether it came from 161
-      // people or from 3.
-      html += `<div class="sheat-cell${v == null && !term ? ' none' : ''}" style="background:${s.bg};color:${s.fg}"`
-        + ` data-r="${ri}" data-c="${ci}">`
-        + (c && c.noRate && c.inN > 0
-          ? `<span class="sh-flow">${c.inN} assessed</span><span class="sh-pct">\u2014</span>`
-          : v == null ? '\u00b7' : `<span class="sh-flow">${c.inN} \u2192 ${c.outN}</span><span class="sh-pct">${v}%</span>`)
-        + '</div>';
+    const kids = kidsOf(r);
+    const caret = kids.length
+      ? `<button type="button" class="sheat-caret" aria-expanded="${openAll}" aria-label="${openAll ? 'Hide' : 'Show'} the jobs in ${esc(r.label)}">${openAll ? '\u25be' : '\u25b8'}</button>`
+      : pad;
+    html += `<div class="sheat-row sheat-dept${kids.length ? ' has-kids' : ''}" data-g="${ri}"><div class="sheat-name">${caret}`
+      + `<span class="sheat-label">${esc(r.label)}</span>${kids.length ? `<span class="sheat-cnt">${kids.length}</span>` : ''}</div>`
+      + r.cells.map((c, ci) => cellHtml(c, `d:${ri}`, ci, false)).join('') + ovHtml(r) + '</div>';
+    kids.forEach((k, ji) => {
+      html += `<div class="sheat-row sheat-job" data-g="${ri}"${openAll ? '' : ' hidden'}><div class="sheat-name"><span class="sheat-label">${esc(k.label)}</span></div>`
+        + k.cells.map((c, ci) => cellHtml(c, `j:${ri}:${ji}`, ci, true)).join('') + ovHtml(k) + '</div>';
     });
-    const ov = r.overall;
-    // The last square carries the same two lines as the rest — the flow, then the rate (Jerin, 2026-08-30:
-    // "in the square, can we have X -> Y & the throughput % below it"). Older callers that pass only a
-    // percentage still render, just without the flow line.
-    html += `<div class="sheat-ov" style="color:${band(ov)}">`
-      + (ov == null ? '—'
-        : (r.ovIn != null ? `<span class="sh-flow">${r.ovIn} \u2192 ${r.ovOut}</span>` : '')
-          + `<span class="sh-pct">${ov}%</span>`)
-      + '</div></div>';
   });
-  html += '<div class="sheat-legend"><span>People lost at the stage</span>'
-    + LOSS_STEPS.map((st, i) => `<i style="background:${st.bg}${i === 0 ? ';box-shadow:inset 0 0 0 1px #cbd5e1' : ''}"></i><span>${
-        i === 0 ? '0\u20139' : i === LOSS_STEPS.length - 1 ? '100+'
-        : (LOSS_STEPS[i - 1].max + 1) + '\u2013' + st.max}</span>`).join('')
+  if (total) {
+    html += `<div class="sheat-row sheat-total"><div class="sheat-name">${pad}<span class="sheat-label">Total</span></div>`
+      + total.cells.map((c, ci) => cellHtml(c, 't', ci, false)).join('') + ovHtml(total) + '</div>';
+  }
+  const strip = (steps, label, edge) => `<div class="lg-row">${label ? `<span class="lg-lbl">${label}</span>` : ''}`
+    + steps.map((st, i) => `<i style="background:${st.bg}${i === 0 ? `;box-shadow:inset 0 0 0 1px ${edge}` : ''}"></i><span>${
+        i === 0 ? '0\u20139' : i === steps.length - 1 ? '100+' : (steps[i - 1].max + 1) + '\u2013' + st.max}</span>`).join('')
     + '</div>';
+  html += '<div class="sheat-legend"><span class="lg-title">People lost at the stage</span><div class="lg-rows">'
+    + strip(LOSS_STEPS, anyKids ? 'Departments' : '', '#cbd5e1') + (anyKids ? strip(JOB_STEPS, 'Jobs', JOB_EDGE) : '')
+    + '</div><span class="sheat-legend-note">\u00b7 nobody assessed at that stage</span></div>';
   host.innerHTML = html;
 
+  // Open or close a department's jobs — its arrow or its name.
+  host.onclick = (e) => {
+    const row = e.target.closest('.sheat-dept.has-kids');
+    if (!row || !e.target.closest('.sheat-name')) return;
+    const btn = row.querySelector('.sheat-caret');
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    host.querySelectorAll(`.sheat-job[data-g="${row.dataset.g}"]`).forEach(x => { x.hidden = !open; });
+    btn.setAttribute('aria-expanded', String(open));
+    btn.setAttribute('aria-label', `${open ? 'Hide' : 'Show'} the jobs in ${row.querySelector('.sheat-label').textContent}`);
+    btn.textContent = open ? '\u25be' : '\u25b8';
+  };
+
   if (!tip) return;
+  const rowFor = (key) => {
+    const p = key.split(':');
+    if (p[0] === 't') return { r: total, name: 'Total' };
+    const d = rows[+p[1]];
+    if (p[0] === 'd') return { r: d, name: d.label };
+    const k = kidsOf(d)[+p[2]];
+    return { r: k, name: `${d.label} \u203a ${k.label}` };
+  };
   host.onmouseover = (e) => {
     const cell = e.target.closest('.sheat-cell');
-    if (!cell || cell.classList.contains('sheat-hd') || cell.dataset.r == null) return;
-    const r = rows[+cell.dataset.r], c = r.cells[+cell.dataset.c];
+    if (!cell || !cell.dataset.k) return;
+    const { r, name } = rowFor(cell.dataset.k);
+    const ci = +cell.dataset.c, c = r.cells[ci];
     const v = pctOf(c);
-    tip.innerHTML = `<div class="tip-hd">${esc(r.label)} · <b>${esc(cols[+cell.dataset.c])}</b></div>`
+    tip.innerHTML = `<div class="tip-hd">${esc(name)} · <b>${esc(cols[ci])}</b></div>`
       + (c && c.noRate && c.inN > 0
-        ? `<div class="tip-row"><span>${esc(wIn(+cell.dataset.c))}</span><span>${c.inN}</span></div>`
+        ? `<div class="tip-row"><span>${esc(wIn(ci))}</span><span>${c.inN}</span></div>`
           + `<div class="tip-row"><span>${esc(labels.terminal)}</span><span></span></div>`
         : c && c.inN > 0
-        ? `<div class="tip-row"><span>${esc(wIn(+cell.dataset.c))}</span><span>${c.inN}</span></div>`
-          + `<div class="tip-row"><span>${esc(wOut(+cell.dataset.c))}</span><span>${c.outN}</span></div>`
+        ? `<div class="tip-row"><span>${esc(wIn(ci))}</span><span>${c.inN}</span></div>`
+          + `<div class="tip-row"><span>${esc(wOut(ci))}</span><span>${c.outN}</span></div>`
           + `<div class="tip-row"><span>throughput</span><span>${v}%</span></div>`
           + `<div class="tip-row"><span>lost here (the shading)</span><span>${c.inN - c.outN}</span></div>`
-        : `<div class="tip-row"><span>${esc(wNone(+cell.dataset.c))}</span><span></span></div>`);
+        : `<div class="tip-row"><span>${esc(wNone(ci))}</span><span></span></div>`);
     tip.style.display = 'block';
     const wrap = host.parentElement;
     const wb = wrap.getBoundingClientRect(), cb = cell.getBoundingClientRect();

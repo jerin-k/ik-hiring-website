@@ -81,30 +81,25 @@ export const DEFINITIONS = {
   'hm-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'Of the people <strong>assessed</strong> at a stage, how many <strong>progressed</strong> to a later one. Built from real events in Ashby — interviews held, assignments triggered, feedback submitted — not from a snapshot of where people sit today.',
-    confirmed: 'Definition rebuilt with Jerin · 30 Aug 2026',
+    confirmed: 'Definition rebuilt with Jerin · 30 Aug 2026 · one section, departments open into violet job rows (#122) 15 Sep 2026',
     groups: [
       {
-        heading: 'The heat table',
+        heading: 'Reading the squares',
         items: [
           ['One column per stage', 'Each cell reads <strong>assessed → progressed</strong>, with the throughput percentage below it. <strong>Assessed</strong> means seen at that stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. <strong>Progressed</strong> means they then reached a <em>later</em> stage. <strong>Ref Check, Documentation and Offer are counted differently</strong>: nobody is assessed at an administrative stage, so those three count the candidates <strong>added</strong> to the stage \u2014 the day they entered it. For Offer, progressed means they went on to be <strong>hired</strong>.'],
-          ['What the colour means', 'In the <strong>table</strong>, the shade is the throughput rate: under 50%, 50\u201370%, and 70% or more. In the <strong>chart</strong> above it, the shade is <strong>how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 from white (0\u20139) to darkest (100 or more), while the number in the square is still the rate. Colour ranks what to fix; the number tells you the rate.'],
-          ['Rows', 'Department, then the individual roles inside it. Click a department to open it.'],
-          ['Overall', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. It is counted per person, never one stage column divided by another — see the warning below.'],
-          ['A blank cell', 'A dot or a dash means <strong>nobody was assessed</strong> at that stage in the period — several stages here carry very little traffic, and plenty of roles skip a round entirely. It is not a zero rate, and it is not missing data.'],
-          ['Stage tick-boxes and Hide zero-pipeline', 'The tick-boxes choose which stage columns appear. <em>Hide zero-pipeline</em> drops roles with no movement at all in the period.'],
-        ]
-      },
-      {
-        heading: 'The chart',
-        items: [
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Each cell reads <strong>assessed \u2192 progressed</strong> with the rate below it, shaded by how many people it lost. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there. Hover for the counts, the rate and the loss.'],
+          ['Rows', 'Each department is a row. Click it, or its arrow, to open the <strong>jobs</strong> inside it, listed underneath. <em>Expand all</em> opens every department, and a department opens by itself when it is the only one showing. With more than one department, <strong>Total</strong> is the last row.'],
+          ['What the colour means', 'The shade is <strong>how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 on five steps from the palest (0\u20139) to the darkest (100 or more). <strong>Department</strong> and <strong>Total</strong> squares are blue; <strong>job</strong> squares use the same five steps in <strong>violet</strong>, so a job reads as a job at a glance. The number in the square is still the rate: colour ranks what to fix, the number tells you the rate.'],
+          ['R1/OA \u2192 late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. It is counted per person, never one stage column divided by another — see the warning below.'],
+          ['A dot', 'A dot means <strong>nobody was assessed</strong> at that stage in the period — several stages here carry very little traffic, and plenty of roles skip a round entirely. It is not a zero rate, and it is not missing data.'],
+          ['Hover', 'Hover a square for its counts, its rate and how many people it lost.'],
+          ['Stages and Hide zero-pipeline', 'The <strong>Stages</strong> dropdown chooses which stage columns appear \u2014 with nothing picked, every stage shows. <em>Hide zero-pipeline</em> drops jobs with no movement at all in the period.'],
         ]
       },
     ],
     warnings: [
       ['Rejections do not count as progress', 'Only people who reached a later stage count as progressed. Someone rejected or withdrawn at a stage counts as assessed there and not progressed.'],
       ['The columns are not a funnel — do not read them left to right', 'Each stage is measured on its own. One column’s <em>progressed</em> will not equal the next column’s <em>assessed</em>, and often will not come close. Three reasons, all real: candidates skip stages (most roles never use Hello Christy or HM Review), <em>progressed</em> means reaching <em>any</em> later stage rather than the next one, and each figure is dated by when the assessment happened — so somebody screened in June and interviewed in July lands in two different quarters. Compare a stage to itself over time, not to its neighbour.'],
-      ['A role with no movement reads zero, not its history', 'If a role had no activity in the selected period it shows zeros rather than its all-time numbers. That includes a period with no stage history at all, such as a quarter that has not started.'],
+      ['A role with no movement reads empty, not its history', 'If a role had no activity in the selected period it shows dots rather than its all-time numbers. That includes a period with no stage history at all, such as a quarter that has not started.'],
       ['Not the same as the Pipeline tab', 'This counts movement <em>during</em> a period. Pipeline counts people <em>sitting</em> somewhere today. The two will never tie out, and are not meant to.'],
     ]
   },
@@ -126,7 +121,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['Do not add it to the Throughput numbers', 'That table counts movement during a period; this one counts people standing still today. Different questions, different totals.'],
+      ['Do not add it to the Throughput numbers', 'Throughput counts movement during a period; this one counts people standing still today. Different questions, different totals.'],
       ['Online Assessment is thin, not empty', 'It is genuinely used, but its volumes are small next to App Review and R1, so read a single role’s OA numbers with care.'],
     ]
   },
@@ -438,26 +433,26 @@ export const DEFINITIONS = {
   'eff-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'The full funnel, stage by stage, <strong>Department → Job</strong>. Of the people <strong>assessed</strong> at each stage, how many <strong>progressed</strong> to a later one.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · one section, departments open into violet job rows (#122) 15 Sep 2026',
     groups: [
       {
-        heading: 'The columns',
+        heading: 'Reading the squares',
         items: [
           ['One column per stage', 'Each cell reads <strong>assessed → progressed</strong>, with the percentage below it. <strong>Assessed</strong> means seen at the stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. Someone who only sat in the queue does not count. <strong>Ref Check, Documentation and Offer are counted differently</strong>: nobody is assessed at an administrative stage, so those three count the candidates <strong>added</strong> to the stage \u2014 the day they entered it. For Offer, progressed means they went on to be <strong>hired</strong>.'],
           ['Progressed', 'The second number in each cell: of those assessed, the ones who then reached a <strong>later stage</strong>. Being rejected or withdrawing does not count.'],
           ['%', 'Progressed ÷ Assessed — of the people actually assessed here, the share who moved forward. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
-          ['Overall', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. Counted per person, never one stage column divided by another.'],
-          ['Rows', 'Department, then the roles inside it. Click a department to open it.'],
-          ['A dash', 'Nobody was assessed at that stage in the period. It is not a zero rate.'],
-          ['Stage tick-boxes', 'Choose which stage columns appear, in the table and the chart.'],
+          ['R1/OA \u2192 late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. Counted per person, never one stage column divided by another.'],
+          ['Rows', 'Each department is a row. Click it, or its arrow, to open the <strong>jobs</strong> inside it, listed underneath. <em>Expand all</em> opens every department, and a department opens by itself when it is the only one showing. With more than one department, <strong>Total</strong> is the last row.'],
+          ['What the colour means', 'The shade is <strong>how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 on five steps from the palest (0\u20139) to the darkest (100 or more). <strong>Department</strong> and <strong>Total</strong> squares are blue; <strong>job</strong> squares use the same five steps in <strong>violet</strong>, so a job reads as a job at a glance. The number in the square is still the rate: colour ranks what to fix, the number tells you the rate.'],
+          ['A dot', 'Nobody was assessed at that stage in the period. It is not a zero rate.'],
+          ['Hover', 'Hover a square for its counts, its rate and how many people it lost.'],
+          ['Stages and Hide zero-pipeline', 'The <strong>Stages</strong> dropdown chooses which stage columns appear \u2014 with nothing picked, every stage shows. <em>Hide zero-pipeline</em> drops jobs with no movement at all in the period.'],
           ['The period', 'Follows the Year/Quarter selector. With Quarter on <em>All</em> each cell adds up every quarter of the selected year, and with Year on <em>All</em> as well it covers all time.'],
-          ['The chart', 'Department down the side, <strong>stage across the top</strong>. Each cell reads <strong>assessed \u2192 progressed</strong> with the rate below it, shaded by how many people it lost. The last column is the <strong>R1/OA \u2192 late stage</strong> span. A dot means nobody was assessed there. Hover for the counts, the rate and the loss.'],
-          ['What the colour means', 'In the <strong>table</strong>, the shade is the throughput rate: under 50%, 50\u201370%, and 70% or more. In the <strong>chart</strong> above it, the shade is <strong>how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 from white (0\u20139) to darkest (100 or more), while the number in the square is still the rate. Colour ranks what to fix; the number tells you the rate.'],
         ]
       },
     ],
     warnings: [
-      ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. Each column is only comparable to its own assessed figure. That is also why the Overall column is a single per-candidate span rather than a sum.'],
+      ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. Each column is only comparable to its own assessed figure. That is also why the <strong>R1/OA \u2192 late</strong> column is a single per-candidate span rather than a sum.'],
       ['Rejections do not count as progress', 'Only people who reached a later stage count as progressed. Someone rejected or withdrawn at a stage counts as assessed there and not progressed.'],
       ['The columns are not a funnel — do not read them left to right', 'Each stage is measured on its own. One column’s <em>progressed</em> will not equal the next column’s <em>assessed</em>, and often will not come close. Three reasons, all real: candidates skip stages (most roles never use Hello Christy or HM Review), <em>progressed</em> means reaching <em>any</em> later stage rather than the next one, and each figure is dated by when the assessment happened — so somebody screened in June and interviewed in July lands in two different quarters. Compare a stage to itself over time, not to its neighbour.'],
       ['Online Assessment carries small numbers', 'Used, but thinly next to App Review and R1. Treat a single role’s OA conversion as indicative, not solid.'],
