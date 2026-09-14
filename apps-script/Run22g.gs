@@ -21,7 +21,7 @@ var G22_PLAN = [
     recs: ['Tina Anisha Bibeiro'] }
 ];
 
-function run22g() { check58d_(); }  // read-only: the outside checker
+function run22g() { task105i_srcCheck(); }  // #105i: READ-ONLY for Ashby (rebuilds the audit tab V9 - 105i Source check). The source switches ran once on 13 Sep: done 46, skip 0, fail 0.
 
 function workLog72_(){
   var ss=SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
@@ -4016,4 +4016,119 @@ function q3State() {
   Logger.log('Q3-2026 openings ' + (rows.length-1) + ' | still Open ' + n.open
     + ' | closed as Hired ' + n.closedHired + ' | closed other ' + n.closedOther
     + ' | archived ' + n.archived + ' | tab "V9 - Q3 opening state". NOTHING written to Ashby.');
+}
+
+
+// ===== #105i (b)+(c) (13 Sep 2026) — READ-ONLY for Ashby =====
+// Jerin: "Tracker will continue to be source of truth - for selected candidates". Compares the SOURCE and the SOURCER of
+// every Q3 selected candidate (Hiring Tracker Master: a name, Offer or Joining Quarter = Q3 2026, status not 'Open') with
+// the application in Ashby, joined on EMAIL via offer_contacts.json and read LIVE with application.info. Nothing is written
+// to Ashby; the only write is the audit tab 'V9 - 105i Source check' (cleared and rebuilt each run).
+// v2 (13 Sep late night): reads the application behind the Q3 OFFER (start date, then offer-created date, in Jul-Sep 2026)
+// rather than the latest offer · the tracker's channel is ANY of category / portal / referral / vendor, so
+// 'Pre-identified / Linkedin' matches either · Jerin's calls: Third-party boards: LinkedIn => Job Portal: Linkedin Inbound
+// and Prospecting: Juicebox => Juicebox: Juicebox Sourced (verdict 'SWITCH (Jerin)'); Juicebox Agent, Linkedin Outreach and
+// Other: Recruiter Networking stay. A blank tracker source never asks for Ashby to be blanked.
+function task105i_srcCheck(){
+  var TRACKER_ID='1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A', AUDIT='1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA', TAB='V9 - 105i Source check';
+  var vals=SpreadsheetApp.openById(TRACKER_ID).getSheetByName('Master').getDataRange().getDisplayValues(), hdr=vals[0];
+  function col(n){ for(var i=0;i<hdr.length;i++) if(String(hdr[i]).replace(/\s+/g,' ').trim()===n) return i; return -1; }
+  var C={id:col('audit-id'),nm:col('Candidate Name'),st:col('Overall Status'),em:col('Personal Email'),oq:col('Offer Quarter'),jq:col('Joining Quarter'),
+         job:col('Job Name'),cat:col('Source Category'),por:col('Source Name, if Portal'),er:col('Source Name, if ER'),ven:col('Source name, if Vendor'),srcr:col('Sourcer')};
+  var miss=[]; for(var k in C) if(C[k]<0) miss.push(k);
+  if(miss.length) throw new Error('T105i tracker columns not found: '+miss.join(','));
+  var oc=JSON.parse(DriveApp.getFilesByName('offer_contacts.json').next().getBlob().getDataAsString()).rows||[];
+  var byEmail={};
+  oc.forEach(function(r){ var e=String(r.email||'').trim().toLowerCase(); if(e&&r.applicationId) (byEmail[e]=byEmail[e]||[]).push(r); });
+  function low(s){ return String(s==null?'':s).toLowerCase(); }
+  function fam(s){ var x=low(s);
+    if(/pre.?identified/.test(x)) return 'Pre-identified';
+    if(/linkedin/.test(x)) return 'LinkedIn'; if(/juicebox/.test(x)) return 'Juicebox'; if(/naukri/.test(x)) return 'Naukri';
+    if(/instahyre/.test(x)) return 'Instahyre'; if(/indeed/.test(x)) return 'Indeed'; if(/iim/.test(x)) return 'IIM Jobs';
+    if(/referr/.test(x)) return 'Referral'; if(/career site|careers page|jobs page/.test(x)) return 'Career Site';
+    if(/networking/.test(x)) return 'Recruiter Networking';
+    if(/bull.?s.?eye|black bull|jobkreators|talent diary|agenc|vendor|consult/.test(x)) return 'Agency';
+    return ''; }
+  function inQ3(d){ d=String(d||'').slice(0,10); return d>='2026-07-01' && d<='2026-09-30'; }
+  var SWITCH={'Third-party boards: LinkedIn':'Job Portal: Linkedin Inbound','Prospecting: Juicebox':'Juicebox: Juicebox Sourced'};
+  var PICK={'LinkedIn':'Job Portal: Linkedin Inbound','Juicebox':'Juicebox: Juicebox Sourced','Recruiter Networking':'Recruiter Networking: Recruiter Networking',
+            'Career Site':'Career Site: Career Site','Referral':'Referral: Referral','Pre-identified':'Pre-identified: Pre-identified'};
+  var out=[['audit-id','Candidate (tracker)','Tracker status','Job (tracker)','Tracker source','Tracker channel(s)','Ashby source','Ashby channel','Source verdict','Suggested Ashby source','Tracker sourcer','Ashby recruiter','Ashby sourcer','Sourcer verdict','Application id','Ashby job']];
+  var n=0, cnt={};
+  for(var r=1;r<vals.length;r++){
+    var row=vals[r], nm=String(row[C.nm]||'').trim(); if(!nm) continue;
+    var st=String(row[C.st]||'').trim(); if(st==='Open') continue;
+    if(String(row[C.oq]).trim()!=='Q3 2026' && String(row[C.jq]).trim()!=='Q3 2026') continue;
+    n++;
+    var cat=String(row[C.cat]||'').trim(), por=String(row[C.por]||'').trim(), er=String(row[C.er]||'').trim(), ven=String(row[C.ven]||'').trim();
+    var tSrc=[cat, por||er||ven].filter(function(x){ return x; }).join(' / ');
+    var tSet=[]; [fam(por), fam(er), (ven?'Agency':''), fam(cat)].forEach(function(f){ if(f && tSet.indexOf(f)<0) tSet.push(f); });
+    if(!tSet.length && /job portal/i.test(cat) && !por) tSet.push('LinkedIn');
+    var tSr=String(row[C.srcr]||'').trim();
+    var cands=byEmail[low(row[C.em]).trim()]||[];
+    var aSrc='', aRec='', aSr='', aJob='', app='', verdict='', sv='';
+    if(!cands.length){ verdict='NO ASHBY OFFER BY EMAIL'; }
+    else {
+      cands.sort(function(a,b){ var ra=(inQ3(a.startDate)?2:0)+(inQ3(a.offerCreatedAt)?1:0), rb=(inQ3(b.startDate)?2:0)+(inQ3(b.offerCreatedAt)?1:0);
+        if(ra!==rb) return rb-ra; return String(b.offerCreatedAt||b.decidedAt||'').localeCompare(String(a.offerCreatedAt||a.decidedAt||'')); });
+      app=cands[0].applicationId;
+      var resp=ashbyWrite_('/application.info',{applicationId:app});
+      var a=(resp&&resp.json&&resp.json.success!==false&&resp.json.results)||null;
+      if(!a){ verdict='ASHBY READ FAILED'; }
+      else {
+        var s=a.source||null, stt=(s&&s.sourceType&&typeof s.sourceType.title==='string')?s.sourceType.title:'';
+        aSrc=s?((stt?stt+': ':'')+(s.title||'')):'';
+        aJob=(a.job&&a.job.title)||'';
+        var recs=[], srs=[]; (a.hiringTeam||[]).forEach(function(m){ if(m.role==='Recruiter') recs.push(memberName_(m)); if(m.role==='Sourcer') srs.push(memberName_(m)); });
+        aRec=recs.join(' | '); aSr=srs.join(' | ');
+        var aFam=fam(aSrc);
+        if(!tSrc) verdict=aSrc?'TRACKER BLANK (Ashby has one)':'BOTH BLANK';
+        else if(!aSrc) verdict='ASHBY BLANK';
+        else if(!tSet.length) verdict='CHECK BY HAND';
+        else if(SWITCH[aSrc] && tSet.indexOf(aFam)>=0) verdict='SWITCH (Jerin)';
+        else if(tSet.indexOf(aFam)>=0) verdict='MATCH';
+        else verdict='MISMATCH';
+      }
+      if(tSr){ var tw=low(tSr).split(/\s+/).filter(function(w){ return w.length>2; });
+        sv=!aSr?'ASHBY BLANK':(tw.some(function(w){ return low(aSr).indexOf(w)>=0; })?'MATCH':'MISMATCH'); }
+      else if(aSr) sv='TRACKER BLANK (Ashby has one)';
+    }
+    cnt[verdict]=(cnt[verdict]||0)+1; if(sv) cnt['sourcer: '+sv]=(cnt['sourcer: '+sv]||0)+1;
+    var sugg=verdict==='SWITCH (Jerin)'?SWITCH[aSrc]:((verdict==='ASHBY BLANK'||verdict==='MISMATCH')?(PICK[tSet[0]]||'(by hand)'):'');
+    out.push([String(row[C.id]||''),nm,st,String(row[C.job]||''),tSrc,tSet.join(' + '),aSrc,fam(aSrc),verdict,sugg,tSr,aRec,aSr,sv,app,aJob]);
+  }
+  var ss=SpreadsheetApp.openById(AUDIT), sh=ss.getSheetByName(TAB); if(!sh) sh=ss.insertSheet(TAB);
+  sh.clear(); sh.getRange(1,1,out.length,out[0].length).setValues(out); sh.setFrozenRows(1); sh.getRange(1,1,1,out[0].length).setFontWeight('bold');
+  Logger.log('T105i v2 selected='+n+' | '+JSON.stringify(cnt));
+}
+
+// ===== #105i source switches (Jerin, 13 Sep 2026) — WRITES to Ashby only in mode 'run' =====
+// Only rows the check marked 'SWITCH (Jerin)': Third-party boards: LinkedIn => Job Portal: Linkedin Inbound and
+// Prospecting: Juicebox => Juicebox: Juicebox Sourced. Re-reads each application first and skips it if its source has
+// changed since the check; reads it back after application.changeSource. Run task105i_srcCheck() first.
+function task105i_applySources(mode){
+  mode=mode||'dry';
+  var AUDIT='1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA', TAB='V9 - 105i Source check';
+  var SWITCH={'Third-party boards: LinkedIn':'Job Portal: Linkedin Inbound','Prospecting: Juicebox':'Juicebox: Juicebox Sourced'};
+  var vals=SpreadsheetApp.openById(AUDIT).getSheetByName(TAB).getDataRange().getValues(), hdr=vals[0];
+  var C={id:hdr.indexOf('audit-id'),as:hdr.indexOf('Ashby source'),v:hdr.indexOf('Source verdict'),app:hdr.indexOf('Application id')};
+  if(C.id<0||C.as<0||C.v<0||C.app<0) throw new Error('T105iW check tab columns not found');
+  var idByKey={};
+  ashbyListAll_('/source.list',{}).forEach(function(s){ var st=(s.sourceType&&s.sourceType.title)||''; if(!s.isArchived) idByKey[(st?st+': ':'')+s.title]=s.id; });
+  function srcOf(appId){ var j=(ashbyWrite_('/application.info',{applicationId:appId}).json)||{}; var s=(j.results||{}).source||{}; return ((s.sourceType&&s.sourceType.title)?s.sourceType.title+': ':'')+(s.title||''); }
+  var done=0, skip=0, fail=0;
+  for(var r=1;r<vals.length;r++){
+    var row=vals[r]; if(String(row[C.v])!=='SWITCH (Jerin)') continue;
+    var from=String(row[C.as]), to=SWITCH[from], app=String(row[C.app]), aid=String(row[C.id]);
+    if(!to||!app){ skip++; Logger.log('T105iW SKIP no target | '+aid); continue; }
+    var sid=idByKey[to]; if(!sid){ fail++; Logger.log('T105iW NO SOURCE ID | '+to); continue; }
+    var cur=srcOf(app);
+    if(cur!==from){ skip++; Logger.log('T105iW SKIP changed since check | '+aid+' | now '+cur); continue; }
+    if(mode!=='run'){ done++; Logger.log('T105iW DRY | '+aid+' | '+from+' => '+to); continue; }
+    var w=ashbyWrite_('/application.changeSource',{applicationId:app, sourceId:sid});
+    if(!w.ok){ fail++; Logger.log('T105iW FAIL | '+aid+' | '+String(w.text).slice(0,120)); continue; }
+    var now=srcOf(app);
+    if(now===to){ done++; } else { fail++; Logger.log('T105iW READBACK DIFFERS | '+aid+' | '+now); }
+  }
+  Logger.log('T105iW mode='+mode+' done='+done+' skip='+skip+' fail='+fail+' | inbound id '+(idByKey['Job Portal: Linkedin Inbound']?'found':'MISSING')+' | sourced id '+(idByKey['Juicebox: Juicebox Sourced']?'found':'MISSING'));
 }
