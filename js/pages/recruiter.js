@@ -354,8 +354,6 @@ export function renderRecruiter(data) {
       <div class="fchip"><div class="ms" id="msPod"></div></div>
       <div class="fchip"><div class="ms" id="msRec"></div></div>
       <div class="fchip"><div class="ms" id="msJob"></div></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="recInclInactive"> Not here this quarter</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
       <div class="fchip"><span class="lbl">Momentum from</span><input type="date" id="recVelFrom"></div>
@@ -920,7 +918,7 @@ export function initRecruiterFilters(baseData) {
   }
 
   // Recruiters the user has EXPLICITLY filtered out with the Pod / Recruiter / Job multi-selects — as
-  // opposed to the ones this tab hides by DEFAULT (past recruiters, no pod set, zero applications).
+  // opposed to the ones this tab ALWAYS hides (recruiters not here this quarter, no pod set).
   // The JP Cases table needs the difference: a default exclusion still has to be accounted for somewhere,
   // an explicit one must not be quietly re-added under an "unassigned" label.
   function explicitlyFiltered(name, q) {
@@ -934,13 +932,8 @@ export function initRecruiterFilters(baseData) {
 
   function getFilteredRecs() {
     const q = selQuarter();
-    const hideZero = document.getElementById('recHideZero')?.checked;
     const pods = msPod ? msPod.getSelected() : [];
     const names = msRec ? msRec.getSelected() : [];
-    // Departed recruiters are hidden by default — their historical numbers are still in the
-    // data (and still score), they just clutter the working view. The Data Hygiene roster
-    // deliberately ignores this and always lists everyone; that tab exists to show the split.
-    const inclInactive = document.getElementById('recInclInactive')?.checked;
     return allRecs.filter(r => {
       // #18 (2026-08-23): "Unassigned" is not a recruiter — it is every candidate nobody is tagged on. It was
       // appearing as a row and a bar in every table and chart, where it reads like a person with a workload.
@@ -955,14 +948,14 @@ export function initRecruiterFilters(baseData) {
       // recruiter and then drop it on the floor, so the pod totals would stop reconciling with the opening
       // totals. groupByPod puts them under "Others" until a pod is set for them in Metric Configuration.
       if (!r.sourcerOnly && podOf(r.name, q) === 'Unassigned') return false;
-      // ⚠ #11: the next two filters key off application-derived fields a sourcer-only person cannot have —
-      // `total` counts applications they were tagged as RECRUITER on (0 by definition), and the inactive test
-      // reads an Ashby recruiter seat they do not hold. Both would silently delete the very rows the credit
-      // split just created, so exempt them.
-      if (!r.sourcerOnly && hideZero && (r.total || 0) === 0) return false;
-      // #14 (2026-08-23): default is now OFF. Past recruiters keep their history in the data and still score;
-      // they just don't clutter the working view unless asked for.
-      if (!r.sourcerOnly && !inclInactive && !presentIn(r, q)) return false;   // #111: by dates, else today's Ashby account
+      // #121 (Jerin, 14 Sep 2026): the "Hide zero-app" and "Not here this quarter" tick-boxes are gone. A recruiter
+      // who was not here in the selected quarter is ALWAYS left out (#111: by Started on / Left on dates, else today's
+      // Ashby account); anyone in closing still tagged to them lands in the JP Cases "No recruiter in this view" group.
+      // Zero-application recruiters are no longer hidden, so someone who owns openings before their first candidate
+      // keeps their Goal on the tab.
+      // ⚠ #11: a sourcer-only person holds no Ashby recruiter seat, so the account test would delete the very rows
+      // the credit split just created — exempt them.
+      if (!r.sourcerOnly && !presentIn(r, q)) return false;
       if (names.length && !names.includes(r.name)) return false;
       if (pods.length && !pods.includes(effectivePod(r, q))) return false;   // #11: match how the row is grouped
       if (!recWorkedSelectedJob(r.name)) return false;
@@ -1482,8 +1475,8 @@ export function initRecruiterFilters(baseData) {
       // read as though the no-pod exclusion had been reversed (Jerin, 2026-08-24).
       // #26 (2026-08-24): everyone in closing has to land somewhere, or this table quietly disagrees with the
       // JP figures in the tables above it. Two populations were falling off the bottom: cases with NO
-      // recruiter tagged, and cases sitting with a PAST recruiter (hidden since "Include past recruiters"
-      // defaults off). Both now sit in their own group so the list reconciles to the full case count.
+      // recruiter tagged, and cases sitting with a recruiter who was not here this quarter (always hidden since
+      // #121). Both now sit in their own group so the list reconciles to the full case count.
       // ⚠ Cases hidden by an explicit Pod / Recruiter / Job selection are NOT swept in here — the user asked
       // for those to be filtered out, and re-adding them under an "unassigned" label would be a lie.
       const orphanBy = {};
@@ -1499,7 +1492,6 @@ export function initRecruiterFilters(baseData) {
         if (!presentIn(r, q2)) return 'not here this quarter';   // #111
         if (isStatusUnknown(r)) return 'status unknown';
         if (podOf(rec, q2) === 'Unassigned') return 'no pod set';
-        if (!(r.total || 0)) return 'no applications';
         return 'not shown above';
       };
 
@@ -2821,8 +2813,6 @@ export function initRecruiterFilters(baseData) {
   const jobNames = [...new Set((baseData.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, onJobChange);
   document.addEventListener('click', closeMsPanels);
-  document.getElementById('recHideZero')?.addEventListener('change', renderAll);
-  document.getElementById('recInclInactive')?.addEventListener('change', renderAll);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
   // Date filter — drives Momentum's 30-day window
