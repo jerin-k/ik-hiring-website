@@ -1,4 +1,4 @@
-import { getData } from '../data.js';
+import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
@@ -391,6 +391,11 @@ export function initHmFilters(data) {
     if (to && start > to) return false;
     return true;
   }
+  // #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter". Throughput and Panelists list
+  // only jobs with an opening OPENED inside From–To — Pipeline has done the same since #8. No dates ⇒ null ⇒ every job.
+  function openJobIds() {
+    return (gFrom() || gTo()) ? jobsWithOpeningIn(data, qq => quarterInRange(qq, gFrom(), gTo())) : null;
+  }
 
   // ===== Section 1: Positions (Department -> Job tree) =====
   function getSelectedStatuses() {
@@ -676,12 +681,14 @@ export function initHmFilters(data) {
     const visStages = TP_KEYS.filter(k => !stSel.length || stSel.includes(TP_LABELS[k]));
 
     const quarters = quartersInWindow(gFrom(), gTo());
+    const openIds = openJobIds();   // #125
 
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(j.title)) return false;
       if (!j.pipeline) return false;
       if (!statusOk(j.title)) return false;   // #120
+      if (openIds && !openIds.has(String(j.id).slice(0, 8))) return false;   // #125: an opening opened in From–To
       return true;
     }).sort(byDept);
 
@@ -777,6 +784,7 @@ export function initHmFilters(data) {
           depts: () => { const d = gDept(); return d ? [d] : []; },
           jobs: () => statusJobs(selJobs()),
           panelists: () => (msHmPanel ? msHmPanel.getSelected() : []),
+          jobIds: () => openJobIds(),   // #125: only jobs with an opening opened in From–To
           range: () => ({ from: gFrom(), to: gTo() }),   // #120: Panelists follow From/To like every other panel here
           expandAll: () => !!document.getElementById('hmExpandAll')?.checked
         }

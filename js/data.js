@@ -215,6 +215,27 @@ export function scopeData(data, { jobIds = null, departments = null } = {}) {
   return out;
 }
 
+// ===== #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter" =====
+// Momentum, Screening Efficiency, Throughput, Time in Process and Panelists list only jobs with an opening OPENED in the period; a
+// previous-quarter opening still counts in Joining Pending and Joining Conversion. quarterOk('YYYY-QN') says whether a quarter is inside
+// the period. An opening with no opened date is not in openingBuckets, so it never qualifies (Data Hygiene lists it).
+export function jobsWithOpeningIn(data, quarterOk) {
+  const out = new Set();
+  const ob = (data && data.openingBuckets) || {};
+  for (const j8 in ob) {
+    const qs = ob[j8].quarters || {};
+    for (const q in qs) if ((qs[q].total || 0) > 0 && quarterOk(q)) { out.add(String(j8).slice(0, 8)); break; }
+  }
+  return out;
+}
+// The same set as a data scope. No quarterOk (no period) ⇒ the data unchanged. A period with no openings ⇒ no jobs at all — never
+// "every job", which is what an empty set means to scopeData (the #120 lesson).
+export function scopeToOpenings(data, quarterOk) {
+  if (!data || !quarterOk) return data;
+  const ids = jobsWithOpeningIn(data, quarterOk);
+  return scopeData(data, { jobIds: ids.size ? ids : ['#noopen#'] });
+}
+
 export function getLastUpdated() {
   return dashboardData?.lastUpdated || null;
 }

@@ -81,13 +81,14 @@ export const DEFINITIONS = {
   'hm-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'Of the people <strong>assessed</strong> at a stage, how many <strong>progressed</strong> to a later one. Built from real events in Ashby — interviews held, assignments triggered, feedback submitted — not from a snapshot of where people sit today.',
-    confirmed: 'Definition rebuilt with Jerin · 30 Aug 2026 · one section, departments open into violet job rows (#122) 15 Sep 2026',
+    confirmed: 'Definition rebuilt with Jerin · 30 Aug 2026 · one section, departments open into violet job rows (#122) 15 Sep 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading the squares',
         items: [
           ['One column per stage', 'Each cell reads <strong>assessed → progressed</strong>, with the throughput percentage below it. <strong>Assessed</strong> means seen at that stage during the period — an interview actually held there, an assignment triggered there, or a feedback form (a select or reject) where no interview exists. <strong>Progressed</strong> means they then reached a <em>later</em> stage. <strong>Ref Check, Documentation and Offer are counted differently</strong>: nobody is assessed at an administrative stage, so those three count the candidates <strong>added</strong> to the stage \u2014 the day they entered it. For Offer, progressed means they went on to be <strong>hired</strong>.'],
           ['Rows', 'Each department is a row. Click it, or its arrow, to open the <strong>jobs</strong> inside it, listed underneath. <em>Expand all</em> opens every department, and a department opens by itself when it is the only one showing. With more than one department, <strong>Total</strong> is the last row.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened between the From and To dates</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 the same rule the Pipeline tab uses. With no dates set, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['What the colour means', 'The shade is <strong>how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 on five steps from the palest (0\u20139) to the darkest (100 or more). <strong>Department</strong> and <strong>Total</strong> squares are blue; <strong>job</strong> squares use the same five steps in <strong>violet</strong>, so a job reads as a job at a glance. The number in the square is still the rate: colour ranks what to fix, the number tells you the rate.'],
           ['R1/OA \u2192 late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. It is counted per person, never one stage column divided by another — see the warning below.'],
           ['A dot', 'A dot means <strong>nobody was assessed</strong> at that stage in the period — several stages here carry very little traffic, and plenty of roles skip a round entirely. It is not a zero rate, and it is not missing data.'],
@@ -194,7 +195,7 @@ export const DEFINITIONS = {
   'rec-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'What counts as being added',
@@ -210,6 +211,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Rows and columns', 'Pod \u2192 Recruiter \u2192 Job \u2192 the day columns. Open a recruiter to see the roles behind their numbers. The last 30 days of the selected range run across the top, most recent first.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. The jobs follow the Year/Quarter selector; <em>Momentum from</em> and <em>Momentum to</em> only move the 30-day window. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Total', 'Every day column beside it added up \u2014 the row\u2019s arrivals for the window shown (30 days, or fewer when the date range is shorter), not for the whole quarter.'],
           ['Momentum from / Momentum to', 'Momentum is the one panel driven by these two dates rather than the Year/Quarter selector, and they change nothing else on the tab. It always shows the last 30 days of that range.'],
           ['The heatmap', 'One row per <strong>recruiter</strong>, one square per <strong>day</strong>; darker means more people added, and the count is in the square. <strong>Hover a square</strong> to list the roles behind it. Empty weekend squares are shaded grey. The column beside the names is the total for the window, the bottom row each day\u2019s total.'],
@@ -225,7 +227,7 @@ export const DEFINITIONS = {
   'rec-screening': {
     summary: 'How these numbers are worked out',
     intro: 'What happens to candidates once they reach <strong>R1</strong> \u2014 how many were put into an R1 round, and how many went further. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'The columns',
@@ -234,6 +236,7 @@ export const DEFINITIONS = {
           ['Progressed', 'Of those, the ones who reached <strong>R2 or beyond</strong> \u2014 any later round, Reference Check, Documentation or Offer \u2014 on or after that day.'],
           ['%', 'Progressed \u00f7 Added at R1.'],
           ['Rows', 'Pod \u2192 Recruiter \u2192 Role. Only roles that actually saw R1 activity in the period are listed \u2014 a recruiter\u2019s older roles are not shown as a row of zeros.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Counted once', 'One count per candidate per role per quarter, however many times they were booked or re-booked. Cancelled interviews and cancelled assignments do not count at all.'],
           ['Chart', 'A <strong>dumbbell</strong>: hollow dot = <strong>added at R1</strong>, solid dot = <strong>progressed past it</strong>, and the line between them is the drop-off. <strong>The axis runs down left to right on purpose</strong>, so it reads added \u2192 progressed. The rate sits in its own column on the right, headed <em>% progressed</em>. Hover a row to list its roles.'],
         ]
@@ -294,7 +297,7 @@ export const DEFINITIONS = {
   'rec-tis': {
     summary: 'How these numbers are worked out',
     intro: 'How long each step actually takes. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · job rows show the recruiter’s own candidates, and the Job filter narrows every row, 14 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · job rows show the recruiter’s own candidates, and the Job filter narrows every row, 14 Sep 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -304,6 +307,7 @@ export const DEFINITIONS = {
           ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
           ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
           ['Rows', 'Pod → Recruiter → Job. A job row shows only <strong>that recruiter’s own candidates</strong> on the role, so the job rows add up to the recruiter row above them. The <strong>Job</strong> filter narrows every number to the chosen jobs.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
           ['TA Screen → Offer', 'Measured from real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
           ['App Review <span class="defs-tag">live</span>', 'Entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure, and it cannot be split by quarter. Marked with an orange asterisk.'],
@@ -318,8 +322,8 @@ export const DEFINITIONS = {
 
   'rec-hygiene': {
     summary: 'What each of these lists is',
-    intro: 'The compliance view: candidates, recruiters and roles the pipeline could not attribute cleanly. Pick a list on the left &mdash; its dot and count say whether it <strong>needs a fix</strong>, is <strong>for the record</strong> or has <strong>nothing to fix</strong>. Each is fixed <strong>in Ashby</strong> or in <strong>Admin → Metric Configuration</strong>, and its rows clear at the next refresh; every list downloads as CSV. The Pod, Recruiter and Job filters never apply here — that is deliberate. Someone whose access is limited to certain departments sees only those departments’ rows, and <em>Other Anomalies</em> leaves out unrecognised stage names for them, since a stage name carries no job. <strong>Unassigned, Multiple Recruiters, Multiple Sourcers and both opening-link lists start on 1 July 2026 and do not move with the Year/Quarter selector</strong>, so a Q3 miss stays visible after Q3 ends. The selector does apply to Selected Candidates Missing Source, Pod Not Set, Capacity Not Set, Roles Missing Score Inputs, and Recruiter Dates (the whole selected year).',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Selected Candidates Missing Source 13 Sep 2026 · lists, 1 July 2026 start and side-list layout 14 Sep 2026',
+    intro: 'The compliance view: candidates, recruiters and roles the pipeline could not attribute cleanly. Pick a list on the left &mdash; its dot and count say whether it <strong>needs a fix</strong>, is <strong>for the record</strong> or has <strong>nothing to fix</strong>. Each is fixed <strong>in Ashby</strong> or in <strong>Admin → Metric Configuration</strong>, and its rows clear at the next refresh; every list downloads as CSV. The Pod, Recruiter and Job filters never apply here — that is deliberate. Someone whose access is limited to certain departments sees only those departments’ rows, and <em>Other Anomalies</em> leaves out unrecognised stage names for them, since a stage name carries no job. <strong>Unassigned, Multiple Recruiters, Multiple Sourcers and both opening-link lists start on 1 July 2026 and do not move with the Year/Quarter selector</strong>, so a Q3 miss stays visible after Q3 ends. The selector does apply to Selected Candidates Missing Source, Pod Not Set, Capacity Not Set, Roles Missing Score Inputs, Jobs Recruiting Without an Opening, and Recruiter Dates (the whole selected year).',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Selected Candidates Missing Source 13 Sep 2026 · lists, 1 July 2026 start and side-list layout 14 Sep 2026 \u00b7 Jobs Recruiting Without an Opening (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'The lists',
@@ -334,6 +338,7 @@ export const DEFINITIONS = {
           ['Offers Missing Opening Link', 'Offers still in play with no opening attached, where the <strong>Offer made</strong> date or the <strong>DOJ</strong> is on or after 1 July 2026. Without the link the offer cannot be tied to a position, which is why Delta on the HM tab can go negative. Attach the opening in Ashby (View Offer → Update Offer → Opening) and the row clears at the next refresh. Columns: <strong>Candidate</strong>, <strong>Job</strong>, <strong>Department</strong>, the offer <strong>Stage</strong>, <strong>Offer made</strong>, <strong>DOJ</strong> and <strong>Recruiter</strong>.'],
           ['Hired Missing Opening Link', 'The same gap, with the same dates, on offers where the person has already been hired or the application is closed — for the record rather than an alert. Hiring Manager Joined does not depend on this link — it counts filled openings — but Recruiter Efficiency does: Joined on Non-Sales and Joining Conversion leave out people on an earlier quarter’s opening, and Sales and Others split Joined by the opening’s quarter. An unlinked joiner can never be judged either way. Same columns as Offers Missing Opening Link, plus the application <strong>Status</strong>.'],
           ['Openings Missing Opened Date', 'Openings with no <strong>opened date</strong> in Ashby. They are <strong>left out of Total Openings entirely</strong> — on Hiring Manager Positions and on Overall Efficiency — so they are invisible rather than merely undated. One row per opening: <strong>Job</strong>, <strong>Department</strong>, <strong>Job status</strong> and the <strong>Opening ID</strong>. Set the date on the opening in Ashby.'],
+          ['Jobs Recruiting Without an Opening', '<strong>Open</strong> jobs with work in the selected quarter \u2014 new candidates, R1 screening, stage assessments, finished stage stays or interviews \u2014 but <strong>no opening opened in that quarter</strong>. The team does not work jobs whose opening is from an earlier quarter, so Momentum, Screening Efficiency, Throughput, Time in Process and Panelists leave these jobs out, and this is the only place their work shows. Create the quarter\u2019s opening in Ashby, or set the opened date on an undated one. Columns: <strong>Job</strong>, <strong>Department</strong>, <strong>New candidates</strong> (added to the top of the funnel, as on Momentum), <strong>R1 screened</strong>, <strong>Assessed</strong> (stage assessments, as on Throughput), <strong>Finished stays</strong> (candidates who left a stage, as on Time in Process), <strong>Interviews</strong> and <strong>Openings in Ashby</strong> \u2014 none, earlier quarters only, or an opening with no opened date.'],
           ['Roles Missing Score Inputs', 'Roles that score zero for the selected quarter — usually Tech/NonTech roles missing a Level. SME roles score on Complexity alone and PA by title, so a blank Level does not flag them; a blank Complexity counts as Normal. They add headcount but no Score anywhere on the dashboard. Set the Level on the job in Ashby.'],
           ['Other Anomalies', 'One-off attribution problems, including any Ashby stage name the pipeline does not recognise — the guard that catches a stage being renamed and silently dropped. Each row names the <strong>Anomaly</strong>, the <strong>Detail</strong> behind it and <strong>What to do</strong>.'],
         ]
@@ -382,7 +387,7 @@ export const DEFINITIONS = {
   'eff-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org \u2014 one row per person, not one per stage.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'What counts as being added',
@@ -397,6 +402,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Rows and columns', 'Department \u2192 Role down the side, the last 30 days of the selected date range across the top.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. The jobs follow the Year/Quarter selector; <em>Momentum from</em> and <em>Momentum to</em> only move the 30-day window. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Momentum from / Momentum to', 'Momentum is the one panel driven by these two dates rather than the Year/Quarter selector, and they change nothing else on the tab. It always shows the last 30 days of that range.'],
           ['Total', 'Every day column beside it added up \u2014 30 days, or fewer when the date range is shorter.'],
           ['The heatmap', 'One row per <strong>department</strong>, one square per <strong>day</strong>; darker means more people added, and the count is in the square. <strong>Hover a square</strong> to list the roles behind it. Empty weekend squares are shaded grey. The column beside the names is the total for the window, the bottom row each day\u2019s total.'],
@@ -412,7 +418,7 @@ export const DEFINITIONS = {
   'eff-screening': {
     summary: 'How these numbers are worked out',
     intro: 'What happens to candidates once they reach <strong>R1</strong>, by department \u2014 how many were put into an R1 round, and how many went further.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'The columns',
@@ -421,6 +427,7 @@ export const DEFINITIONS = {
           ['Progressed', 'Of those, the ones who reached <strong>R2 or beyond</strong> \u2014 any later round, Reference Check, Documentation or Offer \u2014 on or after that day.'],
           ['%', 'Progressed \u00f7 Added at R1.'],
           ['Rows', 'Department \u2192 Role. Only roles that saw R1 activity in the period are listed.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Counted once', 'One count per candidate per role per quarter. Cancelled interviews and cancelled assignments do not count at all.'],
           ['Chart', 'A <strong>dumbbell</strong>: hollow dot = <strong>added at R1</strong>, solid dot = <strong>progressed past it</strong>, and the line between them is the drop-off. <strong>The axis runs down left to right on purpose</strong>, so it reads added \u2192 progressed. The rate sits in its own column on the right, headed <em>% progressed</em>. Hover a row to list its roles.'],
         ]
@@ -433,7 +440,7 @@ export const DEFINITIONS = {
   'eff-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'The full funnel, stage by stage, <strong>Department → Job</strong>. Of the people <strong>assessed</strong> at each stage, how many <strong>progressed</strong> to a later one.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · one section, departments open into violet job rows (#122) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · one section, departments open into violet job rows (#122) 15 Sep 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading the squares',
@@ -443,6 +450,7 @@ export const DEFINITIONS = {
           ['%', 'Progressed ÷ Assessed — of the people actually assessed here, the share who moved forward. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
           ['R1/OA \u2192 late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. Counted per person, never one stage column divided by another.'],
           ['Rows', 'Each department is a row. Click it, or its arrow, to open the <strong>jobs</strong> inside it, listed underneath. <em>Expand all</em> opens every department, and a department opens by itself when it is the only one showing. With more than one department, <strong>Total</strong> is the last row.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['What the colour means', 'The shade is <strong>how many people that square lost</strong> \u2014 assessed there, then never reached a later stage \u2014 on five steps from the palest (0\u20139) to the darkest (100 or more). <strong>Department</strong> and <strong>Total</strong> squares are blue; <strong>job</strong> squares use the same five steps in <strong>violet</strong>, so a job reads as a job at a glance. The number in the square is still the rate: colour ranks what to fix, the number tells you the rate.'],
           ['A dot', 'Nobody was assessed at that stage in the period. It is not a zero rate.'],
           ['Hover', 'Hover a square for its counts, its rate and how many people it lost.'],
@@ -462,7 +470,7 @@ export const DEFINITIONS = {
   'eff-tis': {
     summary: 'How these numbers are worked out',
     intro: 'How long each step actually takes, <strong>Department → Job</strong>. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -472,6 +480,7 @@ export const DEFINITIONS = {
           ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
           ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
           ['Rows', 'Department → Job. Click a department to drill into its roles.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. With Year and Quarter both on <em>All</em>, every job counts. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
           ['TA Screen → Offer', 'From real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
           ['App Review <span class="defs-tag">live</span>', 'Entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure, and it cannot be split by quarter. Marked with an orange asterisk.'],
@@ -533,7 +542,7 @@ export const DEFINITIONS = {
   'interviewer': {
     summary: 'How these numbers are worked out',
     intro: 'Interview load and feedback turnaround per panelist, built from the interviews actually scheduled in Ashby.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 31 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 31 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
     groups: [
       {
         heading: 'The cards',
@@ -551,6 +560,7 @@ export const DEFINITIONS = {
           ['Feedback Coverage', 'How often this panelist writes up an interview: the share of their interviews that have feedback attached, with <strong>feedback received / interviews</strong> in brackets so the rate is never a bare percentage. Taken from Ashby\u2019s own flag on each interview.'],
           ['Avg Turnaround', 'Time from an interview ending to the feedback being submitted, shown in hours under a day and in days above it. All-time; highlighted above 72 hours. A panelist’s figure is the average of their per-role averages, and a department’s is the average of its panelists’ figures.'],
           ['Rows', 'Department \u2192 Panelist \u2192 the roles they interviewed for.'],
+          ['Which jobs are counted', 'Only interviews on jobs with an <strong>opening opened in the selected period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter. On Hiring Manager the period is From\u2013To, on Overall Efficiency Year/Quarter; with no period, every job counts. The <em>Total Interviews</em> card counts the same jobs. Feedback Coverage and Avg Turnaround stay per person, as described below.'],
           ['The period', 'Follows the tab it sits on. On <strong>Hiring Manager</strong> it follows the From and To dates (which Year and Quarter fill in); on <strong>Overall Efficiency</strong> it follows Year and Quarter. Interview counts are kept by month, so a date range counts whole months.'],
           ['Chart', 'One bar per panelist for the 15 busiest in view, stacked by month — or by quarter until the data carries months.'],
         ]
@@ -686,6 +696,8 @@ export const HYGIENE_LISTS = [
     why: 'Recruiter Joined cannot tell whether these people filled this quarter’s opening or an earlier one.', fix: ['Ashby', 'View Offer', 'Update Offer', 'Opening'] },
   { id: 'nodate', group: 'Offers & openings', name: 'Openings Missing Opened Date', sub: 'Invisible in Total Openings', scope: 'all', unit: 'openings',
     why: 'An opening with no opened date is left out of Total Openings on Hiring Manager and Overall Efficiency entirely.', fix: ['Ashby', 'Job', 'Openings', 'Opened at'] },
+  { id: 'noopening', group: 'Offers & openings', name: 'Jobs Recruiting Without an Opening', sub: 'Open jobs worked with no opening this quarter', scope: 'quarter', unit: 'jobs',
+    why: 'Momentum, Screening Efficiency, Throughput, Time in Process and Panelists list only jobs with an opening opened in the quarter, so this work is hidden there until the job gets one.', fix: ['Ashby', 'Job', 'Openings', 'Create or date the opening'] },
   { id: 'unscored', group: 'Offers & openings', name: 'Roles Missing Score Inputs', sub: 'Adds headcount but no Score', scope: 'quarter', unit: 'roles',
     why: 'A role that scores zero adds headcount but nothing to its department’s Score — usually a Tech or Non-Tech role with no Level.', fix: ['Ashby', 'Job', 'Level'] },
   { id: 'anomalies', group: 'System', name: 'Other Anomalies', sub: 'Unknown stage names, mis-credited interviewers', scope: 'live', unit: 'issues',

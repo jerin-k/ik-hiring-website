@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuart
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
-import { scopeData } from '../data.js';   // #120a: the Job filter narrows every number
+import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
@@ -569,6 +569,13 @@ export function renderRecruiter(data) {
             </table></div>
           </div>
 
+          <div class="hyg-panel" data-h="noopening" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:260px">Job</th><th style="min-width:150px">Department</th><th>New candidates</th><th>R1 screened</th><th>Assessed</th><th>Finished stays</th><th>Interviews</th><th style="min-width:220px">Openings in Ashby</th></tr></thead>
+              <tbody id="hygNoOpeningBody"></tbody>
+            </table></div>
+          </div>
+
           <div class="hyg-panel" data-h="unscored" style="display:none">
             <div class="scroll-table"><table>
               <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
@@ -698,6 +705,11 @@ export function initRecruiterFilters(baseData) {
   }
   // True while the Job filter or a department restriction narrows the numbers. The Pod and Recruiter filters narrow none.
   const narrowed = () => !!data._scope;
+  // #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter". Momentum, Screening Efficiency
+  // and Time in Process read the data narrowed to jobs with an opening OPENED in the Year/Quarter period, so every figure — job rows,
+  // recruiter and pod rows, charts — covers the same jobs. Fulfilment, Joining Conversion, Sourcing Mix and Data Hygiene read `data`:
+  // a previous-quarter opening still counts there. Year and Quarter both on All ⇒ every job.
+  const actData = () => { const per = selQuarters(); return per ? scopeToOpenings(data, qq => per.includes(qq)) : data; };
   const NARROW_CAP_NOTE = 'Capacity is set per person for the whole quarter, not per job or department, so it is blank while a filter narrows the numbers.';
   // {job8: {stage: {quarter: hist}}} → {job8: {stage: hist}}: the all-time view of one recruiter's per-job stays.
   const _allTime = new WeakMap();
@@ -999,8 +1011,9 @@ export function initRecruiterFilters(baseData) {
     // ⚠ It will NOT match the old per-stage 'Added', which counted stage ENTRIES and re-counted anyone who
     // came back round, and it is not Momentum's R1 either — Momentum only credits R1 when it was the
     // candidate's FIRST signal, so its R1 is a subset of this one.
-    const r1Store = (data.stageRollups && data.stageRollups.r1ByRecruiter) || null;
-    const r1JobStore = (data.stageRollups && data.stageRollups.r1ByRecruiterJob) || null;
+    const r1Sr = actData().stageRollups || null;   // #125: only jobs with an opening opened in the period
+    const r1Store = (r1Sr && r1Sr.r1ByRecruiter) || null;
+    const r1JobStore = (r1Sr && r1Sr.r1ByRecruiterJob) || null;
     const r1Sum = (byQ) => {
       const acc = { added: 0, cleared: 0 };
       if (!byQ) return acc;
@@ -1886,16 +1899,24 @@ export function initRecruiterFilters(baseData) {
     // has no completed-stay median at all — the cell reads "—" over its waiting pile. That is the honest
     // shape of that column and always was; pooling simply disguised it as a processing time.
     const arPair = (dw) => ({ fin: {}, wait: dw || {}, live: true });
+    // #125: every row reads the data narrowed to jobs with an opening opened in the period, so recruiter and pod rows add up the same
+    // jobs their job rows list.
+    const A = actData(), asr = A.stageRollups || {};
+    const aTisRec = asr.timeInStageByRecruiter || null, aTisRecQ = asr.timeInStageByRecruiterQ || null;
+    const aWaitRec = asr.waitingByRecruiter || null, aWaitRecQ = asr.waitingByRecruiterQ || null;
+    const aTisRecJobQ = asr.timeInStageByRecruiterJobQ || null, aWaitRecJobQ = asr.waitingByRecruiterJobQ || null;
+    const aArRec = A.appReviewDwellByRecruiter || null, aArRecJob = A.appReviewDwellByRecruiterJob || null;
+    const aByJob = {}; (A.recruiters || []).forEach(x => { aByJob[x.name] = x.byJob || []; });
     const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview'
-      ? arPair(arDwellRec && arDwellRec[r.name])
-      : tisPair(tisRec, tisRecQ, waitRec, waitRecQ, r.name, sk, per, tisSplit));
+      ? arPair(aArRec && aArRec[r.name])
+      : tisPair(aTisRec, aTisRecQ, aWaitRec, aWaitRecQ, r.name, sk, per, tisSplit));
     // #120a (Jerin, 14 Sep 2026): a job row under a recruiter shows THAT recruiter's own candidates on the role, so the job rows
     // add up to the recruiter row. They used to show everyone on the role. A file without the recruiter x job split leaves the
     // row empty rather than put the whole role's figure under one person's name.
     const recJobHists = (r, j8) => TIS_STAGES.map(([sk]) => {
-      if (sk === 'appReview') return arPair(arDwellRecJob ? (arDwellRecJob[r.name] || {})[j8] : null);
-      if (!tisRecJobQ) return { fin: {}, wait: tisSplit ? {} : null };
-      const fq = tisRecJobQ[r.name] || {}, wq = (waitRecJobQ || {})[r.name] || {};
+      if (sk === 'appReview') return arPair(aArRecJob ? (aArRecJob[r.name] || {})[j8] : null);
+      if (!aTisRecJobQ) return { fin: {}, wait: tisSplit ? {} : null };
+      const fq = aTisRecJobQ[r.name] || {}, wq = (aWaitRecJobQ || {})[r.name] || {};
       return tisPair(allTimeOf(fq), fq, allTimeOf(wq), wq, j8, sk, per, tisSplit);
     });
     // On an older data file there is no split to show, so fall back to exactly the previous single-number
@@ -1909,11 +1930,15 @@ export function initRecruiterFilters(baseData) {
       G.recs.forEach((r, ri) => {
         const rk = `t${pi}-${ri}`;
         html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${rowCells(recHists(r))}</tr>`;
-        const jobs = (r.byJob || []).slice().sort((a, b) => (b.total || 0) - (a.total || 0));
-        if (jobs.length) jobs.forEach(bj => {
-          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(recJobHists(r, (bj.jobId || '').slice(0, 8)))}</tr>`;
+        // #125: only this recruiter's jobs with an opening opened in the period, and no empty rows (nobody finished or waiting).
+        const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
+        const jobs = (aByJob[r.name] || []).slice().sort((a, b) => (b.total || 0) - (a.total || 0))
+          .map(bj => ({ bj, h: recJobHists(r, (bj.jobId || '').slice(0, 8)) }))
+          .filter(x => x.h.some(p => hasAny(p.fin) || hasAny(p.wait)));
+        if (jobs.length) jobs.forEach(({ bj, h }) => {
+          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(h)}</tr>`;
         });
-        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted);font-style:italic">No jobs attributed</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
+        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
       });
     });
     body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
@@ -2104,6 +2129,37 @@ export function initRecruiterFilters(baseData) {
         <td>${mono(o.openingId || '')}</td></tr>`).join('')
         || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">Every opening has an opened date. ✓</td></tr>`;
     }
+    // #125 (Jerin, 15 Sep 2026): Open jobs worked in the quarter with no opening OPENED in it. Momentum, Screening Efficiency, Throughput,
+    // Time in Process and Panelists list only jobs with an opening opened in the period, so this work is hidden there until the job gets
+    // one. Work = new candidates, R1 screened, stage assessments, finished stage stays or interviews in the quarter.
+    const srH = data.stageRollups || {};
+    const qY = String(q).slice(0, 4), qN = parseInt(String(q).slice(6), 10) || 1;
+    const qFrom = `${qY}-${String((qN - 1) * 3 + 1).padStart(2, '0')}-01`, qTo = `${qY}-${String(qN * 3).padStart(2, '0')}-31`;
+    const withOpening = jobsWithOpeningIn(data, qq => qq === q);
+    const noDate8 = new Set((data.openingsNoDate || []).map(o => String(o.jobId8 || '').slice(0, 8)));
+    const histSum = (h) => Object.values(h || {}).reduce((t, v) => t + (typeof v === 'number' ? v : 0), 0);
+    const noOpening = (data.jobs || []).filter(j => j.status === 'Open' && !withOpening.has(String(j.id).slice(0, 8))).map(j => {
+      const j8 = String(j.id).slice(0, 8);
+      const tofu = Object.entries((srH.tofuByJob || {})[j8] || {}).reduce((t, [dk, v]) => t + (dk >= qFrom && dk <= qTo ? v : 0), 0);
+      const r1 = ((((srH.r1ByJob || {})[j8]) || {})[q] || {}).added || 0;
+      const assessed = Object.values((srH.assessedByJobQ || {})[j8] || {}).reduce((t, st) => t + ((st[q] || {}).a || 0), 0);
+      const stays = Object.values((srH.timeInStageByJobQ || {})[j8] || {}).reduce((t, st) => t + histSum(st[q]), 0);
+      const interviews = ((data.interviewsByJobQ || {})[j8] || {})[q] || 0;
+      const older = Object.keys(((data.openingBuckets || {})[j8] || {}).quarters || {}).filter(qq => qq < q).sort();
+      const openings = noDate8.has(j8) ? 'An opening with no opened date'
+        : older.length ? `Earlier quarters only (${older.join(', ')})` : 'None';
+      return { j, tofu, r1, assessed, stays, interviews, openings };
+    }).filter(x => x.tofu || x.r1 || x.assessed || x.stays || x.interviews)
+      .sort((a, b) => (b.assessed - a.assessed) || (b.tofu - a.tofu));
+    const noOpBody = document.getElementById('hygNoOpeningBody');
+    if (noOpBody) {
+      noOpBody.innerHTML = noOpening.map(x => `<tr>
+        <td style="font-weight:500">${esc(x.j.title || '(untitled)')}</td>
+        <td>${esc(x.j.department || '—')}</td>
+        <td>${x.tofu}</td><td>${x.r1}</td><td>${x.assessed}</td><td>${x.stays}</td><td>${x.interviews}</td>
+        <td class="${x.openings === 'None' ? 'warn' : ''}">${esc(x.openings)}</td></tr>`).join('')
+        || `<tr><td colspan="8" style="text-align:center;color:var(--green);padding:16px">Every Open job worked this quarter has an opening opened in it. ✓</td></tr>`;
+    }
     const usBody = document.getElementById('hygUnscoredBody');
     if (usBody) {
       usBody.innerHTML = unscored.map(({ j, reason }) => `<tr>
@@ -2248,6 +2304,7 @@ export function initRecruiterFilters(baseData) {
       offergap: gapLive.length,
       hiredgap: gapDone.length,
       nodate: noDate.length,
+      noopening: noOpening.length,   // #125
       unscored: unscored.length,
       anomalies: anomList.length,
     };
@@ -2279,6 +2336,8 @@ export function initRecruiterFilters(baseData) {
         ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
       hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'Offer made', 'DOJ', 'Recruiter'],
         ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
+      noopening: () => [['Job', 'Department', 'New candidates', 'R1 screened', 'Assessed', 'Finished stays', 'Interviews', 'Openings in Ashby'],
+        ...noOpening.map(x => [x.j.title || '', x.j.department || '', x.tofu, x.r1, x.assessed, x.stays, x.interviews, x.openings])],
       nodate: () => [['Job', 'Department', 'Job status', 'Opening ID', 'Jobs on this opening'],
         ...noDate.map(o => [o.title || '', o.department || '', o.status || '', o.openingId || '', o.jobs || 1])],
       unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Reason', 'Applications'],
@@ -2340,7 +2399,7 @@ export function initRecruiterFilters(baseData) {
   // counts a person again every time they re-enter one. Two questions, two numbers. Do not reconcile them.
   function dkey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function tofuStores() {
-    const sr = data.stageRollups || {};
+    const sr = actData().stageRollups || {};   // #125
     return { rec: sr.tofuByRecruiter || null, recJob: sr.tofuByRecruiterJob || null };
   }
   // Pod colours, shared by the Momentum chart and the pod hairline in its table.
@@ -2483,7 +2542,8 @@ export function initRecruiterFilters(baseData) {
   function buildScreenChart() {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
     if (recScreenChart) recScreenChart.destroy();
-    const store = (data.stageRollups && data.stageRollups.r1ByRecruiter) || null;
+    const scSr = actData().stageRollups || null;   // #125: the same jobs as the table
+    const store = (scSr && scSr.r1ByRecruiter) || null;
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     const per = selQuarters();
@@ -2495,7 +2555,7 @@ export function initRecruiterFilters(baseData) {
       return acc;
     };
     // Per-JOB detail for the role gradient inside each band (Jerin, 2026-08-29). Same store the table reads.
-    const jobStore = (data.stageRollups && data.stageRollups.r1ByRecruiterJob) || null;
+    const jobStore = (scSr && scSr.r1ByRecruiterJob) || null;
     const jobTitleOfR1 = {}; (data.jobs || []).forEach(j => { jobTitleOfR1[String(j.id).slice(0, 8)] = j.title; });
     const jobsFor = (name) => {
       const mine = jobStore && jobStore[name]; if (!mine) return [];

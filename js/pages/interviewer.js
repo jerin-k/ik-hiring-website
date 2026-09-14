@@ -196,9 +196,15 @@ export function initInterviewer(data, opts = {}) {
     const dSel = F ? (F.depts() || []) : (msIvDept ? msIvDept.getSelected() : []);
     const jSel = F ? (F.jobs() || []) : (msIvJob ? msIvJob.getSelected() : []);
     const nSel = F ? (F.panelists() || []) : (msIvPanel ? msIvPanel.getSelected() : []);
+    // #125: a host that lists only jobs with an opening opened in the period passes F.jobIds — a Set of job ids, or null for every job.
+    // A merged row carries its jobs on jobIds8; a row from a file with no job ids at all stays in.
+    const idSel = F && F.jobIds ? F.jobIds() : null;
+    const inJobs = (p) => { if (!idSel) return true; const ids = p.jobId8 ? [p.jobId8] : (p.jobIds8 || []);
+      return !ids.length || ids.some(j => idSel.has(String(j).slice(0, 8))); };
     return panelists
       .filter(p => !dSel.length || dSel.includes(p.dept))
       .filter(p => !jSel.length || jSel.includes(p.jobTitle))
+      .filter(inJobs)
       .filter(p => !nSel.length || nSel.includes(p.name))
       .map(p => ({ ...p, _count: periodCount(p, quarters, months) }))
       .filter(p => p._count > 0);
@@ -242,7 +248,11 @@ export function initInterviewer(data, opts = {}) {
     const scoped = F
       ? ((F.depts() || []).length || (F.jobs() || []).length || (F.panelists() || []).length)
       : (msIvDept?.getSelected().length || msIvJob?.getSelected().length || msIvPanel?.getSelected().length);
+    // #125: with a period, the card counts interview EVENTS on the same jobs the table lists (interviewsByJobQ), not the org-wide total.
+    const idCard = F && F.jobIds ? F.jobIds() : null;
     const distinct = scoped ? null : (!quarters ? ((data && data.totalInterviews) || null)
+      : idCard ? (data && data.interviewsByJobQ
+          ? [...idCard].reduce((s, j8) => s + quarters.reduce((t, qq) => t + ((data.interviewsByJobQ[j8] || {})[qq] || 0), 0), 0) : null)
       : (byQ ? quarters.reduce((s, q) => s + (byQ[q] || 0), 0) : null));
 
     if (distinct == null) {
