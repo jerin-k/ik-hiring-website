@@ -99,6 +99,12 @@ export function capacityOf(name, quarter = currentQuarter()) {
   return v != null ? v : 0;
 }
 
+// #13 (Jerin, 14 Sep 2026): Data Hygiene → Capacity Not Set lists people whose capacity was never ENTERED. capacityOf() reads a blank
+// as 0, so it cannot tell "never entered" from a deliberate 0; this can. A value carried forward from an earlier quarter counts as set.
+export function capacityIsSet(name, quarter = currentQuarter()) {
+  return inheritedValue(loadJSON(CAP_LS), name, quarter) != null;
+}
+
 export function setCapacity(name, val, quarter) {
   const store = loadJSON(CAP_LS);
   if (!store[quarter]) store[quarter] = {};
