@@ -1,15 +1,11 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-22T06:44:21.293Z",
+  "updatedAt": "2026-09-14T11:51:14.905Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
     {
       "email": "jerin@interviewkickstart.com",
-      "role": "admin"
-    },
-    {
-      "email": "swati.p@interviewkickstart.com",
       "role": "admin"
     },
     {
@@ -20,6 +16,122 @@
       ],
       "departments": [],
       "teams": []
+    },
+    {
+      "email": "aditya.s@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "alokita.dhumne@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "deepti@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "leenita.albert@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "mahima.agarwal@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "oshin.verma@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "praveetha.a@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "rijo@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "ritika.bhasin@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "tina.anisha@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "v.pooja@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "g.darshan@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "peopleops@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "hr@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "ryan@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "soham@interviewkickstart.com",
+      "role": "full_access"
+    },
+    {
+      "email": "burhan@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "US Business",
+        "Marketing"
+      ]
+    },
+    {
+      "email": "raghav@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "Business - India"
+      ]
+    },
+    {
+      "email": "manish.chawla@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "Engineering"
+      ]
+    },
+    {
+      "email": "sreejit@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "Operations",
+        "New Programs"
+      ]
+    },
+    {
+      "email": "kushal@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "Finance"
+      ]
     }
   ]
 }
