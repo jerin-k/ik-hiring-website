@@ -23,6 +23,11 @@ var G22_PLAN = [
 
 function run22g() { task105i_srcCheck(); }  // #105i: READ-ONLY for Ashby (rebuilds the audit tab V9 - 105i Source check). The source switches ran once on 13 Sep: done 46, skip 0, fail 0.
 
+// #115 (14 Sep 2026): an Ashby opening date set in India time is stored as UTC (1 Jul = 30 Jun 18:30Z), so reading its
+// first 10 characters gave the day BEFORE and could file it in the previous quarter. Every audit read of an opening's
+// opened date goes through this, so the date and its quarter match the Ashby page. Returns '' for a missing date.
+function istDay_(iso){ if(!iso) return ''; var d=new Date(iso); return isNaN(d.getTime()) ? '' : Utilities.formatDate(d,'Asia/Kolkata','yyyy-MM-dd'); }
+
 function workLog72_(){
   var ss=SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA');
   var TAB='V9 - Work log';
@@ -467,7 +472,7 @@ function buildAuditV4(opts) {
     var lv2=o.latestVersion||{}, cf2={};
     (lv2.customFields||[]).forEach(function(f){ var lab=(f.valueLabel==null||f.valueLabel==='')?(f.value==null?'':f.value):f.valueLabel; cf2[String(f.title||f.name||'')]=String(lab); });
     var rc2=[]; (lv2.hiringTeam||[]).forEach(function(h){ if(/recruiter/i.test(String(h.role||h.roleName||''))) rc2.push(uById[h.userId]||h.name||''); });
-    var oa2=String(o.openedAt||'');
+    var oa2=istDay_(o.openedAt);   // #115: India time, not UTC
     opsByIdAll[o.id]={ id:o.id, openedAt:oa2?oa2.substring(0,10):'', dated:!!oa2, q:oa2?qtr(oa2):'',
       state:String(o.openingState||''), cr:String(o.closeReasonId||''),
       cx:cxMap(cf2['Role Complexity (Opening)']||''), rt:rtMap(cf2['Role Type']||''),
@@ -476,7 +481,7 @@ function buildAuditV4(opts) {
       recs:rc2, jobIds:(lv2.jobIds||[]) };
   });
   ashbyListAll_('/opening.list').forEach(function(o){
-    var oa=String(o.openedAt||''); if(oa.substring(0,4)!=='2026') return;   // #110g: archived no longer skipped here - kept aside below
+    var oa=istDay_(o.openedAt); if(oa.substring(0,4)!=='2026') return;   // #115: India time, not UTC · #110g: archived no longer skipped here - kept aside below
     var lv=o.latestVersion||{}, cf={};
     (lv.customFields||[]).forEach(function(f){ var lab=(f.valueLabel==null||f.valueLabel==='')?(f.value==null?'':f.value):f.valueLabel; cf[String(f.title||f.name||'')]=String(lab); });
     var recs=[]; (lv.hiringTeam||[]).forEach(function(h){ if(/recruiter/i.test(String(h.role||h.roleName||''))) recs.push(uById[h.userId]||h.name||''); });
@@ -2767,7 +2772,7 @@ function check58d_(){
   ashbyListAll_('/opening.list').forEach(function(o){
     var lv = o.latestVersion || {}, aid = "";
     (lv.customFields||[]).forEach(function(f){ if (String(f.title||f.name||'').trim().toLowerCase() === 'audit-id') aid = String(f.value == null ? '' : f.value).trim(); });
-    var oa = String(o.openedAt||'');
+    var oa = istDay_(o.openedAt);   // #115: India time, not UTC
     ops[o.id] = { state:String(o.openingState||''), archived:!!o.isArchived, aid:aid,
       q: oa ? ('Q' + (Math.floor((parseInt(oa.substring(5,7),10)-1)/3)+1) + ' ' + oa.substring(0,4)) : '' }; });
   var trkSS = SpreadsheetApp.openById('1_LQxHDZ6dXehyR2lc8pcFjfDeRaV80vBzVRB_BKWT5A');
