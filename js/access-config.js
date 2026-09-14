@@ -9,9 +9,35 @@ const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/ma
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 const PUBLISH_CHUNK = 1500;
 
+// ===== #118 Send invite (Jerin, 14 Sep 2026): the web app writes and sends the email; this opens it for ONE person =====
+const INVITES_API = 'https://api.github.com/repos/jerin-k/ik-hiring-website/contents/data/access_invites.json?ref=main';
+const INVITES_RAW = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/access_invites.json';
+// Who was sent an invite and when: {email: {at, by, count}}. Through the contents API (the raw CDN lags up to 5 minutes),
+// falling back to raw. No file yet means nobody has been invited.
+export async function fetchInvites() {
+  try { const r = await fetch(INVITES_API + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) return (await r.json()).invites || {}; } catch (e) { }
+  try { const r = await fetch(INVITES_RAW + '?cb=' + Date.now()); if (r.ok) return (await r.json()).invites || {}; } catch (e) { }
+  return {};
+}
+// The popup itself says "Invite sent" or why not (the server checks the admin, reads the person's PUBLISHED access, writes
+// the email and records it). Here the record is read back at most twice, to update the row — the contents API allows 60
+// unauthenticated reads an hour.
+export async function sendInvite(email) {
+  const key = String(email || '').toLowerCase();
+  const w = window.open(WEBAPP_URL + '?page=doSendInvite&to=' + encodeURIComponent(key), 'acInvite', 'width=460,height=360');
+  if (!w) return { ok: false, reason: 'Popup blocked — allow pop-ups for this site and retry.' };
+  const started = Date.now();
+  for (const waitMs of [12000, 12000]) {
+    await new Promise(r => setTimeout(r, waitMs));
+    const rec = (await fetchInvites())[key];
+    if (rec && rec.at && new Date(rec.at).getTime() >= started - 60000) return { ok: true, at: rec.at, by: rec.by };
+  }
+  return { ok: false, reason: 'Could not confirm the invite yet — check the window for "Invite sent", then reload this page.' };
+}
+
 function normUsers(users) {
   return (users || []).map(u => ({
-    email: (u.email || '').toLowerCase(), role: u.role || 'none',
+    email: (u.email || '').toLowerCase(), role: u.role || 'none', userType: u.userType || '',   // #118: a label-only change must still count as a change
     tabs: (u.tabs || []).slice().sort(),
     departments: (u.departments || []).slice().sort(), teams: (u.teams || []).slice().sort()
   })).sort((x, y) => x.email.localeCompare(y.email));

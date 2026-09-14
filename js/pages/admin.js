@@ -3,7 +3,7 @@ import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
 import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter } from '../metric-config.js';   // #11b · #111
 import { markDirty, isDirty, getMeta, publishConfig, configFileText, collectConfig } from '../metric-config.js';
-import { publishAccess, accessFileText } from '../access-config.js';
+import { publishAccess, accessFileText, sendInvite, fetchInvites } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
 
 // ===== Metric Configuration model (moved here from Recruiter Efficiency 2026-08-09) =====
@@ -164,12 +164,20 @@ export function renderAdmin(accessConfig, data) {
           <button class="btn btn-primary" id="add-user-btn">Add user</button>
         </div>
 
-        <div class="cfg-scroll" style="margin-top:14px"><table class="ac-table">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px">
+          <span class="lbl">User type</span>
+          <select id="acFilterType"><option value="">All</option><option>Hiring Manager</option><option>Recruitment Team</option><option>Admin</option></select>
+          <span class="lbl">Invite status</span>
+          <select id="acFilterInvite"><option value="">All</option><option value="invited">Invited</option><option value="not-invited">Not invited</option><option value="unpublished">Not published yet</option></select>
+          <span id="acFilterCount" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div class="cfg-scroll" style="margin-top:10px"><table class="ac-table">
           <thead><tr>
             <th style="min-width:210px">Email</th>
             <th style="width:140px">Role</th>
+            <th style="width:150px">User type</th>
             <th>Restricted access (tabs + scope)</th>
-            <th style="width:70px"></th>
+            <th style="width:190px"></th>
           </tr></thead>
           <tbody id="users-table-body"></tbody>
         </table></div>
@@ -278,6 +286,10 @@ function acDeptsFrom(data, users) {
 }
 // Tabs a restricted user can be granted (Overview is always on; Admin is admin-only, never offered here).
 const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency']];
+// #118 (Jerin, 14 Sep 2026): a User type label per person. It moves no access — role, tabs and departments still decide what they
+// see — it only groups people and drives the User type filter. A person with no saved label shows the one their role suggests.
+const AC_USER_TYPES = ['Hiring Manager', 'Recruitment Team', 'Admin'];
+const acUserType = (u) => u.userType || (u.role === 'admin' ? 'Admin' : u.role === 'restricted' ? 'Hiring Manager' : 'Recruitment Team');
 // Compact multi-select (native <details> + checkboxes). options = array of strings OR [value, label] pairs.
 function acMs(cls, i, selected, options, labelWord) {
   const opts = options.map(o => Array.isArray(o) ? o : [o, o]);
@@ -338,22 +350,53 @@ export function initAdminAccess(accessConfig, data) {
   const dr = document.getElementById('default-role');
   if (dr) { dr.value = work.defaultRole; dr.addEventListener('change', () => { work.defaultRole = dr.value; setDirtyAc(true); }); }
 
+  // #118 (Jerin, 14 Sep 2026): Send invite asks the web app to write and SEND the email (after the admin confirms; never
+  // automatic). It goes only to someone whose access is PUBLISHED exactly as shown — otherwise they could not sign in yet.
+  // `invites` = who was sent one and when ({email: {at, by, count}}), read from data/access_invites.json.
+  let invites = {};
+  const sameList = (a, b) => JSON.stringify((a || []).slice().sort()) === JSON.stringify((b || []).slice().sort());
+  const isPublished = (u) => ((accessConfig && accessConfig.users) || []).some(p => (p.email || '').toLowerCase() === (u.email || '').toLowerCase()
+    && p.role === u.role && (u.role !== 'restricted' || (sameList(p.tabs, u.tabs) && sameList(p.departments, u.departments))));
+  const inviteCell = (u, i) => {
+    if (u.role === 'none') return '';
+    if (!isPublished(u)) return `<button class="btn btn-secondary btn-sm" disabled title="Publish access first: this access is not live yet, so they could not sign in.">Send invite</button> `;
+    const prev = invites[(u.email || '').toLowerCase()];
+    return `<button class="btn btn-secondary btn-sm ac-invite" data-i="${i}" title="Sends the invite email now, after you confirm.">${prev ? 'Resend invite' : 'Send invite'}</button> `;
+  };
+  const inviteNote = (u) => {
+    const prev = invites[(u.email || '').toLowerCase()]; if (!prev || !prev.at) return '';
+    return `<div style="font-size:10px;color:var(--muted);margin-top:3px">Invited ${new Date(prev.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} by ${acEsc(prev.by || '')}</div>`;
+  };
+  // #118: Invite status for the filter — invited (a send is recorded) · not-invited (published, never sent) · unpublished
+  // (the access shown here is not live yet, so no invite can go). Role None is none of these.
+  const inviteStatus = (u) => u.role === 'none' ? 'no-access' : !isPublished(u) ? 'unpublished'
+    : (invites[(u.email || '').toLowerCase()] ? 'invited' : 'not-invited');
+  const passesFilters = (u) => {
+    const t = (document.getElementById('acFilterType') || {}).value || '', s = (document.getElementById('acFilterInvite') || {}).value || '';
+    return (!t || acUserType(u) === t) && (!s || inviteStatus(u) === s);
+  };
   function renderRows() {
     const body = document.getElementById('users-table-body'); if (!body) return;
-    if (!work.users.length) { body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:14px">No users configured</td></tr>'; return; }
-    body.innerHTML = work.users.map((u, i) => {
+    const cnt = document.getElementById('acFilterCount');
+    if (!work.users.length) { if (cnt) cnt.textContent = ''; body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px">No users configured</td></tr>'; return; }
+    const shown = work.users.map((u, i) => [u, i]).filter(([u]) => passesFilters(u));
+    if (cnt) cnt.textContent = `${shown.length} of ${work.users.length} people`;
+    if (!shown.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px">No users match these filters</td></tr>'; return; }
+    body.innerHTML = shown.map(([u, i]) => {
       const restricted = u.role === 'restricted';
       return `<tr>
         <td style="font-weight:500">${acEsc(u.email)}</td>
         <td><select class="ac-role" data-i="${i}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
+        <td><select class="ac-type" data-i="${i}">${AC_USER_TYPES.map(t => `<option${acUserType(u) === t ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
         <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:5px;max-width:330px">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
             </div>` : `<span style="color:var(--text-muted);font-size:12px">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
-        <td><button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></td>
+        <td style="white-space:nowrap">${inviteCell(u, i)}<button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button>${inviteNote(u)}</td>
       </tr>`;
     }).join('');
     body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
+    body.querySelectorAll('.ac-type').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].userType = s.value; setDirtyAc(true); renderRows(); }));
     const wireMs = (cls, key, word, opts) => body.querySelectorAll('.' + cls).forEach(cb => cb.addEventListener('change', () => {
       const i = +cb.dataset.i;
       const vals = [...body.querySelectorAll('.' + cls + '[data-i="' + i + '"]:checked')].map(x => x.value);
@@ -367,8 +410,21 @@ export function initAdminAccess(accessConfig, data) {
     wireMs('ac-tabs', 'tabs', 'Tabs', AC_TABS);
     wireMs('ac-depts', 'departments', 'Depts', AC_DEPTS);
     body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
+    body.querySelectorAll('.ac-invite').forEach(b => b.addEventListener('click', async () => {
+      const u = work.users[+b.dataset.i]; const prev = invites[(u.email || '').toLowerCase()];
+      if (!window.confirm((prev ? 'Resend' : 'Send') + ' the dashboard invite email to ' + u.email + ' now?')) return;
+      const st = document.getElementById('acStatus');
+      b.disabled = true; b.textContent = 'Sending…';
+      if (st) { st.textContent = 'A window opens and says "Invite sent" — this row updates when it is recorded.'; st.style.color = 'var(--muted)'; }
+      const res = await sendInvite(u.email);
+      if (res.ok) { invites[u.email.toLowerCase()] = { at: res.at, by: res.by }; if (st) { st.textContent = '✓ Invite sent to ' + u.email + '.'; st.style.color = 'var(--green)'; } }
+      else if (st) { st.textContent = '✗ ' + res.reason; st.style.color = 'var(--orange)'; }
+      renderRows();
+    }));
   }
   renderRows();
+  fetchInvites().then(m => { invites = m || {}; renderRows(); });   // #118
+  ['acFilterType', 'acFilterInvite'].forEach(id => document.getElementById(id)?.addEventListener('change', renderRows));   // #118 filters
 
   const addBtn = document.getElementById('add-user-btn');
   if (addBtn) addBtn.addEventListener('click', () => {
@@ -377,6 +433,7 @@ export function initAdminAccess(accessConfig, data) {
     if (!email || email.indexOf('@') < 0) { emailEl.focus(); emailEl.style.borderColor = 'var(--red)'; return; }
     if (work.users.some(u => (u.email || '').toLowerCase() === email)) { emailEl.style.borderColor = 'var(--red)'; return; }
     const u = { email, role }; if (role === 'restricted') { u.tabs = ['hm-report']; u.departments = []; }
+    u.userType = acUserType(u);   // #118: saved explicitly, so the label never shifts if the role changes later
     work.users.push(u); emailEl.value = ''; emailEl.style.borderColor = ''; setDirtyAc(true); renderRows();
   });
 
