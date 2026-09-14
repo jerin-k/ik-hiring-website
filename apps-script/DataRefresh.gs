@@ -352,6 +352,12 @@ function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
               am.archiveReason = (a.archiveReason && a.archiveReason.text) || null;
               am.archiveReasonType = (a.archiveReason && a.archiveReason.reasonType) || null;
               am.email = (a.candidate && a.candidate.primaryEmailAddress && a.candidate.primaryEmailAddress.value) || null;
+              // #116 (13 Sep 2026): carry the application's SOURCE here too. Offers on applications created before the
+              // scope year come through this branch, and without this they reached offerEvents with no source - so Sourcing
+              // Mix's "(source not recorded)" and Data Hygiene's Selected Candidates Missing Source over-counted.
+              var st2 = a.source && a.source.sourceType ? (a.source.sourceType.title || a.source.sourceType) : null;
+              if (typeof st2 === 'object') st2 = null;
+              if (st2) { am.srcType = st2; am.srcName = (a.source && typeof a.source.title === 'string' && a.source.title) ? a.source.title : '(unspecified)'; }
               appMap[o.applicationId] = am;
             recovered++;
           }
