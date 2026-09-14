@@ -6,7 +6,7 @@ import { renderHome, initHomeFilters } from './pages/home.js';
 import { renderHmReport, initHmFilters } from './pages/hm-report.js';
 import { renderRecruiter, initRecruiterFilters } from './pages/recruiter.js';
 import { renderEfficiency, initEfficiencyFilters } from './pages/efficiency.js';
-import { renderSourcing, initSourcingChart } from './pages/sourcing.js';
+// The hidden Sourcing page was removed (#120, 14 Sep 2026): it counted applications, contradicting Sourcing Mix (joiners).
 import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
@@ -235,10 +235,6 @@ function navigateTo(page, sub) {
     case 'efficiency':
       content.innerHTML = renderEfficiency(data);
       initEfficiencyFilters(data);
-      break;
-    case 'sourcing':
-      content.innerHTML = renderSourcing(data);
-      initSourcingChart(data);
       break;
     case 'admin':
       content.innerHTML = renderAdmin(accessConfig, data);

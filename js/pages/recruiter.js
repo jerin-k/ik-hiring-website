@@ -150,6 +150,8 @@ function saveTarget(name, type, val) {
 }
 
 let recScreenChart = null, recJoinChart = null, recFulfilChart = null, recSourceChart = null;
+// One shared function, so revisiting the tab does not stack another document listener each time (#120, 14 Sep 2026).
+const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
 
 // Metric Configuration (pods/capacity/score grid/dept-family) now lives in Admin → Metric Configuration
 // (admin.js). This tab only READS pods + capacity via recruiter-pods.js.
@@ -281,11 +283,11 @@ export function renderRecruiter(data) {
       <div class="fchip"><div class="ms" id="msRec"></div></div>
       <div class="fchip"><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recHideZero" checked> Hide zero-app</label></div>
-      <div class="fchip"><label class="opt" title="Recruiters who weren't here in the selected quarter — by their Started on / Left on dates in Admin → Metric Configuration, or, with no dates set, a disabled Ashby account. Their work still counts in the data either way; tick this to bring them back into the view."><input type="checkbox" id="recInclInactive"> Not here this quarter</label></div>
+      <div class="fchip"><label class="opt"><input type="checkbox" id="recInclInactive"> Not here this quarter</label></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
-      <div class="fchip"><span class="lbl">From</span><input type="date" id="recVelFrom"></div>
-      <div class="fchip"><span class="lbl">To</span><input type="date" id="recVelTo"></div>
+      <div class="fchip"><span class="lbl">Momentum from</span><input type="date" id="recVelFrom"></div>
+      <div class="fchip"><span class="lbl">Momentum to</span><input type="date" id="recVelTo"></div>
       
       
       <p class="sub-note" id="recQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p>
@@ -317,9 +319,9 @@ export function renderRecruiter(data) {
         <thead>
           <tr>
             <th style="min-width:260px">Pod / Recruiter / Job</th>
-            <th title="An interview scheduled at R1, or an assignment triggered at R1. One per candidate per role per quarter; cancellations excluded.">Added at R1</th>
-            <th title="Of those, the ones who reached R2 or beyond.">Progressed</th>
-            <th title="Progressed ÷ Added at R1.">%</th>
+            <th>Added at R1</th>
+            <th>Progressed</th>
+            <th>%</th>
           </tr>
         </thead>
         <tbody id="recScreenBody"></tbody>
@@ -331,7 +333,7 @@ export function renderRecruiter(data) {
       ${defsBlock('rec-joining')}
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
-        <thead><tr><th>Pod / Recruiter</th><th title="Joined + Joining Pending + Dropped.">Offered</th><th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th><th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th><th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th><th>Joining Conversion</th></tr></thead>
+        <thead><tr><th>Pod / Recruiter</th><th>Offered</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
     </div>
@@ -345,7 +347,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus anyone linked to an opening from an earlier quarter, minus anyone joining next quarter.">JP — Current Qtr</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised this quarter, but starting next quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Current Qtr</th><th colspan="2" class="stage-hdr">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
@@ -354,7 +356,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr" title="Everyone who started in the quarter. Sales counts joiners whenever the opening was raised — no earlier-quarter subtraction.">Joined<br>Total</th><th colspan="2" class="stage-hdr" title="Joined this quarter against an opening raised in an EARLIER quarter — carried-over demand. Needs the offer to carry an opening link.">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone who joined, minus the Joined — Prev Qtr Openings column beside it, so the two always add up to Joined Total. It therefore also holds every joiner whose offer carries no opening link at all — that count is printed under the number.">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
@@ -363,7 +365,7 @@ export function renderRecruiter(data) {
       <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Others (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal — Joiners</th><th rowspan="2" class="stage-hdr" style="text-align:right" title="Capacity — Joiners. Set per quarter in Metric Configuration.">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr" title="Everyone who started in the quarter. Sales counts joiners whenever the opening was raised — no earlier-quarter subtraction.">Joined<br>Total</th><th colspan="2" class="stage-hdr" title="Joined this quarter against an opening raised in an EARLIER quarter — carried-over demand. Needs the offer to carry an opening link.">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone who joined, minus the Joined — Prev Qtr Openings column beside it, so the two always add up to Joined Total. It therefore also holds every joiner whose offer carries no opening link at all — that count is printed under the number.">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr" title="Everyone currently in Ref Check, Documentation or Offer.">JP<br>Total</th><th colspan="2" class="stage-hdr" title="Linked to an opening raised last quarter, starting this quarter. Needs the offer to carry an opening link, which only began on 2026-07-25.">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr" title="Everyone in closing, minus the JP — Prev Qtr Openings column beside it. The two always add up to JP Total.">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr" title="Goal minus what was achieved — the shortfall. The bar fills with it.">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOthersBody"></tbody>
@@ -425,8 +427,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="unassigned">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Unassigned — reached TA Screen or later, no Recruiter tagged</h4>
-          <p class="sub-note" style="margin:0">The actionable backlog: these candidates are in active screening but nobody is credited. Grouped by job. (Applications still in App Review are excluded — those aren't worked yet.)</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Unassigned — reached TA Screen or later, no Recruiter tagged</h4></div>
           <button class="hyg-dl" data-dl="unassigned">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -437,8 +438,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="multirec" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Recruiters on one application</h4>
-          <p class="sub-note" style="margin:0">More than one hiring-team member tagged <strong>Recruiter</strong>. Scoring currently credits the first — the team should leave a single Recruiter of record (the one who ran the transition).</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Recruiters on one application</h4></div>
           <button class="hyg-dl" data-dl="multirec">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -449,8 +449,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="multisrc" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Sourcers on one application — data error</h4>
-          <p class="sub-note" style="margin:0">A single application should never have more than one <strong>Sourcer</strong>. Any row here is a data anomaly to correct in Ashby.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Multiple Sourcers on one application — data error</h4></div>
           <button class="hyg-dl" data-dl="multisrc">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -461,32 +460,29 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="roster" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter roster — who counts this quarter</h4>
-          <p class="sub-note" style="margin:0"><strong>Ashby account</strong> = whether they still hold a recruiter seat in Ashby. <strong>This quarter</strong> follows their <strong>Started on</strong> / <strong>Left on</strong> dates from Admin → Metric Configuration; with no dates set, the Ashby account decides. Their history still scores either way.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter roster — who counts this quarter</h4></div>
           <button class="hyg-dl" data-dl="roster">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Ashby account</th><th>Started on</th><th>Left on</th><th>This quarter</th><th>Pod (this quarter)</th><th>Offers</th><th>Hired</th></tr></thead>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Ashby account</th><th>Started on</th><th>Left on</th><th>This quarter</th><th>Pod (this quarter)</th><th>Offers (all-time)</th><th>Hired (all-time)</th></tr></thead>
           <tbody id="hygRosterBody"></tbody>
         </table></div>
       </div>
 
       <div class="hyg-panel" data-h="nopod" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Pod not set — excluded from every table on this tab</h4>
-          <p class="sub-note" style="margin:0">These are <strong>real recruiters with real numbers</strong> who have no pod assigned for the selected quarter. Everything below is <strong>left out</strong> of the pod rows, the pod totals and the charts on Fulfilment, Momentum, Screening, Joining Conversion and Sourcing — because a row labelled "Unassigned" reads like a team, and its totals silently inflate the tab. Fix it in <strong>Admin → Metric Configuration</strong> (Recruiter → Pod, per quarter); the numbers rejoin their pod on the next render. If someone genuinely works across pods rather than being unconfigured, give them the <strong>Others</strong> pod — it shows up like any other pod instead of being hidden.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Pod not set — excluded from every table on this tab</h4></div>
           <button class="hyg-dl" data-dl="nopod">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Applications</th><th>Offers</th><th>Hired</th><th>Joining pending</th><th>Capacity</th></tr></thead>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Applications (all-time)</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th><th>Capacity</th></tr></thead>
           <tbody id="hygNoPodBody"></tbody>
         </table></div>
       </div>
 
       <div class="hyg-panel" data-h="offergap" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Offers missing an opening link — still in play</h4>
-          <p class="sub-note" style="margin:0">These candidates have a live offer but no opening attached, so they are missing from Joining Pending. <strong>This is the list to fix</strong> — attach the opening in Ashby and the next refresh clears the row.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Offers missing an opening link — still in play</h4></div>
           <button class="hyg-dl" data-dl="offergap">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -497,8 +493,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="hiredgap" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Hired / closed, missing an opening link</h4>
-          <p class="sub-note" style="margin:0">Offers with no opening attached where the candidate has already joined or the application is closed. <strong>Reference only</strong> — fixing these changes no number on this site, because joins are counted from the opening being closed as hired, not from this link.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Hired / closed, missing an opening link</h4></div>
           <button class="hyg-dl" data-dl="hiredgap">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -509,8 +504,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="nosrc" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Selected candidates with no source in Ashby — <span id="hygNoSrcQ"></span></h4>
-          <p class="sub-note" style="margin:0">People who <strong>joined</strong>, are <strong>joining</strong> or <strong>dropped after an offer</strong> in the selected quarter, whose application in Ashby carries <strong>no source</strong> — the joiners are the ones Sourcing Mix shows under <em>(source not recorded)</em>. For selected candidates the <strong>Hiring Tracker is the source of truth</strong>: set the source on the application in Ashby to match it, and the row clears at the next refresh.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Selected candidates with no source in Ashby — <span id="hygNoSrcQ"></span></h4></div>
           <button class="hyg-dl" data-dl="nosrc">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -521,8 +515,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="unscored" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Roles missing score inputs</h4>
-          <p class="sub-note" style="margin:0">A role scores zero when it can't be classified — usually a <strong>Tech/NonTech role missing its Level</strong>. (SME roles score on Complexity alone, and PA by title, so a blank Level doesn't flag them; a blank Complexity counts as Normal.) It still counts in HC but adds nothing to its department's Fulfilment target. Set the Level on the job in Ashby.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Roles missing score inputs</h4></div>
           <button class="hyg-dl" data-dl="unscored">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -533,8 +526,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="nodate" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Openings missing an opened date</h4>
-          <p class="sub-note" style="margin:0">These openings have no <strong>opened date</strong> in Ashby, so they are <strong>left out of Total Openings entirely</strong> — on the Hiring Manager Positions tab and on Overall Efficiency. They are invisible, not simply undated. Set the opened date on the opening in Ashby and they appear at the next refresh.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Openings missing an opened date</h4></div>
           <button class="hyg-dl" data-dl="nodate">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -545,20 +537,18 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="nocap" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Capacity not set — but candidates attributed</h4>
-          <p class="sub-note" style="margin:0">Recruiters with a <strong>Capacity of 0</strong> for the selected quarter who nevertheless have offers, hires or joining-pending candidates against their name. Either the capacity belongs in <strong>Admin → Metric Configuration</strong>, or those candidates are attributed to the wrong person. Until it is settled they have no Target and no Capacity Utilisation, so their work is invisible in Fulfilment.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Capacity not set — but candidates attributed</h4></div>
           <button class="hyg-dl" data-dl="nocap">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
-          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Capacity</th><th>Offers</th><th>Hired</th><th>Joining pending</th></tr></thead>
+          <thead><tr><th style="min-width:240px">Recruiter</th><th>Status</th><th>Pod (this quarter)</th><th>Capacity</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
           <tbody id="hygNoCapBody"></tbody>
         </table></div>
       </div>
 
       <div class="hyg-panel" data-h="dates" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter dates — checked against real work</h4>
-          <p class="sub-note" style="margin:0">Compares each recruiter's <strong>Started on</strong> / <strong>Left on</strong> dates (Admin → Metric Configuration) with the work credited to them — openings owned, joiners and drops — quarter by quarter across the selected year. A wrong or missing date quietly hides someone's work, so it shows up here.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Recruiter dates — checked against real work</h4></div>
           <button class="hyg-dl" data-dl="dates">Download CSV</button>
         </div>
         <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
@@ -577,8 +567,7 @@ export function renderRecruiter(data) {
 
       <div class="hyg-panel" data-h="anomalies" style="display:none">
         <div class="hyg-head">
-          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Other anomalies</h4>
-          <p class="sub-note" style="margin:0">One-off attribution problems that need correcting at source in Ashby.</p></div>
+          <div><h4 style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px">Other anomalies</h4></div>
           <button class="hyg-dl" data-dl="anomalies">Download CSV</button>
         </div>
         <div class="scroll-table"><table>
@@ -931,7 +920,7 @@ export function initRecruiterFilters(data) {
     if (qNote) {
       const oneQuarter = !!document.getElementById('recVelQuarter')?.value;
       qNote.style.display = oneQuarter ? 'none' : '';
-      if (!oneQuarter) qNote.innerHTML = `<strong>Quarter: All.</strong> Screening Efficiency, Sourcing Mix and Time in Process cover <strong>${perTxt}</strong>. Fulfilment and Joining Conversion exist only per quarter, so they show <strong>${selQuarter()}</strong> — and because pods and capacity are set quarter by quarter, <strong>every</strong> table here groups by ${selQuarter()} pod membership. Momentum always shows the last 30 days of the From/To range.`;
+      if (!oneQuarter) qNote.innerHTML = `<strong>Quarter: All.</strong> Screening Efficiency, Sourcing Mix and Time in Process show <strong>${perTxt}</strong>. Fulfilment and Joining Conversion show <strong>${selQuarter()}</strong>, and every table groups recruiters by their ${selQuarter()} pod. Momentum shows the last 30 days of its date range.`;
     }
     const spEl = document.getElementById('recScreenPeriod');
     if (spEl) spEl.textContent = `Showing ${perTxt}.`;
@@ -1220,7 +1209,7 @@ export function initRecruiterFilters(data) {
       const joinedCells = (v) => {
         const j = v.jx || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } };
         const pair = (x, sub) => `<td>${x.hc || `<span class="zero">0</span>`}${sub || ''}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
-        const unl = (j.u && j.u.hc) ? `<span class="sublab" title="Joiners with no opening attached to their offer. They sit in this column only because it is Total minus the column beside it.">${j.u.hc} unlinked</span>` : '';
+        const unl = (j.u && j.u.hc) ? `<span class="sublab">${j.u.hc} unlinked</span>` : '';
         return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>` + pair(j.a) + pair(j.b, unl);
       };
 
@@ -1309,7 +1298,7 @@ export function initRecruiterFilters(data) {
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
           // it once ended up showing lifetime scores under a quarter heading. It now reads this.
-          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, sales: isSales };
+          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc, sales: isSales };
           ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo'].forEach(k => podAgg[k] += a[k]);
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
@@ -1330,6 +1319,22 @@ export function initRecruiterFilters(data) {
           // #100: merge in every job this person has a Goal on — as Recruiter OR as Sourcer. Sourced-only
           // roles were missing before, so a sourcer's job rows could not add up to their row above.
           goalJobsOf(r, q).forEach(j8 => { if (!bjByJ8[j8]) bjByJ8[j8] = { jobId: j8 }; });
+          // 🚨 #120 (14 Sep 2026): ...and every job they hold CREDIT on (a sourcer's half of a joiner, a person in closing,
+          // a drop) even with no application tagged to them there. Without it V Pooja's split credit on Part Time
+          // Instructor - Agentic AI (US) sat in her row and in no job row, so the rows did not add up and the chart,
+          // banded from these rows, came out shorter than the table.
+          const pre = r.name + '|';
+          [outByRecJob, joinByRecJob, dropByRecJob].forEach(m => Object.keys(m).forEach(k => {
+            const j8 = k.startsWith(pre) ? k.slice(pre.length) : '';
+            if (j8 && j8 !== 'undefined' && j8 !== 'null' && !bjByJ8[j8]) bjByJ8[j8] = { jobId: j8 };
+          }));
+          const titled = new Set(Object.values(bjByJ8).map(bj => jobMeta(bj).title).filter(Boolean));
+          Object.keys(JP.totalJ || {}).forEach(k => {
+            if (!k.startsWith(pre)) return;
+            const t = k.slice(pre.length); if (!t || titled.has(t)) return;
+            const jj = (data.jobs || []).find(x => x.title === t);
+            if (jj && !bjByJ8[jj.id]) { bjByJ8[jj.id] = { jobId: jj.id }; titled.add(t); }
+          });
           const jobs = Object.values(bjByJ8).sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
           // The role split the Fulfilment chart shades its Achieved band with (Jerin, 2026-08-29). Collected
           // HERE, from the very rows the table prints, so the chart cannot end up on a different basis —
@@ -1363,7 +1368,7 @@ export function initRecruiterFilters(data) {
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
                            gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc),
                            aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: Math.max(0, jaSo - juSo) };   // #108
-              roleAch.push({ title: m.title || '(untitled)', achievedSc: Math.round(juSc) });
+              roleAch.push({ title: m.title || '(untitled)', achievedSc: juSc });   // unrounded: the chart shares out the row's rounded total (#120)
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
                 <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
             });
@@ -1461,7 +1466,7 @@ export function initRecruiterFilters(data) {
       if (orphanCount) {
         html += `<tr data-path="${oi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}No recruiter in this view${cnt(orphanCount)}</td>
-          <td colspan="6" style="color:var(--muted)">Nobody in the view above owns these — kept here so the list reconciles to every case in closing.</td></tr>`;
+          <td colspan="6"></td></tr>`;
         let ri = 0;
         if (noRec.length) {
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
@@ -1863,11 +1868,11 @@ export function initRecruiterFilters(data) {
       cards.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:12px';
       const card = (label, value, sub, color) => `<div class="card"><div class="label">${label}</div><div class="value"${color ? ` style="color:${color}"` : ''}>${value}</div><div class="sub">${sub}</div></div>`;
       cards.innerHTML =
-        card('Unassigned (screening+)', unassigned.length, 'need a Recruiter tag', unassigned.length ? 'var(--orange)' : 'var(--green)') +
-        card('Unassigned (all funnel)', (dq.unassignedTotal || 0).toLocaleString(), 'incl. App Review — not yet worked', 'var(--muted)') +
-        card('Multi-Recruiter apps', multiRec.length, 'first is credited', multiRec.length ? 'var(--orange)' : 'var(--green)') +
-        card('Multi-Sourcer apps', multiSrc.length, 'should be zero', multiSrc.length ? 'var(--red)' : 'var(--green)') +
-        card('Not here this quarter', inactiveCount, 'by dates, or a disabled Ashby account', 'var(--muted)');
+        card('Unassigned (screening+)', unassigned.length, '', unassigned.length ? 'var(--orange)' : 'var(--green)') +
+        card('Unassigned (all funnel)', (dq.unassignedTotal || 0).toLocaleString(), '', 'var(--muted)') +
+        card('Multi-Recruiter apps', multiRec.length, '', multiRec.length ? 'var(--orange)' : 'var(--green)') +
+        card('Multi-Sourcer apps', multiSrc.length, '', multiSrc.length ? 'var(--red)' : 'var(--green)') +
+        card('Not here this quarter', inactiveCount, '', 'var(--muted)');
     }
 
     // --- Unassigned: group by job, candidate rows ---
@@ -1912,7 +1917,7 @@ export function initRecruiterFilters(data) {
         const unknown = isStatusUnknown(r), active = !isRecInactive(r);
         const label = unknown ? 'Unknown' : (active ? 'Enabled' : 'Disabled');
         const colour = unknown ? 'var(--orange)' : (active ? 'var(--green)' : 'var(--red)');
-        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Enabled."' : (active ? ' title="Holds an elevated recruiter seat in Ashby."' : ' title="No longer holds an elevated recruiter seat in Ashby."');
+        const tip = unknown ? ' title="No Ashby user record matched this name, so the status is unknown rather than Enabled."' : (active ? ' title="Holds an elevated recruiter licence in Ashby."' : ' title="No longer holds an elevated recruiter licence in Ashby."');
         const d = datesR[r.name] || {}; const s = r.sourcerOnly ? { in: true, note: 'sourcer' } : recruiterInQuarter(r.name, q, r.isActive);
         const here = `<span style="font-size:11px;font-weight:600;color:${s.in ? 'var(--accent-deep)' : 'var(--muted)'}">${s.in ? 'Yes' : 'No'}${s.note ? ' · ' + esc(s.note) : ''}</span>`;
         return `<tr><td style="font-weight:500">${esc(r.name)}</td>
@@ -2019,12 +2024,16 @@ export function initRecruiterFilters(data) {
       if (expectedSeen.length) {
         ah += `<tr><td colspan="3" style="color:var(--muted);font-size:11px;padding-top:10px;border-top:1px solid var(--border-light)">`
           + `Also outside the stage map, as expected: `
-          + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()} — ${esc(EXPECTED_UNMAPPED[st])})`).join(' · ')
-          + `. No action needed.</td></tr>`;
+          + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()})`).join(' · ')
+          + `.</td></tr>`;
       }
       anBody.innerHTML = ah;
     }
 
+    // People in closing per recruiter, from the live Joining Pending list. #120 (14 Sep 2026): these columns read
+    // `r.joiningPending`, which the data never carries, so they always showed 0.
+    const jpCount = {}; (data.joiningPendingCases || []).forEach(c => { if (c.recruiter) jpCount[c.recruiter] = (jpCount[c.recruiter] || 0) + 1; });
+    const jpCountOf = (name) => jpCount[name] || 0;
     // --- Capacity not set, but candidates attributed ---
     // Capacity 0 is legitimate for people who carry no req load (admins, coordinators). It is only a problem
     // when candidates ARE attributed to them, because Fulfilment then shows work with no target to measure it
@@ -2032,7 +2041,7 @@ export function initRecruiterFilters(data) {
     const noCap = allRecs
       .filter(r => r.name && r.name !== 'Unassigned')
       .map(r => ({ r, cap: capacityOf(r.name, q) || 0,
-                   offers: r.offer || 0, hired: r.hired || 0, jp: r.joiningPending || 0 }))
+                   offers: r.offer || 0, hired: r.hired || 0, jp: jpCountOf(r.name) }))
       .filter(x => x.cap === 0 && (x.offers > 0 || x.hired > 0 || x.jp > 0))
       .sort((a, b) => (b.offers + b.hired) - (a.offers + a.hired));
     const noCapBody = document.getElementById('hygNoCapBody');
@@ -2091,7 +2100,7 @@ export function initRecruiterFilters(data) {
     const noPod = allRecs
       .filter(r => r.name && r.name !== 'Unassigned' && podOf(r.name, q) === 'Unassigned')
       .map(r => ({ r, cap: capacityOf(r.name, q) || 0, total: r.total || 0,
-                   offers: r.offer || 0, hired: r.hired || 0, jp: r.joiningPending || 0 }))
+                   offers: r.offer || 0, hired: r.hired || 0, jp: jpCountOf(r.name) }))
       .sort((a, b) => (b.offers + b.hired) - (a.offers + a.hired) || a.r.name.localeCompare(b.r.name));
     const noPodBody = document.getElementById('hygNoPodBody');
     if (noPodBody) {
@@ -2195,8 +2204,9 @@ export function initRecruiterFilters(data) {
         ...noSrc.map(({ e, outcome }) => [String(e.candidate || '').trim(), e.jobTitle || '', e.department || '', outcome, e.startDate || '', e.offerCreatedAt || '', e.recruiter || '', q])],
       nodate: () => [['Job', 'Department', 'Job status', 'Opening ID', 'Jobs on this opening'],
         ...noDate.map(o => [o.title || '', o.department || '', o.status || '', o.openingId || '', o.jobs || 1])],
-      unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Missing', 'Applications'],
-        ...unscored.map(({ j, missing }) => [j.title || '', j.department || '', j.level || '', j.complexity || '', missing.join(' + '), j.total || 0])],
+      // #120 (14 Sep 2026): the rows carry `reason`; reading `missing` threw, so this download never worked.
+      unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Reason', 'Applications'],
+        ...unscored.map(({ j, reason }) => [j.title || '', j.department || '', j.level || '', j.complexity || '', reason || '', j.total || 0])],
       anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
     };
   }
@@ -2281,7 +2291,7 @@ export function initRecruiterFilters(data) {
     // No ToFU field yet (rollups file written before 2026-08-26). Say so rather than falling back to the
     // old per-stage counts: those answer a different question and would sit under this heading as a lie.
     if (!tRec) {
-      body.innerHTML = `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">ToFU arrivals appear after the next stage-history refresh.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">Arrivals appear after the next stage-history refresh.</td></tr>`;
       return;
     }
     const numRow = (total, perDay, boldTotal) =>
@@ -2366,7 +2376,7 @@ export function initRecruiterFilters(data) {
     }));
     rows.sort((a, b) => b.total - a.total);
     if (!rows.length) {
-      host.innerHTML = '<p class="sub-note" style="margin:6px 0 0">Nobody was added to ToFU in this window for the recruiters shown.</p>';
+      host.innerHTML = '<p class="sub-note" style="margin:6px 0 0">Nobody was added in this window for the recruiters shown.</p>';
       return;
     }
 
@@ -2389,7 +2399,7 @@ export function initRecruiterFilters(data) {
     // column alignment against the table - is identical by construction.
     buildDayHeat(host, tip, wrapEl, rows, chrono, roleAt, {
       alignSel: '.rec-panel[data-panel="velocity"] .vel-table thead th',
-      emptyMsg: 'Nobody was added to ToFU in this window for the recruiters shown.'
+      emptyMsg: 'Nobody was added in this window for the recruiters shown.'
     });
   }
 
@@ -2441,7 +2451,7 @@ export function initRecruiterFilters(data) {
       added: r.added,
       progressed: r.cleared,
       roles: (r.per || []).map(x => ({ title: x.title, added: x.v.added, progressed: x.v.cleared }))
-    })), { solid: SCREEN_SOLID, pale: SCREEN_PALE, xTitle: 'Candidates added at R1', colHeader: 'PROGRESSED',
+    })), { solid: SCREEN_SOLID, pale: SCREEN_PALE, xTitle: 'Candidates added at R1', colHeader: '% progressed',
            fromLabel: 'added at R1', toLabel: 'progressed past R1' });
   }
 
@@ -2534,7 +2544,9 @@ export function initRecruiterFilters(data) {
       const f = lastFulfil[r.name];
       if (!f) return null;
       const goal = Math.round(f.goalSc || 0), cap = Math.round(f.capSc || 0), achieved = Math.round(f.achievedSc || 0);
-      return { name: r.name, goal, cap, achieved, short: Math.max(0, goal - achieved), roles: f.roles || [] };
+      // Short of goal = the table's Delta, rounded once (#120). It was round(goal) - round(achieved), which can differ by 1.
+      const short = Math.round(Math.max(0, f.shortSc != null ? f.shortSc : (f.goalSc || 0) - (f.achievedSc || 0)));
+      return { name: r.name, goal, cap, achieved, short, roles: f.roles || [] };
     }).filter(r => r && (r.goal > 0 || r.cap > 0 || r.achieved > 0))
       .sort((a, b) => b.achieved - a.achieved);
     const wrap = ctx.parentElement;
@@ -2596,11 +2608,26 @@ export function initRecruiterFilters(data) {
       { key: 'achieved', label: 'Achieved (Score)', color: C.green },
       { key: 'short', label: 'Short of Goal (Score)', color: C.amber, split: false }
     ];
-    const fulRows = recs.map(r => ({
-      label: r.name,
-      sum: { achieved: r.achieved, short: r.short },
-      jobs: (r.roles || []).filter(x => x.achievedSc > 0).map(x => ({ title: x.title, v: { achieved: x.achievedSc } }))
-    }));
+    // 🚨 #120 (14 Sep 2026): the bar's length is the TABLE's Achieved. It used to be the role bands added up, each rounded
+    // on its own, so credit with no job row went missing and half-points drifted. The row's rounded total is now shared
+    // out across its roles by largest remainder, and any credit no listed role carries gets its own band.
+    const shareOut = (total, parts) => {
+      const raw = parts.reduce((a, p) => a + p.raw, 0);
+      if (!(raw > 0) || !(total > 0)) return [];
+      const exact = parts.map(p => ({ ...p, x: (p.raw / raw) * total }));
+      exact.forEach(p => { p.n = Math.floor(p.x); });
+      let left = total - exact.reduce((a, p) => a + p.n, 0);
+      exact.slice().sort((a, b) => (b.x - b.n) - (a.x - a.n)).forEach(p => { if (left > 0) { p.n += 1; left -= 1; } });
+      return exact.filter(p => p.n > 0);
+    };
+    const fulRows = recs.map(r => {
+      const parts = (r.roles || []).filter(x => x.achievedSc > 0).map(x => ({ title: x.title, raw: x.achievedSc }));
+      const listed = parts.reduce((a, p) => a + p.raw, 0);
+      const rest = ((lastFulfil[r.name] || {}).achievedSc || 0) - listed;
+      if (rest > 0.01) parts.push({ title: 'credit not tied to a listed role', raw: rest });
+      return { label: r.name, sum: { achieved: r.achieved, short: r.short },
+               jobs: shareOut(r.achieved, parts).map(p => ({ title: p.title, v: { achieved: p.n } })) };
+    });
     recFulfilChart = new Chart(ctx, {
       type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(fulRows, FUL_METRICS, { borderRadius: 2 }) },
@@ -2609,7 +2636,7 @@ export function initRecruiterFilters(data) {
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: metricLegend(FUL_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal',
+          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal', total: (i) => recs[i].goal,   // #120: it added the bars, so past-goal rows showed Achieved as "Goal"
             extra: (i) => {
               const r = recs[i];
               const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
@@ -2702,7 +2729,7 @@ export function initRecruiterFilters(data) {
   msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);
   const jobNames = [...new Set((data.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, renderAll);
-  document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
+  document.addEventListener('click', closeMsPanels);
   document.getElementById('recHideZero')?.addEventListener('change', renderAll);
   document.getElementById('recInclInactive')?.addEventListener('change', renderAll);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);

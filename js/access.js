@@ -32,14 +32,14 @@ function buildAccess(user) {
     case 'admin':
       return {
         role: 'admin',
-        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'sourcing', 'admin'],
+        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'admin'],
         filters: null,
       };
 
     case 'full_access':
       return {
         role: 'full_access',
-        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'sourcing'],
+        pages: ['home', 'hm-report', 'recruiter', 'efficiency'],
         filters: null,
       };
 

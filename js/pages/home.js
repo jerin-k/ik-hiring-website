@@ -239,9 +239,9 @@ export function initHomeFilters() {
               : `${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}`}</div>
           </div>
           <div class="card">
-            <div class="label">Total Hired</div>
+            <div class="label">Applications Hired</div>
             <div class="value" style="color:var(--green)">${(f.hired || 0).toLocaleString()}</div>
-            <div class="sub">${convRate}% conversion</div>
+            <div class="sub">${convRate}% of applications</div>
           </div>
           <div class="card">
             <div class="label">Fill Rate</div>

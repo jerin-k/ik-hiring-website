@@ -37,8 +37,8 @@ const DASH = '<span class="zero">—</span>';
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // Throughput stages (mirrors the HM tab)
-const TP_KEYS = ['app','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
-const TP_LABELS = { app:'App Review', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
+const TP_KEYS = ['app','hc','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];   // Hello Christy added #120 (14 Sep 2026): the HM tab had it, this mirror did not
+const TP_LABELS = { app:'App Review', hc:'Hello Christy', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
 const TP_TO_SK = { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' };
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
@@ -67,7 +67,10 @@ function wireTreePath(tbody, expandAll) {
   }
 }
 
-let effFulfilCombined = null, effSourceChart = null;
+// Module-level so a return visit destroys the previous instance instead of leaking it (#120, 14 Sep 2026).
+let effFulfilCombined = null, effSourceChart = null, effScreenChart = null, effJoinChart = null;
+// One shared function, so revisiting the tab does not stack another document listener each time (#120).
+const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
 
 export function renderEfficiency(data) {
   if (!data || !data.funnel) return '<p>No data available.</p>';
@@ -142,21 +145,22 @@ export function renderEfficiency(data) {
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
-      <div class="fchip"><span class="lbl">From</span><input type="date" id="effVelFrom"></div>
-      <div class="fchip"><span class="lbl">To</span><input type="date" id="effVelTo"></div>
+      <div class="fchip"><span class="lbl">Momentum from</span><input type="date" id="effVelFrom"></div>
+      <div class="fchip"><span class="lbl">Momentum to</span><input type="date" id="effVelTo"></div>
       
       
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span>
+      <p class="sub-note" id="effQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p></div>
 
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
       ${defsBlock('eff-fulfilment')}
-      <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Positions by department — each band is a role</h4>
+      <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Positions by department</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
 
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr" title="Everyone parked in Ref Check, Documentation or Offer, minus anyone whose opening belongs to an earlier quarter. Counts PEOPLE. Live — the quarter selector does not change it.">Joining Pending</th><th colspan="2" class="stage-hdr" title="Reached an offer and then left — declined, withdrew, or archived with the offer still open. Counted in the quarter the work was live.">Drop</th><th colspan="2" class="stage-hdr" title="Total Positions − Joined − Joining Pending. Can be negative when more people are in closing than positions were opened.">Delta</th><th colspan="2" class="stage-hdr" title="Positions closed as carry forward to the next quarter.">Missed</th></tr>
+          <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th colspan="2" class="stage-hdr">Missed</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
@@ -190,9 +194,9 @@ export function renderEfficiency(data) {
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
           <th style="min-width:280px">Department / Job</th>
-          <th title="An interview scheduled at R1, or an assignment triggered at R1. One per candidate per role per quarter; cancellations excluded.">Added at R1</th>
-          <th title="Of those, the ones who reached R2 or beyond.">Progressed</th>
-          <th title="Progressed ÷ Added at R1.">%</th>
+          <th>Added at R1</th>
+          <th>Progressed</th>
+          <th>%</th>
         </tr></thead>
         <tbody id="effScreenBody"></tbody>
       </table></div>
@@ -233,10 +237,10 @@ export function renderEfficiency(data) {
       <div class="scroll-table"><table class="metrics join-table">
         <thead><tr>
           <th>Department / Job</th>
-          <th title="Joined + Joining Pending + Dropped.">Offered</th>
-          <th title="Started in the quarter, minus anyone linked to an earlier quarter's opening.">Joined</th>
-          <th title="Everyone in Ref Check, Documentation or Offer, minus earlier-quarter openings. Live — the same people appear in every quarter.">Joining Pending</th>
-          <th title="Reached Ref Check, Documentation or Offer and was then archived.">Dropped</th>
+          <th>Offered</th>
+          <th>Joined</th>
+          <th>Joining Pending</th>
+          <th>Dropped</th>
           <th>Joining Conversion</th>
         </tr></thead>
         <tbody id="effJoinBody"></tbody>
@@ -284,10 +288,19 @@ export function initEfficiencyFilters(data) {
 
   const expandAll = () => !!document.getElementById('effExpandAll')?.checked;
 
+  // ONE quarter, for what only exists per quarter here: Fulfilment and Joining Conversion.
+  // 🚨 #120 (14 Sep 2026): this fell through to TODAY's quarter whenever EITHER dropdown read "All", so Year: All with
+  // Q1 showed Q3 figures under a Q1 filter (the Recruiter tab was fixed the same way earlier). Resolve the year
+  // instead, and fall back to the current quarter only when no quarter is picked at all.
+  function selYear() {
+    const sel = document.getElementById('effYear');
+    if (sel && sel.value) return sel.value;
+    const first = sel ? [...sel.options].map(o => o.value).filter(Boolean)[0] : '';
+    return first || String(new Date().getFullYear());
+  }
   function selQuarter() {
-    const y = document.getElementById('effYear')?.value;
     const q = document.getElementById('effQuarter')?.value;
-    return (y && q) ? qKey(y, q) : currentQuarter();
+    return q ? qKey(selYear(), q) : currentQuarter();
   }
 
   // Recruiters mapped to a pod for the selected quarter — used only for the live capacity sums.
@@ -392,10 +405,11 @@ export function initEfficiencyFilters(data) {
     const b = openBuckets[jid]; if (!b || !b.quarters) return 0;
     const qq = b.quarters[q]; return qq ? (qq.total || 0) : 0;
   }
-  // A role scores only when Ashby has BOTH Level and Complexity. Missing either and it scores nothing, so it
-  // is marked and excluded from Target rather than quietly contributing 0 — see Data Hygiene → Roles Missing
-  // Score Inputs. Level 'NA' is how Ashby represents unset here, so it counts as missing.
-  const isScoreable = (j) => !!(j.level && j.level !== 'NA' && j.complexity);
+  // A role is "unscored" when the REAL scorer gives it 0, the same test Data Hygiene → Roles Missing Score Inputs uses.
+  // 🚨 #120 (14 Sep 2026): this used to demand BOTH Level and Complexity, but SME roles score on Complexity alone and
+  // Program Advisor roles by title, so SME roles showed Score 0 here while the Recruiter tab scored them.
+  // Headcount counts either way.
+  const isScoreable = (j) => (j.score || 0) > 0;
 
   // [{dept, jobs:[...]}] honouring the Department/Job multi-selects, sorted by department load.
   // withOpeningOnly adds the jobs that exist only as openings (no candidate activity in scope). Fulfilment
@@ -597,7 +611,8 @@ export function initEfficiencyFilters(data) {
         const m = metaByTitle[title] || {};
         const j = { jid: null, title, dept, level: m.level, complexity: m.complexity,
                     score: scoreForRole({ department: dept, title, level: m.level, complexity: m.complexity }, q),
-                    scoreable: isScoreable(m) };
+                    scoreable: false };
+        j.scoreable = isScoreable(j);
         grp.jobs.push({ j, sp: jobSplit(j, q, dept, PM) });
       });
       grp.jobs.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
@@ -641,7 +656,7 @@ export function initEfficiencyFilters(data) {
     const rows = fulfilRows(q);
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
-      const flag = sum.unscored ? `<span title="${sum.unscored} role(s) here have no Level/Complexity in Ashby, so they score nothing. Headcount still counts." style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${sum.unscored} unscored</span>` : '';
+      const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${sum.unscored} unscored</span>` : '';
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length}</span>${flag}</td>${cells(sum, true)}</tr>`;
       jobs.forEach(({ j, sp }, ji) => {
@@ -723,7 +738,6 @@ export function initEfficiencyFilters(data) {
 
   // One bar per DEPARTMENT: solid progressed past R1, pale still at R1, together the number added.
   // Same store as the table.
-  let effScreenChart = null;
   // ===== ONE chart, both dimensions (Jerin, 2026-08-30) — the mirror of the Hiring Manager tab =====
   // The 13 per-department small multiples are gone. Department down the side, stage across the top, the
   // throughput percentage in every cell, and the R1 -> Documentation span as the final column.
@@ -735,12 +749,13 @@ export function initEfficiencyFilters(data) {
     // App Review is kept — see the note on the same line in hm-report.js. It was excluded while throughput
     // meant reached/cleared, which made the stage read 100% and worthless; it is a real figure now.
     const stageCols = vis.slice();
+    const per = tisPeriod();   // #120: the grid follows the whole period, exactly like the table below it
     const asJ2 = (rollups && rollups.assessedByJobQ) || null;
     const spanQ = (rollups && rollups.assessedSpanByJobQ) || null;
     const cellOf = (jids, k) => jids.reduce((a, jid) => {
       if (asJ2) {
-        const c = ((asJ2[jid] || {})[TP_TO_SK[k]] || {})[q] || {};
-        return { inN: a.inN + (c.a || 0), outN: a.outN + (c.b || 0) };
+        const c = sumInPeriod((asJ2[jid] || {})[TP_TO_SK[k]], per);
+        return { inN: a.inN + c.a, outN: a.outN + c.b };
       }
       const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 };
       return { inN: a.inN + c.reached, outN: a.outN + c.cleared };
@@ -749,9 +764,9 @@ export function initEfficiencyFilters(data) {
     // (whichever first) through to Ref Check / Documentation / Offer (whichever first). Never one stage
     // column divided by another: a person sits in several stages, so that double-counts and can exceed 100%.
     const spanOf = (jids) => jids.reduce((acc, jid) => {
-      const v = (spanQ ? (spanQ[jid] || {})[q] : null) || null;
-      if (v) return { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) };
-      return acc;
+      if (!spanQ) return acc;
+      const v = sumInPeriod(spanQ[jid], per);
+      return { a: acc.a + v.a, b: acc.b + v.b };
     }, { a: 0, b: 0 });
     const rows = deptJobs(q).map(({ dept, jobs: js }) => {
       const jids = js.map(j => j.jid);
@@ -776,7 +791,7 @@ export function initEfficiencyFilters(data) {
     buildStageHeat(host, document.getElementById('effTpHeatTip'), rows,
       stageCols.map(k => TP_LABELS[k]), {
         addedCols, hiredCol,
-        overallLabel: spanQ ? 'R1/OA \u2192 LATE' : 'R1 \u2192 DOC',
+        overallLabel: spanQ ? 'R1/OA \u2192 late' : 'R1 \u2192 Doc',
         labels: asJ2 ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
       });
@@ -814,7 +829,7 @@ export function initEfficiencyFilters(data) {
       added: r.added,
       progressed: r.cleared,
       roles: (r.per || []).map(x => ({ title: x.title, added: x.v.added, progressed: x.v.cleared }))
-    })), { xTitle: 'Candidates added at R1', colHeader: 'PROGRESSED',
+    })), { xTitle: 'Candidates added at R1', colHeader: '% progressed',
            fromLabel: 'added at R1', toLabel: 'progressed past R1' });
   }
 
@@ -857,6 +872,32 @@ export function initEfficiencyFilters(data) {
   const ZJC = { o: 0, j: 0, p: 0, dr: 0 };
   const jcOf = (q, dept, title) => joinMapsEff(q)[dept + '|' + (title || '')] || ZJC;
 
+  // ONE list for the table AND the chart (Rule 3: the table computes, the chart reads).
+  // 🚨 #120 (14 Sep 2026): both used to walk only the job tree, so people whose role has no row there (no job title, or
+  // a role Ashby's job list never returned) were dropped: Joining Pending read 42 here against 44 on Fulfilment, which
+  // already adds those rows. Same leftover rule as fulfilRows.
+  function joinRows(q) {
+    const dsel = selDepts(), jsel = selJobs();
+    const seen = {};
+    const out = deptJobs(q).map(({ dept, jobs }) => ({ dept, per: jobs
+      .map(j => { seen[dept + '|' + (j.title || '')] = 1; return { title: j.title, c: jcOf(q, dept, j.title) }; })
+      .filter(x => x.c.o > 0) }));
+    Object.entries(joinMapsEff(q)).forEach(([key, c]) => {
+      if (seen[key] || !(c.o > 0)) return;
+      const i = key.indexOf('|'), dept = key.slice(0, i), title = key.slice(i + 1);
+      if (dsel.length && !dsel.includes(dept)) return;
+      if (jsel.length && !jsel.includes(title)) return;
+      let g = out.find(x => x.dept === dept);
+      if (!g) { g = { dept, per: [] }; out.push(g); }
+      g.per.push({ title: title || '(no job recorded)', c });
+    });
+    return out.map(({ dept, per }) => {
+      per.sort((a, b) => b.c.o - a.c.o);
+      const agg = per.reduce((a, x) => ({ o: a.o + x.c.o, j: a.j + x.c.j, p: a.p + x.c.p, dr: a.dr + x.c.dr }), { o: 0, j: 0, p: 0, dr: 0 });
+      return { dept, ...agg, per };
+    }).filter(r => r.o > 0);
+  }
+
   function renderJoining() {
     const q = selQuarter();
     const body = document.getElementById('effJoinBody'); if (!body) return;
@@ -877,16 +918,12 @@ export function initEfficiencyFilters(data) {
     };
     const add = (a, b) => ({ o: a.o + b.o, j: a.j + b.j, p: a.p + b.p, dr: a.dr + b.dr });
     let html = '';
-    deptJobs(q).forEach(({ dept, jobs }, di) => {
-      const js = jobs.map(j => ({ j, c: jcOf(q, dept, j.title) })).filter(x => x.c.o > 0)
-        .sort((a, b) => b.c.o - a.c.o);
-      if (!js.length) return;
-      const agg = js.reduce((a, x) => add(a, x.c), { o: 0, j: 0, p: 0, dr: 0 });
+    joinRows(q).forEach(({ dept, per: js, ...agg }, di) => {
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(agg, true)}</tr>`;
-      js.forEach(({ j, c }, ji) => {
+      js.forEach(({ title, c }, ji) => {
         html += `<tr data-path="${di}-${ji}" style="display:none">
-          <td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(c, false)}</tr>`;
+          <td style="padding-left:30px;color:var(--muted)">${title}</td>${cells(c, false)}</tr>`;
       });
     });
     body.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody reached an offer under these filters.</td></tr>`;
@@ -897,16 +934,11 @@ export function initEfficiencyFilters(data) {
   // One bar per DEPARTMENT — the department-centric mirror of the Recruiter tab's bar per recruiter.
   // Joined / Joining Pending / Dropped stacked, with Offered and the Joining Conversion printed at the end,
   // read off the same joinMapsEff the table uses.
-  let effJoinChart = null;
   function buildJoinChartEff() {
     const ctx = document.getElementById('effJoinChart'); if (!ctx) return;
     if (effJoinChart) { effJoinChart.destroy(); effJoinChart = null; }
     const q = selQuarter();
-    const rows = deptJobs(q).map(({ dept, jobs }) => {
-      const per = jobs.map(j => ({ title: j.title, c: jcOf(q, dept, j.title) })).filter(x => x.c.o > 0);
-      const agg = per.reduce((a, x) => ({ o: a.o + x.c.o, j: a.j + x.c.j, p: a.p + x.c.p, dr: a.dr + x.c.dr }), { o: 0, j: 0, p: 0, dr: 0 });
-      return { dept, ...agg, per };
-    }).filter(r => r.o > 0).sort((a, b) => b.o - a.o);
+    const rows = joinRows(q).sort((a, b) => b.o - a.o);   // the table's own rows (#120)
     const wrap = document.getElementById('effJoinChartWrap');
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
     const h = hbarHeight(rows.length);
@@ -982,6 +1014,9 @@ export function initEfficiencyFilters(data) {
     if (!tpByJob) { podSkeletonBody('effTpBody', vis.length + 1, () => dashTds(vis.length + 1)); return; }
     // Department → Job, from the stage-history rollups.
     const q = selQuarter();
+    // #120 (14 Sep 2026): the cells follow the whole PERIOD like Screening and Time in Process; they used to read one
+    // quarter, so "Quarter: All" showed only the current quarter. null = all time.
+    const per = tisPeriod();
     const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
     const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
     // Prefers the rebuilt measure — A = assessed at the stage (an interview held there, an assignment
@@ -992,7 +1027,7 @@ export function initEfficiencyFilters(data) {
     const jobRC = (jid) => {
       if (asJ) {
         const t = asJ[jid] || {};
-        return vis.map(k => { const c = (t[TP_TO_SK[k]] || {})[q] || {}; return { r: c.a || 0, c: c.b || 0 }; });
+        return vis.map(k => { const s = sumInPeriod(t[TP_TO_SK[k]], per); return { r: s.a, c: s.b }; });
       }
       const t = tpByJob[jid] || {};
       return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; });
@@ -1002,8 +1037,8 @@ export function initEfficiencyFilters(data) {
     // HM table, which already dashes it) so an empty stage cannot be mistaken for a total failure.
     const spQ = (rollups && rollups.assessedSpanByJobQ) || null;
     const spanOf = (jids) => !spQ ? null : jids.reduce((acc, jid) => {
-      const v = (spQ[jid] || {})[q] || null;
-      return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) } : acc;
+      const v = sumInPeriod(spQ[jid], per);
+      return { a: acc.a + v.a, b: acc.b + v.b };
     }, { a: 0, b: 0 });
     const cells = (rc, sp) => rc.map((x, i) => {
       const added = !!TP_ADDED[vis[i]];
@@ -1031,6 +1066,11 @@ export function initEfficiencyFilters(data) {
 
   // Quarter keys the Year/Quarter selector covers; null = all-time. Separate from selQuarter(), which
   // always resolves to ONE quarter for pod grouping and capacity even when the selector reads "All".
+  // Adds up {quarter: {a, b}} over a period (an array of quarter keys; null = every quarter present).
+  function sumInPeriod(byQ, per) {
+    const src = byQ || {};
+    return (per || Object.keys(src)).reduce((acc, qq) => { const v = src[qq]; return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) } : acc; }, { a: 0, b: 0 });
+  }
   function tisPeriod() {
     const ySel = document.getElementById('effYear');
     // `years` is local to renderEfficiency, so read the fallback year off the rendered select instead.
@@ -1165,7 +1205,7 @@ export function initEfficiencyFilters(data) {
     } else {
       // No ToFU field yet. Say so rather than falling back to the old per-stage counts, which answer a
       // different question and would sit under this heading as a lie.
-      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">ToFU arrivals appear after the next stage-history refresh.</td></tr>`;
+      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">Arrivals appear after the next stage-history refresh.</td></tr>`;
     }
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
@@ -1188,22 +1228,24 @@ export function initEfficiencyFilters(data) {
   const hasJoinerSrc = (data.offerEvents || []).some(e => e.srcType);
 
   let _jsQ = null, _jsMap = null;
-  // { job8: { sourceType: { sourceName: joiners } } } for the given quarter (null/'' = all time).
-  function joinerSourcesByJob(q) {
-    if (_jsQ === (q || 'ALL') && _jsMap) return _jsMap;
+  // { job8: { sourceType: { sourceName: joiners } } } for a PERIOD: an array of quarter keys, null = all time.
+  // #120 (14 Sep 2026): it took ONE quarter, so "Quarter: All" showed the current quarter only.
+  function joinerSourcesByJob(per) {
+    const ck = per ? per.join(',') : 'ALL';
+    if (_jsQ === ck && _jsMap) return _jsMap;
     const out = {};
     (data.offerEvents || []).forEach(e => {
       if (!e.accepted || e.appStatus !== 'Hired' || !e.jobId8) return; // Joined = moved to Hired, not just an accepted offer
       const eq = qOfDate(e.startDate);
       if (!eq) return;
-      if (q && eq !== q) return;
+      if (per && !per.includes(eq)) return;
       const t = e.srcType || NO_SRC;
       const nm = e.srcType ? (e.srcName || '(unspecified)') : NO_SRC;
       const j = out[e.jobId8] || (out[e.jobId8] = {});
       const bt = j[t] || (j[t] = {});
       bt[nm] = (bt[nm] || 0) + 1;
     });
-    _jsQ = (q || 'ALL'); _jsMap = out;
+    _jsQ = ck; _jsMap = out;
     return out;
   }
 
@@ -1212,8 +1254,8 @@ export function initEfficiencyFilters(data) {
   const sumNested = (nst) => Object.values(nst).reduce((s, names) => s + sumNames(names), 0);
 
   // Department → Job, each carrying its merged {type:{name:count}}. Honours the Department + Job filters.
-  function sourceTree(q) {
-    const byJob = joinerSourcesByJob(q);
+  function sourceTree(q, per) {
+    const byJob = joinerSourcesByJob(per);
     return deptJobs(q).map(({ dept, jobs }) => {
       const jarr = [];
       jobs.forEach(j => {
@@ -1228,9 +1270,9 @@ export function initEfficiencyFilters(data) {
   }
 
   // The {type:{name:count}} the chart draws — same scope as the table, so the two can never disagree.
-  function visibleSourceAgg(q) {
+  function visibleSourceAgg(q, per) {
     const agg = {};
-    sourceTree(q).forEach(d => mergeNested(agg, d.nst));
+    sourceTree(q, per).forEach(d => mergeNested(agg, d.nst));
     return agg;
   }
 
@@ -1243,8 +1285,9 @@ export function initEfficiencyFilters(data) {
 
     // Live state only — what the panel is showing right now. The definitions live in the collapsible block
     // above (Jerin, 2026-08-29: "don't we have the collapsible section to give the definition").
-    if (note) note.textContent = q
-      ? `Showing where the people who joined in ${q} came from.`
+    const per = tisPeriod();   // #120: the whole period, not one quarter
+    if (note) note.textContent = per
+      ? `Showing where the people who joined in ${per.length === 1 ? per[0] : (per[0] || '').slice(0, 4)} came from.`
       : 'Showing where everyone who has joined came from (all time).';
     if (th) th.textContent = 'Department / Job / Source type / Source name';
     if (warn) {
@@ -1269,7 +1312,7 @@ export function initEfficiencyFilters(data) {
     };
 
     let html = '';
-    const tree = sourceTree(q);
+    const tree = sourceTree(q, per);
     const grand = tree.reduce((s, d) => s + d.tot, 0) || 1;
     tree.forEach((D, di) => {
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -1370,7 +1413,7 @@ export function initEfficiencyFilters(data) {
 
     buildDayHeat(host, tip, wrap, rows, chrono, roleAt, {
       alignSel: '.eff-panel[data-panel="velocity"] .evel-table thead th',
-      emptyMsg: 'Nobody was added to ToFU in this window for the departments shown.'
+      emptyMsg: 'Nobody was added in this window for the departments shown.'
     });
   }
 
@@ -1405,9 +1448,12 @@ export function initEfficiencyFilters(data) {
   // need department-wise charts, the overall chart is enough — but bring in the gradient to the department,
   // each gradient being a job"). The shared helper in chart-style.js does the banding, so this chart, HM
   // Positions and the two panels below it cannot drift apart.
-  // ⚠ Delta is NOT split — it can be negative and the table clamps it at DEPARTMENT level. Splitting it let
-  // a −5 role and a +5 role cancel in the table while both counted in the chart (SME - India read 53
-  // against the table's 48).
+  // ⚠ Delta is NOT split: a −5 role and a +5 role cancel in the table, and splitting let both count in the chart
+  // (SME - India read 53 against the table's 48).
+  // 🚨 #120 (14 Sep 2026): Delta is SIGNED in the table (Rule 1) and a bar cannot draw a negative band, so a department
+  // with more people in closing than positions drew no Delta band, and the end label and tooltip then added Joined +
+  // Joining Pending and called it "Total positions" (Unknown read 3 against the table's 1). Both now READ the table's
+  // Total, and the tooltip names a negative Delta.
   function renderFulfilCharts(q) {
     const rows = fulfilRows(q);
 
@@ -1442,12 +1488,33 @@ export function initEfficiencyFilters(data) {
 
     const opts = fulfilStackOpts('Positions');
     opts.plugins.legend = metricLegend(METRICS);
-    opts.plugins.tooltip = roleSectionTooltip(METRICS, { totalLabel: 'Total positions' });
+    opts.plugins.stackTotals = false;   // the global plugin adds up the bars; this label must be the table's Total
+    opts.plugins.tooltip = roleSectionTooltip(METRICS, { totalLabel: 'Total positions',
+      total: (i) => rows[i].sum.total,
+      extra: (i) => rows[i].sum.gap < 0 ? `Delta ${rows[i].sum.gap}: ${-rows[i].sum.gap} more in closing than positions opened` : '' });
+    const totalLabels = {
+      id: 'effFulfilTotals',
+      afterDatasetsDraw(chart) {
+        const c = chart.ctx; c.save();
+        c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = '#334155';
+        rows.forEach((r, i) => {
+          let x = null, y = null;
+          chart.data.datasets.forEach((d, di) => {
+            if (!chart.isDatasetVisible(di) || !(d.data[i] > 0)) return;
+            const bar = chart.getDatasetMeta(di).data[i]; if (!bar) return;
+            x = x == null ? bar.x : Math.max(x, bar.x); y = bar.y;
+          });
+          if (x != null) c.fillText(String(r.sum.total), x + 6, y);
+        });
+        c.restore();
+      }
+    };
     effFulfilCombined = new Chart(ctx, {
       type: 'bar',
       data: { labels: rows.map(r => r.dept), datasets: roleBandDatasets(chartRows, METRICS) },
       options: opts,
-      plugins: [roleBandOverlay(METRICS)]
+      plugins: [roleBandOverlay(METRICS), totalLabels]
     });
   }
 
@@ -1463,7 +1530,7 @@ export function initEfficiencyFilters(data) {
     const ctx = document.getElementById('effSourceChart'); if (!ctx) return;
     if (effSourceChart) effSourceChart.destroy();
     const q = selQuarter();
-    const agg = visibleSourceAgg(q);   // type -> { name: count }, same scope as the table
+    const agg = visibleSourceAgg(q, tisPeriod());   // type -> { name: count }, same scope as the table
     const types = Object.keys(agg);
     const totalAll = types.reduce((s, t) => s + Object.values(agg[t]).reduce((a, v) => a + v, 0), 0);
     const wrap = ctx.parentElement; let emptyMsg = wrap && wrap.querySelector('.chart-empty');
@@ -1503,7 +1570,19 @@ export function initEfficiencyFilters(data) {
     });
   }
 
+  // Live state: which period each panel is on when Quarter reads All (#120, mirrors the Recruiter tab's note).
+  function updateQtrNote() {
+    const el = document.getElementById('effQtrNote'); if (!el) return;
+    const oneQuarter = !!document.getElementById('effQuarter')?.value;
+    el.style.display = oneQuarter ? 'none' : '';
+    if (oneQuarter) return;
+    const per = tisPeriod();
+    const perTxt = (per && per.length) ? (per.length === 1 ? per[0] : per[0].slice(0, 4)) : 'all time';
+    el.innerHTML = `<strong>Quarter: All.</strong> Screening Efficiency, Throughput, Time in Process, Sourcing Mix and Panelists cover <strong>${perTxt}</strong>. Fulfilment and Joining Conversion exist only per quarter, so they show <strong>${selQuarter()}</strong>.`;
+  }
+
   function renderActive() {
+    updateQtrNote();
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
@@ -1531,7 +1610,8 @@ export function initEfficiencyFilters(data) {
           quarter: () => document.getElementById('effQuarter')?.value || '',
           depts: () => (msDept ? msDept.getSelected() : []),
           jobs: () => (msJob ? msJob.getSelected() : []),
-          panelists: () => []            // this tab has no panelist dimension
+          panelists: () => [],           // this tab has no panelist dimension
+          expandAll: () => expandAll()   // #120: Expand all reaches the Panelists tree too
         }
       }) || null;
     } else {
@@ -1557,7 +1637,7 @@ export function initEfficiencyFilters(data) {
   msPod = null;
   msDept = makeMultiSelect(document.getElementById('effMsDept'), 'Department', deptNames, renderAll);
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobNames, renderAll);
-  document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
+  document.addEventListener('click', closeMsPanels);
   document.getElementById('effExpandAll')?.addEventListener('change', renderAll);
   document.querySelectorAll('.eff-tpStage').forEach(cb => cb.addEventListener('change', renderThroughput));
 

@@ -248,7 +248,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: PIPELINE ===== -->
     <div class="hm-panel" data-panel="pipeline" style="display:none">
       ${defsBlock('hm-pipeline')}
-      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — each job's counts show where candidates stand today, not in the selected period. The period decides which <em>jobs</em> are listed, so the department and total rows do move with it. Click a department to drill in.</p>
+      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — counts show where candidates stand today, not in the selected period. Click a department to drill in.</p>
       <div class="hm-stages">
         <span class="lbl">Stages:</span>
         ${STAGES_ORDER.map(k => `<label><input type="checkbox" class="hm3Stage" value="${k}" checked> ${STAGE_LABELS[k]}</label>`).join('\n        ')}
@@ -287,6 +287,8 @@ function dropRows(data) {
 }
 
 let hm1ChartInstance = null;
+// One shared function, so revisiting the tab does not stack another document listener each time (#120, 14 Sep 2026).
+const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
 
 export function initHmFilters(data) {
   if (!data) return;
@@ -362,7 +364,9 @@ export function initHmFilters(data) {
     const q = document.getElementById('hmQuarter')?.value || '';
     const fromEl = document.getElementById('hmDateFrom');
     const toEl = document.getElementById('hmDateTo');
-    if (!y && !q) return;
+    // Year: All + Quarter: All = all time, so clear the dates. Returning early left the PREVIOUS quarter's dates in
+    // place: Positions stayed on Q3 while Panelists went all-time (#120, 14 Sep 2026).
+    if (!y && !q) { fromEl.value = ''; toEl.value = ''; return; }
     const years = [...new Set(openings.map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
     const yr = y || years[0] || String(new Date().getFullYear());
     if (q) {
@@ -398,6 +402,24 @@ export function initHmFilters(data) {
     document.querySelectorAll('.hm1Status').forEach(cb => { if (cb.checked) checked.push(cb.value); });
     return checked;
   }
+  // 🚨 #120 (14 Sep 2026): Status is the JOB's status (Open or Closed; Archived counts as Closed). It used to filter only
+  // the opening columns of Positions, so unticking Open moved Total Positions while Joining Pending, Drop, the cases
+  // list, Throughput, Pipeline and Panelists stayed put. It now reaches every panel keyed by a job.
+  // Both ticked, or neither, = no filter (which also stops the default view silently dropping Archived jobs).
+  const jobStatusByTitle = {};
+  (data.jobs || []).forEach(j => { if (j.title) (jobStatusByTitle[j.title] || (jobStatusByTitle[j.title] = new Set())).add(j.status === 'Open' ? 'Open' : 'Closed'); });
+  Object.values(data.openingBuckets || {}).forEach(b => { if (b.title && !jobStatusByTitle[b.title]) jobStatusByTitle[b.title] = new Set([(b.status || 'Open') === 'Open' ? 'Open' : 'Closed']); });
+  function statusWanted() { const s = getSelectedStatuses(); return s.length === 1 ? s[0] : null; }
+  function statusOk(title, raw) {
+    const want = statusWanted(); if (!want) return true;
+    const st = raw != null ? new Set([(raw || 'Open') === 'Open' ? 'Open' : 'Closed']) : (jobStatusByTitle[title] || new Set(['Open']));
+    return st.has(want);
+  }
+  function statusJobs(sel) {
+    if (!statusWanted()) return sel;
+    const out = (sel.length ? sel : jobTitles).filter(t => statusOk(t));
+    return out.length ? out : ['(no job matches the status filter)'];
+  }
 
   function renderSection1() {
     const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept();
@@ -413,7 +435,7 @@ export function initHmFilters(data) {
     Object.entries(ob).forEach(([job8, rec]) => {
       const dept = deptOf(rec.department || '') || 'Unknown';
       if (deptG && dept !== deptG) return;
-      if (statuses.length > 0 && statuses.indexOf(rec.status || 'Open') === -1) return;
+      if (!statusOk(rec.title, rec.status || 'Open')) return;
       if (jobSel.length && !jobSel.includes(rec.title)) return;
       let t = 0, jn = 0, op = 0, ms = 0;
       Object.entries(rec.quarters || {}).forEach(([q, b]) => {
@@ -433,7 +455,7 @@ export function initHmFilters(data) {
     // covers 92/92) and is, so these two columns sit on different time bases — the caption says so.
     // Rows are added for jobs that have people in closing but NO opening in the period: restricting to
     // openings showed 88 of 166 pending people and hid 45 of SME - India's 46.
-    const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title));
+    const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title)) && statusOk(title);
     function bump(dept, title, field) {
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
@@ -600,7 +622,15 @@ export function initHmFilters(data) {
   const assessedByJobQ = () => (data.stageRollups && data.stageRollups.assessedByJobQ) || null;
   const hasAssessed = () => !!assessedByJobQ();
 
-  function throughputFor(j, quarters) {
+  function throughputFor(j, quarters, periodSet) {
+    // 🚨 #120 (14 Sep 2026): a period with NO rollup quarters (a future quarter, a range with no data) has no
+    // throughput and must read empty. It fell through to the LIFETIME snapshot at the bottom, the bug #5 removed for
+    // the older data shape, so Q4 2026 showed full all-time figures.
+    if (periodSet && !quarters.length) {
+      const out = {}; TP_KEYS.forEach(k => { out[k] = { i: 0, o: 0 }; });
+      out.span = { i: 0, o: 0 }; out.overall = null;
+      return out;
+    }
     const asJ = assessedByJobQ();
     if (asJ && quarters.length) {
       const st0 = asJ[j.id] || {};
@@ -654,6 +684,7 @@ export function initHmFilters(data) {
       if (deptG && j._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(j.title)) return false;
       if (!j.pipeline) return false;
+      if (!statusOk(j.title)) return false;   // #120
       return true;
     }).sort(byDept);
 
@@ -661,7 +692,7 @@ export function initHmFilters(data) {
     // job with 308 applications ever and no activity at all in the selected quarter still rendered a full row
     // of zeros, and the department's job count was inflated to match. It now tests throughput IN THE SELECTED
     // PERIOD, which is what the checkbox claims and what the quarter selector implies.
-    const withT = filtered.map(j => ({ j, t: throughputFor(j, quarters) }));
+    const withT = filtered.map(j => ({ j, t: throughputFor(j, quarters, !!(gFrom() || gTo())) }));
     const shown = hideEmpty
       ? withT.filter(({ t }) => TP_KEYS.some(k => (t[k].i > 0 || t[k].o > 0)))
       : withT;
@@ -745,8 +776,7 @@ export function initHmFilters(data) {
       `<span><i class="sw lo"></i>under 50% ${hasAssessed() ? 'progressed' : 'moved past'}</span>`
       + '<span><i class="sw mid"></i>50–70%</span>'
       + '<span><i class="sw hi"></i>over 70%</span>'
-      + `<span><i class="sw none"></i>${hasAssessed() ? 'nobody assessed here' : 'stage not used'}</span>`
-      + `<span class="leg-note">Number = candidates ${hasAssessed() ? 'assessed at that stage' : 'who entered the stage'}.</span>`;
+      + `<span><i class="sw none"></i>${hasAssessed() ? 'nobody assessed here' : 'stage not used'}</span>`;
 
     // ===== ONE chart, both dimensions (Jerin, 2026-08-30) =====
     // Replaces two org-wide charts — a per-stage In/Out column chart and a pipeline funnel — neither of
@@ -787,7 +817,7 @@ export function initHmFilters(data) {
       buildStageHeat(heatHost, document.getElementById('hm2HeatTip'), heatRows,
         stageCols.map(sk => TP_LABELS[sk]), {
           addedCols, hiredCol,
-          overallLabel: hasAssessed() ? 'R1/OA → LATE' : 'R1 → DOC',
+          overallLabel: hasAssessed() ? 'R1/OA → late' : 'R1 → Doc',
           labels: hasAssessed() ? undefined
             : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
         });
@@ -808,8 +838,10 @@ export function initHmFilters(data) {
           year: () => document.getElementById('hmYear')?.value || '',
           quarter: () => document.getElementById('hmQuarter')?.value || '',
           depts: () => { const d = gDept(); return d ? [d] : []; },
-          jobs: () => selJobs(),
-          panelists: () => (msHmPanel ? msHmPanel.getSelected() : [])
+          jobs: () => statusJobs(selJobs()),
+          panelists: () => (msHmPanel ? msHmPanel.getSelected() : []),
+          range: () => ({ from: gFrom(), to: gTo() }),   // #120: Panelists follow From/To like every other panel here
+          expandAll: () => !!document.getElementById('hmExpandAll')?.checked
         }
       }) || null;
     } else {
@@ -848,6 +880,7 @@ export function initHmFilters(data) {
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(c.job)) return false;
+      if (!statusOk(c.job)) return false;   // #120
       if (monthF && monthOf(c.doj) !== monthF) return false;
       if (dojFrom && (c.doj || '') < dojFrom) return false;
       if (dojTo && (c.doj || '') > dojTo) return false;
@@ -861,12 +894,12 @@ export function initHmFilters(data) {
       const unlinkedShown = list.filter(c => !c.linked).length;
       capEl.innerHTML = list.length
         ? `<strong>${list.length}</strong> in closing, <strong>live</strong> \u2014 the page date filter does not apply.`
-          + (unlinkedShown ? ` <strong>${unlinkedShown}</strong> have no opening attached (Data Hygiene \u2192 Offers Missing Opening Link).` : '')
+          + (unlinkedShown ? ` <strong>${unlinkedShown}</strong> have no opening attached.` : '')
         : '';
     }
 
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody with an opening attached is in Ref Check, Documentation or Offer for this filter. Unlinked cases appear in Data Hygiene.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
       return;
     }
     // Newest opening quarter first, unlinked rows last (they have no quarter to sort on).
@@ -910,7 +943,9 @@ export function initHmFilters(data) {
       if (deptG && j._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(j.title)) return false;
       if (!j.pipeline) return false;
-      if (openTitles.size && !openTitles.has(j.title)) return false;
+      // #120: with a period set, a job needs an opening in it. An EMPTY set used to mean "list every job".
+      if ((gFrom() || gTo()) && !openTitles.has(j.title)) return false;
+      if (!statusOk(j.title)) return false;
       if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return false;
       return true;
     }).sort(byDept);
@@ -993,7 +1028,7 @@ export function initHmFilters(data) {
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msHmPanel = makeMultiSelect(document.getElementById('msHmPanel'), 'Panelist', panelistNames, renderPanelist);
-  document.addEventListener('click', () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none'));
+  document.addEventListener('click', closeMsPanels);
   // Joining Pending local listeners
   document.getElementById('hmJPMonth')?.addEventListener('change', renderJoiningPending);
   document.getElementById('hmJPFrom')?.addEventListener('change', renderJoiningPending);

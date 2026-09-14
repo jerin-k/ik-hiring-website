@@ -129,6 +129,7 @@ export function renderAdmin(accessConfig, data) {
     </div>
 
     <div class="adm-panel" data-apanel="access">
+      ${defsBlock('admin-access')}
       <div class="cfg-card" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
         <div style="font-size:12px;line-height:1.6">
           <div id="acStatus" style="font-weight:700"></div>
@@ -147,12 +148,10 @@ export function renderAdmin(accessConfig, data) {
           <option value="full_access">Full Access</option>
           <option value="restricted">Restricted</option>
         </select>
-        <span style="font-size:11px;color:var(--muted)">What unlisted @interviewkickstart.com users see when they first sign in.</span>
       </div>
 
       <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 4px">Users</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 12px">Sign-in identity is the GSuite <strong>email</strong>. <strong>Restricted</strong> users see only the <strong>Tabs</strong> you grant (Overview is always on); Hiring Manager / Overview data is scoped to the <strong>Departments/Teams</strong> you pick (empty = all).</p>
+        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 12px">Users</h4>
 
         <div class="ac-addrow">
           <input type="email" id="new-email" placeholder="name@interviewkickstart.com">
@@ -197,25 +196,22 @@ export function renderAdmin(accessConfig, data) {
       <div class="cfg-card" style="display:flex;align-items:center;gap:12px;background:var(--accent-light);border-color:var(--border)">
         <span class="lbl">Quarter</span>
         <select id="cfgQuarter"></select>
-        <span style="font-size:11px;color:var(--muted)">Drives Pod, Capacity &amp; Score Grid below — each stored per quarter, inheriting the previous quarter (copy-forward); edit to override.</span>
       </div>
 
       <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 8px">Recruiter → Pod &amp; Capacity</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Recruiters here in the selected quarter. <strong>Started on</strong> and <strong>Left on</strong> are set once per person, not per quarter.</p>
-        <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer" title="Recruiters who were not here in the selected quarter, going by their Started on / Left on dates — or, where no dates are set yet, a disabled Ashby account. Their saved Pod and Capacity are kept either way; this only changes what is listed here.">
+        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 10px">Recruiter → Pod &amp; Capacity</h4>
+        <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer">
           <input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" style="color:var(--muted)"></span>
         </label>
         <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px" title="Editable for everyone. Agency = the sourcer takes the whole score on SME roles, and the head; Freelancer and Internal both share the score half and half. Ashby&#39;s External Recruiter flag only sets the default (external = Freelancer, ours = Internal).">Type</th><th style="width:150px" title="Set once per person. With both dates blank, the Ashby account decides who counts, as before.">Started on</th><th style="width:150px" title="Last working day. Blank = still here. Someone who left mid-quarter still counts for that quarter.">Left on</th><th style="width:170px">In quarter</th><th style="width:110px">Ashby account</th></tr></thead>
+          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px">Type</th><th style="width:150px">Started on</th><th style="width:150px">Left on</th><th style="width:170px">In quarter</th><th style="width:110px">Ashby account</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
-        <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span><span style="margin-left:6px">· edits auto-save to this browser (team-wide sync is pending the pipeline).</span></div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span></div>
       </div>
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 6px">Role Score Grid <span id="cfgGridNote" style="font-weight:400;font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0"></span></h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Each classification maps to one complexity tier → its point value. Stored <strong>per quarter</strong> (copy-forward); a candidate scores off the grid for the quarter of its offer/hire date. Points editable in the header; one tier per row.</p>
         <div class="cfg-scroll"><table class="cfg-grid">
           <thead id="cfgGridHead"></thead>
           <tbody id="cfgGridBody"></tbody>
@@ -224,7 +220,6 @@ export function renderAdmin(accessConfig, data) {
 
       <div class="cfg-card">
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 6px">Department → Family</h4>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 10px">Maps each Ashby department to a scoring family. Business departments resolve to <strong>PA</strong> only when the job title is <em>Program Advisor</em> (incl. Sr PA → PA Regular); otherwise NonTech.</p>
         <div class="cfg-scroll"><table>
           <thead><tr><th style="min-width:200px">Ashby Department</th><th style="width:150px">Family</th><th>Note</th></tr></thead>
           <tbody id="cfgDeptBody"></tbody>
@@ -239,12 +234,10 @@ export function renderAdmin(accessConfig, data) {
 
     <div class="admin-section">
       <h3>Departments &amp; Teams</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-        Authoritative Ashby department → team hierarchy, used across all reports to resolve department names.
-        Mirrors Ashby → Admin → Organization Setup → Departments &amp; Teams.
+      ${defsBlock('admin-depts')}
+      <p class="sub-note">
         ${Object.keys(DEPT_TREE).length} departments,
         ${Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0)} teams.
-        Edit <code>site/js/dept-map.js</code> when Ashby changes.
       </p>
       <div class="table-wrapper">
         <table>
@@ -434,14 +427,14 @@ export function initAdminMetricConfig(data) {
       <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td>
       <td><select class="cfg-utype" data-name="${name}" title="${ext.has(name)
         ? 'Ashby marks this account as an External Recruiter.'
-        : 'Ashby does not mark this account as an External Recruiter, so it defaults to Internal — but you can still set it deliberately.'}">${USER_TYPES.map(t => `<option value="${t}"${t === userTypeOf(name, ext) ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+        : 'Ashby does not mark this account as an External Recruiter.'}">${USER_TYPES.map(t => `<option value="${t}"${t === userTypeOf(name, ext) ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
       <td><input type="date" class="cfg-date${(dates[name] || {}).start ? '' : ' is-empty'}" data-name="${name}" data-f="start" value="${(dates[name] || {}).start || ''}" aria-label="Started on for ${name}"></td>
       <td><input type="date" class="cfg-date${(dates[name] || {}).end ? '' : ' is-empty'}" data-name="${name}" data-f="end" value="${(dates[name] || {}).end || ''}" aria-label="Left on for ${name}"></td>
       <td>${(() => { const s = here(r); const q0 = String(q).replace(/^(\d{4})-(Q\d)$/, '$2 $1');
         const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
         const col = !s.in ? 'var(--muted)' : (/left/.test(s.note) ? 'var(--orange)' : (/joined/.test(s.note) ? 'var(--green)' : 'var(--accent-deep)'));
         return `<span title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}" style="font-size:11px;font-weight:600;color:${col}">${txt}</span>`; })()}</td>
-      <td><span title="${unk ? 'No Ashby user record matched this name, so the status is unknown.' : 'Enabled = holds an elevated recruiter seat in Ashby (Recruiter / Recruiter Admin). Only decides who counts when no dates are set.'}" style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
+      <td><span style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
       || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'Nobody here this quarter — tick “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
