@@ -133,8 +133,8 @@ export const DEFINITIONS = {
 
   'rec-fulfilment': {
     summary: 'How these numbers are worked out',
-    intro: 'Three tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> and <strong>Others</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top. Goals, pods and capacity exist only per quarter, so with Quarter on <em>All</em> these tables show the current quarter.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026 · recruiter/sourcer credit rule replaced and the +N sourced line added 13 Sep 2026 · Goal counts filled openings and leaves out archived ones 14 Sep 2026',
+    intro: 'Three tables, same shape. <strong>Non-Sales</strong> is measured on <strong>Joined + Joining Pending</strong>; <strong>Sales</strong> and <strong>Others</strong> on <strong>Joined</strong>. Everything follows the Year/Quarter selector at the top. Goals, pods and capacity exist only per quarter, so with Quarter on <em>All</em> these tables show the current quarter. The <strong>Job</strong> filter narrows every number to the chosen jobs. While it is on, or your access is limited to certain departments, <strong>Capacity</strong> and <strong>Capacity Utilisation</strong> read a dash.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Goal basis updated 6 Sep 2026 · Joined split on Sales and Others added 7 Sep 2026 · recruiter/sourcer credit rule replaced and the +N sourced line added 13 Sep 2026 · Goal counts filled openings and leaves out archived ones 14 Sep 2026 · the Job filter narrows every number, and Capacity reads a dash while it does, 14 Sep 2026',
     groups: [
       {
         heading: 'The two number types in every column',
@@ -147,7 +147,7 @@ export const DEFINITIONS = {
         heading: 'The columns',
         items: [
           ['Goal', 'The <strong>openings you own</strong> in the selected quarter — the positions where you are the <strong>Recruiter on the opening</strong> in Ashby, not every role you have ever touched. Each opening scores from its role’s Family, Level and Complexity. <strong>The Goal is never shared</strong>: even where an opening also has a Sourcer, the recruiter keeps its full points. Openings a person is tagged on as <strong>Sourcer</strong> show underneath as <strong>+N sourced</strong>, with no points attached. Openings still open, already filled or carried forward all count; <strong>archived</strong> openings do not.'],
-          ['Capacity', 'What this recruiter is expected to carry in the quarter, as a <strong>Score</strong>, set by hand in <strong>Admin → Metric Configuration</strong>. It reads 0 until somebody sets it. It is not the Goal — the Goal comes from the openings the recruiter owns. Role rows show a dash, because capacity is set per recruiter.'],
+          ['Capacity', 'What this recruiter is expected to carry in the quarter, as a <strong>Score</strong>, set by hand in <strong>Admin → Metric Configuration</strong>. It reads 0 until somebody sets it. It is not the Goal — the Goal comes from the openings the recruiter owns. Role rows show a dash, because capacity is set per recruiter — and every row does while the <strong>Job</strong> filter or a department restriction narrows the numbers, because capacity cannot be split by job or department.'],
           ['Joined', 'Candidates <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, from the individual offer records — an accepted offer alone is not counted. On <strong>Non-Sales</strong> it also excludes anyone linked to an <strong>earlier quarter\u2019s opening</strong> — last quarter\u2019s work landing now. <strong>Sales and Others take no such subtraction</strong>, deliberately: their goal is joiners whenever the opening was raised. On <strong>Sales</strong> and <strong>Others</strong> this appears as <strong>Joined Total</strong>, split across the two columns beside it.'],
           ['Joined — Prev Qtr Openings <span class="defs-tag">Sales · Others</span>', 'Of the people who joined this quarter, those filling an opening raised in an <strong>earlier</strong> quarter — carried-over demand finally landing. Needs the offer to carry an opening link.'],
           ['Joined — Current Qtr Openings <span class="defs-tag">Sales · Others</span>', 'Everyone else who joined — <strong>Joined Total minus the column beside it</strong>, so the two always add up. Because it is a subtraction it also holds <strong>every joiner whose offer has no opening attached at all</strong>; that count is printed under the number as <em>unlinked</em>. So this column means <em>“not known to be earlier”</em>, not <em>“raised this quarter”</em>.'],
@@ -158,7 +158,7 @@ export const DEFINITIONS = {
           ['JP — Current Qtr Openings <span class="defs-tag">Sales · Others</span>', 'Everyone else in closing.'],
           ['Drop', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted in the quarter they first got there, <strong>once</strong> per person. The small print is Drop \u00f7 (Joined + JP + Drop).'],
           ['Delta', 'Goal minus what was achieved (Joined + Joining Pending on Non-Sales, Joined on Sales and Others), so it is the shortfall. Never shown below zero. On the Score side the bar fills with the shortfall, and the line under it reads how much of the Goal is covered — for example <em>40 of 50 · 80%</em>, <em>goal met</em>, or <em>no goal set</em>. The <strong>+N sourced</strong> line underneath is the same sum for what the person sourced: the openings they are tagged on as Sourcer, minus the sourced people counted as achieved — also never below zero.'],
-          ['Capacity Utilisation', 'Achieved ÷ Capacity, both as Score; a dash when no capacity is set. <strong>The colour runs the opposite way to Delta on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
+          ['Capacity Utilisation', 'Achieved ÷ Capacity, both as Score; a dash when no capacity is set, and while the <strong>Job</strong> filter or a department restriction narrows the numbers — part of someone’s work set against all of their capacity would read falsely low. <strong>The colour runs the opposite way to Delta on purpose</strong>: over 100% is over-delivery and reads well, under 70% is under-use and is the thing worth acting on.'],
         ]
       },
       {
@@ -180,7 +180,7 @@ export const DEFINITIONS = {
       {
         heading: 'The chart and the Cases list',
         items: [
-          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. A solid line marks their <strong>Goal</strong>, a dashed line their <strong>Capacity</strong>, and a pale band labelled <em>Short of Goal</em> fills any shortfall. Everything is in Score. Same figures as the table. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them. <em>Short of Goal</em> is not split \u2014 it belongs to no single role. The bar is always exactly the table\u2019s Achieved: any credit that no role row under the recruiter carries shows as its own band, <em>credit not tied to a listed role</em>. Hovering a bar shows the Goal.'],
+          ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. A solid line marks their <strong>Goal</strong>, a dashed line their <strong>Capacity</strong> (not drawn while the Job filter or a department restriction narrows the numbers), and a pale band labelled <em>Short of Goal</em> fills any shortfall. Everything is in Score. Same figures as the table. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them. <em>Short of Goal</em> is not split \u2014 it belongs to no single role. The bar is always exactly the table\u2019s Achieved: any credit that no role row under the recruiter carries shows as its own band, <em>credit not tied to a listed role</em>. Hovering a bar shows the Goal.'],
           ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
           ['Cases columns', '<strong>Opening Quarter</strong> is the quarter of the opening the offer is linked to (<em>Not linked</em> when there is none). <strong>Month</strong> and <strong>DOJ</strong> are the joining date. <strong>Sub-Stage</strong> is Ref Check, Documentation or Offer.'],
         ]
@@ -198,7 +198,7 @@ export const DEFINITIONS = {
 
   'rec-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage.',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
     confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026',
     groups: [
       {
@@ -229,7 +229,7 @@ export const DEFINITIONS = {
   },
   'rec-screening': {
     summary: 'How these numbers are worked out',
-    intro: 'What happens to candidates once they reach <strong>R1</strong> \u2014 how many were put into an R1 round, and how many went further.',
+    intro: 'What happens to candidates once they reach <strong>R1</strong> \u2014 how many were put into an R1 round, and how many went further. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
     confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026',
     groups: [
       {
@@ -251,7 +251,7 @@ export const DEFINITIONS = {
   },
   'rec-joining': {
     summary: 'How these numbers are worked out',
-    intro: 'Everyone who reached an offer, and what became of them. <strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes.',
+    intro: 'Everyone who reached an offer, and what became of them. <strong>Offered = Joined + Joining Pending + Dropped</strong>, so the row always closes. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
     confirmed: 'Definitions confirmed with Jerin · 26 Aug 2026 · credit rule aligned with Fulfilment 10 Sep 2026 · head always with the recruiter 13 Sep 2026',
     groups: [
       {
@@ -276,7 +276,7 @@ export const DEFINITIONS = {
 
   'rec-sourcing': {
     summary: 'How these numbers are worked out',
-    intro: 'Where the people who actually <strong>joined</strong> came from.',
+    intro: 'Where the people who actually <strong>joined</strong> came from. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
     confirmed: 'Definitions confirmed with Jerin · 29 Aug 2026',
     groups: [
       {
@@ -299,7 +299,7 @@ export const DEFINITIONS = {
   'rec-tis': {
     summary: 'How these numbers are worked out',
     intro: 'How long each step actually takes. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · job rows show the recruiter’s own candidates, and the Job filter narrows every row, 14 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -308,7 +308,7 @@ export const DEFINITIONS = {
           ['The two amber lines below', 'The people <strong>still sitting</strong> in that stage: how many, and on the second line the median days they have waited so far. Their clock is still running, so read it as a backlog to clear, not as how long the step takes.'],
           ['A dash instead of a number', 'Nobody has finished that stage in the selected period. If there is an amber figure under it, everyone who arrived is still there.'],
           ['Red', 'Median above 5 days. Colour only — nothing is filtered out.'],
-          ['Rows', 'Pod → Recruiter → Job. Job rows cover everyone on that role, not only this recruiter.'],
+          ['Rows', 'Pod → Recruiter → Job. A job row shows only <strong>that recruiter’s own candidates</strong> on the role, so the job rows add up to the recruiter row above them. The <strong>Job</strong> filter narrows every number to the chosen jobs.'],
           ['Hello Christy', 'The bot route into screening — an alternative to TA Screen, not a step before it. Low volume, so its column is often empty.'],
           ['TA Screen → Offer', 'Measured from real stage history — entered the stage to left the stage — for candidates who <strong>arrived</strong> during the selected period.'],
           ['App Review <span class="defs-tag">live</span>', 'Entirely a waiting pile: everyone <strong>currently sitting</strong> in App Review, measured as today minus their application date. Nobody in it has finished, so it always shows a dash over an amber figure, and it cannot be split by quarter. Marked with an orange asterisk.'],
@@ -323,7 +323,7 @@ export const DEFINITIONS = {
 
   'rec-hygiene': {
     summary: 'What each of these lists is',
-    intro: 'The compliance view: candidates and roles the pipeline could not attribute cleanly. These get fixed <strong>in Ashby</strong>, and the rows disappear at the next refresh. Every list downloads as CSV. The Pod, Recruiter and Job filters never apply here — that is deliberate. The Year/Quarter selector does, for the lists about a quarter: Recruiter Roster, Recruiter Dates (the whole selected year), Pod Not Set, Selected Candidates Missing Source, Roles Missing Score Inputs and Capacity Not Set.',
+    intro: 'The compliance view: candidates and roles the pipeline could not attribute cleanly. These get fixed <strong>in Ashby</strong>, and the rows disappear at the next refresh. Every list downloads as CSV. The Pod, Recruiter and Job filters never apply here — that is deliberate. Someone whose access is limited to certain departments sees only those departments’ rows, and <em>Other Anomalies</em> leaves out unrecognised stage names for them, since a stage name carries no job. The Unassigned list stops at 800 rows and the Multiple Recruiters and Multiple Sourcers lists at 200. The Year/Quarter selector does, for the lists about a quarter: Recruiter Roster, Recruiter Dates (the whole selected year), Pod Not Set, Selected Candidates Missing Source, Roles Missing Score Inputs and Capacity Not Set.',
     confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Selected Candidates Missing Source 13 Sep 2026',
     groups: [
       {
@@ -556,7 +556,7 @@ export const DEFINITIONS = {
           ['Total Interviews', 'Interview <strong>events</strong> — a two-person panel is one event. It reads <em>Interviews</em> when a period is picked. The line underneath gives the panel places behind them.'],
           ['Panel Slots', 'Shown instead when a Department, Job or Panelist filter is set, or the data has no event count for the period: <strong>places on panels</strong>, so a panel of two counts twice.'],
           ['Panelists', 'Distinct people who sat on at least one interview in the view — <em>Panelists Active</em> when a period is picked.'],
-          ['Feedback Coverage and Avg Turnaround cards', 'The same measures as the columns below, across everyone in view, counted once each. Both are all-time and cover every interview those people sat, not only the filtered ones.'],
+          ['Feedback Coverage and Avg Turnaround cards', 'The same measures as the columns below, across everyone in view, counted once each. Both are all-time and cover every interview those people sat that you can see — all of them, unless your access is limited to certain departments — not only the filtered ones.'],
         ]
       },
       {
@@ -573,7 +573,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Only the interview count follows the period', 'Feedback Coverage and Avg Turnaround have no quarter breakdown in the data, so they are all-time and say so in the header. The interview count beside them does follow the period \u2014 which is why a department can show fewer interviews this quarter than it has feedback outstanding overall.'],
-      ['Feedback figures are per person across the whole org', 'Coverage is recorded per panelist, not per role. A department row rolls up its <strong>distinct</strong> panelists, so nobody is counted twice \u2014 but the figure still covers every interview those people sat anywhere, not only this department\u2019s. The cards above the table have the same limit.'],
+      ['Feedback figures are per person across everything you can see', 'Coverage is recorded per panelist, not per role. A department row rolls up its <strong>distinct</strong> panelists, so nobody is counted twice \u2014 but the figure still covers every interview those people sat anywhere you can see, not only this department\u2019s. The cards above the table have the same limit.'],
     ]
   },
 
@@ -616,7 +616,7 @@ export const DEFINITIONS = {
           ['Default access', 'What anyone signed in with an @interviewkickstart.com account gets when their email is not in the list below.'],
           ['Role', '<strong>Admin</strong>: every tab plus Admin. <strong>Full Access</strong>: every tab except Admin. <strong>Restricted</strong>: Overview plus the tabs you grant. <strong>None</strong>: access denied.'],
           ['Tabs', 'Restricted users only. Choose from Hiring Manager, Recruiter Efficiency and Overall Efficiency. Overview is always on; Admin can never be granted this way.'],
-          ['Depts and Teams', 'Restricted users only; empty means all. It narrows the job and opening lists behind the tabs they see. It does not narrow everything — the Overview, and figures built from offers, stage history and openings by quarter, are not filtered — so treat it as a convenience, not a privacy boundary.'],
+          ['Depts', 'Restricted users only; empty means all. <strong>Every figure</strong> on Hiring Manager, Recruiter Efficiency and Overall Efficiency, the Panelists panels included, narrows to the jobs in those departments. The <strong>Overview</strong> page is never narrowed — it is for everyone. The choices are the departments the jobs carry in Ashby. Teams are no longer used. Treat it as a convenience, not a privacy boundary: the data file behind the dashboard is public, so this changes what the page shows, not what can be read.'],
         ]
       },
     ],
@@ -634,7 +634,7 @@ export const DEFINITIONS = {
         items: [
           ['Where reports get departments', 'From each job in Ashby, which already carries its department and team. This copy is only a fallback for older data files, so changing it moves no current number.'],
           ['Keeping it current', 'It does not update itself. Edit <code>site/js/dept-map.js</code> when Ashby’s departments or teams change.'],
-          ['Also used by', 'The Depts and Teams pickers under Access Management.'],
+          ['Access Management', 'Does not use this copy. Its Depts picker lists the departments the jobs carry in Ashby, which is what a restriction is matched against.'],
         ]
       },
     ],

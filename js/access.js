@@ -52,9 +52,9 @@ function buildAccess(user) {
       const pages = ['home'];
       tabs.forEach(t => { if (RESTRICTABLE.includes(t) && !pages.includes(t)) pages.push(t); });
 
+      // #120b (Jerin, 14 Sep 2026): departments alone scope the data. A `teams` list left on an older user entry is ignored.
       const filters = {};
       if (user.departments && user.departments.length > 0) filters.departments = user.departments;
-      if (user.teams && user.teams.length > 0) filters.teams = user.teams;
 
       return { role: 'restricted', pages, filters };
     }

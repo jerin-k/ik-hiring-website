@@ -230,6 +230,8 @@ export function initInterviewer(data, opts = {}) {
     const orgRows = [...people].map(n => ivs.find(r => r.name === n)).filter(Boolean);
     const lifeInts = orgRows.reduce((s, r) => s + (r.interviews || 0), 0);
     const lifePend = orgRows.reduce((s, r) => s + (r.pendingFeedback || 0), 0);
+    // #120b: a department-scoped view of a file without per-job feedback counts has no pending figure (null) — a dash, never 100%.
+    const pendKnown = orgRows.every(r => r.pendingFeedback != null);
     const covered = Math.max(0, lifeInts - lifePend);
     const turnRows = orgRows.filter(r => r.avgTurnaroundHrs != null);
     const avgTurn = turnRows.length ? turnRows.reduce((s, r) => s + r.avgTurnaroundHrs, 0) / turnRows.length : null;
@@ -259,8 +261,8 @@ export function initInterviewer(data, opts = {}) {
     // reads 281 interviews where Engineering's own are 94 this quarter and 447 all-time, because 4 of its 10
     // panelists also sit on other departments' panels. The table blanks this metric on department rows for
     // exactly that reason, so the card must say what it is counting rather than look department-scoped.
-    setText('ivCardCoverage', `${pct(covered, lifeInts)}%`);
-    setText('ivCardCoverageSub', `${covered.toLocaleString()} of ${lifeInts.toLocaleString()} interviews have feedback`);
+    setText('ivCardCoverage', pendKnown ? `${pct(covered, lifeInts)}%` : '—');
+    setText('ivCardCoverageSub', pendKnown ? `${covered.toLocaleString()} of ${lifeInts.toLocaleString()} interviews have feedback` : 'Feedback per job appears after the next data refresh');
     setText('ivCardTurn', fmtTurn(avgTurn));
     setText('ivThInterviews', label ? `Interviews (${label})` : 'Interviews');
     setText('ivChartTitle', label ? `Top panelists by interview load — ${label}` : 'Top panelists by interview load');
@@ -287,11 +289,12 @@ export function initInterviewer(data, opts = {}) {
           const org = orgByUser[P.userId] || ivs.find(r => r.name === nm) || {};
           a.life += org.interviews || 0;
           a.pend += org.pendingFeedback || 0;
+          if (org.pendingFeedback == null) a.unknown = true;
           const tr = P.jobs.filter(j => j.avgTurnaroundHrs != null);
           if (tr.length) { a.turnSum += tr.reduce((t, j) => t + j.avgTurnaroundHrs, 0) / tr.length; a.turnN++; }
           return a;
         }, { life: 0, pend: 0, turnSum: 0, turnN: 0 });
-        const dCov = dAgg.life ? pct(Math.max(0, dAgg.life - dAgg.pend), dAgg.life) : null;
+        const dCov = dAgg.life && !dAgg.unknown ? pct(Math.max(0, dAgg.life - dAgg.pend), dAgg.life) : null;
         const dTurn = dAgg.turnN ? dAgg.turnSum / dAgg.turnN : null;
         html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${esc(dept)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${pNames.length}</span></td>
@@ -308,7 +311,7 @@ export function initInterviewer(data, opts = {}) {
           html += `<tr data-path="${di}-${pi}" data-haschild data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:30px;font-weight:500">${CARET}${esc(nm)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${P.jobs.length}</span></td>
             <td>${P.total}</td>
-            <td class="${cls(cov)}">${life ? `${cov}% <span class="cov-n">(${(life - pend).toLocaleString()}/${life.toLocaleString()})</span>` : '—'}</td>
+            <td class="${cls(cov)}">${life && org.pendingFeedback != null ? `${cov}% <span class="cov-n">(${(life - pend).toLocaleString()}/${life.toLocaleString()})</span>` : '—'}</td>
             <td class="${tAvg != null && tAvg > 72 ? 'warn' : ''}">${fmtTurn(tAvg)}</td></tr>`;
           P.jobs.slice().sort((a, b) => b._count - a._count).forEach((j, ji) => {
             html += `<tr data-path="${di}-${pi}-${ji}" style="display:none">

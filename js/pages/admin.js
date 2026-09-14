@@ -263,8 +263,19 @@ const AC_ROLE_OPTS = [['admin', 'Admin'], ['full_access', 'Full Access'], ['rest
 const AC_DIRTY_LS = 'ik_access_dirty';
 const AC_WORK_LS = 'ik_access_work';   // #120d: the unpublished working copy itself, so a reload keeps it
 const acEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const AC_DEPTS = Object.keys(DEPT_TREE).sort();
-const AC_TEAMS = [...new Set(Object.values(DEPT_TREE).flat())].sort();
+// #120b (14 Sep 2026): the department choices are the departments jobs actually carry (`job.department`), which is what the
+// restriction is matched against. The old list came from DEPT_TREE, which lacked Founder's Office and offered four departments
+// no job has. Teams are gone: Jerin — "we moved away from the Team construct long back".
+let AC_DEPTS = Object.keys(DEPT_TREE).sort();
+function acDeptsFrom(data, users) {
+  const s = new Set();
+  Object.values((data && data.jobIndex) || {}).forEach(j => j.department && s.add(j.department));
+  ((data && data.jobs) || []).forEach(j => j.department && s.add(j.department));
+  Object.values((data && data.openingBuckets) || {}).forEach(b => b.department && s.add(b.department));
+  // A department already saved on someone stays offered, so opening this page never silently drops it.
+  (users || []).forEach(u => (u.departments || []).forEach(d => s.add(d)));
+  return [...s].sort((a, b) => a.localeCompare(b));
+}
 // Tabs a restricted user can be granted (Overview is always on; Admin is admin-only, never offered here).
 const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency']];
 // Compact multi-select (native <details> + checkboxes). options = array of strings OR [value, label] pairs.
@@ -282,9 +293,10 @@ function acMs(cls, i, selected, options, labelWord) {
 }
 
 // app.js calls this alongside initAdminMetricConfig. accessConfig = the loaded data/access.json.
-export function initAdminAccess(accessConfig) {
+export function initAdminAccess(accessConfig, data) {
   const work = JSON.parse(JSON.stringify(accessConfig || { defaultRole: 'none', users: [] }));
   if (!Array.isArray(work.users)) work.users = [];
+  if (data) AC_DEPTS = acDeptsFrom(data, work.users);
   if (!work.defaultRole) work.defaultRole = 'none';
   // Migrate legacy restricted users (old isRecruiter flag) to the explicit per-user Tabs model.
   work.users.forEach(u => { if (u.role === 'restricted' && !Array.isArray(u.tabs)) { u.tabs = ['hm-report']; if (u.isRecruiter) u.tabs.push('recruiter'); } });
@@ -337,7 +349,6 @@ export function initAdminAccess(accessConfig) {
         <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:5px;max-width:330px">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
-              ${acMs('ac-teams', i, u.teams, AC_TEAMS, 'Teams')}
             </div>` : `<span style="color:var(--text-muted);font-size:12px">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
         <td><button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></td>
       </tr>`;
@@ -355,7 +366,6 @@ export function initAdminAccess(accessConfig) {
     }));
     wireMs('ac-tabs', 'tabs', 'Tabs', AC_TABS);
     wireMs('ac-depts', 'departments', 'Depts', AC_DEPTS);
-    wireMs('ac-teams', 'teams', 'Teams', AC_TEAMS);
     body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
   }
   renderRows();
@@ -366,7 +376,7 @@ export function initAdminAccess(accessConfig) {
     const email = (emailEl.value || '').trim().toLowerCase(), role = roleEl.value;
     if (!email || email.indexOf('@') < 0) { emailEl.focus(); emailEl.style.borderColor = 'var(--red)'; return; }
     if (work.users.some(u => (u.email || '').toLowerCase() === email)) { emailEl.style.borderColor = 'var(--red)'; return; }
-    const u = { email, role }; if (role === 'restricted') { u.tabs = ['hm-report']; u.departments = []; u.teams = []; }
+    const u = { email, role }; if (role === 'restricted') { u.tabs = ['hm-report']; u.departments = []; }
     work.users.push(u); emailEl.value = ''; emailEl.style.borderColor = ''; setDirtyAc(true); renderRows();
   });
 
