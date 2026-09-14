@@ -166,7 +166,7 @@ export function renderAdmin(accessConfig, data) {
 
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px">
           <span class="lbl">User type</span>
-          <select id="acFilterType"><option value="">All</option><option>Hiring Manager</option><option>Recruitment Team</option><option>Admin</option></select>
+          <select id="acFilterType"><option value="">All</option><option>Hiring Manager</option><option>Recruitment Team</option><option>Admin</option><option>Others</option></select>
           <span class="lbl">Invite status</span>
           <select id="acFilterInvite"><option value="">All</option><option value="invited">Invited</option><option value="not-invited">Not invited</option><option value="unpublished">Not published yet</option></select>
           <span id="acFilterCount" style="font-size:12px;color:var(--muted)"></span>
@@ -288,7 +288,7 @@ function acDeptsFrom(data, users) {
 const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency']];
 // #118 (Jerin, 14 Sep 2026): a User type label per person. It moves no access — role, tabs and departments still decide what they
 // see — it only groups people and drives the User type filter. A person with no saved label shows the one their role suggests.
-const AC_USER_TYPES = ['Hiring Manager', 'Recruitment Team', 'Admin'];
+const AC_USER_TYPES = ['Hiring Manager', 'Recruitment Team', 'Admin', 'Others'];   // Others: Jerin, 14 Sep 2026
 const acUserType = (u) => u.userType || (u.role === 'admin' ? 'Admin' : u.role === 'restricted' ? 'Hiring Manager' : 'Recruitment Team');
 // Compact multi-select (native <details> + checkboxes). options = array of strings OR [value, label] pairs.
 function acMs(cls, i, selected, options, labelWord) {
