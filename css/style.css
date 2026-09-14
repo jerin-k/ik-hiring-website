@@ -878,14 +878,22 @@ details.defs.defs-full[open] > summary {
    Department down the side, stage across the top, one cell per pair. Shared by the Hiring Manager and
    Overall Efficiency throughput tabs so the two cannot drift — the number in the cell is the throughput
    percentage and the shade carries the same thing, so a weak stage is visible without reading a digit.
-   HTML rather than canvas: it is a grid of numbers, and the hover needs to show more than one line. */
+   HTML rather than canvas: it is a grid of numbers, and the hover needs to show more than one line.
+   🎨 #122 (Jerin, 15 Sep 2026 — option C1): the grid IS the section now. The Department/Job table under it showed the
+   same figures a second time in a second colour code, so it was removed: a department row opens into its job rows
+   here, job squares are violet (JOB_STEPS in buildStageHeat), and the heading lives inside the box. */
 .sheat-wrap { position: relative; margin: 0 0 18px; overflow-x: auto;
   background: #eef3fa; border-radius: 12px; padding: 16px 18px 12px; }
 .sheat { display: block; min-width: 100%; }
+.sheat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.sheat-head .subsection-title { margin: 0; }
+.sheat-hint { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.sheat-empty { margin: 4px 2px; font-size: 12px; color: var(--muted); }
 .sheat-row { display: flex; align-items: center; gap: 3px; margin-bottom: 4px; }
-.sheat-name { width: 190px; min-width: 190px; font-size: 13px; color: var(--text); text-align: right;
-  font-weight: 500; padding-left: 4px; padding-right: 14px; white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; }
+.sheat-row[hidden] { display: none; }
+/* Left-aligned and wide enough for a job title to wrap onto a second line — never clipped (Jerin: no spillover). */
+.sheat-name { width: 280px; min-width: 280px; font-size: 13px; color: var(--text); text-align: left; font-weight: 500;
+  padding: 0 14px 0 2px; display: flex; align-items: center; gap: 6px; line-height: 1.25; }
 .sheat-cell { flex: 1 1 0; min-width: 66px; height: 46px; border-radius: 4px; background: transparent;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   color: #334155; }
@@ -903,6 +911,19 @@ details.defs.defs-full[open] > summary {
 .sheat-tip .tip-hd { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
 .sheat-tip .tip-row { display: flex; justify-content: space-between; gap: 14px; line-height: 1.6; }
 .sheat-tip .tip-row span:last-child { font-weight: 600; }
+.sheat-dept.has-kids .sheat-name { cursor: pointer; }
+.sheat-caret { appearance: none; border: 0; padding: 0; font-family: inherit; flex: none; width: 22px; height: 22px;
+  border-radius: 6px; background: #dde6f3; color: var(--navy-sub); font-size: 11px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; }
+.sheat-caret:hover { background: #cad8ee; }
+.sheat-caret-sp { width: 22px; flex: none; }
+.sheat-cnt { font-size: 11px; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.sheat-job .sheat-name { font-size: 12px; color: #463b7d; padding-left: 34px; }
+.sheat-job .sheat-cell, .sheat-job .sheat-ov { height: 40px; }
+.sheat-job .sheat-cell .sh-pct { font-size: 12px; }
+.sheat-job:not([hidden]) + .sheat-row:not(.sheat-job) { margin-top: 10px; }
+.sheat-total { border-top: 1px solid #d5deec; padding-top: 6px; margin-top: 6px; }
+.sheat-total .sheat-name { font-weight: 700; }
 
 /* ===== Time in Process cells (2026-08-30) =====
    Two figures per cell: the median for candidates who FINISHED the stage, and under it in amber how many
@@ -918,14 +939,23 @@ td.tis .tis-wait { display: block; font-size: 10px; line-height: 1.15; color: va
 td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 
 /* Stage-heat legend (2026-08-30) — the squares are shaded by PEOPLE LOST, not by throughput %,
-   so the colour needs saying out loud. The number inside the square is still the percentage. */
-.sheat-legend { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 12px 0 2px;
-  padding-left: 14px; font-size: 11px; color: #475569; letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums; }
+   so the colour needs saying out loud. The number inside the square is still the percentage.
+   #122 (15 Sep 2026): two strips once job rows exist — Departments (blue) and Jobs (violet), on the same five steps. */
+.sheat-legend { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 14px 0 2px;
+  padding-left: 2px; font-size: 11px; color: #475569; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+.sheat-legend .lg-title { font-weight: 600; color: var(--text-secondary); letter-spacing: 0; }
+.sheat-legend .lg-rows { display: flex; flex-direction: column; gap: 5px; }
+.sheat-legend .lg-row { display: flex; align-items: center; gap: 7px; }
+.sheat-legend .lg-lbl { min-width: 82px; }
 .sheat-legend i { width: 20px; height: 10px; border-radius: 2px; display: inline-block; }
 .sheat-legend i + span { margin-right: 5px; }
-.sheat-legend .sheat-legend-note { margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--border);
-  letter-spacing: 0; font-style: italic; }
+.sheat-legend .sheat-legend-note { padding-left: 14px; border-left: 1px solid var(--border); letter-spacing: 0; font-style: italic; }
+/* #122: the Stages dropdown + Hide zero-pipeline above the squares, with the filter row's blue control border
+   (the same --border redefinition trick the filter rows use). */
+.tp-controls { --border: #9db2d6; display: flex; align-items: center; gap: 16px; margin: 4px 0 12px; }
+.tp-controls .ms-btn { height: 28px; padding-top: 0; padding-bottom: 0; line-height: 26px; }
+.tp-controls label { font-size: 12px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer; white-space: nowrap; }
 
 /* Feedback Coverage carries its own arithmetic — "75% (123/163)" — so the rate is never a bare
    percentage you have to take on trust (Jerin, 2026-08-31). */

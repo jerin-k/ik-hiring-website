@@ -205,16 +205,16 @@ export function renderEfficiency(data) {
     <!-- PANEL: Throughput (mirrors HM) -->
     <div class="eff-panel" data-panel="throughput" style="display:none">
       ${defsBlock('eff-throughput')}
-      <div style="display:flex;flex-wrap:wrap;gap:12px 16px;margin-bottom:12px;font-size:12px;align-items:center">
-        <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">Stages</span>
-        ${TP_KEYS.map(k => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="eff-tpStage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('')}
+      <div class="tp-controls">
+        <div class="ms" id="effMsTpStage"></div>
+        <label><input type="checkbox" id="effTpHideEmpty" checked> Hide zero-pipeline</label>
       </div>
-      <h3 class="subsection-title">Throughput — department by stage</h3>
-      <div class="sheat-wrap"><div id="effTpHeat" class="sheat"></div><div id="effTpHeatTip" class="sheat-tip"></div></div>
-      <div class="scroll-table"><table>
-        <thead id="effTpHead"></thead>
-        <tbody id="effTpBody"></tbody>
-      </table></div>
+      <!-- #122 (Jerin, 15 Sep 2026 — option C1): ONE section, as on the Hiring Manager tab. Departments open into their jobs
+           inside the squares; the Department / Job table that repeated them underneath is gone. -->
+      <div class="sheat-wrap">
+        <div class="sheat-head"><h3 class="subsection-title">Throughput — by stage</h3><span class="sheat-hint" id="effTpHint"></span></div>
+        <div id="effTpHeat" class="sheat"></div><div id="effTpHeatTip" class="sheat-tip"></div>
+      </div>
     </div>
 
     <!-- PANEL: Time in Process -->
@@ -284,7 +284,7 @@ export function initEfficiencyFilters(data) {
   const tisSplit = hasWaitSplit(rollups);
   const arDwellJob = data.appReviewDwellByJob || null;       // {job8:{days:count}} — App Review dwell (still-parked candidates)
   let activeTab = 'fulfilment';
-  let msPod = null, msDept = null, msJob = null;
+  let msPod = null, msDept = null, msJob = null, msEffTpStage = null;
 
   const expandAll = () => !!document.getElementById('effExpandAll')?.checked;
 
@@ -745,11 +745,12 @@ export function initEfficiencyFilters(data) {
   // is comparable only to its own In, which is what the Overall column is for.
   function buildTpChartEff(q, vis) {
     const host = document.getElementById('effTpHeat'); if (!host) return;
-    if (!tpByJob) { host.innerHTML = ''; return; }
+    const hint = document.getElementById('effTpHint');
+    if (!tpByJob) { host.innerHTML = '<p class="sheat-empty">Stage history is not in this data file yet.</p>'; if (hint) hint.textContent = ''; return; }
     // App Review is kept — see the note on the same line in hm-report.js. It was excluded while throughput
     // meant reached/cleared, which made the stage read 100% and worthless; it is a real figure now.
     const stageCols = vis.slice();
-    const per = tisPeriod();   // #120: the grid follows the whole period, exactly like the table below it
+    const per = tisPeriod();   // #120: the squares follow the whole period, like Screening and Time in Process
     const asJ2 = (rollups && rollups.assessedByJobQ) || null;
     const spanQ = (rollups && rollups.assessedSpanByJobQ) || null;
     const cellOf = (jids, k) => jids.reduce((a, jid) => {
@@ -768,29 +769,45 @@ export function initEfficiencyFilters(data) {
       const v = sumInPeriod(spanQ[jid], per);
       return { a: acc.a + v.a, b: acc.b + v.b };
     }, { a: 0, b: 0 });
-    const rows = deptJobs(q).map(({ dept, jobs: js }) => {
-      const jids = js.map(j => j.jid);
+    // #122 (Jerin, 15 Sep 2026 — option C1): each department row carries its JOB rows, drawn in violet, and the
+    // Department / Job table that repeated these figures underneath is gone. Hide zero-pipeline drops jobs and
+    // departments with no movement in the period (the squares always dropped empty departments).
+    const hideEmpty = !!document.getElementById('effTpHideEmpty')?.checked;
+    const toRow = (label, jids) => {
       const r1 = cellOf(jids, 'r1'), ds = cellOf(jids, 'ds');
       const sp = spanQ ? spanOf(jids) : null;
       return {
-        label: dept,
-        cells: stageCols.map(k => { const c = cellOf(jids, k);
-          if (!(c.inN > 0)) return null;
-          // Offer is the last stage — a rate there would always read 0%.
-          return c; }),
+        label,
+        // Offer is the last stage — its "progressed" is being hired (hiredCol below).
+        cells: stageCols.map(k => { const c = cellOf(jids, k); return c.inN > 0 ? c : null; }),
         overall: sp ? (sp.a > 0 ? Math.round((sp.b / sp.a) * 100) : null)
           : (r1.inN > 0 ? Math.round((ds.inN / r1.inN) * 100) : null),
         ovIn: sp && sp.a > 0 ? sp.a : null,
         ovOut: sp && sp.a > 0 ? sp.b : null,
         _vol: r1.inN
       };
-    }).filter(r => r.cells.some(Boolean)).sort((a, b) => b._vol - a._vol);
+    };
+    const moved = (r) => r.cells.some(Boolean);
+    const rows = deptJobs(q).map(({ dept, jobs: js }) => {
+      const jids = js.map(j => j.jid);
+      return Object.assign(toRow(dept, jids), {
+        _jids: jids,
+        children: js.map(j => toRow(j.title, [j.jid])).filter(r => !hideEmpty || moved(r))
+      });
+    }).filter(r => !hideEmpty || moved(r)).sort((a, b) => b._vol - a._vol);
+    const allJids = [];
+    rows.forEach(r => allJids.push(...r._jids));
+    if (hint) hint.textContent = rows.length === 1
+      ? `${rows[0].label} · ${rows[0].children.length} ${rows[0].children.length === 1 ? 'job' : 'jobs'}`
+      : (rows.length ? 'Click a department to open its jobs' : '');
     const addedCols = new Set();
     stageCols.forEach((k, i) => { if (TP_ADDED[k]) addedCols.add(i); });
     const hiredCol = stageCols.indexOf('offer');
     buildStageHeat(host, document.getElementById('effTpHeatTip'), rows,
       stageCols.map(k => TP_LABELS[k]), {
         addedCols, hiredCol,
+        total: toRow('Total', allJids),
+        expandAll: expandAll(),
         overallLabel: spanQ ? 'R1/OA \u2192 late' : 'R1 \u2192 Doc',
         labels: asJ2 ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
@@ -995,73 +1012,14 @@ export function initEfficiencyFilters(data) {
   }
 
   // Administrative stages: candidates ADDED, not assessed (Jerin, 2026-08-31).
-  const TP_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
+  const TP_ADDED = { rc: 1, ds: 1, offer: 1 };   // keyed like TP_KEYS — as refCheck/docSub they never matched, so the Ref Check and Doc Sub hovers said "assessed" (fixed in #122, 15 Sep 2026)
 
   function renderThroughput() {
-    const vis = TP_KEYS.filter(k => { const cb = document.querySelector(`.eff-tpStage[value="${k}"]`); return !cb || cb.checked; });
-    const head = document.getElementById('effTpHead');
-    if (head) {
-      // ONE column per stage, carrying the same "assessed → progressed" over "%" that the grid square
-      // shows (Jerin, 2026-08-31). It used to split every stage across three sub-columns, so a 12-stage
-      // table ran to 36 columns and matched neither the grid above it nor the Hiring Manager table.
-      const hasA = !!(rollups && rollups.assessedByJobQ);
-      let r1 = '<tr><th style="min-width:260px">Department / Job</th>';
-      vis.forEach(k => { r1 += `<th class="stage-hdr">${TP_LABELS[k]}</th>`; });
-      r1 += `<th class="stage-hdr">Overall<span style="display:block;font-weight:400;font-size:10px;opacity:.75">${hasA ? 'R1/OA → Late' : 'R1 → Doc'}</span></th>`;
-      head.innerHTML = r1 + '</tr>';
-    }
-    const body = document.getElementById('effTpBody'); if (!body) return;
-    if (!tpByJob) { podSkeletonBody('effTpBody', vis.length + 1, () => dashTds(vis.length + 1)); return; }
-    // Department → Job, from the stage-history rollups.
-    const q = selQuarter();
-    // #120 (14 Sep 2026): the cells follow the whole PERIOD like Screening and Time in Process; they used to read one
-    // quarter, so "Quarter: All" showed only the current quarter. null = all time.
-    const per = tisPeriod();
-    const pc = (n, d) => d ? ((n / d) * 100).toFixed(1) : '0.0';
-    const cls = v => { const n = parseFloat(v); return n >= 50 ? 'good' : n >= 20 ? 'pct' : n > 0 ? 'warn' : 'zero'; };
-    // Prefers the rebuilt measure — A = assessed at the stage (an interview held there, an assignment
-    // triggered there, or a feedback form with no interview behind it), B = of those, the ones who then
-    // entered a LATER stage. The old reached/cleared counted a rejection exactly like a promotion, which is
-    // why App Review read 100%. The fallback only fires for a data file that predates the rebuild.
-    const asJ = (rollups && rollups.assessedByJobQ) || null;
-    const jobRC = (jid) => {
-      if (asJ) {
-        const t = asJ[jid] || {};
-        return vis.map(k => { const s = sumInPeriod(t[TP_TO_SK[k]], per); return { r: s.a, c: s.b }; });
-      }
-      const t = tpByJob[jid] || {};
-      return vis.map(k => { const c = t[TP_TO_SK[k]] || { reached: 0, cleared: 0 }; return { r: c.reached, c: c.cleared }; });
-    };
-    // A stage nobody was assessed at printed "0 0 0.0%", which reads as "0% got through" when it means
-    // "nobody was here" — and the grid above shows the same cell as an empty dot. Match the grid (and the
-    // HM table, which already dashes it) so an empty stage cannot be mistaken for a total failure.
-    const spQ = (rollups && rollups.assessedSpanByJobQ) || null;
-    const spanOf = (jids) => !spQ ? null : jids.reduce((acc, jid) => {
-      const v = sumInPeriod(spQ[jid], per);
-      return { a: acc.a + v.a, b: acc.b + v.b };
-    }, { a: 0, b: 0 });
-    const cells = (rc, sp) => rc.map((x, i) => {
-      const added = !!TP_ADDED[vis[i]];
-      if (!x.r) return `<td class="heat none" title="${added ? 'Nobody was added to this stage in this period' : 'Nobody was assessed at this stage in this period'}">—</td>`;
-      const p = Math.round((x.c / x.r) * 100);
-      const band = p < 50 ? 'lo' : (p < 70 ? 'mid' : 'hi');
-      return `<td class="heat ${band}" title="${x.r} ${added ? 'added' : 'assessed'}, ${x.c} progressed">`
-           + `<span class="hv">${x.r} → ${x.c}</span><span class="hp">${p}%</span></td>`;
-    }).join('')
-      + (!sp || !(sp.a > 0)
-        ? `<td class="stage-cell" style="background:#f0f0ff">—</td>`
-        : `<td class="stage-cell" style="background:#f0f0ff"><span class="hv">${sp.a} → ${sp.b}</span>`
-          + `<span class="hp">${Math.round((sp.b / sp.a) * 100)}%</span></td>`);
-    const sumRC = (arrs) => vis.map((_, i) => arrs.reduce((a, rc) => ({ r: a.r + rc[i].r, c: a.c + rc[i].c }), { r: 0, c: 0 }));
-    let html = '';
-    deptJobs(q).forEach(({ dept, jobs: js }, di) => {
-      const jrc = js.map(j => jobRC(j.jid));
-      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(sumRC(jrc), spanOf(js.map(j => j.jid)))}</tr>`;
-      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(jrc[ji], spanOf([j.jid]))}</tr>`; });
-    });
-    body.innerHTML = html || `<tr><td colspan="${vis.length + 2}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
-    wireTreePath(body, expandAll());
-    buildTpChartEff(q, vis);
+    // #122 (15 Sep 2026): a Stages dropdown (nothing picked = every stage) replaced the row of stage tick-boxes, and the
+    // Department / Job table under the squares is gone — the squares open into jobs themselves (buildTpChartEff).
+    const stSel = msEffTpStage ? msEffTpStage.getSelected() : [];
+    const vis = TP_KEYS.filter(k => !stSel.length || stSel.includes(TP_LABELS[k]));
+    buildTpChartEff(selQuarter(), vis);
   }
 
   // Quarter keys the Year/Quarter selector covers; null = all-time. Separate from selQuarter(), which
@@ -1639,7 +1597,9 @@ export function initEfficiencyFilters(data) {
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobNames, renderAll);
   document.addEventListener('click', closeMsPanels);
   document.getElementById('effExpandAll')?.addEventListener('change', renderAll);
-  document.querySelectorAll('.eff-tpStage').forEach(cb => cb.addEventListener('change', renderThroughput));
+  // #122: the Stages dropdown + Hide zero-pipeline above the Throughput squares.
+  msEffTpStage = makeMultiSelect(document.getElementById('effMsTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
+  document.getElementById('effTpHideEmpty')?.addEventListener('change', renderThroughput);
 
   ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderVelocity));
   ['effYear', 'effQuarter'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { applyVelYearQuarter(); renderAll(); }));

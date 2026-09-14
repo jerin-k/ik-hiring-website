@@ -44,7 +44,7 @@ function monthOf(dateStr) {
 }
 
 // Administrative stages: candidates ADDED, not assessed (Jerin, 2026-08-31).
-const TP_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
+const TP_ADDED = { rc: 1, ds: 1, offer: 1 };   // keyed like TP_KEYS — as refCheck/docSub they never matched, so the Ref Check and Doc Sub hovers said "assessed" (fixed in #122, 15 Sep 2026)
 
 function pctClass(val) {
   const n = parseFloat(val);
@@ -229,20 +229,16 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
       ${defsBlock('hm-throughput')}
-      <h3 class="subsection-title">Throughput — department by stage</h3>
-      <div class="sheat-wrap"><div id="hm2Heat" class="sheat"></div><div id="hm2HeatTip" class="sheat-tip"></div></div>
-
-      <p class="sub-note">Click a department to drill in.</p>
-      <div class="hm-stages">
-        <span class="lbl">Stages:</span>
-        ${TP_KEYS.map(k => `<label><input type="checkbox" class="hm2Stage" value="${k}" checked> ${TP_LABELS[k]}</label>`).join('\n        ')}
-        <label class="stage-toggle"><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
+      <div class="tp-controls">
+        <div class="ms" id="msHmTpStage"></div>
+        <label><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
       </div>
-      <div class="scroll-table"><table id="hm2Table">
-        <thead id="hm2Head"></thead>
-        <tbody id="hm2Body"></tbody>
-      </table></div>
-      <div class="heat-legend" id="hm2Legend"></div>
+      <!-- #122 (Jerin, 15 Sep 2026 — option C1): ONE section. The stage squares and the Department/Job table under them
+           showed the same figures twice, in two colour codes; departments now open into their jobs inside the squares. -->
+      <div class="sheat-wrap">
+        <div class="sheat-head"><h3 class="subsection-title">Throughput — by stage</h3><span class="sheat-hint" id="hm2Hint"></span></div>
+        <div id="hm2Heat" class="sheat"></div><div id="hm2HeatTip" class="sheat-tip"></div>
+      </div>
     </div>
 
     <!-- ===== PANEL: PIPELINE ===== -->
@@ -303,7 +299,7 @@ export function initHmFilters(data) {
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
   // #7 (2026-08-22): there used to be FOUR separate Job multi-selects, one per sub-tab, each filtering only
   // its own table. Now a single control in the main filter bar drives every panel and every chart on the tab.
-  let msHmJob = null, msHmPanel = null;
+  let msHmJob = null, msHmPanel = null, msHmTpStage = null;
   const selJobs = () => (msHmJob ? msHmJob.getSelected() : []);
   const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
@@ -675,8 +671,9 @@ export function initHmFilters(data) {
     const deptG = gDept();
     const jobSel = selJobs();
     const hideEmpty = document.getElementById('hm2HideEmpty')?.checked;
-    const visStages = [];
-    document.querySelectorAll('.hm2Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
+    // #122 (15 Sep 2026): the Stages dropdown replaced a row of 13 tick-boxes. Nothing picked = every stage.
+    const stSel = msHmTpStage ? msHmTpStage.getSelected() : [];
+    const visStages = TP_KEYS.filter(k => !stSel.length || stSel.includes(TP_LABELS[k]));
 
     const quarters = quartersInWindow(gFrom(), gTo());
 
@@ -697,20 +694,8 @@ export function initHmFilters(data) {
       ? withT.filter(({ t }) => TP_KEYS.some(k => (t[k].i > 0 || t[k].o > 0)))
       : withT;
 
-    // #10 Option A (2026-08-22): one cell per stage instead of an In / Out / % triple. Twelve stages used to
-    // mean thirty-six numeric columns scrolling sideways, every one weighted the same, so nothing said where
-    // the pipeline was actually leaking. Now the NUMBER is how many entered and the SHADE is how many got
-    // through, which makes a weak stage visible without reading a digit.
-    let row1 = '<tr><th>Department</th>';
-    visStages.forEach(s => { row1 += `<th class="stage-hdr">${TP_LABELS[s]}</th>`; });
-    row1 += '<th class="stage-hdr" style="background:#e0e7ff">Overall<br>' + (hasAssessed() ? 'R1/OA→Late' : 'R1→Doc') + '</th></tr>';
-    document.getElementById('hm2Head').innerHTML = row1;
-
-    const tpTotals = {};
-    TP_KEYS.forEach(k => { tpTotals[k] = { i: 0, o: 0 }; });
     const groups = {};
     shown.forEach(({ j, t }) => {
-      TP_KEYS.forEach(k => { tpTotals[k].i += t[k].i; tpTotals[k].o += t[k].o; });
       if (!groups[j._dept]) groups[j._dept] = [];
       groups[j._dept].push({ job: j, t });
     });
@@ -729,99 +714,51 @@ export function initHmFilters(data) {
         : (hasAssessed() ? null : (acc.r1.i > 0 ? acc.ds.i / acc.r1.i : null));
       return acc;
     }
-    function tpCells(per) {
-      let s = '';
-      const A = hasAssessed();
-      visStages.forEach(sk => {
-        const c = per[sk];
-        // A stage nobody reached is NOT a zero — Hello Christy and HM Review carry very little traffic, and
-        // a role can skip a round entirely. Saying so beats printing 0 / 0 / — which reads as missing data.
-        if (!c || c.i === 0) { s += `<td class="heat none" title="${TP_ADDED[sk] ? 'nobody was added to this stage' : (A ? 'nobody was assessed at this stage' : 'no candidates entered this stage')}">—</td>`; return; }
-        // Offer is the end of the ladder — there is no later stage to progress to, so it carries a count
-        // and no rate rather than a 0% that reads as everyone falling out.
-        const pct = Math.round((c.o / c.i) * 100);
-        const band = pct < 50 ? 'lo' : (pct < 70 ? 'mid' : 'hi');
-        // The cell carries the SAME two figures as the grid square above it — "145 → 98" over "68%"
-        // (Jerin, 2026-08-31). It used to print the assessed count alone, so the table and the grid
-        // disagreed on what a cell was, and the table's own Overall column already showed the flow.
-        const verb = TP_ADDED[sk] ? 'added' : (A ? 'assessed' : 'entered');
-        s += `<td class="heat ${band}" title="${c.i} ${verb}, ${c.o} ${A ? 'progressed' : 'moved past'}">`
-          + `<span class="hv">${c.i} \u2192 ${c.o}</span><span class="hp">${pct}%</span></td>`;
-      });
-      const ov = per.overall != null ? (per.overall * 100).toFixed(1) + '%' : '—';
-      // The span column shows its own two numbers as well, so the rate is never a bare percentage.
-      const ovFlow = (per.span && per.span.i > 0) ? `<span class="hv">${per.span.i} → ${per.span.o}</span>` : '';
-      s += `<td class="stage-cell" style="background:#f0f0ff">${ovFlow}<span class="hp ${pctClass(ov)}">${ov}</span></td>`;
-      return s;
-    }
 
-    let html = '';
-    Object.keys(groups).sort().forEach((deptName, gi) => {
-      const list = groups[deptName];
-      html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${deptName}${cnt(list.length)}</td>${tpCells(aggTP(list))}</tr>`;
-      list.forEach(({ job, t }) => {
-        html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="font-weight:500;max-width:300px;padding-left:30px">${job.title}</td>${tpCells(t)}</tr>`;
-      });
+    // ===== ONE section, both dimensions (#122, Jerin 15 Sep 2026 — option C1) =====
+    // Department down the side, stage across the top, and each department opens into its JOB rows, drawn in violet.
+    // It replaces the squares-plus-table pair: the table repeated the squares' figures in a second colour code (shaded
+    // by % passed where the squares shade by people lost), with its own key and no heading of its own.
+    // 🚨 The stage cells must NEVER be added up. One person passing R1, R2 and R3 appears in all three, so a
+    // total counts them three times. Each cell is comparable only to its own In, which is why the Overall
+    // column exists and why it is a single span.
+    // App Review stays in: under the old reached/cleared measure it read 100% and was dropped from the grid, and that
+    // exclusion outlived the 30-Aug rebuild that made it a real figure (Rule 11).
+    const heatHost = document.getElementById('hm2Heat');
+    if (!heatHost) return;
+    const A = hasAssessed();
+    const toRow = (label, per) => ({
+      label,
+      cells: visStages.map(sk => (per[sk] && per[sk].i > 0) ? { inN: per[sk].i, outN: per[sk].o } : null),
+      overall: per.span && per.span.i > 0 ? Math.round((per.span.o / per.span.i) * 100)
+        : (A ? null : (per.r1.i > 0 ? Math.round((per.ds.i / per.r1.i) * 100) : null)),
+      ovIn: per.span && per.span.i > 0 ? per.span.i : null,
+      ovOut: per.span && per.span.i > 0 ? per.span.o : null,
+      _vol: (per.span && per.span.i) || per.r1.i
     });
+    const heatRows = Object.keys(groups).map(d => Object.assign(toRow(d, aggTP(groups[d])),
+      { children: groups[d].map(({ job, t }) => toRow(job.title, aggTP([{ t }]))) }))
+      .sort((x, y) => y._vol - x._vol);
     const allList = [];
     Object.values(groups).forEach(l => allList.push(...l));
-    html += `<tr class="totals-row"><td>Total</td>${tpCells(aggTP(allList))}</tr>`;
-    const hm2Body = document.getElementById('hm2Body');
-    hm2Body.innerHTML = html;
-    wireTree(hm2Body);
-    const legEl = document.getElementById('hm2Legend');
-    if (legEl) legEl.innerHTML =
-      `<span><i class="sw lo"></i>under 50% ${hasAssessed() ? 'progressed' : 'moved past'}</span>`
-      + '<span><i class="sw mid"></i>50–70%</span>'
-      + '<span><i class="sw hi"></i>over 70%</span>'
-      + `<span><i class="sw none"></i>${hasAssessed() ? 'nobody assessed here' : 'stage not used'}</span>`;
-
-    // ===== ONE chart, both dimensions (Jerin, 2026-08-30) =====
-    // Replaces two org-wide charts — a per-stage In/Out column chart and a pipeline funnel — neither of
-    // which showed a department. First attempt was a single R1 → Documentation dumbbell; Jerin: "not enough
-    // dude, need stage wise throughput visualised too". So: department down the side, stage across the top,
-    // the throughput percentage in every cell, and the R1 → Documentation span as the final column.
-    //
-    // 🚨 The stage cells must NEVER be added up. One person passing R1, R2 and R3 appears in all three, so a
-    // total counts them three times — the same units trap as the throughput dedupe. Each cell is comparable
-    // only to its own In, which is why the Overall column exists and why it is a single span.
-    // It reads the same aggregates the table below renders, so the two agree by construction.
-    const heatHost = document.getElementById('hm2Heat');
-    if (heatHost) {
-      const A = hasAssessed();
-      // App Review used to be excluded here: under the OLD reached/cleared measure it read 99 → 99 = 100%
-      // (leaving a stage counted as passing it), so plotting it was noise. The 30-Aug rebuild made it a
-      // real figure — 65 assessed → 51 progressed — and the TABLE below shows it, as does the Stages
-      // checkbox. The exclusion survived the rebuild and silently dropped a ticked stage from the grid.
-      const stageCols = visStages.slice();
-      const heatRows = Object.keys(groups).map(d => {
-        const per = aggTP(groups[d]);
-        return {
-          label: d,
-          cells: stageCols.map(sk => (per[sk] && per[sk].i > 0)
-            ? { inN: per[sk].i, outN: per[sk].o } : null),
-          overall: per.span && per.span.i > 0 ? Math.round((per.span.o / per.span.i) * 100)
-            : (hasAssessed() ? null : (per.r1.i > 0 ? Math.round((per.ds.i / per.r1.i) * 100) : null)),
-          ovIn: per.span && per.span.i > 0 ? per.span.i : null,
-          ovOut: per.span && per.span.i > 0 ? per.span.o : null,
-          _vol: (per.span && per.span.i) || per.r1.i
-        };
-      }).sort((x, y) => y._vol - x._vol);
-      // Ref Check / Documentation / Offer count candidates ADDED, not assessed — administrative stages
-      // where nobody is interviewed. The pipeline marks them from stage entry; these are the columns.
-      const addedCols = new Set();
-      stageCols.forEach((sk, i) => { if (TP_ADDED[sk]) addedCols.add(i); });
-    const hiredCol = stageCols.indexOf('offer');
-      buildStageHeat(heatHost, document.getElementById('hm2HeatTip'), heatRows,
-        stageCols.map(sk => TP_LABELS[sk]), {
-          addedCols, hiredCol,
-          overallLabel: hasAssessed() ? 'R1/OA → late' : 'R1 → Doc',
-          labels: hasAssessed() ? undefined
-            : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
-        });
-    }
+    const hint = document.getElementById('hm2Hint');
+    if (hint) hint.textContent = heatRows.length === 1
+      ? `${heatRows[0].label} · ${heatRows[0].children.length} ${heatRows[0].children.length === 1 ? 'job' : 'jobs'}`
+      : (heatRows.length ? 'Click a department to open its jobs' : '');
+    // Ref Check / Documentation / Offer count candidates ADDED, not assessed — administrative stages
+    // where nobody is interviewed. The pipeline marks them from stage entry; these are the columns.
+    const addedCols = new Set();
+    visStages.forEach((sk, i) => { if (TP_ADDED[sk]) addedCols.add(i); });
+    const hiredCol = visStages.indexOf('offer');
+    buildStageHeat(heatHost, document.getElementById('hm2HeatTip'), heatRows,
+      visStages.map(sk => TP_LABELS[sk]), {
+        addedCols, hiredCol,
+        total: toRow('Total', aggTP(allList)),
+        expandAll: !!document.getElementById('hmExpandAll')?.checked,
+        overallLabel: A ? 'R1/OA → late' : 'R1 → Doc',
+        labels: A ? undefined
+          : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
+      });
   }
 
   // ===== Panelists — the full Interviewer Efficiency panel, driven by THIS tab's filters =====
@@ -1033,9 +970,9 @@ export function initHmFilters(data) {
   document.getElementById('hmJPMonth')?.addEventListener('change', renderJoiningPending);
   document.getElementById('hmJPFrom')?.addEventListener('change', renderJoiningPending);
   document.getElementById('hmJPTo')?.addEventListener('change', renderJoiningPending);
-  // Throughput-local listeners
+  // Throughput-local listeners — #122: a Stages dropdown (nothing picked = all 13) replaced the row of tick-boxes.
+  msHmTpStage = makeMultiSelect(document.getElementById('msHmTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);
-  document.querySelectorAll('.hm2Stage').forEach(cb => cb.addEventListener('change', renderThroughput));
   // Pipeline-local listeners
   document.getElementById('hm3HideEmpty')?.addEventListener('change', renderPipeline);
   document.querySelectorAll('.hm3Stage').forEach(cb => cb.addEventListener('change', renderPipeline));
