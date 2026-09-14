@@ -182,6 +182,9 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
   // Time-in-App-Review dwell histograms {days:count} for candidates CURRENTLY parked in App Review (now - createdAt).
   // The stage-history accumulator can't see these (they never reached screening), so we capture them here — full coverage.
   var arDwellJob = {}, arDwellRec = {};
+  // #120a/#120b: the same dwell per RECRUITER x JOB, so a Job filter or a department scope can narrow the recruiter
+  // rows. Summed over jobs it equals appReviewDwellByRecruiter for every parked candidate that has a job.
+  var arDwellRecJob = {};
 
   function ensureRec(name) {
     if (!recruiterCounts[name]) { var r = { name: name, total: 0, byJob: {}, sources: {}, srcNested: {}, srcByJob: {}, srcQ: {}, srcByJobQ: {} }; RECRUITER_STAGES.forEach(function(s) { r[s] = 0; }); recruiterCounts[name] = r; }
@@ -243,6 +246,7 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
         var arj8 = (jobId || '').substring(0, 8);
         if (arj8) { var ahj = arDwellJob[arj8] || (arDwellJob[arj8] = {}); ahj[arDays] = (ahj[arDays] || 0) + 1; }
         var ahr = arDwellRec[recName] || (arDwellRec[recName] = {}); ahr[arDays] = (ahr[arDays] || 0) + 1;
+        if (arj8) { var arrj = arDwellRecJob[recName] || (arDwellRecJob[recName] = {}); var ahrj = arrj[arj8] || (arrj[arj8] = {}); ahrj[arDays] = (ahrj[arDays] || 0) + 1; }
       }
 
       funnel.applied++;
@@ -320,7 +324,7 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
   } while (cursor);
 
   return { total: totalApps, scoped: scopedApps, funnel: funnel, recruiterCounts: recruiterCounts, sourceCounts: sourceCounts, weekCounts: weekCounts, qData: qData, appMap: appMap, histApps: histApps, archivedApps: archivedApps,
-    recruiterUserId: recruiterUserId, anomalies: anomalies, unassignedCases: unassignedCases, unmappedStages: unmappedStages, appReviewDwellByJob: arDwellJob, appReviewDwellByRecruiter: arDwellRec };
+    recruiterUserId: recruiterUserId, anomalies: anomalies, unassignedCases: unassignedCases, unmappedStages: unmappedStages, appReviewDwellByJob: arDwellJob, appReviewDwellByRecruiter: arDwellRec, appReviewDwellByRecruiterJob: arDwellRecJob };
 }
 
 // ===== OFFER PASS =====
@@ -455,14 +459,18 @@ function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
 // per-panelist totals) + panelists[] (per Dept→Job→panelist rows for the HM Panelists tab).
 function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) {
   var byUser = {}, byDJU = {}; var EXCLUDED_INTERVIEWER_ID = '924ff493-7411-49a4-ba4b-e083d78dc0b9', interviewsByQuarter = {}, interviewsByMonth = {};
+  // #120a/#120b: interview EVENTS per job (by quarter and month), so the Panelists Interviews card can follow a scope.
+  var interviewsByJobQ = {}, interviewsByJobM = {}, evNoJob = 0;
   // DISTINCT CANDIDATES per quarter, not interview events. interviewsByQuarter counts EVENTS - one candidate
   // doing R1, R2 and R3 is three of those and one of these. The Overview tile asks 'how many people did we
   // interview', which is this. Keyed quarter -> {applicationId: 1}; only the counts ever leave the server.
   var intAppsByQ = {};        // userId totals / dept->title->userId
   var evEndByAppUser = {};            // (appId '|' userId) -> [event endMs, ...] — for feedback turnaround matching
   function eu(uid) { if (!byUser[uid]) byUser[uid] = { interviews: 0, feedbackCount: 0, turnSum: 0, turnN: 0, byQuarter: {}, byMonth: {}, pending: 0 }; return byUser[uid]; }
-  function edju(dept, title, uid) { var d = byDJU[dept] || (byDJU[dept] = {}); var t = d[title] || (d[title] = {}); return t[uid] || (t[uid] = { interviews: 0, feedbackCount: 0, turnSum: 0, turnN: 0, byQuarter: {}, byMonth: {} }); }
-  function jobCtx(appId) { var am = appId ? appMap[appId] : null; var jd = (am && am.jobId) ? jobLookup[am.jobId] : null; return { dept: jd ? jd.department : 'Unknown', title: jd ? jd.title : 'Unknown' }; }
+  // #120b: rows are keyed dept -> JOB -> panelist. They were dept -> job TITLE -> panelist, which merged two jobs sharing a
+  // title and could not be narrowed to one job. The title stays on the row; the site merges same-title rows for display.
+  function edju(ctx, uid) { var d = byDJU[ctx.dept] || (byDJU[ctx.dept] = {}); var tk = ctx.j8 + '|' + ctx.title; var t = d[tk] || (d[tk] = {}); return t[uid] || (t[uid] = { title: ctx.title, j8: ctx.j8, interviews: 0, feedbackCount: 0, turnSum: 0, turnN: 0, pending: 0, byQuarter: {}, byMonth: {} }); }
+  function jobCtx(appId) { var am = appId ? appMap[appId] : null; var jd = (am && am.jobId) ? jobLookup[am.jobId] : null; return { dept: jd ? jd.department : 'Unknown', title: jd ? jd.title : 'Unknown', j8: (am && am.jobId) ? String(am.jobId).substring(0, 8) : '' }; }
 
   // Pass 1 — interview schedules → events. Interviewers are in ev.interviewerUserIds (array of ids); ev.interviewers[].userId is null.
   var cursor = null, evCount = 0, pages = 0;
@@ -479,18 +487,19 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
         var st = ev.startTime ? new Date(ev.startTime).getTime() : 0;
         if (st && st < SCOPE_FROM_MS) continue;
         var _uu = ev.interviewerUserIds || [], _hasReal = false; for (var _z = 0; _z < _uu.length; _z++) { if (_uu[_z] && _uu[_z] !== EXCLUDED_INTERVIEWER_ID) { _hasReal = true; break; } } if (!_hasReal) continue; evCount++; if (st) { var _qd = new Date(st); var _qk = _qd.getUTCFullYear() + '-Q' + (Math.floor(_qd.getUTCMonth() / 3) + 1); interviewsByQuarter[_qk] = (interviewsByQuarter[_qk] || 0) + 1; if (appId) { (intAppsByQ[_qk] || (intAppsByQ[_qk] = {}))[appId] = 1; } var _mk = _qd.getUTCFullYear() + '-' + ('0' + (_qd.getUTCMonth() + 1)).slice(-2); interviewsByMonth[_mk] = (interviewsByMonth[_mk] || 0) + 1; }
+        if (st) { if (ctx1.j8) { var _ijq = interviewsByJobQ[ctx1.j8] || (interviewsByJobQ[ctx1.j8] = {}); _ijq[_qk] = (_ijq[_qk] || 0) + 1; var _ijm = interviewsByJobM[ctx1.j8] || (interviewsByJobM[ctx1.j8] = {}); _ijm[_mk] = (_ijm[_mk] || 0) + 1; } else evNoJob++; }
         var endMs = ev.endTime ? new Date(ev.endTime).getTime() : 0;
         var uids = ev.interviewerUserIds || [];
         for (var k = 0; k < uids.length; k++) {
           var uid = uids[k]; if (!uid || uid === EXCLUDED_INTERVIEWER_ID) continue;
           eu(uid).interviews++; if (!ev.hasSubmittedFeedback) byUser[uid].pending++;
-          edju(ctx1.dept, ctx1.title, uid).interviews++;
+          var _dj1 = edju(ctx1, uid); _dj1.interviews++; if (!ev.hasSubmittedFeedback) _dj1.pending++;
           if (st) {
             var _pq = new Date(st);
             var _pqk = _pq.getUTCFullYear() + '-Q' + (Math.floor(_pq.getUTCMonth() / 3) + 1);
             var _pmk = _pq.getUTCFullYear() + '-' + ('0' + (_pq.getUTCMonth() + 1)).slice(-2);
             var _euq = eu(uid); _euq.byQuarter[_pqk] = (_euq.byQuarter[_pqk] || 0) + 1; _euq.byMonth[_pmk] = (_euq.byMonth[_pmk] || 0) + 1;
-            var _djq = edju(ctx1.dept, ctx1.title, uid); _djq.byQuarter[_pqk] = (_djq.byQuarter[_pqk] || 0) + 1; _djq.byMonth[_pmk] = (_djq.byMonth[_pmk] || 0) + 1;
+            var _djq = edju(ctx1, uid); _djq.byQuarter[_pqk] = (_djq.byQuarter[_pqk] || 0) + 1; _djq.byMonth[_pmk] = (_djq.byMonth[_pmk] || 0) + 1;
           }
           if (endMs && appId) { var key = appId + '|' + uid; (evEndByAppUser[key] || (evEndByAppUser[key] = [])).push(endMs); }
         }
@@ -499,7 +508,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null; pages++;
     if (cursor) Utilities.sleep(30);
   } while (cursor);
-  Logger.log('interviewSchedule.list: ' + evCount + ' scoped events, ' + pages + ' pages');
+  Logger.log('interviewSchedule.list: ' + evCount + ' scoped events, ' + pages + ' pages, ' + evNoJob + ' with no job');
 
   // Pass 2 — feedback → per-panelist count + turnaround. Feedback has NO interviewEventId, so turnaround is matched
   // by (applicationId + submitter) to the nearest earlier interview-event endTime; job/dept via appMap[applicationId].
@@ -518,7 +527,7 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
       if (subMs && subMs < SCOPE_FROM_MS) continue;
       fbCount++;
       eu(uid2).feedbackCount++;
-      var ctx2 = jobCtx(fb.applicationId); var dju = edju(ctx2.dept, ctx2.title, uid2); dju.feedbackCount++;
+      var ctx2 = jobCtx(fb.applicationId); var dju = edju(ctx2, uid2); dju.feedbackCount++;
       var ends = fb.applicationId ? evEndByAppUser[fb.applicationId + '|' + uid2] : null;
       if (ends && subMs) { var best = 0; for (var z = 0; z < ends.length; z++) { if (ends[z] <= subMs && ends[z] > best) best = ends[z]; }
         if (best) { var t = (subMs - best) / 3600000; byUser[uid2].turnSum += t; byUser[uid2].turnN++; dju.turnSum += t; dju.turnN++;
@@ -538,8 +547,8 @@ function fetchAndProcessInterviews_(startTime, appMap, jobLookup, userNameById) 
   interviewers.sort(function (a, b) { return b.interviews - a.interviews; });
   var panelists = [];
   for (var dp in byDJU) for (var tt in byDJU[dp]) for (var uu in byDJU[dp][tt]) { var x = byDJU[dp][tt][uu];
-    panelists.push({ dept: dp, jobTitle: tt, name: nameOf(uu), userId: uu, interviews: x.interviews, byQuarter: x.byQuarter, byMonth: x.byMonth, feedbackSubmitted: x.feedbackCount, feedbackOnScheduled: x.fbOnSched || 0, avgTurnaroundHrs: x.turnN ? Math.round(x.turnSum / x.turnN * 10) / 10 : null }); }
-  return { interviewers: interviewers, panelists: panelists, totalInterviews: evCount, totalFeedback: fbCount, interviewsByQuarter: interviewsByQuarter, interviewsByMonth: interviewsByMonth, intAppsByQ: intAppsByQ };
+    panelists.push({ dept: dp, jobTitle: x.title, jobId8: x.j8 || null, name: nameOf(uu), userId: uu, interviews: x.interviews, byQuarter: x.byQuarter, byMonth: x.byMonth, feedbackSubmitted: x.feedbackCount, feedbackOnScheduled: x.fbOnSched || 0, pendingFeedback: x.pending, turnN: x.turnN, turnSumHrs: Math.round(x.turnSum * 10000) / 10000, avgTurnaroundHrs: x.turnN ? Math.round(x.turnSum / x.turnN * 10) / 10 : null }); }
+  return { interviewers: interviewers, panelists: panelists, totalInterviews: evCount, totalFeedback: fbCount, interviewsByQuarter: interviewsByQuarter, interviewsByMonth: interviewsByMonth, intAppsByQ: intAppsByQ, interviewsByJobQ: interviewsByJobQ, interviewsByJobM: interviewsByJobM, evNoJob: evNoJob };
 }
 
 // Fast recon: verify createdAfter scoping + volume + shape on the two endpoints (run once before a full refresh).
@@ -869,6 +878,7 @@ function refreshDashboardData() {
       subStage: sub3,
       recruiter: e.recruiter || null,
       sourcer: e.sourcer || null,   // #11 sourcer - the credit split needs it on JP too
+      jobId8: e.jobId8 || null,     // #120a: the job itself - a title alone matches two jobs for some titles
       linked: e.offerOpeningId ? true : false
     };
   });
@@ -879,7 +889,7 @@ function refreshDashboardData() {
     if (!sub4) continue;
     if (am4.status === 'Hired' || am4.status === 'Archived') continue;
     var jd4 = am4.jobId ? jobLookup[am4.jobId] : null;
-    jpCaseByApp_[aid3] = { openingQuarter: null, month: null, doj: null, department: jd4 ? jd4.department : '', job: jd4 ? jd4.title : '', candidate: am4.candidate || null, subStage: sub4, recruiter: am4.recruiter || null, sourcer: am4.sourcer || null, linked: false };
+    jpCaseByApp_[aid3] = { openingQuarter: null, month: null, doj: null, department: jd4 ? jd4.department : '', job: jd4 ? jd4.title : '', jobId8: am4.jobId ? String(am4.jobId).substring(0, 8) : null, candidate: am4.candidate || null, subStage: sub4, recruiter: am4.recruiter || null, sourcer: am4.sourcer || null, linked: false };
   }
   var joiningPendingCases = Object.keys(jpCaseByApp_).map(function(k) { return jpCaseByApp_[k]; });
   joiningPendingCases.sort(function(a, b) {
@@ -901,6 +911,7 @@ function refreshDashboardData() {
     offerLinkGaps.push({
       candidate: e.candidate || null,
       job: jdg ? jdg.title : '',
+      jobId8: e.jobId8 || null,   // #120b
       department: jdg ? jdg.department : '',
       recruiter: e.recruiter || null,
       doj: e.startDate || null,
@@ -1026,6 +1037,10 @@ function refreshDashboardData() {
     Logger.log('dropEvents: ' + dropEvents.length + ' total (' + (dropEvents.length - added) + ' from offers, ' + added + ' from late-stage archived apps with no offer)');
   } catch (eD) { Logger.log('late-stage drop merge skipped: ' + eD.message); }
 
+  // #120b: title + department of EVERY in-scope job (jobs[] lists only some), so a department scope can place an
+  // event, a rollup key or an owned opening whose job is not in jobs[]. Job titles and departments only - no people.
+  var jobIndex_ = {};
+  for (var _jx in jobLookup) { var _jl = jobLookup[_jx]; if (!_jl || excludedJobIds[_jx]) continue; jobIndex_[String(_jx).substring(0, 8)] = { title: _jl.title || '', department: _jl.department || '' }; }
   var dashboard = {
     lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
@@ -1035,11 +1050,13 @@ function refreshDashboardData() {
     jobs: jobsList, recruiters: recruitersList, sources: sourcesList,
     weeklyVelocity: velocity, quarterly: quarterly, avgTimeToHire: 0,
     offerEvents: offerEvents, joiningPendingCases: joiningPendingCases, offerLinkGaps: offerLinkGaps, openingsNoDate: openingsNoDate, dataQuality: dataQuality,
-    appReviewDwellByJob: appResult.appReviewDwellByJob, appReviewDwellByRecruiter: appResult.appReviewDwellByRecruiter,
+    appReviewDwellByJob: appResult.appReviewDwellByJob, appReviewDwellByRecruiter: appResult.appReviewDwellByRecruiter, appReviewDwellByRecruiterJob: appResult.appReviewDwellByRecruiterJob || {},
     interviewers: ivResult.interviewers, panelists: ivResult.panelists, totalInterviews: ivResult.totalInterviews, interviewsByQuarter: ivResult.interviewsByQuarter, interviewsByMonth: ivResult.interviewsByMonth || {},
     candidatesInterviewedByQuarter: candidatesInterviewedByQuarter, panelInterviewedByQuarter: panelByQ, assessedByQuarter: assessedByQ,
     candidatesInterviewedByYear: candidatesInterviewedByYear, panelInterviewedByYear: panelInterviewedByYear, assessedByYear: assessedByYear,
-    dropEvents: dropEvents
+    dropEvents: dropEvents,
+    interviewsByJobQ: ivResult.interviewsByJobQ || {}, interviewsByJobM: ivResult.interviewsByJobM || {},
+    jobIndex: jobIndex_
   };
   assertDashboardComplete_(dashboard, existing);
   saveDashboardJson_(dashboard);
@@ -1283,6 +1300,9 @@ function computeStageRollups_(events) {
   var minDay = dayKey_(Date.now() - ROLLUP_WINDOW_DAYS * 86400000), todayKey = dayKey_(Date.now());
   var velByRec = {}, velByJob = {}, velByRecJob = {}, tpByJob = {}, tpByRec = {}, tisJob = {}, tisRec = {}, tisJobQ = {}, tisRecQ = {};
   var waitJob = {}, waitRec = {}, waitJobQ = {}, waitRecQ = {};
+  // #120a/#120b: dwell per RECRUITER x JOB x quarter (finished and still-waiting kept apart, as below), so the Time in
+  // Process recruiter rows can follow a Job filter or a department scope. No all-time twin: it is the sum of the quarters.
+  var tisRecJobQ = {}, waitRecJobQ = {};
   // Added 2026-08-21 after the filter audit: the quarter selector was only regrouping
   // pods (stage numbers were lifetime), and per-job rows under Screening had no source.
   var tpByJobQ = {}, tpByRecQ = {}, tpByRecJob = {};
@@ -1301,6 +1321,7 @@ function computeStageRollups_(events) {
   // selector was only regrouping pods on the three Time-in-Process panels, so Q1 and Q2 rendered the
   // same lifetime numbers under different headings. Bucketing on entry matches throughputBy*Q above.
   function tisQ(store, key, stage, qk, dw) { var s = store[key] || (store[key] = {}); var h = s[stage] || (s[stage] = {}); var q = h[qk] || (h[qk] = {}); q[dw] = (q[dw] || 0) + 1; }
+  function tisRJQ(store, rec, j8, stage, qk, dw) { tisQ(store[rec] || (store[rec] = {}), j8, stage, qk, dw); }
   for (var id in events) {
     var d = events[id], rec = d.r, j8 = d.j ? String(d.j).substring(0, 8) : null;
     for (var n = 0; n < d.ev.length; n++) {
@@ -1333,13 +1354,15 @@ function computeStageRollups_(events) {
         if (rec) tis(sRec, rec, k, dw);
         if (j8 && qk) tisQ(sJobQ, j8, k, qk, dw);
         if (rec && qk) tisQ(sRecQ, rec, k, qk, dw);
+        if (rec && j8 && qk) tisRJQ(finished ? tisRecJobQ : waitRecJobQ, rec, j8, k, qk, dw);
       }
     }
   }
   return { schemaVersion: 1, generatedAt: new Date().toISOString(), windowDays: ROLLUP_WINDOW_DAYS,
     velocityByRecruiter: velByRec, velocityByJob: velByJob, velocityByRecruiterJob: velByRecJob, throughputByJob: tpByJob, throughputByRecruiter: tpByRec, throughputByJobQ: tpByJobQ, throughputByRecruiterQ: tpByRecQ, throughputByRecruiterJob: tpByRecJob,
     timeInStageByJob: tisJob, timeInStageByRecruiter: tisRec, timeInStageByJobQ: tisJobQ, timeInStageByRecruiterQ: tisRecQ,
-    tisSchema: 2, waitingByJob: waitJob, waitingByRecruiter: waitRec, waitingByJobQ: waitJobQ, waitingByRecruiterQ: waitRecQ };
+    tisSchema: 2, waitingByJob: waitJob, waitingByRecruiter: waitRec, waitingByJobQ: waitJobQ, waitingByRecruiterQ: waitRecQ,
+    timeInStageByRecruiterJobQ: tisRecJobQ, waitingByRecruiterJobQ: waitRecJobQ };
 }
 
 function triggerStageHistoryNow() {
