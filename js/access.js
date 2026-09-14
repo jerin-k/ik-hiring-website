@@ -2,12 +2,17 @@
 // falling back to the Vercel-served local copy if the fetch fails.
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/access.json';
 const LOCAL_URL = '/data/access.json';
+// #118 (14 Sep 2026): read the GitHub contents API FIRST. raw.githubusercontent ignores ?cb and served the previous access file
+// for minutes after a publish — the Admin list reloaded without the person just added, and a publish from it would have
+// removed them. The API is exact; if it refuses (60 unauthenticated reads an hour per IP), raw and then Vercel's copy follow.
+const API_URL = 'https://api.github.com/repos/jerin-k/ik-hiring-website/contents/data/access.json?ref=main';
 
 let accessConfig = null;
 
 export async function loadAccessConfig() {
   let cfg = null;
-  try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
+  try { const r = await fetch(API_URL + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
+  if (!cfg) { try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ } }
   if (!cfg) { try { const r = await fetch(LOCAL_URL + '?t=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { } }
   accessConfig = cfg || { defaultRole: 'none', users: [] };
   return accessConfig;
