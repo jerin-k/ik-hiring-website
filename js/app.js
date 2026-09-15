@@ -52,7 +52,6 @@ async function onAuthSuccess(user) {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.getElementById('user-email').textContent = user.email;
-  setupAskAshby();   // #79b
 
   accessConfig = await loadAccessConfig();
   await loadDashboardData();
@@ -148,31 +147,6 @@ function setupRefreshButton() {
 
 function setupSignout() {
   document.getElementById('signout-btn').addEventListener('click', signOut);
-}
-
-// #79b (Jerin, 15 Sep 2026 — option A1 of the side-window mock-up): the Ask Ashby AI pill opens Ashby's Assistant in its OWN tall
-// window, 480 px wide, docked to the right edge of the screen the dashboard is on, instead of a new tab. It is a NAMED window, so a
-// second click brings the same one to the front rather than opening another. A website cannot resize the dashboard's own window,
-// and Chrome always shows a slim address bar on the popup. Phones and tablets (no separate windows), and a refused pop-up, fall back
-// to the link's own new tab.
-const ASHBY_WINDOW = { name: 'ikAshbyAI', width: 480 };
-let ashbyWin = null;
-function setupAskAshby() {
-  const link = document.getElementById('askAshby');
-  if (!link || link.dataset.wired) return;
-  link.dataset.wired = '1';
-  link.addEventListener('click', (e) => {
-    if (window.matchMedia('(max-width: 760px), (pointer: coarse)').matches) return;   // a normal tab there
-    if (ashbyWin && !ashbyWin.closed) { e.preventDefault(); ashbyWin.focus(); return; }
-    const s = window.screen, w = ASHBY_WINDOW.width;
-    const left = (s.availLeft || 0) + s.availWidth - w, top = s.availTop || 0;
-    const win = window.open(link.href, ASHBY_WINDOW.name, `popup=yes,width=${w},height=${s.availHeight},left=${left},top=${top}`);
-    if (!win) return;   // pop-up refused: let the click open the new tab
-    e.preventDefault();
-    try { win.opener = null; } catch (err) { /* already on Ashby's origin */ }
-    ashbyWin = win;
-    win.focus();
-  });
 }
 
 // The route is "page" or "page/sub-tab" — e.g. #recruiter/momentum. Reloading has to put you back exactly
