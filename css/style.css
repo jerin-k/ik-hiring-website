@@ -1043,3 +1043,52 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 .heat-tip .tip-row { display:flex; justify-content:space-between; gap:14px; line-height:1.6; }
 .heat-tip .tip-row span:last-child { font-weight:600; }
 
+/* ===== Overview ranked panels — #135 (Jerin, 15 Sep 2026: option A "context cards", colours 1 "clear contrast") =====
+   Joined and hires in a DEEP teal, Open in a PALE slate, so "done" and "still to do" separate by depth — the old teal
+   and slate blue sat at the same depth and a department bar read as one blue block. Same colour families as the other
+   tabs (Joined stays teal). Every number colour clears 4.5:1 on white. */
+:root { --ov-joined: #1E7590; --ov-open: #9fb3d6; --ov-missed: #c46f86; --ov-apps: #4E6BA6; --ov-track: #eef2f8; --ov-ink-bg: #e3f0f3; }
+.ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 820px) { .ov-grid { grid-template-columns: 1fr; } }
+.ov-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.ov-head { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.ov-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ov-title { font-size: 13.5px; font-weight: 650; color: var(--navy); margin: 0; }
+.ov-chip { font-size: 10.5px; font-weight: 600; color: var(--accent-deep); background: var(--accent-light); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.ov-sum { font-size: 12px; color: var(--muted); }
+.ov-sum b { color: var(--text); font-weight: 650; font-variant-numeric: tabular-nums; }
+.ov-list { padding: 2px 8px 6px; }
+.ov-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border-radius: 8px; }
+.ov-row:hover { background: #f6f8fc; }
+.ov-row.ov-rest { padding-top: 4px; padding-bottom: 4px; }
+.ov-row.ov-rest:hover { background: none; }
+.ov-medal { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
+.ov-medal.top { background: var(--navy-sub); color: #fff; box-shadow: none; }
+.ov-main { min-width: 0; }
+.ov-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; min-width: 0; }
+.ov-dept { font-size: 10.5px; color: var(--text-secondary); background: #f1f4f9; border: 1px solid var(--border-light); border-radius: 5px; padding: 0 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ov-bar { height: 8px; border-radius: 4px; background: var(--ov-track); overflow: hidden; display: flex; gap: 1px; margin-top: 6px; }
+.ov-bar.thin { height: 6px; }
+.ov-bar i { display: block; height: 100%; }
+.ov-bar i.j, .ov-bar i.h, .ov-legend i.j { background: var(--ov-joined); }
+.ov-bar i.o, .ov-legend i.o { background: var(--ov-open); }
+.ov-bar i.m, .ov-legend i.m { background: var(--ov-missed); }
+.ov-bar i.a { background: var(--ov-apps); }
+.ov-val { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ov-big { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.ov-ink { color: var(--ov-joined); }
+.ov-of { color: var(--muted); font-size: 12px; font-weight: 600; }
+.ov-small { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+.ov-pct { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+.ov-pct.hi { color: var(--ov-joined); background: var(--ov-ink-bg); }
+.ov-pct.mid { color: var(--accent-deep); background: var(--accent-light); }
+.ov-pct.lo { color: #8a3a52; background: var(--red-light); }
+.ov-foot { margin-top: auto; border-top: 1px solid var(--border-light); padding: 9px 16px; display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; font-size: 11.5px; color: var(--muted); }
+.ov-link { color: var(--accent-deep); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.ov-link:hover { text-decoration: underline; }
+.ov-legend { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ov-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 4px; }
