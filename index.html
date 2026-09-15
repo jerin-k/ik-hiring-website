@@ -33,9 +33,10 @@
         </div>
         <div class="header-right">
           <!-- #79 (Jerin, 15 Sep 2026): Ashby's own Assistant, one click away. It has no API and Ashby refuses to be framed
-               (x-frame-options: DENY), so it opens in a new tab, where each person is signed in as themselves. -->
+               (x-frame-options: DENY). #79b (option A1): app.js setupAskAshby() opens it in a tall side window on the right of the
+               screen; this link's new tab is the fallback on phones or when a pop-up is refused. -->
           <a class="ask-ashby" id="askAshby" href="https://app.ashbyhq.com/ai" target="_blank" rel="noopener noreferrer"
-             title="Opens Ashby Assistant in a new tab — signed in as you, with your own Ashby access">
+             title="Opens Ashby Assistant in a side window — signed in as you, with your own Ashby access">
             <svg class="ask-spark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="askSparkG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0abfc"/><stop offset=".5" stop-color="#c4b5fd"/><stop offset="1" stop-color="#67e8f9"/></linearGradient></defs><path d="M11 2c.55 5.1 3.2 7.75 8.3 8.3-5.1.55-7.75 3.2-8.3 8.3-.55-5.1-3.2-7.75-8.3-8.3 5.1-.55 7.75-3.2 8.3-8.3z" fill="url(#askSparkG)"/><path d="M19 14c.28 2.2 1.4 3.32 3.6 3.6-2.2.28-3.32 1.4-3.6 3.6-.28-2.2-1.4-3.32-3.6-3.6 2.2-.28 3.32-1.4 3.6-3.6z" fill="url(#askSparkG)" opacity=".85"/></svg>
             <span class="ask-label">Ask Ashby AI</span><span class="ask-arrow" aria-hidden="true">&#x2197;</span>
           </a>
