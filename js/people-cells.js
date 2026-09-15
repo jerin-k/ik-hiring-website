@@ -66,10 +66,13 @@ export function tdStage(s) {
   return `<td data-sv="${k}"><span class="pl-stage pl-s${k}"><span class="pl-ticks" aria-hidden="true">${ticks}</span>${s}</span></td>`;
 }
 
+// The class suffix for a pod's colour (`pl-pod-<x>` here, `pod-<x>` on Admin's pod dropdowns — #137b). Unassigned / unknown = 'none'.
+export const podClass = (pod) => POD_CLASS[pod] || 'none';
+
 export function avatar(name, pod) {
   const p = String(name || '').trim().split(/\s+/).filter(Boolean);
   const ini = !p.length ? '' : p.length === 1 ? p[0].slice(0, 2) : p[0][0] + p[p.length - 1][0];
-  return `<span class="pl-av pl-pod-${POD_CLASS[pod] || 'none'}" aria-hidden="true">${esc(ini.toUpperCase())}</span>`;
+  return `<span class="pl-av pl-pod-${podClass(pod)}" aria-hidden="true">${esc(ini.toUpperCase())}</span>`;
 }
 
 // `refDay` as for tdQuarter: the pod is the recruiter's pod in the quarter of the start date, else today's.

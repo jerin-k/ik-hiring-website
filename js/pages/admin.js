@@ -5,6 +5,7 @@ import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDate
 import { markDirty, isDirty, getMeta, publishConfig, configFileText, collectConfig } from '../metric-config.js';
 import { publishAccess, accessFileText, sendInvite, fetchInvites } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
+import { avatar, podClass, countTag } from '../people-cells.js';   // #137b: the same initials, pod colours and count tags as the people lists
 
 // ===== Metric Configuration model (moved here from Recruiter Efficiency 2026-08-09) =====
 // See memory project_recruiter-score-model. A role's Score = Family + Level + Complexity → grid → points.
@@ -82,101 +83,201 @@ function buildEffectiveConfig(data) {
 }
 
 export function renderAdmin(accessConfig, data) {
-  const users = accessConfig?.users || [];
-
+  const deptNames = Object.keys(DEPT_TREE).sort();
+  const teamCount = Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0);
+  // #137b (Jerin, 15 Sep 2026 — option A of mock-up 2, with #138): four sub-tabs instead of two, and each opens on ONE slim strip — the
+  // sync state, who published last, the page's one setting, Publish / Download — in place of the old stack of boxes. Pod & Capacity and
+  // Scoring share the team-config strip (#mcStrip): they are one config file, so either Publish sends both. Quarter shows only where it
+  // changes something (Pod & Capacity, Scoring → Grid — CLAUDE.md Rule 13). Nothing about publishing, invites or who can edit changed.
   return `
     <style>
-      .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }
-      .cfg-card .lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
-      .cfg-card select, .cfg-card input[type=number], .cfg-card input[type=email], .cfg-card input[type=text] {
-        appearance:none; -webkit-appearance:none; height:32px; padding:0 10px; border:1px solid var(--border);
-        border-radius:8px; font-family:inherit; font-size:12px; font-weight:500; background:var(--bg); color:var(--text); }   /* font-family: these controls rendered in the browser's Arial */
-      /* #111: the date boxes match the Pod / Capacity controls beside them. A date input inherits neither the page
-         font nor the rule above, which is why it rendered as the raw browser box (CLAUDE.md Rule 12). */
-      .cfg-card input.cfg-date { height:32px; width:140px; padding:0 8px 0 10px; border:1px solid var(--border); border-radius:8px;
-        font-family:inherit; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; background:var(--bg); color:var(--text); cursor:pointer; }
-      .cfg-card input.cfg-date.is-empty { color:var(--muted); font-weight:400; }
-      .cfg-card input.cfg-date:hover { border-color:#9db2d6; }
-      .cfg-card input.cfg-date:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-      .cfg-card input.cfg-date::-webkit-calendar-picker-indicator { opacity:.45; cursor:pointer; }
-      .cfg-card input.cfg-date:hover::-webkit-calendar-picker-indicator { opacity:.8; }
-      .ac-addrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-      .ac-addrow #new-email { flex:1; min-width:240px; }
-      .ac-table { width:100%; border-collapse:collapse; }
-      .ac-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); font-weight:600; padding:7px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
-      .ac-table td { padding:9px 10px; border-bottom:1px solid var(--border-light); vertical-align:top; font-size:13px; }
-      .ac-table tbody tr:last-child td { border-bottom:none; }
-      .ac-table tbody tr:hover { background:var(--border-light); }
-      .ac-ms { border:1px solid var(--border); border-radius:7px; background:var(--bg); }
+      .adm-strip { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:10px 14px; margin-bottom:14px;
+        background:var(--card); border:1px solid var(--border); border-radius:10px; }
+      .adm-grow { flex:1; }
+      .adm-vr { width:1px; height:22px; background:var(--border); }
+      .adm-sync { display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; font-size:12px; font-weight:600;
+        white-space:nowrap; background:#e3f1f4; color:#17586c; }
+      .adm-sync::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; flex:none; }
+      .adm-sync.is-dirty { background:var(--orange-light); color:var(--orange); }
+      .adm-sync.is-busy { background:var(--border-light); color:var(--muted); }
+      .adm-sync.is-error { background:var(--red-light); color:var(--red); white-space:normal; }
+      .adm-prov { font-size:11.5px; color:var(--muted); }
+      .adm-field { display:inline-flex; align-items:center; gap:8px; }
+      .adm-field .lbl { font-size:11.5px; font-weight:600; color:var(--muted); }
+      .adm-card { background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+      .adm-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:10px 14px; border-bottom:1px solid var(--border-light); }
+      .adm-title { font-size:13px; font-weight:700; color:var(--navy); }
+      .adm-count { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .adm-strip select, .adm-card select, .adm-card input[type=number], .adm-card input[type=email], .adm-card input[type=text] {
+        appearance:none; -webkit-appearance:none; height:30px; padding:0 26px 0 10px; border:1px solid #c9d3e5; border-radius:8px;
+        font-family:inherit; font-size:12px; font-weight:500; color:var(--text); cursor:pointer;
+        background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b7391'/%3E%3C/svg%3E") no-repeat right 10px center; }   /* font-family: controls do not inherit it (Rule 12) */
+      .adm-card input[type=number], .adm-card input[type=email], .adm-card input[type=text] { padding:0 10px; background-image:none; cursor:text; }
+      .adm-strip select:hover, .adm-card select:hover, .adm-card input:hover { border-color:#9db2d6; }
+      .adm-strip select:focus-visible, .adm-card select:focus-visible, .adm-card input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+      .adm-card select.adm-quiet { border-color:transparent; background-color:transparent; }
+      .adm-card select.adm-quiet:hover { border-color:#c9d3e5; background-color:var(--card); }
+      .adm-card #new-email { width:260px; }
+      /* #111: the date boxes match the Pod / Capacity controls beside them; empty ones are dashed. */
+      .adm-card input.cfg-date { height:28px; width:140px; padding:0 8px 0 10px; border:1px solid #c9d3e5; border-radius:7px; cursor:pointer;
+        font-family:inherit; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; background:var(--card); color:var(--text); }
+      .adm-card input.cfg-date.is-empty { color:var(--muted); font-weight:400; border-style:dashed; }
+      .adm-card input.cfg-date::-webkit-calendar-picker-indicator { opacity:.45; cursor:pointer; }
+      .adm-card input.cfg-date:hover::-webkit-calendar-picker-indicator { opacity:.8; }
+      .ac-table { width:100%; border-collapse:collapse; border:0; border-radius:0; }
+      .ac-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; padding:8px 12px;
+        background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+      .ac-table td { padding:8px 12px; border-top:1px solid var(--border-light); vertical-align:middle; font-size:12.5px; color:var(--text-secondary); }
+      .ac-table tbody tr:first-child td { border-top:0; }
+      .ac-table tbody tr:hover td { background:#f8fafc; }
+      .adm-who { display:inline-flex; align-items:center; gap:9px; white-space:nowrap; }
+      .adm-who b { font-weight:600; color:var(--text); }
+      .adm-who .dom { color:var(--muted); }
+      .adm-who .pl-av { width:24px; height:24px; font-size:10px; }
+      .adm-card select.ac-role { font-weight:600; border-color:transparent; }
+      .adm-card select.ac-role.r-admin { background-color:var(--navy); color:#fff; }
+      .adm-card select.ac-role.r-full_access { background-color:#dcecf1; color:#17586c; }
+      .adm-card select.ac-role.r-restricted { background-color:#e4eaf5; color:#33507f; }
+      .adm-card select.ac-role.r-none { color:var(--muted); border:1px dashed #c3cad8; }
+      .ac-type-wrap { display:inline-flex; align-items:center; gap:3px; }
+      .ac-type-wrap i { width:8px; height:8px; border-radius:2px; flex:none; }
+      .ac-ms { border:1px solid transparent; border-radius:8px; }
+      .ac-ms[open] { border-color:var(--border); background:var(--bg); }
+      .ac-ms summary { list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:4px; padding:3px 5px; border-radius:7px; }
+      .ac-ms summary:hover { background:var(--border-light); }
       .ac-ms summary::-webkit-details-marker { display:none; }
-      .ac-del { background:none; border:1px solid var(--border); color:var(--red); font-size:11px; font-weight:600; padding:4px 10px; border-radius:6px; cursor:pointer; }
+      .ac-ms-word { font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); min-width:40px; }
+      .ac-ms-list { max-height:160px; overflow:auto; padding:4px 8px; border-top:1px solid var(--border); }
+      .ac-chip { display:inline-flex; align-items:center; font-size:11px; font-weight:600; line-height:16px; padding:1px 8px; border-radius:6px; white-space:nowrap;
+        background:var(--border-light); color:var(--text-secondary); }
+      .ac-chip.is-tab { background:#f3f6fb; box-shadow:inset 0 0 0 1px #b9c7df; color:var(--accent-deep); }
+      .ac-chip.is-any { background:transparent; box-shadow:inset 0 0 0 1px var(--border); color:var(--muted); font-weight:500; }
+      .ac-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; white-space:nowrap; }
+      .ac-inv { font-size:11px; font-weight:500; color:var(--muted); }
+      .ac-inv.is-sent { color:#1E7590; font-weight:600; }
+      .ac-inv.is-wait { color:var(--orange); }
+      .ac-del { background:none; border:1px solid transparent; color:var(--red); font-size:11px; font-weight:600; padding:4px 8px; border-radius:6px; cursor:pointer; }
       .ac-del:hover { background:var(--red); color:#fff; border-color:var(--red); }
-      .cfg-grid td, .cfg-grid th { text-align:center; white-space:nowrap; }
+      .adm-card select.cfg-pod { font-weight:600; border-color:transparent; }
+      .adm-card select.cfg-pod.pod-sales { background-color:#e4eaf5; color:#33507f; }
+      .adm-card select.cfg-pod.pod-smeus { background-color:#d6eaf0; color:#17586c; }
+      .adm-card select.cfg-pod.pod-smein { background-color:#dcefeb; color:#2b6b62; }
+      .adm-card select.cfg-pod.pod-lateral { background-color:#fbefe3; color:#9a5b1e; }
+      .adm-card select.cfg-pod.pod-others { background-color:#eceef3; color:#4a5578; }
+      .adm-card select.cfg-pod.pod-none { background-color:var(--orange-light); color:var(--orange); border:1px dashed #d9b36a; }
+      .adm-card select.cfg-utype.is-agency { color:#9a5b1e; font-weight:600; }
+      .adm-cap { display:inline-flex; align-items:center; gap:8px; }
+      .adm-card .adm-cap input { width:76px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+      .adm-capbar { width:56px; height:5px; border-radius:3px; background:var(--border-light); overflow:hidden; }
+      .adm-capbar span { display:block; height:100%; background:#9fb3d6; }
+      .adm-inq { display:inline-flex; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; white-space:nowrap; background:#eef2f8; color:var(--accent-deep); }
+      .adm-inq.is-joined { background:#e3f1f4; color:#17586c; }
+      .adm-inq.is-left { background:var(--orange-light); color:var(--orange); }
+      .adm-inq.is-out { background:var(--border-light); color:var(--muted); }
+      .adm-acct { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; white-space:nowrap; }
+      .adm-acct::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+      .adm-acct.is-on { color:var(--green); }
+      .adm-acct.is-off { color:var(--red); }
+      .adm-acct.is-unk { color:var(--orange); }
+      .adm-podchip { display:inline-flex; align-items:center; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap; }
+      .adm-podchip.pl-pod-none { background:var(--orange-light); color:var(--orange); }
+      .adm-check { display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--text-secondary); }
+      .adm-check input { appearance:none; -webkit-appearance:none; width:28px; height:16px; margin:0; border-radius:999px; background:#c9d3e5; position:relative; cursor:pointer; transition:background .15s; }
+      .adm-check input::after { content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:left .15s; }
+      .adm-check input:checked { background:var(--navy-sub); }
+      .adm-check input:checked::after { left:14px; }
+      .adm-check input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+      .adm-teams { display:flex; flex-wrap:wrap; gap:4px; }
+      .adm-team { font-size:11px; font-weight:500; line-height:16px; padding:2px 8px; border-radius:6px; background:var(--border-light); color:var(--text-secondary); white-space:nowrap; }
+      /* Scoring's side list — the look Jerin picked from mock-up 2 (15 Sep 2026): the chosen row lifts, with a navy edge and a count badge. */
+      .adm-split { display:grid; grid-template-columns:260px minmax(0,1fr); gap:14px; align-items:start; }
+      .adm-rail { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:8px; display:grid; gap:4px; }
+      .adm-row { appearance:none; width:100%; text-align:left; cursor:pointer; font-family:inherit; background:transparent; border:1px solid transparent;
+        border-radius:9px; padding:10px 12px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:3px 8px; align-items:center;
+        transition:background-color .14s, border-color .14s; }
+      .adm-row:hover { background:#f3f6fb; }
+      .adm-row[aria-selected="true"] { background:var(--accent-light); border-color:#c9d3e5; box-shadow:inset 3px 0 0 var(--navy-sub); }
+      .adm-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+      .adm-row b { font-size:13px; font-weight:600; color:var(--text); }
+      .adm-row small { grid-column:1 / -1; font-size:11.5px; color:var(--muted); }
+      .adm-row em { font-style:normal; font-size:11px; font-weight:700; color:var(--accent-deep); background:#e4eaf5; border-radius:5px; padding:1px 7px; font-variant-numeric:tabular-nums; }
+      .adm-main { min-width:0; }
+      .cfg-grid th, .cfg-grid td { text-align:center; white-space:nowrap; }
       .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:210px; white-space:normal; }
-      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); text-align:left; }
-      .cfg-grid .tier-pts { width:46px; text-align:center; padding:2px; font-size:11px; }
-      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+      .cfg-grid th .tier-name { display:block; margin-bottom:5px; }
+      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--navy); text-align:left; padding:6px 12px; }
+      .adm-card .cfg-grid input.tier-pts { width:54px; height:24px; padding:0 4px; text-align:center; font-size:11px; font-weight:700; }
+      .grid-cell { position:relative; display:inline-grid; place-items:center; min-width:46px; height:26px; cursor:pointer; }
+      .grid-cell input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+      .grid-pick { width:13px; height:13px; border-radius:50%; border:1.5px solid #c3cad8; background:#fff; font-size:0; box-sizing:border-box; }
+      .grid-cell:hover .grid-pick { border-color:var(--accent); }
+      .grid-cell input:checked + .grid-pick { width:auto; min-width:42px; height:22px; padding:0 8px; border:0; border-radius:6px; display:inline-grid; place-items:center;
+        font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+      .grid-cell input:focus-visible + .grid-pick { outline:2px solid var(--accent); outline-offset:2px; }
+      .grid-cell input:checked + .gt-1 { background:#eef1f7; color:#4a5578; }
+      .grid-cell input:checked + .gt-2 { background:#e4eaf5; color:#33507f; }
+      .grid-cell input:checked + .gt-3 { background:#ddebf0; color:#2a5f7a; }
+      .grid-cell input:checked + .gt-4 { background:#cfe4eb; color:#17586c; }
+      .grid-cell input:checked + .gt-5 { background:#a9d0da; color:#0f4c5e; }
+      .grid-cell input:checked + .gt-6 { background:#3f8aa0; color:#fff; }
+      .grid-cell input:checked + .gt-7 { background:#1E7590; color:#fff; }
+      .adm-card select.cfg-fam.is-exclude { color:var(--muted); border-style:dashed; }
+      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; padding:14px; }
       .cfg-ref table { width:100%; font-size:12px; }
-      .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
+      .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
       .cfg-scroll { overflow-x:auto; }
-      /* .adm-subtabs is the recessed .subtab-band — see style.css */
-      /* .adm-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
+      @media (max-width:860px) { .adm-split { grid-template-columns:1fr; } }
+      /* .adm-subtabs is the recessed .subtab-band and .adm-subtab inherits .subtab-chip — see style.css */
     </style>
 
     <div class="adm-subtabs subtab-band">
       <button class="adm-subtab subtab-chip active" data-atab="access">Access Management</button>
-      <button class="adm-subtab subtab-chip" data-atab="metric">Metric Configuration</button>
+      <button class="adm-subtab subtab-chip" data-atab="pods">Pod &amp; Capacity</button>
+      <button class="adm-subtab subtab-chip" data-atab="depts">Departments &amp; Teams</button>
+      <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>
     </div>
 
     <div class="adm-panel" data-apanel="access">
-      <div class="cfg-card" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
-        <div style="font-size:12px;line-height:1.6">
-          <div id="acStatus" style="font-weight:700"></div>
-          <div id="acProvenance" style="color:var(--muted)"></div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="acPublishBtn" class="btn btn-primary">Publish access</button>
-          <button id="acDownloadBtn" class="btn btn-secondary" title="Download access.json — fallback if publish is unavailable">Download</button>
-        </div>
+      <div class="adm-strip">
+        <span id="acStatus" class="adm-sync"></span>
+        <span id="acProvenance" class="adm-prov"></span>
+        <span class="adm-grow"></span>
+        <label class="adm-field"><span class="lbl">Default access</span>
+          <select id="default-role">
+            <option value="none">None (denied)</option>
+            <option value="full_access">Full Access</option>
+            <option value="restricted">Restricted</option>
+          </select></label>
+        <span class="adm-vr"></span>
+        <button id="acPublishBtn" class="btn btn-primary">Publish access</button>
+        <button id="acDownloadBtn" class="btn btn-secondary" title="Download access.json — fallback if publish is unavailable">Download</button>
       </div>
 
-      <div class="cfg-card" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
-        <span class="lbl">Default access</span>
-        <select id="default-role">
-          <option value="none">None (denied)</option>
-          <option value="full_access">Full Access</option>
-          <option value="restricted">Restricted</option>
-        </select>
-      </div>
-
-      <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 12px">Users</h4>
-
-        <div class="ac-addrow">
-          <input type="email" id="new-email" placeholder="name@interviewkickstart.com">
-          <select id="new-role">
+      <div class="adm-card">
+        <div class="adm-toolbar">
+          <span class="adm-title">Users</span>
+          <input type="email" id="new-email" placeholder="name@interviewkickstart.com" aria-label="Email of the person to add">
+          <select id="new-role" aria-label="Role for the person to add">
             <option value="restricted">Restricted</option>
             <option value="full_access">Full Access</option>
             <option value="admin">Admin</option>
             <option value="none">None (denied)</option>
           </select>
           <button class="btn btn-primary" id="add-user-btn">Add user</button>
+          <span class="adm-grow"></span>
+          <label class="adm-field"><span class="lbl">User type</span>
+            <select id="acFilterType"><option value="">All</option><option>Hiring Manager</option><option>Recruitment Team</option><option>Admin</option><option>Others</option></select></label>
+          <label class="adm-field"><span class="lbl">Invite status</span>
+            <select id="acFilterInvite"><option value="">All</option><option value="invited">Invited</option><option value="not-invited">Not invited</option><option value="unpublished">Not published yet</option></select></label>
+          <span id="acFilterCount" class="adm-count"></span>
         </div>
-
-        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px">
-          <span class="lbl">User type</span>
-          <select id="acFilterType"><option value="">All</option><option>Hiring Manager</option><option>Recruitment Team</option><option>Admin</option><option>Others</option></select>
-          <span class="lbl">Invite status</span>
-          <select id="acFilterInvite"><option value="">All</option><option value="invited">Invited</option><option value="not-invited">Not invited</option><option value="unpublished">Not published yet</option></select>
-          <span id="acFilterCount" style="font-size:12px;color:var(--muted)"></span>
-        </div>
-        <div class="cfg-scroll" style="margin-top:10px"><table class="ac-table">
+        <div class="cfg-scroll"><table class="ac-table">
           <thead><tr>
-            <th style="min-width:210px">Email</th>
-            <th style="width:140px">Role</th>
-            <th style="width:150px">User type</th>
+            <th style="min-width:260px">Email</th>
+            <th style="width:150px">Role</th>
+            <th style="width:180px">User type</th>
             <th>Restricted access (tabs + scope)</th>
-            <th style="width:190px"></th>
+            <th style="width:250px"></th>
           </tr></thead>
           <tbody id="users-table-body"></tbody>
         </table></div>
@@ -185,84 +286,87 @@ export function renderAdmin(accessConfig, data) {
       ${defsBlock('admin-access')}
     </div><!-- /access panel -->
 
-    <div class="adm-panel" data-apanel="metric" style="display:none">
-    <div class="admin-section">
-      <h3>Metric Configuration</h3>
-
-      <div class="cfg-card" id="mcPublishCard" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
-        <div style="font-size:12px;line-height:1.6">
-          <div id="mcStatus" style="font-weight:700"></div>
-          <div id="mcProvenance" style="color:var(--muted)"></div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="mcPublishBtn" class="btn btn-primary">Publish to team</button>
-          <button id="mcDownloadBtn" class="btn btn-secondary" title="Download metric_config.json — fallback if publish is unavailable">Download</button>
-        </div>
-      </div>
-
-      <div class="cfg-card" style="display:flex;align-items:center;gap:12px;background:var(--accent-light);border-color:var(--border)">
-        <span class="lbl">Quarter</span>
-        <select id="cfgQuarter"></select>
-      </div>
-
-      <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 10px">Recruiter → Pod &amp; Capacity</h4>
-        <label class="opt" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0 0 10px;cursor:pointer">
-          <input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" style="color:var(--muted)"></span>
-        </label>
-        <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:220px">Recruiter</th><th style="width:160px">Pod</th><th style="width:140px">Capacity (Score)</th><th style="width:150px">Type</th><th style="width:150px">Started on</th><th style="width:150px">Left on</th><th style="width:170px">In quarter</th><th style="width:110px">Ashby account</th></tr></thead>
-          <tbody id="cfgPodBody"></tbody>
-        </table></div>
-        <div style="margin-top:10px;font-size:11px;color:var(--muted)"><span id="cfgPodSummary"></span></div>
-      </div>
-
-      <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 6px">Role Score Grid <span id="cfgGridNote" style="font-weight:400;font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0"></span></h4>
-        <div class="cfg-scroll"><table class="cfg-grid">
-          <thead id="cfgGridHead"></thead>
-          <tbody id="cfgGridBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 6px">Department → Family</h4>
-        <div class="cfg-scroll"><table>
-          <thead><tr><th style="min-width:200px">Ashby Department</th><th style="width:150px">Family</th><th>Note</th></tr></thead>
-          <tbody id="cfgDeptBody"></tbody>
-        </table></div>
-      </div>
-
-      <div class="cfg-card">
-        <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 6px">Level → Band · Complexity · Leadership override</h4>
-        <div id="cfgRefBlock"></div>
-      </div>
-      ${defsBlock('admin-metric')}
+    <div class="adm-strip" id="mcStrip" style="display:none">
+      <span id="mcStatus" class="adm-sync"></span>
+      <span id="mcProvenance" class="adm-prov"></span>
+      <span class="adm-grow"></span>
+      <span id="cfgQuarterField" class="adm-field"><label class="adm-field"><span class="lbl">Quarter</span><select id="cfgQuarter"></select></label><span class="adm-vr"></span></span>
+      <button id="mcPublishBtn" class="btn btn-primary" title="Publishes Pod &amp; Capacity and Scoring together — they are one team config">Publish to team</button>
+      <button id="mcDownloadBtn" class="btn btn-secondary" title="Download metric_config.json — fallback if publish is unavailable">Download</button>
     </div>
 
-    <div class="admin-section">
-      <h3>Departments &amp; Teams</h3>
-      <p class="sub-note">
-        ${Object.keys(DEPT_TREE).length} departments,
-        ${Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0)} teams.
-      </p>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th style="width:180px">Department</th><th>Teams</th></tr></thead>
+    <div class="adm-panel" data-apanel="pods" style="display:none">
+      <div class="adm-card">
+        <div class="adm-toolbar">
+          <span class="adm-title">Recruiter → Pod &amp; Capacity</span>
+          <span id="cfgPodSummary" style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center"></span>
+          <span class="adm-grow"></span>
+          <label class="adm-check"><input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" class="adm-count"></span></label>
+        </div>
+        <div class="cfg-scroll"><table class="ac-table">
+          <thead><tr><th style="min-width:230px">Recruiter</th><th style="width:150px">Pod</th><th style="width:170px">Capacity (Score)</th><th style="width:140px">Type</th><th style="width:150px">Started on</th><th style="width:150px">Left on</th><th style="width:230px">In quarter</th><th style="width:120px">Ashby account</th></tr></thead>
+          <tbody id="cfgPodBody"></tbody>
+        </table></div>
+      </div>
+      ${defsBlock('admin-pods')}
+    </div>
+
+    <div class="adm-panel" data-apanel="depts" style="display:none">
+      <div class="adm-card">
+        <div class="adm-toolbar">
+          <span class="adm-title">Departments &amp; Teams</span>
+          <span class="adm-count">${deptNames.length} departments · ${teamCount} teams · a read-only copy of Ashby's tree</span>
+        </div>
+        <div class="cfg-scroll"><table class="ac-table">
+          <thead><tr><th style="width:230px">Department</th><th>Teams</th></tr></thead>
           <tbody>
-            ${Object.keys(DEPT_TREE).sort().map(dept => `
-              <tr>
-                <td style="font-weight:600; white-space:nowrap; vertical-align:top">${dept}</td>
-                <td style="font-size:0.85rem">${DEPT_TREE[dept].length
-                  ? DEPT_TREE[dept].map(t => `<span style="display:inline-block; background:var(--border-light,#f1f5f9); border:1px solid var(--border,#e2e8f0); border-radius:4px; padding:1px 6px; margin:2px 3px 2px 0">${t}</span>`).join('')
-                  : '<span style="color:var(--text-muted)">— no teams —</span>'}</td>
-              </tr>`).join('')}
+            ${deptNames.map(dept => `<tr>
+              <td style="white-space:nowrap;vertical-align:top"><b style="font-weight:600;color:var(--text)">${dept}</b>${countTag(DEPT_TREE[dept].length)}</td>
+              <td>${DEPT_TREE[dept].length
+                ? `<div class="adm-teams">${DEPT_TREE[dept].map(t => `<span class="adm-team">${t}</span>`).join('')}</div>`
+                : '<span class="adm-count">No teams</span>'}</td>
+            </tr>`).join('')}
           </tbody>
-        </table>
+        </table></div>
       </div>
       ${defsBlock('admin-depts')}
     </div>
-    </div><!-- /metric panel -->
+
+    <div class="adm-panel" data-apanel="scoring" style="display:none">
+      <div class="adm-split">
+        <div class="adm-rail" role="tablist" aria-label="Scoring">
+          <button type="button" class="adm-row" role="tab" data-ssec="grid" aria-selected="true"><b>Role Score Grid</b><em>${CLASSIFICATIONS.length}</em><small>roles across ${SCORE_TIERS.length} tiers</small></button>
+          <button type="button" class="adm-row" role="tab" data-ssec="family" aria-selected="false"><b>Department → Family</b><em>${DEPT_FAMILY_DEFAULT.length}</em><small>departments mapped</small></button>
+          <button type="button" class="adm-row" role="tab" data-ssec="levels" aria-selected="false"><b>Levels &amp; overrides</b><small>Level bands · complexity · leadership</small></button>
+        </div>
+        <div class="adm-main">
+          <div class="adm-ssec" data-ssec="grid">
+            <div class="adm-card">
+              <div class="adm-toolbar"><span class="adm-title">Role Score Grid</span><span id="cfgGridNote" class="adm-count"></span></div>
+              <div class="cfg-scroll"><table class="ac-table cfg-grid"><thead id="cfgGridHead"></thead><tbody id="cfgGridBody"></tbody></table></div>
+            </div>
+            ${defsBlock('admin-grid')}
+          </div>
+          <div class="adm-ssec" data-ssec="family" style="display:none">
+            <div class="adm-card">
+              <div class="adm-toolbar"><span class="adm-title">Department → Family</span></div>
+              <div class="cfg-scroll"><table class="ac-table">
+                <thead><tr><th style="min-width:200px">Ashby Department</th><th style="width:170px">Family</th><th>Note</th></tr></thead>
+                <tbody id="cfgDeptBody"></tbody>
+              </table></div>
+            </div>
+            ${defsBlock('admin-family')}
+          </div>
+          <div class="adm-ssec" data-ssec="levels" style="display:none">
+            <div class="adm-card">
+              <div class="adm-toolbar"><span class="adm-title">Level → Band · Complexity · Leadership override</span></div>
+              <div id="cfgRefBlock"></div>
+            </div>
+            ${defsBlock('admin-levels')}
+          </div>
+        </div>
+      </div>
+    </div><!-- /scoring panel -->
   `;
 }
 
@@ -291,18 +395,30 @@ const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Effic
 const AC_USER_TYPES = ['Hiring Manager', 'Recruitment Team', 'Admin', 'Others'];   // Others: Jerin, 14 Sep 2026
 const acUserType = (u) => u.userType || (u.role === 'admin' ? 'Admin' : u.role === 'restricted' ? 'Hiring Manager' : 'Recruitment Team');
 // Compact multi-select (native <details> + checkboxes). options = array of strings OR [value, label] pairs.
+// #137b: closed, it reads as labels — one per granted tab, one per department — instead of "Tabs: a, b".
+function acMsSummary(word, labels, isTab) {
+  return `<span class="ac-ms-word">${word}</span>` + (labels.length
+    ? labels.map(l => `<span class="ac-chip${isTab ? ' is-tab' : ''}">${acEsc(l)}</span>`).join('')
+    : '<span class="ac-chip is-any">Any</span>');
+}
 function acMs(cls, i, selected, options, labelWord) {
   const opts = options.map(o => Array.isArray(o) ? o : [o, o]);
   const sel = new Set(selected || []);
   const selLabels = opts.filter(([v]) => sel.has(v)).map(([, l]) => l);
-  const summary = selLabels.length ? selLabels.join(', ') : 'Any';
   return `<details class="ac-ms">
-    <summary style="list-style:none;cursor:pointer;padding:5px 8px;font-size:11px;color:${sel.size ? 'var(--text)' : 'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelWord}: ${acEsc(summary)}</summary>
-    <div style="max-height:160px;overflow:auto;padding:4px 8px;border-top:1px solid var(--border)">
+    <summary title="Click to change">${acMsSummary(labelWord, selLabels, cls === 'ac-tabs')}</summary>
+    <div class="ac-ms-list">
       ${opts.map(([v, l]) => `<label style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;white-space:nowrap"><input type="checkbox" class="${cls}" data-i="${i}" value="${acEsc(v)}"${sel.has(v) ? ' checked' : ''}> ${acEsc(l)}</label>`).join('')}
     </div>
   </details>`;
 }
+// #137b: the email cell leads with initials, then the name part in bold and the domain in grey.
+const acWho = (email) => {
+  const [local, dom] = String(email || '').split('@');
+  return `<span class="adm-who">${avatar(local.replace(/[._-]+/g, ' '))}<span><b>${acEsc(local)}</b><span class="dom">${dom ? '@' + acEsc(dom) : ''}</span></span></span>`;
+};
+const AC_TYPE_COL = { 'Hiring Manager': '#4E6BA6', 'Recruitment Team': '#1E7590', 'Admin': '#22344f', 'Others': '#9aa3b8' };
+const admWhen = (iso) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 // app.js calls this alongside initAdminMetricConfig. accessConfig = the loaded data/access.json.
 export function initAdminAccess(accessConfig, data) {
@@ -339,11 +455,14 @@ export function initAdminAccess(accessConfig, data) {
     refreshUI();
   };
 
+  // #137b: the status is a pill — teal in sync, amber with unpublished edits, grey while working, rose on an error.
+  const say = (el, text, state) => { if (!el) return; el.textContent = text; el.className = 'adm-sync' + (state ? ' is-' + state : ''); };
   function refreshUI() {
     const st = document.getElementById('acStatus'), pv = document.getElementById('acProvenance');
-    if (st) { const dirty = isDirtyAc(); st.textContent = dirty ? '● Unpublished access changes on this browser' : (droppedNote || '✓ In sync with the team'); st.style.color = (dirty || droppedNote) ? 'var(--orange)' : 'var(--green)'; }
+    const dirty = isDirtyAc();
+    say(st, dirty ? 'Unpublished access changes on this browser' : (droppedNote || 'In sync with the team'), (dirty || droppedNote) ? 'dirty' : '');
     if (pv) pv.innerHTML = (accessConfig && accessConfig.updatedAt)
-      ? `Access published ${new Date(accessConfig.updatedAt).toLocaleString()}${accessConfig.updatedBy ? ' · by ' + accessConfig.updatedBy : ''}`
+      ? `Access published ${admWhen(accessConfig.updatedAt)}${accessConfig.updatedBy ? ' · by ' + acEsc(accessConfig.updatedBy) : ''}`
       : 'Live access config — publish to update the shared file.';
   }
 
@@ -359,13 +478,18 @@ export function initAdminAccess(accessConfig, data) {
     && p.role === u.role && (u.role !== 'restricted' || (sameList(p.tabs, u.tabs) && sameList(p.departments, u.departments))));
   const inviteCell = (u, i) => {
     if (u.role === 'none') return '';
-    if (!isPublished(u)) return `<button class="btn btn-secondary btn-sm" disabled title="Publish access first: this access is not live yet, so they could not sign in.">Send invite</button> `;
+    if (!isPublished(u)) return `<button class="btn btn-secondary btn-sm" disabled title="Publish access first: this access is not live yet, so they could not sign in.">Send invite</button>`;
     const prev = invites[(u.email || '').toLowerCase()];
-    return `<button class="btn btn-secondary btn-sm ac-invite" data-i="${i}" title="Sends the invite email now, after you confirm.">${prev ? 'Resend invite' : 'Send invite'}</button> `;
+    return `<button class="btn btn-secondary btn-sm ac-invite" data-i="${i}" title="Sends the invite email now, after you confirm.">${prev ? 'Resend invite' : 'Send invite'}</button>`;
   };
-  const inviteNote = (u) => {
-    const prev = invites[(u.email || '').toLowerCase()]; if (!prev || !prev.at) return '';
-    return `<div style="font-size:10px;color:var(--muted);margin-top:3px">Invited ${new Date(prev.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} by ${acEsc(prev.by || '')}</div>`;
+  // #137b: the invite state is a label beside the button; who sent it is in the hover.
+  const inviteState = (u) => {
+    if (u.role === 'none') return '';
+    if (!isPublished(u)) return '<span class="ac-inv is-wait">Not published yet</span>';
+    const prev = invites[(u.email || '').toLowerCase()];
+    if (!prev) return '<span class="ac-inv">Not invited</span>';
+    const d = prev.at ? new Date(prev.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    return `<span class="ac-inv is-sent" title="Invited${d ? ' ' + d : ''}${prev.by ? ' by ' + acEsc(prev.by) : ''}">✓ Invited${d ? ' ' + d : ''}</span>`;
   };
   // #118: Invite status for the filter — invited (a send is recorded) · not-invited (published, never sent) · unpublished
   // (the access shown here is not live yet, so no invite can go). Role None is none of these.
@@ -383,16 +507,16 @@ export function initAdminAccess(accessConfig, data) {
     if (cnt) cnt.textContent = `${shown.length} of ${work.users.length} people`;
     if (!shown.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px">No users match these filters</td></tr>'; return; }
     body.innerHTML = shown.map(([u, i]) => {
-      const restricted = u.role === 'restricted';
+      const restricted = u.role === 'restricted', type = acUserType(u);
       return `<tr>
-        <td style="font-weight:500">${acEsc(u.email)}</td>
-        <td><select class="ac-role" data-i="${i}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
-        <td><select class="ac-type" data-i="${i}">${AC_USER_TYPES.map(t => `<option${acUserType(u) === t ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:5px;max-width:330px">
+        <td>${acWho(u.email)}</td>
+        <td><select class="ac-role r-${u.role}" data-i="${i}" aria-label="Role for ${acEsc(u.email)}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
+        <td><span class="ac-type-wrap"><i style="background:${AC_TYPE_COL[type] || '#9aa3b8'}"></i><select class="ac-type adm-quiet" data-i="${i}" aria-label="User type for ${acEsc(u.email)}">${AC_USER_TYPES.map(t => `<option${type === t ? ' selected' : ''}>${t}</option>`).join('')}</select></span></td>
+        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:3px;max-width:400px">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
-            </div>` : `<span style="color:var(--text-muted);font-size:12px">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
-        <td style="white-space:nowrap">${inviteCell(u, i)}<button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button>${inviteNote(u)}</td>
+            </div>` : `<span class="adm-count">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
+        <td><div class="ac-actions">${inviteState(u)}${inviteCell(u, i)}<button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></div></td>
       </tr>`;
     }).join('');
     body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
@@ -404,7 +528,7 @@ export function initAdminAccess(accessConfig, data) {
       const lm = new Map((opts || []).map(o => Array.isArray(o) ? o : [o, o]));
       const disp = vals.map(v => lm.get(v) || v);
       const sum = cb.closest('details').querySelector('summary');
-      if (sum) sum.textContent = word + ': ' + (disp.length ? disp.join(', ') : 'Any');
+      if (sum) sum.innerHTML = acMsSummary(word, disp, cls === 'ac-tabs');
       setDirtyAc(true);
     }));
     wireMs('ac-tabs', 'tabs', 'Tabs', AC_TABS);
@@ -415,10 +539,10 @@ export function initAdminAccess(accessConfig, data) {
       if (!window.confirm((prev ? 'Resend' : 'Send') + ' the dashboard invite email to ' + u.email + ' now?')) return;
       const st = document.getElementById('acStatus');
       b.disabled = true; b.textContent = 'Sending…';
-      if (st) { st.textContent = 'A window opens and says "Invite sent" — this row updates when it is recorded.'; st.style.color = 'var(--muted)'; }
+      say(st, 'A window opens and says "Invite sent" — this row updates when it is recorded.', 'busy');
       const res = await sendInvite(u.email);
-      if (res.ok) { invites[u.email.toLowerCase()] = { at: res.at, by: res.by }; if (st) { st.textContent = '✓ Invite sent to ' + u.email + '.'; st.style.color = 'var(--green)'; } }
-      else if (st) { st.textContent = '✗ ' + res.reason; st.style.color = 'var(--orange)'; }
+      if (res.ok) { invites[u.email.toLowerCase()] = { at: res.at, by: res.by }; say(st, 'Invite sent to ' + u.email, ''); }
+      else say(st, res.reason, 'error');
       renderRows();
     }));
   }
@@ -441,12 +565,12 @@ export function initAdminAccess(accessConfig, data) {
   if (pubBtn) pubBtn.addEventListener('click', async () => {
     const st = document.getElementById('acStatus');
     pubBtn.disabled = true; const lbl = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
-    if (st) { st.textContent = 'A sign-in popup will open — approve it, then this verifies automatically…'; st.style.color = 'var(--muted)'; }
+    say(st, 'A sign-in popup will open — approve it, then this verifies automatically…', 'busy');
     const payload = { schemaVersion: 1, defaultRole: work.defaultRole, users: work.users };
     let res; try { res = await publishAccess(payload); } catch (e) { res = { ok: false, reason: e.message }; }
     pubBtn.textContent = lbl; pubBtn.disabled = false;
-    if (res.ok) { setDirtyAc(false); if (st) { st.textContent = '✓ Published — access is live for the whole team.'; st.style.color = 'var(--green)'; } }
-    else if (st) { st.textContent = '✗ ' + res.reason; st.style.color = 'var(--red)'; }
+    if (res.ok) { setDirtyAc(false); say(st, 'Published — access is live for the whole team', ''); }
+    else say(st, res.reason, 'error');
   });
   const dlBtn = document.getElementById('acDownloadBtn');
   if (dlBtn) dlBtn.addEventListener('click', () => {
@@ -467,9 +591,23 @@ export function initAdminMetricConfig(data) {
   const cfgQ = () => document.getElementById('cfgQuarter')?.value || currentQuarter();
 
   // ===== Admin sub-tabs (Access Management | Metric Configuration) =====
+  // #137b: Pod & Capacity and Scoring share the team-config strip; Quarter shows only where it changes something (Rule 13).
+  const showMetricStrip = () => {
+    const tab = document.querySelector('.adm-subtab.active')?.dataset.atab;
+    const sec = document.querySelector('.adm-row[aria-selected="true"]')?.dataset.ssec;
+    const strip = document.getElementById('mcStrip'); if (strip) strip.style.display = (tab === 'pods' || tab === 'scoring') ? '' : 'none';
+    const qf = document.getElementById('cfgQuarterField'); if (qf) qf.style.display = (tab === 'pods' || (tab === 'scoring' && sec === 'grid')) ? '' : 'none';
+  };
   document.querySelectorAll('.adm-subtab').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.adm-subtab').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.adm-panel').forEach(p => { p.style.display = p.dataset.apanel === btn.dataset.atab ? '' : 'none'; });
+    showMetricStrip();
+  }));
+  // Scoring's side list: it lands on the Grid, and one section shows at a time.
+  document.querySelectorAll('.adm-row').forEach(row => row.addEventListener('click', () => {
+    document.querySelectorAll('.adm-row').forEach(r => r.setAttribute('aria-selected', String(r === row)));
+    document.querySelectorAll('.adm-ssec').forEach(x => { x.style.display = x.dataset.ssec === row.dataset.ssec ? '' : 'none'; });
+    showMetricStrip();
   }));
 
   function updatePodSummary() {
@@ -481,7 +619,11 @@ export function initAdminMetricConfig(data) {
     const shown = recs.filter(r => r.name !== 'Unassigned' && (showPast || here(r)));
     shown.forEach(r => { const p = podOf(r.name, q); counts[p] = (counts[p] || 0) + 1; });
     const hidden = showPast ? 0 : recs.filter(r => r.name !== 'Unassigned' && !here(r)).length;
-    el.textContent = Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join('  ·  ') + (hidden ? `  ·  ${hidden} not here this quarter, hidden` : '');
+    // #137b: one chip per pod, in the pod's colour and in pod order.
+    const order = [...POD_OPTIONS, 'Unassigned'];
+    el.innerHTML = Object.entries(counts).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+      .map(([p, c]) => `<span class="adm-podchip pl-pod-${podClass(p)}">${p} ${c}</span>`).join('')
+      + (hidden ? `<span class="adm-count">${hidden} not here this quarter, hidden</span>` : '');
   }
   function renderPodCapacity() {
     const body = document.getElementById('cfgPodBody'); if (!body) return;
@@ -512,24 +654,36 @@ export function initAdminMetricConfig(data) {
     // three options — so those false positives can be cleared rather than silently halving a real
     // recruiter's SME credit under the Freelancer default.
     const ext = new Set((data && data.externalUsers) || []);
-    body.innerHTML = sorted.map(r => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false; return `<tr>
-      <td style="font-weight:500">${name}</td>
-      <td><select class="cfg-pod" data-name="${name}">${podOpts.map(p => `<option value="${p}"${p === podOf(name, q) ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
-      <td><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${capacityOf(name, q)}" style="width:90px"></td>
-      <td><select class="cfg-utype" data-name="${name}" title="${ext.has(name)
+    // #137b: initials in the pod's colour, a tinted pod box, a capacity bar against the largest capacity listed, and labels for In quarter
+    // and the Ashby account. The inputs, their values and what each change writes are exactly as before.
+    const capMax = Math.max(1, ...sorted.map(r => +capacityOf(r.name, q) || 0));
+    const capPct = (v) => Math.min(100, Math.round((+v || 0) / capMax * 100));
+    body.innerHTML = sorted.map(r => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false;
+      const pod = podOf(name, q), cap = capacityOf(name, q), ut = userTypeOf(name, ext); return `<tr>
+      <td><span class="adm-who">${avatar(name, pod)}<b>${name}</b></span></td>
+      <td><select class="cfg-pod pod-${podClass(pod)}" data-name="${name}" aria-label="Pod for ${name}">${podOpts.map(p => `<option value="${p}"${p === pod ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
+      <td><span class="adm-cap"><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${cap}" aria-label="Capacity for ${name}"><span class="adm-capbar"><span style="width:${capPct(cap)}%"></span></span></span></td>
+      <td><select class="cfg-utype adm-quiet${ut === 'Agency' ? ' is-agency' : ''}" data-name="${name}" title="${ext.has(name)
         ? 'Ashby marks this account as an External Recruiter.'
-        : 'Ashby does not mark this account as an External Recruiter.'}">${USER_TYPES.map(t => `<option value="${t}"${t === userTypeOf(name, ext) ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+        : 'Ashby does not mark this account as an External Recruiter.'}">${USER_TYPES.map(t => `<option value="${t}"${t === ut ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
       <td><input type="date" class="cfg-date${(dates[name] || {}).start ? '' : ' is-empty'}" data-name="${name}" data-f="start" value="${(dates[name] || {}).start || ''}" aria-label="Started on for ${name}"></td>
       <td><input type="date" class="cfg-date${(dates[name] || {}).end ? '' : ' is-empty'}" data-name="${name}" data-f="end" value="${(dates[name] || {}).end || ''}" aria-label="Left on for ${name}"></td>
       <td>${(() => { const s = here(r); const q0 = String(q).replace(/^(\d{4})-(Q\d)$/, '$2 $1');
         const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
-        const col = !s.in ? 'var(--muted)' : (/left/.test(s.note) ? 'var(--orange)' : (/joined/.test(s.note) ? 'var(--green)' : 'var(--accent-deep)'));
-        return `<span title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}" style="font-size:11px;font-weight:600;color:${col}">${txt}</span>`; })()}</td>
-      <td><span style="font-size:11px;font-weight:600;color:${unk ? 'var(--orange)' : (off ? 'var(--red)' : 'var(--green)')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
-      || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'Nobody here this quarter — tick “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
-    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary(); }));
-    body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => { setCapacity(inp.dataset.name, inp.value, cfgQ()); touched(); }));
-    body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); }));   // #11b
+        const cls = !s.in ? ' is-out' : (/left/.test(s.note) ? ' is-left' : (/joined/.test(s.note) ? ' is-joined' : ''));
+        return `<span class="adm-inq${cls}" title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}">${txt}</span>`; })()}</td>
+      <td><span class="adm-acct ${unk ? 'is-unk' : (off ? 'is-off' : 'is-on')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
+      || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
+    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => {
+      setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary();
+      sel.className = 'cfg-pod pod-' + podClass(sel.value);
+      const av = sel.closest('tr')?.querySelector('.pl-av'); if (av) av.className = 'pl-av pl-pod-' + podClass(sel.value);
+    }));
+    body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => {
+      setCapacity(inp.dataset.name, inp.value, cfgQ()); touched();
+      const bar = inp.closest('.adm-cap')?.querySelector('.adm-capbar span'); if (bar) bar.style.width = capPct(inp.value) + '%';
+    }));
+    body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); sel.classList.toggle('is-agency', sel.value === 'Agency'); }));   // #11b
     // #111: dates are per person, not per quarter. Re-render on change so 'In quarter' and the list follow at once.
     body.querySelectorAll('.cfg-date').forEach(inp => inp.addEventListener('change', () => { inp.classList.toggle('is-empty', !inp.value); setRecruiterDate(inp.dataset.name, inp.dataset.f, inp.value); touched(); renderPodCapacity(); }));
     updatePodSummary();
@@ -538,26 +692,30 @@ export function initAdminMetricConfig(data) {
     const head = document.getElementById('cfgGridHead'); if (!head) return;
     const q = cfgQ();
     const grid = gridForQuarter(q);
-    head.innerHTML = `<tr><th>Role Classification</th>${SCORE_TIERS.map(([n]) => `<th>${n}<br><input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}"></th>`).join('')}</tr>`;
+    head.innerHTML = `<tr><th>Role Classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-name">${n}</span><input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}" aria-label="Points for ${n}"></th>`).join('')}</tr>`;
     let html = '', lastFam = null;
     CLASSIFICATIONS.forEach(([fam, cls]) => {
       if (fam !== lastFam) { html += `<tr class="fam-sep"><td colspan="${SCORE_TIERS.length + 1}">${fam}</td></tr>`; lastFam = fam; }
       const rname = 'grid_' + cls.replace(/[^a-z0-9]/gi, '_');
-      html += `<tr><td>${cls}</td>${SCORE_TIERS.map(([n]) => `<td><input type="radio" name="${rname}" class="grid-radio" data-cls="${cls}" data-tier="${n}"${n === grid.rowTier[cls] ? ' checked' : ''}></td>`).join('')}</tr>`;
+      // #137b: the chosen tier fills in with its points (deeper = more points); the radio underneath is still what saves.
+      html += `<tr><td>${cls}</td>${SCORE_TIERS.map(([n], k) => `<td><label class="grid-cell" title="${cls} → ${n}"><input type="radio" name="${rname}" class="grid-radio" data-cls="${cls}" data-tier="${n}"${n === grid.rowTier[cls] ? ' checked' : ''}><span class="grid-pick gt-${k + 1}" data-tier="${n}">${grid.tierPoints[n]}</span></label></td>`).join('')}</tr>`;
     });
     document.getElementById('cfgGridBody').innerHTML = html;
     document.querySelectorAll('#cfgGridBody .grid-radio').forEach(r => r.addEventListener('change', () => { if (r.checked) { setGridTier(cfgQ(), r.dataset.cls, r.dataset.tier); touched(); } }));
-    document.querySelectorAll('#cfgGridHead .tier-pts').forEach(inp => inp.addEventListener('input', () => { setGridPoints(cfgQ(), inp.dataset.tier, parseInt(inp.value, 10) || 0); touched(); }));
+    document.querySelectorAll('#cfgGridHead .tier-pts').forEach(inp => inp.addEventListener('input', () => {
+      setGridPoints(cfgQ(), inp.dataset.tier, parseInt(inp.value, 10) || 0); touched();
+      document.querySelectorAll('#cfgGridBody .grid-pick').forEach(x => { if (x.dataset.tier === inp.dataset.tier) x.textContent = parseInt(inp.value, 10) || 0; });
+    }));
     const note = document.getElementById('cfgGridNote');
-    if (note) note.textContent = ` — ${loadGridStore()[q] ? 'edited for ' + q.replace('-', ' ') : 'inherited (copy-forward)'}`;
+    if (note) note.textContent = loadGridStore()[q] ? 'Edited for ' + q.replace('-', ' ') : 'Inherited from an earlier quarter (copy-forward)';
   }
   function renderDeptFamily() {
     const body = document.getElementById('cfgDeptBody'); if (!body) return;
     body.innerHTML = DEPT_FAMILY_DEFAULT.map(([dept, , note]) => `<tr>
-      <td style="font-weight:500">${dept}</td>
-      <td><select class="cfg-fam" data-dept="${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select></td>
-      <td style="color:var(--muted);font-size:11px">${note || ''}</td></tr>`).join('');
-    body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); touched(); }));
+      <td><b style="font-weight:600;color:var(--text)">${dept}</b></td>
+      <td><select class="cfg-fam${familyOf(dept) === 'Exclude' ? ' is-exclude' : ''}" data-dept="${dept}" aria-label="Family for ${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select></td>
+      <td class="adm-count" style="font-size:11.5px">${note || ''}</td></tr>`).join('');
+    body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); touched(); s.classList.toggle('is-exclude', s.value === 'Exclude'); }));
   }
   function renderRefBlock() {
     const el = document.getElementById('cfgRefBlock'); if (!el) return;
@@ -574,21 +732,21 @@ export function initAdminMetricConfig(data) {
     const status = document.getElementById('mcStatus'), prov = document.getElementById('mcProvenance');
     if (!status) return;
     const dirty = isDirty(), meta = getMeta();
-    status.textContent = dirty ? '● Unpublished changes on this browser' : '✓ In sync with the team';
-    status.style.color = dirty ? 'var(--orange)' : 'var(--green)';
+    status.textContent = dirty ? 'Unpublished changes on this browser' : 'In sync with the team';
+    status.className = 'adm-sync' + (dirty ? ' is-dirty' : '');   // #137b: a pill, like Access Management's
     prov.innerHTML = (meta && meta.updatedAt)
-      ? `Team config published ${new Date(meta.updatedAt).toLocaleString()}${meta.updatedBy ? ' · by ' + meta.updatedBy : ''}`
+      ? `Team config published ${admWhen(meta.updatedAt)}${meta.updatedBy ? ' · by ' + meta.updatedBy : ''}`
       : 'No team config published yet — Publish to set the shared baseline.';
   }
   const pubBtn = document.getElementById('mcPublishBtn');
   if (pubBtn) pubBtn.addEventListener('click', async () => {
     const status = document.getElementById('mcStatus');
     pubBtn.disabled = true; const label = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
-    status.textContent = 'A sign-in popup will open — approve it, then this verifies automatically…'; status.style.color = 'var(--muted)';
+    status.textContent = 'A sign-in popup will open — approve it, then this verifies automatically…'; status.className = 'adm-sync is-busy';
     let res; try { res = await publishConfig(buildEffectiveConfig(data)); } catch (e) { res = { ok: false, reason: e.message }; }
     pubBtn.textContent = label; pubBtn.disabled = false;
-    if (res.ok) { status.textContent = '✓ Published — the whole team now sees this config.'; status.style.color = 'var(--green)'; refreshPublishUI(); }
-    else { status.textContent = '✗ ' + res.reason; status.style.color = 'var(--red)'; }
+    if (res.ok) { status.textContent = 'Published — the whole team now sees this config'; status.className = 'adm-sync'; refreshPublishUI(); }
+    else { status.textContent = res.reason; status.className = 'adm-sync is-error'; }
   });
   const dlBtn = document.getElementById('mcDownloadBtn');
   if (dlBtn) dlBtn.addEventListener('click', () => {
@@ -606,5 +764,7 @@ export function initAdminMetricConfig(data) {
     qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); });
     document.getElementById('cfgShowPast')?.addEventListener('change', renderPodCapacity);
   }
-  renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock(); refreshPublishUI();
+  renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock(); refreshPublishUI(); showMetricStrip();
+  // #137b: an old link or a remembered route to the retired Metric Configuration tab lands on Pod & Capacity.
+  if (/^#\/?admin\/metric$/.test(location.hash)) location.hash = 'admin/pods';
 }
