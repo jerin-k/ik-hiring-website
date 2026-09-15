@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-14T11:56:19.246Z",
+  "updatedAt": "2026-09-15T06:32:22.949Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -11,13 +11,13 @@
     },
     {
       "email": "gopu.nair@interviewkickstart.com",
-      "role": "full_access",
+      "role": "admin",
       "tabs": [
         "hm-report"
       ],
       "departments": [],
       "teams": [],
-      "userType": "Recruitment Team"
+      "userType": "Admin"
     },
     {
       "email": "aditya.s@interviewkickstart.com",
