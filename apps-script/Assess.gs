@@ -209,6 +209,9 @@ function computeAssessedRollups_(events) {
   }
 
   var byJobQ = {}, spanByJobQ = {}, nA = 0, nB = 0;
+  // #129: day twins - the same a / b keyed by the assessment DAY (the string assessQ_ cuts the quarter from), from
+  // reportFloorDay_() on, so Throughput can follow the From / To boxes. A quarter's days add up to that quarter.
+  var byJobD = {}, spanByJobD = {}, floorD = reportFloorDay_();
   for (var app in assessed) {
     var meta = who[app] || {}, j8 = meta.j ? String(meta.j).substring(0, 8) : null;
     if (!j8) continue;
@@ -220,7 +223,13 @@ function computeAssessedRollups_(events) {
       var sm = jm[st] || (jm[st] = {});
       var cell = sm[q] || (sm[q] = { a: 0, b: 0 });
       cell.a++; nA++;
-      if (progressed(app, st, day)) { cell.b++; nB++; }
+      var prog = progressed(app, st, day);
+      if (prog) { cell.b++; nB++; }
+      if (day >= floorD) {
+        var jmD = byJobD[j8] || (byJobD[j8] = {}), smD = jmD[st] || (jmD[st] = {});
+        var cD = smD[day] || (smD[day] = { a: 0, b: 0 });
+        cD.a++; if (prog) cD.b++;
+      }
     }
     // The headline span: assessed at R1 or OA, whichever came first, through to Ref Check / Documentation /
     // Offer, whichever they reach first. One span per application ‚Äî no adding stage counts together.
@@ -237,6 +246,11 @@ function computeAssessedRollups_(events) {
           if (ASSESS_SPAN_END[w2[z].k] && w2[z].e && w2[z].e >= startDay) { reachedLate = true; break; }
         }
         if (reachedLate) sc.b++;
+        if (startDay >= floorD) {
+          var sjD = spanByJobD[j8] || (spanByJobD[j8] = {});
+          var scD = sjD[startDay] || (sjD[startDay] = { a: 0, b: 0 });
+          scD.a++; if (reachedLate) scD.b++;
+        }
       }
     }
   }
@@ -246,6 +260,8 @@ function computeAssessedRollups_(events) {
   return {
     assessedByJobQ: byJobQ,
     assessedSpanByJobQ: spanByJobQ,
+    assessedByJobD: byJobD,
+    assessedSpanByJobD: spanByJobD,
     assessedMeta: {
       generatedAt: new Date().toISOString(),
       definition: 'A = interviewed at the stage, or an assignment triggered there, or feedback with no interview behind it. For Ref Check / Documentation / Offer, A = candidates ADDED to the stage, since nobody is assessed there. B = of those, entered a later stage afterwards; for Offer, B = went on to be Hired.',
