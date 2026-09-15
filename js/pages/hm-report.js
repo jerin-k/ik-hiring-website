@@ -1,6 +1,7 @@
 import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
+import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds } from '../period.js';   // #127
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat } from '../chart-style.js';
@@ -114,7 +115,7 @@ export function renderHmReport(data) {
   if (!data || !data.jobs) return '<p>No data available.</p>';
 
   const allDepts = [...new Set([...(data.openings || []), ...(data.jobs || [])].map(x => deptOf(x.department)))].filter(Boolean).sort();
-  const years = [...new Set((data.openings || []).map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+  const years = reportingYears();   // #127c: nothing before Q3 2026 is offered — it was never cleaned up
   // #12 (2026-08-23): built straight off case order, so the list came out unsorted — Sep, Aug, Jul, May, Jun,
   // Mar... Sort on the raw YYYY-MM (which sorts correctly as a string) and format only at the end; sorting the
   // formatted "Aug 2026" labels would order them alphabetically, which is worse.
@@ -184,17 +185,10 @@ export function renderHmReport(data) {
       <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
       <div class="fchip"><div class="ms" id="msHmJob"></div></div>
-      <div class="fchip"><span class="lbl">Status</span>
-        <label class="opt"><input type="checkbox" class="hm1Status" value="Open" checked> Open</label>
-        <label class="opt"><input type="checkbox" class="hm1Status" value="Closed" checked> Closed</label>
-      </div>
-      <span class="fdiv"></span>
-      <div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div>
-      <div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div>
       
       
       <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span></div>
 
     <!-- ===== PANEL: POSITIONS ===== -->
     <div class="hm-panel" data-panel="positions">
@@ -355,27 +349,13 @@ export function initHmFilters(data) {
   function gFrom() { return document.getElementById('hmDateFrom')?.value || ''; }
   function gTo() { return document.getElementById('hmDateTo')?.value || ''; }
 
+  // #127c (Jerin, 15 Sep 2026): the dates always cover the whole selection and never start before Q3 2026 — nothing earlier was cleaned
+  // up. Year and Quarter both on All run from 1 Jul 2026 to the end of the quarter today falls in.
   function applyYearQuarter() {
     const y = document.getElementById('hmYear')?.value || '';
     const q = document.getElementById('hmQuarter')?.value || '';
-    const fromEl = document.getElementById('hmDateFrom');
-    const toEl = document.getElementById('hmDateTo');
-    // Year: All + Quarter: All = all time, so clear the dates. Returning early left the PREVIOUS quarter's dates in
-    // place: Positions stayed on Q3 while Panelists went all-time (#120, 14 Sep 2026).
-    if (!y && !q) { fromEl.value = ''; toEl.value = ''; return; }
-    const years = [...new Set(openings.map(o => (o.openedAt || '').slice(0, 4)).filter(Boolean))].sort().reverse();
-    const yr = y || years[0] || String(new Date().getFullYear());
-    if (q) {
-      const qi = parseInt(q.slice(1), 10);
-      const sm = (qi - 1) * 3 + 1;
-      const em = sm + 2;
-      const lastDay = new Date(parseInt(yr, 10), em, 0).getDate();
-      fromEl.value = `${yr}-${String(sm).padStart(2, '0')}-01`;
-      toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    } else {
-      fromEl.value = `${yr}-01-01`;
-      toEl.value = `${yr}-12-31`;
-    }
+    // #127b: and the pickers cannot leave it — other days are greyed out, and a date typed outside it snaps back.
+    setDateBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'), selectionQuarters(y, q), true);
   }
 
   // A quarter counts as inside the report window when the quarter itself starts inside it.
@@ -398,33 +378,11 @@ export function initHmFilters(data) {
   }
 
   // ===== Section 1: Positions (Department -> Job tree) =====
-  function getSelectedStatuses() {
-    const checked = [];
-    document.querySelectorAll('.hm1Status').forEach(cb => { if (cb.checked) checked.push(cb.value); });
-    return checked;
-  }
-  // 🚨 #120 (14 Sep 2026): Status is the JOB's status (Open or Closed; Archived counts as Closed). It used to filter only
-  // the opening columns of Positions, so unticking Open moved Total Positions while Joining Pending, Drop, the cases
-  // list, Throughput, Pipeline and Panelists stayed put. It now reaches every panel keyed by a job.
-  // Both ticked, or neither, = no filter (which also stops the default view silently dropping Archived jobs).
-  const jobStatusByTitle = {};
-  (data.jobs || []).forEach(j => { if (j.title) (jobStatusByTitle[j.title] || (jobStatusByTitle[j.title] = new Set())).add(j.status === 'Open' ? 'Open' : 'Closed'); });
-  Object.values(data.openingBuckets || {}).forEach(b => { if (b.title && !jobStatusByTitle[b.title]) jobStatusByTitle[b.title] = new Set([(b.status || 'Open') === 'Open' ? 'Open' : 'Closed']); });
-  function statusWanted() { const s = getSelectedStatuses(); return s.length === 1 ? s[0] : null; }
-  function statusOk(title, raw) {
-    const want = statusWanted(); if (!want) return true;
-    const st = raw != null ? new Set([(raw || 'Open') === 'Open' ? 'Open' : 'Closed']) : (jobStatusByTitle[title] || new Set(['Open']));
-    return st.has(want);
-  }
-  function statusJobs(sel) {
-    if (!statusWanted()) return sel;
-    const out = (sel.length ? sel : jobTitles).filter(t => statusOk(t));
-    return out.length ? out : ['(no job matches the status filter)'];
-  }
+  // #127g (Jerin, 15 Sep 2026): the Open / Closed job Status tick-boxes are gone — they make no sense with the opening-first approach.
+  // Both boxes ticked was the default and meant no filter, so no default number moves.
 
   function renderSection1() {
     const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept();
-    const statuses = getSelectedStatuses();
     const jobSel = selJobs();
     const ob = data.openingBuckets || {};
 
@@ -436,7 +394,6 @@ export function initHmFilters(data) {
     Object.entries(ob).forEach(([job8, rec]) => {
       const dept = deptOf(rec.department || '') || 'Unknown';
       if (deptG && dept !== deptG) return;
-      if (!statusOk(rec.title, rec.status || 'Open')) return;
       if (jobSel.length && !jobSel.includes(rec.title)) return;
       let t = 0, jn = 0, op = 0, ms = 0;
       Object.entries(rec.quarters || {}).forEach(([q, b]) => {
@@ -456,7 +413,7 @@ export function initHmFilters(data) {
     // covers 92/92) and is, so these two columns sit on different time bases — the caption says so.
     // Rows are added for jobs that have people in closing but NO opening in the period: restricting to
     // openings showed 88 of 166 pending people and hid 45 of SME - India's 46.
-    const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title)) && statusOk(title);
+    const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title));
     function bump(dept, title, field) {
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
@@ -687,7 +644,6 @@ export function initHmFilters(data) {
       if (deptG && j._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(j.title)) return false;
       if (!j.pipeline) return false;
-      if (!statusOk(j.title)) return false;   // #120
       if (openIds && !openIds.has(String(j.id).slice(0, 8))) return false;   // #125: an opening opened in From–To
       return true;
     }).sort(byDept);
@@ -782,7 +738,7 @@ export function initHmFilters(data) {
           year: () => document.getElementById('hmYear')?.value || '',
           quarter: () => document.getElementById('hmQuarter')?.value || '',
           depts: () => { const d = gDept(); return d ? [d] : []; },
-          jobs: () => statusJobs(selJobs()),
+          jobs: () => selJobs(),
           panelists: () => (msHmPanel ? msHmPanel.getSelected() : []),
           jobIds: () => openJobIds(),   // #125: only jobs with an opening opened in From–To
           range: () => ({ from: gFrom(), to: gTo() }),   // #120: Panelists follow From/To like every other panel here
@@ -825,7 +781,6 @@ export function initHmFilters(data) {
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(c.job)) return false;
-      if (!statusOk(c.job)) return false;   // #120
       if (monthF && monthOf(c.doj) !== monthF) return false;
       if (dojFrom && (c.doj || '') < dojFrom) return false;
       if (dojTo && (c.doj || '') > dojTo) return false;
@@ -890,7 +845,6 @@ export function initHmFilters(data) {
       if (!j.pipeline) return false;
       // #120: with a period set, a job needs an opening in it. An EMPTY set used to mean "list every job".
       if ((gFrom() || gTo()) && !openTitles.has(j.title)) return false;
-      if (!statusOk(j.title)) return false;
       if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return false;
       return true;
     }).sort(byDept);
@@ -962,9 +916,8 @@ export function initHmFilters(data) {
   document.getElementById('hmDept')?.addEventListener('change', renderActive);
   document.getElementById('hmDateFrom')?.addEventListener('change', renderActive);
   document.getElementById('hmDateTo')?.addEventListener('change', renderActive);
-  document.getElementById('hmYear')?.addEventListener('change', () => { applyYearQuarter(); renderActive(); });
+  document.getElementById('hmYear')?.addEventListener('change', () => { fillQuarterSelect(document.getElementById('hmQuarter'), document.getElementById('hmYear').value, true); applyYearQuarter(); renderActive(); });   // #127c: only the year's quarters on offer
   document.getElementById('hmQuarter')?.addEventListener('change', () => { applyYearQuarter(); renderActive(); });
-  document.querySelectorAll('.hm1Status').forEach(cb => cb.addEventListener('change', renderActive));
   document.getElementById('hmExpandAll')?.addEventListener('change', renderActive);
 
   // ONE Job multi-select in the main filter bar, wired to renderActive so it reaches every sub-tab.
@@ -985,23 +938,9 @@ export function initHmFilters(data) {
   document.getElementById('hm3HideEmpty')?.addEventListener('change', renderPipeline);
   document.querySelectorAll('.hm3Stage').forEach(cb => cb.addEventListener('change', renderPipeline));
 
-  // Default the period filter to the current year + current quarter
-  const nowY = String(new Date().getFullYear());
-  const nowQ = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
-  const yearSel = document.getElementById('hmYear');
-  const qSel = document.getElementById('hmQuarter');
-  if (yearSel) {
-    const hasNow = [...yearSel.options].some(o => o.value === nowY);
-    yearSel.value = hasNow ? nowY : (yearSel.options[1] ? yearSel.options[1].value : '');
-  }
-  if (qSel) qSel.value = nowQ;
-  // Default the period to the CURRENT quarter, matching Recruiter and Overall Efficiency.
-  // Landing on "All"/full-year mixed finished quarters with the one in progress, which is not the view
-  // anyone actually wants first — the live quarter is what gets worked on.
-  // applyYearQuarter() returns early when both are blank, so the dates would have stayed empty.
-  const hmY = document.getElementById('hmYear'), hmQ = document.getElementById('hmQuarter');
-  if (hmY) { const nowY = String(new Date().getFullYear()); if ([...hmY.options].some(o => o.value === nowY)) hmY.value = nowY; }
-  if (hmQ) hmQ.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+  // Default the period to the CURRENT year + quarter — #127d: the newest on offer, so Q4 is picked by itself from 1 Oct.
+  keepDatesInBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'));   // #127b
+  selectCurrentQuarter(document.getElementById('hmYear'), document.getElementById('hmQuarter'), true);
   applyYearQuarter();
 
   showTab('positions');

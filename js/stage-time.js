@@ -1,3 +1,4 @@
+import { selectionQuarters } from './period.js';
 // ===== Time-in-stage helpers (shared by Overall + Recruiter Efficiency "Time in Process" tabs) =====
 // A "histogram" is { "<days>": count } — how many candidates dwelt N whole days in a stage.
 // App Review histograms come from data.appReviewDwellByJob/ByRecruiter (main pull: now − createdAt for
@@ -48,11 +49,10 @@ export function tisCell(hist, threshold) {
 
 // Quarter keys covered by a Year/Quarter selection. null = no period picked (all-time).
 // `years` is the page's own year list, used only to resolve "quarter but no year".
-export function periodQuarters(year, quarter, years) {
-  if (!year && !quarter) return null;
-  const yr = String(year || (years && years[0]) || new Date().getFullYear());
-  if (quarter) return [`${yr}-${quarter}`];
-  return ['Q1', 'Q2', 'Q3', 'Q4'].map(q => `${yr}-${q}`);
+// #127 (Jerin, 15 Sep 2026): never before Q3 2026, and Year + Quarter both on All cover every quarter on offer rather than all time,
+// so this no longer returns null. See period.js.
+export function periodQuarters(year, quarter) {
+  return selectionQuarters(year, quarter);
 }
 
 // Does this rollups file carry the per-quarter dwell histograms? Older files do not, and a caller that

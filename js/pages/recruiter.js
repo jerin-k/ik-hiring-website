@@ -5,6 +5,7 @@ import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } f
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
+import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds } from '../period.js';   // #127
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 
@@ -165,9 +166,7 @@ export function renderRecruiter(data) {
       </div>`;
   }
 
-  const cy = new Date().getFullYear();
-  const years = [];
-  for (let y = Math.max(cy, 2026); y >= 2026; y--) years.push(y);
+  const years = reportingYears();   // #127c: 2026 onwards; a new year appears on its first day
 
   return `
     <style>
@@ -356,12 +355,9 @@ export function renderRecruiter(data) {
       <div class="fchip"><div class="ms" id="msJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
-      <div class="fchip"><span class="lbl">Momentum from</span><input type="date" id="recVelFrom"></div>
-      <div class="fchip"><span class="lbl">Momentum to</span><input type="date" id="recVelTo"></div>
       
       
-      <p class="sub-note" id="recQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p>
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span></div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip vel-dates" style="display:none"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates" style="display:none"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span></div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day.
          🚨 The day columns were replaced with summary columns (Total / Last 7d / Prev 7d / Trend / Active
@@ -833,16 +829,10 @@ export function initRecruiterFilters(baseData) {
   // read THIS, not selQuarter(): one quarter under a "Quarter: All" filter silently hides the rest of the
   // year — Sourcing Mix was showing 3,223 of 54,501 applications that way.
   function selQuarters() {
-    const ySel = document.getElementById('recVelYear');
-    const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
-    return periodQuarters(ySel?.value || '', document.getElementById('recVelQuarter')?.value || '', yrs);
+    return periodQuarters(document.getElementById('recVelYear')?.value || '', document.getElementById('recVelQuarter')?.value || '');
   }
   // Plain-English name for a period, for the line printed above a table.
-  function periodLabel(per) {
-    if (!per || !per.length) return 'all time';
-    if (per.length === 1) return per[0];
-    return `${per[0].slice(0, 4)} — ${per[0].slice(5)} to ${per[per.length - 1].slice(5)}`;
-  }
+  function periodLabel(per) { return periodText(per); }   // #127c
 
   // Styled multi-select checkbox dropdown. Returns { getSelected } ; empty selection = "All".
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
@@ -983,17 +973,10 @@ export function initRecruiterFilters(baseData) {
     // cleared HERE — once per render — not inside fulfilRows, which would wipe the first table's rows.
     lastFulfil = {};
 
-    // Which period each panel is actually on. Two of them CANNOT follow a multi-quarter selection —
-    // pods, capacity and the Fulfilment goal are set quarter by quarter — so say which quarter they used
-    // rather than letting a "Quarter: All" filter sit over one quarter's numbers.
+    // #127a (Jerin, 15 Sep 2026): this tab has no Quarter: All — goals, pods and capacity belong to a quarter and people move between Sales
+    // and Non-Sales, so quarters are never added together. Every panel is on the one quarter picked (the old Quarter: All note is gone).
     const per = selQuarters();
     const perTxt = periodLabel(per);
-    const qNote = document.getElementById('recQtrNote');
-    if (qNote) {
-      const oneQuarter = !!document.getElementById('recVelQuarter')?.value;
-      qNote.style.display = oneQuarter ? 'none' : '';
-      if (!oneQuarter) qNote.innerHTML = `<strong>Quarter: All.</strong> Screening Efficiency, Sourcing Mix and Time in Process show <strong>${perTxt}</strong>. Fulfilment and Joining Conversion show <strong>${selQuarter()}</strong>, and every table groups recruiters by their ${selQuarter()} pod. Momentum shows the last 30 days of its date range.`;
-    }
     const spEl = document.getElementById('recScreenPeriod');
     if (spEl) spEl.textContent = `Showing ${perTxt}.`;
 
@@ -1869,7 +1852,7 @@ export function initRecruiterFilters(baseData) {
   function tisNote(per) {
     const el = document.getElementById('recTisNote'); if (!el) return;
     if (!per) { el.style.display = 'none'; return; }
-    const label = per.length === 1 ? per[0] : per[0].slice(0, 4);
+    const label = periodText(per);
     el.style.display = '';
     el.style.color = (tisHasQ && tisSplit) ? 'var(--muted)' : 'var(--orange)';
     el.innerHTML = !tisHasQ
@@ -2271,7 +2254,7 @@ export function initRecruiterFilters(baseData) {
 
     // --- #111: recruiter Started on / Left on dates, checked against the work credited to them ---
     const qOfD = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const yearQs = [1, 2, 3, 4].map(n => qKey(String(q).slice(0, 4), n)).filter(k => k <= currentQuarter());
+    const yearQs = [1, 2, 3, 4].map(n => qKey(String(q).slice(0, 4), n)).filter(k => k >= REPORTING_START && k <= currentQuarter());   // #127c
     const work = {};   // name -> quarter -> { open, joined, drops }
     const addWork = (name, qq, k, n) => { if (!name || !qq || !n) return; const a = (work[name] = work[name] || {}); const b = (a[qq] = a[qq] || { open: 0, joined: 0, drops: 0 }); b[k] += n; };
     Object.entries(data.ownedSeatsByRecruiterQ || {}).forEach(([name, byQ]) => Object.entries(byQ || {}).forEach(([qq, byJob]) =>
@@ -2387,17 +2370,11 @@ export function initRecruiterFilters(baseData) {
     return out; // most recent first
   }
   function applyVelYearQuarter() {
-    const y = document.getElementById('recVelYear')?.value || '';
-    const q = document.getElementById('recVelQuarter')?.value || '';
     const fromEl = document.getElementById('recVelFrom'), toEl = document.getElementById('recVelTo');
-    if (!fromEl || !toEl || (!y && !q)) return;
-    const yr = y || String(new Date().getFullYear());
-    if (q) {
-      const qi = parseInt(q.slice(1), 10); const sm = (qi - 1) * 3 + 1; const em = sm + 2;
-      const last = new Date(parseInt(yr, 10), em, 0).getDate();
-      fromEl.value = `${yr}-${String(sm).padStart(2, '0')}-01`;
-      toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
-    } else { fromEl.value = `${yr}-01-01`; toEl.value = `${yr}-12-31`; }
+    if (!fromEl || !toEl) return;
+    // #127c: the whole selection, never before Q3 2026 (Year and Quarter both on All = every quarter on offer).
+    // #127b: and the pickers cannot leave it — other days are greyed out, and a date typed outside it snaps back.
+    setDateBounds(fromEl, toEl, selectionQuarters(document.getElementById('recVelYear')?.value || '', document.getElementById('recVelQuarter')?.value || ''), true);
   }
   // ===== ToFU (top of funnel) — rebuilt 2026-08-26 to Jerin's spec =====
   // "How many candidates got added to ToFU on a particular day. ToFU is HM or OA or R1, whichever comes
@@ -2851,6 +2828,7 @@ export function initRecruiterFilters(baseData) {
 
   function showTab(name) {
     activeTab = name;
+    document.querySelectorAll('.vel-dates').forEach(c => { c.style.display = name === 'velocity' ? '' : 'none'; });   // #127e: From / To drive Momentum only
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActiveChart();
@@ -2891,12 +2869,14 @@ export function initRecruiterFilters(baseData) {
   ['recVelFrom', 'recVelTo'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', () => { renderVelocity(); renderActiveChart(); }));
   // Year/Quarter also picks the quarter for pod grouping + capacity, so re-render everything
-  ['recVelYear', 'recVelQuarter'].forEach(id =>
-    document.getElementById(id)?.addEventListener('change', () => { applyVelYearQuarter(); renderAll(); }));
-  // default the velocity date filter to current year + current quarter
-  const vy = document.getElementById('recVelYear'), vq = document.getElementById('recVelQuarter');
-  if (vy) { const nowY = String(new Date().getFullYear()); vy.value = [...vy.options].some(o => o.value === nowY) ? nowY : (vy.options[1] ? vy.options[1].value : ''); }
-  if (vq) vq.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+  document.getElementById('recVelYear')?.addEventListener('change', () => {
+    fillQuarterSelect(document.getElementById('recVelQuarter'), document.getElementById('recVelYear').value, false);   // #127a/c: the year's quarters on offer, no All
+    applyVelYearQuarter(); renderAll();
+  });
+  document.getElementById('recVelQuarter')?.addEventListener('change', () => { applyVelYearQuarter(); renderAll(); });
+  // Default to the current year + quarter — #127d: the newest on offer, so Q4 is picked by itself from 1 Oct.
+  keepDatesInBounds(document.getElementById('recVelFrom'), document.getElementById('recVelTo'));   // #127b
+  selectCurrentQuarter(document.getElementById('recVelYear'), document.getElementById('recVelQuarter'), false);
   applyVelYearQuarter();
 
   renderAll();
