@@ -288,6 +288,24 @@ function getUserAccess(email) {
   return null;
 }
 
+// #124 (Jerin, 15 Sep 2026): who may PUBLISH (access or metric config) is decided by the PUBLISHED access.json -
+// the same list Send invite checks - not the old "Dashboard Access Config" sheet, which a newly published admin
+// never reached. Only if access.json cannot be read at all does the old sheet decide, so a Drive hiccup can never
+// lock every admin out.
+function isPublishedAdmin_(email) {
+  email = String(email || '').toLowerCase();
+  var access = null;
+  try { access = loadDriveJson_('access.json'); } catch (eA) { access = null; }
+  if (access && access.users && access.users.length) {
+    for (var i = 0; i < access.users.length; i++) {
+      if (String(access.users[i].email || '').toLowerCase() === email) return access.users[i].role === 'admin';
+    }
+    return false;
+  }
+  var old = getUserAccess(email);
+  return !!(old && old.role === 'admin');
+}
+
 function getDefaultAccess() {
   var ss = getOrCreateConfigSheet();
   var sheet = ss.getSheetByName('Settings');
@@ -423,13 +441,12 @@ function doPost(e) {
 //   WEBAPP_URL?page=doPublish&sid=<id>&i=<idx>&n=<count>&c=<gzip+base64url chunk>[&base=<baseUpdatedAt> on last]
 // A top-level GET carries the admin's IK login (a cross-site POST does NOT — SameSite blocks it), and small GET
 // URLs dodge the URL-length limit that a whole-config GET hit. We buffer chunks in the script cache and, on the
-// final chunk, reassemble + ungzip + write. getUserAccess(Session email) is the real gate. The frontend confirms
+// final chunk, reassemble + ungzip + write. isPublishedAdmin_(Session email) is the real gate (#124). The frontend confirms
 // success by RE-READING data/metric_config.json (the popup never needs to message back). Writes Drive + GitHub.
 function publishConfigPage_(e, userEmail) {
   var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
   var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Publish Metric Config'); };
-  var access = getUserAccess(userEmail);
-  if (!access || access.role !== 'admin') return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not an admin. Ask an admin to publish.</p>');
+  if (!isPublishedAdmin_(userEmail)) return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not an admin in the published access list. Ask an admin to publish.</p>');   // #124: the published access.json decides, not the old sheet
   try {
     var p = e.parameter || {};
     var sid = p.mcsid || '', c = p.mcdata || '';
@@ -462,8 +479,7 @@ function publishConfigPage_(e, userEmail) {
 function publishAccessPage_(e, userEmail) {
   var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
   var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Publish Access'); };
-  var access = getUserAccess(userEmail);
-  if (!access || access.role !== 'admin') return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not an admin. Ask an admin to publish.</p>');
+  if (!isPublishedAdmin_(userEmail)) return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not an admin in the published access list. Ask an admin to publish.</p>');   // #124: the published access.json decides, not the old sheet
   try {
     var sid = e.parameter.mcsid, idx = parseInt(e.parameter.mcidx, 10), tot = parseInt(e.parameter.mctot, 10), data = e.parameter.mcdata || '';
     var cache = CacheService.getScriptCache();
