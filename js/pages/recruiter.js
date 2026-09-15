@@ -6,7 +6,8 @@ import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   //
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
-         rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData } from '../period.js';   // #127 · #129
+         rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData,
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 
@@ -367,7 +368,7 @@ export function renderRecruiter(data) {
       <span class="fdiv"></span>
       
       
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span></div>
+    <span class="period" id="recPeriod"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span>${dojFilterHtml('rec', data.joiningPendingCases)}</div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day.
          🚨 The day columns were replaced with summary columns (Total / Last 7d / Prev 7d / Trend / Active
@@ -991,8 +992,7 @@ export function initRecruiterFilters(baseData) {
     return false;
   }
 
-  function getFilteredRecs() {
-    const q = selQuarter();
+  function getFilteredRecs(q = selQuarter()) {   // #133: the Joining Pending list asks for today's quarter
     const pods = msPod ? msPod.getSelected() : [];
     const names = msRec ? msRec.getSelected() : [];
     return allRecs.filter(r => {
@@ -1525,15 +1525,15 @@ export function initRecruiterFilters(baseData) {
     // Only recruiters visible under the current filters appear, so it stays in step with the tables above.
     // #130 (Jerin, 15 Sep 2026): both people lists sit on their own sub-tabs now — Joining Pending and the new Joiners — and ONE tree
     // draws both, so they group, reconcile and explain their last group the same way. `rest` = the columns after the first.
-    function peopleTree(cases, { rest, cells, isLinked, sortBy }) {
-      const q2 = selQuarter();
+    // #133: the quarter, the recruiters shown and their pod groups are arguments — Joining Pending passes TODAY's quarter, Joiners the selected one.
+    function peopleTree(cases, { rest, cells, isLinked, sortBy, q2 = selQuarter(), inRecs = recs, inGroups = groups }) {
       const byRec = {}, noRec = [];
       cases.forEach(c => {
         const rec = c.recruiter;
         if (!rec || rec === 'Unassigned') { noRec.push(c); return; }
         (byRec[rec] || (byRec[rec] = [])).push(c);
       });
-      const visible = new Set(recs.map(r => r.name));
+      const visible = new Set(inRecs.map(r => r.name));
       const roster = {}; allRecs.forEach(r => { if (r.name) roster[r.name] = r; });
       // ⚠ Do NOT call this group "Unassigned" — that is also a POD name, and naming it that made the table
       // read as though the no-pod exclusion had been reversed (Jerin, 2026-08-24).
@@ -1567,7 +1567,7 @@ export function initRecruiterFilters(baseData) {
           <td style="padding-left:52px">${c.candidate || DASH}</td>
           ${cells(c)}</tr>`;
       };
-      groups.forEach((G, pi) => {
+      inGroups.forEach((G, pi) => {
         const mine = G.recs.filter(r => visible.has(r.name) && (byRec[r.name] || []).length);
         if (!mine.length) return;
         const podCount = mine.reduce((n, r) => n + byRec[r.name].length, 0);
@@ -1582,7 +1582,7 @@ export function initRecruiterFilters(baseData) {
           list.forEach((c, ci) => { html += candRow(c, `${pi}-${ri}-${ci}`); });
         });
       });
-      const oi = groups.length;
+      const oi = inGroups.length;
       const orphanNames = Object.keys(orphanBy).sort();
       const orphanCount = noRec.length + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
       if (orphanCount) {
@@ -1610,7 +1610,12 @@ export function initRecruiterFilters(baseData) {
 
     const jpBody = document.getElementById('recJPBody');
     if (jpBody) {
-      const jp = peopleTree(data.joiningPendingCases || [], {
+      // #133 (Jerin, 15 Sep 2026): a LIVE list, so it is grouped by the pods of the quarter we are in today — the Year / Quarter boxes are
+      // hidden on this sub-tab, and a hidden box must not change what is shown — and narrowed by the DOJ boxes that take their place.
+      const qNow = currentQuarter(), sameQ = qNow === selQuarter(), dojF = dojFilterOf('rec');
+      const nowRecs = sameQ ? recs : getFilteredRecs(qNow);
+      const jp = peopleTree((data.joiningPendingCases || []).filter(c => inDojFilter(c.doj, dojF)), {
+        q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
         rest: 6,
         isLinked: c => c.linked,
         sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
@@ -1624,7 +1629,7 @@ export function initRecruiterFilters(baseData) {
       wireTreePath(jpBody);
       const cap = document.getElementById('recJPCaption');
       if (cap) cap.innerHTML = jp.shown
-        ? `<strong>${jp.shown}</strong> in closing, <strong>live</strong> — the quarter selector does not apply.`
+        ? `<strong>${jp.shown}</strong> in closing${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, <strong>live</strong>.`
           + (jp.orphanCount ? ` <strong>${jp.orphanCount}</strong> sit in the last group.` : '')
           + (jp.unlinked ? ` <strong>${jp.unlinked}</strong> have no opening attached.` : '')
         : '';
@@ -2932,6 +2937,8 @@ export function initRecruiterFilters(baseData) {
 
   function showTab(name) {
     activeTab = name;
+    // #133: Joining Pending is live, so the period boxes give way to the DOJ boxes there. Expand all stays: it opens the pod / recruiter tree.
+    toggleJpFilters('rec', document.getElementById('recPeriod'), name === 'joiningpending');
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -2972,6 +2979,7 @@ export function initRecruiterFilters(baseData) {
   // Date filter — #129: narrows every panel (and still sets Momentum's 30-day window), so a change re-renders the whole tab
   ['recVelFrom', 'recVelTo'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', renderAll));
+  ['recDojMonth', 'recDojFrom', 'recDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));   // #133
   // Year/Quarter also picks the quarter for pod grouping + capacity, so re-render everything
   document.getElementById('recVelYear')?.addEventListener('change', () => {
     fillQuarterSelect(document.getElementById('recVelQuarter'), document.getElementById('recVelYear').value, false);   // #127a/c: the year's quarters on offer, no All

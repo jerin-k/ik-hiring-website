@@ -158,3 +158,53 @@ export function sumDayFields(map, r) {
 // covers whole quarters and show an empty cell + a note for anything narrower (Rule 4: never swap the time basis silently).
 export const hasDayData = (data) => !!(data && data.reportDayFloor);
 export const hasDayRollups = (rollups) => !!(rollups && rollups.dayFloor);
+
+// ===== #133 (Jerin, 15 Sep 2026): the Joining Pending sub-tabs filter by DATE OF JOINING, not by the reporting period =====
+// "None of these filters made sense for Joining Pending tabs." Joining Pending is LIVE, so Year / Quarter / From / To moved nothing there.
+// On that sub-tab — Hiring Manager, Recruiter and Overall Efficiency alike — they give way to DOJ Month and a DOJ From / To range, in the
+// same place in the filter row. One rule for all three: a month and / or a range, either end may be empty; anyone with no DOJ yet drops
+// out while any of them is set.
+export function dojFilterHtml(prefix, cases, style = '') {
+  // Sort on the raw YYYY-MM and format at the end — sorting "Aug 2026" labels would order them alphabetically (HM #12, 23 Aug).
+  const months = [...new Set((cases || []).map(c => String(c.doj || c.startDate || '').slice(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)))].sort().reverse();
+  const opts = '<option value="">All</option>' + months.map(m => `<option value="${m}">${MON_ABBR[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}</option>`).join('');
+  return `<span class="period jp-doj" id="${prefix}JpDoj" style="display:none;${style}">`
+    + `<div class="fchip"><span class="lbl">DOJ Month</span><select id="${prefix}DojMonth">${opts}</select></div>`
+    + `<div class="fchip"><span class="lbl">DOJ From</span><input type="date" id="${prefix}DojFrom"></div>`
+    + `<div class="fchip"><span class="lbl">DOJ To</span><input type="date" id="${prefix}DojTo"></div></span>`;
+}
+export function dojFilterOf(prefix) {
+  const v = (id) => (document.getElementById(prefix + id) || {}).value || '';
+  return { month: v('DojMonth'), from: v('DojFrom'), to: v('DojTo') };
+}
+export function inDojFilter(doj, f) {
+  if (!f || (!f.month && !f.from && !f.to)) return true;
+  const d = String(doj || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  if (f.month && d.slice(0, 7) !== f.month) return false;
+  if (f.from && d < f.from) return false;
+  if (f.to && d > f.to) return false;
+  return true;
+}
+// "with a DOJ in Sep 2026", "with a DOJ from 1 Sep 2026 to 30 Sep 2026" — '' when no DOJ box is set. For the line above the list.
+export function dojFilterText(f) {
+  if (!f || (!f.month && !f.from && !f.to)) return '';
+  const parts = [];
+  if (f.month) parts.push(`in ${MON_ABBR[+f.month.slice(5, 7) - 1]} ${f.month.slice(0, 4)}`);
+  if (f.from && f.to) parts.push(`from ${dayText(f.from, true)} to ${dayText(f.to, true)}`);
+  else if (f.from) parts.push(`on or after ${dayText(f.from, true)}`);
+  else if (f.to) parts.push(`on or before ${dayText(f.to, true)}`);
+  return 'with a DOJ ' + parts.join(' and ');
+}
+// On the Joining Pending sub-tab: the DOJ boxes show and the period boxes hide; everywhere else the reverse.
+export function toggleJpFilters(prefix, periodEl, onJp) {
+  const doj = document.getElementById(prefix + 'JpDoj');
+  if (doj) doj.style.display = onJp ? '' : 'none';
+  showControl(periodEl, !onJp);
+}
+// Hide / show a control without losing its own inline display (the HM Expand all label carries display:flex inline).
+export function showControl(el, show) {
+  if (!el) return;
+  if (el.dataset.disp === undefined) el.dataset.disp = el.style.display || '';
+  el.style.display = show ? el.dataset.disp : 'none';
+}

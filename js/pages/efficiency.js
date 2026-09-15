@@ -5,7 +5,8 @@ import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
-         rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData } from '../period.js';   // #127 · #129
+         rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -153,11 +154,11 @@ export function renderEfficiency(data) {
     <div class="eff-filters">
       <div class="fchip"><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all</label></div>
+      <div class="fchip" id="effExpandWrap"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
       
       
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>
+    <span class="period" id="effPeriod"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>${dojFilterHtml('eff', data.joiningPendingCases)}
       </div>
 
     <!-- PANEL: Position Fulfilment -->
@@ -742,10 +743,11 @@ export function initEfficiencyFilters(data) {
   // position counts above — surfaced here rather than silently missing.
   function renderFulfilJP() {
     const body = document.getElementById('effFulfilJPBody'); if (!body) return;
-    const dsel = selDepts(), jsel = selJobs();
+    const dsel = selDepts(), jsel = selJobs(), dojF = dojFilterOf('eff');   // #133: the DOJ boxes replace the period on this sub-tab
     const rows = (data.joiningPendingCases || [])
       .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
-      .filter(c => !jsel.length || jsel.includes(c.job));
+      .filter(c => !jsel.length || jsel.includes(c.job))
+      .filter(c => inDojFilter(c.doj, dojF));
     body.innerHTML = rows.length ? rows.map(c => `<tr>
       <td>${c.doj || DASH}</td><td style="font-weight:500">${c.candidate || DASH}</td><td>${c.department || DASH}</td>
       <td style="max-width:260px">${c.job || DASH}</td><td>${c.subStage || DASH}</td><td>${c.recruiter || DASH}</td>
@@ -756,7 +758,7 @@ export function initEfficiencyFilters(data) {
     if (cap) {
       const unlinked = rows.filter(c => !c.linked).length;
       cap.innerHTML = rows.length
-        ? `<strong>${rows.length}</strong> in closing, <strong>live</strong> — the dates do not apply.` + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+        ? `<strong>${rows.length}</strong> in closing${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, <strong>live</strong>.` + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
         : '';
     }
   }
@@ -1694,6 +1696,10 @@ export function initEfficiencyFilters(data) {
 
   function showTab(name) {
     activeTab = name;
+    // #133: Joining Pending is live, so the period boxes give way to the DOJ boxes there. Expand all opens department trees, so it hides over
+    // the two flat people lists, where it would move nothing (Rule 13).
+    toggleJpFilters('eff', document.getElementById('effPeriod'), name === 'joiningpending');
+    showControl(document.getElementById('effExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.eff-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.eff-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -1717,6 +1723,7 @@ export function initEfficiencyFilters(data) {
 
   // #129: the dates narrow every panel, so a change re-renders whichever is showing (they used to redraw Momentum only).
   ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));
+  ['effDojMonth', 'effDojFrom', 'effDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));   // #133
   document.getElementById('effYear')?.addEventListener('change', () => {
     fillQuarterSelect(document.getElementById('effQuarter'), document.getElementById('effYear').value, true);   // #127c: only the year's quarters on offer
     applyVelYearQuarter(); renderAll();
