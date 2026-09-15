@@ -57,10 +57,23 @@ export const DEFINITIONS = {
           ['Why Joining Pending and Dropped are not on it', 'Those two count people. Stacking them onto a bar made of positions would produce a total that means nothing.'],
         ]
       },
+    ],
+    warnings: [
+      ['Positions and people are different units', 'Total Openings, Open and Missed count <strong>positions</strong>. Joining Pending and Dropped count <strong>people</strong>. One position can have several people in closing against it, so never read across the row as if it were one running total.'],
+      ['Drop does not need an offer', 'Someone archived out of Ref Check or Documentation counts as a drop even if no offer was ever raised for them.'],
+      ['Joining Pending is live', 'It always shows who is in closing today; the period you pick only decides which openings count as earlier-quarter ones. Everything else on Position Fulfilment follows the period. The people behind it are listed on the <strong>Joining Pending</strong> sub-tab.'],
+      ['A role only appears if it belongs here', 'It shows up when it had an opening in the period, or when someone is in closing on it. Roles with neither are not this period’s work and are left out.'],
+    ]
+  },
+
+  'hm-joiningpending': {
+    summary: 'How this list is worked out',
+    intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — the people behind the Joining Pending card on <strong>Position Fulfilment</strong>. It is a <strong>live</strong> list: it shows who is in closing today, so the Year, Quarter, From and To filters do not change it. The <strong>Department</strong> and <strong>Job</strong> filters do.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026',
+    groups: [
       {
-        heading: 'Joining Pending — Cases',
+        heading: 'The columns',
         items: [
-          ['What the list is', 'One row per person currently in Ref Check, Documentation or Offer. Same people as the card, without the subtraction — so this list is slightly longer than the card figure.'],
           ['Opening Quarter', 'The quarter of the opening their offer is linked to. It reads <em>Not linked</em> when the offer has no opening attached in Ashby — those offers are listed in <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.'],
           ['Month and DOJ', 'The candidate’s date of joining, and its month.'],
           ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
@@ -70,10 +83,27 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['Positions and people are different units', 'Total Openings, Open and Missed count <strong>positions</strong>. Joining Pending and Dropped count <strong>people</strong>. One position can have several people in closing against it, so never read across the row as if it were one running total.'],
-      ['Drop does not need an offer', 'Someone archived out of Ref Check or Documentation counts as a drop even if no offer was ever raised for them.'],
-      ['Joining Pending is live', 'It always shows who is in closing today; the period you pick only decides which openings count as earlier-quarter ones. Everything else on this page follows the period.'],
-      ['A role only appears if it belongs here', 'It shows up when it had an opening in the period, or when someone is in closing on it. Roles with neither are not this period’s work and are left out.'],
+      ['Slightly longer than the Joining Pending card', 'The same people as the card on Position Fulfilment, without its subtraction: the card leaves out anyone whose opening was raised in a quarter before the period you picked. This list shows everyone, so nobody is lost.'],
+    ]
+  },
+
+  'hm-joiners': {
+    summary: 'How this list is worked out',
+    intro: 'One row per <strong>person</strong> who joined: moved to the <em>Hired</em> stage — an accepted offer alone does not count — with a <strong>start date</strong> between the <strong>From</strong> and <strong>To</strong> dates, most recent first. The <strong>Department</strong> and <strong>Job</strong> filters narrow it.',
+    confirmed: 'Added with Jerin · 15 Sep 2026 (#130)',
+    groups: [
+      {
+        heading: 'The columns',
+        items: [
+          ['Opening Quarter', 'The quarter of the opening their offer is linked to. It reads <em>Not linked</em> when the offer has no opening attached in Ashby.'],
+          ['Month and DOJ', 'The day they started (their date of joining), and its month.'],
+          ['Department, Job, Candidate, Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Not the same number as Joined on Position Fulfilment', 'That column counts <strong>positions</strong> filled, in the quarter each opening was opened. This list counts <strong>people</strong>, on the day they started. Someone who starts now on a position opened in an earlier quarter is listed here, but counts in that earlier quarter’s Joined. Both are right.'],
+      ['Everyone who joined is listed', 'Including people filling a position opened in an earlier quarter — the <strong>Opening Quarter</strong> column shows who they are. There is no Sub-Stage column, because Hired is a single stage.'],
     ]
   },
 
@@ -173,22 +203,62 @@ export const DEFINITIONS = {
         ]
       },
       {
-        heading: 'The chart and the Cases list',
+        heading: 'The chart',
         items: [
           ['Chart', 'One bar per recruiter \u2014 the bar is what they <strong>achieved</strong>. A solid line marks their <strong>Goal</strong>, a dashed line their <strong>Capacity</strong> (not drawn while the Job filter or a department restriction narrows the numbers), and a pale band labelled <em>Short of Goal</em> fills any shortfall. Everything is in Score. Same figures as the table. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them. <em>Short of Goal</em> is not split \u2014 it belongs to no single role. The bar is always exactly the table\u2019s Achieved: any credit that no role row under the recruiter carries shows as its own band, <em>credit not tied to a listed role</em>. Hovering a bar shows the Goal.'],
-          ['Joining Pending — Cases', 'Every person in closing, one row each, grouped Pod → Recruiter → Candidate. A <strong>live</strong> list, so the quarter selector does not apply. Anyone with no recruiter tagged, or whose recruiter this tab hides by default, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
-          ['Cases columns', '<strong>Opening Quarter</strong> is the quarter of the opening the offer is linked to (<em>Not linked</em> when there is none). <strong>Month</strong> and <strong>DOJ</strong> are the joining date. <strong>Sub-Stage</strong> is Ref Check, Documentation or Offer.'],
         ]
       },
     ],
     warnings: [
-      ['Fulfilment — Others', 'A third table for recruiters in the <strong>Others</strong> pod — people who work across pods rather than inside one. It uses the <strong>Sales counting rule</strong>: joiners count regardless of which quarter raised the opening, because that work is billed per joiner. Nobody appears in more than one table, so no total or chart double-counts.'],
+      ['Position Fulfilment — Others', 'A third table for recruiters in the <strong>Others</strong> pod — people who work across pods rather than inside one. It uses the <strong>Sales counting rule</strong>: joiners count regardless of which quarter raised the opening, because that work is billed per joiner. Nobody appears in more than one table, so no total or chart double-counts.'],
           ['Recruiters with no pod set are left out entirely', 'Out of every row, total and chart on this tab. Their numbers are in <strong>Data Hygiene → Pod Not Set</strong>. Someone who genuinely works across pods should be given the <strong>Others</strong> pod, which appears here like any other.'],
       ['Drop does not need an offer', 'Someone archived out of Ref Check or Documentation counts as a drop even if no offer was ever raised for them.'],
-      ['Recruiters who weren\u2019t here this quarter are left out', 'A recruiter counts from their <strong>Started on</strong> date to their <strong>Left on</strong> date, set in <strong>Admin \u2192 Metric Configuration</strong> \u2014 someone who left mid-quarter still counts for that quarter. Until a recruiter\u2019s dates are entered, a disabled Ashby account decides. Anyone not here is out of every row, total and chart on this tab for that quarter. People in closing who are still tagged to them are listed under <em>No recruiter in this view</em> in <strong>Joining Pending \u2014 Cases</strong>.'],
-      ['Joining Pending here is lower than on the Hiring Manager tab', 'These tables count a person only when their <strong>Recruiter has a row on this tab</strong>. Anyone with <strong>no Recruiter tagged</strong> in Ashby, or tagged to a recruiter who was <strong>not here this quarter</strong>, is left out, so the Joining Pending total here is lower than the Hiring Manager card. Nobody is lost: <strong>Joining Pending \u2014 Cases</strong> lists them all under <em>No recruiter in this view</em>, with the count on that group and the reason beside each name, and everyone with no Recruiter tagged is also on <strong>Data Hygiene \u2192 Unassigned</strong>.'],
+      ['Recruiters who weren\u2019t here this quarter are left out', 'A recruiter counts from their <strong>Started on</strong> date to their <strong>Left on</strong> date, set in <strong>Admin \u2192 Metric Configuration</strong> \u2014 someone who left mid-quarter still counts for that quarter. Until a recruiter\u2019s dates are entered, a disabled Ashby account decides. Anyone not here is out of every row, total and chart on this tab for that quarter. People in closing who are still tagged to them are listed under <em>No recruiter in this view</em> on the <strong>Joining Pending</strong> sub-tab.'],
+      ['Joining Pending here is lower than on the Hiring Manager tab', 'These tables count a person only when their <strong>Recruiter has a row on this tab</strong>. Anyone with <strong>no Recruiter tagged</strong> in Ashby, or tagged to a recruiter who was <strong>not here this quarter</strong>, is left out, so the Joining Pending total here is lower than the Hiring Manager card. Nobody is lost: the <strong>Joining Pending</strong> sub-tab lists them all under <em>No recruiter in this view</em>, with the count on that group and the reason beside each name, and everyone with no Recruiter tagged is also on <strong>Data Hygiene \u2192 Unassigned</strong>.'],
       ['Openings with more than one owner are split', 'When two or more recruiters sit as <em>Recruiter</em> on the same opening in Ashby, the opening and its score are <strong>divided equally</strong> between them. This is the only place a Goal shows a decimal. There is no Data Hygiene list for these yet — the decimal is the sign.'],
       ['Roles that score zero for the quarter', 'They still count in HC but contribute 0 to Score — usually Tech/NonTech roles missing a Level (SME roles score on Complexity alone and PA by title, so neither needs a Level). Score understates the work until the Level is set. The list is in <strong>Data Hygiene → Roles Missing Score Inputs</strong>.'],
+    ]
+  },
+
+  'rec-joiningpending': {
+    summary: 'How this list is worked out',
+    intro: 'Every person in closing — <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. A <strong>live</strong> list, so the From and To dates do not change who is on it; the Year and Quarter only decide which pod each recruiter sits in. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026',
+    groups: [
+      {
+        heading: 'Reading it',
+        items: [
+          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the selected quarter, earliest joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
+          ['Opening Quarter', 'The quarter of the opening the offer is linked to (<em>Not linked</em> when there is none).'],
+          ['Month and DOJ', 'The joining date, and its month.'],
+          ['Department and Job', 'The role they are joining.'],
+          ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Longer than JP Total on Position Fulfilment', 'Those tables count a person only against a recruiter with a row there, and Non-Sales also leaves out anyone on an earlier quarter’s opening or joining next quarter. This list shows everyone.'],
+    ]
+  },
+
+  'rec-joiners': {
+    summary: 'How this list is worked out',
+    intro: 'Everyone who joined — moved to the <em>Hired</em> stage (an accepted offer alone does not count), with a <strong>start date</strong> between the <strong>From</strong> and <strong>To</strong> dates — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it.',
+    confirmed: 'Added with Jerin · 15 Sep 2026 (#130)',
+    groups: [
+      {
+        heading: 'Reading it',
+        items: [
+          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the selected quarter, most recent joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
+          ['Opening Quarter', 'The quarter of the opening the offer is linked to (<em>Not linked</em> when there is none).'],
+          ['Month and DOJ', 'The day they started, and its month.'],
+          ['Department and Job', 'The role they joined.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Everyone who joined is listed', 'There is no earlier-quarter subtraction, so a recruiter can list more people here than <strong>Joined</strong> on the Position Fulfilment Non-Sales table, which leaves out anyone filling an earlier quarter’s opening — the <strong>Opening Quarter</strong> column shows who. The people under each recruiter are the joiners <strong>Sourcing Mix</strong> counts. There is no Sub-Stage column, because Hired is a single stage.'],
+      ['One row per person, under the recruiter', 'Someone with a Sourcer is still listed once, under their Recruiter — the same as the HC columns.'],
     ]
   },
 
@@ -257,9 +327,9 @@ export const DEFINITIONS = {
         items: [
           ['Offered', 'Joined + Joining Pending + Dropped — everyone who got as far as an offer.'],
           ['Joined', 'People <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, which must fall between the <strong>From</strong> and <strong>To</strong> dates (an accepted offer alone is not counted), minus anyone whose offer is linked to an <strong>earlier quarter\u2019s opening</strong> — that was last quarter\u2019s work landing now. The same rule applies on every pod, Sales included.'],
-          ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule the Hiring Manager Positions card uses.'],
-          ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived, counted when the day they first got there is between the <strong>From</strong> and <strong>To</strong> dates. The same list HM and both Fulfilment tables use.'],
-          ['Who each person is counted against', 'Every number in this table is a <strong>count of people</strong>, and each person counts <strong>whole</strong> against their <strong>recruiter</strong> — the same as the HC columns in Fulfilment, whoever sourced the role.'],
+          ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus earlier-quarter openings. Exactly the rule of the Joining Pending card on <strong>Hiring Manager → Position Fulfilment</strong>.'],
+          ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived, counted when the day they first got there is between the <strong>From</strong> and <strong>To</strong> dates. The same list the Hiring Manager tab and the Position Fulfilment tables use.'],
+          ['Who each person is counted against', 'Every number in this table is a <strong>count of people</strong>, and each person counts <strong>whole</strong> against their <strong>recruiter</strong> — the same as the HC columns in Position Fulfilment, whoever sourced the role.'],
           ['Joining Conversion', '(Joined + Joining Pending) ÷ Offered — the share of everyone who reached an offer who has <strong>not</strong> fallen out. The bar shows it at a glance.'],
           ['The chart', 'One bar per recruiter, stacking <strong>Joined</strong>, <strong>Joining Pending</strong> and <strong>Dropped</strong>, with <strong>Offered</strong> (their sum) at the end and <strong>Joining conversion</strong> in its own column on the right. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them.'],
         ]
@@ -267,9 +337,9 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This measures drop-out, not joining', 'Joined and Joining Pending appear on both sides of the fraction, so they cancel: it is really <strong>1 \u2212 Dropped \u00f7 Offered</strong>. It sits near 96% and moves only when people fall out. That is the intended question \u2014 <em>who have we lost?</em>'],
-      ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in Ref Check, Documentation or Offer <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered. Kept that way on purpose, so this column matches the HM Positions card instead of inventing a fifth definition.'],
+      ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in Ref Check, Documentation or Offer <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered. Kept that way on purpose, so this column matches the Joining Pending card on Hiring Manager → Position Fulfilment instead of inventing a fifth definition.'],
       ['Recruiters with no pod set are missing entirely', 'As everywhere on this tab — see <strong>Data Hygiene → Pod Not Set</strong>. Cross-pod recruiters belong in the <strong>Others</strong> pod, which is shown normally.'],
-      ['Joining Pending here is lower than on the Hiring Manager tab', 'A person counts only against a <strong>recruiter with a row on this tab</strong>. Anyone with no Recruiter tagged in Ashby, or tagged to a recruiter who was not here this quarter, is left out. They are all listed in <strong>Fulfilment → Joining Pending — Cases</strong> under <em>No recruiter in this view</em>, and everyone with no Recruiter tagged is on <strong>Data Hygiene → Unassigned</strong>.'],
+      ['Joining Pending here is lower than on the Hiring Manager tab', 'A person counts only against a <strong>recruiter with a row on this tab</strong>. Anyone with no Recruiter tagged in Ashby, or tagged to a recruiter who was not here this quarter, is left out. They are all listed on the <strong>Joining Pending</strong> sub-tab under <em>No recruiter in this view</em>, and everyone with no Recruiter tagged is on <strong>Data Hygiene → Unassigned</strong>.'],
     ]
   },
 
@@ -282,7 +352,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Four levels', 'Pod → Recruiter → Source type (e.g. <em>Job Portal</em>) → the specific source (e.g. <em>Naukri</em>, <em>LinkedIn</em>, <em>Employee Referral</em>).'],
-          ['Joiners', 'People <strong>moved to the Hired stage</strong>, whose <strong>start date</strong> falls between the <strong>From</strong> and <strong>To</strong> dates, credited to that recruiter, counted against the source on their application. Every joiner counts, including anyone filling a position opened in an earlier quarter — so this can run slightly ahead of the Fulfilment table, which leaves those out.'],
+          ['Joiners', 'People <strong>moved to the Hired stage</strong>, whose <strong>start date</strong> falls between the <strong>From</strong> and <strong>To</strong> dates, credited to that recruiter, counted against the source on their application. Every joiner counts, including anyone filling a position opened in an earlier quarter — so this can run slightly ahead of the Position Fulfilment table, which leaves those out. The same people are listed by name on the <strong>Joiners</strong> sub-tab.'],
           ['%', 'Share of the level above it — a source’s share of its type, a type’s share of the recruiter, a recruiter’s share of the pod.'],
           ['Chart', 'One bar per recruiter — the 20 with the most joiners in view — stacked by source type. The six biggest types get their own colour and the rest are pooled as <em>All other types</em>. It reads the same joiners as the table.'],
           ['(source not recorded)', 'A joiner whose application carries no source. They are kept here rather than dropped, so the panel still adds up to the number of joiners. They are listed by name — with the people still joining and those who dropped after an offer — in <strong>Recruiter Efficiency → Data Hygiene → Selected Candidates Missing Source</strong>.'],
@@ -369,11 +439,10 @@ export const DEFINITIONS = {
         ]
       },
       {
-        heading: 'Charts and the Cases list',
+        heading: 'The chart',
         items: [
           ['The chart', 'One bar per department, stacked Joined / Joining Pending / Delta with the total on the end — the same three numbers as the table. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them. The legend is at metric level — clicking one toggles that whole colour.'],
           ['A negative Delta on a chart', 'A bar cannot be drawn backwards, so a department with a negative Delta gets no Delta segment and its bar runs past its total. The number at the end of the bar and the tooltip’s <em>Total positions</em> are still the table’s Total, and the tooltip names the negative Delta.'],
-          ['Joining Pending — Cases', 'Everyone in Ref Check, Documentation or Offer, scoped to the Department and Job filters. <strong>Candidate</strong> is the person, <strong>Sub-stage</strong> is which of Ref Check, Documentation or Offer they are in, and <strong>DOJ</strong> is the joining date. <strong>Opening</strong> reads <em>Not linked</em> when no opening is attached in Ashby, so that person cannot be tied to a position above. Those are the ones to fix first.'],
         ]
       },
     ],
@@ -381,7 +450,50 @@ export const DEFINITIONS = {
       ['Drop does not need an offer', 'Someone archived out of Ref Check or Documentation counts as a drop even if no offer was ever raised for them.'],
       ['Positions and people in the same row', 'Total Positions, Joined and Missed count <strong>positions</strong>. Joining Pending and Drop count <strong>people</strong>. One position can hold several people in closing, which is exactly why Delta is allowed to go negative.'],
       ['This table should agree with HM → Department Summary', 'Same definitions, same rules about which roles appear. The differences are presentation: this one adds Score to every column and drills from department to job.'],
-      ['The Cases list is slightly longer than the column', 'The column subtracts people sitting on an earlier quarter’s opening; the list shows everyone, so nobody is lost.'],
+    ]
+  },
+
+  'eff-joiningpending': {
+    summary: 'How this list is worked out',
+    intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so the Year, Quarter, From and To filters do not change it; the <strong>Department</strong> and <strong>Job</strong> filters do.',
+    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026',
+    groups: [
+      {
+        heading: 'The columns',
+        items: [
+          ['DOJ', 'The joining date.'],
+          ['Candidate', 'The person.'],
+          ['Department and Job', 'The role they are joining.'],
+          ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
+          ['Recruiter', 'The Recruiter on their hiring team in Ashby.'],
+          ['Opening', '<em>Linked</em> when an opening is attached to their offer in Ashby. <em>Not linked</em> means that person cannot be tied to a position on Position Fulfilment — those are the ones to fix first.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Slightly longer than the Joining Pending column', 'The column on Position Fulfilment leaves out people sitting on an opening raised before the selected period starts. This list shows everyone, so nobody is lost.'],
+    ]
+  },
+
+  'eff-joiners': {
+    summary: 'How this list is worked out',
+    intro: 'Everyone who joined — moved to the <em>Hired</em> stage (an accepted offer alone does not count), with a <strong>start date</strong> between the <strong>From</strong> and <strong>To</strong> dates — one row each, most recent first. The <strong>Department</strong> and <strong>Job</strong> filters narrow it.',
+    confirmed: 'Added with Jerin · 15 Sep 2026 (#130)',
+    groups: [
+      {
+        heading: 'The columns',
+        items: [
+          ['DOJ', 'The day they started.'],
+          ['Candidate', 'The person.'],
+          ['Department and Job', 'The role they joined.'],
+          ['Recruiter', 'The Recruiter on their hiring team in Ashby.'],
+          ['Opening', '<em>Linked</em> when an opening is attached to their offer in Ashby, <em>Not linked</em> when there is none.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Not the same number as Joined on Position Fulfilment', 'That column counts <strong>positions</strong> filled, in the quarter each opening was opened. This list counts <strong>people</strong>, on the day they started. Both are right.'],
+      ['Everyone who joined is listed', 'Including people filling a position opened before the period, so the count matches the joiners on <strong>Sourcing Mix</strong> and can run ahead of <strong>Joined</strong> on Joining Conversion, which leaves those out. There is no Sub-stage column, because Hired is a single stage.'],
     ]
   },
 
@@ -504,19 +616,19 @@ export const DEFINITIONS = {
         items: [
           ['Offered', 'Joined + Joining Pending + Dropped \u2014 everyone who got as far as an offer.'],
           ['Joined', 'People <strong>moved to the Hired stage</strong>, dated by their <strong>start date</strong>, which must fall between the <strong>From</strong> and <strong>To</strong> dates (an accepted offer alone is not counted), minus anyone whose offer is linked to an opening raised <strong>before the selected period starts</strong>.'],
-          ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone on an opening raised before the selected period starts. The same rule the Hiring Manager Positions card uses.'],
+          ['Joining Pending', 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em>, minus anyone on an opening raised before the selected period starts. The same rule as the Joining Pending card on Hiring Manager → Position Fulfilment.'],
           ['Dropped', 'Reached Ref Check, Documentation or Offer and was then archived, counted when the day they first got there is between the <strong>From</strong> and <strong>To</strong> dates. The same list HM and the Recruiter tab use.'],
           ['Joining Conversion', '(Joined + Joining Pending) \u00f7 Offered \u2014 the share of everyone who reached an offer who has <strong>not</strong> fallen out.'],
-          ['Rows', 'Department, then the roles inside it. People whose offer or case names a role Ashby\u2019s job list does not return still count, under their department (or <em>Unknown</em>), with <em>(no job recorded)</em> when there is no title \u2014 so Joining Pending here matches Fulfilment on this tab.'],
-          ['The period', 'Follows the Year/Quarter selector, like Fulfilment: with Quarter on <em>All</em> it adds up every quarter of the selected year (Year on <em>All</em> as well: every quarter since Q3 2026). The <strong>From</strong> and <strong>To</strong> dates inside it narrow Joined and Dropped to the day; Joining Pending stays live.'],
+          ['Rows', 'Department, then the roles inside it. People whose offer or case names a role Ashby\u2019s job list does not return still count, under their department (or <em>Unknown</em>), with <em>(no job recorded)</em> when there is no title \u2014 so Joining Pending here matches Position Fulfilment on this tab.'],
+          ['The period', 'Follows the Year/Quarter selector, like Position Fulfilment: with Quarter on <em>All</em> it adds up every quarter of the selected year (Year on <em>All</em> as well: every quarter since Q3 2026). The <strong>From</strong> and <strong>To</strong> dates inside it narrow Joined and Dropped to the day; Joining Pending stays live.'],
           ['Chart', 'One bar per department, stacking Joined, Joining Pending and Dropped, with <strong>Offered</strong> at the end of the bar and the <strong>Joining conversion</strong> in its own labelled column down the right-hand edge. Each section is split into the <strong>roles</strong> behind it &mdash; hover one to list them.'],
         ]
       },
     ],
     warnings: [
       ['This measures drop-out, not joining', 'Joined and Joining Pending sit on <em>both</em> sides of the fraction, so they cancel: the figure is arithmetically <strong>1 \u2212 Dropped \u00f7 Offered</strong>. That is the intended question \u2014 <em>who have we lost?</em>'],
-      ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in closing <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered \u2014 kept that way so the column matches the HM Positions card.'],
-      ['How this compares with the Recruiter tab', 'The Recruiter tab\u2019s <em>Fulfilment</em> tables take no earlier-quarter subtraction on Joined for the Sales and Others pods. Pods do not exist on this tab, so here the subtraction is applied to every department \u2014 the same as the Recruiter tab\u2019s own Joining Conversion, which applies it to every pod.'],
+      ['Joining Pending is live; its neighbours are quarterly', 'It shows who is in closing <strong>today</strong>, so the same people sit inside every quarter\u2019s Offered \u2014 kept that way so the column matches the Joining Pending card on Hiring Manager → Position Fulfilment.'],
+      ['How this compares with the Recruiter tab', 'The Recruiter tab\u2019s <em>Position Fulfilment</em> tables take no earlier-quarter subtraction on Joined for the Sales and Others pods. Pods do not exist on this tab, so here the subtraction is applied to every department \u2014 the same as the Recruiter tab\u2019s own Joining Conversion, which applies it to every pod.'],
     ]
   },
   'eff-sourcing': {
@@ -536,7 +648,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This counts joiners, not applications', 'Deliberate: a channel can bring tens of thousands of applications and produce almost no one who starts.'],
-      ['Counted by START DATE, and every joiner counts', 'Someone who accepted in June and starts in September counts in Q3, not Q2. <strong>One deliberate difference from Fulfilment and Joining Conversion on this tab:</strong> those two leave out people filling a position that was opened in an earlier quarter, because they answer “did we fill this quarter’s demand”. This panel asks which channels bring us people, so a joiner counts however long ago their position was raised — which is why its total runs a little higher.'],
+      ['Counted by START DATE, and every joiner counts', 'Someone who accepted in June and starts in September counts in Q3, not Q2. <strong>One deliberate difference from Position Fulfilment and Joining Conversion on this tab:</strong> those two leave out people filling a position that was opened in an earlier quarter, because they answer “did we fill this quarter’s demand”. This panel asks which channels bring us people, so a joiner counts however long ago their position was raised — which is why its total runs a little higher.'],
     ]
   },
 
@@ -583,7 +695,7 @@ export const DEFINITIONS = {
         items: [
           ['A role\u2019s Score', '<strong>Family + Level + Complexity</strong> \u2192 the grid \u2192 points. Level and Complexity come from the job in Ashby; Family is derived from the department and job title.'],
           ['Pod', 'Groups recruiters on the Recruiter Efficiency tab. A recruiter with <strong>no pod for the selected quarter is excluded from every row and total</strong> on that tab \u2014 they are listed under Data Hygiene \u2192 Pod Not Set. Use <strong>Others</strong> for anyone who works across pods \u2014 it groups and totals like a normal pod.'],
-          ['Capacity', 'A Score, not a headcount \u2014 what that recruiter is expected to carry in that quarter. It sits beside the Goal on the Fulfilment tables and drives Capacity Utilisation. It is not the Goal: the Goal comes from the openings the recruiter owns in Ashby.'],
+          ['Capacity', 'A Score, not a headcount \u2014 what that recruiter is expected to carry in that quarter. It sits beside the Goal on the Position Fulfilment tables and drives Capacity Utilisation. It is not the Goal: the Goal comes from the openings the recruiter owns in Ashby.'],
           ['Type', '<strong>Agency</strong>, <strong>Freelancer</strong> or <strong>Internal</strong>. A label only \u2014 it moves no number, because everyone follows the same credit rule. Ashby\u2019s <em>External Recruiter</em> flag sets the default (flagged = Freelancer, otherwise Internal), and anyone can change it here. Hover the box to see whether Ashby flags the account.'],
           ['Started on', 'The recruiter\u2019s first day, set once per person \u2014 not per quarter. A blank start means they count from the first quarter on record. Ashby does not record this, which is why it is kept here.'],
           ['Left on', 'Their last working day. Blank means still here. Someone who left part-way through a quarter still counts for that whole quarter.'],
