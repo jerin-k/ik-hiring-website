@@ -136,8 +136,8 @@ export const DEFINITIONS = {
 
   'hm-pipeline': {
     summary: 'How these numbers are worked out',
-    intro: 'This is a <strong>live snapshot</strong>: where candidates stand right now. It is the one table on this page whose numbers the date filter does not change.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026',
+    intro: 'This is a <strong>live snapshot</strong>: where candidates stand right now. It is the one table on this page whose numbers the date filter does not change. Shading: a deeper teal behind a number means more people, compared within that stage’s column (departments with departments, jobs with jobs); zeros stay grey.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading the table',
@@ -265,8 +265,8 @@ export const DEFINITIONS = {
 
   'rec-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage. The <strong>Job</strong> filter narrows every number to the chosen jobs. Shading: a deeper teal square means more people added that day, weekends are greyed, a thin line marks each new week, and a small bar beside a recruiter’s total compares it with the others.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'What counts as being added',
@@ -346,8 +346,8 @@ export const DEFINITIONS = {
 
   'rec-sourcing': {
     summary: 'How these numbers are worked out',
-    intro: 'Where the people who actually <strong>joined</strong> came from. The <strong>Job</strong> filter narrows every number to the chosen jobs.',
-    confirmed: 'Definitions confirmed with Jerin · 29 Aug 2026 · Quarter on All adds up the whole year 15 Sep 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026',
+    intro: 'Where the people who actually <strong>joined</strong> came from. The <strong>Job</strong> filter narrows every number to the chosen jobs. Shading: each share is also drawn as a bar, in the source type’s colour from the chart above.',
+    confirmed: 'Definitions confirmed with Jerin · 29 Aug 2026 · Quarter on All adds up the whole year 15 Sep 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -368,8 +368,8 @@ export const DEFINITIONS = {
 
   'rec-tis': {
     summary: 'How these numbers are worked out',
-    intro: 'How long each step actually takes. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · job rows show the recruiter’s own candidates, and the Job filter narrows every row, 14 Sep 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026',
+    intro: 'How long each step actually takes. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited. Shading: a deeper slate behind a median means a slower stage compared with the rest of its column, and the waiting label darkens the longer people have waited — pale amber under 7 days, darker up to 30, rose after 30.',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · job rows show the recruiter’s own candidates, and the Job filter narrows every row, 14 Sep 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -501,8 +501,8 @@ export const DEFINITIONS = {
 
   'eff-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org \u2014 one row per person, not one per stage.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org \u2014 one row per person, not one per stage. Shading: a deeper teal square means more people added that day, weekends are greyed, a thin line marks each new week, and a small bar beside a job’s total compares it with the others.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'What counts as being added',
@@ -584,8 +584,8 @@ export const DEFINITIONS = {
 
   'eff-tis': {
     summary: 'How these numbers are worked out',
-    intro: 'How long each step actually takes, <strong>Department → Job</strong>. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 30 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026',
+    intro: 'How long each step actually takes, <strong>Department → Job</strong>. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited. Shading: a deeper slate behind a median means a slower stage compared with the rest of its column, and the waiting label darkens the longer people have waited — pale amber under 7 days, darker up to 30, rose after 30.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 30 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
@@ -635,8 +635,8 @@ export const DEFINITIONS = {
   },
   'eff-sourcing': {
     summary: 'How these numbers are worked out',
-    intro: 'Where the people who actually <strong>joined</strong> came from, <strong>Department → Job → Source type → Source</strong>.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 30 Aug 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026',
+    intro: 'Where the people who actually <strong>joined</strong> came from, <strong>Department → Job → Source type → Source</strong>. Shading: each share is also drawn as a bar; a source name’s bar takes that source’s colour from the chart above, and the rest stay slate.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 30 Aug 2026 \u00b7 From / To narrows it to the day (#129) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',

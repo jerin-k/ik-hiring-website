@@ -1,6 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
+import { shadeMomentum, shadeTis, shareBars, colorShareBars } from '../grid-shade.js';   // #137c
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
@@ -1714,6 +1715,7 @@ export function initRecruiterFilters(baseData) {
       });
       srcBody.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
       wireTreePath(srcBody);
+      shareBars(srcBody, recSrcColorOf);   // #137c: the colours come from buildSourceChart
     }
 
     // ===== Time in Process — Pod → Recruiter → Job, median days parked per stage =====
@@ -2038,6 +2040,7 @@ export function initRecruiterFilters(baseData) {
     });
     body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
     wireVelTree(body);
+    shadeTis(body);   // #137c
     tisNote(per);
   }
 
@@ -2567,6 +2570,7 @@ export function initRecruiterFilters(baseData) {
     });
     body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
     wireTreePath(body);
+    shadeMomentum(body, dates);   // #137c
   }
 
   // ===== charts (standard palette + square legends) =====
@@ -2884,6 +2888,8 @@ export function initRecruiterFilters(baseData) {
       plugins: [markers, roleBandOverlay(FUL_METRICS)]
     });
   }
+  // #137c: the source-type colours the chart used last, read by the Sourcing Mix share bars (var, so it exists before the chart runs).
+  var recSrcColorOf;
   function buildSourceChart() {
     const ctx = document.getElementById('recSourceChart'); if (!ctx) return;
     if (recSourceChart) { recSourceChart.destroy(); recSourceChart = null; }
@@ -2913,6 +2919,8 @@ export function initRecruiterFilters(baseData) {
     const REST = '\u0000rest';
     const cats = rest.length ? [...topTypes, REST] : topTypes;
     const palette = [C.blue, C.green, C.cyan, C.slate, C.amber, '#C5CFE5', '#94a3b8'];
+    recSrcColorOf = (t) => { const i = cats.indexOf(t); return i >= 0 ? palette[i % palette.length] : (rest.length ? palette[(cats.length - 1) % palette.length] : null); };
+    colorShareBars(document.getElementById('recSourceBody'), recSrcColorOf);   // #137c
     const datasets = cats.map((cat, ci) => ({
       label: cat === REST ? 'All other types' : cat, backgroundColor: palette[ci % palette.length], stack: 's', borderRadius: 2, ...HBAR,
       data: withSrc.map(r => cat === REST ? rest.reduce((s, t) => s + (tt[r.name][t] || 0), 0) : (tt[r.name][cat] || 0))

@@ -1136,3 +1136,32 @@ table.pl-list td:not(:first-child) { text-align: left; }
 .pl-pod-others, .pl-pod-none { background: #eceef3; color: #4a5578; }
 .pl-count { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 5px; background: #e4eaf5; color: var(--accent-deep);
   font-size: 10.5px; font-weight: 600; line-height: 16px; font-variant-numeric: tabular-nums; vertical-align: 1px; }
+
+/* ===== #137c (Jerin, 15 Sep 2026 · option B): light shading for the number grids — Momentum · Time in Process · Pipeline · Sourcing Mix =====
+   Drawn ONLY by js/grid-shade.js, as a pass over a table the page already filled — no number, row, column or order changes.
+   Teal = how many (deeper = more) · slate = how long a stage took · amber → rose = how long people have been waiting. */
+.gs-h1 { background:#eaf4f7; color:#1b5f75; }
+.gs-h2 { background:#d3e8ee; color:#17586c; }
+.gs-h3 { background:#b3d6e0; color:#0f4c5e; }
+.gs-h4 { background:#7fb8c9; color:#0b3a48; }
+.gs-h5 { background:#3f8aa0; color:#fff; }
+.gs-hc, .gs-pc { display:inline-grid; place-items:center; min-width:22px; height:20px; padding:0 5px; border-radius:4px; font-weight:600;
+  font-variant-numeric:tabular-nums; }
+th.gs-wkend, td.gs-wkend { background-image:linear-gradient(rgba(15,23,42,.04), rgba(15,23,42,.04)); }
+th.gs-wkedge, td.gs-wkedge { box-shadow:inset 1px 0 0 #c9d3e5; }
+table th.wknd.gs-wkedge { box-shadow:inset 1px 0 0 #c9d3e5, inset 0 -2px 0 rgba(163,50,83,0.38); }   /* keeps the page's weekend underline */
+.gs-dow { display:block; margin-top:1px; font-size:9.5px; font-weight:500; line-height:1.1; letter-spacing:0; text-transform:none; color:#9aa3b8; }
+.gs-dow.is-today { color:#1E7590; font-weight:700; }
+.gs-bar { display:inline-block; height:5px; margin-left:6px; border-radius:3px; background:#9fb3d6; vertical-align:middle; }
+td.tis .tis-med.gs-m { display:inline-block; min-width:30px; padding:1px 6px; border-radius:5px; }
+.gs-m1 { background:#f3f6fa; } .gs-m2 { background:#e6ecf5; } .gs-m3 { background:#d8e1ef; } .gs-m4 { background:#c9d6ea; } .gs-m5 { background:#b6c7e2; }
+td.tis .gs-wait { display:inline-block; margin-top:3px; padding:2px 6px; border-radius:5px; }
+td.tis .gs-wait .tis-wait { color:inherit; }
+.gs-w1 { background:#fff6dc; color:#8a5a00; }
+.gs-w2 { background:#fde2a8; color:#6f4700; }
+.gs-w3 { background:#f3dbe2; color:#9b3f5c; }
+.gs-share { display:inline-flex; align-items:center; justify-content:flex-end; gap:8px; width:100%; min-width:150px; }
+.gs-track { flex:1; max-width:120px; height:7px; border-radius:4px; background:var(--border-light); overflow:hidden; }
+.gs-fill { display:block; height:100%; border-radius:4px; background:#9fb3d6; }
+.gs-share.gs-name .gs-fill { opacity:.55; }
+.gs-share b { min-width:44px; text-align:right; font-weight:600; }

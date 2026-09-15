@@ -2,6 +2,7 @@ import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
+import { shadePipeline } from '../grid-shade.js';   // #137c
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
@@ -929,6 +930,7 @@ export function initHmFilters(data) {
     const hm3Body = document.getElementById('hm3Body');
     hm3Body.innerHTML = html;
     wireTree(hm3Body);
+    shadePipeline(hm3Body);   // #137c
   }
 
   // ===== Sub-tab switching =====
