@@ -43,34 +43,56 @@ async function loadHireLinks_() {
   return null;
 }
 
-// ===== #131 (Jerin, 15 Sep 2026): the opening a person was HIRED into =====
-// Ashby holds two links. The opening named on the OFFER is what the API gives the pipeline (offerEvents.openingId). The opening picked
-// at the Hired step is not in the API at all (#84) — and when the opening was picked there, the offer's box stays empty. On 15 Sep all
-// 40 Q3 joiners reading "Not linked" were really hired into a Filled opening. Ashby's own Openings screen shows that link, so
-// data/hire_links.json is read from it in the browser (recipe: reference_ashby-ui-automation, #131).
-// 🔑 It fills ONLY hires whose offer names no opening — an offer's own opening is never overwritten — matched on candidate + job +
-// start date. Every panel reading offerEvents.openingQuarter then sees the real opening, and those people leave Data Hygiene →
-// Hired Missing Opening Link. A link that matches nothing is kept on data.hireLinks.unused, never guessed onto someone else.
+// ===== #131 / #132 (Jerin, 15 Sep 2026): the opening a person is really tied to =====
+// The opening named on the OFFER is what the API gives the pipeline (offerEvents.openingId). Two more links are not in the API at all
+// (#84): the opening picked at the Hired step — when it is picked there, the offer's box stays empty — and a person tied to an opening
+// before they are hired. Ashby's own Openings screen shows both (hiredApplications / lockedApplications), so data/hire_links.json is read
+// from it in the browser (recipe: reference_ashby-ui-automation, #131). On 15 Sep all 40 Q3 joiners reading "Not linked" were hired into
+// a Filled opening (#131), and one Joining Pending person was tied to an Open one (#132).
+// 🔑 A link fills ONLY a record that names no opening — an offer's own opening is never overwritten:
+//    kind 'hire' → Hired offers, matched on candidate + job + start date; their Hired Missing Opening Link rows go.
+//    kind 'lock' → Joining Pending cases, and a live offer for the same person if there is one, matched on candidate + job; a matching
+//                  live offer leaves Offers Missing Opening Link.
+// Every panel reading openingQuarter / linked then sees the real opening. A link that matches nothing is kept on data.hireLinks.unused,
+// never guessed onto someone else.
 export function applyHireLinks(data, file) {
   const links = (file && file.links) || [];
   data.hireLinks = { generatedAt: (file && file.generatedAt) || null, applied: 0, unused: [] };
   if (!links.length) return;
-  const key = (name, j8, day) => `${String(name || '').trim().toLowerCase()}|${j8 || ''}|${day || ''}`;
-  const byKey = new Map(links.map(l => [key(l.candidate, l.jobId8, l.startDate), l]));
-  const used = new Set();
+  const person = (name, j8) => `${String(name || '').trim().toLowerCase()}|${j8 || ''}`;
+  const hires = new Map(), locks = new Map();
+  links.forEach(l => {
+    if ((l.kind || 'hire') === 'lock') locks.set(person(l.candidate, l.jobId8), l);
+    else hires.set(person(l.candidate, l.jobId8) + '|' + (l.startDate || ''), l);
+  });
+  const used = new Set(), cleared = new Set();
   (data.offerEvents || []).forEach(e => {
-    if (e.openingId || e.appStatus !== 'Hired') return;
-    const k = key(e.candidate, e.jobId8, e.startDate), l = byKey.get(k);
+    if (e.openingId) return;
+    const p = person(e.candidate, e.jobId8);
+    const l = e.appStatus === 'Hired' ? hires.get(p + '|' + (e.startDate || '')) : (e.appStatus === 'Active' ? locks.get(p) : null);
     if (!l) return;
     e.openingId = l.openingId;
     e.openingQuarter = l.openingQuarter;
     if (!e.openingIdAny) { e.openingIdAny = l.openingId; e.openingQuarterAny = l.openingQuarter; }
-    e.openingVia = 'hire';
-    used.add(k);
+    e.openingVia = e.appStatus === 'Hired' ? 'hire' : 'lock';
+    cleared.add(e.appStatus + '|' + p + '|' + (e.appStatus === 'Hired' ? (e.startDate || '') : ''));
+    used.add(l);
     data.hireLinks.applied++;
   });
-  if (data.offerLinkGaps) data.offerLinkGaps = data.offerLinkGaps.filter(g => !(g.appStatus === 'Hired' && used.has(key(g.candidate, g.jobId8, g.doj))));
-  data.hireLinks.unused = links.filter(l => !used.has(key(l.candidate, l.jobId8, l.startDate))).map(l => l.candidate);
+  (data.joiningPendingCases || []).forEach(c => {
+    if (c.linked) return;
+    const l = locks.get(person(c.candidate, c.jobId8));
+    if (!l) return;
+    c.linked = true;
+    c.openingId = l.openingId;
+    c.openingQuarter = l.openingQuarter;
+    c.openingVia = 'lock';
+    used.add(l);
+    data.hireLinks.applied++;
+  });
+  if (data.offerLinkGaps) data.offerLinkGaps = data.offerLinkGaps.filter(g =>
+    !cleared.has(g.appStatus + '|' + person(g.candidate, g.jobId8) + '|' + (g.appStatus === 'Hired' ? (g.doj || '') : '')));
+  data.hireLinks.unused = links.filter(l => !used.has(l)).map(l => l.candidate);
 }
 
 // One row per department + job title + panelist. A key held by a single row keeps that exact row object, so data that

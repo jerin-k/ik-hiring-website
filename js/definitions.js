@@ -69,12 +69,12 @@ export const DEFINITIONS = {
   'hm-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — the people behind the Joining Pending card on <strong>Position Fulfilment</strong>. It is a <strong>live</strong> list: it shows who is in closing today, so the Year, Quarter, From and To filters do not change it. The <strong>Department</strong> and <strong>Job</strong> filters do.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Opening Quarter', 'The quarter of the opening their offer is linked to. It reads <em>Not linked</em> when the offer has no opening attached in Ashby — those offers are listed in <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.'],
+          ['Opening Quarter', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against. It reads <em>Not linked</em> when neither exists — offers in that state are listed in <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.'],
           ['Month and DOJ', 'The candidate’s date of joining, and its month.'],
           ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
           ['Department, Job, Candidate, Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby.'],
@@ -223,13 +223,13 @@ export const DEFINITIONS = {
   'rec-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Every person in closing — <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. A <strong>live</strong> list, so the From and To dates do not change who is on it; the Year and Quarter only decide which pod each recruiter sits in. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
           ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the selected quarter, earliest joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
-          ['Opening Quarter', 'The quarter of the opening the offer is linked to (<em>Not linked</em> when there is none).'],
+          ['Opening Quarter', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against (<em>Not linked</em> when neither exists).'],
           ['Month and DOJ', 'The joining date, and its month.'],
           ['Department and Job', 'The role they are joining.'],
           ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
@@ -456,7 +456,7 @@ export const DEFINITIONS = {
   'eff-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so the Year, Quarter, From and To filters do not change it; the <strong>Department</strong> and <strong>Job</strong> filters do.',
-    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026',
     groups: [
       {
         heading: 'The columns',
@@ -466,7 +466,7 @@ export const DEFINITIONS = {
           ['Department and Job', 'The role they are joining.'],
           ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
           ['Recruiter', 'The Recruiter on their hiring team in Ashby.'],
-          ['Opening', '<em>Linked</em> when an opening is attached to their offer in Ashby. <em>Not linked</em> means that person cannot be tied to a position on Position Fulfilment — those are the ones to fix first.'],
+          ['Opening', '<em>Linked</em> when they are tied to an opening in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against. <em>Not linked</em> means that person cannot be tied to a position on Position Fulfilment — those are the ones to fix first.'],
         ]
       },
     ],
