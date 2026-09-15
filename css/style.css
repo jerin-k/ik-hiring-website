@@ -152,6 +152,43 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .refresh-btn .spin { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ===== #79 (Jerin, 15 Sep 2026): "Ask Ashby AI" — Ashby's own Assistant in a new tab =====
+   "Make it look as fancy as possible": a slowly turning gradient ring, a twinkling sparkle, a light sweep across the pill and a
+   glow on hover — the one piece of colour in the navy bar, so it reads as the AI entry point. Motion stops for anyone whose
+   system asks for reduced motion; below 560px it shrinks to the sparkle alone. */
+@property --ask-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.ask-ashby {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 13px 4px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; letter-spacing: .01em; line-height: 18px;
+  color: #fff; text-decoration: none; white-space: nowrap;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(135deg, #2c4268, #25395b) padding-box,
+    conic-gradient(from var(--ask-angle), #a78bfa, #3996D2, #22d3ee, #f0abfc, #a78bfa) border-box;
+  box-shadow: 0 2px 10px rgba(10, 18, 36, .35);
+  animation: ask-spin 6s linear infinite;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.ask-ashby::after {   /* the light sweep — under the text, over the fill */
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .18) 48%, transparent 66%);
+  transform: translateX(-120%);
+  animation: ask-sweep 4.5s ease-in-out infinite;
+}
+.ask-ashby:hover { transform: translateY(-1px); box-shadow: 0 0 0 3px rgba(167, 139, 250, .20), 0 6px 22px rgba(139, 92, 246, .45); }
+.ask-ashby:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 2px; }
+.ask-ashby .ask-spark { width: 16px; height: 16px; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(196, 181, 253, .75)); animation: ask-twinkle 2.4s ease-in-out infinite; }
+.ask-ashby .ask-label { background: linear-gradient(90deg, #ffffff, #dbe7ff 55%, #eadcff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ask-ashby .ask-arrow { font-size: 11px; color: #c4b5fd; opacity: .6; transition: transform .18s ease, opacity .18s ease; }
+.ask-ashby:hover .ask-arrow { opacity: 1; transform: translate(2px, -2px); }
+@keyframes ask-spin { to { --ask-angle: 360deg; } }
+@keyframes ask-sweep { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@keyframes ask-twinkle { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.15) rotate(14deg); } }
+@media (max-width: 560px) { .ask-ashby .ask-label, .ask-ashby .ask-arrow { display: none; } .ask-ashby { padding: 5px; } }
+@media (prefers-reduced-motion: reduce) { .ask-ashby, .ask-ashby::after, .ask-ashby .ask-spark { animation: none; } }
+
 /* ===== Nav Strip =====
    Two treatments, one shape (Jerin, 2026-08-30). LEVEL 1 (the page) is a SOLID 7px chip; every level below
    it — sub-tabs, and the Data Hygiene lists — is the same 7px chip TINTED. Hierarchy is carried by fill
