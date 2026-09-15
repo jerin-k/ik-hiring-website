@@ -184,7 +184,6 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: POSITION FULFILMENT ===== -->
     <div class="hm-panel" data-panel="positions">
-      ${defsBlock('hm-positions')}
       <div class="cards" id="hm1Cards"></div>
 
       <h3 class="subsection-title">Positions by department</h3>
@@ -196,31 +195,31 @@ export function renderHmReport(data) {
         <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Delta</th><th>Missed</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
+      ${defsBlock('hm-positions')}
     </div>
 
     <!-- ===== PANEL: JOINING PENDING (#130b — was the Cases list under Position Fulfilment) ===== -->
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
-      ${defsBlock('hm-joiningpending')}
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
+      ${defsBlock('hm-joiningpending')}
     </div>
 
     <!-- ===== PANEL: JOINERS (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage ===== -->
     <div class="hm-panel" data-panel="joiners" style="display:none">
-      ${defsBlock('hm-joiners')}
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
       </table></div>
+      ${defsBlock('hm-joiners')}
     </div>
 
     <!-- ===== PANEL: THROUGHPUT ===== -->
     <div class="hm-panel" data-panel="throughput" style="display:none">
-      ${defsBlock('hm-throughput')}
       <div class="tp-controls">
         <div class="ms" id="msHmTpStage"></div>
         <label><input type="checkbox" id="hm2HideEmpty" checked> Hide zero-pipeline</label>
@@ -231,11 +230,11 @@ export function renderHmReport(data) {
         <div class="sheat-head"><h3 class="subsection-title">Throughput — by stage</h3><span class="sheat-hint" id="hm2Hint"></span></div>
         <div id="hm2Heat" class="sheat"></div><div id="hm2HeatTip" class="sheat-tip"></div>
       </div>
+      ${defsBlock('hm-throughput')}
     </div>
 
     <!-- ===== PANEL: PIPELINE ===== -->
     <div class="hm-panel" data-panel="pipeline" style="display:none">
-      ${defsBlock('hm-pipeline')}
       <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — counts show where candidates stand today, not in the selected period. Click a department to drill in.</p>
       <!-- #128 (Jerin, 15 Sep 2026): the same Stages dropdown + Hide zero-pipeline as Throughput (#122), replacing the row of stage tick-boxes. -->
       <div class="tp-controls">
@@ -246,6 +245,7 @@ export function renderHmReport(data) {
         <thead id="hm3Head"></thead>
         <tbody id="hm3Body"></tbody>
       </table></div>
+      ${defsBlock('hm-pipeline')}
     </div>
 
     <!-- ===== PANEL: PANELISTS ===== -->

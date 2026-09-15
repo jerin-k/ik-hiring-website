@@ -129,7 +129,6 @@ export function renderAdmin(accessConfig, data) {
     </div>
 
     <div class="adm-panel" data-apanel="access">
-      ${defsBlock('admin-access')}
       <div class="cfg-card" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
         <div style="font-size:12px;line-height:1.6">
           <div id="acStatus" style="font-weight:700"></div>
@@ -183,12 +182,12 @@ export function renderAdmin(accessConfig, data) {
         </table></div>
       </div>
 
+      ${defsBlock('admin-access')}
     </div><!-- /access panel -->
 
     <div class="adm-panel" data-apanel="metric" style="display:none">
     <div class="admin-section">
       <h3>Metric Configuration</h3>
-      ${defsBlock('admin-metric')}
 
       <div class="cfg-card" id="mcPublishCard" style="background:var(--accent-light);border-color:var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
         <div style="font-size:12px;line-height:1.6">
@@ -238,11 +237,11 @@ export function renderAdmin(accessConfig, data) {
         <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:0 0 6px">Level → Band · Complexity · Leadership override</h4>
         <div id="cfgRefBlock"></div>
       </div>
+      ${defsBlock('admin-metric')}
     </div>
 
     <div class="admin-section">
       <h3>Departments &amp; Teams</h3>
-      ${defsBlock('admin-depts')}
       <p class="sub-note">
         ${Object.keys(DEPT_TREE).length} departments,
         ${Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0)} teams.
@@ -261,6 +260,7 @@ export function renderAdmin(accessConfig, data) {
           </tbody>
         </table>
       </div>
+      ${defsBlock('admin-depts')}
     </div>
     </div><!-- /metric panel -->
   `;

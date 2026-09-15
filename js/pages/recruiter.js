@@ -377,19 +377,18 @@ export function renderRecruiter(data) {
          something else — and the per-day grid is the thing he specified when he defined this panel. Fix the
          look here if it needs fixing; do not swap the day columns for derived metrics again. -->
     <div class="rec-panel" data-panel="velocity" style="display:none">
-      ${defsBlock('rec-momentum')}
       <div class="tofu-heat-wrap" id="recVelHeatWrap"><div id="recVelHeat" class="tofu-heat"></div><div id="recVelHeatTip" class="heat-tip"></div></div>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recVelHead"></thead>
         <tbody id="recVelBody"></tbody>
       </table></div>
+      ${defsBlock('rec-momentum')}
     </div>
 
     <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29 (Jerin). HM Review and Online
          Assessment columns were removed on purpose: this panel is about R1 only, and both still count on
          Momentum through ToFU. See the definitions block for what Added and Cleared mean. -->
     <div class="rec-panel" data-panel="screening" style="display:none">
-      ${defsBlock('rec-screening')}
       <p class="sub-note" id="recScreenPeriod" style="font-weight:600"></p>
       <div class="chart-wrap" style="height:300px"><canvas id="recScreenChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
@@ -403,21 +402,21 @@ export function renderRecruiter(data) {
         </thead>
         <tbody id="recScreenBody"></tbody>
       </table></div>
+      ${defsBlock('rec-screening')}
     </div>
 
     <!-- PANEL: Joining Conversion -->
     <div class="rec-panel" data-panel="joining" style="display:none">
-      ${defsBlock('rec-joining')}
       <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
         <thead><tr><th>Pod / Recruiter</th><th>Offered</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
+      ${defsBlock('rec-joining')}
     </div>
 
     <!-- PANEL: Position Fulfilment -->
     <div class="rec-panel" data-panel="fulfilment">
-      ${defsBlock('rec-fulfilment')}
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
 
@@ -448,11 +447,11 @@ export function renderRecruiter(data) {
         <tbody id="recFulfilOthersBody"></tbody>
       </table></div>
 
+      ${defsBlock('rec-fulfilment')}
     </div>
 
     <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
     <div class="rec-panel" data-panel="joiningpending" style="display:none">
-      ${defsBlock('rec-joiningpending')}
       <p class="sub-note" id="recJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
@@ -461,11 +460,11 @@ export function renderRecruiter(data) {
         </tr></thead>
         <tbody id="recJPBody"></tbody>
       </table></div>
+      ${defsBlock('rec-joiningpending')}
     </div>
 
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage -->
     <div class="rec-panel" data-panel="joiners" style="display:none">
-      ${defsBlock('rec-joiners')}
       <p class="sub-note" id="recJoinersCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
@@ -474,11 +473,11 @@ export function renderRecruiter(data) {
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
       </table></div>
+      ${defsBlock('rec-joiners')}
     </div>
 
     <!-- PANEL: Sourcing Mix -->
     <div class="rec-panel" data-panel="sourcing" style="display:none">
-      ${defsBlock('rec-sourcing')}
       <p class="sub-note" id="recSourcePeriod" style="font-weight:600"></p>
       <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
@@ -486,23 +485,23 @@ export function renderRecruiter(data) {
         <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
+      ${defsBlock('rec-sourcing')}
     </div>
 
     <!-- PANEL: Time in Process (Pod → Recruiter → Job; median days parked per stage, red > 5) -->
     <div class="rec-panel" data-panel="timeinprocess" style="display:none">
-      ${defsBlock('rec-tis')}
       <p class="sub-note" id="recTisNote" style="display:none"></p>
       <div class="scroll-table"><table class="vel-table">
         <thead id="recTisHead"></thead>
         <tbody id="recTisBody"></tbody>
       </table></div>
+      ${defsBlock('rec-tis')}
     </div>
 
     <!-- PANEL: Data Hygiene (LIVE — surfaces data.dataQuality from the attribution pass).
          #13 (Jerin, 14 Sep 2026): a side list (mock-up B1). The five summary boxes and Recruiter Roster were removed; the list
          names, reminders, "why" and "where to fix" live as data in definitions.js (HYGIENE_LISTS). -->
     <div class="rec-panel" data-panel="hygiene" style="display:none">
-      ${defsBlock('rec-hygiene')}
       <div class="hy-split" id="hySplit">
         <aside class="hy-rail">
           <div class="hy-rail-head">
@@ -615,6 +614,7 @@ export function renderRecruiter(data) {
           </div>
         </div>
       </div>
+      ${defsBlock('rec-hygiene')}
     </div>
   `;
 }

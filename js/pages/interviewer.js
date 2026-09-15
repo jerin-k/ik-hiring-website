@@ -100,7 +100,6 @@ export function renderInterviewer(data, opts = {}) {
       <div class="fchip"><label class="opt" style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="ivExpandAll" checked> Expand all</label></div>
     </div>`}
 
-    ${defsBlock('interviewer')}
 
 
     <div class="cards" style="margin-bottom:20px">
@@ -123,7 +122,10 @@ export function renderInterviewer(data, opts = {}) {
         <th>Avg Turnaround<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
       </tr></thead>
       <tbody id="ivBody"></tbody>
-    </table></div>`;
+    </table></div>
+
+    ${defsBlock('interviewer')}
+  `;
 }
 
 // EMBEDDED MODE (2026-08-30). This panel is no longer a tab of its own — it is mounted inside Hiring

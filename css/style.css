@@ -855,21 +855,23 @@ details.defs > summary:focus-visible { outline: 2px solid var(--accent); outline
 
 
 /* ===== Definitions block (js/definitions.js) — plain-English explanation of a section's numbers =====
-   Closed, this is a quiet one-line link, not a banner: an empty full-width uppercase card above the
-   numbers shouts at you every visit for something you read once. The card treatment only appears once
-   it is actually open and has content to hold. */
-details.defs.defs-full { margin: 0 0 14px; }
+   #134 (Jerin, 15 Sep 2026, option A): it sits at the END of its panel, under the last table or chart —
+   a thin rule, then one quiet slate-blue line with an "i". Closed it is a line, never a banner; the white
+   card appears only once it is open. Amber stays for the "Worth knowing" group inside, which flags traps. */
+details.defs.defs-full { margin: 22px 0 0; padding-top: 10px; border-top: 1px solid var(--border); }
 details.defs.defs-full > summary {
-  text-transform: none; letter-spacing: normal; font-size: 11.5px; font-weight: 500;
-  color: var(--orange); padding: 2px 0;
+  text-transform: none; letter-spacing: normal; font-size: 12px; font-weight: 500;
+  color: var(--accent-deep); padding: 2px 0; gap: 7px;
 }
-details.defs.defs-full > summary:hover { color: var(--orange); text-decoration: underline; }
-details.defs.defs-full[open] {
-  border: 1px solid var(--border); border-radius: 6px; background: #fff; margin-bottom: 18px;
-}
-details.defs.defs-full[open] > summary {
-  padding: 9px 12px; border-bottom: 1px solid var(--border-light); width: 100%;
-}
+details.defs.defs-full > summary::before { content: none; }
+details.defs.defs-full > summary:hover { color: var(--accent-deep); }
+details.defs.defs-full > summary:hover .defs-sum-text { text-decoration: underline; text-underline-offset: 3px; }
+.defs-ico { width: 14px; height: 14px; flex: none; color: var(--accent); }
+.defs-chev { width: 12px; height: 12px; flex: none; transition: transform .18s ease; }
+details.defs.defs-full[open] > summary .defs-chev { transform: rotate(180deg); }
+details.defs.defs-full[open] > summary { margin-bottom: 10px; }
+details.defs.defs-full > .defs-body { border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+@media (prefers-reduced-motion: reduce) { .defs-chev { transition: none; } }
 .defs-body { padding: 14px 14px 4px; }
 .defs-intro { font-size: 12.5px; line-height: 1.55; color: var(--muted); margin: 0 0 16px; }
 .defs-group { margin: 0 0 16px; }
