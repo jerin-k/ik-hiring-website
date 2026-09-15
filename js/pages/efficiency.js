@@ -4,6 +4,7 @@ import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
+import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds } from '../period.js';   // #127
 import { scoreForRole } from '../score-model.js';
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -76,9 +77,7 @@ const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => 
 export function renderEfficiency(data) {
   if (!data || !data.funnel) return '<p>No data available.</p>';
 
-  const cy = new Date().getFullYear();
-  const years = [];
-  for (let y = Math.max(cy, 2026); y >= 2026; y--) years.push(y);
+  const years = reportingYears();   // #127c: 2026 onwards; a new year appears on its first day
 
   return `
     <style>
@@ -146,11 +145,9 @@ export function renderEfficiency(data) {
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
       <div class="fchip"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all</label></div>
       <span class="fdiv"></span>
-      <div class="fchip"><span class="lbl">Momentum from</span><input type="date" id="effVelFrom"></div>
-      <div class="fchip"><span class="lbl">Momentum to</span><input type="date" id="effVelTo"></div>
       
       
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates" style="display:none"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates" style="display:none"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>
       </div>
 
     <!-- PANEL: Fulfilment -->
@@ -1074,10 +1071,7 @@ export function initEfficiencyFilters(data) {
     return (per || Object.keys(src)).reduce((acc, qq) => { const v = src[qq]; return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) } : acc; }, { a: 0, b: 0 });
   }
   function tisPeriod() {
-    const ySel = document.getElementById('effYear');
-    // `years` is local to renderEfficiency, so read the fallback year off the rendered select instead.
-    const yrs = ySel ? [...ySel.options].map(o => o.value).filter(Boolean) : [];
-    return periodQuarters(ySel?.value || '', document.getElementById('effQuarter')?.value || '', yrs);
+    return periodQuarters(document.getElementById('effYear')?.value || '', document.getElementById('effQuarter')?.value || '');   // #127c: never before Q3 2026
   }
 
   // Says which stages actually follow the period. Without this the panel would repeat the original bug in a
@@ -1085,7 +1079,7 @@ export function initEfficiencyFilters(data) {
   function tisNote(per) {
     const el = document.getElementById('effTisNote'); if (!el) return;
     if (!per) { el.style.display = 'none'; return; }
-    const label = per.length === 1 ? per[0] : per[0].slice(0, 4);
+    const label = periodText(per);
     el.style.display = '';
     el.style.color = (tisHasQ && tisSplit) ? 'var(--muted)' : 'var(--orange)';
     el.innerHTML = !tisHasQ
@@ -1154,17 +1148,11 @@ export function initEfficiencyFilters(data) {
     return out;
   }
   function applyVelYearQuarter() {
-    const y = document.getElementById('effYear')?.value || '';
-    const q = document.getElementById('effQuarter')?.value || '';
     const fromEl = document.getElementById('effVelFrom'), toEl = document.getElementById('effVelTo');
-    if (!fromEl || !toEl || (!y && !q)) return;
-    const yr = y || String(new Date().getFullYear());
-    if (q) {
-      const qi = parseInt(q.slice(1), 10); const sm = (qi - 1) * 3 + 1; const em = sm + 2;
-      const last = new Date(parseInt(yr, 10), em, 0).getDate();
-      fromEl.value = `${yr}-${String(sm).padStart(2, '0')}-01`;
-      toEl.value = `${yr}-${String(em).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
-    } else { fromEl.value = `${yr}-01-01`; toEl.value = `${yr}-12-31`; }
+    if (!fromEl || !toEl) return;
+    // #127c: the whole selection, never before Q3 2026 (Year and Quarter both on All = every quarter on offer).
+    // #127b: and the pickers cannot leave it — other days are greyed out, and a date typed outside it snaps back.
+    setDateBounds(fromEl, toEl, selectionQuarters(document.getElementById('effYear')?.value || '', document.getElementById('effQuarter')?.value || ''), true);
   }
   function dkeyEff(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   // Pod-level daily submissions (OA/HM/R1), summed across pod members from recruiters[].daily. Dept/Job
@@ -1297,7 +1285,7 @@ export function initEfficiencyFilters(data) {
     // above (Jerin, 2026-08-29: "don't we have the collapsible section to give the definition").
     const per = tisPeriod();   // #120: the whole period, not one quarter
     if (note) note.textContent = per
-      ? `Showing where the people who joined in ${per.length === 1 ? per[0] : (per[0] || '').slice(0, 4)} came from.`
+      ? `Showing where the people who joined in ${periodText(per)} came from.`
       : 'Showing where everyone who has joined came from (all time).';
     if (th) th.textContent = 'Department / Job / Source type / Source name';
     if (warn) {
@@ -1622,6 +1610,7 @@ export function initEfficiencyFilters(data) {
 
   function showTab(name) {
     activeTab = name;
+    document.querySelectorAll('.vel-dates').forEach(c => { c.style.display = name === 'velocity' ? '' : 'none'; });   // #127e: From / To drive Momentum only
     document.querySelectorAll('.eff-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.eff-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActive();
@@ -1643,12 +1632,14 @@ export function initEfficiencyFilters(data) {
   document.getElementById('effTpHideEmpty')?.addEventListener('change', renderThroughput);
 
   ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderVelocity));
-  ['effYear', 'effQuarter'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { applyVelYearQuarter(); renderAll(); }));
-
-  // Default Year+Quarter to current
-  const vy = document.getElementById('effYear'), vq = document.getElementById('effQuarter');
-  if (vy) { const nowY = String(new Date().getFullYear()); vy.value = [...vy.options].some(o => o.value === nowY) ? nowY : (vy.options[1] ? vy.options[1].value : ''); }
-  if (vq) vq.value = 'Q' + (Math.floor(new Date().getMonth() / 3) + 1);
+  document.getElementById('effYear')?.addEventListener('change', () => {
+    fillQuarterSelect(document.getElementById('effQuarter'), document.getElementById('effYear').value, true);   // #127c: only the year's quarters on offer
+    applyVelYearQuarter(); renderAll();
+  });
+  document.getElementById('effQuarter')?.addEventListener('change', () => { applyVelYearQuarter(); renderAll(); });
+  // Default to the current year + quarter — #127d: the newest on offer, so Q4 is picked by itself from 1 Oct.
+  keepDatesInBounds(document.getElementById('effVelFrom'), document.getElementById('effVelTo'));   // #127b
+  selectCurrentQuarter(document.getElementById('effYear'), document.getElementById('effQuarter'), true);
   applyVelYearQuarter();
 
   renderAll();

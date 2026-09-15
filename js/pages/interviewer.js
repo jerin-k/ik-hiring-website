@@ -48,6 +48,7 @@ function allMonthKeys(data) {
 
 import { defsBlock } from '../definitions.js';
 import { HBAR, hbarHeight } from '../chart-style.js';
+import { reportingQuarters, selectionQuarters, quarterSpan, periodText } from '../period.js';   // #127
 
 export function renderInterviewer(data, opts = {}) {
   const ivs = (data && data.interviewers) || [];
@@ -155,34 +156,23 @@ export function initInterviewer(data, opts = {}) {
   // the Year/Quarter boxes, which the dates can drift away from (#120, 14 Sep 2026).
   const rangeOf = () => (F && F.range) ? F.range() : null;
   const qStart = (k) => `${k.slice(0, 4)}-${String((parseInt(k.slice(6), 10) - 1) * 3 + 1).padStart(2, '0')}-01`;
+  // #127: never before Q3 2026 — with no dates at all the period is every quarter on offer, not all time.
   function selQuarters() {
     const rg = rangeOf();
     if (rg) {
-      if (!rg.from && !rg.to) return null;
+      if (!rg.from && !rg.to) return reportingQuarters();
       return qkeys.filter(k => (!rg.from || qStart(k) >= rg.from) && (!rg.to || qStart(k) <= rg.to));
     }
-    const y = sel('ivYear'), q = sel('ivQuarter');
-    if (!y && !q) return null;
-    const yr = y || years[0] || String(new Date().getFullYear());
-    if (q) return [`${yr}-${q}`];
-    return qkeys.filter(k => k.slice(0, 4) === yr);
+    return selectionQuarters(sel('ivYear'), sel('ivQuarter'));
   }
   // Months covered by the same selection; null = all-time (every month present).
   function selMonths() {
     const rg = rangeOf();
-    if (rg) {
-      const lo = (rg.from || '').slice(0, 7), hi = (rg.to || '').slice(0, 7);
-      return mkeys.filter(k => (!lo || k >= lo) && (!hi || k <= hi));
-    }
-    const y = sel('ivYear'), q = sel('ivQuarter');
-    if (!y && !q) return mkeys.slice();
-    const yr = y || years[0] || String(new Date().getFullYear());
-    let ms = mkeys.filter(k => k.slice(0, 4) === yr);
-    if (q) { const qi = parseInt(q.slice(1), 10); const lo = (qi - 1) * 3 + 1, hi = lo + 2;
-      ms = ms.filter(k => { const mm = parseInt(k.slice(5), 10); return mm >= lo && mm <= hi; }); }
-    return ms;
+    const span = rg && (rg.from || rg.to) ? rg : quarterSpan(rg ? reportingQuarters() : selectionQuarters(sel('ivYear'), sel('ivQuarter')));
+    const lo = (span.from || '').slice(0, 7), hi = (span.to || '').slice(0, 7);
+    return mkeys.filter(k => (!lo || k >= lo) && (!hi || k <= hi));
   }
-  function periodLabel(qs) { return !qs ? '' : (qs.length === 1 ? qs[0] : (qs[0] || '').slice(0, 4)); }
+  const periodLabel = periodText;
 
   // Interview count for the selected period. Prefers byMonth (finer), falls back to byQuarter, then lifetime.
   function periodCount(rec, quarters, months) {
