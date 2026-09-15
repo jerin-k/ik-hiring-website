@@ -116,7 +116,7 @@ export const DEFINITIONS = {
           ['Total', 'Every application on the role, archived ones included — so it is bigger than the stage columns added up.'],
           ['What the date filter does do', 'It decides <strong>which roles are listed</strong> — only those with an opening in the selected period — so department and total rows change with it. With Year and Quarter both on <em>All</em>, the period starts on 1 July 2026. Each role’s own counts do not.'],
           ['Rows', 'Department, then the roles inside it. Click to open.'],
-          ['Stage tick-boxes and Hide zero-pipeline', 'The tick-boxes choose which stage columns appear. <em>Hide zero-pipeline</em> drops roles with nobody in them.'],
+          ['Stages and Hide zero-pipeline', 'The <strong>Stages</strong> dropdown chooses which stage columns appear; with nothing picked every stage shows, the same as on Throughput. <em>Hide zero-pipeline</em> drops roles with nobody in the stages shown.'],
         ]
       },
     ],

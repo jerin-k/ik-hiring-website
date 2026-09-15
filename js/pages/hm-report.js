@@ -164,11 +164,6 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:150px; }   /* Dropped + % caption */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:180px; }   /* Delta: track + number + caption */
 
-      /* tidy, evenly spaced stage checkbox strip */
-      .hm-stages { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:2px 0 14px; }
-      .hm-stages > label.stage-toggle { margin-left:auto; color:var(--muted); }
-      .hm-stages > span.lbl { font-size:11px; color:var(--muted); }
-      .hm-stages label { font-size:11px; display:flex; align-items:center; gap:5px; cursor:pointer; }
     </style>
 
     <div class="hm-report">
@@ -239,10 +234,10 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="pipeline" style="display:none">
       ${defsBlock('hm-pipeline')}
       <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — counts show where candidates stand today, not in the selected period. Click a department to drill in.</p>
-      <div class="hm-stages">
-        <span class="lbl">Stages:</span>
-        ${STAGES_ORDER.map(k => `<label><input type="checkbox" class="hm3Stage" value="${k}" checked> ${STAGE_LABELS[k]}</label>`).join('\n        ')}
-        <label class="stage-toggle"><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
+      <!-- #128 (Jerin, 15 Sep 2026): the same Stages dropdown + Hide zero-pipeline as Throughput (#122), replacing the row of stage tick-boxes. -->
+      <div class="tp-controls">
+        <div class="ms" id="msHmPipeStage"></div>
+        <label><input type="checkbox" id="hm3HideEmpty" checked> Hide zero-pipeline</label>
       </div>
       <div class="scroll-table"><table id="hm3Table">
         <thead id="hm3Head"></thead>
@@ -293,7 +288,7 @@ export function initHmFilters(data) {
   // Job-title multi-selects (Positions / Joining Pending / Throughput / Pipeline)
   // #7 (2026-08-22): there used to be FOUR separate Job multi-selects, one per sub-tab, each filtering only
   // its own table. Now a single control in the main filter bar drives every panel and every chart on the tab.
-  let msHmJob = null, msHmPanel = null, msHmTpStage = null;
+  let msHmJob = null, msHmPanel = null, msHmTpStage = null, msHmPipeStage = null;
   const selJobs = () => (msHmJob ? msHmJob.getSelected() : []);
   const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
@@ -825,8 +820,9 @@ export function initHmFilters(data) {
     const deptG = gDept();
     const jobSel = selJobs();
     const hideEmpty = document.getElementById('hm3HideEmpty')?.checked;
-    const visStages = [];
-    document.querySelectorAll('.hm3Stage').forEach(cb => { if (cb.checked) visStages.push(cb.value); });
+    // #128: nothing picked in the Stages dropdown = every stage, as on Throughput.
+    const stPick = msHmPipeStage ? msHmPipeStage.getSelected() : [];
+    const visStages = STAGES_ORDER.filter(k => !stPick.length || stPick.includes(STAGE_LABELS[k]));
 
     // #8 (2026-08-22): the row list was every job that had ever existed, so roles whose opening closed
     // quarters ago kept appearing. The COUNTS here stay live — this panel is a snapshot of where people stand
@@ -936,7 +932,7 @@ export function initHmFilters(data) {
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);
   // Pipeline-local listeners
   document.getElementById('hm3HideEmpty')?.addEventListener('change', renderPipeline);
-  document.querySelectorAll('.hm3Stage').forEach(cb => cb.addEventListener('change', renderPipeline));
+  msHmPipeStage = makeMultiSelect(document.getElementById('msHmPipeStage'), 'Stages', STAGES_ORDER.map(k => STAGE_LABELS[k]), renderPipeline);   // #128
 
   // Default the period to the CURRENT year + quarter — #127d: the newest on offer, so Q4 is picked by itself from 1 Oct.
   keepDatesInBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'));   // #127b
