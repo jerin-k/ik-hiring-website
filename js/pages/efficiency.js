@@ -1,6 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
+import { shadeMomentum, shadeTis, shareBars, colorShareBars } from '../grid-shade.js';   // #137c
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
@@ -1212,6 +1213,7 @@ export function initEfficiencyFilters(data) {
     });
     body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
+    shadeTis(body);   // #137c
     tisNote(per);
   }
 
@@ -1287,6 +1289,7 @@ export function initEfficiencyFilters(data) {
     }
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">Nobody was added in these days on jobs with an opening in the period.</td></tr>`;
     wireTreePath(body, expandAll());
+    shadeMomentum(body, dates);   // #137c
     buildVelChartEff();
   }
 
@@ -1405,6 +1408,7 @@ export function initEfficiencyFilters(data) {
 
     body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Nobody joined under these filters, so there is no source mix to show.</td></tr>`;
     wireTreePath(body, expandAll());
+    shareBars(body, effSrcColorOf);   // #137c: the colours come from buildSourceChart
     buildSourceChart();
   }
 
@@ -1606,6 +1610,8 @@ export function initEfficiencyFilters(data) {
   // type-bar shows only its own sources. Aggregated over exactly the same scope as the table
   // below (visibleSourceAgg), so the chart and the tree can never disagree under a filter.
   const SRC_PALETTE = ['#4E6BA6', '#398AA2', '#1E7590', '#D8B5BE', '#938FB8', '#7BA7C7', '#A9CAD6', '#C4A6B8', '#6B8E9F', '#B5C8D8', '#8FB0A8', '#D0B8A0'];
+  // #137c: the source-name colours the chart used last, read by the Sourcing Mix share bars (var, so it exists before the chart runs).
+  var effSrcColorOf;
   function buildSourceChart() {
     const ctx = document.getElementById('effSourceChart'); if (!ctx) return;
     if (effSourceChart) effSourceChart.destroy();
@@ -1627,6 +1633,9 @@ export function initEfficiencyFilters(data) {
     const topNames = Object.entries(nameTotals).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]);
     const topSet = new Set(topNames);
     const datasets = topNames.map((nm, i) => ({ label: nm, data: typeLabels.map(t => (agg[t] && agg[t][nm]) || 0), backgroundColor: SRC_PALETTE[i % SRC_PALETTE.length], stack: 's', borderWidth: 0, ...HBAR }));
+    // #137c: this chart colours by SOURCE NAME, so the share bars do the same — a name's bar is its colour here, everything else stays slate.
+    effSrcColorOf = (t, nm, kind) => (kind === 'name' && topNames.includes(nm) ? SRC_PALETTE[topNames.indexOf(nm) % SRC_PALETTE.length] : null);
+    colorShareBars(document.getElementById('effSourceBody'), effSrcColorOf);
     const otherData = typeLabels.map(t => Object.entries(agg[t]).reduce((s, [nm, c]) => s + (topSet.has(nm) ? 0 : c), 0));
     // ⚠ Not keyed on the string 'Other': Ashby has a real source NAME of its own that could collide. This
     // bucket is the leftover names beyond the top 12, and is labelled so.
