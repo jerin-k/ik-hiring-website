@@ -88,3 +88,73 @@ export function keepDatesInBounds(fromEl, toEl) {
   if (fromEl) fromEl.addEventListener('change', fix(fromEl, toEl, true), true);
   if (toEl) toEl.addEventListener('change', fix(toEl, fromEl, false), true);
 }
+
+// ===== #129 (Jerin, 15 Sep 2026): the From / To boxes filter EVERY panel =====
+// "If there is a filter applied, data needs to change as well." The pipeline keeps a DAY twin of every quarter store (openings, Goal,
+// drops, interviews, R1, assessed, Time in Process), with day keys from `reportDayFloor` (dashboard.json) / `dayFloor`
+// (stage_rollups.json) on — never earlier than REPORTING_START, so every range a page can offer is covered. A range is
+// { from, to } as YYYY-MM-DD, both ends included, always inside the selected period.
+
+// The range the From / To boxes describe, clamped to the period — an empty box means that edge of the period.
+export function rangeOf(fromEl, toEl, qs) {
+  const s = quarterSpan(qs);
+  let from = (fromEl && fromEl.value) || s.from, to = (toEl && toEl.value) || s.to;
+  if (from < s.from) from = s.from;
+  if (to > s.to) to = s.to;
+  if (from > to) from = to;
+  return { from, to };
+}
+
+export const inRange = (day, r) => !!day && (!r || (day >= r.from && day <= r.to));
+
+// Plain name for what is on screen: the period's own name when the range covers it, else the dates — "1 Aug – 31 Aug 2026".
+const MON_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayText = (d, withYear) => `${+d.slice(8, 10)} ${MON_ABBR[+d.slice(5, 7) - 1]}${withYear ? ' ' + d.slice(0, 4) : ''}`;
+export function rangeText(r, qs) {
+  if (!r || coversQuarters(r, qs)) return periodText(qs);
+  return `${dayText(r.from, r.from.slice(0, 4) !== r.to.slice(0, 4))} – ${dayText(r.to, true)}`;
+}
+export const quarterOfDay = (d) => (d && d.length >= 7) ? `${d.slice(0, 4)}-Q${Math.floor((+d.slice(5, 7) - 1) / 3) + 1}` : null;
+
+// Does the range touch this quarter at all? A quarter counts when ANY of its days is inside — keeping only quarters whose FIRST day is
+// inside (the old rule) dropped Q3 the moment From moved to 15 Aug.
+export function rangeTouchesQuarter(q, r) {
+  if (!r) return true;
+  const s = quarterSpan([q]);
+  return s.from <= r.to && s.to >= r.from;
+}
+
+// Does the range cover every day of these quarters? Then the day sums equal the quarter figures (#129 control 1).
+export function coversQuarters(r, qs) {
+  if (!r) return true;
+  const s = quarterSpan(qs);
+  return r.from <= s.from && r.to >= s.to;
+}
+
+// Whole days of quarter q, and of q inside the range. Capacity for part of a quarter is scaled by these (Jerin: 1A).
+const dayNum = (d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000;
+export function quarterDays(q) { const s = quarterSpan([q]); return dayNum(s.to) - dayNum(s.from) + 1; }
+export function quarterDaysIn(q, r) {
+  const s = quarterSpan([q]);
+  if (!r) return quarterDays(q);
+  const a = s.from > r.from ? s.from : r.from, b = s.to < r.to ? s.to : r.to;
+  return b < a ? 0 : dayNum(b) - dayNum(a) + 1;
+}
+
+// {day: n} → n added up over the range.
+export function sumDayCount(map, r) {
+  let n = 0;
+  for (const d in (map || {})) if (inRange(d, r)) n += map[d] || 0;
+  return n;
+}
+// {day: {field: n}} → {field: n} added up over the range.
+export function sumDayFields(map, r) {
+  const out = {};
+  for (const d in (map || {})) if (inRange(d, r)) { const v = map[d]; for (const f in v) out[f] = (out[f] || 0) + (v[f] || 0); }
+  return out;
+}
+
+// Does this data file carry the day twins? A file from before 15 Sep does not — callers then keep the quarter figures for a range that
+// covers whole quarters and show an empty cell + a note for anything narrower (Rule 4: never swap the time basis silently).
+export const hasDayData = (data) => !!(data && data.reportDayFloor);
+export const hasDayRollups = (rollups) => !!(rollups && rollups.dayFloor);

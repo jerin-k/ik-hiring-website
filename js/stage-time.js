@@ -78,6 +78,21 @@ export function tisHist(store, storeQ, key, stage, quarters) {
   return (store && store[key] && store[key][stage]) || {};
 }
 
+// #129 (15 Sep 2026): the same histogram for a From / To range. storeD = {key:{stage:{day:{days:count}}}} keys each dwell sample by
+// the DAY the candidate entered the stage (the date the quarter key is cut from), so a whole quarter's days pool to exactly that
+// quarter's histogram.
+export function tisHistRange(storeD, key, stage, range) {
+  const byD = storeD && storeD[key] && storeD[key][stage];
+  if (!byD) return {};
+  const out = {};
+  for (const d in byD) if (d >= range.from && d <= range.to) mergeHist(out, byD[d]);
+  return out;
+}
+export function tisPairRange(storeD, waitStoreD, key, stage, range, split) {
+  const fin = tisHistRange(storeD, key, stage, range);
+  return split ? { fin, wait: tisHistRange(waitStoreD, key, stage, range) } : { fin, wait: null };
+}
+
 // App Review dwell is "today − applied date for everyone CURRENTLY parked there" — a live snapshot with no
 // historical dimension, so it cannot be quarter-scoped at all. Panels mark the column and say this rather
 // than letting a live number sit unlabelled beside quarter-scoped ones.
