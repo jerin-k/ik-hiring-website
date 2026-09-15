@@ -26,8 +26,9 @@ export function initTableSorting() {
       const aCell = a.cells[colIdx];
       const bCell = b.cells[colIdx];
       if (!aCell || !bCell) return 0;
-      const aVal = aCell.textContent.replace(/[,%—]/g, '').trim();
-      const bVal = bCell.textContent.replace(/[,%—]/g, '').trim();
+      // #137: a cell may carry its sort value in data-sv — a date drawn as "17 Sep · Thu · in 2 days" still sorts by the date.
+      const aVal = (aCell.dataset.sv ?? aCell.textContent).replace(/[,%—]/g, '').trim();
+      const bVal = (bCell.dataset.sv ?? bCell.textContent).replace(/[,%—]/g, '').trim();
       const aNum = parseFloat(aVal);
       const bNum = parseFloat(bVal);
       if (!isNaN(aNum) && !isNaN(bNum)) return asc ? aNum - bNum : bNum - aNum;
