@@ -1,0 +1,408 @@
+{
+ "schema": 1,
+ "generatedAt": "2026-09-15T08:38:10Z",
+ "source": "Ashby Openings screen: the person hired into each opening (read in Jerin's browser; the public API cannot see this link). #131",
+ "scope": "Hires whose offer names no opening, offer made or joining on/after 2026-07-01",
+ "links": [
+  {
+   "candidate": "Pradeepthi J",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-01",
+   "openingId": "d3c3bf6a-7c43-420a-9faa-954e6e113f76",
+   "openingQuarter": "2026-Q2",
+   "opening": "GH-2173-197-0",
+   "openedAt": "2026-06-01"
+  },
+  {
+   "candidate": "Rashmi Singh",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-13",
+   "openingId": "1562278a-7609-4b3e-bbe4-91786575f322",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2195-198-0",
+   "openedAt": "2026-07-13"
+  },
+  {
+   "candidate": "Manal Zaidi",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-13",
+   "openingId": "140ccaaf-8a91-47c5-93c8-2b9bd5310514",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2193-198-0",
+   "openedAt": "2026-07-13"
+  },
+  {
+   "candidate": "Arzoo .",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-13",
+   "openingId": "1263b33d-759b-400c-bba3-6d4494c07d8d",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2196-198-0",
+   "openedAt": "2026-07-13"
+  },
+  {
+   "candidate": "Anant Shukla",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-13",
+   "openingId": "7dc8eca1-83aa-45d9-a1ab-fac35630f08f",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2194-198-0",
+   "openedAt": "2026-07-13"
+  },
+  {
+   "candidate": "Rudolph Gaye",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-13",
+   "openingId": "943535a5-3754-42f0-b4ea-be8b2844ac95",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2192-198-0",
+   "openedAt": "2026-07-13"
+  },
+  {
+   "candidate": "Afreen Ghazali Isaf",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-13",
+   "openingId": "949d7f30-6b4e-4b8f-8af1-d854489dbe05",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2191-198-0",
+   "openedAt": "2026-07-13"
+  },
+  {
+   "candidate": "Leenita Joseph Albert",
+   "jobId8": "e8867563",
+   "job": "Intern, Talent Acquisition",
+   "startDate": "2026-07-13",
+   "openingId": "fdde9c2f-5dbb-4983-b00d-0184eddaadae",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2198-105-0",
+   "openedAt": "2026-07-14"
+  },
+  {
+   "candidate": "Tim Chowdary",
+   "jobId8": "60a32504",
+   "job": "SME India : FDE",
+   "startDate": "2026-07-15",
+   "openingId": "8afa2ba8-017d-4d9d-9496-14e1f36ceda7",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2187-398-398-1",
+   "openedAt": "2026-07-07"
+  },
+  {
+   "candidate": "Saren Subramanian",
+   "jobId8": "19982198",
+   "job": "SDET 2",
+   "startDate": "2026-07-22",
+   "openingId": "433bdba1-6225-4a2d-8382-f0aebee38243",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2176-347-988",
+   "openedAt": "2026-07-03"
+  },
+  {
+   "candidate": "Zeeshan Niyaz Shah",
+   "jobId8": "9783f817",
+   "job": "Customer Success Associate (US)",
+   "startDate": "2026-07-15",
+   "openingId": "c1654358-964a-437f-89b5-fc6ef164350c",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-88",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "Archi Srivastava",
+   "jobId8": "9783f817",
+   "job": "Customer Success Associate (US)",
+   "startDate": "2026-07-15",
+   "openingId": "7eee53a5-6c38-4bec-b586-7484f8e0c6c4",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2190-61-2026 07",
+   "openedAt": "2026-07-10"
+  },
+  {
+   "candidate": "Praveetha A",
+   "jobId8": "e8867563",
+   "job": "Intern, Talent Acquisition",
+   "startDate": "2026-07-22",
+   "openingId": "7f700046-88c1-4070-9213-2bf6662542ef",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2175-105-200",
+   "openedAt": "2026-07-02"
+  },
+  {
+   "candidate": "Meena Rajendran",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "ef0f90be-f49e-49b0-b1c2-93e0681e9a2a",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--46",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Nikita Kaul",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "19823453-a486-4e6b-90e3-75089a595d46",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--48",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Naveen Sureshbabu",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "54154d0c-c4b8-4baa-a6ee-559acfe481b3",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-93",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "S Pruthvi",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "b552981f-c4ee-4af4-93c9-b6c48c121577",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--53",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Shreya Pasari",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "2d3df2ba-68a6-4ad3-b59b-f88dbd21082c",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-91",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "P Srinath",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "e8823806-28ca-4edb-8bd6-4054f7c0d476",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-92",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "Ajay Vedani",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "1cf26f1e-bbe5-409f-969b-05b726cf2488",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--50",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Aamir Hamza Khan",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "1652116b-9a7d-4ada-9bc2-e3bf617fa687",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--51",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Shirish Gupta",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "61728bf8-da52-4476-918e-1022565f1364",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--47",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Tanya Chhabra",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "d1af6ae3-4590-4a5e-8896-42afed612a75",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--52",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Rohan Singh",
+   "jobId8": "60a32504",
+   "job": "SME India : FDE",
+   "startDate": "2026-07-27",
+   "openingId": "1445f512-d412-47f4-995f-33516a107e31",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2179-398-398-9",
+   "openedAt": "2026-07-07"
+  },
+  {
+   "candidate": "Ashray BK",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "9504f791-ac1d-44b0-966d-291048ef89a0",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-94",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "Shilpa Madhusudhanan",
+   "jobId8": "22fcd2e7",
+   "job": "Program Advisor - US (AI Programs)",
+   "startDate": "2026-07-29",
+   "openingId": "7777dfcd-edaf-4fd7-aa3d-e8858f393351",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--49",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Namandeep Singh",
+   "jobId8": "60a32504",
+   "job": "SME India : FDE",
+   "startDate": "2026-07-27",
+   "openingId": "866531b5-3937-41f5-b96e-077a0d3a36dc",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-2178-398-398-10",
+   "openedAt": "2026-07-01"
+  },
+  {
+   "candidate": "Kevin Shen",
+   "jobId8": "3c1dbb02",
+   "job": "Part Time Instructor - Agentic AI (US)",
+   "startDate": "2026-07-24",
+   "openingId": "6d29f478-9b18-4f13-8308-e90cc91f529d",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-87",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "Shakir James",
+   "jobId8": "3c1dbb02",
+   "job": "Part Time Instructor - Agentic AI (US)",
+   "startDate": "2026-07-27",
+   "openingId": "614d3786-c798-4a0c-934a-7c67dc99ec06",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-154",
+   "openedAt": "2026-07-17"
+  },
+  {
+   "candidate": "Nishant Sondhi",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "567620a3-7ad5-4897-b6b8-9fbcb64ea720",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--36",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Syed Ibrahim M S",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "9050ea33-2cb4-4d83-b701-c02d647278dc",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--37",
+   "openedAt": "2026-07-29"
+  },
+  {
+   "candidate": "Sanskriti Kumari",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "1747a87c-751b-4bf4-b0b5-127d6bbd023b",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--45",
+   "openedAt": "2026-07-30"
+  },
+  {
+   "candidate": "Mritunjay Kumar Pandey",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "56b16e18-ba1d-4205-a6e3-a15250e11613",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--44",
+   "openedAt": "2026-07-30"
+  },
+  {
+   "candidate": "Biswajit Biswas",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "c9bc2735-3913-4777-a083-cb6a3e8db915",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--43",
+   "openedAt": "2026-07-30"
+  },
+  {
+   "candidate": "Aashish Kumar Dubey",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "9c19ed5a-6965-414f-870d-d28a8b083484",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--42",
+   "openedAt": "2026-07-30"
+  },
+  {
+   "candidate": "Pratik Kumar Dev",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "820b2c8a-9a14-4627-9be2-07f94760e5c0",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening--41",
+   "openedAt": "2026-07-30"
+  },
+  {
+   "candidate": "Nanditha S",
+   "jobId8": "092e9d9b",
+   "job": "Program Advisor - India",
+   "startDate": "2026-07-29",
+   "openingId": "3203f12a-59ce-45a2-8919-3708e03b5d30",
+   "openingQuarter": "2026-Q3",
+   "opening": "GH-1225-197-197-24",
+   "openedAt": "2026-07-01"
+  },
+  {
+   "candidate": "Sarthak Kumar",
+   "jobId8": "df29da2f",
+   "job": "Program Advisor (Pre sales)",
+   "startDate": "2026-07-29",
+   "openingId": "84e2f683-acdd-4d98-85c9-2eb2707201f6",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-90",
+   "openedAt": "2026-08-07"
+  },
+  {
+   "candidate": "Viswanadharao Hima Satya Sree",
+   "jobId8": "df29da2f",
+   "job": "Program Advisor (Pre sales)",
+   "startDate": "2026-07-29",
+   "openingId": "29b96c45-8a7c-4be7-b5f1-5319185a8358",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-30",
+   "openedAt": "2026-07-20"
+  },
+  {
+   "candidate": "Abu Marcose",
+   "jobId8": "3c1dbb02",
+   "job": "Part Time Instructor - Agentic AI (US)",
+   "startDate": "2026-07-28",
+   "openingId": "23cd0309-d177-493d-beb6-1241b3a06132",
+   "openingQuarter": "2026-Q3",
+   "opening": "IK-Opening-153",
+   "openedAt": "2026-07-09"
+  }
+ ]
+}

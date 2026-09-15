@@ -2,6 +2,8 @@ const LIVE_DATA_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-websi
 const LOCAL_DATA_URL = '/data/dashboard.json';
 const LIVE_ROLLUPS_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/stage_rollups.json';
 const LOCAL_ROLLUPS_URL = '/data/stage_rollups.json';
+const LIVE_HIRE_LINKS_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/hire_links.json';   // #131
+const LOCAL_HIRE_LINKS_URL = '/data/hire_links.json';
 
 let dashboardData = null;
 
@@ -21,6 +23,8 @@ export async function loadDashboardData() {
   // which is what a department scope narrows.
   dashboardData.panelistRows = dashboardData.panelists || [];
   dashboardData.panelists = mergePanelists(dashboardData.panelistRows);
+  // #131: before anything reads offerEvents, give hires whose offer names no opening the opening they were hired into.
+  applyHireLinks(dashboardData, await loadHireLinks_());
   // Stage-history rollups (true daily velocity + reached/cleared throughput). Best-effort — the UI
   // degrades gracefully to the snapshot approximation if this file isn't present yet.
   dashboardData.stageRollups = await loadStageRollups_();
@@ -31,6 +35,42 @@ async function loadStageRollups_() {
   try { const r = await fetch(LIVE_ROLLUPS_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   try { const r = await fetch(LOCAL_ROLLUPS_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   return null;
+}
+
+async function loadHireLinks_() {
+  try { const r = await fetch(LIVE_HIRE_LINKS_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
+  try { const r = await fetch(LOCAL_HIRE_LINKS_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
+  return null;
+}
+
+// ===== #131 (Jerin, 15 Sep 2026): the opening a person was HIRED into =====
+// Ashby holds two links. The opening named on the OFFER is what the API gives the pipeline (offerEvents.openingId). The opening picked
+// at the Hired step is not in the API at all (#84) — and when the opening was picked there, the offer's box stays empty. On 15 Sep all
+// 40 Q3 joiners reading "Not linked" were really hired into a Filled opening. Ashby's own Openings screen shows that link, so
+// data/hire_links.json is read from it in the browser (recipe: reference_ashby-ui-automation, #131).
+// 🔑 It fills ONLY hires whose offer names no opening — an offer's own opening is never overwritten — matched on candidate + job +
+// start date. Every panel reading offerEvents.openingQuarter then sees the real opening, and those people leave Data Hygiene →
+// Hired Missing Opening Link. A link that matches nothing is kept on data.hireLinks.unused, never guessed onto someone else.
+export function applyHireLinks(data, file) {
+  const links = (file && file.links) || [];
+  data.hireLinks = { generatedAt: (file && file.generatedAt) || null, applied: 0, unused: [] };
+  if (!links.length) return;
+  const key = (name, j8, day) => `${String(name || '').trim().toLowerCase()}|${j8 || ''}|${day || ''}`;
+  const byKey = new Map(links.map(l => [key(l.candidate, l.jobId8, l.startDate), l]));
+  const used = new Set();
+  (data.offerEvents || []).forEach(e => {
+    if (e.openingId || e.appStatus !== 'Hired') return;
+    const k = key(e.candidate, e.jobId8, e.startDate), l = byKey.get(k);
+    if (!l) return;
+    e.openingId = l.openingId;
+    e.openingQuarter = l.openingQuarter;
+    if (!e.openingIdAny) { e.openingIdAny = l.openingId; e.openingQuarterAny = l.openingQuarter; }
+    e.openingVia = 'hire';
+    used.add(k);
+    data.hireLinks.applied++;
+  });
+  if (data.offerLinkGaps) data.offerLinkGaps = data.offerLinkGaps.filter(g => !(g.appStatus === 'Hired' && used.has(key(g.candidate, g.jobId8, g.doj))));
+  data.hireLinks.unused = links.filter(l => !used.has(key(l.candidate, l.jobId8, l.startDate))).map(l => l.candidate);
 }
 
 // One row per department + job title + panelist. A key held by a single row keeps that exact row object, so data that
