@@ -1669,14 +1669,14 @@ export function initRecruiterFilters(baseData) {
   // Scores come from the job's Level/Complexity, looked up by title (the cases carry no score inputs).
   //   Non-Sales  A = Current Qtr   : everyone MINUS those linked to an opening from an earlier quarter
   //              B = Upcoming Qtr  : linked to a CURRENT-quarter opening, but starting NEXT quarter
-  //   Sales      A = Prev Qtr Openings    : linked to a PREVIOUS-quarter opening, starting THIS quarter
-  //              B = Current Qtr Openings : everyone MINUS those whose start date fell in the previous quarter
+  //   Sales      A = Prev Qtr Openings    : linked to an opening from an EARLIER quarter, whatever the joining date
+  //              B = Current Qtr Openings : everyone MINUS A
   // 🚨 Only 25 of 166 cases carry an opening link at all, so every rule that needs one can only judge those
   // 25; the other 141 fall through to the "everyone minus..." bucket. Openings were first attached on
   // 2026-07-25, so these splits fill in as that process matures rather than being wrong today.
   function jpMaps(q, isSales) {
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const prevQ = qShift(q, -1), nextQ = qShift(q, 1);
+    const nextQ = qShift(q, 1);
     const meta = {};
     (data.jobs || []).forEach(j => { if (j.title && !meta[j.title]) meta[j.title] = j; });
     const bucketA = {}, bucketB = {};
@@ -1694,10 +1694,12 @@ export function initRecruiterFilters(baseData) {
       const bump = (mR, mJ) => addCredit(mR, mJ, jt, rec, c.sourcer, c.department, sc);
       // #27 (Jerin, 2026-08-24) — the settled definitions, one line each. Do not re-derive them.
       if (isSales) {
-        // A: the opening was raised LAST quarter and the candidate joins THIS quarter (carried over).
+        // A: the opening was raised in an EARLIER quarter, whatever the joining date — the same test as Joined — Prev Qtr Openings.
+        //    #126 (Jerin, 15 Sep 2026): it used to demand exactly LAST quarter AND a joining date THIS quarter, so a person on an older
+        //    opening, or joining later, was filed under Current Qtr Openings.
         // B: everyone else in closing — i.e. the whole population MINUS A, so A + B is the total.
         // ⚠ B used to test `dq !== prevQ`, which is a different question entirely and read 85 of 153.
-        if (oq === prevQ && dq === q) bump(bucketA, bucketAJ);
+        if (oq && oq < q) bump(bucketA, bucketAJ);
         else bump(bucketB, bucketBJ);
       } else {
         // A: everyone except those sitting on an EARLIER quarter's opening (the HM card rule), MINUS anyone
@@ -2035,7 +2037,17 @@ export function initRecruiterFilters(baseData) {
     const FLOOR = floor || '2026-07-01';
     const FLOOR_LONG = (() => { const [y, m, d] = FLOOR.split('-').map(Number); return `${d} ${MON[m - 1]} ${y}`; })();
     const waitRow = cols => `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:16px">This list starts on ${FLOOR_LONG} from the next data refresh.</td></tr>`;
-    const unassigned = floor ? (dq.unassigned || []) : [];
+    // #126 (Jerin, 15 Sep 2026): everyone in Joining Pending with no Recruiter tagged is listed too, whatever their dates — the Recruiter
+    // tables cannot credit them, and nothing else puts them in front of the team. Anyone the pipeline already listed is not repeated.
+    const listedU = new Set((dq.unassigned || []).map(u => (u.job8 || '') + '|' + String(u.candidate || '').trim().toLowerCase()));
+    const jpNoRec = floor ? (data.joiningPendingCases || [])
+      .filter(c => (!c.recruiter || c.recruiter === 'Unassigned')
+        && !listedU.has((c.jobId8 || '') + '|' + String(c.candidate || '').trim().toLowerCase()))
+      .map(c => ({ candidate: c.candidate, department: c.department, job8: c.jobId8, jobTitle: c.job || c.jobTitle,
+                   stage: c.subStage ? `${c.subStage} · Joining Pending` : 'Joining Pending', createdAt: '', lastActivity: '', applicationId: '' }))
+      : [];
+    const unassigned = floor ? (dq.unassigned || []).concat(jpNoRec) : [];
+    const unassignedTotal = floor ? (dq.unassignedSinceFloor != null ? dq.unassignedSinceFloor : (dq.unassigned || []).length) + jpNoRec.length : null;
     const multiRec = floor ? (dq.multiRecruiter || []) : [];
     const multiSrc = floor ? (dq.multiSourcer || []) : [];
     const byLast = (a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || ''));
@@ -2067,7 +2079,7 @@ export function initRecruiterFilters(baseData) {
             });
           });
         });
-        const total = dq.unassignedSinceFloor != null ? dq.unassignedSinceFloor : unassigned.length;
+        const total = unassignedTotal;
         if (html && total > unassigned.length) html += `<tr><td colspan="5" style="color:var(--muted);font-size:11px">Showing the ${unassigned.length.toLocaleString()} with the most recent activity, of ${total.toLocaleString()}. The CSV holds the same rows.</td></tr>`;
         uBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Nobody unassigned since ${FLOOR_LONG}. ✓</td></tr>`;
         wireVelTree(uBody);
@@ -2294,7 +2306,7 @@ export function initRecruiterFilters(baseData) {
     // --- the side list: counts, date scopes, then draw ---
     const sinceFloor = (key, rows) => floor ? (dq[key] != null ? dq[key] : rows.length) : null;
     hygCounts = {
-      unassigned: sinceFloor('unassignedSinceFloor', unassigned),
+      unassigned: unassignedTotal,   // #126: includes Joining Pending people with no Recruiter
       multirec: sinceFloor('multiRecruiterSinceFloor', multiRec),
       multisrc: sinceFloor('multiSourcerSinceFloor', multiSrc),
       nosrc: noSrc.length,
