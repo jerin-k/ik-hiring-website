@@ -2,7 +2,7 @@ import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
-         rangeOf, inRange, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData } from '../period.js';   // #127 · #129
+         rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData } from '../period.js';   // #127 · #129 · #130
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat } from '../chart-style.js';
@@ -170,7 +170,10 @@ export function renderHmReport(data) {
     <div class="hm-report">
     <!-- ===== GLOBAL PAGE FILTERS ===== -->
     <div class="hm-subtabs subtab-band">
-      <button class="hm-subtab subtab-chip active" data-tab="positions">Positions</button>
+      <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
+      <button class="hm-subtab subtab-chip active" data-tab="positions">Position Fulfilment</button>
+      <button class="hm-subtab subtab-chip" data-tab="joiningpending">Joining Pending</button>
+      <button class="hm-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
       <button class="hm-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
@@ -186,7 +189,7 @@ export function renderHmReport(data) {
       <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
     <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span></div>
 
-    <!-- ===== PANEL: POSITIONS ===== -->
+    <!-- ===== PANEL: POSITION FULFILMENT ===== -->
     <div class="hm-panel" data-panel="positions">
       ${defsBlock('hm-positions')}
       <div class="cards" id="hm1Cards"></div>
@@ -200,8 +203,11 @@ export function renderHmReport(data) {
         <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Delta</th><th>Missed</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
+    </div>
 
-      <h3 class="subsection-title">Joining Pending — Cases</h3>
+    <!-- ===== PANEL: JOINING PENDING (#130b — was the Cases list under Position Fulfilment) ===== -->
+    <div class="hm-panel" data-panel="joiningpending" style="display:none">
+      ${defsBlock('hm-joiningpending')}
       <div class="filter-bar">
         <select id="hmJPMonth"><option value="">All DOJ Months</option>${jpMonths.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
         <span style="font-size:11px;color:var(--muted)">DOJ</span>
@@ -213,6 +219,16 @@ export function renderHmReport(data) {
       <div class="scroll-table"><table>
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- ===== PANEL: JOINERS (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage ===== -->
+    <div class="hm-panel" data-panel="joiners" style="display:none">
+      ${defsBlock('hm-joiners')}
+      <p class="sub-note" id="hmJoinCaption" style="margin-bottom:8px"></p>
+      <div class="scroll-table"><table>
+        <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Recruiter</th></tr></thead>
+        <tbody id="hmJoinBody"></tbody>
       </table></div>
     </div>
 
@@ -834,6 +850,42 @@ export function initHmFilters(data) {
     </tr>`).join('');
   }
 
+  // ===== #130c (Jerin, 15 Sep 2026): Joiners — one row per PERSON moved to Hired =====
+  // The same test as every people-based Joined on the site (accepted offer AND moved to Hired), dated by START date inside From / To.
+  // No earlier-quarter subtraction — like the Joining Pending list, it shows everyone and the Opening Quarter column says which is which.
+  // 🚨 People, not positions: it will not equal the Joined column on Position Fulfilment, which counts positions filled (Rule 1).
+  function renderJoiners() {
+    const body = document.getElementById('hmJoinBody');
+    if (!body) return;
+    const deptG = gDept(), jobSel = selJobs(), rg = hmRange();
+    const list = (data.offerEvents || [])
+      .filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg))
+      .map(e => ({ ...e, _dept: deptOf(e.department || '') }))
+      .filter(e => !(deptG && e._dept !== deptG) && !(jobSel.length && !jobSel.includes(e.jobTitle)));
+    const capEl = document.getElementById('hmJoinCaption');
+    if (capEl) {
+      const unlinked = list.filter(e => !e.openingQuarter).length;
+      capEl.innerHTML = list.length
+        ? `<strong>${list.length}</strong> joined, ${rangeText(rg, hmQuarters())}.` + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
+    if (!list.length) {
+      body.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody joined between these dates for this filter.</td></tr>`;
+      return;
+    }
+    // Most recent joining date first.
+    list.sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
+    body.innerHTML = list.map(e => `<tr>
+      <td>${e.openingQuarter || '<span style="color:var(--red);font-size:11px">Not linked</span>'}</td>
+      <td>${monthOf(e.startDate)}</td>
+      <td>${e.startDate}</td>
+      <td style="font-weight:500">${e._dept || ''}</td>
+      <td style="max-width:280px">${e.jobTitle || ''}</td>
+      <td style="font-weight:500">${e.candidate || ''}</td>
+      <td>${e.recruiter || '—'}</td>
+    </tr>`).join('');
+  }
+
   // ===== Section 3: Current Pipeline (Department -> Job tree) =====
   function renderPipeline() {
     const deptG = gDept();
@@ -914,7 +966,9 @@ export function initHmFilters(data) {
   // so we (re)render the active panel on tab switch and on any global filter change.
   let activeTab = 'positions';
   function renderActive() {
-    if (activeTab === 'positions') { renderSection1(); renderJoiningPending(); }
+    if (activeTab === 'positions') renderSection1();
+    else if (activeTab === 'joiningpending') renderJoiningPending();   // #130b
+    else if (activeTab === 'joiners') renderJoiners();                 // #130c
     else if (activeTab === 'throughput') renderThroughput();
     else if (activeTab === 'pipeline') renderPipeline();
     else if (activeTab === 'panelists') renderPanelist();

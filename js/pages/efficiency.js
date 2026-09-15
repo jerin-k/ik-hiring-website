@@ -137,7 +137,10 @@ export function renderEfficiency(data) {
 
 
     <div class="eff-subtabs subtab-band">
-      <button class="eff-subtab subtab-chip active" data-tab="fulfilment">Fulfilment</button>
+      <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
+      <button class="eff-subtab subtab-chip active" data-tab="fulfilment">Position Fulfilment</button>
+      <button class="eff-subtab subtab-chip" data-tab="joiningpending">Joining Pending</button>
+      <button class="eff-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
       <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
@@ -157,7 +160,7 @@ export function renderEfficiency(data) {
     <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>
       </div>
 
-    <!-- PANEL: Fulfilment -->
+    <!-- PANEL: Position Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
       ${defsBlock('eff-fulfilment')}
       <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Positions by department</h4>
@@ -170,11 +173,25 @@ export function renderEfficiency(data) {
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
+    </div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:22px 0 6px">Joining Pending — Cases</h4>
+    <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
+    <div class="eff-panel" data-panel="joiningpending" style="display:none">
+      ${defsBlock('eff-joiningpending')}
+      <p class="sub-note" id="effJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-stage: Hired is one stage -->
+    <div class="eff-panel" data-panel="joiners" style="display:none">
+      ${defsBlock('eff-joiners')}
+      <p class="sub-note" id="effJoinersCaption" style="margin-bottom:8px"></p>
+      <div class="scroll-table"><table>
+        <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Recruiter</th><th>Opening</th></tr></thead>
+        <tbody id="effJoinersBody"></tbody>
       </table></div>
     </div>
 
@@ -535,7 +552,6 @@ export function initEfficiencyFilters(data) {
     const per = tisPeriod();   // #126: the whole period, like the Hiring Manager tab (null = every quarter on record)
     fulfilTable(per);
     renderFulfilCharts(per);
-    renderFulfilJP();
   }
 
   // Per-job position split for the quarter, from the openings model:
@@ -735,6 +751,39 @@ export function initEfficiencyFilters(data) {
       <td style="max-width:260px">${c.job || DASH}</td><td>${c.subStage || DASH}</td><td>${c.recruiter || DASH}</td>
       <td>${c.linked ? '<span style="color:var(--green)">Linked</span>' : '<span style="color:var(--orange);font-weight:600">Not linked</span>'}</td></tr>`).join('')
       : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No offers in play under these filters.</td></tr>`;
+    // #130b: on its own sub-tab now, so it says it is live — the dates above it do not apply.
+    const cap = document.getElementById('effJPCaption');
+    if (cap) {
+      const unlinked = rows.filter(c => !c.linked).length;
+      cap.innerHTML = rows.length
+        ? `<strong>${rows.length}</strong> in closing, <strong>live</strong> — the dates do not apply.` + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
+  }
+
+  // #130c (Jerin, 15 Sep 2026): Joiners — one row per PERSON moved to Hired (an accepted offer alone does not count), dated by START date
+  // inside From / To. No earlier-quarter subtraction, so it matches Sourcing Mix's joiner count; the Opening column shows who is unlinked.
+  // 🚨 People, not positions: it will not equal Joined on Position Fulfilment, which counts positions filled (Rule 1).
+  function renderJoiners() {
+    const body = document.getElementById('effJoinersBody'); if (!body) return;   // ⚠ not effJoinBody — Joining Conversion owns that id
+    const dsel = selDepts(), jsel = selJobs(), rg = effRange();
+    const rows = (data.offerEvents || [])
+      .filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg))
+      .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
+      .filter(e => !jsel.length || jsel.includes(e.jobTitle))
+      .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
+    body.innerHTML = rows.length ? rows.map(e => `<tr>
+      <td>${e.startDate}</td><td style="font-weight:500">${e.candidate || DASH}</td><td>${e.department || DASH}</td>
+      <td style="max-width:260px">${e.jobTitle || DASH}</td><td>${e.recruiter || DASH}</td>
+      <td>${e.openingId ? '<span style="color:var(--green)">Linked</span>' : '<span style="color:var(--orange);font-weight:600">Not linked</span>'}</td></tr>`).join('')
+      : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody joined between these dates under these filters.</td></tr>`;
+    const cap = document.getElementById('effJoinersCaption');
+    if (cap) {
+      const unlinked = rows.filter(e => !e.openingId).length;
+      cap.innerHTML = rows.length
+        ? `<strong>${rows.length}</strong> joined, ${rangeText(rg, tisPeriod())}.` + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
   }
 
   // Screening Added(reached)/Cleared(left)/% for HM / OA / R1. LIVE Pod→Dept→Job from throughputByJob when
@@ -1602,6 +1651,8 @@ export function initEfficiencyFilters(data) {
 
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
+    else if (activeTab === 'joiningpending') renderFulfilJP();   // #130b
+    else if (activeTab === 'joiners') renderJoiners();           // #130c
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
     else if (activeTab === 'throughput') renderThroughput();   // its chart is built inside renderThroughput

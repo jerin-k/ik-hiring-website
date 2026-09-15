@@ -347,7 +347,10 @@ export function renderRecruiter(data) {
     </style>
 
     <div class="rec-subtabs subtab-band">
-      <button class="rec-subtab subtab-chip active" data-tab="fulfilment">Fulfilment</button>
+      <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
+      <button class="rec-subtab subtab-chip active" data-tab="fulfilment">Position Fulfilment</button>
+      <button class="rec-subtab subtab-chip" data-tab="joiningpending">Joining Pending</button>
+      <button class="rec-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="rec-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="rec-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
       <button class="rec-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
@@ -417,7 +420,7 @@ export function renderRecruiter(data) {
       <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
 
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Fulfilment — Non-Sales</h4>
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Position Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
           <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Current Qtr</th><th colspan="2" class="stage-hdr">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
@@ -426,7 +429,7 @@ export function renderRecruiter(data) {
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Sales (Hires)</h4>
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Position Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
           <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
@@ -435,7 +438,7 @@ export function renderRecruiter(data) {
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Fulfilment — Others (Hires)</h4>
+      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Position Fulfilment — Others (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
           <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
@@ -444,7 +447,11 @@ export function renderRecruiter(data) {
         <tbody id="recFulfilOthersBody"></tbody>
       </table></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:22px 0 6px">Joining Pending — Cases</h4>
+    </div>
+
+    <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
+    <div class="rec-panel" data-panel="joiningpending" style="display:none">
+      ${defsBlock('rec-joiningpending')}
       <p class="sub-note" id="recJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
@@ -452,6 +459,19 @@ export function renderRecruiter(data) {
           <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Sub-Stage</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage -->
+    <div class="rec-panel" data-panel="joiners" style="display:none">
+      ${defsBlock('rec-joiners')}
+      <p class="sub-note" id="recJoinersCaption" style="margin-bottom:8px"></p>
+      <div class="scroll-table"><table class="metrics">
+        <thead><tr>
+          <th style="min-width:240px">Pod / Recruiter / Candidate</th>
+          <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th>
+        </tr></thead>
+        <tbody id="recJoinersBody"></tbody>
       </table></div>
     </div>
 
@@ -1498,16 +1518,17 @@ export function initRecruiterFilters(baseData) {
     const othersBody = document.getElementById('recFulfilOthersBody');
     if (othersBody) { othersBody.innerHTML = fulfilRows(othersGroups, 'hire'); wireVelTree(othersBody); }
 
-    // ===== #20 (2026-08-23): Joining Pending — Cases, Pod → Recruiter → Candidate =====
-    // Same population and same columns as the Hiring Manager cases table, re-cut by who owns the candidate
+    // ===== #20 (2026-08-23): Joining Pending — Pod → Recruiter → Candidate =====
+    // Same population and same columns as the Hiring Manager Joining Pending list, re-cut by who owns the candidate
     // rather than which department the role sits in. It is a LIVE list: everyone currently parked in Ref
     // Check, Documentation or Offer, so the quarter selector does not apply to it (the caption says so).
     // Only recruiters visible under the current filters appear, so it stays in step with the tables above.
-    const jpBody = document.getElementById('recJPBody');
-    if (jpBody) {
+    // #130 (Jerin, 15 Sep 2026): both people lists sit on their own sub-tabs now — Joining Pending and the new Joiners — and ONE tree
+    // draws both, so they group, reconcile and explain their last group the same way. `rest` = the columns after the first.
+    function peopleTree(cases, { rest, cells, isLinked, sortBy }) {
       const q2 = selQuarter();
       const byRec = {}, noRec = [];
-      (data.joiningPendingCases || []).forEach(c => {
+      cases.forEach(c => {
         const rec = c.recruiter;
         if (!rec || rec === 'Unassigned') { noRec.push(c); return; }
         (byRec[rec] || (byRec[rec] = [])).push(c);
@@ -1516,11 +1537,11 @@ export function initRecruiterFilters(baseData) {
       const roster = {}; allRecs.forEach(r => { if (r.name) roster[r.name] = r; });
       // ⚠ Do NOT call this group "Unassigned" — that is also a POD name, and naming it that made the table
       // read as though the no-pod exclusion had been reversed (Jerin, 2026-08-24).
-      // #26 (2026-08-24): everyone in closing has to land somewhere, or this table quietly disagrees with the
-      // JP figures in the tables above it. Two populations were falling off the bottom: cases with NO
-      // recruiter tagged, and cases sitting with a recruiter who was not here this quarter (always hidden since
-      // #121). Both now sit in their own group so the list reconciles to the full case count.
-      // ⚠ Cases hidden by an explicit Pod / Recruiter / Job selection are NOT swept in here — the user asked
+      // #26 (2026-08-24): everyone in the list has to land somewhere, or it quietly disagrees with the
+      // figures in the tables it explains. Two populations were falling off the bottom: people with NO
+      // recruiter tagged, and people sitting with a recruiter who was not here this quarter (always hidden since
+      // #121). Both now sit in their own group so the list reconciles to the full count.
+      // ⚠ People hidden by an explicit Pod / Recruiter / Job selection are NOT swept in here — the user asked
       // for those to be filtered out, and re-adding them under an "unassigned" label would be a lie.
       const orphanBy = {};
       Object.entries(byRec).forEach(([rec, list]) => {
@@ -1538,19 +1559,13 @@ export function initRecruiterFilters(baseData) {
         return 'not shown above';
       };
 
-      let html = '', shown = 0, unlinked = 0, orphanCount = 0;
-      const byDoj = (a, b) => String(a.doj || '').localeCompare(String(b.doj || ''));
+      let html = '', shown = 0, unlinked = 0;
       const cnt = (n, extra) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${extra ? extra + ' · ' : ''}${n}</span>`;
       const candRow = (c, path) => {
-        shown++; if (!c.linked) unlinked++;
-        const oq = c.openingQuarter
-          ? c.openingQuarter
-          : '<span style="color:var(--orange);font-size:11px">Not linked</span>';
+        shown++; if (!isLinked(c)) unlinked++;
         return `<tr data-path="${path}" style="display:none">
           <td style="padding-left:52px">${c.candidate || DASH}</td>
-          <td>${oq}</td><td>${monthLabel(c.doj)}</td><td>${c.doj || DASH}</td>
-          <td>${c.department || DASH}</td><td style="max-width:260px">${c.job || c.jobTitle || DASH}</td>
-          <td>${c.subStage || DASH}</td></tr>`;
+          ${cells(c)}</tr>`;
       };
       groups.forEach((G, pi) => {
         const mine = G.recs.filter(r => visible.has(r.name) && (byRec[r.name] || []).length);
@@ -1558,46 +1573,84 @@ export function initRecruiterFilters(baseData) {
         const podCount = mine.reduce((n, r) => n + byRec[r.name].length, 0);
         html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${G.pod}${cnt(podCount)}</td>
-          <td colspan="6" style="color:var(--muted)">${mine.length} recruiter${mine.length === 1 ? '' : 's'}</td></tr>`;
+          <td colspan="${rest}" style="color:var(--muted)">${mine.length} recruiter${mine.length === 1 ? '' : 's'}</td></tr>`;
         mine.forEach((r, ri) => {
-          const list = byRec[r.name].slice().sort(byDoj);
+          const list = byRec[r.name].slice().sort(sortBy);
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${cnt(list.length)}</td>
-            <td colspan="6"></td></tr>`;
+            <td colspan="${rest}"></td></tr>`;
           list.forEach((c, ci) => { html += candRow(c, `${pi}-${ri}-${ci}`); });
         });
       });
       const oi = groups.length;
       const orphanNames = Object.keys(orphanBy).sort();
-      orphanCount = noRec.length + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
+      const orphanCount = noRec.length + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
       if (orphanCount) {
         html += `<tr data-path="${oi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}No recruiter in this view${cnt(orphanCount)}</td>
-          <td colspan="6"></td></tr>`;
+          <td colspan="${rest}"></td></tr>`;
         let ri = 0;
         if (noRec.length) {
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}No recruiter tagged${cnt(noRec.length)}</td><td colspan="6" style="color:var(--orange);font-size:11px">Fix in Ashby: tag a Recruiter on the hiring team.</td></tr>`;
-          noRec.slice().sort(byDoj).forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
+            <td style="padding-left:26px;font-weight:500">${CARET}No recruiter tagged${cnt(noRec.length)}</td><td colspan="${rest}" style="color:var(--orange);font-size:11px">Fix in Ashby: tag a Recruiter on the hiring team.</td></tr>`;
+          noRec.slice().sort(sortBy).forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
           ri++;
         }
         orphanNames.forEach(nm => {
-          const list = orphanBy[nm].slice().sort(byDoj);
+          const list = orphanBy[nm].slice().sort(sortBy);
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${nm}${cnt(list.length, orphanWhy(nm))}</td><td colspan="6"></td></tr>`;
+            <td style="padding-left:26px;font-weight:500">${CARET}${nm}${cnt(list.length, orphanWhy(nm))}</td><td colspan="${rest}"></td></tr>`;
           list.forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
           ri++;
         });
       }
-      jpBody.innerHTML = html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody in closing under these filters.</td></tr>`;
+      return { html, shown, unlinked, orphanCount };
+    }
+    const NOT_LINKED = '<span style="color:var(--orange);font-size:11px">Not linked</span>';
+
+    const jpBody = document.getElementById('recJPBody');
+    if (jpBody) {
+      const jp = peopleTree(data.joiningPendingCases || [], {
+        rest: 6,
+        isLinked: c => c.linked,
+        sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
+        cells: c => `<td>${c.openingQuarter || NOT_LINKED}</td><td>${monthLabel(c.doj)}</td><td>${c.doj || DASH}</td>
+          <td>${c.department || DASH}</td><td style="max-width:260px">${c.job || c.jobTitle || DASH}</td>
+          <td>${c.subStage || DASH}</td>`
+      });
+      jpBody.innerHTML = jp.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody in closing under these filters.</td></tr>`;
       // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
       // knows about .lvl-pod / .lvl-rec rows — so nothing here expanded at all and only the pod headers showed.
       wireTreePath(jpBody);
       const cap = document.getElementById('recJPCaption');
-      if (cap) cap.innerHTML = shown
-        ? `<strong>${shown}</strong> in closing, <strong>live</strong> — the quarter selector does not apply.`
-          + (orphanCount ? ` <strong>${orphanCount}</strong> sit in the last group.` : '')
-          + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+      if (cap) cap.innerHTML = jp.shown
+        ? `<strong>${jp.shown}</strong> in closing, <strong>live</strong> — the quarter selector does not apply.`
+          + (jp.orphanCount ? ` <strong>${jp.orphanCount}</strong> sit in the last group.` : '')
+          + (jp.unlinked ? ` <strong>${jp.unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
+
+    // ===== #130c (Jerin, 15 Sep 2026): Joiners — everyone moved to Hired who started inside From / To =====
+    // The same Joined test as every people-based figure on this tab (an accepted offer AND moved to Hired), with NO earlier-quarter
+    // subtraction — like Sourcing Mix — so a recruiter can list more people here than Joined on the Non-Sales table; the Opening
+    // Quarter column shows who. The head stays with the recruiter: a sourced joiner is listed once, under their Recruiter.
+    const joinersBody = document.getElementById('recJoinersBody');
+    if (joinersBody) {
+      const rgJ = selRange();
+      const jn = peopleTree((data.offerEvents || []).filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rgJ)), {
+        rest: 5,
+        isLinked: e => !!e.openingId,
+        sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
+        cells: e => `<td>${e.openingQuarter || NOT_LINKED}</td><td>${monthLabel(e.startDate)}</td><td>${e.startDate || DASH}</td>
+          <td>${e.department || DASH}</td><td style="max-width:260px">${e.jobTitle || DASH}</td>`
+      });
+      joinersBody.innerHTML = jn.html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody joined between these dates under these filters.</td></tr>`;
+      wireTreePath(joinersBody);
+      const capJ = document.getElementById('recJoinersCaption');
+      if (capJ) capJ.innerHTML = jn.shown
+        ? `<strong>${jn.shown}</strong> joined, ${rangeText(rgJ, [selQuarter()])}.`
+          + (jn.orphanCount ? ` <strong>${jn.orphanCount}</strong> sit in the last group.` : '')
+          + (jn.unlinked ? ` <strong>${jn.unlinked}</strong> have no opening attached.` : '')
         : '';
     }
 
