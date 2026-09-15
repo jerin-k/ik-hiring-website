@@ -695,7 +695,7 @@ export function initHmFilters(data) {
     }
 
     // ===== ONE section, both dimensions (#122, Jerin 15 Sep 2026 — option C1) =====
-    // Department down the side, stage across the top, and each department opens into its JOB rows, drawn in violet.
+    // Department down the side, stage across the top, and each department opens into its JOB rows, drawn in their own colour (apricot since #136).
     // It replaces the squares-plus-table pair: the table repeated the squares' figures in a second colour code (shaded
     // by % passed where the squares shade by people lost), with its own key and no heading of its own.
     // 🚨 The stage cells must NEVER be added up. One person passing R1, R2 and R3 appears in all three, so a

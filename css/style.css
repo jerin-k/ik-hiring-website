@@ -920,7 +920,9 @@ details.defs.defs-full > .defs-body { border: 1px solid var(--border); border-ra
    HTML rather than canvas: it is a grid of numbers, and the hover needs to show more than one line.
    🎨 #122 (Jerin, 15 Sep 2026 — option C1): the grid IS the section now. The Department/Job table under it showed the
    same figures a second time in a second colour code, so it was removed: a department row opens into its job rows
-   here, job squares are violet (JOB_STEPS in buildStageHeat), and the heading lives inside the box. */
+   here, job squares have their own colour (JOB_STEPS in buildStageHeat — soft apricot since #136), and the heading lives
+   inside the box. #136 (Jerin, 15 Sep 2026 — option C): each DEPARTMENT row sits on a darker slate band, so it reads like a
+   heading over its jobs. */
 .sheat-wrap { position: relative; margin: 0 0 18px; overflow-x: auto;
   background: #eef3fa; border-radius: 12px; padding: 16px 18px 12px; }
 .sheat { display: block; min-width: 100%; }
@@ -951,13 +953,16 @@ details.defs.defs-full > .defs-body { border: 1px solid var(--border); border-ra
 .sheat-tip .tip-row { display: flex; justify-content: space-between; gap: 14px; line-height: 1.6; }
 .sheat-tip .tip-row span:last-child { font-weight: 600; }
 .sheat-dept.has-kids .sheat-name { cursor: pointer; }
+.sheat-dept { background: #d8e1ee; border-radius: 8px; margin-inline: -6px; padding: 4px 6px; }
+.sheat-dept .sheat-caret { background: #c6d3e7; }
+.sheat-dept .sheat-caret:hover { background: #b5c6e0; }
 .sheat-caret { appearance: none; border: 0; padding: 0; font-family: inherit; flex: none; width: 22px; height: 22px;
   border-radius: 6px; background: #dde6f3; color: var(--navy-sub); font-size: 11px; line-height: 1; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; }
 .sheat-caret:hover { background: #cad8ee; }
 .sheat-caret-sp { width: 22px; flex: none; }
 .sheat-cnt { font-size: 11px; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
-.sheat-job .sheat-name { font-size: 12px; color: #463b7d; padding-left: 34px; }
+.sheat-job .sheat-name { font-size: 12px; color: #7a4a2a; padding-left: 34px; }
 .sheat-job .sheat-cell, .sheat-job .sheat-ov { height: 40px; }
 .sheat-job .sheat-cell .sh-pct { font-size: 12px; }
 .sheat-job:not([hidden]) + .sheat-row:not(.sheat-job) { margin-top: 10px; }
@@ -979,7 +984,7 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 
 /* Stage-heat legend (2026-08-30) — the squares are shaded by PEOPLE LOST, not by throughput %,
    so the colour needs saying out loud. The number inside the square is still the percentage.
-   #122 (15 Sep 2026): two strips once job rows exist — Departments (blue) and Jobs (violet), on the same five steps. */
+   #122 (15 Sep 2026): two strips once job rows exist — Departments (blue) and Jobs (soft apricot since #136), on the same five steps. */
 .sheat-legend { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 14px 0 2px;
   padding-left: 2px; font-size: 11px; color: #475569; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
 .sheat-legend .lg-title { font-weight: 600; color: var(--text-secondary); letter-spacing: 0; }

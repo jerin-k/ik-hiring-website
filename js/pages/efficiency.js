@@ -870,7 +870,7 @@ export function initEfficiencyFilters(data) {
       const v = abOf(spanQ[jid], spanD[jid]);   // #129
       return { a: acc.a + v.a, b: acc.b + v.b };
     }, { a: 0, b: 0 });
-    // #122 (Jerin, 15 Sep 2026 — option C1): each department row carries its JOB rows, drawn in violet, and the
+    // #122 (Jerin, 15 Sep 2026 — option C1): each department row carries its JOB rows, drawn in their own colour (apricot since #136), and the
     // Department / Job table that repeated these figures underneath is gone. Hide zero-pipeline drops jobs and
     // departments with no movement in the period (the squares always dropped empty departments).
     const hideEmpty = !!document.getElementById('effTpHideEmpty')?.checked;

@@ -471,17 +471,22 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
   // ⚠ Every pairing above clears 4.5:1. The old ramp did not: it flipped the label to white at t > 0.55
   // while the teal there was still light, so 17 of 60 live squares sat under 4.5:1 and 8 under 3:1 — the
   // worst at 2.5:1. Re-check the contrast if these hexes are ever touched.
-  // 🎨 #122 (Jerin, 15 Sep 2026 — option C1): JOB rows use the same five steps in VIOLET, so a job reads as a job at a
-  // glance. Most job squares lose 0–9 people, so the palest step is TINTED here (a department's is white) and every job
-  // square carries a hairline edge — without both, the violet would barely show. Every pair clears 4.5:1.
+  // 🎨 #122 (Jerin, 15 Sep 2026 — option C1) gave JOB rows their own five steps so a job reads as a job at a glance.
+  // #136 (Jerin, 15 Sep 2026 — option C): the job hue is a soft APRICOT, lighter than the department blue at every step
+  // ("another color instead of the violet/purple … pastel but lighter compared to the blue of the department"). Most job
+  // squares lose 0–9 people, so the palest step is TINTED and every job square carries a hairline edge. Dark text on
+  // every step; every pair clears 4.5:1.
   const JOB_STEPS = [
-    { max: 9, bg: '#ebe7f6', fg: '#0f172a' },
-    { max: 29, bg: '#bdb5dd', fg: '#0f172a' },
-    { max: 49, bg: '#a197cc', fg: '#0f172a' },
-    { max: 99, bg: '#6b5fa6', fg: '#ffffff' },
-    { max: Infinity, bg: '#463b7d', fg: '#ffffff' }
+    { max: 9, bg: '#fdf3ea', fg: '#0f172a' },
+    { max: 29, bg: '#f9dfc6', fg: '#0f172a' },
+    { max: 49, bg: '#f3c9a2', fg: '#0f172a' },
+    { max: 99, bg: '#eab07f', fg: '#0f172a' },
+    { max: Infinity, bg: '#df955e', fg: '#0f172a' }
   ];
-  const JOB_EDGE = '#c9c1e5';
+  const JOB_EDGE = '#efd2b6';
+  // #136: a DEPARTMENT row sits on a darker slate band (.sheat-dept in style.css), so its white 0–9 squares carry a thin
+  // edge to still read as squares on it.
+  const DEPT_EDGE = '#cbd5e1';
   const shade = (lost, steps) => (lost == null ? { bg: 'transparent', fg: '#94a3b8' } : steps.find(s => lost <= s.max));
   const lostOf = (c) => (c && !c.noRate && c.inN > 0) ? Math.max(0, c.inN - c.outN) : null;
   const band = (v) => v == null ? '#94a3b8' : (v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568'));
@@ -509,7 +514,8 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     // "nobody got this far".
     const term = !!(c && c.noRate && c.inN > 0);
     const s = term ? { bg: '#e6ebf0', fg: '#475569' } : shade(v == null ? null : lostOf(c), isJob ? JOB_STEPS : LOSS_STEPS);
-    const edge = isJob && (v != null || term) ? `;box-shadow:inset 0 0 0 1px ${JOB_EDGE}` : '';
+    const edgeCol = (v != null || term) ? (isJob ? JOB_EDGE : (s.bg === '#ffffff' ? DEPT_EDGE : null)) : null;
+    const edge = edgeCol ? `;box-shadow:inset 0 0 0 1px ${edgeCol}` : '';
     return `<div class="sheat-cell${v == null && !term ? ' none' : ''}" style="background:${s.bg};color:${s.fg}${edge}"`
       + ` data-k="${key}" data-c="${ci}">`
       + (term ? `<span class="sh-flow">${c.inN} assessed</span><span class="sh-pct">\u2014</span>`
@@ -547,8 +553,8 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
         i === 0 ? '0\u20139' : i === steps.length - 1 ? '100+' : (steps[i - 1].max + 1) + '\u2013' + st.max}</span>`).join('')
     + '</div>';
   html += '<div class="sheat-legend"><span class="lg-title">People lost at the stage</span><div class="lg-rows">'
-    + strip(LOSS_STEPS, anyKids ? 'Departments' : '', '#cbd5e1') + (anyKids ? strip(JOB_STEPS, 'Jobs', JOB_EDGE) : '')
-    + '</div><span class="sheat-legend-note">\u00b7 nobody assessed at that stage</span></div>';
+    + strip(LOSS_STEPS, anyKids ? 'Departments' : '', DEPT_EDGE) + (anyKids ? strip(JOB_STEPS, 'Jobs', JOB_EDGE) : '')
+    + '</div><span class="sheat-legend-note">\u00b7 nobody assessed at that stage' + (anyKids ? ' \u00b7 department rows sit on the darker band' : '') + '</span></div>';
   host.innerHTML = html;
 
   // Open or close a department's jobs — its arrow or its name.
