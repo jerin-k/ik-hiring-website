@@ -151,7 +151,7 @@ export function renderEfficiency(data) {
       
       
     <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div></span>
-      <p class="sub-note" id="effQtrNote" style="display:none;color:var(--orange);flex-basis:100%;margin:2px 0 0"></p></div>
+      </div>
 
     <!-- PANEL: Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
@@ -289,7 +289,7 @@ export function initEfficiencyFilters(data) {
 
   const expandAll = () => !!document.getElementById('effExpandAll')?.checked;
 
-  // ONE quarter, for what only exists per quarter here: Fulfilment and Joining Conversion.
+  // ONE quarter, for the job trees the activity panels hang their period data off.
   // 🚨 #120 (14 Sep 2026): this fell through to TODAY's quarter whenever EITHER dropdown read "All", so Year: All with
   // Q1 showed Q3 figures under a Q1 filter (the Recruiter tab was fixed the same way earlier). Resolve the year
   // instead, and fall back to the current quarter only when no quarter is picked at all.
@@ -302,6 +302,15 @@ export function initEfficiencyFilters(data) {
   function selQuarter() {
     const q = document.getElementById('effQuarter')?.value;
     return q ? qKey(selYear(), q) : currentQuarter();
+  }
+  // #126 (Jerin, 15 Sep 2026): Fulfilment and Joining Conversion follow the WHOLE period (tisPeriod), the way the Hiring Manager tab
+  // does — with Quarter on All they add up every quarter of the selected year, and with Year and Quarter both on All every quarter on
+  // record (period null). "An earlier quarter's opening" means one raised before the period starts, and each quarter's positions score
+  // at that quarter's points. This is the one quarter a period's job rows are scored at — the points shown beside a role, and Joining
+  // Pending, which is live: the current quarter when the period holds it, otherwise the period's last quarter.
+  function scoreQOf(per) {
+    const cur = currentQuarter();
+    return !per || per.includes(cur) ? cur : per[per.length - 1];
   }
 
   // Recruiters mapped to a pod for the selected quarter — used only for the live capacity sums.
@@ -327,7 +336,8 @@ export function initEfficiencyFilters(data) {
         const jid = ((bj.jobId || '').slice(0, 8)) || (m.title || '?');
         const P = tree[pod] || (tree[pod] = { depts: {} });
         const D = P.depts[dept] || (P.depts[dept] = { jobs: {} });
-        const J = D.jobs[jid] || (D.jobs[jid] = { jid: jid, title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: scoreForRole(m, q) });
+        const J = D.jobs[jid] || (D.jobs[jid] = { jid: jid, title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: scoreForRole(m, q),
+          rawDept: m.department, rawTitle: m.title });   // #126: what scoreOf() needs to price the role in another quarter
         J.total += bj.total || 0; J.offer += bj.offer || 0; J.hired += bj.hired || 0;
       });
     });
@@ -353,9 +363,13 @@ export function initEfficiencyFilters(data) {
   // a pod via the recruiters who worked it, so a job worked from two pods was SPLIT across them. Every job
   // belongs to exactly one department, so flattening pods away removes the split entirely — department
   // totals become clean sums over jobs. Pods live on in Recruiter Efficiency, where they mean something.
-  let _dtQ = null, _dt = null;
-  function deptTree(q) {
-    if (_dtQ === q && _dt) return _dt;
+  // #126: seedPer = the quarters whose opening-only jobs are seeded below (undefined = just q; null = every quarter on record), so a
+  // whole-period Fulfilment gets a row for a role whose only positions were opened in another quarter of the period.
+  let _dtKey = null, _dt = null;
+  function deptTree(q, seedPer) {
+    const seeds = seedPer === undefined ? [q] : seedPer;
+    const cacheKey = q + '|' + (seeds ? seeds.join(',') : '*');
+    if (_dtKey === cacheKey && _dt) return _dt;
     const tree = getTree(q);
     const byDept = {};
     Object.values(tree).forEach(P => Object.entries(P.depts).forEach(([dept, D]) => {
@@ -367,7 +381,7 @@ export function initEfficiencyFilters(data) {
         // instead of collapsing into an anonymous "(untitled)" row nobody can act on.
         const known = j.title && j.title !== '(untitled)';
         const title = known ? j.title : `Unknown job (${j.jid}) — not in Ashby's job list`;
-        const e = T[j.jid] || (T[j.jid] = { jid: j.jid, title, unknown: !known, dept, level: j.level, complexity: j.complexity, score: j.score, total: 0, offer: 0, hired: 0 });
+        const e = T[j.jid] || (T[j.jid] = { jid: j.jid, title, unknown: !known, dept, level: j.level, complexity: j.complexity, score: j.score, rawDept: j.rawDept, rawTitle: j.rawTitle, total: 0, offer: 0, hired: 0 });
         e.total += j.total || 0; e.offer += j.offer || 0; e.hired += j.hired || 0;
       });
     }));
@@ -382,8 +396,8 @@ export function initEfficiencyFilters(data) {
     Object.values(byDept).forEach(T => Object.keys(T).forEach(jid => seen.add(jid)));
     Object.entries(data.openingBuckets || {}).forEach(([jid, b]) => {
       if (seen.has(jid)) return;
-      const qq = b.quarters && b.quarters[q];
-      if (!qq || !(qq.total > 0)) return;
+      const bq = b.quarters || {};
+      if (!(seeds || Object.keys(bq)).some(qq => bq[qq] && bq[qq].total > 0)) return;
       const raw = b.department || '';
       const dept = (raw && resolveDeptTeam(raw).dept) || 'Unknown';
       const known = !!b.title;
@@ -392,11 +406,11 @@ export function initEfficiencyFilters(data) {
         jid, dept, openingOnly: true, unknown: !known,
         title: known ? b.title : `Unknown job (${jid}) — not in Ashby's job list`,
         level: undefined, complexity: undefined,
-        score: scoreForRole({ department: raw, title: b.title }, q),
+        score: scoreForRole({ department: raw, title: b.title }, q), rawDept: raw, rawTitle: b.title,
         total: 0, offer: 0, hired: 0
       };
     });
-    _dtQ = q; _dt = byDept;
+    _dtKey = cacheKey; _dt = byDept;
     return byDept;
   }
 
@@ -415,14 +429,14 @@ export function initEfficiencyFilters(data) {
   // [{dept, jobs:[...]}] honouring the Department/Job multi-selects, sorted by department load.
   // withOpeningOnly adds the jobs that exist only as openings (no candidate activity in scope). Fulfilment
   // needs them to reach its true position count; every other sub-tab would just gain permanently empty rows.
-  function deptJobs(q, withOpeningOnly, openedInPeriod) {
+  function deptJobs(q, withOpeningOnly, openedInPeriod, seedPer) {
     const dsel = selDepts(), jsel = selJobs();
     // #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter". Momentum, Screening
     // Efficiency, Throughput and Time in Process pass openedInPeriod: only jobs with an opening OPENED in the Year/Quarter period.
     // Fulfilment, Joining Conversion and Sourcing Mix do not. Year and Quarter both on All ⇒ every job.
     const perO = openedInPeriod ? tisPeriod() : null;
     const openIds = perO ? jobsWithOpeningIn(data, qq => perO.includes(qq)) : null;
-    const t = deptTree(q);
+    const t = deptTree(q, seedPer);
     const out = [];
     Object.keys(t).forEach(dept => {
       if (dsel.length && !dsel.includes(dept)) return;
@@ -514,10 +528,10 @@ export function initEfficiencyFilters(data) {
   }
 
   function renderFulfilment() {
-    const q = selQuarter();
-    fulfilTable(q);
-    renderFulfilCharts(q);
-    renderFulfilJP(q);
+    const per = tisPeriod();   // #126: the whole period, like the Hiring Manager tab (null = every quarter on record)
+    fulfilTable(per);
+    renderFulfilCharts(per);
+    renderFulfilJP();
   }
 
   // Per-job position split for the quarter, from the openings model:
@@ -537,34 +551,51 @@ export function initEfficiencyFilters(data) {
   // Gap below is allowed to come out negative.
   const qOfDate = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
   const dkey = (d) => resolveDeptTeam(d || '').dept || d || 'Unknown';
-  function peopleMaps(q) {
+  // #126: per = the period's quarters (null = every quarter on record). Joining Pending leaves out openings from before the period
+  // STARTS — the Hiring Manager card's rule — and each drop keeps its quarter so its Score is priced at that quarter's points.
+  function peopleMaps(per) {
+    const startQ = per ? per[0] : null;
     const jp = {}, drop = {};
-    const add = (m, k) => { m[k] = (m[k] || 0) + 1; };
     (data.joiningPendingCases || []).forEach(c => {
-      if (c.openingQuarter && c.openingQuarter < q) return;
-      add(jp, dkey(c.department) + '|' + (c.job || c.jobTitle || ''));
+      if (c.openingQuarter && startQ && c.openingQuarter < startQ) return;
+      const k = dkey(c.department) + '|' + (c.job || c.jobTitle || '');
+      jp[k] = (jp[k] || 0) + 1;
     });
     dropRows(data).forEach(e => {
-      if (e.quarter !== q) return;
-      add(drop, dkey(e.department) + '|' + (e.jobTitle || ''));
+      if (!e.quarter || (per && !per.includes(e.quarter))) return;
+      const k = dkey(e.department) + '|' + (e.jobTitle || '');
+      (drop[k] || (drop[k] = [])).push(e.quarter);
     });
-    return { jp, drop };
+    return { jp, drop, atQ: scoreQOf(per), memo: {} };
   }
-  function jobSplit(j, q, dept, PM) {
-    const b = openBuckets[j.jid], qq = b && b.quarters && b.quarters[q];
-    const total = qq ? (qq.total || 0) : 0;
-    const joined = qq ? (qq.joined || 0) : 0;
-    const missed = qq ? (qq.missed || 0) : 0;
+  // A role's points in one quarter. The job tree prices every role at PM.atQ; any other quarter of the period is priced here, once.
+  function scoreOf(j, qq, PM) {
+    if (qq === PM.atQ) return j.score || 0;
+    const k = (j.jid || (j.dept + '|' + j.title)) + '|' + qq;
+    if (!(k in PM.memo)) PM.memo[k] = scoreForRole({ department: j.rawDept, title: j.rawTitle, level: j.level, complexity: j.complexity }, qq);
+    return PM.memo[k];
+  }
+  function jobSplit(j, per, dept, PM) {
+    const bq = (openBuckets[j.jid] && openBuckets[j.jid].quarters) || {};
+    let total = 0, joined = 0, missed = 0, tS = 0, jS = 0, mS = 0;
+    (per || Object.keys(bq)).forEach(qq => {
+      const b = bq[qq]; if (!b) return;
+      const s = scoreOf(j, qq, PM);
+      total += b.total || 0; joined += b.joined || 0; missed += b.missed || 0;
+      tS += (b.total || 0) * s; jS += (b.joined || 0) * s; mS += (b.missed || 0) * s;
+    });
     const key = dept + '|' + (j.title || '');
     const pending = (PM.jp[key] || 0);
-    const drop = (PM.drop[key] || 0);
+    const dropQs = PM.drop[key] || [];
+    const drop = dropQs.length;
     // SIGNED on purpose — the clamp is gone here for the same reason it is gone from HM Delta: more people
     // can be in closing than there are positions when an offer carries no opening link. Hiding that behind a
     // zero makes the row's arithmetic impossible to check by eye.
     const gap = total - joined - pending;
-    const sc = j.scoreable ? j.score : 0;
-    return { total, joined, pending, drop, missed, gap, sc, scoreable: j.scoreable,
-      tS: total * sc, jS: joined * sc, pS: pending * sc, dS: drop * sc, mS: missed * sc, gS: gap * sc };
+    const pS = pending * scoreOf(j, PM.atQ, PM);
+    const dS = dropQs.reduce((s, qq) => s + scoreOf(j, qq, PM), 0);
+    return { total, joined, pending, drop, missed, gap, sc: j.score || 0, scoreable: j.scoreable,
+      tS, jS, pS, dS, mS, gS: tS - jS - pS };
   }
   const sumSplits = (arr) => arr.reduce((a, x) => ({
     total: a.total + x.total, joined: a.joined + x.joined, pending: a.pending + x.pending,
@@ -578,16 +609,17 @@ export function initEfficiencyFilters(data) {
   // job list never returned (DRAFT status — see the pipeline note in Data Hygiene), and two of those carry
   // real openings, one of them already filled. The sp.total > 0 filter below is what keeps candidate-only
   // rows out of this table, so admitting Unknown leaks nothing that has no positions.
-  function fulfilRows(q) {
-    const PM = peopleMaps(q);
+  function fulfilRows(per) {
+    const PM = peopleMaps(per);
+    const q = PM.atQ;   // #126: the quarter the job rows are scored at; the figures add up every quarter in `per`
     const dsel = selDepts(), jsel = selJobs();
     const seen = {};
-    const out = deptJobs(q, true)
+    const out = deptJobs(q, true, false, per)
       .map(({ dept, jobs }) => {
         // A role belongs on this table if it had positions in the quarter OR has people against it — the
         // same rule the Hiring Manager tab uses. Restricting to roles with openings hid most of the people
         // in closing there (45 of SME - India's 46), and would hide them here too.
-        const js = jobs.map(j => { seen[dept + '|' + (j.title || '')] = 1; return { j, sp: jobSplit(j, q, dept, PM) }; })
+        const js = jobs.map(j => { seen[dept + '|' + (j.title || '')] = 1; return { j, sp: jobSplit(j, per, dept, PM) }; })
           .filter(x => x.sp.total > 0 || x.sp.pending > 0 || x.sp.drop > 0 || x.sp.missed > 0);
         js.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
         return { dept, jobs: js, sum: sumSplits(js.map(x => x.sp)) };
@@ -618,9 +650,9 @@ export function initEfficiencyFilters(data) {
         const m = metaByTitle[title] || {};
         const j = { jid: null, title, dept, level: m.level, complexity: m.complexity,
                     score: scoreForRole({ department: dept, title, level: m.level, complexity: m.complexity }, q),
-                    scoreable: false };
+                    rawDept: dept, rawTitle: title, scoreable: false };
         j.scoreable = isScoreable(j);
-        grp.jobs.push({ j, sp: jobSplit(j, q, dept, PM) });
+        grp.jobs.push({ j, sp: jobSplit(j, per, dept, PM) });
       });
       grp.jobs.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
       grp.sum = sumSplits(grp.jobs.map(x => x.sp));
@@ -628,7 +660,7 @@ export function initEfficiencyFilters(data) {
     return out.filter(d => d.jobs.length).sort((a, b) => b.sum.total - a.sum.total);
   }
 
-  function fulfilTable(q) {
+  function fulfilTable(per) {
     const body = document.getElementById('effFulfilBody'); if (!body) return;
     const z = (n) => n > 0 ? n : '<span class="zero">0</span>';
     // Gap cell borrowed wholesale from Recruiter → Fulfilment: a slim track that fills with the SHORTFALL,
@@ -660,7 +692,7 @@ export function initEfficiencyFilters(data) {
         + gapCell(x) + `<td class="score">${x.gS}</td>`
         + `<td style="color:var(--red)">${z(x.missed)}</td><td class="score">${z(x.mS)}</td>`;
     };
-    const rows = fulfilRows(q);
+    const rows = fulfilRows(per);
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
       const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${sum.unscored} unscored</span>` : '';
@@ -682,7 +714,7 @@ export function initEfficiencyFilters(data) {
   // Candidate-level joining-pending list, same source as the Hiring Manager tab (joiningPendingCases),
   // scoped to the Department/Job filters. Unlinked rows carry no opening, so they are invisible to the
   // position counts above — surfaced here rather than silently missing.
-  function renderFulfilJP(q) {
+  function renderFulfilJP() {
     const body = document.getElementById('effFulfilJPBody'); if (!body) return;
     const dsel = selDepts(), jsel = selJobs();
     const rows = (data.joiningPendingCases || [])
@@ -870,43 +902,49 @@ export function initEfficiencyFilters(data) {
   // is measured on joiners whenever the opening was raised. Sales is a POD, and pods do not exist on this
   // tab, so the subtraction is applied uniformly here. That is the only deliberate difference between the
   // two panels, and the definitions block says so.
-  let _jcQ = null, _jc = null;
-  function joinMapsEff(q) {
-    if (_jcQ === q && _jc) return _jc;
+  // #126 (Jerin, 15 Sep 2026): `period` is the whole Year/Quarter period, as on Fulfilment (null = every quarter on record). Joined and
+  // Dropped count every quarter inside it; an "earlier quarter's opening" is one raised before the period STARTS.
+  let _jcKey = null, _jc = null;
+  function joinMapsEff(period) {
+    const cacheKey = period ? period.join(',') : '*';
+    if (_jcKey === cacheKey && _jc) return _jc;
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
+    const startQ = period ? period[0] : null;
+    const inPeriod = (qq) => !!qq && (!period || period.includes(qq));
+    const earlier = (oq) => !!(oq && startQ && oq < startQ);
     const byKey = {};
     const bump = (key, field) => { const a = byKey[key] || (byKey[key] = { o: 0, j: 0, p: 0, dr: 0 }); a[field] += 1; };
     (data.offerEvents || []).forEach(e => {
-      if (!e.accepted || e.appStatus !== 'Hired' || qOf(e.startDate) !== q) return; // Joined = moved to Hired, not just an accepted offer
-      if (e.openingQuarter && e.openingQuarter < q) return;
+      if (!e.accepted || e.appStatus !== 'Hired' || !inPeriod(qOf(e.startDate))) return; // Joined = moved to Hired, not just an accepted offer
+      if (earlier(e.openingQuarter)) return;
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'j');
     });
     (data.joiningPendingCases || []).forEach(c => {
-      if (c.openingQuarter && c.openingQuarter < q) return;
+      if (earlier(c.openingQuarter)) return;
       bump(dkey(c.department) + '|' + (c.job || c.jobTitle || ''), 'p');
     });
     dropRows(data).forEach(e => {
-      if (e.quarter !== q) return;
+      if (!inPeriod(e.quarter)) return;
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'dr');
     });
     Object.values(byKey).forEach(a => { a.o = a.j + a.p + a.dr; });
-    _jcQ = q; _jc = byKey;
+    _jcKey = cacheKey; _jc = byKey;
     return byKey;
   }
   const ZJC = { o: 0, j: 0, p: 0, dr: 0 };
-  const jcOf = (q, dept, title) => joinMapsEff(q)[dept + '|' + (title || '')] || ZJC;
+  const jcOf = (period, dept, title) => joinMapsEff(period)[dept + '|' + (title || '')] || ZJC;
 
   // ONE list for the table AND the chart (Rule 3: the table computes, the chart reads).
   // 🚨 #120 (14 Sep 2026): both used to walk only the job tree, so people whose role has no row there (no job title, or
   // a role Ashby's job list never returned) were dropped: Joining Pending read 42 here against 44 on Fulfilment, which
   // already adds those rows. Same leftover rule as fulfilRows.
-  function joinRows(q) {
+  function joinRows(period) {
     const dsel = selDepts(), jsel = selJobs();
     const seen = {};
-    const out = deptJobs(q).map(({ dept, jobs }) => ({ dept, per: jobs
-      .map(j => { seen[dept + '|' + (j.title || '')] = 1; return { title: j.title, c: jcOf(q, dept, j.title) }; })
+    const out = deptJobs(scoreQOf(period)).map(({ dept, jobs }) => ({ dept, per: jobs
+      .map(j => { seen[dept + '|' + (j.title || '')] = 1; return { title: j.title, c: jcOf(period, dept, j.title) }; })
       .filter(x => x.c.o > 0) }));
-    Object.entries(joinMapsEff(q)).forEach(([key, c]) => {
+    Object.entries(joinMapsEff(period)).forEach(([key, c]) => {
       if (seen[key] || !(c.o > 0)) return;
       const i = key.indexOf('|'), dept = key.slice(0, i), title = key.slice(i + 1);
       if (dsel.length && !dsel.includes(dept)) return;
@@ -923,7 +961,7 @@ export function initEfficiencyFilters(data) {
   }
 
   function renderJoining() {
-    const q = selQuarter();
+    const period = tisPeriod();   // #126: the whole period, like Fulfilment
     const body = document.getElementById('effJoinBody'); if (!body) return;
     const convCell = (v) => {
       if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
@@ -942,7 +980,7 @@ export function initEfficiencyFilters(data) {
     };
     const add = (a, b) => ({ o: a.o + b.o, j: a.j + b.j, p: a.p + b.p, dr: a.dr + b.dr });
     let html = '';
-    joinRows(q).forEach(({ dept, per: js, ...agg }, di) => {
+    joinRows(period).forEach(({ dept, per: js, ...agg }, di) => {
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(agg, true)}</tr>`;
       js.forEach(({ title, c }, ji) => {
@@ -961,8 +999,7 @@ export function initEfficiencyFilters(data) {
   function buildJoinChartEff() {
     const ctx = document.getElementById('effJoinChart'); if (!ctx) return;
     if (effJoinChart) { effJoinChart.destroy(); effJoinChart = null; }
-    const q = selQuarter();
-    const rows = joinRows(q).sort((a, b) => b.o - a.o);   // the table's own rows (#120)
+    const rows = joinRows(tisPeriod()).sort((a, b) => b.o - a.o);   // the table's own rows (#120)
     const wrap = document.getElementById('effJoinChartWrap');
     if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
     const h = hbarHeight(rows.length);
@@ -1427,8 +1464,8 @@ export function initEfficiencyFilters(data) {
   // with more people in closing than positions drew no Delta band, and the end label and tooltip then added Joined +
   // Joining Pending and called it "Total positions" (Unknown read 3 against the table's 1). Both now READ the table's
   // Total, and the tooltip names a negative Delta.
-  function renderFulfilCharts(q) {
-    const rows = fulfilRows(q);
+  function renderFulfilCharts(per) {
+    const rows = fulfilRows(per);
 
     const ctx = document.getElementById('effFulfilCombined'); if (!ctx) return;
     if (effFulfilCombined) effFulfilCombined.destroy();
@@ -1441,7 +1478,7 @@ export function initEfficiencyFilters(data) {
     if (!rows.length) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `No openings in ${q.replace('-', ' ')}.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = per && per.length === 1 ? `No openings in ${per[0].replace('-', ' ')}.` : 'No openings in this period.'; emptyMsg.style.display = 'flex'; }
       return;
     }
     ctx.style.display = ''; if (emptyMsg) emptyMsg.style.display = 'none';
@@ -1543,19 +1580,7 @@ export function initEfficiencyFilters(data) {
     });
   }
 
-  // Live state: which period each panel is on when Quarter reads All (#120, mirrors the Recruiter tab's note).
-  function updateQtrNote() {
-    const el = document.getElementById('effQtrNote'); if (!el) return;
-    const oneQuarter = !!document.getElementById('effQuarter')?.value;
-    el.style.display = oneQuarter ? 'none' : '';
-    if (oneQuarter) return;
-    const per = tisPeriod();
-    const perTxt = (per && per.length) ? (per.length === 1 ? per[0] : per[0].slice(0, 4)) : 'all time';
-    el.innerHTML = `<strong>Quarter: All.</strong> Screening Efficiency, Throughput, Time in Process, Sourcing Mix and Panelists cover <strong>${perTxt}</strong>. Fulfilment and Joining Conversion exist only per quarter, so they show <strong>${selQuarter()}</strong>.`;
-  }
-
   function renderActive() {
-    updateQtrNote();
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
