@@ -1,7 +1,12 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
+import { canAccessPage } from '../access.js';
+
+// #135: kept from renderHome so a card only links to a tab this user may open.
+let homeAccess = null;
 
 export function renderHome(access) {
+  homeAccess = access;
   const data = getData();
   if (!data) return '<p>Loading...</p>';
 
@@ -202,6 +207,47 @@ export function initHomeFilters() {
     ];
     const maxPipeline = Math.max(...pipelineStages.map(s => s.value), 1);
 
+    // #135 (Jerin, 15 Sep 2026 — option A "context cards", colours 1 "clear contrast"): each ranked panel opens with what
+    // its rows add up to, the top three wear filled rank badges, jobs and panelists carry a department tag, and each card
+    // ends with a link to the tab behind it — shown only when this user may open that tab.
+    const ovEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const ovMedal = (i) => `<span class="ov-medal${i < 3 ? ' top' : ''}">${i + 1}</span>`;
+    const ovPct = (pc) => (pc >= 70 ? 'hi' : pc >= 40 ? 'mid' : 'lo');
+    const ovDeptTag = (d) => (d ? `<div class="ov-meta"><span class="ov-dept">${ovEsc(d)}</span></div>` : '');
+    const ovLink = (route, label) => {
+      let ok = false;
+      try { ok = !!homeAccess && canAccessPage(homeAccess, route.split('/')[0]); } catch (e) { ok = false; }
+      return ok ? `<a class="ov-link" href="#${route}">${label} →</a>` : '';
+    };
+    const hiredSum = hiredJobs.reduce((s, j) => s + (j.hired || 0), 0);
+    const appSum = displayJobs.reduce((s, j) => s + (j.applied || 0), 0);
+    const ovTop = panelistsInPeriod.slice(0, 5);
+    const ovPanelOk = ovTop.length > 0 && ovTop[0].interviews > 0;
+    const panSum = ovTop.reduce((s, p) => s + (p.interviews || 0), 0);
+    // A person has no department in Ashby, so a panelist's tag is the department they INTERVIEWED FOR most in the period:
+    // panelists[] holds one row per panelist per job, with that job's department and a per-quarter count. Rows with no
+    // known job ('Unknown') are ignored; "+N" when they interviewed for more than one department.
+    const ovPanelDept = (() => {
+      const byName = {};
+      (data.panelists || []).forEach(r => {
+        const dept = r.dept && r.dept !== 'Unknown' ? r.dept : null;
+        if (!dept) return;
+        const bq = r.byQuarter;
+        const n = !bq ? (r.interviews || 0)
+          : isQuarter ? (bq[val] || 0)
+          : Object.entries(bq).reduce((s, [k, v]) => s + (k.startsWith(year + '-') ? v : 0), 0);
+        if (!n) return;
+        const m = (byName[r.name] = byName[r.name] || {});
+        m[dept] = (m[dept] || 0) + n;
+      });
+      const out = {};
+      Object.entries(byName).forEach(([name, m]) => {
+        const ds = Object.entries(m).sort((a, b) => b[1] - a[1]);
+        out[name] = ds[0][0] + (ds.length > 1 ? ` +${ds.length - 1}` : '');
+      });
+      return out;
+    })();
+
     container.innerHTML = `
       <div style="margin-bottom:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px;">
@@ -263,120 +309,74 @@ export function initHomeFilters() {
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="min-width:0;">
-          <h3 class="subsection-title" style="margin-top:0;">Positions by Department</h3>
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-            ${deptArr.length === 0 ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No opening data for this period</div>' :
-              deptArr.slice(0, 6).map(([ dept, v ], i) => {
-                const joinedPct = Math.round((v.joined / maxDeptTotal) * 100);
-                const openPct = Math.round((v.open / maxDeptTotal) * 100);
-                const missedPct = Math.round(((v.missed || 0) / maxDeptTotal) * 100);
-                return `
-                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);${(i === Math.min(deptArr.length, 6) - 1 && deptArr.length <= 6) ? 'border:none;' : ''}">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:10px;">
-                      <span style="display:flex;gap:10px;min-width:0;">
-                        <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;flex-shrink:0;">${i + 1}</span>
-                        <span style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${dept}</span>
-                      </span>
-                      <span style="font-size:12px;white-space:nowrap;"><span class="good">${v.joined}</span> <span style="color:var(--muted)">/ ${v.total}</span></span>
-                    </div>
-                    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border-light);margin-left:26px;">
-                      <div style="width:${joinedPct}%;background:var(--green);"></div>
-                      <div style="width:${openPct}%;background:var(--blue);"></div>
-                      <div style="width:${missedPct}%;background:var(--red);"></div>
-                    </div>
-                  </div>
-                `;
-              }).join('') + (() => {
-                // The list is capped at six. Without this line the six departments silently fall short of the
-                // Total Positions card sitting right beside them (40 of 45 for 2026-Q3), which reads as a bug.
-                const rest = deptArr.slice(6);
-                if (!rest.length) return '';
-                const rt = rest.reduce((s, [, v]) => s + v.total, 0);
-                const rj = rest.reduce((s, [, v]) => s + v.joined, 0);
-                return `<div style="padding:8px 12px 9px 38px;font-size:11.5px;color:var(--muted);">
-                  + ${rest.length} more department${rest.length > 1 ? 's' : ''} · <span class="good">${rj}</span> / ${rt}
-                </div>`;
-              })()}
+      <div class="ov-grid">
+        <div class="ov-card">
+          <div class="ov-head">
+            <div class="ov-top"><h3 class="ov-title">Positions by Department</h3><span class="ov-chip">${ovEsc(periodLabel)}</span></div>
+            <div class="ov-sum">${deptArr.length ? `<b>${totalFilled}</b> of <b>${totalPositions}</b> positions joined · <b>${totalOpen}</b> still open` : 'No opening data for this period'}</div>
           </div>
-        </div>
-
-        <div style="min-width:0;">
-          <h3 class="subsection-title" style="margin-top:0;">Top Jobs by Hired</h3>
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-            ${hiredJobs.length === 0 ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No hire data for this period</div>' :
-              hiredJobs.map((j, i) => {
-                const pct = hiredJobs[0].hired > 0 ? Math.max(Math.round((j.hired / hiredJobs[0].hired) * 100), 3) : 0;
-                return `
-                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;${i === hiredJobs.length - 1 ? 'border:none;' : ''}">
-                    <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;">${i + 1}</span>
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${j.title}</div>
-                      <div style="margin-top:4px;background:var(--border-light);border-radius:3px;height:6px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:var(--green);border-radius:3px;"></div>
-                      </div>
-                    </div>
-                    <div style="text-align:right;white-space:nowrap;">
-                      <div style="font-weight:700;font-size:13px;color:var(--green)">${j.hired}</div>
-                      <div style="font-size:10px;color:var(--muted);font-weight:600;">${j.applied.toLocaleString()} apps</div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-          </div>
-        </div>
-
-        <div style="min-width:0;">
-          <h3 class="subsection-title" style="margin-top:0;">Top Jobs by Applications</h3>
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-            ${displayJobs.length === 0 ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No application data for this period</div>' :
-              displayJobs.map((j, i) => {
-                const pct = displayJobs[0].applied > 0 ? Math.max(Math.round((j.applied / displayJobs[0].applied) * 100), 3) : 0;
-                return `
-                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;${i === displayJobs.length - 1 ? 'border:none;' : ''}">
-                    <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;">${i + 1}</span>
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${j.title}</div>
-                      <div style="margin-top:4px;background:var(--border-light);border-radius:3px;height:6px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
-                      </div>
-                    </div>
-                    <div style="text-align:right;white-space:nowrap;">
-                      <div style="font-weight:700;font-size:13px;">${j.applied.toLocaleString()}</div>
-                      <div style="font-size:10px;color:var(--green);font-weight:600;">${j.hired} hired</div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-          </div>
-        </div>
-
-        <div style="min-width:0;">
-          <h3 class="subsection-title" style="margin-top:0;">Top Panelists by Interview Count</h3>
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+          <div class="ov-list">
+            ${deptArr.slice(0, 6).map(([dept, v], i) => {
+              const pc = v.total > 0 ? Math.round((v.joined / v.total) * 100) : 0;
+              const seg = (n, cls) => (n ? `<i class="${cls}" style="width:${Math.round((n / maxDeptTotal) * 100)}%"></i>` : '');
+              return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(dept)}</div><div class="ov-bar">${seg(v.joined, 'j')}${seg(v.open, 'o')}${seg(v.missed || 0, 'm')}</div></div>`
+                + `<div class="ov-val"><div class="ov-big"><span class="ov-ink">${v.joined}</span><span class="ov-of"> / ${v.total}</span></div><span class="ov-pct ${ovPct(pc)}">${pc}% joined</span></div></div>`;
+            }).join('')}
             ${(() => {
-              const tp = panelistsInPeriod.slice(0, 5);
-              if (!tp.length || !tp[0].interviews) return '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No interview data for this period</div>';
-              return tp.map((p, i) => {
-                const pct = tp[0].interviews > 0 ? Math.max(Math.round((p.interviews / tp[0].interviews) * 100), 3) : 0;
-                return `
-                  <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;${i === tp.length - 1 ? 'border:none;' : ''}">
-                    <span style="font-size:11px;color:var(--muted);width:16px;text-align:right;">${i + 1}</span>
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
-                      <div style="margin-top:4px;background:var(--border-light);border-radius:3px;height:6px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
-                      </div>
-                    </div>
-                    <div style="text-align:right;white-space:nowrap;">
-                      <div style="font-weight:700;font-size:13px;">${(p.interviews || 0).toLocaleString()}</div>
-                    </div>
-                  </div>
-                `;
-              }).join('');
+              // Capped at six; the rest are summed on one line so the card still reconciles with Total Positions.
+              const rest = deptArr.slice(6);
+              if (!rest.length) return '';
+              const rt = rest.reduce((s, [, v]) => s + v.total, 0);
+              const rj = rest.reduce((s, [, v]) => s + v.joined, 0);
+              return `<div class="ov-row ov-rest"><span></span><span class="ov-small">+ ${rest.length} more department${rest.length > 1 ? 's' : ''}</span><span class="ov-small">${rj} / ${rt}</span></div>`;
             })()}
           </div>
+          <div class="ov-foot"><span class="ov-legend"><span><i class="j"></i>Joined</span><span><i class="o"></i>Open</span><span><i class="m"></i>Missed</span></span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
+        </div>
+
+        <div class="ov-card">
+          <div class="ov-head">
+            <div class="ov-top"><h3 class="ov-title">Top Jobs by Hired</h3><span class="ov-chip">${ovEsc(periodLabel)}</span></div>
+            <div class="ov-sum">${hiredJobs.length ? `The top ${hiredJobs.length > 1 ? hiredJobs.length + ' jobs' : 'job'} made <b>${hiredSum}</b> hire${hiredSum === 1 ? '' : 's'}${hiredJobs.length > 1 ? ' between them' : ''}` : 'No hire data for this period'}</div>
+          </div>
+          <div class="ov-list">
+            ${hiredJobs.map((j, i) => {
+              const w = hiredJobs[0].hired > 0 ? Math.max(Math.round((j.hired / hiredJobs[0].hired) * 100), 3) : 0;
+              return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(j.title)}</div>${ovDeptTag(j.department)}<div class="ov-bar thin"><i class="h" style="width:${w}%"></i></div></div>`
+                + `<div class="ov-val"><div class="ov-big ov-ink">${j.hired}</div><div class="ov-small">${(j.applied || 0).toLocaleString()} apps</div></div></div>`;
+            }).join('')}
+          </div>
+          <div class="ov-foot"><span>Hires in the period</span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
+        </div>
+
+        <div class="ov-card">
+          <div class="ov-head">
+            <div class="ov-top"><h3 class="ov-title">Top Jobs by Applications</h3><span class="ov-chip">${ovEsc(periodLabel)}</span></div>
+            <div class="ov-sum">${displayJobs.length ? `The top ${displayJobs.length > 1 ? displayJobs.length + ' jobs' : 'job'} drew <b>${appSum.toLocaleString()}</b> application${appSum === 1 ? '' : 's'}` : 'No application data for this period'}</div>
+          </div>
+          <div class="ov-list">
+            ${displayJobs.map((j, i) => {
+              const w = displayJobs[0].applied > 0 ? Math.max(Math.round((j.applied / displayJobs[0].applied) * 100), 3) : 0;
+              return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(j.title)}</div>${ovDeptTag(j.department)}<div class="ov-bar thin"><i class="a" style="width:${w}%"></i></div></div>`
+                + `<div class="ov-val"><div class="ov-big">${(j.applied || 0).toLocaleString()}</div><div class="ov-small${j.hired ? ' ov-ink' : ''}">${j.hired || 0} hired</div></div></div>`;
+            }).join('')}
+          </div>
+          <div class="ov-foot"><span>Applications in the period</span>${ovLink('hm-report/pipeline', 'Hiring Manager')}</div>
+        </div>
+
+        <div class="ov-card">
+          <div class="ov-head">
+            <div class="ov-top"><h3 class="ov-title">Top Panelists by Interview Count</h3><span class="ov-chip">${ovEsc(periodLabel)}</span></div>
+            <div class="ov-sum">${ovPanelOk ? `${ovTop.length > 1 ? `The top ${ovTop.length} ran` : 'Ran'} <b>${panSum.toLocaleString()}</b> interview${panSum === 1 ? '' : 's'}` : 'No interview data for this period'}</div>
+          </div>
+          <div class="ov-list">
+            ${ovPanelOk ? ovTop.map((pp, i) => {
+              const w = ovTop[0].interviews > 0 ? Math.max(Math.round((pp.interviews / ovTop[0].interviews) * 100), 3) : 0;
+              return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(pp.name)}</div>${ovDeptTag(ovPanelDept[pp.name])}<div class="ov-bar thin"><i class="a" style="width:${w}%"></i></div></div>`
+                + `<div class="ov-val"><div class="ov-big">${(pp.interviews || 0).toLocaleString()}</div><div class="ov-small">interviews</div></div></div>`;
+            }).join('') : ''}
+          </div>
+          <div class="ov-foot"><span>Interviews in the period${anyByQuarter ? '' : ' · all time'}</span>${ovLink('hm-report/panelists', 'Panelists')}</div>
         </div>
       </div>
       ${defsBlock('overview')}

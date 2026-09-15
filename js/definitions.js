@@ -756,7 +756,7 @@ export const DEFINITIONS = {
   'overview': {
     summary: 'How these numbers are worked out',
     intro: 'The one-page summary. Everything follows the Year/Quarter selector unless it says otherwise.',
-    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · Joined positions = moved to Hired 14 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 30 Aug 2026 · Joined positions = moved to Hired 14 Sep 2026 · the four ranked panels became context cards (#135) 15 Sep 2026',
     groups: [
       {
         heading: 'The five cards',
@@ -773,9 +773,10 @@ export const DEFINITIONS = {
         heading: 'The rest of the page',
         items: [
           ['Hiring Pipeline', 'Applied → Screened → Interviewed → Offered → Hired for the period. Each band is how many candidates reached that point, so the bands step down.'],
-          ['Positions by Department', 'The same positions as the Total Positions card, broken out by department. The six largest are listed and everything past them is summed on a final line, so the list always reconciles with the card above it.'],
-          ['Top Jobs by Hired / by Applications', 'The roles with the most hires, and the most applications, in the period. <strong>By Hired under a quarter</strong> reads every role once the data file carries the per-quarter hire ranking; against an older file it falls back to that quarter’s busiest roles, so a role that hires well on very few applicants can be missing from it.'],
-          ['Top Panelists by Interview Count', 'Who carried the interviewing load in the period.'],
+          ['Positions by Department', 'The same positions as the Total Positions card, broken out by department. The six largest are listed and everything past them is summed on a final line, so the list always reconciles with the card above it. The line under the title is the joined, total and still-open positions for the period — the same as the Total Positions card — and the pill beside a department is its joined positions ÷ its total. In the bar, deep teal is joined, pale slate is open and rose is missed.'],
+          ['Top Jobs by Hired / by Applications', 'The roles with the most hires, and the most applications, in the period. <strong>By Hired under a quarter</strong> reads every role once the data file carries the per-quarter hire ranking; against an older file it falls back to that quarter’s busiest roles, so a role that hires well on very few applicants can be missing from it. The grey tag under a job is its department, and the line under the title adds up the jobs listed.'],
+          ['Top Panelists by Interview Count', 'Who carried the interviewing load in the period. The grey tag under a name is the department they <strong>interviewed for most</strong> in the period — Ashby gives a person no department, so it comes from the jobs behind their interviews; “+1” means they also interviewed for another department.'],
+          ['Rank badges and links', 'The top three in each list wear a filled badge. The link at the bottom of a card opens the tab behind it, and only shows if you can open that tab.'],
         ]
       },
     ],
