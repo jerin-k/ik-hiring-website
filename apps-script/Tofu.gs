@@ -181,6 +181,10 @@ function computeTofuRollups_(events) {
   var beyondR1 = { r2: 1, r3: 1, r4: 1, r5: 1, refCheck: 1, docSub: 1, offer: 1 };
   var archLate = archStore.hits || {};
   var r1Rec = {}, r1RecJob = {}, r1Job = {};
+  // #129: the same added / cleared counts keyed by the DAY of that first R1 action (bookedOn - the string the quarter key
+  // is cut from), from reportFloorDay_() on, so Screening Efficiency can follow the From / To boxes. A quarter's days add
+  // up to that quarter.
+  var r1RecD = {}, r1JobD = {}, r1RecJobD = {}, floorD = reportFloorDay_();
   var bump2 = function (store, key, q, field) {
     if (!key) return;
     var a = store[key] || (store[key] = {});
@@ -210,15 +214,21 @@ function computeTofuRollups_(events) {
     var rrec = rw.r || null, rjob8 = rw.j ? String(rw.j).substring(0, 8) : null;
     var ev = (events[raid] && events[raid].ev) || null;
     for (var rq in firstInQ) {
-      var bookedOn = firstInQ[rq];
+      var bookedOn = firstInQ[rq], inD = bookedOn >= floorD;
       r1Added++;
       bump2(r1Rec, rrec, rq, 'added');
       bump2(r1Job, rjob8, rq, 'added');
+      if (inD) { bump2(r1RecD, rrec, bookedOn, 'added'); bump2(r1JobD, rjob8, bookedOn, 'added'); }
       if (rrec && rjob8) {
         var rj = r1RecJob[rrec] || (r1RecJob[rrec] = {});
         var rjq = rj[rjob8] || (rj[rjob8] = {});
         var cell = rjq[rq] || (rjq[rq] = { added: 0, cleared: 0 });
         cell.added++;
+        if (inD) {
+          var rjD = r1RecJobD[rrec] || (r1RecJobD[rrec] = {});
+          var rjqD = rjD[rjob8] || (rjD[rjob8] = {});
+          (rjqD[bookedOn] || (rjqD[bookedOn] = { added: 0, cleared: 0 })).added++;
+        }
       }
       // did they go past R1?
       var moved = false;
@@ -246,6 +256,11 @@ function computeTofuRollups_(events) {
         bump2(r1Rec, rrec, rq, 'cleared');
         bump2(r1Job, rjob8, rq, 'cleared');
         if (rrec && rjob8) r1RecJob[rrec][rjob8][rq].cleared++;
+        if (inD) {
+          bump2(r1RecD, rrec, bookedOn, 'cleared');
+          bump2(r1JobD, rjob8, bookedOn, 'cleared');
+          if (rrec && rjob8) r1RecJobD[rrec][rjob8][bookedOn].cleared++;
+        }
       }
     }
   }
@@ -260,6 +275,9 @@ function computeTofuRollups_(events) {
     r1ByRecruiter: r1Rec,
     r1ByJob: r1Job,
     r1ByRecruiterJob: r1RecJob,
+    r1ByRecruiterD: r1RecD,
+    r1ByJobD: r1JobD,
+    r1ByRecruiterJobD: r1RecJobD,
     // ⚠ archivedNoProgress is NOT a blind spot: the archived sweep COMPLETED on 2026-08-29 (all 14,128
     // applications read), so an archived candidate with no record past R1 genuinely did not progress.
     // While the sweep was still running the same count WAS a blind spot — 1,016 then, and the rates it
