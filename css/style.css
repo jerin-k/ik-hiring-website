@@ -1092,3 +1092,47 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 .ov-link:hover { text-decoration: underline; }
 .ov-legend { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .ov-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 4px; }
+
+/* ===== #137 (Jerin, 15 Sep 2026 · option A): the people lists — Joining Pending + Joiners on HM · Recruiter · Overall Efficiency =====
+   The cells are built ONLY by js/people-cells.js. State in form, no new numbers: the Sub-Stage badge fills in towards joining, the joining
+   date says when (rose once passed), chips mark the opening quarter (peach = an earlier quarter's) and what to fix in Ashby (amber dashed),
+   and each recruiter carries their initials in their pod's colour. `.pl-list` also left-aligns the Recruiter tab's `.metrics` tables. */
+table.pl-list td { vertical-align: middle; }
+table.pl-list th:not(:first-child),
+table.pl-list td:not(:first-child) { text-align: left; }
+.pl-cand { font-weight: 600; color: var(--text); white-space: nowrap; }
+.pl-dept { font-weight: 500; color: var(--navy); white-space: nowrap; }
+.pl-job { max-width: 270px; }
+.pl-mon { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.pl-doj b { display: block; font-weight: 600; color: var(--text); white-space: nowrap; line-height: 16px; }
+.pl-doj small { display: block; font-size: 10.5px; color: var(--muted); white-space: nowrap; line-height: 14px; }
+.pl-doj.pl-passed small { color: var(--red); font-weight: 600; }
+.pl-doj.pl-today b, .pl-doj.pl-today small { color: #1E7590; }
+.pl-doj.pl-today small { font-weight: 700; }
+.pl-stage { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 7px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; white-space: nowrap; }
+.pl-ticks { display: inline-flex; gap: 2px; }
+.pl-ticks i { width: 3px; height: 9px; border-radius: 1px; background: currentColor; opacity: .22; }
+.pl-ticks i.on { opacity: 1; }
+.pl-s0 { background: var(--border-light); color: var(--text-secondary); }
+.pl-s1 { background: #eef1f7; color: #4a5578; }
+.pl-s2 { background: #e4eaf5; color: #33507f; }
+.pl-s3 { background: #ddebf0; color: #2a5f7a; }
+.pl-s4 { background: #cfe4eb; color: #17586c; }
+.pl-s5 { background: #1E7590; color: #fff; }
+.pl-chip { display: inline-block; font-size: 11px; font-weight: 600; line-height: 16px; padding: 1px 7px; border-radius: 6px; white-space: nowrap;
+  border: 1px solid var(--border); color: var(--text-secondary); background: var(--card); }
+.pl-chip.pl-prev { background: #fbefe3; border-color: #f0d9c2; color: #9a5b1e; }
+.pl-chip.pl-fix { border-style: dashed; border-color: #d9b36a; background: var(--orange-light); color: var(--orange); }
+.pl-chip.pl-unset { border-style: dashed; border-color: #c3cad8; color: var(--muted); font-weight: 500; }
+.pl-chip.pl-ok { color: #1E7590; border-color: #cfe4eb; background: #f3f9fb; }
+.pl-rec { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; vertical-align: middle; }
+.pl-av { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .02em; line-height: 1; }
+.pl-pod-sales { background: #e4eaf5; color: #33507f; }
+.pl-pod-smeus { background: #d6eaf0; color: #17586c; }
+.pl-pod-smein { background: #dcefeb; color: #2b6b62; }
+.pl-pod-lateral { background: #fbefe3; color: #9a5b1e; }
+.pl-pod-others, .pl-pod-none { background: #eceef3; color: #4a5578; }
+.pl-count { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 5px; background: #e4eaf5; color: var(--accent-deep);
+  font-size: 10.5px; font-weight: 600; line-height: 16px; font-variant-numeric: tabular-nums; vertical-align: 1px; }

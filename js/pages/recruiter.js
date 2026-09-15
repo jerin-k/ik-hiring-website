@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
+import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
@@ -453,7 +454,7 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
     <div class="rec-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="recJPCaption" style="margin-bottom:8px"></p>
-      <div class="scroll-table"><table class="metrics">
+      <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:240px">Pod / Recruiter / Candidate</th>
           <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Sub-Stage</th>
@@ -466,7 +467,7 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage -->
     <div class="rec-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="recJoinersCaption" style="margin-bottom:8px"></p>
-      <div class="scroll-table"><table class="metrics">
+      <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:240px">Pod / Recruiter / Candidate</th>
           <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th>
@@ -1560,12 +1561,12 @@ export function initRecruiterFilters(baseData) {
       };
 
       let html = '', shown = 0, unlinked = 0;
-      const cnt = (n, extra) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${extra ? extra + ' · ' : ''}${n}</span>`;
+      // #137: the counts are small number tags, recruiters carry their initials in their pod's colour, and the cells come from people-cells.js.
+      const cnt = (n, extra) => `${extra ? `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${extra}</span>` : ''}${countTag(n)}`;
+      const recName = (name, pod) => `<span class="pl-rec">${avatar(name, pod)}${name}</span>`;
       const candRow = (c, path) => {
         shown++; if (!isLinked(c)) unlinked++;
-        return `<tr data-path="${path}" style="display:none">
-          <td style="padding-left:52px">${c.candidate || DASH}</td>
-          ${cells(c)}</tr>`;
+        return `<tr data-path="${path}" style="display:none">${tdCandidate(c.candidate, 'padding-left:52px')}${cells(c)}</tr>`;
       };
       inGroups.forEach((G, pi) => {
         const mine = G.recs.filter(r => visible.has(r.name) && (byRec[r.name] || []).length);
@@ -1577,7 +1578,7 @@ export function initRecruiterFilters(baseData) {
         mine.forEach((r, ri) => {
           const list = byRec[r.name].slice().sort(sortBy);
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${cnt(list.length)}</td>
+            <td style="padding-left:26px;font-weight:500">${CARET}${recName(r.name, G.pod)}${cnt(list.length)}</td>
             <td colspan="${rest}"></td></tr>`;
           list.forEach((c, ci) => { html += candRow(c, `${pi}-${ri}-${ci}`); });
         });
@@ -1599,14 +1600,13 @@ export function initRecruiterFilters(baseData) {
         orphanNames.forEach(nm => {
           const list = orphanBy[nm].slice().sort(sortBy);
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${nm}${cnt(list.length, orphanWhy(nm))}</td><td colspan="${rest}"></td></tr>`;
+            <td style="padding-left:26px;font-weight:500">${CARET}${recName(nm)}${cnt(list.length, orphanWhy(nm))}</td><td colspan="${rest}"></td></tr>`;
           list.forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
           ri++;
         });
       }
       return { html, shown, unlinked, orphanCount };
     }
-    const NOT_LINKED = '<span style="color:var(--orange);font-size:11px">Not linked</span>';
 
     const jpBody = document.getElementById('recJPBody');
     if (jpBody) {
@@ -1619,9 +1619,8 @@ export function initRecruiterFilters(baseData) {
         rest: 6,
         isLinked: c => c.linked,
         sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
-        cells: c => `<td>${c.openingQuarter || NOT_LINKED}</td><td>${monthLabel(c.doj)}</td><td>${c.doj || DASH}</td>
-          <td>${c.department || DASH}</td><td style="max-width:260px">${c.job || c.jobTitle || DASH}</td>
-          <td>${c.subStage || DASH}</td>`
+        cells: c => `${tdQuarter(c.openingQuarter)}${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
+          + `${tdJob(c.job || c.jobTitle)}${tdStage(c.subStage)}`
       });
       jpBody.innerHTML = jp.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody in closing under these filters.</td></tr>`;
       // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
@@ -1646,8 +1645,7 @@ export function initRecruiterFilters(baseData) {
         rest: 5,
         isLinked: e => !!e.openingId,
         sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
-        cells: e => `<td>${e.openingQuarter || NOT_LINKED}</td><td>${monthLabel(e.startDate)}</td><td>${e.startDate || DASH}</td>
-          <td>${e.department || DASH}</td><td style="max-width:260px">${e.jobTitle || DASH}</td>`
+        cells: e => `${tdQuarter(e.openingQuarter, e.startDate)}${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}`
       });
       joinersBody.innerHTML = jn.html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody joined between these dates under these filters.</td></tr>`;
       wireTreePath(joinersBody);

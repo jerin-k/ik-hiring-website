@@ -1,6 +1,7 @@
 import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
+import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
@@ -201,7 +202,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: JOINING PENDING (#130b — was the Cases list under Position Fulfilment) ===== -->
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:8px"></p>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="pl-list">
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
@@ -211,7 +212,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: JOINERS (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage ===== -->
     <div class="hm-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:8px"></p>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="pl-list">
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
       </table></div>
@@ -820,16 +821,9 @@ export function initHmFilters(data) {
       if (qa !== qb) { if (!qa) return 1; if (!qb) return -1; return qa > qb ? -1 : 1; }
       return (a.candidate || '').localeCompare(b.candidate || '');
     });
-    body.innerHTML = list.map(c => `<tr>
-      <td>${c.openingQuarter || '<span style="color:var(--red);font-size:11px">Not linked</span>'}</td>
-      <td>${monthOf(c.doj) !== '\u2014' ? monthOf(c.doj) : (c.month || '\u2014')}</td>
-      <td>${c.doj || '—'}</td>
-      <td style="font-weight:500">${c._dept || ''}</td>
-      <td style="max-width:280px">${c.job || ''}</td>
-      <td style="font-weight:500">${c.candidate || ''}</td>
-      <td>${c.subStage || '—'}</td>
-      <td>${c.recruiter || '—'}</td>
-    </tr>`).join('');
+    // #137: the cells come from people-cells.js — badges, dates and chips; the columns and the order above are unchanged.
+    body.innerHTML = list.map(c => `<tr>${tdQuarter(c.openingQuarter)}${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c._dept)}`
+      + `${tdJob(c.job)}${tdCandidate(c.candidate)}${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}</tr>`).join('');
   }
 
   // ===== #130c (Jerin, 15 Sep 2026): Joiners — one row per PERSON moved to Hired =====
@@ -857,15 +851,9 @@ export function initHmFilters(data) {
     }
     // Most recent joining date first.
     list.sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
-    body.innerHTML = list.map(e => `<tr>
-      <td>${e.openingQuarter || '<span style="color:var(--red);font-size:11px">Not linked</span>'}</td>
-      <td>${monthOf(e.startDate)}</td>
-      <td>${e.startDate}</td>
-      <td style="font-weight:500">${e._dept || ''}</td>
-      <td style="max-width:280px">${e.jobTitle || ''}</td>
-      <td style="font-weight:500">${e.candidate || ''}</td>
-      <td>${e.recruiter || '—'}</td>
-    </tr>`).join('');
+    // #137: the cells come from people-cells.js; the pod colour and the earlier-quarter check use each person's own start date.
+    body.innerHTML = list.map(e => `<tr>${tdQuarter(e.openingQuarter, e.startDate)}${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e._dept)}`
+      + `${tdJob(e.jobTitle)}${tdCandidate(e.candidate)}${tdRecruiter(e.recruiter, e.startDate)}</tr>`).join('');
   }
 
   // ===== Section 3: Current Pipeline (Department -> Job tree) =====

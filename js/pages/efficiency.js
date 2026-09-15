@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { defsBlock } from '../definitions.js';
+import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
@@ -179,7 +180,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="effJPCaption" style="margin-bottom:8px"></p>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="pl-list">
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
@@ -189,7 +190,7 @@ export function renderEfficiency(data) {
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-stage: Hired is one stage -->
     <div class="eff-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:8px"></p>
-      <div class="scroll-table"><table>
+      <div class="scroll-table"><table class="pl-list">
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
@@ -748,10 +749,9 @@ export function initEfficiencyFilters(data) {
       .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
       .filter(c => !jsel.length || jsel.includes(c.job))
       .filter(c => inDojFilter(c.doj, dojF));
-    body.innerHTML = rows.length ? rows.map(c => `<tr>
-      <td>${c.doj || DASH}</td><td style="font-weight:500">${c.candidate || DASH}</td><td>${c.department || DASH}</td>
-      <td style="max-width:260px">${c.job || DASH}</td><td>${c.subStage || DASH}</td><td>${c.recruiter || DASH}</td>
-      <td>${c.linked ? '<span style="color:var(--green)">Linked</span>' : '<span style="color:var(--orange);font-weight:600">Not linked</span>'}</td></tr>`).join('')
+    // #137: the cells come from people-cells.js — badges, dates and chips; the columns and the rows are unchanged.
+    body.innerHTML = rows.length ? rows.map(c => `<tr>${tdDoj(c.doj, { live: true })}${tdCandidate(c.candidate)}${tdDept(c.department)}`
+      + `${tdJob(c.job)}${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdLinked(c.linked)}</tr>`).join('')
       : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No offers in play under these filters.</td></tr>`;
     // #130b: on its own sub-tab now, so it says it is live — the dates above it do not apply.
     const cap = document.getElementById('effJPCaption');
@@ -774,10 +774,9 @@ export function initEfficiencyFilters(data) {
       .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
       .filter(e => !jsel.length || jsel.includes(e.jobTitle))
       .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
-    body.innerHTML = rows.length ? rows.map(e => `<tr>
-      <td>${e.startDate}</td><td style="font-weight:500">${e.candidate || DASH}</td><td>${e.department || DASH}</td>
-      <td style="max-width:260px">${e.jobTitle || DASH}</td><td>${e.recruiter || DASH}</td>
-      <td>${e.openingId ? '<span style="color:var(--green)">Linked</span>' : '<span style="color:var(--orange);font-weight:600">Not linked</span>'}</td></tr>`).join('')
+    // #137: the cells come from people-cells.js; the pod colour and the earlier-quarter check use each person's own start date.
+    body.innerHTML = rows.length ? rows.map(e => `<tr>${tdDoj(e.startDate)}${tdCandidate(e.candidate)}${tdDept(e.department)}`
+      + `${tdJob(e.jobTitle)}${tdRecruiter(e.recruiter, e.startDate)}${tdLinked(!!e.openingId)}</tr>`).join('')
       : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody joined between these dates under these filters.</td></tr>`;
     const cap = document.getElementById('effJoinersCaption');
     if (cap) {
