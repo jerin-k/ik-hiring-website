@@ -832,7 +832,7 @@ export function defsBlock(id) {
     ? `<div class="defs-group defs-warn"><h5>Worth knowing</h5>${rows(d.warnings)}</div>`
     : '';
   return `<details class="defs defs-full">
-    <summary>${d.summary}</summary>
+    <summary><svg class="defs-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="7.35" y="7" width="1.3" height="4.6" rx=".6" fill="currentColor"/><circle cx="8" cy="4.8" r=".9" fill="currentColor"/></svg><span class="defs-sum-text">${d.summary}</span><svg class="defs-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
     <div class="defs-body">
       ${d.intro ? `<p class="defs-intro">${d.intro}</p>` : ''}
       ${groups}${warn}

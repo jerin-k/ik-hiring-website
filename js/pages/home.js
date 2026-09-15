@@ -203,7 +203,6 @@ export function initHomeFilters() {
     const maxPipeline = Math.max(...pipelineStages.map(s => s.value), 1);
 
     container.innerHTML = `
-      ${defsBlock('overview')}
       <div style="margin-bottom:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px;">
           <h3 class="subsection-title" style="margin:0;">Key Metrics — ${periodLabel}</h3>
@@ -380,6 +379,7 @@ export function initHomeFilters() {
           </div>
         </div>
       </div>
+      ${defsBlock('overview')}
     `;
     // The selector is rendered in the page shell so its listener can be bound once, then moved into the
     // Key Metrics row here — same level as the heading, which is where Jerin asked for it.

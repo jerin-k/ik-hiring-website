@@ -163,7 +163,6 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Position Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
-      ${defsBlock('eff-fulfilment')}
       <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Positions by department</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
 
@@ -174,45 +173,45 @@ export function renderEfficiency(data) {
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
+      ${defsBlock('eff-fulfilment')}
     </div>
 
     <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
-      ${defsBlock('eff-joiningpending')}
       <p class="sub-note" id="effJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
+      ${defsBlock('eff-joiningpending')}
     </div>
 
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-stage: Hired is one stage -->
     <div class="eff-panel" data-panel="joiners" style="display:none">
-      ${defsBlock('eff-joiners')}
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
         <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
+      ${defsBlock('eff-joiners')}
     </div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day. Chart and grid mirror the Recruiter
          tab since 2026-08-29: one bar per DAY stacked by department and shaded by role, every date on the
          axis, weekends in maroon, a small mark on any weekday with nothing on it. -->
     <div class="eff-panel" data-panel="velocity" style="display:none">
-      ${defsBlock('eff-momentum')}
       <div class="tofu-heat-wrap" id="effVelHeatWrap"><div id="effVelHeat" class="tofu-heat"></div><div id="effVelHeatTip" class="heat-tip"></div></div>
       <div class="scroll-table"><table class="evel-table">
         <thead id="effVelHead"></thead>
         <tbody id="effVelBody"></tbody>
       </table></div>
+      ${defsBlock('eff-momentum')}
     </div>
 
     <!-- PANEL: Screening Efficiency — ONE R1 column set since 2026-08-29, mirroring the Recruiter tab.
          HM Review and Online Assessment columns were removed on purpose: this panel is about R1, and
          both still count on Momentum through ToFU. -->
     <div class="eff-panel" data-panel="screening" style="display:none">
-      ${defsBlock('eff-screening')}
       <div class="chart-wrap" id="effScreenChartWrap" style="height:300px"><canvas id="effScreenChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
@@ -223,11 +222,11 @@ export function renderEfficiency(data) {
         </tr></thead>
         <tbody id="effScreenBody"></tbody>
       </table></div>
+      ${defsBlock('eff-screening')}
     </div>
 
     <!-- PANEL: Throughput (mirrors HM) -->
     <div class="eff-panel" data-panel="throughput" style="display:none">
-      ${defsBlock('eff-throughput')}
       <div class="tp-controls">
         <div class="ms" id="effMsTpStage"></div>
         <label><input type="checkbox" id="effTpHideEmpty" checked> Hide zero-pipeline</label>
@@ -238,16 +237,17 @@ export function renderEfficiency(data) {
         <div class="sheat-head"><h3 class="subsection-title">Throughput — by stage</h3><span class="sheat-hint" id="effTpHint"></span></div>
         <div id="effTpHeat" class="sheat"></div><div id="effTpHeatTip" class="sheat-tip"></div>
       </div>
+      ${defsBlock('eff-throughput')}
     </div>
 
     <!-- PANEL: Time in Process -->
     <div class="eff-panel" data-panel="timeinprocess" style="display:none">
-      ${defsBlock('eff-tis')}
       <p class="sub-note" id="effTisNote" style="display:none"></p>
       <div class="scroll-table"><table>
         <thead id="effTisHead"></thead>
         <tbody id="effTisBody"></tbody>
       </table></div>
+      ${defsBlock('eff-tis')}
     </div>
 
     <!-- PANEL: Joining Conversion — brought onto the settled definition 2026-08-29, mirroring the Recruiter
@@ -255,7 +255,6 @@ export function renderEfficiency(data) {
          (Joined + Joining Pending) / Offered. It used to read Offered / Hired / Conversion %, which was the
          pre-26-August metric and disagreed with the same-named panel on the Recruiter tab. -->
     <div class="eff-panel" data-panel="joining" style="display:none">
-      ${defsBlock('eff-joining')}
       <div class="chart-wrap" id="effJoinChartWrap" style="height:300px"><canvas id="effJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
         <thead><tr>
@@ -268,11 +267,11 @@ export function renderEfficiency(data) {
         </tr></thead>
         <tbody id="effJoinBody"></tbody>
       </table></div>
+      ${defsBlock('eff-joining')}
     </div>
 
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
-      ${defsBlock('eff-sourcing')}
       <p class="sub-note" id="effSourceNote"></p>
       <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-6px"></p>
       <h3 class="subsection-title">Channel mix — where joiners came from</h3>
@@ -281,6 +280,7 @@ export function renderEfficiency(data) {
         <thead><tr><th style="min-width:340px" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
+      ${defsBlock('eff-sourcing')}
     </div>
 
     <div class="eff-panel" data-panel="panelists" style="display:none">
