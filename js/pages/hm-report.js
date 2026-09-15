@@ -2,7 +2,8 @@ import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
-         rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData } from '../period.js';   // #127 · #129 · #130
+         rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat } from '../chart-style.js';
@@ -117,14 +118,6 @@ export function renderHmReport(data) {
 
   const allDepts = [...new Set([...(data.openings || []), ...(data.jobs || [])].map(x => deptOf(x.department)))].filter(Boolean).sort();
   const years = reportingYears();   // #127c: nothing before Q3 2026 is offered — it was never cleaned up
-  // #12 (2026-08-23): built straight off case order, so the list came out unsorted — Sep, Aug, Jul, May, Jun,
-  // Mar... Sort on the raw YYYY-MM (which sorts correctly as a string) and format only at the end; sorting the
-  // formatted "Aug 2026" labels would order them alphabetically, which is worse.
-  const jpMonths = [...new Set((data.joiningPendingCases || [])
-    .map(c => String(c.doj || c.startDate || '').slice(0, 7))
-    .filter(m => m.length === 7))]
-    .sort().reverse()
-    .map(m => monthOf(m));
 
   return `
     <style>
@@ -186,8 +179,8 @@ export function renderHmReport(data) {
       <div class="fchip"><div class="ms" id="msHmJob"></div></div>
       
       
-      <label class="opt" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span></div>
+      <label class="opt" id="hmExpandWrap" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
+    <span class="period" id="hmPeriod"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span>${dojFilterHtml('hm', data.joiningPendingCases, 'margin-left:auto')}</div>
 
     <!-- ===== PANEL: POSITION FULFILMENT ===== -->
     <div class="hm-panel" data-panel="positions">
@@ -208,13 +201,6 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: JOINING PENDING (#130b — was the Cases list under Position Fulfilment) ===== -->
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       ${defsBlock('hm-joiningpending')}
-      <div class="filter-bar">
-        <select id="hmJPMonth"><option value="">All DOJ Months</option>${jpMonths.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
-        <span style="font-size:11px;color:var(--muted)">DOJ</span>
-        <input type="date" id="hmJPFrom" title="DOJ from">
-        <span style="font-size:11px;color:var(--muted)">to</span>
-        <input type="date" id="hmJPTo" title="DOJ to">
-      </div>
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:8px"></p>
       <div class="scroll-table"><table>
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
@@ -788,9 +774,7 @@ export function initHmFilters(data) {
     if (!body) return;
     const deptG = gDept();
     const jobSel = selJobs();
-    const monthF = document.getElementById('hmJPMonth')?.value || '';
-    const dojFrom = document.getElementById('hmJPFrom')?.value || '';
-    const dojTo = document.getElementById('hmJPTo')?.value || '';
+    const dojF = dojFilterOf('hm');   // #133: DOJ Month + DOJ From / To, in the filter row on this sub-tab
 
     // Deliberately BROAD: everyone currently in closing (Ref Check / Documentation / Offer),
     // with or without an opening linked. The unlinked ones show with a blank Opening Quarter
@@ -811,9 +795,7 @@ export function initHmFilters(data) {
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
       if (jobSel.length && !jobSel.includes(c.job)) return false;
-      if (monthF && monthOf(c.doj) !== monthF) return false;
-      if (dojFrom && (c.doj || '') < dojFrom) return false;
-      if (dojTo && (c.doj || '') > dojTo) return false;
+      if (!inDojFilter(c.doj, dojF)) return false;
       return true;
     });
 
@@ -823,7 +805,7 @@ export function initHmFilters(data) {
       // missing an opening link — that is a hygiene problem sitting inside a real joining number.
       const unlinkedShown = list.filter(c => !c.linked).length;
       capEl.innerHTML = list.length
-        ? `<strong>${list.length}</strong> in closing, <strong>live</strong> \u2014 the page date filter does not apply.`
+        ? `<strong>${list.length}</strong> in closing${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, <strong>live</strong>.`
           + (unlinkedShown ? ` <strong>${unlinkedShown}</strong> have no opening attached.` : '')
         : '';
     }
@@ -975,6 +957,10 @@ export function initHmFilters(data) {
   }
   function showTab(name) {
     activeTab = name;
+    // #133: Joining Pending is live, so the period boxes give way to the DOJ boxes there. Expand all opens department trees, so it hides over
+    // the two flat people lists, where it would move nothing (Rule 13).
+    toggleJpFilters('hm', document.getElementById('hmPeriod'), name === 'joiningpending');
+    showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
     document.querySelectorAll('.hm-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.hm-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActive();
@@ -996,10 +982,8 @@ export function initHmFilters(data) {
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msHmPanel = makeMultiSelect(document.getElementById('msHmPanel'), 'Panelist', panelistNames, renderPanelist);
   document.addEventListener('click', closeMsPanels);
-  // Joining Pending local listeners
-  document.getElementById('hmJPMonth')?.addEventListener('change', renderJoiningPending);
-  document.getElementById('hmJPFrom')?.addEventListener('change', renderJoiningPending);
-  document.getElementById('hmJPTo')?.addEventListener('change', renderJoiningPending);
+  // #133: the DOJ boxes in the filter row (shown on the Joining Pending sub-tab only)
+  ['hmDojMonth', 'hmDojFrom', 'hmDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderJoiningPending));
   // Throughput-local listeners — #122: a Stages dropdown (nothing picked = all 13) replaced the row of tick-boxes.
   msHmTpStage = makeMultiSelect(document.getElementById('msHmTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);

@@ -35,7 +35,7 @@ export const DEFINITIONS = {
         heading: 'The filters at the top',
         items: [
           ['Department and Job', 'Narrow every panel on this tab to the chosen department and roles.'],
-          ['From / To, Year and Quarter', 'The period. Year and Quarter fill in the From and To dates; you can also pick your own dates, but only <strong>inside the selected Year/Quarter period</strong> — any other day is greyed out, and a date typed outside it snaps back to the nearest edge. Every panel follows the dates <strong>to the day</strong>: positions count when they were opened on a day inside From–To, drops when the person first reached Ref Check, Documentation or Offer on one, and Throughput and Panelists count what happened on those days. <strong>Joining Pending</strong> and the <strong>Pipeline</strong> counts stay live. Which roles are listed follows the quarters the dates touch. With Year and Quarter both on <em>All</em>, the dates run from 1 July 2026 to the end of the current quarter. <strong>Nothing before Q3 2026 is offered</strong>, because nothing earlier was cleaned up; a new quarter appears on its first day.'],
+          ['From / To, Year and Quarter', 'The period. Year and Quarter fill in the From and To dates; you can also pick your own dates, but only <strong>inside the selected Year/Quarter period</strong> — any other day is greyed out, and a date typed outside it snaps back to the nearest edge. Every panel follows the dates <strong>to the day</strong>: positions count when they were opened on a day inside From–To, drops when the person first reached Ref Check, Documentation or Offer on one, and Throughput and Panelists count what happened on those days. <strong>Joining Pending</strong> and the <strong>Pipeline</strong> counts stay live; on the <strong>Joining Pending</strong> sub-tab these boxes give way to DOJ Month, DOJ From and DOJ To. Which roles are listed follows the quarters the dates touch. With Year and Quarter both on <em>All</em>, the dates run from 1 July 2026 to the end of the current quarter. <strong>Nothing before Q3 2026 is offered</strong>, because nothing earlier was cleaned up; a new quarter appears on its first day.'],
         ]
       },
       {
@@ -68,8 +68,8 @@ export const DEFINITIONS = {
 
   'hm-joiningpending': {
     summary: 'How this list is worked out',
-    intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — the people behind the Joining Pending card on <strong>Position Fulfilment</strong>. It is a <strong>live</strong> list: it shows who is in closing today, so the Year, Quarter, From and To filters do not change it. The <strong>Department</strong> and <strong>Job</strong> filters do.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026',
+    intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — the people behind the Joining Pending card on <strong>Position Fulfilment</strong>. It is a <strong>live</strong> list: it shows who is in closing today, so on this sub-tab <strong>Year</strong>, <strong>Quarter</strong>, <strong>From</strong> and <strong>To</strong> give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>. The <strong>Department</strong> and <strong>Job</strong> filters narrow it too.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026',
     groups: [
       {
         heading: 'The columns',
@@ -78,7 +78,7 @@ export const DEFINITIONS = {
           ['Month and DOJ', 'The candidate’s date of joining, and its month.'],
           ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
           ['Department, Job, Candidate, Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby.'],
-          ['Its own date filter', 'The DOJ month and date boxes above the list filter the list only. They do not touch anything else on the page.'],
+          ['DOJ Month, DOJ From and DOJ To', 'In the filter row, on this sub-tab only, in place of Year, Quarter, From and To. They narrow the list by <strong>date of joining</strong>: pick a month, a range, or both, and either end of the range can be left empty. Anyone with <strong>no DOJ yet</strong> drops out while any of them is set; with all three empty, everyone in closing is listed.'],
         ]
       },
     ],
@@ -222,17 +222,18 @@ export const DEFINITIONS = {
 
   'rec-joiningpending': {
     summary: 'How this list is worked out',
-    intro: 'Every person in closing — <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. A <strong>live</strong> list, so the From and To dates do not change who is on it; the Year and Quarter only decide which pod each recruiter sits in. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026',
+    intro: 'Every person in closing — <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. A <strong>live</strong> list: each person sits in their recruiter’s pod for the quarter we are in today. On this sub-tab <strong>Year</strong>, <strong>Quarter</strong>, <strong>From</strong> and <strong>To</strong> give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it too, and <em>Expand all</em> opens every pod and recruiter.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the selected quarter, earliest joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
+          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the quarter we are in today, earliest joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
           ['Opening Quarter', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against (<em>Not linked</em> when neither exists).'],
           ['Month and DOJ', 'The joining date, and its month.'],
           ['Department and Job', 'The role they are joining.'],
           ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
+          ['DOJ Month, DOJ From and DOJ To', 'In the filter row, on this sub-tab only, in place of Year, Quarter, From and To. They narrow the list by <strong>date of joining</strong>: pick a month, a range, or both, and either end of the range can be left empty. Anyone with <strong>no DOJ yet</strong> drops out while any of them is set; with all three empty, everyone in closing is listed.'],
         ]
       },
     ],
@@ -455,8 +456,8 @@ export const DEFINITIONS = {
 
   'eff-joiningpending': {
     summary: 'How this list is worked out',
-    intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so the Year, Quarter, From and To filters do not change it; the <strong>Department</strong> and <strong>Job</strong> filters do.',
-    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026',
+    intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so on this sub-tab <strong>Year</strong>, <strong>Quarter</strong>, <strong>From</strong> and <strong>To</strong> give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>. The <strong>Department</strong> and <strong>Job</strong> filters narrow it too.',
+    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026',
     groups: [
       {
         heading: 'The columns',
@@ -467,6 +468,7 @@ export const DEFINITIONS = {
           ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now.'],
           ['Recruiter', 'The Recruiter on their hiring team in Ashby.'],
           ['Opening', '<em>Linked</em> when they are tied to an opening in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against. <em>Not linked</em> means that person cannot be tied to a position on Position Fulfilment — those are the ones to fix first.'],
+          ['DOJ Month, DOJ From and DOJ To', 'In the filter row, on this sub-tab only, in place of Year, Quarter, From and To. They narrow the list by <strong>date of joining</strong>: pick a month, a range, or both, and either end of the range can be left empty. Anyone with <strong>no DOJ yet</strong> drops out while any of them is set; with all three empty, everyone in closing is listed.'],
         ]
       },
     ],
