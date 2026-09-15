@@ -1,7 +1,8 @@
 import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
-import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds } from '../period.js';   // #127
+import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
+         rangeOf, inRange, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData } from '../period.js';   // #127 · #129
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat } from '../chart-style.js';
@@ -268,7 +269,13 @@ function dropRows(data) {
   return (data.offerEvents || [])
     .filter(e => e.appStatus === 'Archived')
     .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
-                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer' }));
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
+                 day: e.lateEntryAt || e.archivedAt || null }));   // #129: the pipeline's rule for dropEvents.day
+}
+// #129 (15 Sep 2026): is this drop inside the From / To range? A drop is dated by the day the candidate first reached Ref Check,
+// Documentation or Offer (dropEvents.day). A row from a data file older than 15 Sep has no day, so it can only answer for whole quarters.
+function dropIn(e, rg, qs) {
+  return e.day ? inRange(e.day, rg) : (coversQuarters(rg, qs) && qs.includes(e.quarter));
 }
 
 let hm1ChartInstance = null;
@@ -353,23 +360,20 @@ export function initHmFilters(data) {
     setDateBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'), selectionQuarters(y, q), true);
   }
 
-  // A quarter counts as inside the report window when the quarter itself starts inside it.
-  // The Year/Quarter presets set From/To to exact quarter or year boundaries, so this picks
-  // out precisely the quarters the user asked for.
-  function quarterInRange(q, from, to) {
-    if (!q) return false;
-    const y = parseInt(q.slice(0, 4), 10);
-    const qi = parseInt(q.slice(6), 10);
-    if (!y || !qi) return false;
-    const start = `${y}-${String((qi - 1) * 3 + 1).padStart(2, '0')}-01`;
-    if (from && start < from) return false;
-    if (to && start > to) return false;
-    return true;
-  }
+  // ===== #129 (Jerin, 15 Sep 2026): every panel follows the From / To dates to the DAY =====
+  // "If there is a filter applied, data needs to change as well." hmRange() is the two dates, kept inside the Year/Quarter period (#127b).
+  // A window covering whole quarters reads the quarter figures exactly as before; a narrower one reads the pipeline's day fields, whose
+  // days add up to those quarter figures. Pipeline counts and Joining Pending stay live.
+  function hmQuarters() { return selectionQuarters(document.getElementById('hmYear')?.value || '', document.getElementById('hmQuarter')?.value || ''); }
+  function hmRange() { return rangeOf(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'), hmQuarters()); }
+  // A quarter is inside the window when ANY of its days is. The old rule needed the quarter's FIRST day inside, so moving From to
+  // 15 Aug dropped Q3 — every job list emptied and every count read zero.
+  function quarterInRange(q) { return /^\d{4}-Q[1-4]$/.test(q || '') && rangeTouchesQuarter(q, hmRange()); }
+  function windowQuarters() { return hmQuarters().filter(quarterInRange); }
   // #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter". Throughput and Panelists list
-  // only jobs with an opening OPENED inside From–To — Pipeline has done the same since #8. No dates ⇒ null ⇒ every job.
+  // only jobs with an opening OPENED in a quarter the window touches — Pipeline has done the same since #8. No dates ⇒ null ⇒ every job.
   function openJobIds() {
-    return (gFrom() || gTo()) ? jobsWithOpeningIn(data, qq => quarterInRange(qq, gFrom(), gTo())) : null;
+    return (gFrom() || gTo()) ? jobsWithOpeningIn(data, quarterInRange) : null;
   }
 
   // ===== Section 1: Positions (Department -> Job tree) =====
@@ -380,6 +384,8 @@ export function initHmFilters(data) {
     const dateFrom = gFrom(), dateTo = gTo(), deptG = gDept();
     const jobSel = selJobs();
     const ob = data.openingBuckets || {};
+    // #129: the window, the quarters it touches, and whether it covers them whole.
+    const rg = hmRange(), winQs = windowQuarters(), wholeWin = coversQuarters(rg, winQs), dayOK = hasDayData(data);
 
     // Each DISTINCT opening is counted once, in the quarter it was opened, and
     // Total = Joined + Open + Missed. A role opened in Q2 therefore still counts
@@ -391,10 +397,11 @@ export function initHmFilters(data) {
       if (deptG && dept !== deptG) return;
       if (jobSel.length && !jobSel.includes(rec.title)) return;
       let t = 0, jn = 0, op = 0, ms = 0;
-      Object.entries(rec.quarters || {}).forEach(([q, b]) => {
-        if (!quarterInRange(q, dateFrom, dateTo)) return;
-        t += b.total || 0; jn += b.joined || 0; op += b.open || 0; ms += b.missed || 0;
-      });
+      const add = (b) => { t += b.total || 0; jn += b.joined || 0; op += b.open || 0; ms += b.missed || 0; };
+      // #129: a window covering whole quarters adds those quarters; a narrower one adds the positions opened on its days (openingBuckets
+      // .days, India time, the clock the quarters are cut from). A data file from before 15 Sep has no days, so a narrow window reads empty.
+      if (wholeWin) Object.entries(rec.quarters || {}).forEach(([q, b]) => { if (winQs.includes(q)) add(b); });
+      else if (dayOK) Object.entries(rec.days || {}).forEach(([d, b]) => { if (inRange(d, rg)) add(b); });
       if (!t && !jn && !op && !ms) return;
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
@@ -429,7 +436,7 @@ export function initHmFilters(data) {
       bump(dept, title, 'jpP');
     });
     dropRows(data).forEach(e => {
-      if (!quarterInRange(e.quarter, dateFrom, dateTo)) return;
+      if (!dropIn(e, rg, winQs)) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
       const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
       if (!inScope(dept, title)) return;
       bump(dept, title, 'drop');
@@ -582,6 +589,18 @@ export function initHmFilters(data) {
     if (periodSet && !quarters.length) {
       const out = {}; TP_KEYS.forEach(k => { out[k] = { i: 0, o: 0 }; });
       out.span = { i: 0, o: 0 }; out.overall = null;
+      return out;
+    }
+    // #129: a window narrower than the quarters it touches adds up the DAY twins instead — assessed / progressed on the day of the
+    // assessment, the span on the day of the first R1 or OA assessment. A rollups file from before 15 Sep has no days: the row reads empty.
+    if (quarters.length && !coversQuarters(hmRange(), windowQuarters())) {
+      const sr = data.stageRollups || {}, rg = hmRange();
+      const asD = sr.assessedByJobD || null, spD = sr.assessedSpanByJobD || null;
+      const out = {};
+      TP_KEYS.forEach(k => { const s = asD ? sumDayFields((asD[j.id] || {})[TP_TO_STAGE[k]], rg) : {}; out[k] = { i: s.a || 0, o: s.b || 0 }; });
+      const sp = spD ? sumDayFields(spD[j.id], rg) : {};
+      out.span = { i: sp.a || 0, o: sp.b || 0 };
+      out.overall = out.span.i > 0 ? out.span.o / out.span.i : null;
       return out;
     }
     const asJ = assessedByJobQ();

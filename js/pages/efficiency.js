@@ -3,8 +3,9 @@ import { defsBlock } from '../definitions.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
-         hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
-import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds } from '../period.js';   // #127
+         hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
+import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
+         rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData } from '../period.js';   // #127 · #129
 import { scoreForRole } from '../score-model.js';
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -31,7 +32,13 @@ function dropRows(data) {
   return (data.offerEvents || [])
     .filter(e => e.appStatus === 'Archived')
     .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
-                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer' }));
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
+                 day: e.lateEntryAt || e.archivedAt || null }));   // #129: the pipeline's rule for dropEvents.day
+}
+// #129 (15 Sep 2026): is this drop inside the From / To range? A drop is dated by the day the candidate first reached Ref Check,
+// Documentation or Offer (dropEvents.day). A row from a data file older than 15 Sep has no day, so it can only answer for whole quarters.
+function dropIn(e, rg, qs) {
+  return e.day ? inRange(e.day, rg) : (!!qs && coversQuarters(rg, qs) && qs.includes(e.quarter));
 }
 
 const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
@@ -147,7 +154,7 @@ export function renderEfficiency(data) {
       <span class="fdiv"></span>
       
       
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates" style="display:none"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates" style="display:none"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>
       </div>
 
     <!-- PANEL: Fulfilment -->
@@ -558,12 +565,15 @@ export function initEfficiencyFilters(data) {
       const k = dkey(c.department) + '|' + (c.job || c.jobTitle || '');
       jp[k] = (jp[k] || 0) + 1;
     });
+    // #129: the From / To range, and whether it covers the whole period. A drop counts when the day they first reached Ref Check /
+    // Documentation / Offer is inside the range, and is priced at that day's quarter (a row from before 15 Sep has no day: whole periods only).
+    const rg = effRange(), whole = per ? coversQuarters(rg, per) : true, dayOK = hasDayData(data);
     dropRows(data).forEach(e => {
-      if (!e.quarter || (per && !per.includes(e.quarter))) return;
+      if (e.day ? !inRange(e.day, rg) : (!e.quarter || (per && !per.includes(e.quarter)) || !whole)) return;
       const k = dkey(e.department) + '|' + (e.jobTitle || '');
-      (drop[k] || (drop[k] = [])).push(e.quarter);
+      (drop[k] || (drop[k] = [])).push(e.day ? quarterOfDay(e.day) : e.quarter);
     });
-    return { jp, drop, atQ: scoreQOf(per), memo: {} };
+    return { jp, drop, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };
   }
   // A role's points in one quarter. The job tree prices every role at PM.atQ; any other quarter of the period is priced here, once.
   function scoreOf(j, qq, PM) {
@@ -573,14 +583,17 @@ export function initEfficiencyFilters(data) {
     return PM.memo[k];
   }
   function jobSplit(j, per, dept, PM) {
-    const bq = (openBuckets[j.jid] && openBuckets[j.jid].quarters) || {};
+    const ob = openBuckets[j.jid] || {}, bq = ob.quarters || {};
     let total = 0, joined = 0, missed = 0, tS = 0, jS = 0, mS = 0;
-    (per || Object.keys(bq)).forEach(qq => {
-      const b = bq[qq]; if (!b) return;
+    const add = (b, qq) => {
       const s = scoreOf(j, qq, PM);
       total += b.total || 0; joined += b.joined || 0; missed += b.missed || 0;
       tS += (b.total || 0) * s; jS += (b.joined || 0) * s; mS += (b.missed || 0) * s;
-    });
+    };
+    // #129: a range covering the whole period adds its quarters, as before; a narrower one adds the positions opened on its days
+    // (openingBuckets .days, India time), each priced at its own quarter's points. A data file from before 15 Sep has no days.
+    if (PM.whole) (per || Object.keys(bq)).forEach(qq => { if (bq[qq]) add(bq[qq], qq); });
+    else if (PM.dayOK) Object.entries(ob.days || {}).forEach(([d, b]) => { if (inRange(d, PM.rg)) add(b, quarterOfDay(d)); });
     const key = dept + '|' + (j.title || '');
     const pending = (PM.jp[key] || 0);
     const dropQs = PM.drop[key] || [];
@@ -736,13 +749,7 @@ export function initEfficiencyFilters(data) {
     const per = tisPeriod();                       // the same period helper Time in Process uses
     const body = document.getElementById('effScreenBody'); if (!body) return;
     const store = (rollups && rollups.r1ByJob) || null;
-    const sumFor = (jid) => {
-      const byQ = store && store[(jid || '').slice(0, 8)]; const acc = { added: 0, cleared: 0 };
-      if (!byQ) return acc;
-      const keys = (per && per.length) ? per : Object.keys(byQ);
-      keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
-      return acc;
-    };
+    const sumFor = r1For;   // #129: the same helper the chart reads
     const pcv = (n, d) => d ? Math.round((n / d) * 100) : 0;
     const cls = (v) => v >= 50 ? 'good' : v >= 20 ? 'pct' : v > 0 ? 'warn' : 'zero';
     const cells = (v, bold) => {
@@ -782,16 +789,23 @@ export function initEfficiencyFilters(data) {
   function buildTpChartEff(q, vis) {
     const host = document.getElementById('effTpHeat'); if (!host) return;
     const hint = document.getElementById('effTpHint');
-    if (!tpByJob) { host.innerHTML = '<p class="sheat-empty">Stage history is not in this data file yet.</p>'; if (hint) hint.textContent = ''; return; }
+    // #129: this used to demand the all-time throughputByJob just to draw, although the squares read assessedByJobQ. Only a file with
+    // neither is empty now.
+    if (!tpByJob && !(rollups && rollups.assessedByJobQ)) { host.innerHTML = '<p class="sheat-empty">Stage history is not in this data file yet.</p>'; if (hint) hint.textContent = ''; return; }
     // App Review is kept — see the note on the same line in hm-report.js. It was excluded while throughput
     // meant reached/cleared, which made the stage read 100% and worthless; it is a real figure now.
     const stageCols = vis.slice();
     const per = tisPeriod();   // #120: the squares follow the whole period, like Screening and Time in Process
     const asJ2 = (rollups && rollups.assessedByJobQ) || null;
     const spanQ = (rollups && rollups.assessedSpanByJobQ) || null;
+    // #129: inside a narrower From / To range the squares add up the day twins (assessedByJobD / assessedSpanByJobD) instead. A rollups
+    // file from before 15 Sep has none, so a narrow range then reads empty rather than the quarter.
+    const rg = effRange(), dayTp = !coversQuarters(rg, per);
+    const asD2 = (rollups && rollups.assessedByJobD) || {}, spanD = (rollups && rollups.assessedSpanByJobD) || {};
+    const abOf = (byQ, byD) => { if (!dayTp) return sumInPeriod(byQ, per); const s = sumDayFields(byD, rg); return { a: s.a || 0, b: s.b || 0 }; };
     const cellOf = (jids, k) => jids.reduce((a, jid) => {
       if (asJ2) {
-        const c = sumInPeriod((asJ2[jid] || {})[TP_TO_SK[k]], per);
+        const c = abOf((asJ2[jid] || {})[TP_TO_SK[k]], (asD2[jid] || {})[TP_TO_SK[k]]);
         return { inN: a.inN + c.a, outN: a.outN + c.b };
       }
       const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 };
@@ -802,7 +816,7 @@ export function initEfficiencyFilters(data) {
     // column divided by another: a person sits in several stages, so that double-counts and can exceed 100%.
     const spanOf = (jids) => jids.reduce((acc, jid) => {
       if (!spanQ) return acc;
-      const v = sumInPeriod(spanQ[jid], per);
+      const v = abOf(spanQ[jid], spanD[jid]);   // #129
       return { a: acc.a + v.a, b: acc.b + v.b };
     }, { a: 0, b: 0 });
     // #122 (Jerin, 15 Sep 2026 — option C1): each department row carries its JOB rows, drawn in violet, and the
@@ -856,14 +870,7 @@ export function initEfficiencyFilters(data) {
     const store = (rollups && rollups.r1ByJob) || null;
     const wrap = document.getElementById('effScreenChartWrap');
     if (!store) { if (wrap) wrap.style.height = '0px'; return; }
-    const per = tisPeriod();
-    const sumFor = (jid) => {
-      const byQ = store[(jid || '').slice(0, 8)]; const acc = { added: 0, cleared: 0 };
-      if (!byQ) return acc;
-      const keys = (per && per.length) ? per : Object.keys(byQ);
-      keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
-      return acc;
-    };
+    const sumFor = r1For;   // #129: the same helper as the table
     const rows = deptJobs(selQuarter(), false, true).map(({ dept, jobs }) => {   // #125
       const per = jobs.map(j => ({ title: j.title, v: sumFor(j.jid) })).filter(x => x.v.added > 0);
       const agg = per.reduce((a, x) => ({ added: a.added + x.v.added, cleared: a.cleared + x.v.cleared }), { added: 0, cleared: 0 });
@@ -903,7 +910,8 @@ export function initEfficiencyFilters(data) {
   // Dropped count every quarter inside it; an "earlier quarter's opening" is one raised before the period STARTS.
   let _jcKey = null, _jc = null;
   function joinMapsEff(period) {
-    const cacheKey = period ? period.join(',') : '*';
+    const rg = effRange();   // #129: Joined and Dropped follow From / To, so the cache is keyed by the range as well as the period
+    const cacheKey = (period ? period.join(',') : '*') + '|' + rg.from + '|' + rg.to;
     if (_jcKey === cacheKey && _jc) return _jc;
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const startQ = period ? period[0] : null;
@@ -912,7 +920,7 @@ export function initEfficiencyFilters(data) {
     const byKey = {};
     const bump = (key, field) => { const a = byKey[key] || (byKey[key] = { o: 0, j: 0, p: 0, dr: 0 }); a[field] += 1; };
     (data.offerEvents || []).forEach(e => {
-      if (!e.accepted || e.appStatus !== 'Hired' || !inPeriod(qOf(e.startDate))) return; // Joined = moved to Hired, not just an accepted offer
+      if (!e.accepted || e.appStatus !== 'Hired' || !inPeriod(qOf(e.startDate)) || !inRange(e.startDate, rg)) return; // Joined = moved to Hired, not just an accepted offer · #129: inside From / To
       if (earlier(e.openingQuarter)) return;
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'j');
     });
@@ -921,7 +929,7 @@ export function initEfficiencyFilters(data) {
       bump(dkey(c.department) + '|' + (c.job || c.jobTitle || ''), 'p');
     });
     dropRows(data).forEach(e => {
-      if (!inPeriod(e.quarter)) return;
+      if (!dropIn(e, rg, period)) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'dr');
     });
     Object.values(byKey).forEach(a => { a.o = a.j + a.p + a.dr; });
@@ -1073,13 +1081,32 @@ export function initEfficiencyFilters(data) {
   function tisPeriod() {
     return periodQuarters(document.getElementById('effYear')?.value || '', document.getElementById('effQuarter')?.value || '');   // #127c: never before Q3 2026
   }
+  // #129 (Jerin, 15 Sep 2026): the From / To boxes narrow every panel on this tab. effRange() is the two dates kept inside the Year/Quarter
+  // period (#127b). A range covering the whole period reads the quarter figures exactly as before; a narrower one reads the pipeline's day
+  // fields, whose days add up to those quarter figures. Job lists stay on the period (#125) and Joining Pending stays live.
+  function effRange() { return rangeOf(document.getElementById('effVelFrom'), document.getElementById('effVelTo'), tisPeriod()); }
+  const effWhole = () => coversQuarters(effRange(), tisPeriod());
+  // Added at R1 / Progressed for one job — over the period's quarters, or inside a narrower range over its days (r1ByJobD). The Screening
+  // table and its chart both read this, so they cannot disagree.
+  function r1For(jid) {
+    const j8 = (jid || '').slice(0, 8), acc = { added: 0, cleared: 0 }, per = tisPeriod(), rg = effRange();
+    if (!coversQuarters(rg, per)) {
+      const s = sumDayFields(((rollups && rollups.r1ByJobD) || {})[j8], rg);
+      acc.added = s.added || 0; acc.cleared = s.cleared || 0;
+      return acc;
+    }
+    const byQ = rollups && rollups.r1ByJob && rollups.r1ByJob[j8];
+    if (!byQ) return acc;
+    (per && per.length ? per : Object.keys(byQ)).forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
+    return acc;
+  }
 
   // Says which stages actually follow the period. Without this the panel would repeat the original bug in a
   // new form — quarter-scoped columns sitting unlabelled next to a live one.
   function tisNote(per) {
     const el = document.getElementById('effTisNote'); if (!el) return;
     if (!per) { el.style.display = 'none'; return; }
-    const label = periodText(per);
+    const label = rangeText(effRange(), per);   // #129: the dates, when From / To is narrower than the period
     el.style.display = '';
     el.style.color = (tisHasQ && tisSplit) ? 'var(--muted)' : 'var(--orange)';
     el.innerHTML = !tisHasQ
@@ -1111,9 +1138,12 @@ export function initEfficiencyFilters(data) {
     // has no completed-stay median at all — the cell reads "—" over its waiting pile. That is the honest
     // shape of that column and always was; pooling simply disguised it as a processing time.
     const arPair = (dw) => ({ fin: {}, wait: dw || {}, live: true });
+    // #129: inside a narrower From / To range the stays come from the day twins, by the day the candidate entered the stage.
+    const rgT = effRange(), dayTis = !coversQuarters(rgT, per);
+    const tisD = rollups.timeInStageByJobD || null, waitD = rollups.waitingByJobD || null;
     const jobHists = (jid) => TIS_STAGES.map(([sk]) => sk === 'appReview'
       ? arPair(arDwellJob && arDwellJob[jid])
-      : tisPair(tisByJob, tisByJobQ, waitByJob, waitByJobQ, jid, sk, per, tisSplit));
+      : (dayTis ? tisPairRange(tisD, waitD, jid, sk, rgT, tisSplit) : tisPair(tisByJob, tisByJobQ, waitByJob, waitByJobQ, jid, sk, per, tisSplit)));
     // On an older data file there is no split to show, so fall back to exactly the previous single-number
     // cell rather than passing a pooled median off as a completed-stay time. tisNote says so on screen.
     const cell = (p) => tisSplit ? tisCellSplit(p, 5) : tisCell(p.live ? p.wait : p.fin, 5);
@@ -1229,7 +1259,8 @@ export function initEfficiencyFilters(data) {
   // { job8: { sourceType: { sourceName: joiners } } } for a PERIOD: an array of quarter keys, null = all time.
   // #120 (14 Sep 2026): it took ONE quarter, so "Quarter: All" showed the current quarter only.
   function joinerSourcesByJob(per) {
-    const ck = per ? per.join(',') : 'ALL';
+    const rg = effRange();   // #129: joiners whose start date is inside From / To; the cache is keyed by the range too
+    const ck = (per ? per.join(',') : 'ALL') + '|' + rg.from + '|' + rg.to;
     if (_jsQ === ck && _jsMap) return _jsMap;
     const out = {};
     (data.offerEvents || []).forEach(e => {
@@ -1237,6 +1268,7 @@ export function initEfficiencyFilters(data) {
       const eq = qOfDate(e.startDate);
       if (!eq) return;
       if (per && !per.includes(eq)) return;
+      if (!inRange(e.startDate, rg)) return;
       const t = e.srcType || NO_SRC;
       const nm = e.srcType ? (e.srcName || '(unspecified)') : NO_SRC;
       const j = out[e.jobId8] || (out[e.jobId8] = {});
@@ -1285,7 +1317,7 @@ export function initEfficiencyFilters(data) {
     // above (Jerin, 2026-08-29: "don't we have the collapsible section to give the definition").
     const per = tisPeriod();   // #120: the whole period, not one quarter
     if (note) note.textContent = per
-      ? `Showing where the people who joined in ${periodText(per)} came from.`
+      ? `Showing where the people who joined in ${rangeText(effRange(), per)} came from.`
       : 'Showing where everyone who has joined came from (all time).';
     if (th) th.textContent = 'Department / Job / Source type / Source name';
     if (warn) {
@@ -1597,6 +1629,7 @@ export function initEfficiencyFilters(data) {
           depts: () => (msDept ? msDept.getSelected() : []),
           jobs: () => (msJob ? msJob.getSelected() : []),
           jobIds: () => { const per = tisPeriod(); return per ? jobsWithOpeningIn(data, qq => per.includes(qq)) : null; },   // #125
+          range: () => effRange(),       // #129: interviews counted by day inside From / To, as on Hiring Manager
           panelists: () => [],           // this tab has no panelist dimension
           expandAll: () => expandAll()   // #120: Expand all reaches the Panelists tree too
         }
@@ -1610,7 +1643,7 @@ export function initEfficiencyFilters(data) {
 
   function showTab(name) {
     activeTab = name;
-    document.querySelectorAll('.vel-dates').forEach(c => { c.style.display = name === 'velocity' ? '' : 'none'; });   // #127e: From / To drive Momentum only
+    // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.eff-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.eff-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActive();
@@ -1631,7 +1664,8 @@ export function initEfficiencyFilters(data) {
   msEffTpStage = makeMultiSelect(document.getElementById('effMsTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('effTpHideEmpty')?.addEventListener('change', renderThroughput);
 
-  ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderVelocity));
+  // #129: the dates narrow every panel, so a change re-renders whichever is showing (they used to redraw Momentum only).
+  ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));
   document.getElementById('effYear')?.addEventListener('change', () => {
     fillQuarterSelect(document.getElementById('effQuarter'), document.getElementById('effYear').value, true);   // #127c: only the year's quarters on offer
     applyVelYearQuarter(); renderAll();

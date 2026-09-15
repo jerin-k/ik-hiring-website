@@ -48,7 +48,8 @@ function allMonthKeys(data) {
 
 import { defsBlock } from '../definitions.js';
 import { HBAR, hbarHeight } from '../chart-style.js';
-import { reportingQuarters, selectionQuarters, quarterSpan, periodText } from '../period.js';   // #127
+import { reportingQuarters, selectionQuarters, quarterSpan, periodText,
+         inRange, sumDayCount, coversQuarters, rangeTouchesQuarter, rangeText, hasDayData } from '../period.js';   // #127 · #129
 
 export function renderInterviewer(data, opts = {}) {
   const ivs = (data && data.interviewers) || [];
@@ -154,29 +155,39 @@ export function initInterviewer(data, opts = {}) {
   // Quarters covered by the Year/Quarter selection; null = all-time.
   // A host with a DATE RANGE (Hiring Manager's From/To) passes F.range, and Panelists then follow the dates rather than
   // the Year/Quarter boxes, which the dates can drift away from (#120, 14 Sep 2026).
-  const rangeOf = () => (F && F.range) ? F.range() : null;
-  const qStart = (k) => `${k.slice(0, 4)}-${String((parseInt(k.slice(6), 10) - 1) * 3 + 1).padStart(2, '0')}-01`;
+  // #129 (Jerin, 15 Sep 2026): the host's From / To boxes narrow this panel to the DAY — both hosts (Hiring Manager, Overall Efficiency)
+  // pass F.range, and the pipeline keeps interviews per day (byDay, interviewsByDay, interviewsByJobD). A range covering whole quarters
+  // reads the quarter figures exactly as before; so does a data file from before 15 Sep, which has no days.
+  const rangeOf = () => { const rg = (F && F.range) ? F.range() : null;
+    return rg && (rg.from || rg.to) ? { from: rg.from || '0000-01-01', to: rg.to || '9999-12-31' } : null; };
   // #127: never before Q3 2026 — with no dates at all the period is every quarter on offer, not all time.
+  // #129: a quarter counts when ANY of its days is inside the range. The old rule kept a quarter only when its first day was, so moving
+  // From to 15 Aug dropped Q3 and emptied the panel.
   function selQuarters() {
     const rg = rangeOf();
-    if (rg) {
-      if (!rg.from && !rg.to) return reportingQuarters();
-      return qkeys.filter(k => (!rg.from || qStart(k) >= rg.from) && (!rg.to || qStart(k) <= rg.to));
-    }
+    if (rg) return reportingQuarters().filter(k => rangeTouchesQuarter(k, rg));
+    if (F && F.range) return reportingQuarters();
     return selectionQuarters(sel('ivYear'), sel('ivQuarter'));
+  }
+  // The range to count by DAY: set only when it is narrower than the quarters it touches and the data file carries days.
+  function dayRange() {
+    const rg = rangeOf();
+    return rg && hasDayData(data) && !coversQuarters(rg, selQuarters()) ? rg : null;
   }
   // Months covered by the same selection; null = all-time (every month present).
   function selMonths() {
     const rg = rangeOf();
-    const span = rg && (rg.from || rg.to) ? rg : quarterSpan(rg ? reportingQuarters() : selectionQuarters(sel('ivYear'), sel('ivQuarter')));
+    const span = rg || quarterSpan(F && F.range ? reportingQuarters() : selectionQuarters(sel('ivYear'), sel('ivQuarter')));
     const lo = (span.from || '').slice(0, 7), hi = (span.to || '').slice(0, 7);
     return mkeys.filter(k => (!lo || k >= lo) && (!hi || k <= hi));
   }
-  const periodLabel = periodText;
+  const periodLabel = (quarters) => { const rg = rangeOf(); return rg ? rangeText(rg, quarters) : periodText(quarters); };
 
-  // Interview count for the selected period. Prefers byMonth (finer), falls back to byQuarter, then lifetime.
+  // Interview count for the selected period. By day inside a narrow range (#129); otherwise byMonth (finer), then byQuarter, then lifetime.
   function periodCount(rec, quarters, months) {
     if (!quarters) return rec.interviews || 0;
+    const rgD = dayRange();
+    if (rgD) return sumDayCount(rec.byDay, rgD);
     if (rec.byMonth && months && months.length) return months.reduce((s, m) => s + (rec.byMonth[m] || 0), 0);
     if (rec.byQuarter) return quarters.reduce((s, q) => s + (rec.byQuarter[q] || 0), 0);
     return rec.interviews || 0;
@@ -240,7 +251,11 @@ export function initInterviewer(data, opts = {}) {
       : (msIvDept?.getSelected().length || msIvJob?.getSelected().length || msIvPanel?.getSelected().length);
     // #125: with a period, the card counts interview EVENTS on the same jobs the table lists (interviewsByJobQ), not the org-wide total.
     const idCard = F && F.jobIds ? F.jobIds() : null;
+    const rgD = dayRange();   // #129: inside a narrow From / To range the card counts the interviews held on those days
     const distinct = scoped ? null : (!quarters ? ((data && data.totalInterviews) || null)
+      : rgD ? (idCard
+          ? (data && data.interviewsByJobD ? [...idCard].reduce((s, j8) => s + sumDayCount(data.interviewsByJobD[j8], rgD), 0) : null)
+          : (data && data.interviewsByDay ? sumDayCount(data.interviewsByDay, rgD) : null))
       : idCard ? (data && data.interviewsByJobQ
           ? [...idCard].reduce((s, j8) => s + quarters.reduce((t, qq) => t + ((data.interviewsByJobQ[j8] || {})[qq] || 0), 0), 0) : null)
       : (byQ ? quarters.reduce((s, q) => s + (byQ[q] || 0), 0) : null));
@@ -340,7 +355,12 @@ export function initInterviewer(data, opts = {}) {
     // instead of rendering an empty chart — the shape is the same, just coarser, and the caption says which.
     const hasMonths = rows.some(p => p.byMonth && Object.keys(p.byMonth).length);
     const buckets = hasMonths ? months : (selQuarters() || allQuarterKeys(data));
-    const bucketOf = (p, k) => hasMonths ? ((p.byMonth && p.byMonth[k]) || 0) : ((p.byQuarter && p.byQuarter[k]) || 0);
+    // #129: inside a narrow From / To range a month's segment holds only that month's days inside the range, so each bar adds up to the
+    // table's Interviews figure.
+    const rgD = dayRange();
+    const bucketOf = (p, k) => rgD && hasMonths
+      ? sumDayCount(p.byDay, { from: rgD.from > k + '-01' ? rgD.from : k + '-01', to: rgD.to < k + '-31' ? rgD.to : k + '-31' })
+      : hasMonths ? ((p.byMonth && p.byMonth[k]) || 0) : ((p.byQuarter && p.byQuarter[k]) || 0);
     const bucketLabel = (k) => hasMonths ? monthLabel(k) : k;
     const byName = {};
     rows.forEach(p => {

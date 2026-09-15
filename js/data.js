@@ -46,10 +46,10 @@ export function mergePanelists(rows) {
   return [...byKey.values()].map(list => {
     if (list.length === 1) return list[0];
     const m = { ...list[0], jobId8: null, jobIds8: list.map(p => p.jobId8).filter(Boolean),
-      interviews: 0, feedbackSubmitted: 0, feedbackOnScheduled: 0, pendingFeedback: 0, turnN: 0, turnSumHrs: 0, byQuarter: {}, byMonth: {} };
+      interviews: 0, feedbackSubmitted: 0, feedbackOnScheduled: 0, pendingFeedback: 0, turnN: 0, turnSumHrs: 0, byQuarter: {}, byMonth: {}, byDay: {} };
     list.forEach(p => {
       ['interviews', 'feedbackSubmitted', 'feedbackOnScheduled', 'pendingFeedback', 'turnN', 'turnSumHrs'].forEach(f => { m[f] += p[f] || 0; });
-      addMap(m.byQuarter, p.byQuarter); addMap(m.byMonth, p.byMonth);
+      addMap(m.byQuarter, p.byQuarter); addMap(m.byMonth, p.byMonth); addMap(m.byDay, p.byDay);   // byDay: #129
     });
     m.avgTurnaroundHrs = m.turnN ? Math.round(m.turnSumHrs / m.turnN * 10) / 10 : null;
     return m;
@@ -129,10 +129,12 @@ export function scopeData(data, { jobIds = null, departments = null } = {}) {
   filt('dropEvents', e => allowRow(e.jobId8, e.department, e.jobTitle));
   filt('joiningPendingCases', e => allowRow(e.jobId8, e.department, e.job));
   filt('offerLinkGaps', e => allowRow(e.jobId8, e.department, e.job));
-  ['openingBuckets', 'openingPendingByJobQ', 'appReviewDwellByJob', 'interviewsByJobQ', 'interviewsByJobM'].forEach(k => { if (data[k]) out[k] = pickKeys(data[k]); });
+  ['openingBuckets', 'openingPendingByJobQ', 'appReviewDwellByJob', 'interviewsByJobQ', 'interviewsByJobM', 'interviewsByJobD'].forEach(k => { if (data[k]) out[k] = pickKeys(data[k]); });
   ['ownedSeatsByRecruiterQ', 'ownedSeatsBySourcerQ'].forEach(k => { if (!data[k]) return; out[k] = {};
     for (const name in data[k]) { out[k][name] = {}; for (const q in data[k][name]) out[k][name][q] = pickKeys(data[k][name][q]); } });
-  if (data.ownedSeatsPairQ) { out.ownedSeatsPairQ = {}; for (const q in data.ownedSeatsPairQ) out.ownedSeatsPairQ[q] = pickKeys(data.ownedSeatsPairQ[q]); }
+  // ownedSeatsPairD (#129) is the same shape keyed by the day an opening opened instead of its quarter.
+  ['ownedSeatsPairQ', 'ownedSeatsPairD'].forEach(k => { if (!data[k]) return; out[k] = {};
+    for (const q in data[k]) out[k][q] = pickKeys(data[k][q]); });
 
   // ---- per-recruiter figures, rebuilt from their per-job rows ----
   if (data.recruiters) out.recruiters = data.recruiters.map(r => {
@@ -166,9 +168,9 @@ export function scopeData(data, { jobIds = null, departments = null } = {}) {
     const perJob = allRows.some(p => 'pendingFeedback' in p);   // feedback and turnaround per job exist from 14 Sep
     const byUser = new Map();
     pRows.forEach(p => { const k = p.userId || p.name; let u = byUser.get(k);
-      if (!u) byUser.set(k, (u = { name: p.name, userId: p.userId, interviews: 0, feedbackSubmitted: 0, feedbackOnScheduled: 0, pendingFeedback: 0, turnN: 0, turnSumHrs: 0, byQuarter: {}, byMonth: {} }));
+      if (!u) byUser.set(k, (u = { name: p.name, userId: p.userId, interviews: 0, feedbackSubmitted: 0, feedbackOnScheduled: 0, pendingFeedback: 0, turnN: 0, turnSumHrs: 0, byQuarter: {}, byMonth: {}, byDay: {} }));
       ['interviews', 'feedbackSubmitted', 'feedbackOnScheduled', 'pendingFeedback', 'turnN', 'turnSumHrs'].forEach(f => { u[f] += p[f] || 0; });
-      addNum(u.byQuarter, p.byQuarter || {}); addNum(u.byMonth, p.byMonth || {}); });
+      addNum(u.byQuarter, p.byQuarter || {}); addNum(u.byMonth, p.byMonth || {}); addNum(u.byDay, p.byDay || {}); });
     out.interviewers = [...byUser.values()].map(u => ({ ...u,
         pendingFeedback: perJob ? u.pendingFeedback : null,
         avgTurnaroundHrs: perJob && u.turnN ? Math.round(u.turnSumHrs / u.turnN * 10) / 10 : null }))
@@ -184,14 +186,23 @@ export function scopeData(data, { jobIds = null, departments = null } = {}) {
       out.totalInterviews = Object.values(q).reduce((s, n) => s + n, 0);
     } else { out.interviewsByQuarter = null; out.interviewsByMonth = null; out.totalInterviews = null; gaps.push('interviewsByQuarter'); }
   }
+  // #129: the company-wide interviews per DAY, rebuilt the same way from its per-job twin.
+  if ('interviewsByDay' in data) {
+    if (data.interviewsByJobD) {
+      const d = {};
+      for (const j8 in data.interviewsByJobD) if (allow8(j8)) addNum(d, data.interviewsByJobD[j8]);
+      out.interviewsByDay = d;
+    } else { out.interviewsByDay = null; gaps.push('interviewsByDay'); }
+  }
 
   // ---- stage-history rollups ----
+  // #129: the DAY twins (…ByJobD, …ByRecruiterJobD) narrow exactly like the quarter stores.
   const sr = data.stageRollups;
   if (sr) {
     const s = { ...sr };
     for (const k in sr) {
-      if (/ByRecruiterJobQ?$/.test(k)) s[k] = pickInner(sr[k]);
-      else if (/ByJobQ?$/.test(k)) s[k] = pickKeys(sr[k]);
+      if (/ByRecruiterJob[QD]?$/.test(k)) s[k] = pickInner(sr[k]);
+      else if (/ByJob[QD]?$/.test(k)) s[k] = pickKeys(sr[k]);
     }
     const rebuild = (target, twin, dropQuarter) => { if (!(target in sr)) return;
       if (sr[twin]) s[target] = sumJobs(sr[twin], dropQuarter); else { s[target] = null; gaps.push(target); } };
@@ -204,6 +215,9 @@ export function scopeData(data, { jobIds = null, departments = null } = {}) {
     rebuild('timeInStageByRecruiter', 'timeInStageByRecruiterJobQ', true);
     rebuild('waitingByRecruiterQ', 'waitingByRecruiterJobQ');
     rebuild('waitingByRecruiter', 'waitingByRecruiterJobQ', true);
+    rebuild('r1ByRecruiterD', 'r1ByRecruiterJobD');                   // #129 day twins
+    rebuild('timeInStageByRecruiterD', 'timeInStageByRecruiterJobD');
+    rebuild('waitingByRecruiterD', 'waitingByRecruiterJobD');
     out.stageRollups = s;
   }
 

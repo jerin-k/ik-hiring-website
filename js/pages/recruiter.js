@@ -4,8 +4,9 @@ import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
-         hasWaitSplit, tisPair, poolPairs, tisCellSplit } from '../stage-time.js';
-import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds } from '../period.js';   // #127
+         hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
+import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
+         rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData } from '../period.js';   // #127 · #129
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 
@@ -24,7 +25,13 @@ function dropRows(data) {
   return (data.offerEvents || [])
     .filter(e => e.appStatus === 'Archived')
     .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
-                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer' }));
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
+                 day: e.lateEntryAt || e.archivedAt || null }));   // #129: the pipeline's rule for dropEvents.day
+}
+// #129 (15 Sep 2026): is this drop inside the From / To range? A drop is dated by the day the candidate first reached Ref Check,
+// Documentation or Offer (dropEvents.day). A row from a data file older than 15 Sep has no day, so it can only answer for whole quarters.
+function dropIn(e, rg, qs) {
+  return e.day ? inRange(e.day, rg) : (coversQuarters(rg, qs) && qs.includes(e.quarter));
 }
 
 
@@ -357,7 +364,7 @@ export function renderRecruiter(data) {
       <span class="fdiv"></span>
       
       
-    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip vel-dates" style="display:none"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates" style="display:none"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span></div>
+    <span class="period"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span></div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day.
          🚨 The day columns were replaced with summary columns (Total / Last 7d / Prev 7d / Trend / Active
@@ -706,6 +713,41 @@ export function initRecruiterFilters(baseData) {
   // recruiter and pod rows, charts — covers the same jobs. Fulfilment, Joining Conversion, Sourcing Mix and Data Hygiene read `data`:
   // a previous-quarter opening still counts there. Year and Quarter both on All ⇒ every job.
   const actData = () => { const per = selQuarters(); return per ? scopeToOpenings(data, qq => per.includes(qq)) : data; };
+  // ===== #129 (Jerin, 15 Sep 2026): the From / To boxes narrow every panel on this tab =====
+  // "If there is a filter applied, data needs to change as well." The range always sits inside the one quarter picked (#127b). A range
+  // covering the whole quarter reads the quarter figures exactly as before; a narrower one reads the pipeline's day fields, whose days
+  // add up to those quarter figures. Job lists stay on the quarter (#125), Joining Pending stays live, Data Hygiene is unchanged.
+  function selRange() { return rangeOf(document.getElementById('recVelFrom'), document.getElementById('recVelTo'), [selQuarter()]); }
+  const wholeQuarter = () => coversQuarters(selRange(), [selQuarter()]);
+  // Capacity is set for a whole quarter, so a range covering part of it gets that share of the days (Jerin: 1A).
+  const capacityFor = (name, qq) => {
+    const cap = capacityOf(name, qq) || 0, rg = selRange();
+    return coversQuarters(rg, [qq]) ? cap : Math.round(cap * quarterDaysIn(qq, rg) / quarterDays(qq));
+  };
+  // The openings each person owns or sources inside the range, shaped like ownedSeatsPairQ[qq]: ownedSeatsPairD added up over the days
+  // in the range, the same (recruiter, sourcer) pair merged. A data file from before 15 Sep has no days, so it answers whole quarters only.
+  let _pairsKey = null, _pairsData = null, _pairsVal = null;
+  function pairsFor(qq) {
+    const rg = selRange();
+    if (coversQuarters(rg, [qq])) return (pairsQ && pairsQ[qq]) || {};
+    const key = qq + '|' + rg.from + '|' + rg.to;
+    if (_pairsData === data && _pairsKey === key) return _pairsVal;
+    const out = {}, pd = hasDayData(data) ? (data.ownedSeatsPairD || {}) : {};
+    for (const d in pd) {
+      if (!inRange(d, rg) || quarterOfDay(d) !== qq) continue;
+      for (const j8 in pd[d]) {
+        const arr = out[j8] || (out[j8] = []);
+        pd[d][j8].forEach(p => {
+          let hit = arr.find(x => x.r === p.r && x.s === p.s);
+          if (!hit) arr.push(hit = { r: p.r, s: p.s, n: 0 });
+          hit.n += p.n || 0;
+        });
+      }
+    }
+    Object.values(out).forEach(arr => arr.forEach(x => { x.n = Math.round(x.n * 10000) / 10000; }));
+    _pairsKey = key; _pairsData = data; _pairsVal = out;
+    return out;
+  }
   const NARROW_CAP_NOTE = 'Capacity is set per person for the whole quarter, not per job or department, so it is blank while a filter narrows the numbers.';
   // {job8: {stage: {quarter: hist}}} → {job8: {stage: hist}}: the all-time view of one recruiter's per-job stays.
   const _allTime = new WeakMap();
@@ -722,11 +764,11 @@ export function initRecruiterFilters(baseData) {
   //   1. usePairs   — recruiter+sourcer read off the SAME opening. Exact; cannot leak.
   //   2. useOwnedGoal — the old per-JOB maps. Still leaks (#100a) but now at least applies the split to the
   //      per-job rows too, so #100b is fixed even before the pipeline has run.
-  //   3. neither    — the pre-#1 equal-split-of-seats convention.
+  //   3. neither    — no Goal (a data file older than 6 Sep; the pre-#1 equal split was removed in #129).
   const goalOf = (r, qq, only8) => {
     let hc = 0, sc = 0, so = 0;
     if (usePairs) {
-      const byJob = pairsQ[qq] || {};
+      const byJob = pairsFor(qq);
       const keys = only8 ? (byJob[only8] ? [only8] : []) : Object.keys(byJob);
       keys.forEach(j8 => {
         const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
@@ -760,11 +802,8 @@ export function initRecruiterFilters(baseData) {
       Object.keys(ownedSrc).forEach(j8 => { so += ownedSrc[j8] || 0; });   // sourced openings: a count, no points
       return { hc, sc, so };
     }
-    (r.byJob || []).forEach(bj => {
-      if (only8 && (bj.jobId || '').slice(0, 8) !== only8) return;
-      const seats = seatsOf(bj.jobId); if (!seats) return;
-      hc += seats; sc += seats * scoreForRole(jobMeta(bj), qq);
-    });
+    // #129: the third basis (the pre-#1 equal split of a role's positions) called seatsOf, which exists only inside fulfilRows, so it
+    // could only ever throw. Every data file since 10 Sep carries ownedSeatsPairQ, so it is gone rather than repaired.
     return { hc, sc, so };
   };
   // Every job this person has a Goal on in a quarter — as Recruiter or as Sourcer. Feeds the drill-down rows,
@@ -772,7 +811,7 @@ export function initRecruiterFilters(baseData) {
   const goalJobsOf = (r, qq) => {
     const out = {};
     if (usePairs) {
-      Object.entries(pairsQ[qq] || {}).forEach(([j8, arr]) =>
+      Object.entries(pairsFor(qq)).forEach(([j8, arr]) =>
         (arr || []).forEach(pr => { if (pr.n && (pr.r === r.name || pr.s === r.name)) out[j8] = 1; }));
     } else if (useOwnedGoal) {
       [ownedByRecQ, ownedBySrcQ].forEach(map =>
@@ -976,7 +1015,8 @@ export function initRecruiterFilters(baseData) {
     // #127a (Jerin, 15 Sep 2026): this tab has no Quarter: All — goals, pods and capacity belong to a quarter and people move between Sales
     // and Non-Sales, so quarters are never added together. Every panel is on the one quarter picked (the old Quarter: All note is gone).
     const per = selQuarters();
-    const perTxt = periodLabel(per);
+    const rg = selRange(), whole = coversQuarters(rg, per);   // #129: the From / To range, and whether it is the whole quarter
+    const perTxt = rangeText(rg, per);
     const spEl = document.getElementById('recScreenPeriod');
     if (spEl) spEl.textContent = `Showing ${perTxt}.`;
 
@@ -995,11 +1035,15 @@ export function initRecruiterFilters(baseData) {
     // came back round, and it is not Momentum's R1 either — Momentum only credits R1 when it was the
     // candidate's FIRST signal, so its R1 is a subset of this one.
     const r1Sr = actData().stageRollups || null;   // #125: only jobs with an opening opened in the period
-    const r1Store = (r1Sr && r1Sr.r1ByRecruiter) || null;
-    const r1JobStore = (r1Sr && r1Sr.r1ByRecruiterJob) || null;
+    // #129: a narrower From / To range reads the day twins (r1By…D) — each candidate counted once per role per quarter, on the day of their
+    // first R1 action, so the days add up to the quarter. A rollups file from before 15 Sep has none, and the panel then says so.
+    const r1Day = !whole;
+    const r1Store = (r1Sr && (r1Day ? r1Sr.r1ByRecruiterD : r1Sr.r1ByRecruiter)) || null;
+    const r1JobStore = (r1Sr && (r1Day ? r1Sr.r1ByRecruiterJobD : r1Sr.r1ByRecruiterJob)) || null;
     const r1Sum = (byQ) => {
       const acc = { added: 0, cleared: 0 };
       if (!byQ) return acc;
+      if (r1Day) { const s = sumDayFields(byQ, rg); acc.added = s.added || 0; acc.cleared = s.cleared || 0; return acc; }
       if (per && per.length) per.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
       else Object.keys(byQ).forEach(qq => { const c = byQ[qq]; acc.added += c.added || 0; acc.cleared += c.cleared || 0; });
       return acc;
@@ -1055,7 +1099,7 @@ export function initRecruiterFilters(baseData) {
     // ===== Joining Conversion =====
     const joinBody = document.getElementById('recJoinBody');
     if (joinBody) {
-      const CM = convMaps(selQuarter());
+      const CM = convMaps(selQuarter(), selRange());
       const cOf = (name) => CM.byRec[name] || { o: 0, j: 0, p: 0, dr: 0 };
       const convCell = (v) => {
         if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
@@ -1126,14 +1170,17 @@ export function initRecruiterFilters(baseData) {
       //   Non-Sales → offers whose DECIDED date falls in the quarter (the offer was made)
       // Score comes from the event's own department/title/level/complexity, same grid as everywhere else.
       const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-      const OM = outcomeMaps(q);
+      const rg = selRange();   // #129: Joined, Drop, Goal and Capacity below all follow the From / To range
+      const OM = outcomeMaps(q, rg);
       const JP = jpMaps(q, isSales);
       const Z = { hc: 0, sc: 0, so: 0 };
       const jpOf = (rec) => ({ t: JP.total[rec] || Z, a: JP.bucketA[rec] || Z, b: JP.bucketB[rec] || Z });
       const jpOfJob = (rec, title) => { const k = rec + '|' + (title || '');
         return { t: JP.totalJ[k] || Z, a: JP.bucketAJ[k] || Z, b: JP.bucketBJ[k] || Z }; };
-      const outByRec = isSales ? OM.sales : OM.nonSales;
-      const outByRecJob = isSales ? OM.salesJob : OM.nonSalesJob;
+      // #129: Non-Sales reads its Joined from joinByRec below. These maps also used to carry Non-Sales offers by DECIDED date — Ashby's bulk
+      // data-entry stamp (CLAUDE.md date trap 2) — and all that did was add empty job rows under Non-Sales recruiters.
+      const outByRec = isSales ? OM.sales : {};
+      const outByRecJob = isSales ? OM.salesJob : {};
       const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0, so: 0 };
       const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
       // #39: the Joined split, shaped exactly like jpOf/jpOfJob so the two blocks render through the same
@@ -1155,7 +1202,7 @@ export function initRecruiterFilters(baseData) {
       // raised (Jerin, 2026-08-26). Same word, two rules, on purpose — do not "fix" it.
       if (!isSales) (data.offerEvents || []).forEach(e => {
         const rec = e.recruiter; if (!rec || !e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
-        if (qOf(e.startDate) !== q) return;
+        if (!inRange(e.startDate, rg)) return;   // #129: started inside the From / To range (which sits inside the quarter)
         if (e.openingQuarter && e.openingQuarter < q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         addCredit(joinByRec, joinByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);   // #11
@@ -1215,7 +1262,7 @@ export function initRecruiterFilters(baseData) {
       const dropByRec = {}, dropByRecJob = {};
       dropRows(data).forEach(e => {
         const rec = e.recruiter; if (!rec) return;
-        if (e.quarter !== q) return;
+        if (!dropIn(e, rg, [q])) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         // #11: a sourcer carries their share of the bad news as well as the good ("split is everywhere").
         // ⚠ Drops found via stage history have their sourcer recovered from appMap in the pipeline, so a few
@@ -1318,7 +1365,7 @@ export function initRecruiterFilters(baseData) {
         // or department, so while the numbers are narrowed Capacity and Capacity Utilisation both read "—" rather than set part of
         // someone's work against all of their capacity. 0 also drops the chart's Capacity line (drawn only when cap > 0) and
         // stops capacity alone from holding a row open.
-        const capSc = narrowed() ? 0 : (capacityOf(r.name, q) || 0);
+        const capSc = narrowed() ? 0 : capacityFor(r.name, q);   // #129 (Jerin 1A): scaled by the days of the quarter inside From / To
         // Outcome column = Joined on BOTH tables.
         const xHC = isSales ? o.hc : jn.hc, xSc = isSales ? o.sc : jn.sc;
         // What Gap and Capacity Utilisation are measured against (Jerin, 2026-08-24):
@@ -1559,8 +1606,8 @@ export function initRecruiterFilters(baseData) {
     // Org-wide totals live in Overall Efficiency.
     const srcBody = document.getElementById('recSourceBody');
     if (srcBody) {
-      const perSrc = selQuarters();
-      const nestOf = (r) => srcNestedFor(r, perSrc);
+      const perSrc = selQuarters(), rgSrc = selRange();   // #129: joiners whose start date is inside From / To
+      const nestOf = (r) => srcNestedFor(r, perSrc, rgSrc);
       const recSrcTotal = r => Object.values(nestOf(r)).reduce((s, names) => s + Object.values(names).reduce((a, v) => a + v, 0), 0);
       const sn = document.getElementById('recSourceNote');
       if (sn) {
@@ -1573,7 +1620,7 @@ export function initRecruiterFilters(baseData) {
       }
       const spSrc = document.getElementById('recSourcePeriod');
       if (spSrc) spSrc.textContent = perSrc && perSrc.length
-        ? `Showing where the people who joined in ${periodLabel(perSrc)} came from.`
+        ? `Showing where the people who joined in ${rangeText(rgSrc, perSrc)} came from.`
         : `Showing where everyone who has joined came from (all time).`;
       const grand = recs.reduce((s, r) => s + recSrcTotal(r), 0) || 1;
       let html = '';
@@ -1728,8 +1775,9 @@ export function initRecruiterFilters(baseData) {
   // so the panel totals still reconcile with Joined. About 5% today.
   const NO_SRC = '(source not recorded)';
   let _jsQ = null, _js = null;
-  function joinerSources(per) {
-    const key = (per && per.length) ? per.join(',') : 'ALL';
+  function joinerSources(per, rg) {
+    // #129: keyed by the From / To range too — a cache keyed by the quarter alone would keep showing the whole quarter's joiners.
+    const key = ((per && per.length) ? per.join(',') : 'ALL') + (rg ? '|' + rg.from + '|' + rg.to : '');
     if (_jsQ === key && _js) return _js;
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const inPeriod = (q) => !per || !per.length ? !!q : per.indexOf(q) >= 0;
@@ -1738,6 +1786,7 @@ export function initRecruiterFilters(baseData) {
       if (!e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
       const q = qOf(e.startDate);
       if (!q || !inPeriod(q)) return;
+      if (rg && !inRange(e.startDate, rg)) return;   // #129: started inside From / To
       const rec = e.recruiter; if (!rec) return;
       const t = e.srcType || NO_SRC;
       const n = e.srcType ? (e.srcName || '(unspecified)') : NO_SRC;
@@ -1748,7 +1797,7 @@ export function initRecruiterFilters(baseData) {
     _jsQ = key; _js = byRec;
     return byRec;
   }
-  function srcNestedFor(r, per) { return joinerSources(per)[r.name] || {}; }
+  function srcNestedFor(r, per, rg) { return joinerSources(per, rg)[r.name] || {}; }
 
   // ===== Joining Conversion (spec settled with Jerin, 2026-08-26) =====
   //   Offered           = Joined + Joining Pending + Dropped
@@ -1765,7 +1814,7 @@ export function initRecruiterFilters(baseData) {
   // 2. Joining Pending is LIVE while Joined and Dropped are quarterly, so the same ~165 people are inside
   //    every quarter's Offered. Deliberate - it keeps this column identical to the HM card rather than
   //    inventing a fifth definition of Joining Pending. The definitions block says both of these on screen.
-  function convMaps(q) {
+  function convMaps(q, rg) {   // #129: rg = the From / To range inside quarter q
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const byRec = {}, byRecJob = {};
     // byRecJob carries the same three counts one level down, per ROLE, so the chart can shade each band by
@@ -1791,7 +1840,7 @@ export function initRecruiterFilters(baseData) {
     // Joined - people, by start date, minus last quarter's carry-over.
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      if (!e.accepted || e.appStatus !== 'Hired' || qOf(e.startDate) !== q) return; // Joined = moved to Hired, not just an accepted offer
+      if (!e.accepted || e.appStatus !== 'Hired' || !inRange(e.startDate, rg)) return; // Joined = moved to Hired, not just an accepted offer · #129: started inside From / To
       if (e.openingQuarter && e.openingQuarter < q) return;
       bump(headTo(rec, e.sourcer, e.department), 'j', e.jobTitle);   // #43
     });
@@ -1804,7 +1853,7 @@ export function initRecruiterFilters(baseData) {
     // Dropped - the one unified list, shared with HM and both Fulfilment tables.
     dropRows(data).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      if (e.quarter !== q) return;
+      if (!dropIn(e, rg, [q])) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
       bump(headTo(rec, e.sourcer, e.department), 'dr', e.job || e.jobTitle);   // #43
     });
     Object.values(byRec).forEach(a => { a.o = a.j + a.p + a.dr; });
@@ -1812,9 +1861,10 @@ export function initRecruiterFilters(baseData) {
     return { byRec, byRecJob };
   }
 
-  function outcomeMaps(q) {
-    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const sales = {}, nonSales = {}, salesJob = {}, nonSalesJob = {};
+  // #129 (15 Sep 2026): rg = the From / To range inside quarter q. The Non-Sales maps are gone: they filed offers by DECIDED date, which is
+  // Ashby's bulk data-entry stamp and must never date a filtered figure — Non-Sales Joined comes from joinByRec in fulfilRows.
+  function outcomeMaps(q, rg) {
+    const sales = {}, salesJob = {};
     // #39 (Jerin, 7 Sep 2026): split Joined by the OPENING's quarter, mirroring the JP block beside it.
     //   A = the opening was raised in an EARLIER quarter  -> "Joined — Prev Qtr Openings" (carried-over demand)
     //   B = everyone else                                 -> "Joined — Current Qtr Openings"
@@ -1829,7 +1879,7 @@ export function initRecruiterFilters(baseData) {
       const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
       // #11: every one of these goes through addCredit, so the recruiter/sourcer division is identical
       // across Joined and its two opening-quarter buckets — they can never drift apart.
-      if (e.accepted && e.appStatus === 'Hired' && qOf(e.startDate) === q) { // Joined = moved to Hired, not just an accepted offer
+      if (e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg)) { // Joined = moved to Hired, not just an accepted offer · #129: inside From / To
         addCredit(sales, salesJob, e.jobId8, rec, e.sourcer, e.department, sc);
         // #39: bucket the same person by their opening's quarter. See the note above.
         const oq = e.openingQuarter || null, earlier = !!(oq && oq < q);
@@ -1838,11 +1888,8 @@ export function initRecruiterFilters(baseData) {
         // nobody reads B as measured demand.
         if (!oq) addCredit(salesU, salesUJob, e.jobId8, rec, e.sourcer, e.department, sc);
       }
-      if (qOf(e.decidedAt) === q) {
-        addCredit(nonSales, nonSalesJob, e.jobId8, rec, e.sourcer, e.department, sc);
-      }
     });
-    return { sales, nonSales, salesJob, nonSalesJob, salesA, salesB, salesAJob, salesBJob, salesU, salesUJob };
+    return { sales, salesJob, salesA, salesB, salesAJob, salesBJob, salesU, salesUJob };
   }
 
   function tisPeriod() { return selQuarters(); }
@@ -1852,7 +1899,7 @@ export function initRecruiterFilters(baseData) {
   function tisNote(per) {
     const el = document.getElementById('recTisNote'); if (!el) return;
     if (!per) { el.style.display = 'none'; return; }
-    const label = periodText(per);
+    const label = rangeText(selRange(), per);   // #129: the dates, when From / To is narrower than the quarter
     el.style.display = '';
     el.style.color = (tisHasQ && tisSplit) ? 'var(--muted)' : 'var(--orange)';
     el.innerHTML = !tisHasQ
@@ -1892,14 +1939,21 @@ export function initRecruiterFilters(baseData) {
     const aTisRecJobQ = asr.timeInStageByRecruiterJobQ || null, aWaitRecJobQ = asr.waitingByRecruiterJobQ || null;
     const aArRec = A.appReviewDwellByRecruiter || null, aArRecJob = A.appReviewDwellByRecruiterJob || null;
     const aByJob = {}; (A.recruiters || []).forEach(x => { aByJob[x.name] = x.byJob || []; });
+    // #129: inside a narrower From / To range the stays come from the day twins, by the day the candidate entered the stage. A rollups
+    // file from before 15 Sep has none, so a narrow range then reads empty rather than the quarter.
+    const rgT = selRange(), dayTis = !coversQuarters(rgT, per);
+    const dTisRec = asr.timeInStageByRecruiterD || null, dWaitRec = asr.waitingByRecruiterD || null;
+    const dTisRecJob = asr.timeInStageByRecruiterJobD || {}, dWaitRecJob = asr.waitingByRecruiterJobD || {};
     const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview'
       ? arPair(aArRec && aArRec[r.name])
-      : tisPair(aTisRec, aTisRecQ, aWaitRec, aWaitRecQ, r.name, sk, per, tisSplit));
+      : (dayTis ? tisPairRange(dTisRec, dWaitRec, r.name, sk, rgT, tisSplit)
+                : tisPair(aTisRec, aTisRecQ, aWaitRec, aWaitRecQ, r.name, sk, per, tisSplit)));
     // #120a (Jerin, 14 Sep 2026): a job row under a recruiter shows THAT recruiter's own candidates on the role, so the job rows
     // add up to the recruiter row. They used to show everyone on the role. A file without the recruiter x job split leaves the
     // row empty rather than put the whole role's figure under one person's name.
     const recJobHists = (r, j8) => TIS_STAGES.map(([sk]) => {
       if (sk === 'appReview') return arPair(aArRecJob ? (aArRecJob[r.name] || {})[j8] : null);
+      if (dayTis) return tisPairRange(dTisRecJob[r.name] || {}, dWaitRecJob[r.name] || {}, j8, sk, rgT, tisSplit);   // #129
       if (!aTisRecJobQ) return { fin: {}, wait: tisSplit ? {} : null };
       const fq = aTisRecJobQ[r.name] || {}, wq = (aWaitRecJobQ || {})[r.name] || {};
       return tisPair(allTimeOf(fq), fq, allTimeOf(wq), wq, j8, sk, per, tisSplit);
@@ -2532,28 +2586,25 @@ export function initRecruiterFilters(baseData) {
     const ctx = document.getElementById('recScreenChart'); if (!ctx) return;
     if (recScreenChart) recScreenChart.destroy();
     const scSr = actData().stageRollups || null;   // #125: the same jobs as the table
-    const store = (scSr && scSr.r1ByRecruiter) || null;
+    const per = selQuarters(), rg = selRange(), r1Day = !coversQuarters(rg, per);   // #129: the same basis as the table
+    const store = (scSr && (r1Day ? scSr.r1ByRecruiterD : scSr.r1ByRecruiter)) || null;
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
-    const per = selQuarters();
-    const sumFor = (name) => {
-      const byQ = store && store[name]; const acc = { added: 0, cleared: 0 };
+    const sumIn = (byQ) => {
+      const acc = { added: 0, cleared: 0 };
       if (!byQ) return acc;
+      if (r1Day) { const s = sumDayFields(byQ, rg); acc.added = s.added || 0; acc.cleared = s.cleared || 0; return acc; }
       const keys = (per && per.length) ? per : Object.keys(byQ);
       keys.forEach(qq => { const c = byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
       return acc;
     };
+    const sumFor = (name) => sumIn(store && store[name]);
     // Per-JOB detail for the role gradient inside each band (Jerin, 2026-08-29). Same store the table reads.
-    const jobStore = (scSr && scSr.r1ByRecruiterJob) || null;
+    const jobStore = (scSr && (r1Day ? scSr.r1ByRecruiterJobD : scSr.r1ByRecruiterJob)) || null;
     const jobTitleOfR1 = {}; (data.jobs || []).forEach(j => { jobTitleOfR1[String(j.id).slice(0, 8)] = j.title; });
     const jobsFor = (name) => {
       const mine = jobStore && jobStore[name]; if (!mine) return [];
-      return Object.keys(mine).map(j8 => {
-        const byQ = mine[j8]; const acc = { added: 0, cleared: 0 };
-        const keys = (per && per.length) ? per : Object.keys(byQ || {});
-        keys.forEach(qq => { const c = byQ && byQ[qq]; if (c) { acc.added += c.added || 0; acc.cleared += c.cleared || 0; } });
-        return { title: jobTitleOfR1[j8] || j8, v: acc };
-      }).filter(x => x.v.added > 0);
+      return Object.keys(mine).map(j8 => ({ title: jobTitleOfR1[j8] || j8, v: sumIn(mine[j8]) })).filter(x => x.v.added > 0);
     };
     const recs = store ? [...lastRecs].map(r => ({ name: r.name, ...sumFor(r.name), per: jobsFor(r.name) }))
       .filter(r => r.added > 0).sort((a, b) => b.added - a.added) : [];
@@ -2585,7 +2636,7 @@ export function initRecruiterFilters(baseData) {
     if (recJoinChart) recJoinChart.destroy();
     // Joined / Joining Pending / Dropped stacked, with OFFERED - the sum of the three - printed at the end.
     // Reads the same convMaps call as the table, so the two can never disagree.
-    const CMc = convMaps(selQuarter());
+    const CMc = convMaps(selQuarter(), selRange());
     const cOfC = (n) => CMc.byRec[n] || { o: 0, j: 0, p: 0, dr: 0 };
     const recs = [...lastRecs].filter(r => cOfC(r.name).o > 0).sort((a, b) => cOfC(b.name).o - cOfC(a.name).o);
     const wrap = ctx.parentElement;
@@ -2784,8 +2835,8 @@ export function initRecruiterFilters(baseData) {
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     // Recruiter-centric stacked bar: Y = recruiter (top 20 by joiners), stacked by source_type.
     // Reads the SAME joiner map as the table below it — one source of truth, no recomputation.
-    const perS = selQuarters();
-    const typeTotals = (r) => { const out = {}; Object.entries(srcNestedFor(r, perS)).forEach(([t, names]) => { out[t] = Object.values(names).reduce((a, v) => a + v, 0); }); return out; };
+    const perS = selQuarters(), rgS = selRange();   // #129: the same joiners as the table
+    const typeTotals = (r) => { const out = {}; Object.entries(srcNestedFor(r, perS, rgS)).forEach(([t, names]) => { out[t] = Object.values(names).reduce((a, v) => a + v, 0); }); return out; };
     const srcTotal = r => Object.values(typeTotals(r)).reduce((s, v) => s + v, 0);
     const withSrc = [...lastRecs].filter(r => srcTotal(r) > 0).sort((a, b) => srcTotal(b) - srcTotal(a)).slice(0, 20);
     if (withSrc.length === 0) {
@@ -2828,7 +2879,7 @@ export function initRecruiterFilters(baseData) {
 
   function showTab(name) {
     activeTab = name;
-    document.querySelectorAll('.vel-dates').forEach(c => { c.style.display = name === 'velocity' ? '' : 'none'; });   // #127e: From / To drive Momentum only
+    // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActiveChart();
@@ -2865,9 +2916,9 @@ export function initRecruiterFilters(baseData) {
   document.addEventListener('click', closeMsPanels);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
-  // Date filter — drives Momentum's 30-day window
+  // Date filter — #129: narrows every panel (and still sets Momentum's 30-day window), so a change re-renders the whole tab
   ['recVelFrom', 'recVelTo'].forEach(id =>
-    document.getElementById(id)?.addEventListener('change', () => { renderVelocity(); renderActiveChart(); }));
+    document.getElementById(id)?.addEventListener('change', renderAll));
   // Year/Quarter also picks the quarter for pod grouping + capacity, so re-render everything
   document.getElementById('recVelYear')?.addEventListener('change', () => {
     fillQuarterSelect(document.getElementById('recVelQuarter'), document.getElementById('recVelYear').value, false);   // #127a/c: the year's quarters on offer, no All
