@@ -1,4 +1,5 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
+import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
 import { shadeMomentum, shadeTis, shareBars, colorShareBars } from '../grid-shade.js';   // #137c
@@ -44,7 +45,7 @@ function dropIn(e, rg, qs) {
   return e.day ? inRange(e.day, rg) : (!!qs && coversQuarters(rg, qs) && qs.includes(e.quarter));
 }
 
-const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
+const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
 const DASH = '<span class="zero">—</span>';
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -96,16 +97,16 @@ export function renderEfficiency(data) {
 
       /* .eff-filters look now lives in style.css — one quiet row, defined once */
       .eff-filters select, .eff-filters input[type=date] {
-        appearance:none; -webkit-appearance:none; height:28px; padding:0 11px; border:1px solid var(--border);
-        border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); }
-      .eff-filters select { padding-right:28px; cursor:pointer;
+        appearance:none; -webkit-appearance:none; height:1.75rem; padding:0 0.6875rem; border:1px solid var(--border);
+        border-radius:0.5rem; font-size:0.75rem; font-weight:500; background:var(--card); color:var(--text); }
+      .eff-filters select { padding-right:1.75rem; cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-        background-repeat:no-repeat; background-position:right 10px center; }
+        background-repeat:no-repeat; background-position:right 0.625rem center; }
       .eff-filters select:hover, .eff-filters input:hover { border-color:var(--muted); }
-      .eff-filters select:focus, .eff-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
-      .eff-filters .fchip { display:flex; align-items:center; gap:7px; }
+      .eff-filters select:focus, .eff-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 0.1875rem rgba(78,107,166,0.16); }
+      .eff-filters .fchip { display:flex; align-items:center; gap:0.4375rem; }
       /* .eff-filters label styling lives in style.css — quiet, sentence case */
-      .eff-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text) }
+      .eff-filters .fchip > label.opt { font-size:0.75rem; font-weight:500; display:flex; align-items:center; gap:0.25rem; cursor:pointer; color:var(--text) }
       .eff-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
 
       /* Velocity table — freeze the first two columns */
@@ -113,29 +114,29 @@ export function renderEfficiency(data) {
       .evel-table th, .evel-table td { white-space:nowrap; }
       /* Design pass 2026-08-29, mirroring the Recruiter grid: tighter rhythm, values louder than the dots,
          weekends underlined in a soft maroon, departments with nothing in the window muted. */
-      .evel-table th { padding:8px 9px; letter-spacing:0.02em; }
-      .evel-table td { padding:6px 9px; }
+      .evel-table th { padding:0.5rem 0.5625rem; letter-spacing:0.02em; }
+      .evel-table td { padding:0.375rem 0.5625rem; }
       .evel-table tbody td:not(:first-child) { font-weight:500; font-variant-numeric:tabular-nums; }
       .evel-table tbody td .zero { font-weight:400; }
       .evel-table tbody tr.lvl-quiet td { color:var(--muted); }
       .evel-table tbody tr.lvl-quiet td:not(:first-child) { font-weight:400; }
       .evel-table th.wknd { box-shadow:inset 0 -2px 0 rgba(163,50,83,0.38); }
       .evel-table th:not(:first-child), .evel-table td:not(:first-child) { text-align:right; }
-      .evel-table th:nth-child(n+3), .evel-table td:nth-child(n+3) { min-width:56px; }
-      .evel-table th:nth-child(1), .evel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:260px; min-width:260px; max-width:260px; text-align:left; white-space:normal; }
-      .evel-table th:nth-child(2), .evel-table td:nth-child(2) { position:sticky; left:260px; z-index:2; min-width:96px; border-right:2px solid var(--border); }
+      .evel-table th:nth-child(n+3), .evel-table td:nth-child(n+3) { min-width:3.5rem; }
+      .evel-table th:nth-child(1), .evel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:16.25rem; min-width:16.25rem; max-width:16.25rem; text-align:left; white-space:normal; }
+      .evel-table th:nth-child(2), .evel-table td:nth-child(2) { position:sticky; left:16.25rem; z-index:2; min-width:6rem; border-right:2px solid var(--border); }
       .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:var(--bg); }
       .evel-table tbody td:nth-child(1), .evel-table tbody td:nth-child(2) { background:var(--card); }
 
       /* per-department chart cards */
-      .eff-podcharts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:18px; }
+      .eff-podcharts { display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); gap:0.75rem; margin-bottom:1.125rem; }
       /* Fulfilment: two per row — five across made every bar unreadable. */
       .eff-podcharts.eff-2col { grid-template-columns:repeat(2,minmax(0,1fr)); }
-      @media (max-width:900px) { .eff-podcharts.eff-2col { grid-template-columns:1fr; } }
-      .eff-podchart { border:1px solid var(--border); border-radius:10px; padding:14px 16px; background:var(--card); min-height:110px;
-        display:flex; flex-direction:column; gap:6px; }
-      .eff-podchart h5 { font-size:12px; font-weight:600; color:var(--text); margin:0; }
-      .eff-podchart p { font-size:11px; color:var(--muted); margin:0; line-height:1.5; }
+      @media (max-width:50.625rem) { .eff-podcharts.eff-2col { grid-template-columns:1fr; } }
+      .eff-podchart { border:1px solid var(--border); border-radius:0.625rem; padding:0.875rem 1rem; background:var(--card); min-height:6.875rem;
+        display:flex; flex-direction:column; gap:0.375rem; }
+      .eff-podchart h5 { font-size:0.75rem; font-weight:600; color:var(--text); margin:0; }
+      .eff-podchart p { font-size:0.6875rem; color:var(--muted); margin:0; line-height:1.5; }
     </style>
 
 
@@ -165,12 +166,12 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Position Fulfilment -->
     <div class="eff-panel" data-panel="fulfilment">
-      <h4 id="effFulfilCombinedHdr" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Positions by department</h4>
-      <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 18px"><canvas id="effFulfilCombined"></canvas></div>
+      <h4 id="effFulfilCombinedHdr" style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Positions by department</h4>
+      <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 1.125rem"><canvas id="effFulfilCombined"></canvas></div>
 
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:280px">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th colspan="2" class="stage-hdr">Missed</th></tr>
+          <tr><th rowspan="2" style="min-width:17.5rem">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th colspan="2" class="stage-hdr">Missed</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
@@ -180,9 +181,9 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
-      <p class="sub-note" id="effJPCaption" style="margin-bottom:8px"></p>
+      <p class="sub-note" id="effJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
+        <thead><tr><th>DOJ</th><th style="min-width:10rem">Candidate</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiningpending')}
@@ -190,9 +191,9 @@ export function renderEfficiency(data) {
 
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-stage: Hired is one stage -->
     <div class="eff-panel" data-panel="joiners" style="display:none">
-      <p class="sub-note" id="effJoinersCaption" style="margin-bottom:8px"></p>
+      <p class="sub-note" id="effJoinersCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th>DOJ</th><th style="min-width:160px">Candidate</th><th style="min-width:150px">Department</th><th style="min-width:200px">Job</th><th>Recruiter</th><th>Opening</th></tr></thead>
+        <thead><tr><th>DOJ</th><th style="min-width:10rem">Candidate</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Recruiter</th><th>Opening</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiners')}
@@ -214,10 +215,10 @@ export function renderEfficiency(data) {
          HM Review and Online Assessment columns were removed on purpose: this panel is about R1, and
          both still count on Momentum through ToFU. -->
     <div class="eff-panel" data-panel="screening" style="display:none">
-      <div class="chart-wrap" id="effScreenChartWrap" style="height:300px"><canvas id="effScreenChart"></canvas></div>
+      <div class="chart-wrap" id="effScreenChartWrap" style="height:18.75rem"><canvas id="effScreenChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
-          <th style="min-width:280px">Department / Job</th>
+          <th style="min-width:17.5rem">Department / Job</th>
           <th>Added at R1</th>
           <th>Progressed</th>
           <th>%</th>
@@ -257,7 +258,7 @@ export function renderEfficiency(data) {
          (Joined + Joining Pending) / Offered. It used to read Offered / Hired / Conversion %, which was the
          pre-26-August metric and disagreed with the same-named panel on the Recruiter tab. -->
     <div class="eff-panel" data-panel="joining" style="display:none">
-      <div class="chart-wrap" id="effJoinChartWrap" style="height:300px"><canvas id="effJoinChart"></canvas></div>
+      <div class="chart-wrap" id="effJoinChartWrap" style="height:18.75rem"><canvas id="effJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
         <thead><tr>
           <th>Department / Job</th>
@@ -275,11 +276,11 @@ export function renderEfficiency(data) {
     <!-- PANEL: Sourcing Mix -->
     <div class="eff-panel" data-panel="sourcing" style="display:none">
       <p class="sub-note" id="effSourceNote"></p>
-      <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-6px"></p>
+      <p class="sub-note" id="effSourceWarn" style="display:none;color:var(--orange);margin-top:-0.375rem"></p>
       <h3 class="subsection-title">Channel mix — where joiners came from</h3>
-      <div class="chart-wrap" style="margin:0 0 20px;height:460px;position:relative"><canvas id="effSourceChart"></canvas></div>
+      <div class="chart-wrap" style="margin:0 0 1.25rem;height:28.75rem;position:relative"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:340px" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:21.25rem" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
       ${defsBlock('eff-sourcing')}
@@ -494,7 +495,7 @@ export function initEfficiencyFilters(data) {
     container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
       + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
       + `<div class="ms-list">`
-      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No options yet</span>')
+      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
       + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
     const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -544,10 +545,10 @@ export function initEfficiencyFilters(data) {
       html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${dept}</td>${cellsFn(dept)}</tr>`;
       html += `<tr data-path="${pi}-0" style="display:none">
-        <td style="padding-left:32px;color:var(--muted);font-style:italic">${PENDING}</td>${dashTds(metricCols)}</tr>`;
+        <td style="padding-left:2rem;color:var(--muted);font-style:italic">${PENDING}</td>${dashTds(metricCols)}</tr>`;
     });
     if (grandRow) html += grandRow;
-    body.innerHTML = html || `<tr><td colspan="${metricCols + 1}" style="text-align:center;color:var(--muted);padding:16px">No pods match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${metricCols + 1}" style="text-align:center;color:var(--muted);padding:1rem">No pods match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
@@ -724,19 +725,19 @@ export function initEfficiencyFilters(data) {
     const rows = fulfilRows(per);
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
-      const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:11px;margin-left:6px">${sum.unscored} unscored</span>` : '';
+      const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${sum.unscored} unscored</span>` : '';
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jobs.length}</span>${flag}</td>${cells(sum, true)}</tr>`;
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells(sum, true)}</tr>`;
       jobs.forEach(({ j, sp }, ji) => {
         const meta = sp.scoreable
-          ? `<span style="font-size:10px;margin-left:6px;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span>`
-          : `<span style="font-size:10px;margin-left:6px;color:var(--orange)">unscored</span>`;
-        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}${meta}</td>${cells(sp, false)}</tr>`;
+          ? `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span>`
+          : `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--orange)">unscored</span>`;
+        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--muted)">${j.title}${meta}</td>${cells(sp, false)}</tr>`;
       });
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
     html += `<tr style="background:var(--accent-light);font-weight:700"><td>All departments</td>${cells(g, true)}</tr>`;
-    body.innerHTML = html || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:16px">No openings in this period.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
   }
 
@@ -753,7 +754,7 @@ export function initEfficiencyFilters(data) {
     // #137: the cells come from people-cells.js — badges, dates and chips; the columns and the rows are unchanged.
     body.innerHTML = rows.length ? rows.map(c => `<tr>${tdDoj(c.doj, { live: true })}${tdCandidate(c.candidate)}${tdDept(c.department)}`
       + `${tdJob(c.job)}${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdLinked(c.linked)}</tr>`).join('')
-      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No offers in play under these filters.</td></tr>`;
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">No offers in play under these filters.</td></tr>`;
     // #130b: on its own sub-tab now, so it says it is live — the dates above it do not apply.
     const cap = document.getElementById('effJPCaption');
     if (cap) {
@@ -778,7 +779,7 @@ export function initEfficiencyFilters(data) {
     // #137: the cells come from people-cells.js; the pod colour and the earlier-quarter check use each person's own start date.
     body.innerHTML = rows.length ? rows.map(e => `<tr>${tdDoj(e.startDate)}${tdCandidate(e.candidate)}${tdDept(e.department)}`
       + `${tdJob(e.jobTitle)}${tdRecruiter(e.recruiter, e.startDate)}${tdLinked(!!e.openingId)}</tr>`).join('')
-      : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody joined between these dates under these filters.</td></tr>`;
+      : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
     const cap = document.getElementById('effJoinersCaption');
     if (cap) {
       const unlinked = rows.filter(e => !e.openingId).length;
@@ -810,7 +811,7 @@ export function initEfficiencyFilters(data) {
         + `<td class="${v.added ? cls(pcv(v.cleared, v.added)) : 'zero'}">${v.added ? pcv(v.cleared, v.added) + '%' : DASH}</td>`;
     };
     if (!store) {
-      body.innerHTML = `<tr><td colspan="4" style="color:var(--muted);font-style:italic;padding:16px">R1 screening figures appear after the next stage-history refresh.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="color:var(--muted);font-style:italic;padding:1rem">R1 screening figures appear after the next stage-history refresh.</td></tr>`;
       buildScreenChartEff();
       return;
     }
@@ -820,12 +821,12 @@ export function initEfficiencyFilters(data) {
         .sort((a, b) => b.v.added - a.v.added);
       if (!js.length) return;
       const agg = js.reduce((a, x) => ({ added: a.added + x.v.added, cleared: a.cleared + x.v.cleared }), { added: 0, cleared: 0 });
-      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(agg, true)}</tr>`;
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${js.length}</span></td>${cells(agg, true)}</tr>`;
       js.forEach(({ j, v }, ji) => {
-        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${cells(v, false)}</tr>`;
+        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--muted)">${j.title}</td>${cells(v, false)}</tr>`;
       });
     });
-    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No R1 activity under these filters.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem">No R1 activity under these filters.</td></tr>`;
     wireTreePath(body, expandAll());
     buildScreenChartEff();
   }
@@ -927,7 +928,7 @@ export function initEfficiencyFilters(data) {
       const agg = per.reduce((a, x) => ({ added: a.added + x.v.added, cleared: a.cleared + x.v.cleared }), { added: 0, cleared: 0 });
       return { dept, ...agg, per };
     }).filter(r => r.added > 0).sort((a, b) => b.added - a.added);
-    if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
+    if (!rows.length) { if (wrap) wrap.style.height = '7.5rem'; return; }
     // Bar thickness matches the Fulfilment chart and the Recruiter tab's version of this panel.
     const h = hbarHeight(rows.length);
     if (wrap) wrap.style.height = h + 'px';
@@ -1038,13 +1039,13 @@ export function initEfficiencyFilters(data) {
     let html = '';
     joinRows(period).forEach(({ dept, per: js, ...agg }, di) => {
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${cells(agg, true)}</tr>`;
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${js.length}</span></td>${cells(agg, true)}</tr>`;
       js.forEach(({ title, c }, ji) => {
         html += `<tr data-path="${di}-${ji}" style="display:none">
-          <td style="padding-left:30px;color:var(--muted)">${title}</td>${cells(c, false)}</tr>`;
+          <td style="padding-left:1.875rem;color:var(--muted)">${title}</td>${cells(c, false)}</tr>`;
       });
     });
-    body.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody reached an offer under these filters.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody reached an offer under these filters.</td></tr>`;
     wireTreePath(body, expandAll());
     buildJoinChartEff();
   }
@@ -1057,7 +1058,7 @@ export function initEfficiencyFilters(data) {
     if (effJoinChart) { effJoinChart.destroy(); effJoinChart = null; }
     const rows = joinRows(tisPeriod()).sort((a, b) => b.o - a.o);   // the table's own rows (#120)
     const wrap = document.getElementById('effJoinChartWrap');
-    if (!rows.length) { if (wrap) wrap.style.height = '120px'; return; }
+    if (!rows.length) { if (wrap) wrap.style.height = '7.5rem'; return; }
     const h = hbarHeight(rows.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
@@ -1078,13 +1079,13 @@ export function initEfficiencyFilters(data) {
       id: 'effJoinEndLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        c.font = `${uiPx(10)}px -apple-system, BlinkMacSystemFont, sans-serif`; c.textBaseline = 'middle';
         // Offered at the end of the bar; the Joining Conversion is its own labelled column at the right
         // edge (Jerin, 2026-08-29) — same treatment as the Recruiter Efficiency version, same helper.
         const last = chart.getDatasetMeta(chart.data.datasets.length - 1);
         last.data.forEach((bar, i) => {
           c.textAlign = 'left'; c.fillStyle = '#334155';
-          c.fillText(String(offered[i]), bar.x + 6, bar.y);
+          c.fillText(String(offered[i]), bar.x + uiPx(6), bar.y);
         });
         c.restore();
         drawConvColumn(chart, offered.map((o, i) => o > 0 ? Math.round(((joined[i] + pending[i]) / o) * 100) : null), 'Joining conversion');
@@ -1172,10 +1173,10 @@ export function initEfficiencyFilters(data) {
     const head = document.getElementById('effTisHead');
     if (head) {
       const perH = tisPeriod();
-      let h = '<tr><th style="min-width:260px">Department / Job</th>';
+      let h = '<tr><th style="min-width:16.25rem">Department / Job</th>';
       TIS_STAGES.forEach(([sk, lbl]) => {
         const live = perH && sk === 'appReview';
-        h += `<th class="stage-sub" style="min-width:48px"${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
+        h += `<th class="stage-sub" style="min-width:3rem"${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
       });
       head.innerHTML = h + '</tr>';
     }
@@ -1208,10 +1209,10 @@ export function initEfficiencyFilters(data) {
       const kept = jsAll.map(j => ({ j, h: jobHists(j.jid) })).filter(x => x.h.some(p => hasAny(p.fin) || hasAny(p.wait)));
       if (!kept.length) return;
       const js = kept.map(x => x.j), jh = kept.map(x => x.h);
-      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${js.length}</span></td>${poolCells(jh)}</tr>`;
-      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${js.length}</span></td>${poolCells(jh)}</tr>`;
+      js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
     });
-    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No departments match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
     shadeTis(body);   // #137c
     tisNote(per);
@@ -1253,7 +1254,7 @@ export function initEfficiencyFilters(data) {
     const dates = velDates();
     const dkeys = dates.map(dkeyEff);
     if (head) {
-      let h = `<tr><th style="min-width:260px">Department / Job</th><th>Total · ${dates.length}d</th>`;
+      let h = `<tr><th style="min-width:16.25rem">Department / Job</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => {
         const wknd = d.getDay() === 0 || d.getDay() === 6;
         h += `<th class="${wknd ? 'wknd' : ''}"${wknd ? ' title="Weekend"' : ''}>${MON[d.getMonth()]} ${d.getDate()}</th>`;
@@ -1277,17 +1278,17 @@ export function initEfficiencyFilters(data) {
         if (!jd.length) return;
         jd.forEach(x => { add(dArr, x.jArr); dTot += x.jTot; });
         const dc = DEPT_COLORS[di % DEPT_COLORS.length];
-        html += `<tr class="lvl-dept${dTot ? '' : ' lvl-quiet'}" data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600;box-shadow:inset 3px 0 0 ${dc}">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
+        html += `<tr class="lvl-dept${dTot ? '' : ' lvl-quiet'}" data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600;box-shadow:inset 0.1875rem 0 0 ${dc}">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jd.length}</span></td>${numRow(dTot, dArr, true)}</tr>`;
         jd.forEach(({ j, jArr, jTot }, ji) => {
-          html += `<tr class="lvl-job${jTot ? '' : ' lvl-quiet'}" data-path="${di}-${ji}" style="display:none"><td style="padding-left:30px;color:var(--text)">${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
+          html += `<tr class="lvl-job${jTot ? '' : ' lvl-quiet'}" data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--text)">${j.title}</td>${numRow(jTot, jArr, false)}</tr>`;
         });
       });
     } else {
       // No ToFU field yet. Say so rather than falling back to the old per-stage counts, which answer a
       // different question and would sit under this heading as a lie.
-      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:16px">Arrivals appear after the next stage-history refresh.</td></tr>`;
+      html += `<tr><td colspan="${dkeys.length + 2}" style="color:var(--muted);font-style:italic;padding:1rem">Arrivals appear after the next stage-history refresh.</td></tr>`;
     }
-    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:16px">Nobody was added in these days on jobs with an opening in the period.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:1rem">Nobody was added in these days on jobs with an opening in the period.</td></tr>`;
     wireTreePath(body, expandAll());
     shadeMomentum(body, dates);   // #137c
     buildVelChartEff();
@@ -1386,9 +1387,9 @@ export function initEfficiencyFilters(data) {
       let out = '';
       Object.entries(nst).map(([t, names]) => [t, sumNames(names), names]).sort((a, b) => b[1] - a[1])
         .forEach(([t, tcnt, names], ti) => {
-          out += `<tr data-path="${path}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:${pad}px;font-weight:500">${CARET}${t}</td><td>${tcnt}</td><td>${pc(tcnt, parentTot)}%</td></tr>`;
+          out += `<tr data-path="${path}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:${uiPx(pad)}px;font-weight:500">${CARET}${t}</td><td>${tcnt}</td><td>${pc(tcnt, parentTot)}%</td></tr>`;
           Object.entries(names).sort((a, b) => b[1] - a[1]).forEach(([nm, cnt], ni) => {
-            out += `<tr data-path="${path}-${ti}-${ni}" style="display:none"><td style="padding-left:${pad + 26}px;color:var(--muted)">${nm}</td><td>${cnt}</td><td>${pc(cnt, tcnt)}%</td></tr>`;
+            out += `<tr data-path="${path}-${ti}-${ni}" style="display:none"><td style="padding-left:${uiPx(pad + 26)}px;color:var(--muted)">${nm}</td><td>${cnt}</td><td>${pc(cnt, tcnt)}%</td></tr>`;
           });
         });
       return out;
@@ -1399,14 +1400,14 @@ export function initEfficiencyFilters(data) {
     const grand = tree.reduce((s, d) => s + d.tot, 0) || 1;
     tree.forEach((D, di) => {
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${D.jobs.length}</span></td><td style="font-weight:600">${D.tot || '<span class="zero">0</span>'}</td><td>${pc(D.tot, grand)}%</td></tr>`;
+        <td style="font-weight:600">${CARET}${D.dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${D.jobs.length}</span></td><td style="font-weight:600">${D.tot || '<span class="zero">0</span>'}</td><td>${pc(D.tot, grand)}%</td></tr>`;
       D.jobs.forEach((J, ji) => {
-        html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:30px">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
+        html += `<tr data-path="${di}-${ji}" data-haschild data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:1.875rem">${CARET}${J.title}</td><td>${J.tot}</td><td>${pc(J.tot, D.tot)}%</td></tr>`;
         html += typeRows(J.nst, J.tot, `${di}-${ji}`, 56);
       });
     });
 
-    body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Nobody joined under these filters, so there is no source mix to show.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined under these filters, so there is no source mix to show.</td></tr>`;
     wireTreePath(body, expandAll());
     shareBars(body, effSrcColorOf);   // #137c: the colours come from buildSourceChart
     buildSourceChart();
@@ -1434,8 +1435,8 @@ export function initEfficiencyFilters(data) {
       const cfg = buildCfg(p);
       const body = document.getElementById(`${containerId}_b${i}`), ctx = document.getElementById(`${containerId}_${i}`);
       if (!body || !ctx) return;
-      if (!cfg) { body.innerHTML = `<p style="font-size:11px;color:var(--muted);margin:6px 0 0;line-height:1.5">${emptyText}</p>`; return; }
-      body.style.height = (cfg._h || Math.max(90, cfg.data.labels.length * 22 + 34)) + 'px';
+      if (!cfg) { body.innerHTML = `<p style="font-size:0.6875rem;color:var(--muted);margin:0.375rem 0 0;line-height:1.5">${emptyText}</p>`; return; }
+      body.style.height = uiPx(cfg._h || Math.max(90, cfg.data.labels.length * 22 + 34)) + 'px';
       delete cfg._h;
       podCharts[containerId].push(new Chart(ctx, cfg));
     });
@@ -1551,7 +1552,7 @@ export function initEfficiencyFilters(data) {
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     if (!rows.length) {
       ctx.style.display = 'none';
-      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       if (emptyMsg) { emptyMsg.textContent = per && per.length === 1 ? `No openings in ${per[0].replace('-', ' ')}.` : 'No openings in this period.'; emptyMsg.style.display = 'flex'; }
       return;
     }
@@ -1580,7 +1581,7 @@ export function initEfficiencyFilters(data) {
       id: 'effFulfilTotals',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
-        c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, sans-serif`;
         c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = '#334155';
         rows.forEach((r, i) => {
           let x = null, y = null;
@@ -1589,7 +1590,7 @@ export function initEfficiencyFilters(data) {
             const bar = chart.getDatasetMeta(di).data[i]; if (!bar) return;
             x = x == null ? bar.x : Math.max(x, bar.x); y = bar.y;
           });
-          if (x != null) c.fillText(String(r.sum.total), x + 6, y);
+          if (x != null) c.fillText(String(r.sum.total), x + uiPx(6), y);
         });
         c.restore();
       }
@@ -1622,7 +1623,7 @@ export function initEfficiencyFilters(data) {
     const wrap = ctx.parentElement; let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     if (!types.length || !totalAll) {
       ctx.style.display = 'none';
-      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       if (emptyMsg) { emptyMsg.textContent = 'Nobody joined under the current filter, so there is no source mix to show.'; emptyMsg.style.display = 'flex'; }
       return;
     }

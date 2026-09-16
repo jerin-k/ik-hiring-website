@@ -5,6 +5,8 @@
 // tree only shows and hides rows, so the shading survives it. Styles: the `.gs-*` block at the end of style.css.
 // Teal = how many (deeper = more) · slate = how long a stage took · amber → rose = how long people have been waiting.
 
+import { uiPx } from './ui-scale.js';   // #140
+
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const step = (v, max) => (v > 0 && max > 0 ? Math.max(1, Math.min(5, Math.ceil((v / max) * 5))) : 0);
 const numOf = (td) => { const t = td ? td.textContent.replace(/[,\s]/g, '') : ''; return /^\d+(\.\d+)?$/.test(t) ? +t : 0; };
@@ -45,7 +47,7 @@ export function shadeMomentum(tbody, dates) {
   const totMax = maxOf(second.map(tr => numOf(tr.cells[1])));
   second.forEach(tr => {
     const v = numOf(tr.cells[1]);
-    if (v > 0) tr.cells[1].insertAdjacentHTML('beforeend', `<span class="gs-bar" style="width:${Math.max(3, Math.round((v / totMax) * 36))}px"></span>`);
+    if (v > 0) tr.cells[1].insertAdjacentHTML('beforeend', `<span class="gs-bar" style="width:${uiPx(Math.max(3, Math.round((v / totMax) * 36)))}px"></span>`);
   });
 }
 

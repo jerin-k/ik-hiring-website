@@ -3,6 +3,8 @@
 // charts stay readable: skips zeros, skips bars too thin to label, and inside stacked/arc segments only labels
 // pieces big enough to fit the text. Opt out per chart with options.plugins.valueLabels = false.
 
+import { uiPx } from './ui-scale.js';   // #140: label font, gaps and "too thin to label" thresholds follow the 90% root
+
 function fmtVal(v) {
   if (v == null || isNaN(v)) return '';
   const n = Number(v);
@@ -16,7 +18,7 @@ export const valueLabelsPlugin = {
     if (chart.options?.plugins?.valueLabels === false) return;
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = `600 ${uiPx(10)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     chart.data.datasets.forEach((ds, di) => {
       const meta = chart.getDatasetMeta(di);
       if (meta.hidden) return;
@@ -52,26 +54,26 @@ export const valueLabelsPlugin = {
         const w = ctx.measureText(label).width;
 
         if (horizontal) {
-          if ((p.height || 0) < 8) return;                           // bar too thin to read
+          if ((p.height || 0) < uiPx(8)) return;                     // bar too thin to read
           const span = Math.abs(p.x - p.base);
           if (stacked || floating) {
-            if (span < w + 6) return;                                // segment too small
+            if (span < w + uiPx(6)) return;                          // segment too small
             ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(label, (p.x + p.base) / 2, p.y);
           } else {
             ctx.fillStyle = '#475569'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-            ctx.fillText(label, p.x + 3, p.y);
+            ctx.fillText(label, p.x + uiPx(3), p.y);
           }
         } else {
-          if ((p.width || 0) < 13) return;
+          if ((p.width || 0) < uiPx(13)) return;
           const span = Math.abs(p.base - p.y);
           if (stacked || floating) {
-            if (span < 12) return;
+            if (span < uiPx(12)) return;
             ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(label, p.x, (p.y + p.base) / 2);
           } else {
             ctx.fillStyle = '#475569'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-            ctx.fillText(label, p.x, p.y - 3);
+            ctx.fillText(label, p.x, p.y - uiPx(3));
           }
         }
       });
@@ -106,7 +108,7 @@ export const stackTotalsPlugin = {
     if (pad == null) pad = {};
     else if (typeof pad === 'number') pad = { top: pad, right: pad, bottom: pad, left: pad };
     const side = horizontal ? 'right' : 'top';
-    pad[side] = Math.max(pad[side] || 0, horizontal ? 34 : 18);
+    pad[side] = Math.max(pad[side] || 0, uiPx(horizontal ? 34 : 18));
     lay.padding = pad;
   },
   afterDatasetsDraw(chart) {
@@ -121,13 +123,13 @@ export const stackTotalsPlugin = {
     const meta = chart.getDatasetMeta(outer);
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     ctx.fillStyle = '#334155';
     (meta.data || []).forEach((el, i) => {
       if (!el || typeof el.getProps !== 'function') return;
       const p = el.getProps(['x', 'y', 'width', 'height'], true);
       // Too cramped to label without colliding with the neighbouring stack.
-      if (horizontal ? (p.height || 0) < 8 : (p.width || 0) < 18) return;
+      if (horizontal ? (p.height || 0) < uiPx(8) : (p.width || 0) < uiPx(18)) return;
       let tot = 0;
       ds.forEach((d, di) => {
         if (chart.getDatasetMeta(di).hidden) return;
@@ -136,8 +138,8 @@ export const stackTotalsPlugin = {
         if (v != null && !isNaN(v)) tot += Number(v);
       });
       if (!tot) return;
-      if (horizontal) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(fmtVal(tot), el.x + 6, el.y); }
-      else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(fmtVal(tot), el.x, el.y - 4); }
+      if (horizontal) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(fmtVal(tot), el.x + uiPx(6), el.y); }
+      else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(fmtVal(tot), el.x, el.y - uiPx(4)); }
     });
     ctx.restore();
   }

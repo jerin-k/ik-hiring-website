@@ -31,7 +31,7 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 const deptOf = v => splitDT(v).dept;
 const byDept = (a, b) => a._dept.localeCompare(b._dept) || ((b.total || 0) - (a.total || 0)) || String(a.title || '').localeCompare(String(b.title || ''));
 
-const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
+const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
 
 // YYYY-MM-DD -> "YYYY-QN" (Position Opened Quarter)
 function quarterOf(dateStr) {
@@ -61,7 +61,7 @@ function pctCell(num, den) {
   return `<span class="${pctClass(p)}">${p}${p !== '—' ? '%' : ''}</span>`;
 }
 function zv(v) { return v > 0 ? v : '<span class="zero">0</span>'; }
-function cnt(n) { return `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`; }
+function cnt(n) { return `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${n}</span>`; }
 
 function computeThroughput(p, total) {
   const stages = ['helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
@@ -125,19 +125,19 @@ export function renderHmReport(data) {
     <style>
       .hm-filters select, .hm-filters input[type=date] {
         appearance:none; -webkit-appearance:none;
-        height:28px; padding:0 30px 0 11px; border:1px solid var(--border); border-radius:8px;
-        font-size:12px; font-weight:500; background:var(--card); color:var(--text); cursor:pointer;
+        height:1.75rem; padding:0 1.875rem 0 0.6875rem; border:1px solid var(--border); border-radius:0.5rem;
+        font-size:0.75rem; font-weight:500; background:var(--card); color:var(--text); cursor:pointer;
       }
-      .hm-filters input[type=date] { padding-right:11px; }
+      .hm-filters input[type=date] { padding-right:0.6875rem; }
       .hm-filters select {
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-        background-repeat:no-repeat; background-position:right 11px center;
+        background-repeat:no-repeat; background-position:right 0.6875rem center;
       }
       .hm-filters select:hover, .hm-filters input[type=date]:hover { border-color:var(--muted); }
-      .hm-filters select:focus, .hm-filters input[type=date]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
-      .hm-filters .fchip { display:flex; align-items:center; gap:7px; }
+      .hm-filters select:focus, .hm-filters input[type=date]:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 0.1875rem rgba(78,107,166,0.16); }
+      .hm-filters .fchip { display:flex; align-items:center; gap:0.4375rem; }
       /* .hm-filters label styling lives in style.css — quiet, sentence case */
-      .hm-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; }
+      .hm-filters .fchip > label.opt { font-size:0.75rem; font-weight:500; display:flex; align-items:center; gap:0.25rem; cursor:pointer; }
       .hm-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
       .hm-report table td, .hm-report table th { vertical-align:middle; }
 
@@ -152,13 +152,13 @@ export function renderHmReport(data) {
       /* #13 (2026-08-23): min-width was 720px while the six numeric columns alone need 840, so the table grew
          past it and the ROLE NAME column was squeezed to 0px — that is the 'weird spacing'. The name column
          now has a real width and min-width covers the whole row. */
-      .hm-report .hm-summary { width:100%; min-width:1100px; table-layout:fixed; }
-      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:260px; }
+      .hm-report .hm-summary { width:100%; min-width:68.75rem; table-layout:fixed; }
+      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:16.25rem; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
-        text-align:right; width:130px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        text-align:right; width:8.125rem; white-space:nowrap; font-variant-numeric:tabular-nums; }
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
-      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:150px; }   /* Dropped + % caption */
-      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:180px; }   /* Delta: track + number + caption */
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:9.375rem; }   /* Dropped + % caption */
+      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:11.25rem; }   /* Delta: track + number + caption */
 
     </style>
 
@@ -176,12 +176,12 @@ export function renderHmReport(data) {
 
     <!-- ===== SUB-TAB STRIP ===== -->
     <div class="hm-filters">
-      <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:170px"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
+      <div class="fchip"><span class="lbl">Department</span><select id="hmDept" style="min-width:10.625rem"><option value="">All Departments</option>${allDepts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
       <span class="fdiv"></span>
       <div class="fchip"><div class="ms" id="msHmJob"></div></div>
       
       
-      <label class="opt" id="hmExpandWrap" style="margin-left:auto;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
+      <label class="opt" id="hmExpandWrap" style="margin-left:auto;font-size:0.75rem;font-weight:500;display:flex;align-items:center;gap:0.3125rem;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
     <span class="period" id="hmPeriod"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span>${dojFilterHtml('hm', data.joiningPendingCases, 'margin-left:auto')}</div>
 
     <!-- ===== PANEL: POSITION FULFILMENT ===== -->
@@ -189,7 +189,7 @@ export function renderHmReport(data) {
       <div class="cards" id="hm1Cards"></div>
 
       <h3 class="subsection-title">Positions by department</h3>
-      <div class="chart-wrap" id="hm1ChartWrap" style="height:340px"><canvas id="hm1Chart"></canvas></div>
+      <div class="chart-wrap" id="hm1ChartWrap" style="height:21.25rem"><canvas id="hm1Chart"></canvas></div>
 
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
@@ -202,7 +202,7 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: JOINING PENDING (#130b — was the Cases list under Position Fulfilment) ===== -->
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
-      <p class="sub-note" id="hmJPCaption" style="margin-bottom:8px"></p>
+      <p class="sub-note" id="hmJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
@@ -212,7 +212,7 @@ export function renderHmReport(data) {
 
     <!-- ===== PANEL: JOINERS (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage ===== -->
     <div class="hm-panel" data-panel="joiners" style="display:none">
-      <p class="sub-note" id="hmJoinCaption" style="margin-bottom:8px"></p>
+      <p class="sub-note" id="hmJoinCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
         <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Recruiter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
@@ -313,7 +313,7 @@ export function initHmFilters(data) {
     container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
       + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
       + `<div class="ms-list">`
-      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No options yet</span>')
+      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
       + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
     const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -501,7 +501,7 @@ export function initHmFilters(data) {
         <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}</tr>`;
       jobs2.forEach(o => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:30px;font-weight:500;max-width:360px">${o.title}</td>${metrics(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${o.title}</td>${metrics(o)}</tr>`;
       });
     });
     html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}</tr>`;
@@ -813,7 +813,7 @@ export function initHmFilters(data) {
     }
 
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
       return;
     }
     // Newest opening quarter first, unlinked rows last (they have no quarter to sort on).
@@ -847,7 +847,7 @@ export function initHmFilters(data) {
         : '';
     }
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Nobody joined between these dates for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
       return;
     }
     // Most recent joining date first.
@@ -923,7 +923,7 @@ export function initHmFilters(data) {
         <td style="font-weight:600">${CARET}${deptName}${cnt(G.jobs.length)}</td>${pipeCells(G.total, G.stages)}</tr>`;
       G.jobs.forEach(j => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="font-weight:500;max-width:300px;padding-left:30px">${j.title}</td>${pipeCells(j.total, j.pipeline)}</tr>`;
+          <td style="font-weight:500;max-width:18.75rem;padding-left:1.875rem">${j.title}</td>${pipeCells(j.total, j.pipeline)}</tr>`;
       });
     });
     html += `<tr class="totals-row"><td>Total</td>${pipeCells(grandTotal, stageTotalsAll)}</tr>`;

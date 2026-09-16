@@ -1,4 +1,5 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
+import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
 import { shadeMomentum, shadeTis, shareBars, colorShareBars } from '../grid-shade.js';   // #137c
@@ -49,7 +50,7 @@ function pctClass(val) {
   if (n > 0) return 'warn';
   return 'zero';
 }
-const CARET = '<span class="caret" style="display:inline-block;width:14px;color:var(--muted)">▸</span>';
+const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
 const DASH = '<span class="zero">—</span>';
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -172,7 +173,7 @@ export function renderRecruiter(data) {
   if (!data || !data.recruiters || data.recruiters.length === 0) {
     return `
       <div class="card" style="text-align:center;padding:2rem;">
-        <p style="color:var(--muted);font-size:13px;">Recruiter data not yet available.</p>
+        <p style="color:var(--muted);font-size:0.8125rem;">Recruiter data not yet available.</p>
       </div>`;
   }
 
@@ -193,80 +194,80 @@ export function renderRecruiter(data) {
       /* ===== Data Hygiene side list (#13, Jerin 14 Sep 2026 — mock-up B1) =====
          The list of lists sits on the left and the chosen list on the right. State lives in form, not only in numbers: a dot and a
          count badge per list (rose = needs a fix, slate = for the record, teal = nothing to fix) and a bar that sums the three. */
-      .hy-split { display:grid; grid-template-columns:300px minmax(0,1fr); border:1px solid var(--border); border-radius:12px;
-        background:var(--card); overflow:hidden; margin-top:4px; }
+      .hy-split { display:grid; grid-template-columns:18.75rem minmax(0,1fr); border:1px solid var(--border); border-radius:0.75rem;
+        background:var(--card); overflow:hidden; margin-top:0.25rem; }
       .hy-rail { background:#f7f9fc; border-right:1px solid var(--border); display:flex; flex-direction:column; }
-      .hy-rail-head { padding:14px 14px 12px; border-bottom:1px solid var(--border); background:var(--card); display:grid; gap:8px; }
-      .hy-rail-title { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
-      .hy-rail-title strong { font-size:13px; font-weight:700; color:var(--text); }
-      .hy-rail-title span { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
-      .hy-statebar { display:flex; gap:2px; height:6px; border-radius:999px; overflow:hidden; }
+      .hy-rail-head { padding:0.875rem 0.875rem 0.75rem; border-bottom:1px solid var(--border); background:var(--card); display:grid; gap:0.5rem; }
+      .hy-rail-title { display:flex; align-items:baseline; justify-content:space-between; gap:0.625rem; }
+      .hy-rail-title strong { font-size:0.8125rem; font-weight:700; color:var(--text); }
+      .hy-rail-title span { font-size:0.75rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .hy-statebar { display:flex; gap:2px; height:0.375rem; border-radius:62.4375rem; overflow:hidden; }
       .hy-statebar i { display:block; height:100%; }
       .hy-statebar .s-fix { background:var(--red); }
       .hy-statebar .s-record { background:#b5bccf; }
       .hy-statebar .s-clear { background:var(--green); }
       .hy-statebar .s-wait { background:var(--border); }
-      .hy-legend { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11.5px; color:var(--muted); }
-      .hy-legend span { display:inline-flex; align-items:center; gap:5px; }
+      .hy-legend { display:flex; flex-wrap:wrap; gap:0.25rem 0.75rem; font-size:0.71875rem; color:var(--muted); }
+      .hy-legend span { display:inline-flex; align-items:center; gap:0.3125rem; }
       .hy-legend b { color:var(--text-secondary); font-weight:600; font-variant-numeric:tabular-nums; }
-      .hy-rail-body { padding:6px 8px 12px; display:grid; gap:2px; align-content:start; }
-      .hy-grp { display:flex; align-items:center; justify-content:space-between; padding:12px 8px 5px; }
-      .hy-grp:first-child { padding-top:6px; }
-      .hy-grp span { font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9aa3bd; }
-      .hy-grp em { font-style:normal; font-size:11px; color:#9aa3bd; font-variant-numeric:tabular-nums; }
+      .hy-rail-body { padding:0.375rem 0.5rem 0.75rem; display:grid; gap:2px; align-content:start; }
+      .hy-grp { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0.5rem 0.3125rem; }
+      .hy-grp:first-child { padding-top:0.375rem; }
+      .hy-grp span { font-size:0.65625rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9aa3bd; }
+      .hy-grp em { font-style:normal; font-size:0.6875rem; color:#9aa3bd; font-variant-numeric:tabular-nums; }
       .hy-row { appearance:none; width:100%; text-align:left; cursor:pointer; background:transparent; font-family:inherit;
-        border:1px solid transparent; border-radius:9px; padding:8px 10px; color:var(--text-secondary);
-        display:grid; grid-template-columns:10px minmax(0,1fr) auto; column-gap:10px; align-items:center;
+        border:1px solid transparent; border-radius:0.5625rem; padding:0.5rem 0.625rem; color:var(--text-secondary);
+        display:grid; grid-template-columns:0.625rem minmax(0,1fr) auto; column-gap:0.625rem; align-items:center;
         transition:background-color .14s, border-color .14s, box-shadow .14s; }
       .hy-row:hover { background:#eef2f8; }
       .hy-row[aria-selected="true"] { background:var(--card); border-color:var(--border);
-        box-shadow:0 1px 2px rgba(15,23,42,.06), 0 4px 12px -6px rgba(34,52,79,.18); }
+        box-shadow:0 1px 2px rgba(15,23,42,.06), 0 0.25rem 0.75rem -0.375rem rgba(34,52,79,.18); }
       .hy-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-      .hy-dot { width:8px; height:8px; border-radius:50%; justify-self:center; }
-      .hy-dot.fix { background:var(--red); box-shadow:0 0 0 3px var(--red-light); }
-      .hy-dot.record { background:#b5bccf; box-shadow:0 0 0 3px #eef0f5; }
-      .hy-dot.clear { background:var(--green); box-shadow:0 0 0 3px var(--green-light); }
-      .hy-dot.wait { background:var(--border); box-shadow:0 0 0 3px var(--border-light); }
-      .hy-name { font-size:13px; font-weight:550; line-height:1.3; }
+      .hy-dot { width:0.5rem; height:0.5rem; border-radius:50%; justify-self:center; }
+      .hy-dot.fix { background:var(--red); box-shadow:0 0 0 0.1875rem var(--red-light); }
+      .hy-dot.record { background:#b5bccf; box-shadow:0 0 0 0.1875rem #eef0f5; }
+      .hy-dot.clear { background:var(--green); box-shadow:0 0 0 0.1875rem var(--green-light); }
+      .hy-dot.wait { background:var(--border); box-shadow:0 0 0 0.1875rem var(--border-light); }
+      .hy-name { font-size:0.8125rem; font-weight:550; line-height:1.3; }
       .hy-row[aria-selected="true"] .hy-name { color:var(--navy); font-weight:650; }
-      .hy-sub { grid-column:2 / 4; font-size:11.5px; line-height:1.35; color:var(--muted); margin-top:2px; }
-      .hy-n { font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; line-height:1; padding:4px 8px; border-radius:999px;
+      .hy-sub { grid-column:2 / 4; font-size:0.71875rem; line-height:1.35; color:var(--muted); margin-top:2px; }
+      .hy-n { font-variant-numeric:tabular-nums; font-size:0.6875rem; font-weight:700; line-height:1; padding:0.25rem 0.5rem; border-radius:62.4375rem;
         white-space:nowrap; border:1px solid transparent; }
       .hy-n.fix { background:var(--red-light); color:var(--red); border-color:#ecd3db; }
       .hy-n.record { background:#eef0f5; color:var(--muted); border-color:#dde1ea; }
-      .hy-n.clear { background:var(--green-light); color:var(--green); border-color:#cfe3e9; display:inline-flex; align-items:center; gap:3px; }
+      .hy-n.clear { background:var(--green-light); color:var(--green); border-color:#cfe3e9; display:inline-flex; align-items:center; gap:0.1875rem; }
       .hy-n.wait { background:var(--border-light); color:var(--muted); }
-      .hy-n svg { width:10px; height:10px; }
-      .hy-main { padding:20px 22px 22px; min-width:0; display:grid; gap:16px; align-content:start; }
-      .hy-top { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; }
-      .hy-title { display:grid; gap:6px; min-width:0; }
-      .hy-crumb { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#9aa3bd; }
-      .hy-title h3 { margin:0; font-size:19px; line-height:1.2; letter-spacing:-.01em; color:var(--navy); font-weight:700; text-transform:none; }
-      .hy-pills { display:flex; flex-wrap:wrap; gap:6px; }
-      .hy-pill { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px;
+      .hy-n svg { width:0.625rem; height:0.625rem; }
+      .hy-main { padding:1.25rem 1.375rem 1.375rem; min-width:0; display:grid; gap:1rem; align-content:start; }
+      .hy-top { display:flex; justify-content:space-between; align-items:flex-start; gap:1.125rem; flex-wrap:wrap; }
+      .hy-title { display:grid; gap:0.375rem; min-width:0; }
+      .hy-crumb { font-size:0.6875rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#9aa3bd; }
+      .hy-title h3 { margin:0; font-size:1.1875rem; line-height:1.2; letter-spacing:-.01em; color:var(--navy); font-weight:700; text-transform:none; }
+      .hy-pills { display:flex; flex-wrap:wrap; gap:0.375rem; }
+      .hy-pill { display:inline-flex; align-items:center; gap:0.375rem; font-size:0.71875rem; font-weight:600; padding:0.1875rem 0.5625rem; border-radius:62.4375rem;
         border:1px solid var(--border); color:var(--text-secondary); background:var(--card); white-space:nowrap; }
       .hy-pill.fix { background:var(--red-light); border-color:#ecd3db; color:var(--red); }
       .hy-pill.record { background:#eef0f5; border-color:#dde1ea; color:var(--muted); }
       .hy-pill.clear { background:var(--green-light); border-color:#cfe3e9; color:var(--green); }
-      .hy-pill svg { width:12px; height:12px; }
-      .hy-side { display:flex; align-items:center; gap:14px; }
+      .hy-pill svg { width:0.75rem; height:0.75rem; }
+      .hy-side { display:flex; align-items:center; gap:0.875rem; }
       .hy-big { display:grid; justify-items:end; line-height:1; }
-      .hy-big b { font-size:28px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--navy); }
-      .hy-big span { font-size:10.5px; color:var(--muted); margin-top:5px; text-transform:uppercase; letter-spacing:.05em; }
-      .hyg-dl { appearance:none; display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1px solid var(--border);
-        border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; white-space:nowrap; font-family:inherit; }
+      .hy-big b { font-size:1.75rem; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--navy); }
+      .hy-big span { font-size:0.65625rem; color:var(--muted); margin-top:0.3125rem; text-transform:uppercase; letter-spacing:.05em; }
+      .hyg-dl { appearance:none; display:inline-flex; align-items:center; gap:0.4375rem; background:var(--card); border:1px solid var(--border);
+        border-radius:0.5rem; padding:0.4375rem 0.75rem; font-size:0.75rem; font-weight:600; color:var(--text-secondary); cursor:pointer; white-space:nowrap; font-family:inherit; }
       .hyg-dl:hover { color:var(--text); border-color:#b9c4d8; }
-      .hyg-dl svg { width:13px; height:13px; }
-      .hy-facts { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:12px; }
-      .hy-fact { border:1px solid var(--border-light); background:#f7f9fc; border-radius:10px; padding:11px 14px; display:grid; gap:6px; align-content:start; }
-      .hy-fact h4 { margin:0; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9aa3bd; }
-      .hy-fact p { margin:0; font-size:13px; color:var(--text-secondary); }
-      .hy-path { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
-      .hy-path span { font-size:12px; font-weight:600; color:var(--accent-deep); background:var(--card); border:1px solid var(--border);
-        border-radius:6px; padding:2px 7px; white-space:nowrap; }
-      .hy-path svg { width:10px; height:10px; color:#9aa3bd; flex:none; }
+      .hyg-dl svg { width:0.8125rem; height:0.8125rem; }
+      .hy-facts { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:0.75rem; }
+      .hy-fact { border:1px solid var(--border-light); background:#f7f9fc; border-radius:0.625rem; padding:0.6875rem 0.875rem; display:grid; gap:0.375rem; align-content:start; }
+      .hy-fact h4 { margin:0; font-size:0.65625rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9aa3bd; }
+      .hy-fact p { margin:0; font-size:0.8125rem; color:var(--text-secondary); }
+      .hy-path { display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem; }
+      .hy-path span { font-size:0.75rem; font-weight:600; color:var(--accent-deep); background:var(--card); border:1px solid var(--border);
+        border-radius:0.375rem; padding:2px 0.4375rem; white-space:nowrap; }
+      .hy-path svg { width:0.625rem; height:0.625rem; color:#9aa3bd; flex:none; }
       .hy-main .scroll-table { margin-bottom:0; }
-      @media (max-width: 900px) {
+      @media (max-width: 50.625rem) {
         .hy-split { grid-template-columns:1fr; }
         .hy-rail { border-right:0; border-bottom:1px solid var(--border); }
         .hy-sub { display:none; }
@@ -277,16 +278,16 @@ export function renderRecruiter(data) {
       /* consolidated filter block (matches HM) */
       /* .rec-filters look now lives in style.css — one quiet row, defined once */
       .rec-filters select, .rec-filters input[type=date], .rec-filters input[type=text] {
-        appearance:none; -webkit-appearance:none; height:28px; padding:0 11px; border:1px solid var(--border);
-        border-radius:8px; font-size:12px; font-weight:500; background:var(--card); color:var(--text); }
-      .rec-filters select { padding-right:28px; cursor:pointer;
+        appearance:none; -webkit-appearance:none; height:1.75rem; padding:0 0.6875rem; border:1px solid var(--border);
+        border-radius:0.5rem; font-size:0.75rem; font-weight:500; background:var(--card); color:var(--text); }
+      .rec-filters select { padding-right:1.75rem; cursor:pointer;
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-        background-repeat:no-repeat; background-position:right 10px center; }
+        background-repeat:no-repeat; background-position:right 0.625rem center; }
       .rec-filters select:hover, .rec-filters input:hover { border-color:var(--muted); }
-      .rec-filters select:focus, .rec-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(78,107,166,0.16); }
-      .rec-filters .fchip { display:flex; align-items:center; gap:7px; }
+      .rec-filters select:focus, .rec-filters input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 0.1875rem rgba(78,107,166,0.16); }
+      .rec-filters .fchip { display:flex; align-items:center; gap:0.4375rem; }
       /* .rec-filters label styling lives in style.css — quiet, sentence case */
-      .rec-filters .fchip > label.opt { font-size:12px; font-weight:500; display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text) }
+      .rec-filters .fchip > label.opt { font-size:0.75rem; font-weight:500; display:flex; align-items:center; gap:0.25rem; cursor:pointer; color:var(--text) }
       .rec-filters .fdiv { width:1px; align-self:stretch; background:#cdddf7; margin:2px 2px; }
 
       /* Velocity table — freeze the first two columns (Pod/Recruiter/Stage + Total-15) */
@@ -295,14 +296,14 @@ export function renderRecruiter(data) {
       /* ===== Momentum grid, design pass 2026-08-29 (look only — no columns, rows or figures changed) ===== */
       /* Tighter rhythm: 30 day-columns at the global 8px/12px padding pushed the grid wider than it needed
          to be and made the sparse cells feel emptier than they are. */
-      .vel-table th { padding:8px 9px; letter-spacing:0.02em; }
-      .vel-table td { padding:6px 9px; }
+      .vel-table th { padding:0.5rem 0.5625rem; letter-spacing:0.02em; }
+      .vel-table td { padding:0.375rem 0.5625rem; }
       /* A real number should read louder than an empty cell. Dots stay faint; values get their weight back. */
       .vel-table tbody td { color:var(--text-secondary); }
       .vel-table tbody td:not(:first-child) { font-weight:500; font-variant-numeric:tabular-nums; }
       .vel-table tbody td .zero { font-weight:400; }
       /* Depth by weight and colour rather than indent alone: pod > recruiter > role. */
-      .vel-table tbody tr.lvl-pod td { font-size:12.5px; }
+      .vel-table tbody tr.lvl-pod td { font-size:0.78125rem; }
       .vel-table tbody tr.lvl-job td:first-child { color:var(--muted); font-weight:400; white-space:normal; line-height:1.35; }
       /* Someone with nothing in the window is still worth seeing, just not worth reading first. */
       .vel-table tbody tr.lvl-quiet td { color:var(--muted); }
@@ -312,41 +313,41 @@ export function renderRecruiter(data) {
          not an alert. */
       .vel-table th.wknd { box-shadow:inset 0 -2px 0 rgba(163,50,83,0.38); }
       .vel-table th:not(:first-child), .vel-table td:not(:first-child) { text-align:right; }
-      .vel-table th:nth-child(n+3), .vel-table td:nth-child(n+3) { min-width:56px; }
-      .vel-table th:nth-child(1), .vel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:250px; min-width:250px; max-width:250px; text-align:left; white-space:normal; }
-      .vel-table th:nth-child(2), .vel-table td:nth-child(2) { position:sticky; left:250px; z-index:2; min-width:96px; border-right:2px solid var(--border); }
+      .vel-table th:nth-child(n+3), .vel-table td:nth-child(n+3) { min-width:3.5rem; }
+      .vel-table th:nth-child(1), .vel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:15.625rem; min-width:15.625rem; max-width:15.625rem; text-align:left; white-space:normal; }
+      .vel-table th:nth-child(2), .vel-table td:nth-child(2) { position:sticky; left:15.625rem; z-index:2; min-width:6rem; border-right:2px solid var(--border); }
       .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:var(--bg); }
       .vel-table tbody td:nth-child(1), .vel-table tbody td:nth-child(2) { background:var(--card); }
       .vel-table tbody tr.lvl-pod td:nth-child(1), .vel-table tbody tr.lvl-pod td:nth-child(2) { background:var(--border-light); }
 
       /* multi-select checkbox dropdown */
       .ms { position:relative; display:inline-block; }
-      .ms-btn { appearance:none; height:28px; padding:0 11px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-weight:500;
-        background:var(--card); color:var(--text); cursor:pointer; min-width:120px; text-align:left; white-space:nowrap; }
+      .ms-btn { appearance:none; height:1.75rem; padding:0 0.6875rem; border:1px solid var(--border); border-radius:0.5rem; font-size:0.75rem; font-weight:500;
+        background:var(--card); color:var(--text); cursor:pointer; min-width:7.5rem; text-align:left; white-space:nowrap; }
       .ms-btn:hover { border-color:var(--muted); }
-      .ms-panel { position:absolute; top:38px; left:0; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:8px;
-        padding:6px; min-width:180px; max-height:260px; overflow:auto; box-shadow:0 6px 20px rgba(15,23,42,0.12); }
-      .ms-opt { display:flex; align-items:center; gap:7px; padding:5px 8px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; white-space:nowrap; }
+      .ms-panel { position:absolute; top:2.375rem; left:0; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:0.5rem;
+        padding:0.375rem; min-width:11.25rem; max-height:16.25rem; overflow:auto; box-shadow:0 0.375rem 1.25rem rgba(15,23,42,0.12); }
+      .ms-opt { display:flex; align-items:center; gap:0.4375rem; padding:0.3125rem 0.5rem; font-size:0.75rem; font-weight:500; border-radius:0.375rem; cursor:pointer; white-space:nowrap; }
       .ms-opt:hover { background:var(--border-light); }
 
 
       /* Metric Configuration */
-      .cfg-card { border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; background:var(--card); }
-      .cfg-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-      .cfg-card .fchip { display:flex; align-items:center; gap:7px; }
-      .cfg-card .fchip > span.lbl { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
+      .cfg-card { border:1px solid var(--border); border-radius:0.75rem; padding:1rem 1.125rem; margin-bottom:1.125rem; background:var(--card); }
+      .cfg-head { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; }
+      .cfg-card .fchip { display:flex; align-items:center; gap:0.4375rem; }
+      .cfg-card .fchip > span.lbl { font-size:0.6875rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; }
       .cfg-card select, .cfg-card input[type=date], .cfg-card input[type=number] {
-        appearance:none; -webkit-appearance:none; height:32px; padding:0 10px; border:1px solid var(--border);
-        border-radius:8px; font-size:12px; font-weight:500; background:var(--bg); color:var(--text); }
-      .btn-secondary { background:var(--bg); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-weight:600; color:var(--text); }
+        appearance:none; -webkit-appearance:none; height:2rem; padding:0 0.625rem; border:1px solid var(--border);
+        border-radius:0.5rem; font-size:0.75rem; font-weight:500; background:var(--bg); color:var(--text); }
+      .btn-secondary { background:var(--bg); border:1px solid var(--border); border-radius:0.5rem; cursor:pointer; font-weight:600; color:var(--text); }
       .btn-secondary:hover { border-color:var(--muted); }
       .cfg-grid td, .cfg-grid th { text-align:center; white-space:nowrap; }
-      .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:210px; white-space:normal; }
-      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); text-align:left; }
-      .cfg-grid .tier-pts { width:46px; text-align:center; padding:2px; font-size:11px; }
-      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
-      .cfg-ref table { width:100%; font-size:12px; }
-      .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
+      .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:13.125rem; white-space:normal; }
+      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); text-align:left; }
+      .cfg-grid .tier-pts { width:2.875rem; text-align:center; padding:2px; font-size:0.6875rem; }
+      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:1rem; }
+      .cfg-ref table { width:100%; font-size:0.75rem; }
+      .cfg-ref th { text-align:left; color:var(--muted); font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.03em; }
     </style>
 
     <div class="rec-subtabs subtab-band">
@@ -392,11 +393,11 @@ export function renderRecruiter(data) {
          Momentum through ToFU. See the definitions block for what Added and Cleared mean. -->
     <div class="rec-panel" data-panel="screening" style="display:none">
       <p class="sub-note" id="recScreenPeriod" style="font-weight:600"></p>
-      <div class="chart-wrap" style="height:300px"><canvas id="recScreenChart"></canvas></div>
+      <div class="chart-wrap" style="height:18.75rem"><canvas id="recScreenChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
         <thead>
           <tr>
-            <th style="min-width:260px">Pod / Recruiter / Job</th>
+            <th style="min-width:16.25rem">Pod / Recruiter / Job</th>
             <th>Added at R1</th>
             <th>Progressed</th>
             <th>%</th>
@@ -409,7 +410,7 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Joining Conversion -->
     <div class="rec-panel" data-panel="joining" style="display:none">
-      <div class="chart-wrap" style="height:280px"><canvas id="recJoinChart"></canvas></div>
+      <div class="chart-wrap" style="height:17.5rem"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
         <thead><tr><th>Pod / Recruiter</th><th>Offered</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Joining Conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
@@ -419,31 +420,31 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Position Fulfilment -->
     <div class="rec-panel" data-panel="fulfilment">
-      <div class="chart-wrap" style="height:280px"><canvas id="recFulfilChart"></canvas></div>
+      <div class="chart-wrap" style="height:17.5rem"><canvas id="recFulfilChart"></canvas></div>
 
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px">Position Fulfilment — Non-Sales</h4>
+      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Position Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:240px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Current Qtr</th><th colspan="2" class="stage-hdr">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:15rem">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Current Qtr</th><th colspan="2" class="stage-hdr">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Position Fulfilment — Sales (Hires)</h4>
+      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
 
-      <h4 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 6px">Position Fulfilment — Others (Hires)</h4>
+      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Others (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:200px">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
+          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOthersBody"></tbody>
@@ -454,10 +455,10 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Joining Pending (#130b — was the Cases list under Position Fulfilment) -->
     <div class="rec-panel" data-panel="joiningpending" style="display:none">
-      <p class="sub-note" id="recJPCaption" style="margin-bottom:8px"></p>
+      <p class="sub-note" id="recJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
-          <th style="min-width:240px">Pod / Recruiter / Candidate</th>
+          <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
           <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Sub-Stage</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
@@ -467,10 +468,10 @@ export function renderRecruiter(data) {
 
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage -->
     <div class="rec-panel" data-panel="joiners" style="display:none">
-      <p class="sub-note" id="recJoinersCaption" style="margin-bottom:8px"></p>
+      <p class="sub-note" id="recJoinersCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
-          <th style="min-width:240px">Pod / Recruiter / Candidate</th>
+          <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
           <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th>
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
@@ -482,9 +483,9 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="sourcing" style="display:none">
       <p class="sub-note" id="recSourcePeriod" style="font-weight:600"></p>
       <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
-      <div class="chart-wrap" style="height:320px"><canvas id="recSourceChart"></canvas></div>
+      <div class="chart-wrap" style="height:20rem"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
-        <thead><tr><th style="min-width:320px">Pod / Recruiter / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:20rem">Pod / Recruiter / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
       ${defsBlock('rec-sourcing')}
@@ -518,99 +519,99 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="unassigned">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:300px">Department / Job / Candidate</th><th>Stage</th><th>Applied</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Department / Job / Candidate</th><th>Stage</th><th>Applied</th><th>Last activity</th><th>Application ID</th></tr></thead>
               <tbody id="hygUnassignedBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="multirec" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:200px">Job</th><th>Candidate</th><th style="min-width:240px">Recruiters tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <thead><tr><th style="min-width:12.5rem">Job</th><th>Candidate</th><th style="min-width:15rem">Recruiters tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
               <tbody id="hygMultiRecBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="multisrc" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:200px">Job</th><th>Candidate</th><th style="min-width:240px">Sourcers tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <thead><tr><th style="min-width:12.5rem">Job</th><th>Candidate</th><th style="min-width:15rem">Sourcers tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
               <tbody id="hygMultiSrcBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nosrc" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Outcome</th><th>Start date</th><th>Recruiter</th></tr></thead>
+              <thead><tr><th style="min-width:11.25rem">Candidate</th><th style="min-width:12.5rem">Job</th><th>Department</th><th>Outcome</th><th>Start date</th><th>Recruiter</th></tr></thead>
               <tbody id="hygNoSrcBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="dates" style="display:none">
-            <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:0 0 6px">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
+            <h5 style="font-size:0.75rem;font-weight:600;color:var(--text);margin:0 0 0.375rem">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:240px">Recruiter</th><th>Quarter</th><th>Work found</th><th>Started on</th><th>Left on</th></tr></thead>
+              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Quarter</th><th>Work found</th><th>Started on</th><th>Left on</th></tr></thead>
               <tbody id="hygDatesOutBody"></tbody>
             </table></div>
-            <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">Ashby account disabled, no Left on date <span id="hygDatesNoEndN" style="color:var(--muted);font-weight:400"></span></h5>
+            <h5 style="font-size:0.75rem;font-weight:600;color:var(--text);margin:0.875rem 0 0.375rem">Ashby account disabled, no Left on date <span id="hygDatesNoEndN" style="color:var(--muted);font-weight:400"></span></h5>
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:240px">Recruiter</th><th>Started on</th><th>Last quarter with work</th></tr></thead>
+              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Started on</th><th>Last quarter with work</th></tr></thead>
               <tbody id="hygDatesNoEndBody"></tbody>
             </table></div>
-            <h5 style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 6px">No Started on date</h5>
+            <h5 style="font-size:0.75rem;font-weight:600;color:var(--text);margin:0.875rem 0 0.375rem">No Started on date</h5>
             <p class="sub-note" id="hygDatesNoStart" style="margin:0"></p>
           </div>
 
           <div class="hyg-panel" data-h="nopod" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:240px">Recruiter</th><th>Applications (all-time)</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
+              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Applications (all-time)</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
               <tbody id="hygNoPodBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nocap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:240px">Recruiter</th><th>Pod</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
+              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Pod</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
               <tbody id="hygNoCapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="offergap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+              <thead><tr><th style="min-width:11.25rem">Candidate</th><th style="min-width:12.5rem">Job</th><th>Department</th><th>Stage</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
               <tbody id="hygOfferGapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="hiredgap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:180px">Candidate</th><th style="min-width:200px">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+              <thead><tr><th style="min-width:11.25rem">Candidate</th><th style="min-width:12.5rem">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
               <tbody id="hygHiredGapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nodate" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Job status</th><th>Opening ID</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th style="min-width:9.375rem">Department</th><th>Job status</th><th>Opening ID</th></tr></thead>
               <tbody id="hygNoDateBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="noopening" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:260px">Job</th><th style="min-width:150px">Department</th><th>New candidates</th><th>R1 screened</th><th>Assessed</th><th>Finished stays</th><th>Interviews</th><th style="min-width:220px">Openings in Ashby</th></tr></thead>
+              <thead><tr><th style="min-width:16.25rem">Job</th><th style="min-width:9.375rem">Department</th><th>New candidates</th><th>R1 screened</th><th>Assessed</th><th>Finished stays</th><th>Interviews</th><th style="min-width:13.75rem">Openings in Ashby</th></tr></thead>
               <tbody id="hygNoOpeningBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="unscored" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:300px">Job</th><th style="min-width:150px">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th style="min-width:9.375rem">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
               <tbody id="hygUnscoredBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="anomalies" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:280px">Anomaly</th><th style="min-width:240px">Detail</th><th>What to do</th></tr></thead>
+              <thead><tr><th style="min-width:17.5rem">Anomaly</th><th style="min-width:15rem">Detail</th><th>What to do</th></tr></thead>
               <tbody id="hygAnomBody"></tbody>
             </table></div>
           </div>
@@ -654,9 +655,9 @@ export function initRecruiterFilters(baseData) {
   const inactiveTag = (r) => {
     if (!r || r.sourcerOnly) return '';
     const s = recruiterInQuarter(r.name, selQuarter(), r.isActive);
-    if (!s.in) return ` <span title="Not here in the selected quarter${s.note ? ' (' + s.note + ')' : ''}" style="font-size:10px;color:var(--red);font-weight:600">· not here this quarter</span>`;
-    if (s.basis === 'dates' && /left|joined/.test(s.note)) return ` <span style="font-size:10px;color:var(--muted);font-weight:600">· ${s.note}</span>`;
-    return isStatusUnknown(r) ? ' <span title="No Ashby user record matched this name, so active/inactive is unknown" style="font-size:10px;color:var(--orange);font-weight:600">· status unknown</span>' : '';
+    if (!s.in) return ` <span title="Not here in the selected quarter${s.note ? ' (' + s.note + ')' : ''}" style="font-size:0.625rem;color:var(--red);font-weight:600">· not here this quarter</span>`;
+    if (s.basis === 'dates' && /left|joined/.test(s.note)) return ` <span style="font-size:0.625rem;color:var(--muted);font-weight:600">· ${s.note}</span>`;
+    return isStatusUnknown(r) ? ' <span title="No Ashby user record matched this name, so active/inactive is unknown" style="font-size:0.625rem;color:var(--orange);font-weight:600">· status unknown</span>' : '';
   };
   // Time-in-stage histograms (days:count). App Review from the main pull; TA Screen → Offer from stage history.
   const _sr = data.stageRollups || {};
@@ -908,7 +909,7 @@ export function initRecruiterFilters(baseData) {
     container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
       + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
       + `<div class="ms-list">`
-      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:11px;color:var(--muted);padding:4px 8px">No options yet</span>')
+      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
       + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
     const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -1083,18 +1084,18 @@ export function initRecruiterFilters(baseData) {
       if (!r1Store) {
         // No R1 field yet. Say so rather than falling back to the per-stage counts, which answer a
         // different question and would sit under this heading as a lie.
-        screenBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">R1 screening figures appear after the next stage-history refresh.</td></tr>`;
+        screenBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem">R1 screening figures appear after the next stage-history refresh.</td></tr>`;
       } else {
         let html = '';
         groups.forEach((G, pi) => {
           const podAgg = { added: 0, cleared: 0 };
           const recVals = G.recs.map(r => { const v = r1Of(r.name); podAgg.added += v.added; podAgg.cleared += v.cleared; return v; });
           html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-            <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${r1Cells(podAgg, true)}</tr>`;
+            <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${G.recs.length}</span></td>${r1Cells(podAgg, true)}</tr>`;
           G.recs.forEach((r, ri) => {
             const rk = `s${pi}-${ri}`;
             html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-              <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${r1Cells(recVals[ri], false)}</tr>`;
+              <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${r1Cells(recVals[ri], false)}</tr>`;
             // Only roles that actually saw R1 activity in the period — a recruiter's older roles are not
             // listed as a column of zeros (Jerin, 2026-08-26: "I don't think Oshin has these many roles").
             const mine = (r1JobStore && r1JobStore[r.name]) || {};
@@ -1105,15 +1106,15 @@ export function initRecruiterFilters(baseData) {
               jobRows.forEach(({ j8, v }) => {
                 const jm = jobById[j8];
                 html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-                  <td style="padding-left:52px;color:var(--muted)">${(jm && jm.title) || j8}</td>${r1Cells(v, false)}</tr>`;
+                  <td style="padding-left:3.25rem;color:var(--muted)">${(jm && jm.title) || j8}</td>${r1Cells(v, false)}</tr>`;
               });
             } else {
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-                <td style="padding-left:52px;color:var(--muted);font-style:italic">No R1 activity in this period</td>${'<td>' + DASH + '</td>'.repeat(3)}</tr>`;
+                <td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No R1 activity in this period</td>${'<td>' + DASH + '</td>'.repeat(3)}</tr>`;
             }
           });
         });
-        screenBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+        screenBody.innerHTML = html || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
         wireVelTree(screenBody);
       }
     }
@@ -1146,12 +1147,12 @@ export function initRecruiterFilters(baseData) {
         if (!shown.length) return;
         const tot = shown.reduce((a, r) => add(a, cOf(r.name)), { o: 0, j: 0, p: 0, dr: 0 });
         html += `<tr class="pod-header" data-g="j${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>${cells(tot, true)}</tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${shown.length}</span></td>${cells(tot, true)}</tr>`;
         shown.forEach(r => {
-          html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:30px;font-weight:500">${r.name}${inactiveTag(r)}</td>${cells(cOf(r.name), false)}</tr>`;
+          html += `<tr class="leaf" data-g="j${gi}" style="display:none"><td style="padding-left:1.875rem;font-weight:500">${r.name}${inactiveTag(r)}</td>${cells(cOf(r.name), false)}</tr>`;
         });
       });
-      joinBody.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nothing in play this quarter for the recruiters shown.</td></tr>`;
+      joinBody.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nothing in play this quarter for the recruiters shown.</td></tr>`;
       wirePodTree(joinBody);
     }
 
@@ -1437,11 +1438,11 @@ export function initRecruiterFilters(baseData) {
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${shown.length}</span></td>${cells(podAgg, true)}</tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${shown.length}</span></td>${cells(podAgg, true)}</tr>`;
         shown.forEach(({ r, a }, ri) => {
           const rk = `${mode}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
           // #1: the per-job rows must include roles the recruiter OWNS openings on even where they never
           // tagged an application, or the job Goals would not sum to the recruiter row above. Merge byJob
           // with the owned-opening jobs for this quarter, then sort.
@@ -1500,16 +1501,16 @@ export function initRecruiterFilters(baseData) {
                            aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: Math.max(0, jaSo - juSo) };   // #108
               roleAch.push({ title: m.title || '(untitled)', achievedSc: juSc });   // unrounded: the chart shares out the row's rounded total (#120)
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-                <td style="padding-left:52px;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:10px;margin-left:6px;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
+                <td style="padding-left:3.25rem;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
             });
           } else {
             html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-              <td style="padding-left:52px;color:var(--muted);font-style:italic">No jobs attributed</td>${`<td>${DASH}</td>`.repeat(ncol - 1)}</tr>`;
+              <td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No jobs attributed</td>${`<td>${DASH}</td>`.repeat(ncol - 1)}</tr>`;
           }
           if (lastFulfil[r.name]) lastFulfil[r.name].roles = roleAch;
         });
       });
-      return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters in this group.</td></tr>`;
+      return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters in this group.</td></tr>`;
     }
 
     const offerBody = document.getElementById('recFulfilOfferBody');
@@ -1563,11 +1564,11 @@ export function initRecruiterFilters(baseData) {
 
       let html = '', shown = 0, unlinked = 0;
       // #137: the counts are small number tags, recruiters carry their initials in their pod's colour, and the cells come from people-cells.js.
-      const cnt = (n, extra) => `${extra ? `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${extra}</span>` : ''}${countTag(n)}`;
+      const cnt = (n, extra) => `${extra ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${extra}</span>` : ''}${countTag(n)}`;
       const recName = (name, pod) => `<span class="pl-rec">${avatar(name, pod)}${name}</span>`;
       const candRow = (c, path) => {
         shown++; if (!isLinked(c)) unlinked++;
-        return `<tr data-path="${path}" style="display:none">${tdCandidate(c.candidate, 'padding-left:52px')}${cells(c)}</tr>`;
+        return `<tr data-path="${path}" style="display:none">${tdCandidate(c.candidate, 'padding-left:3.25rem')}${cells(c)}</tr>`;
       };
       inGroups.forEach((G, pi) => {
         const mine = G.recs.filter(r => visible.has(r.name) && (byRec[r.name] || []).length);
@@ -1579,7 +1580,7 @@ export function initRecruiterFilters(baseData) {
         mine.forEach((r, ri) => {
           const list = byRec[r.name].slice().sort(sortBy);
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${recName(r.name, G.pod)}${cnt(list.length)}</td>
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}${recName(r.name, G.pod)}${cnt(list.length)}</td>
             <td colspan="${rest}"></td></tr>`;
           list.forEach((c, ci) => { html += candRow(c, `${pi}-${ri}-${ci}`); });
         });
@@ -1594,14 +1595,14 @@ export function initRecruiterFilters(baseData) {
         let ri = 0;
         if (noRec.length) {
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}No recruiter tagged${cnt(noRec.length)}</td><td colspan="${rest}" style="color:var(--orange);font-size:11px">Fix in Ashby: tag a Recruiter on the hiring team.</td></tr>`;
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}No recruiter tagged${cnt(noRec.length)}</td><td colspan="${rest}" style="color:var(--orange);font-size:0.6875rem">Fix in Ashby: tag a Recruiter on the hiring team.</td></tr>`;
           noRec.slice().sort(sortBy).forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
           ri++;
         }
         orphanNames.forEach(nm => {
           const list = orphanBy[nm].slice().sort(sortBy);
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${recName(nm)}${cnt(list.length, orphanWhy(nm))}</td><td colspan="${rest}"></td></tr>`;
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}${recName(nm)}${cnt(list.length, orphanWhy(nm))}</td><td colspan="${rest}"></td></tr>`;
           list.forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
           ri++;
         });
@@ -1623,7 +1624,7 @@ export function initRecruiterFilters(baseData) {
         cells: c => `${tdQuarter(c.openingQuarter)}${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
           + `${tdJob(c.job || c.jobTitle)}${tdStage(c.subStage)}`
       });
-      jpBody.innerHTML = jp.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Nobody in closing under these filters.</td></tr>`;
+      jpBody.innerHTML = jp.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">Nobody in closing under these filters.</td></tr>`;
       // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
       // knows about .lvl-pod / .lvl-rec rows — so nothing here expanded at all and only the pod headers showed.
       wireTreePath(jpBody);
@@ -1648,7 +1649,7 @@ export function initRecruiterFilters(baseData) {
         sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
         cells: e => `${tdQuarter(e.openingQuarter, e.startDate)}${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}`
       });
-      joinersBody.innerHTML = jn.html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nobody joined between these dates under these filters.</td></tr>`;
+      joinersBody.innerHTML = jn.html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
       wireTreePath(joinersBody);
       const capJ = document.getElementById('recJoinersCaption');
       if (capJ) capJ.innerHTML = jn.shown
@@ -1684,12 +1685,12 @@ export function initRecruiterFilters(baseData) {
       groups.forEach((G, pi) => {
         const podTotal = G.recs.reduce((s, r) => s + recSrcTotal(r), 0);
         html += `<tr data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${G.recs.length}</span></td>
           <td style="font-weight:600">${podTotal || '<span class="zero">0</span>'}</td><td>${pct(podTotal, grand)}%</td></tr>`;
         G.recs.forEach((r, ri) => {
           const rt = recSrcTotal(r);
           html += `<tr data-path="${pi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>
             <td>${rt || '<span class="zero">0</span>'}</td><td>${rt ? pct(rt, podTotal) + '%' : DASH}</td></tr>`;
           // Source type → source name (from srcNested). Falls back to type-only (r.sources) until the refresh
           // that emits srcNested has run.
@@ -1699,21 +1700,21 @@ export function initRecruiterFilters(baseData) {
             types.forEach(([t, tcnt, names], ti) => {
               const hasNames = names && Object.keys(names).length;
               html += `<tr data-path="${pi}-${ri}-${ti}"${hasNames ? ' data-haschild data-exp="0"' : ''} style="display:none${hasNames ? ';cursor:pointer' : ''}">
-                <td style="padding-left:52px;font-weight:500">${hasNames ? CARET : ''}${t}</td>
+                <td style="padding-left:3.25rem;font-weight:500">${hasNames ? CARET : ''}${t}</td>
                 <td>${tcnt}</td><td class="${pctClass(pct(tcnt, rt))}">${pct(tcnt, rt)}%</td></tr>`;
               if (hasNames) Object.entries(names).sort((a, b) => b[1] - a[1]).forEach(([nm, cnt], ni) => {
                 html += `<tr data-path="${pi}-${ri}-${ti}-${ni}" style="display:none">
-                  <td style="padding-left:78px;color:var(--muted)">${nm}</td>
+                  <td style="padding-left:4.875rem;color:var(--muted)">${nm}</td>
                   <td>${cnt}</td><td class="${pctClass(pct(cnt, tcnt))}">${pct(cnt, tcnt)}%</td></tr>`;
               });
             });
           } else {
             html += `<tr data-path="${pi}-${ri}-0" style="display:none">
-              <td style="padding-left:52px;color:var(--muted);font-style:italic">Nobody joined in this period</td><td>${DASH}</td><td>${DASH}</td></tr>`;
+              <td style="padding-left:3.25rem;color:var(--muted);font-style:italic">Nobody joined in this period</td><td>${DASH}</td><td>${DASH}</td></tr>`;
           }
         });
       });
-      srcBody.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+      srcBody.innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
       wireTreePath(srcBody);
       shareBars(srcBody, recSrcColorOf);   // #137c: the colours come from buildSourceChart
     }
@@ -1974,14 +1975,14 @@ export function initRecruiterFilters(baseData) {
     const head = document.getElementById('recTisHead');
     const per = tisPeriod();
     if (head) {
-      let h = '<tr><th style="min-width:230px">Pod / Recruiter / Job</th>';
+      let h = '<tr><th style="min-width:14.375rem">Pod / Recruiter / Job</th>';
       TIS_STAGES.forEach(([sk, lbl]) => {
         const live = per && sk === 'appReview';
         h += `<th${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
       });
       head.innerHTML = h + '</tr>';
     }
-    if (!tisRec && !arDwellRec) { body.innerHTML = `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">Time-in-stage data pending the next stage-history refresh.</td></tr>`; return; }
+    if (!tisRec && !arDwellRec) { body.innerHTML = `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">Time-in-stage data pending the next stage-history refresh.</td></tr>`; return; }
     const q = selQuarter();
     const groups = groupByPod(getFilteredRecs(), q);
     // App Review is a live snapshot with no historical dimension, so it never takes the period; the rest do.
@@ -2023,22 +2024,22 @@ export function initRecruiterFilters(baseData) {
     const poolCells = (arrs) => TIS_STAGES.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
     let html = '';
     groups.forEach((G, pi) => {
-      html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${G.recs.length}</span></td>${poolCells(G.recs.map(recHists))}</tr>`;
+      html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${G.recs.length}</span></td>${poolCells(G.recs.map(recHists))}</tr>`;
       G.recs.forEach((r, ri) => {
         const rk = `t${pi}-${ri}`;
-        html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:26px;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${rowCells(recHists(r))}</tr>`;
+        html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${rowCells(recHists(r))}</tr>`;
         // #125: only this recruiter's jobs with an opening opened in the period, and no empty rows (nobody finished or waiting).
         const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
         const jobs = (aByJob[r.name] || []).slice().sort((a, b) => (b.total || 0) - (a.total || 0))
           .map(bj => ({ bj, h: recJobHists(r, (bj.jobId || '').slice(0, 8)) }))
           .filter(x => x.h.some(p => hasAny(p.fin) || hasAny(p.wait)));
         if (jobs.length) jobs.forEach(({ bj, h }) => {
-          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(h)}</tr>`;
+          html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(h)}</tr>`;
         });
-        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
+        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
       });
     });
-    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
     wireVelTree(body);
     shadeTis(body);   // #137c
     tisNote(per);
@@ -2125,14 +2126,14 @@ export function initRecruiterFilters(baseData) {
     const dq = data.dataQuality || {};
     const q = selQuarter();
     const esc = hyEsc;
-    const mono = s => `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted)">${esc(s)}</span>`;
+    const mono = s => `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.6875rem;color:var(--muted)">${esc(s)}</span>`;
     // #13: Unassigned / Multiple Recruiters / Multiple Sourcers are cut to the date floor BY THE PIPELINE (added, interviewed or assessed
     // on or after it). Data from before that change carries no floor, so those three wait for the next refresh instead of showing the
     // old oldest-first rows under the new heading. The two opening-link lists are cut here, from the same floor.
     const floor = dq.hygieneFloor || null;
     const FLOOR = floor || '2026-07-01';
     const FLOOR_LONG = (() => { const [y, m, d] = FLOOR.split('-').map(Number); return `${d} ${MON[m - 1]} ${y}`; })();
-    const waitRow = cols => `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:16px">This list starts on ${FLOOR_LONG} from the next data refresh.</td></tr>`;
+    const waitRow = cols => `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:1rem">This list starts on ${FLOOR_LONG} from the next data refresh.</td></tr>`;
     // #126 (Jerin, 15 Sep 2026): everyone in Joining Pending with no Recruiter tagged is listed too, whatever their dates — the Recruiter
     // tables cannot credit them, and nothing else puts them in front of the team. Anyone the pipeline already listed is not repeated.
     const listedU = new Set((dq.unassigned || []).map(u => (u.job8 || '') + '|' + String(u.candidate || '').trim().toLowerCase()));
@@ -2166,18 +2167,18 @@ export function initRecruiterFilters(baseData) {
         let html = '';
         Object.keys(byDept).sort((a, b) => sizeOf(byDept[b]) - sizeOf(byDept[a]) || a.localeCompare(b)).forEach((dn, di) => {
           const jobs = byDept[dn], nD = sizeOf(jobs), nJ = Object.keys(jobs).length;
-          html += `<tr class="lvl-pod" data-pod="u${di}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${esc(dn)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${nD}</span></td><td colspan="4" style="color:var(--muted);font-size:11px">${nD} candidate${nD === 1 ? '' : 's'} across ${nJ} job${nJ === 1 ? '' : 's'}</td></tr>`;
+          html += `<tr class="lvl-pod" data-pod="u${di}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${esc(dn)}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${nD}</span></td><td colspan="4" style="color:var(--muted);font-size:0.6875rem">${nD} candidate${nD === 1 ? '' : 's'} across ${nJ} job${nJ === 1 ? '' : 's'}</td></tr>`;
           Object.keys(jobs).sort((a, b) => jobs[b].length - jobs[a].length || a.localeCompare(b)).forEach((jt, ji) => {
             const rk = `u${di}-${ji}`, rows = jobs[jt];
-            html += `<tr class="lvl-rec" data-pod="u${di}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:26px;font-weight:500">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${rows.length}</span></td><td colspan="4"></td></tr>`;
+            html += `<tr class="lvl-rec" data-pod="u${di}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:1.625rem;font-weight:500">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${rows.length}</span></td><td colspan="4"></td></tr>`;
             rows.slice().sort(byLast).forEach(u => {
-              html += `<tr class="lvl-stage" data-pod="u${di}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:52px">${esc(u.candidate || '(candidate name not captured)')}</td><td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${esc(u.lastActivity || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
+              html += `<tr class="lvl-stage" data-pod="u${di}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem">${esc(u.candidate || '(candidate name not captured)')}</td><td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${esc(u.lastActivity || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
             });
           });
         });
         const total = unassignedTotal;
-        if (html && total > unassigned.length) html += `<tr><td colspan="5" style="color:var(--muted);font-size:11px">Showing the ${unassigned.length.toLocaleString()} with the most recent activity, of ${total.toLocaleString()}. The CSV holds the same rows.</td></tr>`;
-        uBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Nobody unassigned since ${FLOOR_LONG}. ✓</td></tr>`;
+        if (html && total > unassigned.length) html += `<tr><td colspan="5" style="color:var(--muted);font-size:0.6875rem">Showing the ${unassigned.length.toLocaleString()} with the most recent activity, of ${total.toLocaleString()}. The CSV holds the same rows.</td></tr>`;
+        uBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">Nobody unassigned since ${FLOOR_LONG}. ✓</td></tr>`;
         wireVelTree(uBody);
       }
     }
@@ -2187,9 +2188,9 @@ export function initRecruiterFilters(baseData) {
     const anomalyRows = list => list.slice().sort(byLast).map(m =>
       `<tr><td>${esc(jobTitleBy8[m.job8] || m.job8 || '')}</td><td>${esc(m.candidate || '—')}</td><td>${(m.names || []).map(esc).join(', ')}</td><td>${esc(m.lastActivity || '')}</td><td>${mono(m.app)}</td></tr>`).join('');
     const mrBody = document.getElementById('hygMultiRecBody');
-    if (mrBody) mrBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiRec) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">No application has more than one Recruiter since ${FLOOR_LONG}. ✓</td></tr>`);
+    if (mrBody) mrBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiRec) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">No application has more than one Recruiter since ${FLOOR_LONG}. ✓</td></tr>`);
     const msBody = document.getElementById('hygMultiSrcBody');
-    if (msBody) msBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiSrc) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">No application has more than one Sourcer since ${FLOOR_LONG}. ✓</td></tr>`);
+    if (msBody) msBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiSrc) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">No application has more than one Sourcer since ${FLOOR_LONG}. ✓</td></tr>`);
 
     // --- Opening-link gaps: one array from the pipeline, split by whether it is still actionable. #13: an offer counts when it was
     // MADE or the person JOINS on or after the floor (Jerin: "offers in Q3 or DOJ in Q3 - or later"). ---
@@ -2200,12 +2201,12 @@ export function initRecruiterFilters(baseData) {
     const ogBody = document.getElementById('hygOfferGapBody');
     if (ogBody) {
       ogBody.innerHTML = gapLive.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:16px">Every live offer since ${FLOOR_LONG} has an opening attached. ✓</td></tr>`;
+        || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:1rem">Every live offer since ${FLOOR_LONG} has an opening attached. ✓</td></tr>`;
     }
     const hgBody = document.getElementById('hygHiredGapBody');
     if (hgBody) {
       hgBody.innerHTML = gapDone.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Nothing here since ${FLOOR_LONG}.</td></tr>`;
+        || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Nothing here since ${FLOOR_LONG}.</td></tr>`;
     }
 
     // --- Roles that score zero for the selected quarter ---
@@ -2231,11 +2232,11 @@ export function initRecruiterFilters(baseData) {
     const ndBody = document.getElementById('hygNoDateBody');
     if (ndBody) {
       ndBody.innerHTML = noDate.map(o => `<tr>
-        <td style="font-weight:500">${esc(o.title || '(job not found)')}${o.jobs > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">+${o.jobs - 1} more job${o.jobs > 2 ? 's' : ''}</span>` : ''}</td>
+        <td style="font-weight:500">${esc(o.title || '(job not found)')}${o.jobs > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">+${o.jobs - 1} more job${o.jobs > 2 ? 's' : ''}</span>` : ''}</td>
         <td>${esc(o.department || '—')}</td>
         <td class="${o.status === 'Open' ? 'warn' : 'zero'}">${esc(o.status || '—')}</td>
         <td>${mono(o.openingId || '')}</td></tr>`).join('')
-        || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:16px">Every opening has an opened date. ✓</td></tr>`;
+        || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:1rem">Every opening has an opened date. ✓</td></tr>`;
     }
     // #125 (Jerin, 15 Sep 2026): Open jobs worked in the quarter with no opening OPENED in it. Momentum, Screening Efficiency, Throughput,
     // Time in Process and Panelists list only jobs with an opening opened in the period, so this work is hidden there until the job gets
@@ -2266,7 +2267,7 @@ export function initRecruiterFilters(baseData) {
         <td>${esc(x.j.department || '—')}</td>
         <td>${x.tofu}</td><td>${x.r1}</td><td>${x.assessed}</td><td>${x.stays}</td><td>${x.interviews}</td>
         <td class="${x.openings === 'None' ? 'warn' : ''}">${esc(x.openings)}</td></tr>`).join('')
-        || `<tr><td colspan="8" style="text-align:center;color:var(--green);padding:16px">Every Open job worked this quarter has an opening opened in it. ✓</td></tr>`;
+        || `<tr><td colspan="8" style="text-align:center;color:var(--green);padding:1rem">Every Open job worked this quarter has an opening opened in it. ✓</td></tr>`;
     }
     const usBody = document.getElementById('hygUnscoredBody');
     if (usBody) {
@@ -2277,7 +2278,7 @@ export function initRecruiterFilters(baseData) {
         <td>${esc(j.complexity || '—')}</td>
         <td style="color:var(--orange);font-weight:500">${reason}</td>
         <td>${j.total || 0}</td></tr>`).join('')
-        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every role scores for this quarter. ✓</td></tr>`;
+        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">Every role scores for this quarter. ✓</td></tr>`;
     }
 
     // --- Other anomalies ---
@@ -2301,9 +2302,9 @@ export function initRecruiterFilters(baseData) {
     const anBody = document.getElementById('hygAnomBody');
     if (anBody) {
       let ah = anomList.map(a => `<tr><td style="font-weight:500">${esc(a.what)}</td><td>${esc(a.detail)}</td><td style="color:var(--muted)">${esc(a.fix)}</td></tr>`).join('')
-        || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:16px">No anomalies. ✓</td></tr>`;
+        || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:1rem">No anomalies. ✓</td></tr>`;
       if (expectedSeen.length) {
-        ah += `<tr><td colspan="3" style="color:var(--muted);font-size:11px;padding-top:10px;border-top:1px solid var(--border-light)">Also outside the stage map, as expected: `
+        ah += `<tr><td colspan="3" style="color:var(--muted);font-size:0.6875rem;padding-top:0.625rem;border-top:1px solid var(--border-light)">Also outside the stage map, as expected: `
           + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()})`).join(' · ') + `.</td></tr>`;
       }
       anBody.innerHTML = ah;
@@ -2323,7 +2324,7 @@ export function initRecruiterFilters(baseData) {
     const noCapBody = document.getElementById('hygNoCapBody');
     if (noCapBody) {
       noCapBody.innerHTML = noCap.map(({ r, pod, offers, hired, jp }) => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc(pod)}</td><td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td><td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td></tr>`).join('')
-        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Everyone in a pod has a capacity for this quarter. ✓</td></tr>`;
+        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">Everyone in a pod has a capacity for this quarter. ✓</td></tr>`;
     }
 
     // --- #105i (Jerin, 13 Sep 2026): selected candidates with no source in Ashby ---
@@ -2348,8 +2349,8 @@ export function initRecruiterFilters(baseData) {
     const nsBody = document.getElementById('hygNoSrcBody');
     if (nsBody) {
       const nsColour = { 'Joined': 'var(--green)', 'Joining pending': 'var(--orange)', 'Dropped after offer': 'var(--muted)' };
-      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr><td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td><td>${esc(e.department)}</td><td><span style="font-size:11px;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td><td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:16px">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
+      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr><td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td><td>${esc(e.department)}</td><td><span style="font-size:0.6875rem;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td><td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
     }
 
     // --- Pod Not Set: the numbers this tab deliberately leaves out. getFilteredRecs() drops anyone whose pod resolves to "Unassigned"
@@ -2362,7 +2363,7 @@ export function initRecruiterFilters(baseData) {
     const noPodBody = document.getElementById('hygNoPodBody');
     if (noPodBody) {
       noPodBody.innerHTML = noPod.map(({ r, total, offers, hired, jp }) => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${total.toLocaleString()}</td><td>${offers}</td><td class="${hired > 0 ? 'good' : 'zero'}">${hired}</td><td class="${jp > 0 ? 'warn' : 'zero'}">${jp}</td></tr>`).join('')
-        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:16px">Everyone who counts this quarter has a pod — nothing is being left out. ✓</td></tr>`;
+        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">Everyone who counts this quarter has a pod — nothing is being left out. ✓</td></tr>`;
     }
 
     // --- #111: recruiter Started on / Left on dates, checked against the work credited to them ---
@@ -2387,10 +2388,10 @@ export function initRecruiterFilters(baseData) {
     const datesNoStart = rosterRecs.filter(r => r.isActive !== false && !(datesMap[r.name] || {}).start);
     const dOutBody = document.getElementById('hygDatesOutBody');
     if (dOutBody) dOutBody.innerHTML = datesOut.map(({ r, qq, w, d }) => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc(qq)}</td><td>${esc(workTxt(w))}</td><td>${esc(d.start || '—')}</td><td>${esc(d.end || '—')}</td></tr>`).join('')
-      || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No work is credited outside anyone's dates.</td></tr>`;
+      || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">No work is credited outside anyone's dates.</td></tr>`;
     const dNoEndBody = document.getElementById('hygDatesNoEndBody');
     if (dNoEndBody) dNoEndBody.innerHTML = datesNoEnd.map(r => `<tr><td style="font-weight:500">${esc(r.name)}</td><td>${esc((datesMap[r.name] || {}).start || '—')}</td><td>${esc(lastWorkQ(r.name) || '—')}</td></tr>`).join('')
-      || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Every disabled Ashby account has a Left on date.</td></tr>`;
+      || `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem">Every disabled Ashby account has a Left on date.</td></tr>`;
     const setTxt = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
     setTxt('hygDatesOutN', datesOut.length ? '· ' + datesOut.length : '');
     setTxt('hygDatesNoEndN', datesNoEnd.length ? '· ' + datesNoEnd.length : '');
@@ -2517,7 +2518,7 @@ export function initRecruiterFilters(baseData) {
     const dkeys = dates.map(dkey);
 
     if (head) {
-      let h = `<tr><th style="min-width:240px">Pod / Recruiter / Job</th><th>Total · ${dates.length}d</th>`;
+      let h = `<tr><th style="min-width:15rem">Pod / Recruiter / Job</th><th>Total · ${dates.length}d</th>`;
       dates.forEach(d => {
         const wknd = d.getDay() === 0 || d.getDay() === 6;
         h += `<th class="${wknd ? 'wknd' : ''}"${wknd ? ' title="Weekend"' : ''}>${MON[d.getMonth()]} ${d.getDate()}</th>`;
@@ -2528,7 +2529,7 @@ export function initRecruiterFilters(baseData) {
     // No ToFU field yet (rollups file written before 2026-08-26). Say so rather than falling back to the
     // old per-stage counts: those answer a different question and would sit under this heading as a lie.
     if (!tRec) {
-      body.innerHTML = `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">Arrivals appear after the next stage-history refresh.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">Arrivals appear after the next stage-history refresh.</td></tr>`;
       return;
     }
     const numRow = (total, perDay, boldTotal) =>
@@ -2537,7 +2538,7 @@ export function initRecruiterFilters(baseData) {
     const series = (m) => { let t = 0; const per = dkeys.map(dk => { const v = (m && m[dk]) || 0; t += v; return v; }); return { per, t }; };
     const addInto = (dst, src) => { src.forEach((v, i) => dst[i] += v); };
     const jobTitleOf = {}; (data.jobs || []).forEach(j => { jobTitleOf[j.id] = j.title; });
-    const spanN = (n) => `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px">${n}</span>`;
+    const spanN = (n) => `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${n}</span>`;
 
     let html = '';
     groups.forEach((G, pi) => {
@@ -2547,7 +2548,7 @@ export function initRecruiterFilters(baseData) {
       // reading the same pods, and this is the cheapest way to say so without adding a column.
       const podColor = POD_COLORS[pi % POD_COLORS.length];
       html += `<tr class="lvl-pod" data-path="${pi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600;box-shadow:inset 3px 0 0 ${podColor}">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
+        <td style="font-weight:600;box-shadow:inset 0.1875rem 0 0 ${podColor}">${CARET}${G.pod}${spanN(G.recs.length)}</td>${numRow(podTotal, podArr, true)}</tr>`;
       G.recs.forEach((r, ri) => {
         const rp = `${pi}-${ri}`;
         const jobs = [];
@@ -2561,14 +2562,14 @@ export function initRecruiterFilters(baseData) {
         }
         const quiet = recSeries[ri].t === 0 ? ' lvl-quiet' : '';
         html += `<tr class="lvl-rec${quiet}" data-path="${rp}"${jobs.length ? ' data-haschild data-exp="0"' : ''} style="display:none${jobs.length ? ';cursor:pointer' : ''}">
-          <td style="padding-left:26px;font-weight:500">${jobs.length ? CARET : ''}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recSeries[ri].t, recSeries[ri].per, false)}</tr>`;
+          <td style="padding-left:1.625rem;font-weight:500">${jobs.length ? CARET : ''}${r.name}${inactiveTag(r)}${jobs.length ? spanN(jobs.length) : ''}</td>${numRow(recSeries[ri].t, recSeries[ri].per, false)}</tr>`;
         jobs.forEach((J, ji) => {
           html += `<tr class="lvl-job" data-path="${rp}-${ji}" style="display:none">
-            <td style="padding-left:52px">${J.title}</td>${numRow(J.t, J.per, false)}</tr>`;
+            <td style="padding-left:3.25rem">${J.title}</td>${numRow(J.t, J.per, false)}</tr>`;
         });
       });
     });
-    body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:16px">No recruiters match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
     wireTreePath(body);
     shadeMomentum(body, dates);   // #137c
   }
@@ -2614,7 +2615,7 @@ export function initRecruiterFilters(baseData) {
     }));
     rows.sort((a, b) => b.total - a.total);
     if (!rows.length) {
-      host.innerHTML = '<p class="sub-note" style="margin:6px 0 0">Nobody was added in this window for the recruiters shown.</p>';
+      host.innerHTML = '<p class="sub-note" style="margin:0.375rem 0 0">Nobody was added in this window for the recruiters shown.</p>';
       return;
     }
 
@@ -2670,7 +2671,7 @@ export function initRecruiterFilters(baseData) {
       .filter(r => r.added > 0).sort((a, b) => b.added - a.added) : [];
     if (!recs.length) {
       ctx.style.display = 'none';
-      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       if (emptyMsg) { emptyMsg.textContent = store ? 'Nobody was added at R1 in this period.' : 'R1 screening figures appear after the next stage-history refresh.'; emptyMsg.style.display = 'flex'; }
       return;
     }
@@ -2704,7 +2705,7 @@ export function initRecruiterFilters(baseData) {
     if (!recs.length) {
       if (recJoinChart) { recJoinChart.destroy(); recJoinChart = null; }
       ctx.style.display = 'none';
-      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       if (emptyMsg) { emptyMsg.textContent = 'Nothing in play this quarter for the recruiters shown.'; emptyMsg.style.display = 'flex'; }
       return;
     }
@@ -2737,7 +2738,7 @@ export function initRecruiterFilters(baseData) {
       id: 'joinLabels',
       afterDatasetsDraw(chart) {
         const c = chart.ctx; c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif'; c.textBaseline = 'middle';
+        c.font = `${uiPx(10)}px -apple-system, BlinkMacSystemFont, sans-serif`; c.textBaseline = 'middle';
         // Offered sits at the end of the bar; the Joining Conversion is its own labelled column at the
         // right edge (Jerin, 2026-08-29), so it reads straight down like a table column instead of as a
         // suffix on each bar. Same arithmetic as the table's column — (Joined + Joining Pending) / Offered
@@ -2746,7 +2747,7 @@ export function initRecruiterFilters(baseData) {
         last.data.forEach((bar, i) => {
           c.textAlign = 'left';
           c.fillStyle = '#334155';
-          c.fillText(String(offered[i]), bar.x + 6, bar.y);
+          c.fillText(String(offered[i]), bar.x + uiPx(6), bar.y);
         });
         c.restore();
         drawConvColumn(chart, offered.map((o, i) => o > 0 ? Math.round(((joined[i] + pending[i]) / o) * 100) : null), 'Joining conversion');
@@ -2790,7 +2791,7 @@ export function initRecruiterFilters(baseData) {
     if (!recs.length) {
       if (recFulfilChart) { recFulfilChart.destroy(); recFulfilChart = null; }
       ctx.style.display = 'none';
-      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${q.replace('-', ' ')} — no goal, capacity or joiners on any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
       return;
     }
@@ -2807,11 +2808,11 @@ export function initRecruiterFilters(baseData) {
       afterDatasetsDraw(chart) {
         const c = chart.ctx, meta = chart.getDatasetMeta(0), x = chart.scales.x;
         c.save();
-        c.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.font = `${uiPx(10)}px -apple-system, BlinkMacSystemFont, sans-serif`;
         c.textBaseline = 'middle';
         recs.forEach((r, i) => {
           const bar = meta.data[i]; if (!bar) return;
-          const half = (bar.height || 18) / 2;
+          const half = (bar.height || uiPx(18)) / 2;
           const y0 = bar.y - half, y1 = bar.y + half;
           // The Achieved number is drawn by roleBandOverlay now — once across all of its role bands,
           // rather than inside the first band only.
@@ -2819,18 +2820,18 @@ export function initRecruiterFilters(baseData) {
           if (r.goal > 0) {
             const gx = x.getPixelForValue(r.goal);
             c.strokeStyle = '#41506B'; c.lineWidth = 2; c.setLineDash([]);
-            c.beginPath(); c.moveTo(gx, y0 - 3); c.lineTo(gx, y1 + 3); c.stroke();
+            c.beginPath(); c.moveTo(gx, y0 - uiPx(3)); c.lineTo(gx, y1 + uiPx(3)); c.stroke();
             c.fillStyle = '#41506B'; c.textAlign = 'center';
-            c.fillText('Goal ' + r.goal, gx, y0 - 9);
+            c.fillText('Goal ' + r.goal, gx, y0 - uiPx(9));
           }
           // CAPACITY — the finishing line. Dashed, so it never reads as another target.
           if (r.cap > 0) {
             const cx = x.getPixelForValue(r.cap);
-            c.strokeStyle = '#A15568'; c.lineWidth = 2; c.setLineDash([3, 3]);
-            c.beginPath(); c.moveTo(cx, y0 - 3); c.lineTo(cx, y1 + 3); c.stroke();
+            c.strokeStyle = '#A15568'; c.lineWidth = 2; c.setLineDash([uiPx(3), uiPx(3)]);
+            c.beginPath(); c.moveTo(cx, y0 - uiPx(3)); c.lineTo(cx, y1 + uiPx(3)); c.stroke();
             c.setLineDash([]);
             c.fillStyle = '#A15568'; c.textAlign = 'center';
-            c.fillText('Cap ' + r.cap, cx, y1 + 10);
+            c.fillText('Cap ' + r.cap, cx, y1 + uiPx(10));
           }
         });
         c.restore();
@@ -2903,7 +2904,7 @@ export function initRecruiterFilters(baseData) {
     const withSrc = [...lastRecs].filter(r => srcTotal(r) > 0).sort((a, b) => srcTotal(b) - srcTotal(a)).slice(0, 20);
     if (withSrc.length === 0) {
       ctx.style.display = 'none';
-      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:13px;text-align:center;padding:20px'; wrap.appendChild(emptyMsg); }
+      if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       if (emptyMsg) { emptyMsg.textContent = 'Nobody joined under the current filter, so there is no source mix to show.'; emptyMsg.style.display = 'flex'; }
       return;
     }

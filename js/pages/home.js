@@ -19,7 +19,7 @@ export function renderHome(access) {
   return `
     <div id="home-period-holder" hidden>
       <div>
-        <select id="period-selector" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;background:var(--card);color:var(--text);cursor:pointer;min-width:110px;">
+        <select id="period-selector" style="padding:0.375rem 0.75rem;border:1px solid var(--border);border-radius:0.375rem;font-size:0.75rem;font-weight:500;background:var(--card);color:var(--text);cursor:pointer;min-width:6.875rem;">
           ${sortedYears.map(y => `<option value="${y}">${y}</option>`).join('')}
           ${sortedYears.map(y => `
             <optgroup label="${y} Quarters">
@@ -249,12 +249,12 @@ export function initHomeFilters() {
     })();
 
     container.innerHTML = `
-      <div style="margin-bottom:24px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px;">
+      <div style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.625rem;">
           <h3 class="subsection-title" style="margin:0;">Key Metrics — ${periodLabel}</h3>
           <span id="home-period-slot" style="flex-shrink:0"></span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;">
           <div class="card">
             <div class="label">Total Positions</div>
             <div class="value">${totalPositions}</div>
