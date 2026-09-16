@@ -91,72 +91,72 @@ export function renderAdmin(accessConfig, data) {
   // changes something (Pod & Capacity, Scoring → Grid — CLAUDE.md Rule 13). Nothing about publishing, invites or who can edit changed.
   return `
     <style>
-      .adm-strip { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:10px 14px; margin-bottom:14px;
-        background:var(--card); border:1px solid var(--border); border-radius:10px; }
+      .adm-strip { display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 1rem; padding:0.625rem 0.875rem; margin-bottom:0.875rem;
+        background:var(--card); border:1px solid var(--border); border-radius:0.625rem; }
       .adm-grow { flex:1; }
-      .adm-vr { width:1px; height:22px; background:var(--border); }
-      .adm-sync { display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; font-size:12px; font-weight:600;
+      .adm-vr { width:1px; height:1.375rem; background:var(--border); }
+      .adm-sync { display:inline-flex; align-items:center; gap:0.4375rem; padding:0.25rem 0.6875rem; border-radius:62.4375rem; font-size:0.75rem; font-weight:600;
         white-space:nowrap; background:#e3f1f4; color:#17586c; }
-      .adm-sync::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; flex:none; }
+      .adm-sync::before { content:""; width:0.4375rem; height:0.4375rem; border-radius:50%; background:currentColor; flex:none; }
       .adm-sync.is-dirty { background:var(--orange-light); color:var(--orange); }
       .adm-sync.is-busy { background:var(--border-light); color:var(--muted); }
       .adm-sync.is-error { background:var(--red-light); color:var(--red); white-space:normal; }
-      .adm-prov { font-size:11.5px; color:var(--muted); }
-      .adm-field { display:inline-flex; align-items:center; gap:8px; }
-      .adm-field .lbl { font-size:11.5px; font-weight:600; color:var(--muted); }
-      .adm-card { background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-      .adm-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:10px 14px; border-bottom:1px solid var(--border-light); }
-      .adm-title { font-size:13px; font-weight:700; color:var(--navy); }
-      .adm-count { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .adm-prov { font-size:0.71875rem; color:var(--muted); }
+      .adm-field { display:inline-flex; align-items:center; gap:0.5rem; }
+      .adm-field .lbl { font-size:0.71875rem; font-weight:600; color:var(--muted); }
+      .adm-card { background:var(--card); border:1px solid var(--border); border-radius:0.625rem; overflow:hidden; }
+      .adm-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 0.875rem; padding:0.625rem 0.875rem; border-bottom:1px solid var(--border-light); }
+      .adm-title { font-size:0.8125rem; font-weight:700; color:var(--navy); }
+      .adm-count { font-size:0.75rem; color:var(--muted); font-variant-numeric:tabular-nums; }
       .adm-strip select, .adm-card select, .adm-card input[type=number], .adm-card input[type=email], .adm-card input[type=text] {
-        appearance:none; -webkit-appearance:none; height:30px; padding:0 26px 0 10px; border:1px solid #c9d3e5; border-radius:8px;
-        font-family:inherit; font-size:12px; font-weight:500; color:var(--text); cursor:pointer;
-        background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b7391'/%3E%3C/svg%3E") no-repeat right 10px center; }   /* font-family: controls do not inherit it (Rule 12) */
-      .adm-card input[type=number], .adm-card input[type=email], .adm-card input[type=text] { padding:0 10px; background-image:none; cursor:text; }
+        appearance:none; -webkit-appearance:none; height:1.875rem; padding:0 1.625rem 0 0.625rem; border:1px solid #c9d3e5; border-radius:0.5rem;
+        font-family:inherit; font-size:0.75rem; font-weight:500; color:var(--text); cursor:pointer;
+        background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b7391'/%3E%3C/svg%3E") no-repeat right 0.625rem center; }   /* font-family: controls do not inherit it (Rule 12) */
+      .adm-card input[type=number], .adm-card input[type=email], .adm-card input[type=text] { padding:0 0.625rem; background-image:none; cursor:text; }
       .adm-strip select:hover, .adm-card select:hover, .adm-card input:hover { border-color:#9db2d6; }
       .adm-strip select:focus-visible, .adm-card select:focus-visible, .adm-card input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
       .adm-card select.adm-quiet { border-color:transparent; background-color:transparent; }
       .adm-card select.adm-quiet:hover { border-color:#c9d3e5; background-color:var(--card); }
-      .adm-card #new-email { width:260px; }
+      .adm-card #new-email { width:16.25rem; }
       /* #111: the date boxes match the Pod / Capacity controls beside them; empty ones are dashed. */
-      .adm-card input.cfg-date { height:28px; width:140px; padding:0 8px 0 10px; border:1px solid #c9d3e5; border-radius:7px; cursor:pointer;
-        font-family:inherit; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; background:var(--card); color:var(--text); }
+      .adm-card input.cfg-date { height:1.75rem; width:8.75rem; padding:0 0.5rem 0 0.625rem; border:1px solid #c9d3e5; border-radius:0.4375rem; cursor:pointer;
+        font-family:inherit; font-size:0.75rem; font-weight:500; font-variant-numeric:tabular-nums; background:var(--card); color:var(--text); }
       .adm-card input.cfg-date.is-empty { color:var(--muted); font-weight:400; border-style:dashed; }
       .adm-card input.cfg-date::-webkit-calendar-picker-indicator { opacity:.45; cursor:pointer; }
       .adm-card input.cfg-date:hover::-webkit-calendar-picker-indicator { opacity:.8; }
       .ac-table { width:100%; border-collapse:collapse; border:0; border-radius:0; }
-      .ac-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; padding:8px 12px;
+      .ac-table th { text-align:left; font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; padding:0.5rem 0.75rem;
         background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
-      .ac-table td { padding:8px 12px; border-top:1px solid var(--border-light); vertical-align:middle; font-size:12.5px; color:var(--text-secondary); }
+      .ac-table td { padding:0.5rem 0.75rem; border-top:1px solid var(--border-light); vertical-align:middle; font-size:0.78125rem; color:var(--text-secondary); }
       .ac-table tbody tr:first-child td { border-top:0; }
       .ac-table tbody tr:hover td { background:#f8fafc; }
-      .adm-who { display:inline-flex; align-items:center; gap:9px; white-space:nowrap; }
+      .adm-who { display:inline-flex; align-items:center; gap:0.5625rem; white-space:nowrap; }
       .adm-who b { font-weight:600; color:var(--text); }
       .adm-who .dom { color:var(--muted); }
-      .adm-who .pl-av { width:24px; height:24px; font-size:10px; }
+      .adm-who .pl-av { width:1.5rem; height:1.5rem; font-size:0.625rem; }
       .adm-card select.ac-role { font-weight:600; border-color:transparent; }
       .adm-card select.ac-role.r-admin { background-color:var(--navy); color:#fff; }
       .adm-card select.ac-role.r-full_access { background-color:#dcecf1; color:#17586c; }
       .adm-card select.ac-role.r-restricted { background-color:#e4eaf5; color:#33507f; }
       .adm-card select.ac-role.r-none { color:var(--muted); border:1px dashed #c3cad8; }
-      .ac-type-wrap { display:inline-flex; align-items:center; gap:3px; }
-      .ac-type-wrap i { width:8px; height:8px; border-radius:2px; flex:none; }
-      .ac-ms { border:1px solid transparent; border-radius:8px; }
+      .ac-type-wrap { display:inline-flex; align-items:center; gap:0.1875rem; }
+      .ac-type-wrap i { width:0.5rem; height:0.5rem; border-radius:2px; flex:none; }
+      .ac-ms { border:1px solid transparent; border-radius:0.5rem; }
       .ac-ms[open] { border-color:var(--border); background:var(--bg); }
-      .ac-ms summary { list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:4px; padding:3px 5px; border-radius:7px; }
+      .ac-ms summary { list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem; padding:0.1875rem 0.3125rem; border-radius:0.4375rem; }
       .ac-ms summary:hover { background:var(--border-light); }
       .ac-ms summary::-webkit-details-marker { display:none; }
-      .ac-ms-word { font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); min-width:40px; }
-      .ac-ms-list { max-height:160px; overflow:auto; padding:4px 8px; border-top:1px solid var(--border); }
-      .ac-chip { display:inline-flex; align-items:center; font-size:11px; font-weight:600; line-height:16px; padding:1px 8px; border-radius:6px; white-space:nowrap;
+      .ac-ms-word { font-size:0.65625rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); min-width:2.5rem; }
+      .ac-ms-list { max-height:10rem; overflow:auto; padding:0.25rem 0.5rem; border-top:1px solid var(--border); }
+      .ac-chip { display:inline-flex; align-items:center; font-size:0.6875rem; font-weight:600; line-height:1rem; padding:1px 0.5rem; border-radius:0.375rem; white-space:nowrap;
         background:var(--border-light); color:var(--text-secondary); }
       .ac-chip.is-tab { background:#f3f6fb; box-shadow:inset 0 0 0 1px #b9c7df; color:var(--accent-deep); }
       .ac-chip.is-any { background:transparent; box-shadow:inset 0 0 0 1px var(--border); color:var(--muted); font-weight:500; }
-      .ac-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; white-space:nowrap; }
-      .ac-inv { font-size:11px; font-weight:500; color:var(--muted); }
+      .ac-actions { display:flex; align-items:center; justify-content:flex-end; gap:0.5rem; white-space:nowrap; }
+      .ac-inv { font-size:0.6875rem; font-weight:500; color:var(--muted); }
       .ac-inv.is-sent { color:#1E7590; font-weight:600; }
       .ac-inv.is-wait { color:var(--orange); }
-      .ac-del { background:none; border:1px solid transparent; color:var(--red); font-size:11px; font-weight:600; padding:4px 8px; border-radius:6px; cursor:pointer; }
+      .ac-del { background:none; border:1px solid transparent; color:var(--red); font-size:0.6875rem; font-weight:600; padding:0.25rem 0.5rem; border-radius:0.375rem; cursor:pointer; }
       .ac-del:hover { background:var(--red); color:#fff; border-color:var(--red); }
       .adm-card select.cfg-pod { font-weight:600; border-color:transparent; }
       .adm-card select.cfg-pod.pod-sales { background-color:#e4eaf5; color:#33507f; }
@@ -166,53 +166,53 @@ export function renderAdmin(accessConfig, data) {
       .adm-card select.cfg-pod.pod-others { background-color:#eceef3; color:#4a5578; }
       .adm-card select.cfg-pod.pod-none { background-color:var(--orange-light); color:var(--orange); border:1px dashed #d9b36a; }
       .adm-card select.cfg-utype.is-agency { color:#9a5b1e; font-weight:600; }
-      .adm-cap { display:inline-flex; align-items:center; gap:8px; }
-      .adm-card .adm-cap input { width:76px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
-      .adm-capbar { width:56px; height:5px; border-radius:3px; background:var(--border-light); overflow:hidden; }
+      .adm-cap { display:inline-flex; align-items:center; gap:0.5rem; }
+      .adm-card .adm-cap input { width:4.75rem; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+      .adm-capbar { width:3.5rem; height:0.3125rem; border-radius:0.1875rem; background:var(--border-light); overflow:hidden; }
       .adm-capbar span { display:block; height:100%; background:#9fb3d6; }
-      .adm-inq { display:inline-flex; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; white-space:nowrap; background:#eef2f8; color:var(--accent-deep); }
+      .adm-inq { display:inline-flex; font-size:0.6875rem; font-weight:600; padding:2px 0.5rem; border-radius:0.375rem; white-space:nowrap; background:#eef2f8; color:var(--accent-deep); }
       .adm-inq.is-joined { background:#e3f1f4; color:#17586c; }
       .adm-inq.is-left { background:var(--orange-light); color:var(--orange); }
       .adm-inq.is-out { background:var(--border-light); color:var(--muted); }
-      .adm-acct { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; white-space:nowrap; }
-      .adm-acct::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+      .adm-acct { display:inline-flex; align-items:center; gap:0.375rem; font-size:0.75rem; font-weight:600; white-space:nowrap; }
+      .adm-acct::before { content:""; width:0.4375rem; height:0.4375rem; border-radius:50%; background:currentColor; }
       .adm-acct.is-on { color:var(--green); }
       .adm-acct.is-off { color:var(--red); }
       .adm-acct.is-unk { color:var(--orange); }
-      .adm-podchip { display:inline-flex; align-items:center; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap; }
+      .adm-podchip { display:inline-flex; align-items:center; font-size:0.71875rem; font-weight:600; padding:0.1875rem 0.5625rem; border-radius:0.375rem; white-space:nowrap; }
       .adm-podchip.pl-pod-none { background:var(--orange-light); color:var(--orange); }
-      .adm-check { display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--text-secondary); }
-      .adm-check input { appearance:none; -webkit-appearance:none; width:28px; height:16px; margin:0; border-radius:999px; background:#c9d3e5; position:relative; cursor:pointer; transition:background .15s; }
-      .adm-check input::after { content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:left .15s; }
+      .adm-check { display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.75rem; color:var(--text-secondary); }
+      .adm-check input { appearance:none; -webkit-appearance:none; width:1.75rem; height:1rem; margin:0; border-radius:62.4375rem; background:#c9d3e5; position:relative; cursor:pointer; transition:background .15s; }
+      .adm-check input::after { content:""; position:absolute; top:2px; left:2px; width:0.75rem; height:0.75rem; border-radius:50%; background:#fff; transition:left .15s; }
       .adm-check input:checked { background:var(--navy-sub); }
-      .adm-check input:checked::after { left:14px; }
+      .adm-check input:checked::after { left:0.875rem; }
       .adm-check input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-      .adm-teams { display:flex; flex-wrap:wrap; gap:4px; }
-      .adm-team { font-size:11px; font-weight:500; line-height:16px; padding:2px 8px; border-radius:6px; background:var(--border-light); color:var(--text-secondary); white-space:nowrap; }
+      .adm-teams { display:flex; flex-wrap:wrap; gap:0.25rem; }
+      .adm-team { font-size:0.6875rem; font-weight:500; line-height:1rem; padding:2px 0.5rem; border-radius:0.375rem; background:var(--border-light); color:var(--text-secondary); white-space:nowrap; }
       /* Scoring's side list — the look Jerin picked from mock-up 2 (15 Sep 2026): the chosen row lifts, with a navy edge and a count badge. */
-      .adm-split { display:grid; grid-template-columns:260px minmax(0,1fr); gap:14px; align-items:start; }
-      .adm-rail { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:8px; display:grid; gap:4px; }
+      .adm-split { display:grid; grid-template-columns:16.25rem minmax(0,1fr); gap:0.875rem; align-items:start; }
+      .adm-rail { background:var(--card); border:1px solid var(--border); border-radius:0.75rem; padding:0.5rem; display:grid; gap:0.25rem; }
       .adm-row { appearance:none; width:100%; text-align:left; cursor:pointer; font-family:inherit; background:transparent; border:1px solid transparent;
-        border-radius:9px; padding:10px 12px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:3px 8px; align-items:center;
+        border-radius:0.5625rem; padding:0.625rem 0.75rem; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0.1875rem 0.5rem; align-items:center;
         transition:background-color .14s, border-color .14s; }
       .adm-row:hover { background:#f3f6fb; }
-      .adm-row[aria-selected="true"] { background:var(--accent-light); border-color:#c9d3e5; box-shadow:inset 3px 0 0 var(--navy-sub); }
+      .adm-row[aria-selected="true"] { background:var(--accent-light); border-color:#c9d3e5; box-shadow:inset 0.1875rem 0 0 var(--navy-sub); }
       .adm-row:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-      .adm-row b { font-size:13px; font-weight:600; color:var(--text); }
-      .adm-row small { grid-column:1 / -1; font-size:11.5px; color:var(--muted); }
-      .adm-row em { font-style:normal; font-size:11px; font-weight:700; color:var(--accent-deep); background:#e4eaf5; border-radius:5px; padding:1px 7px; font-variant-numeric:tabular-nums; }
+      .adm-row b { font-size:0.8125rem; font-weight:600; color:var(--text); }
+      .adm-row small { grid-column:1 / -1; font-size:0.71875rem; color:var(--muted); }
+      .adm-row em { font-style:normal; font-size:0.6875rem; font-weight:700; color:var(--accent-deep); background:#e4eaf5; border-radius:0.3125rem; padding:1px 0.4375rem; font-variant-numeric:tabular-nums; }
       .adm-main { min-width:0; }
       .cfg-grid th, .cfg-grid td { text-align:center; white-space:nowrap; }
-      .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:210px; white-space:normal; }
-      .cfg-grid th .tier-name { display:block; margin-bottom:5px; }
-      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--navy); text-align:left; padding:6px 12px; }
-      .adm-card .cfg-grid input.tier-pts { width:54px; height:24px; padding:0 4px; text-align:center; font-size:11px; font-weight:700; }
-      .grid-cell { position:relative; display:inline-grid; place-items:center; min-width:46px; height:26px; cursor:pointer; }
+      .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:13.125rem; white-space:normal; }
+      .cfg-grid th .tier-name { display:block; margin-bottom:0.3125rem; }
+      .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; color:var(--navy); text-align:left; padding:0.375rem 0.75rem; }
+      .adm-card .cfg-grid input.tier-pts { width:3.375rem; height:1.5rem; padding:0 0.25rem; text-align:center; font-size:0.6875rem; font-weight:700; }
+      .grid-cell { position:relative; display:inline-grid; place-items:center; min-width:2.875rem; height:1.625rem; cursor:pointer; }
       .grid-cell input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
-      .grid-pick { width:13px; height:13px; border-radius:50%; border:1.5px solid #c3cad8; background:#fff; font-size:0; box-sizing:border-box; }
+      .grid-pick { width:0.8125rem; height:0.8125rem; border-radius:50%; border:1.5px solid #c3cad8; background:#fff; font-size:0; box-sizing:border-box; }
       .grid-cell:hover .grid-pick { border-color:var(--accent); }
-      .grid-cell input:checked + .grid-pick { width:auto; min-width:42px; height:22px; padding:0 8px; border:0; border-radius:6px; display:inline-grid; place-items:center;
-        font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+      .grid-cell input:checked + .grid-pick { width:auto; min-width:2.625rem; height:1.375rem; padding:0 0.5rem; border:0; border-radius:0.375rem; display:inline-grid; place-items:center;
+        font-size:0.6875rem; font-weight:700; font-variant-numeric:tabular-nums; }
       .grid-cell input:focus-visible + .grid-pick { outline:2px solid var(--accent); outline-offset:2px; }
       .grid-cell input:checked + .gt-1 { background:#eef1f7; color:#4a5578; }
       .grid-cell input:checked + .gt-2 { background:#e4eaf5; color:#33507f; }
@@ -222,11 +222,11 @@ export function renderAdmin(accessConfig, data) {
       .grid-cell input:checked + .gt-6 { background:#3f8aa0; color:#fff; }
       .grid-cell input:checked + .gt-7 { background:#1E7590; color:#fff; }
       .adm-card select.cfg-fam.is-exclude { color:var(--muted); border-style:dashed; }
-      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; padding:14px; }
-      .cfg-ref table { width:100%; font-size:12px; }
-      .cfg-ref th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+      .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:0.875rem; padding:0.875rem; }
+      .cfg-ref table { width:100%; font-size:0.75rem; }
+      .cfg-ref th { text-align:left; color:var(--muted); font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; }
       .cfg-scroll { overflow-x:auto; }
-      @media (max-width:860px) { .adm-split { grid-template-columns:1fr; } }
+      @media (max-width:48.375rem) { .adm-split { grid-template-columns:1fr; } }
       /* .adm-subtabs is the recessed .subtab-band and .adm-subtab inherits .subtab-chip — see style.css */
     </style>
 
@@ -273,11 +273,11 @@ export function renderAdmin(accessConfig, data) {
         </div>
         <div class="cfg-scroll"><table class="ac-table">
           <thead><tr>
-            <th style="min-width:260px">Email</th>
-            <th style="width:150px">Role</th>
-            <th style="width:180px">User type</th>
+            <th style="min-width:16.25rem">Email</th>
+            <th style="width:9.375rem">Role</th>
+            <th style="width:11.25rem">User type</th>
             <th>Restricted access (tabs + scope)</th>
-            <th style="width:250px"></th>
+            <th style="width:15.625rem"></th>
           </tr></thead>
           <tbody id="users-table-body"></tbody>
         </table></div>
@@ -299,12 +299,12 @@ export function renderAdmin(accessConfig, data) {
       <div class="adm-card">
         <div class="adm-toolbar">
           <span class="adm-title">Recruiter → Pod &amp; Capacity</span>
-          <span id="cfgPodSummary" style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center"></span>
+          <span id="cfgPodSummary" style="display:inline-flex;flex-wrap:wrap;gap:0.375rem;align-items:center"></span>
           <span class="adm-grow"></span>
           <label class="adm-check"><input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" class="adm-count"></span></label>
         </div>
         <div class="cfg-scroll"><table class="ac-table">
-          <thead><tr><th style="min-width:230px">Recruiter</th><th style="width:150px">Pod</th><th style="width:170px">Capacity (Score)</th><th style="width:140px">Type</th><th style="width:150px">Started on</th><th style="width:150px">Left on</th><th style="width:230px">In quarter</th><th style="width:120px">Ashby account</th></tr></thead>
+          <thead><tr><th style="min-width:14.375rem">Recruiter</th><th style="width:9.375rem">Pod</th><th style="width:10.625rem">Capacity (Score)</th><th style="width:8.75rem">Type</th><th style="width:9.375rem">Started on</th><th style="width:9.375rem">Left on</th><th style="width:14.375rem">In quarter</th><th style="width:7.5rem">Ashby account</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
       </div>
@@ -318,7 +318,7 @@ export function renderAdmin(accessConfig, data) {
           <span class="adm-count">${deptNames.length} departments · ${teamCount} teams · a read-only copy of Ashby's tree</span>
         </div>
         <div class="cfg-scroll"><table class="ac-table">
-          <thead><tr><th style="width:230px">Department</th><th>Teams</th></tr></thead>
+          <thead><tr><th style="width:14.375rem">Department</th><th>Teams</th></tr></thead>
           <tbody>
             ${deptNames.map(dept => `<tr>
               <td style="white-space:nowrap;vertical-align:top"><b style="font-weight:600;color:var(--text)">${dept}</b>${countTag(DEPT_TREE[dept].length)}</td>
@@ -351,7 +351,7 @@ export function renderAdmin(accessConfig, data) {
             <div class="adm-card">
               <div class="adm-toolbar"><span class="adm-title">Department → Family</span></div>
               <div class="cfg-scroll"><table class="ac-table">
-                <thead><tr><th style="min-width:200px">Ashby Department</th><th style="width:170px">Family</th><th>Note</th></tr></thead>
+                <thead><tr><th style="min-width:12.5rem">Ashby Department</th><th style="width:10.625rem">Family</th><th>Note</th></tr></thead>
                 <tbody id="cfgDeptBody"></tbody>
               </table></div>
             </div>
@@ -408,7 +408,7 @@ function acMs(cls, i, selected, options, labelWord) {
   return `<details class="ac-ms">
     <summary title="Click to change">${acMsSummary(labelWord, selLabels, cls === 'ac-tabs')}</summary>
     <div class="ac-ms-list">
-      ${opts.map(([v, l]) => `<label style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;white-space:nowrap"><input type="checkbox" class="${cls}" data-i="${i}" value="${acEsc(v)}"${sel.has(v) ? ' checked' : ''}> ${acEsc(l)}</label>`).join('')}
+      ${opts.map(([v, l]) => `<label style="display:flex;align-items:center;gap:0.375rem;font-size:0.6875rem;padding:2px 0;white-space:nowrap"><input type="checkbox" class="${cls}" data-i="${i}" value="${acEsc(v)}"${sel.has(v) ? ' checked' : ''}> ${acEsc(l)}</label>`).join('')}
     </div>
   </details>`;
 }
@@ -502,17 +502,17 @@ export function initAdminAccess(accessConfig, data) {
   function renderRows() {
     const body = document.getElementById('users-table-body'); if (!body) return;
     const cnt = document.getElementById('acFilterCount');
-    if (!work.users.length) { if (cnt) cnt.textContent = ''; body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px">No users configured</td></tr>'; return; }
+    if (!work.users.length) { if (cnt) cnt.textContent = ''; body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:0.875rem">No users configured</td></tr>'; return; }
     const shown = work.users.map((u, i) => [u, i]).filter(([u]) => passesFilters(u));
     if (cnt) cnt.textContent = `${shown.length} of ${work.users.length} people`;
-    if (!shown.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px">No users match these filters</td></tr>'; return; }
+    if (!shown.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:0.875rem">No users match these filters</td></tr>'; return; }
     body.innerHTML = shown.map(([u, i]) => {
       const restricted = u.role === 'restricted', type = acUserType(u);
       return `<tr>
         <td>${acWho(u.email)}</td>
         <td><select class="ac-role r-${u.role}" data-i="${i}" aria-label="Role for ${acEsc(u.email)}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
         <td><span class="ac-type-wrap"><i style="background:${AC_TYPE_COL[type] || '#9aa3b8'}"></i><select class="ac-type adm-quiet" data-i="${i}" aria-label="User type for ${acEsc(u.email)}">${AC_USER_TYPES.map(t => `<option${type === t ? ' selected' : ''}>${t}</option>`).join('')}</select></span></td>
-        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:3px;max-width:400px">
+        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:0.1875rem;max-width:25rem">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
             </div>` : `<span class="adm-count">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
@@ -673,7 +673,7 @@ export function initAdminMetricConfig(data) {
         const cls = !s.in ? ' is-out' : (/left/.test(s.note) ? ' is-left' : (/joined/.test(s.note) ? ' is-joined' : ''));
         return `<span class="adm-inq${cls}" title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}">${txt}</span>`; })()}</td>
       <td><span class="adm-acct ${unk ? 'is-unk' : (off ? 'is-off' : 'is-on')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
-      || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
+      || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1rem">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => {
       setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary();
       sel.className = 'cfg-pod pod-' + podClass(sel.value);
@@ -714,7 +714,7 @@ export function initAdminMetricConfig(data) {
     body.innerHTML = DEPT_FAMILY_DEFAULT.map(([dept, , note]) => `<tr>
       <td><b style="font-weight:600;color:var(--text)">${dept}</b></td>
       <td><select class="cfg-fam${familyOf(dept) === 'Exclude' ? ' is-exclude' : ''}" data-dept="${dept}" aria-label="Family for ${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select></td>
-      <td class="adm-count" style="font-size:11.5px">${note || ''}</td></tr>`).join('');
+      <td class="adm-count" style="font-size:0.71875rem">${note || ''}</td></tr>`).join('');
     body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); touched(); s.classList.toggle('is-exclude', s.value === 'Exclude'); }));
   }
   function renderRefBlock() {
@@ -722,7 +722,7 @@ export function initAdminMetricConfig(data) {
     el.innerHTML = `<div class="cfg-ref">
       <table><thead><tr><th>Level band</th><th>Ashby L-scale</th></tr></thead><tbody>${LEVEL_BANDS.map(([b, l]) => `<tr><td>${b}</td><td style="color:var(--muted)">${l}</td></tr>`).join('')}</tbody></table>
       <table><thead><tr><th>Complexity (Ashby)</th></tr></thead><tbody><tr><td>Normal</td></tr><tr><td>Complex</td></tr><tr><td>Uber Complex</td></tr></tbody></table>
-      <table><thead><tr><th>Leadership override</th></tr></thead><tbody><tr><td>L7–L8 → Leadership (60)</td></tr><tr><td>L9 &amp; above → Senior Leadership (120)</td></tr><tr><td style="color:var(--muted);font-size:11px">Any family; overrides Family/Complexity by level.</td></tr></tbody></table>
+      <table><thead><tr><th>Leadership override</th></tr></thead><tbody><tr><td>L7–L8 → Leadership (60)</td></tr><tr><td>L9 &amp; above → Senior Leadership (120)</td></tr><tr><td style="color:var(--muted);font-size:0.6875rem">Any family; overrides Family/Complexity by level.</td></tr></tbody></table>
     </div>`;
   }
 

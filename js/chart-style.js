@@ -7,6 +7,8 @@
 // is exactly how the charts drifted apart in the first place — the same class of problem as a chart that
 // recomputes what its table already worked out.
 
+import { uiPx } from './ui-scale.js';   // #140: canvas text and pixel constants follow the 90% root
+
 export const HBAR = {
   barPercentage: 0.62,
   categoryPercentage: 0.9,
@@ -16,7 +18,7 @@ export const HBAR = {
 // Canvas height for a horizontal bar chart with `rows` bars. `extra` is room for the legend, the axis and
 // any heading a chart draws above its plot area.
 export function hbarHeight(rows, extra = 90, min = 260) {
-  return Math.max(min, rows * HBAR.rowPx + extra);
+  return uiPx(Math.max(min, rows * HBAR.rowPx + extra));   // #140: a size set from code follows the root
 }
 
 // Spread into a dataset: { ...hbarDataset(), label, data, backgroundColor, ... }
@@ -41,14 +43,14 @@ export function drawConvColumn(chart, pcts, header = 'Conversion') {
   const meta = chart.getDatasetMeta(chart.data.datasets.length - 1);
   if (!meta || !meta.data.length) return;
   const c = chart.ctx;
-  const right = chart.chartArea.right + CONV_PAD - 12;   // right edge of the column's text
+  const right = chart.chartArea.right + uiPx(CONV_PAD - 12);   // right edge of the column's text
   c.save();
   c.textAlign = 'right';
   c.textBaseline = 'middle';
   c.fillStyle = '#94a3b8';
-  c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
-  c.fillText(header.toUpperCase(), right, chart.chartArea.top - 10);
-  c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+  c.font = `600 ${uiPx(9)}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  c.fillText(header.toUpperCase(), right, chart.chartArea.top - uiPx(10));
+  c.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, sans-serif`;
   meta.data.forEach((bar, i) => {
     const v = pcts[i];
     if (v == null) return;
@@ -157,7 +159,7 @@ export function roleBandOverlay(metrics) {
             if (d._m !== M.key || !chart.isDatasetVisible(di)) return;
             const bar = chart.getDatasetMeta(di).data[i];
             if (!bar) return;
-            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y; h = bar.height || 18;
+            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y; h = bar.height || uiPx(18);
             total += d.data[i] || 0;
             if ((d.data[i] || 0) > 0) edges.push(bar.x);
           });
@@ -173,13 +175,13 @@ export function roleBandOverlay(metrics) {
           c.lineWidth = 1.5;
           c.strokeStyle = darken(M.color, SEP_DARKEN);
           edges.sort((a, b) => a - b).slice(0, -1).forEach(x => {
-            if (x - prev < SEP_MIN_PX) return;
+            if (x - prev < uiPx(SEP_MIN_PX)) return;
             prev = x;
             c.beginPath(); c.moveTo(x, top + 1); c.lineTo(x, bot - 1); c.stroke();
           });
 
-          if (hi - lo < 22) return;
-          c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+          if (hi - lo < uiPx(22)) return;
+          c.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, sans-serif`;
           c.textAlign = 'center';
           c.fillStyle = '#fff';
           c.fillText(String(total), (lo + hi) / 2, y);
@@ -317,32 +319,32 @@ export function buildDumbbell(ctx, rows, opts = {}) {
       if (!meta || !x) return;
       c.save();
       c.textBaseline = 'middle';
-      const colX = chart.chartArea.right + 46;
+      const colX = chart.chartArea.right + uiPx(46);
       c.textAlign = 'center';
       c.fillStyle = '#94a3b8';
-      c.font = '600 9px -apple-system, BlinkMacSystemFont, sans-serif';
-      c.fillText(colHeader, colX, chart.chartArea.top - 12);
+      c.font = `600 ${uiPx(9)}px -apple-system, BlinkMacSystemFont, sans-serif`;
+      c.fillText(colHeader, colX, chart.chartArea.top - uiPx(12));
       rows.forEach((r, i) => {
         const bar = meta.data[i]; if (!bar) return;
         const y = bar.y, xa = x.getPixelForValue(r.added), xp = x.getPixelForValue(r.progressed);
         // progressed: solid, with its number inside when the dot is big enough to hold it
-        c.beginPath(); c.arc(xp, y, 8, 0, Math.PI * 2); c.fillStyle = DOT_TO; c.fill();
-        c.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.beginPath(); c.arc(xp, y, uiPx(8), 0, Math.PI * 2); c.fillStyle = DOT_TO; c.fill();
+        c.font = `600 ${uiPx(10)}px -apple-system, BlinkMacSystemFont, sans-serif`;
         c.fillStyle = '#fff';
         if (r.progressed > 0) c.fillText(String(r.progressed), xp, y);
         // added: hollow, its number outside on the axis side
-        c.beginPath(); c.arc(xa, y, 8, 0, Math.PI * 2);
+        c.beginPath(); c.arc(xa, y, uiPx(8), 0, Math.PI * 2);
         c.fillStyle = '#fff'; c.fill();
-        c.lineWidth = 2.5; c.strokeStyle = DOT_FROM; c.stroke();
-        c.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+        c.lineWidth = uiPx(2.5); c.strokeStyle = DOT_FROM; c.stroke();
+        c.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, sans-serif`;
         c.fillStyle = '#334155'; c.textAlign = 'right';
-        c.fillText(String(r.added), xa - 13, y);
+        c.fillText(String(r.added), xa - uiPx(13), y);
         // the rate, in its own labelled column at the right edge
         const v = rate(r);
         if (v != null) {
           c.textAlign = 'center';
           c.fillStyle = v >= 50 ? '#0F6B62' : (v >= 20 ? '#A16207' : '#A15568');
-          c.font = '600 12px -apple-system, BlinkMacSystemFont, sans-serif';
+          c.font = `600 ${uiPx(12)}px -apple-system, BlinkMacSystemFont, sans-serif`;
           c.fillText(v + '%', colX, y);
         }
       });
@@ -600,8 +602,8 @@ export function buildStageHeat(host, tip, rows, cols, opts = {}) {
     let left = cb.left - wb.left + cell.offsetWidth / 2 - tip.offsetWidth / 2;
     left = Math.max(0, Math.min(left, wrap.clientWidth - tip.offsetWidth));
     tip.style.left = left + 'px';
-    const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - 8;
-    tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + 8 : top) + 'px';
+    const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - uiPx(8);
+    tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + uiPx(8) : top) + 'px';
   };
   host.onmouseout = (e) => {
     if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.sheat-cell')) tip.style.display = 'none';
@@ -630,7 +632,7 @@ const heatEsc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   if (!host) return;
   const { alignSel = null, emptyMsg = 'Nothing arrived in this window.', rowLabel = 'added' } = opts;
-  if (!rows.length) { host.innerHTML = `<p class="sub-note" style="margin:6px 0 0">${emptyMsg}</p>`; return; }
+  if (!rows.length) { host.innerHTML = `<p class="sub-note" style="margin:0.375rem 0 0">${emptyMsg}</p>`; return; }
   const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
   const mx = Math.max(...rows.map(r => Math.max(...r.per)));
   const dayTot = chrono.map((_, i) => rows.reduce((a, r) => a + r.per[i], 0));
@@ -659,7 +661,7 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
     + '</div>';
   html += '<div class="heat-scale">fewer'
     + [1, 2, 3, 4, 5].map(k => `<i style="background:${heatShade(mx * k / 5, mx)}"></i>`).join('')
-    + `more<span style="margin-left:14px">darkest = ${mx} in a day</span></div>`;
+    + `more<span style="margin-left:0.875rem">darkest = ${mx} in a day</span></div>`;
   host.innerHTML = html;
 
   // Match the table's first two columns, measured rather than guessed — the table's first column sizes
@@ -671,16 +673,16 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   // whole month stayed on screen — which made 30 columns of two-line headers unreadable. The cells now hold
   // a comfortable width and .tofu-heat-wrap scrolls sideways when the month does not fit.
   const th = alignSel ? document.querySelectorAll(alignSel) : [];
-  let w1 = 210, w2 = 96;
-  const cellMin = 42;
+  let w1 = uiPx(210), w2 = uiPx(96);
+  const cellMin = uiPx(42);
   if (th.length >= 2) {
     const t1 = Math.round(th[0].getBoundingClientRect().width);
     const t2 = Math.round(th[1].getBoundingClientRect().width);
-    if (t1 > 80 && t2 > 40) { w1 = t1; w2 = t2; }
+    if (t1 > uiPx(80) && t2 > uiPx(40)) { w1 = t1; w2 = t2; }
   }
   // Trim the left block a little when it is wide — that is free horizontal room for the cells, and the
   // month is what people came to read, not the row label.
-  w1 = Math.min(w1, 190);
+  w1 = Math.min(w1, uiPx(190));
   host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
   host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
   host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
@@ -705,8 +707,8 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
     let left = cb.left - wb.left + cell.offsetWidth / 2 - tw / 2;
     left = Math.max(0, Math.min(left, wrap.clientWidth - tw));
     tip.style.left = left + 'px';
-    const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - 8;
-    tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + 8 : top) + 'px';
+    const top = cb.top - wb.top + wrap.scrollTop - tip.offsetHeight - uiPx(8);
+    tip.style.top = (top < 0 ? cb.top - wb.top + cell.offsetHeight + uiPx(8) : top) + 'px';
   };
   host.onmouseout = (e) => {
     if (tip && !e.relatedTarget?.closest?.('.heat-cell.has')) tip.style.display = 'none';

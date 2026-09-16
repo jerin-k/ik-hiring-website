@@ -1,3 +1,4 @@
+import './ui-scale.js';   // #140: first, so every chart is built by the scaled Chart
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
 import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
 import { loadDashboardData, getFilteredData, getLastUpdated } from './data.js';
@@ -64,7 +65,7 @@ async function onAuthSuccess(user) {
     document.getElementById('page-content').innerHTML = `
       <div class="card" style="text-align:center;padding:3rem;">
         <h2>Access Denied</h2>
-        <p style="color:var(--muted);margin-top:8px;">You don't have access to this dashboard. Contact your admin.</p>
+        <p style="color:var(--muted);margin-top:0.5rem;">You don't have access to this dashboard. Contact your admin.</p>
       </div>
     `;
     return;
