@@ -1218,7 +1218,7 @@ export function initEfficiencyFilters(data) {
     tisNote(per);
   }
 
-  // ===== Momentum (Department → Job → Stage; last 30 days of range, descending) =====
+  // ===== Momentum (Department → Job → Stage; every day of the range, descending) =====
   function velDates() {
     const toV = document.getElementById('effVelTo')?.value;
     const fromV = document.getElementById('effVelFrom')?.value;
@@ -1227,7 +1227,9 @@ export function initEfficiencyFilters(data) {
     if (end > today) end = today;
     const start = fromV ? new Date(fromV + 'T00:00:00') : null;
     const out = [];
-    for (let i = 0; i < 30; i++) { const d = new Date(end); d.setDate(end.getDate() - i); if (start && d < start) break; out.push(d); }
+    // #141c (Jerin, 17 Sep): every day From → To, newest first — the same as Recruiter Efficiency (was the last 30 days only).
+    const days = start ? Math.floor((end - start) / 86400000) + 1 : 30;
+    for (let i = 0; i < days; i++) { const d = new Date(end); d.setDate(end.getDate() - i); if (start && d < start) break; out.push(d); }
     return out;
   }
   function applyVelYearQuarter() {

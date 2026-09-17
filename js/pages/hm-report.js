@@ -951,6 +951,9 @@ export function initHmFilters(data) {
     // the two flat people lists, where it would move nothing (Rule 13).
     toggleJpFilters('hm', document.getElementById('hmPeriod'), name === 'joiningpending');
     showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
+    // #141d (Jerin, 17 Sep): Pipeline counts are live (#129) and its roles follow Year and Quarter, so From and To would move
+    // nothing there — they hide (Rule 13).
+    ['hmDateFrom', 'hmDateTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
     document.querySelectorAll('.hm-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.hm-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActive();

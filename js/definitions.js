@@ -18,7 +18,7 @@ export const DEFINITIONS = {
   'hm-positions': {
     summary: 'How these numbers are worked out',
     intro: 'Everything on this page is built from Ashby <strong>openings</strong> (the positions being filled) and <strong>offers</strong> (the people). Those two are counted differently, which is the single most common source of confusion here — see <em>Worth knowing</em> at the bottom.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026 · From / To narrows every panel to the day (#129) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026 · From / To narrows every panel to the day (#129) 15 Sep 2026 \u00b7 Pipeline hides From / To (#141d) 17 Sep 2026',
     groups: [
       {
         heading: 'The six cards at the top',
@@ -35,7 +35,7 @@ export const DEFINITIONS = {
         heading: 'The filters at the top',
         items: [
           ['Department and Job', 'Narrow every panel on this tab to the chosen department and roles.'],
-          ['From / To, Year and Quarter', 'The period. Year and Quarter fill in the From and To dates; you can also pick your own dates, but only <strong>inside the selected Year/Quarter period</strong> — any other day is greyed out, and a date typed outside it snaps back to the nearest edge. Every panel follows the dates <strong>to the day</strong>: positions count when they were opened on a day inside From–To, drops when the person first reached Ref Check, Documentation or Offer on one, and Throughput and Panelists count what happened on those days. <strong>Joining Pending</strong> and the <strong>Pipeline</strong> counts stay live; on the <strong>Joining Pending</strong> sub-tab these boxes give way to DOJ Month, DOJ From and DOJ To. Which roles are listed follows the quarters the dates touch. With Year and Quarter both on <em>All</em>, the dates run from 1 July 2026 to the end of the current quarter. <strong>Nothing before Q3 2026 is offered</strong>, because nothing earlier was cleaned up; a new quarter appears on its first day.'],
+          ['From / To, Year and Quarter', 'The period. Year and Quarter fill in the From and To dates; you can also pick your own dates, but only <strong>inside the selected Year/Quarter period</strong> — any other day is greyed out, and a date typed outside it snaps back to the nearest edge. Every panel follows the dates <strong>to the day</strong>: positions count when they were opened on a day inside From–To, drops when the person first reached Ref Check, Documentation or Offer on one, and Throughput and Panelists count what happened on those days. <strong>Joining Pending</strong> and the <strong>Pipeline</strong> counts stay live; on the <strong>Joining Pending</strong> sub-tab these boxes give way to DOJ Month, DOJ From and DOJ To, and on the <strong>Pipeline</strong> sub-tab From and To are hidden, since they would change nothing there. Which roles are listed follows the quarters the dates touch. With Year and Quarter both on <em>All</em>, the dates run from 1 July 2026 to the end of the current quarter. <strong>Nothing before Q3 2026 is offered</strong>, because nothing earlier was cleaned up; a new quarter appears on its first day.'],
         ]
       },
       {
@@ -136,15 +136,15 @@ export const DEFINITIONS = {
 
   'hm-pipeline': {
     summary: 'How these numbers are worked out',
-    intro: 'This is a <strong>live snapshot</strong>: where candidates stand right now. It is the one table on this page whose numbers the date filter does not change. Shading: a deeper teal behind a number means more people, compared within that stage’s column (departments with departments, jobs with jobs); zeros stay grey.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 \u00b7 shading (#137c) 15 Sep 2026',
+    intro: 'This is a <strong>live snapshot</strong>: where candidates stand right now. It is the one table on this page whose numbers the period does not change, so From and To are hidden on this sub-tab. Shading: a deeper teal behind a number means more people, compared within that stage’s column (departments with departments, jobs with jobs); zeros stay grey.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 \u00b7 shading (#137c) 15 Sep 2026 \u00b7 From / To hidden here (#141d) 17 Sep 2026',
     groups: [
       {
         heading: 'Reading the table',
         items: [
           ['The numbers', 'How many candidates are in that stage <strong>today</strong>; archived candidates are left out. <strong>Hired</strong> is everyone hired on the role so far, because a hired candidate stays at Hired.'],
           ['Total', 'Every application on the role, archived ones included — so it is bigger than the stage columns added up.'],
-          ['What the date filter does do', 'It decides <strong>which roles are listed</strong> — only those with an opening in the selected period — so department and total rows change with it. With Year and Quarter both on <em>All</em>, the period starts on 1 July 2026. Each role’s own counts do not.'],
+          ['What Year and Quarter do', 'They decide <strong>which roles are listed</strong> — only those with an opening in the selected period — so department and total rows change with it. With Year and Quarter both on <em>All</em>, the period starts on 1 July 2026. Each role’s own counts do not.'],
           ['Rows', 'Department, then the roles inside it. Click to open.'],
           ['Stages and Hide zero-pipeline', 'The <strong>Stages</strong> dropdown chooses which stage columns appear; with nothing picked every stage shows, the same as on Throughput. <em>Hide zero-pipeline</em> drops roles with nobody in the stages shown.'],
         ]
@@ -266,7 +266,7 @@ export const DEFINITIONS = {
   'rec-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day — one row per person, not one per stage. The <strong>Job</strong> filter narrows every number to the chosen jobs. Shading: a deeper teal square means more people added that day, weekends are greyed, a thin line marks each new week, and a small bar beside a recruiter’s total compares it with the others.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 26 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026 \u00b7 every day From → To (#141c) 17 Sep 2026',
     groups: [
       {
         heading: 'What counts as being added',
@@ -281,10 +281,10 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Rows and columns', 'Pod \u2192 Recruiter \u2192 Job \u2192 the day columns. Open a recruiter to see the roles behind their numbers. The last 30 days of the selected range run across the top, most recent first.'],
-          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. The jobs follow the Year/Quarter selector; <em>From</em> and <em>To</em> move the 30-day window. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
+          ['Rows and columns', 'Pod \u2192 Recruiter \u2192 Job \u2192 the day columns. Open a recruiter to see the roles behind their numbers. Every day of the selected range runs across the top, most recent first; a long range scrolls sideways.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. The jobs follow the Year/Quarter selector; <em>From</em> and <em>To</em> set which days are shown. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
           ['Total', 'Every day column beside it added up \u2014 the row\u2019s arrivals for the window shown (30 days, or fewer when the date range is shorter), not for the whole quarter.'],
-          ['From / To', 'The two dates after Year and Quarter, which can only be set <strong>inside the selected quarter</strong>. Here Momentum shows the last 30 days of that range; every other panel on the tab counts only what happened between the two dates.'],
+          ['From / To', 'The two dates after Year and Quarter, which can only be set <strong>inside the selected quarter</strong>. Momentum shows every day between them; every other panel on the tab counts only what happened between the two dates.'],
           ['The heatmap', 'One row per <strong>recruiter</strong>, one square per <strong>day</strong>; darker means more people added, and the count is in the square. <strong>Hover a square</strong> to list the roles behind it. Empty weekend squares are shaded grey. The column beside the names is the total for the window, the bottom row each day\u2019s total.'],
           ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon, on the chart and underlined in the table. An empty square on a Saturday or Sunday is a weekend, not a bad day.'],
         ]
@@ -394,8 +394,8 @@ export const DEFINITIONS = {
 
   'rec-hygiene': {
     summary: 'What each of these lists is',
-    intro: 'The compliance view: candidates, recruiters and roles the pipeline could not attribute cleanly. Pick a list on the left &mdash; its dot and count say whether it <strong>needs a fix</strong>, is <strong>for the record</strong> or has <strong>nothing to fix</strong>. Each is fixed <strong>in Ashby</strong> or in <strong>Admin → Pod &amp; Capacity</strong>, and its rows clear at the next refresh; every list downloads as CSV. The Pod, Recruiter and Job filters never apply here — that is deliberate. Someone whose access is limited to certain departments sees only those departments’ rows, and <em>Other Anomalies</em> leaves out unrecognised stage names for them, since a stage name carries no job. <strong>Unassigned, Multiple Recruiters, Multiple Sourcers and both opening-link lists start on 1 July 2026 and do not move with the Year/Quarter selector</strong>, so a Q3 miss stays visible after Q3 ends. Unassigned also lists everyone in Joining Pending with no Recruiter tagged, whatever their dates. The selector does apply to Selected Candidates Missing Source, Pod Not Set, Capacity Not Set, Roles Missing Score Inputs, Jobs Recruiting Without an Opening, and Recruiter Dates (the selected year, from Q3 2026).',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Selected Candidates Missing Source 13 Sep 2026 · lists, 1 July 2026 start and side-list layout 14 Sep 2026 \u00b7 Jobs Recruiting Without an Opening (#125) 15 Sep 2026',
+    intro: 'The compliance view: candidates, recruiters and roles the pipeline could not attribute cleanly. Pick a list on the left &mdash; its dot and count say whether it <strong>needs a fix</strong>, is <strong>for the record</strong> or has <strong>nothing to fix</strong>. Each is fixed <strong>in Ashby</strong> or in <strong>Admin → Pod &amp; Capacity</strong>, and its rows clear at the next refresh; every list downloads as CSV. The Pod, Recruiter, Job, From and To filters never apply here — that is deliberate — so they are hidden on this sub-tab. Someone whose access is limited to certain departments sees only those departments’ rows, and <em>Other Anomalies</em> leaves out unrecognised stage names for them, since a stage name carries no job. <strong>Unassigned, Multiple Recruiters, Multiple Sourcers and both opening-link lists start on 1 July 2026 and do not move with the Year/Quarter selector</strong>, so a Q3 miss stays visible after Q3 ends. Unassigned also lists everyone in Joining Pending with no Recruiter tagged, whatever their dates. The selector does apply to Selected Candidates Missing Source, Pod Not Set, Capacity Not Set, Roles Missing Score Inputs, Jobs Recruiting Without an Opening, and Recruiter Dates (the selected year, from Q3 2026).',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Selected Candidates Missing Source 13 Sep 2026 · lists, 1 July 2026 start and side-list layout 14 Sep 2026 \u00b7 Jobs Recruiting Without an Opening (#125) 15 Sep 2026 \u00b7 its idle filters hidden (#141b) 17 Sep 2026',
     groups: [
       {
         heading: 'The lists',
@@ -502,7 +502,7 @@ export const DEFINITIONS = {
   'eff-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org \u2014 one row per person, not one per stage. Shading: a deeper teal square means more people added that day, weekends are greyed, a thin line marks each new week, and a small bar beside a job’s total compares it with the others.',
-    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 29 Aug 2026 \u00b7 only jobs with an opening opened in the period (#125) 15 Sep 2026 \u00b7 shading (#137c) 15 Sep 2026 \u00b7 every day From → To (#141c) 17 Sep 2026',
     groups: [
       {
         heading: 'What counts as being added',
@@ -516,9 +516,9 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Rows and columns', 'Department \u2192 Role down the side, the last 30 days of the selected date range across the top.'],
-          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. The jobs follow the Year/Quarter selector; <em>From</em> and <em>To</em> move the 30-day window. With Year and Quarter both on <em>All</em>, the period starts at Q3 2026. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
-          ['From / To', 'The two dates after Year and Quarter, which can only be set <strong>inside the selected period</strong>. Here Momentum shows the last 30 days of that range; every other panel on the tab counts only what happened between the two dates.'],
+          ['Rows and columns', 'Department \u2192 Role down the side, every day of the selected date range across the top, most recent first; a long range scrolls sideways.'],
+          ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected Year/Quarter period</strong> \u2014 the team does not work jobs whose opening was opened in an earlier quarter \u2014 and of those, only jobs with something to show in the period. The jobs follow the Year/Quarter selector; <em>From</em> and <em>To</em> set which days are shown. With Year and Quarter both on <em>All</em>, the period starts at Q3 2026. An opening with no opened date does not count; those are listed in <strong>Recruiter Efficiency \u2192 Data Hygiene \u2192 Openings Missing Opened Date</strong>, and Open jobs worked without an opening in <strong>Jobs Recruiting Without an Opening</strong>.'],
+          ['From / To', 'The two dates after Year and Quarter, which can only be set <strong>inside the selected period</strong>. Momentum shows every day between them; every other panel on the tab counts only what happened between the two dates.'],
           ['Total', 'Every day column beside it added up \u2014 30 days, or fewer when the date range is shorter.'],
           ['The heatmap', 'One row per <strong>department</strong>, one square per <strong>day</strong>; darker means more people added, and the count is in the square. <strong>Hover a square</strong> to list the roles behind it. Empty weekend squares are shaded grey. The column beside the names is the total for the window, the bottom row each day\u2019s total.'],
           ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon, on the chart and underlined in the table.'],
