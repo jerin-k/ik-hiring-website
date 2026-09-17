@@ -91,7 +91,7 @@ export function renderAdmin(accessConfig, data) {
   // changes something (Pod & Capacity, Scoring → Grid — CLAUDE.md Rule 13). Nothing about publishing, invites or who can edit changed.
   return `
     <style>
-      .adm-strip { display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 1rem; padding:0.625rem 0.875rem; margin-bottom:0.875rem;
+      .adm-strip { display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 1rem; padding:0.75rem 0.875rem; margin-bottom:0.875rem;
         background:var(--card); border:1px solid var(--border); border-radius:0.625rem; }
       .adm-grow { flex:1; }
       .adm-vr { width:1px; height:1.375rem; background:var(--border); }
@@ -105,7 +105,7 @@ export function renderAdmin(accessConfig, data) {
       .adm-field { display:inline-flex; align-items:center; gap:0.5rem; }
       .adm-field .lbl { font-size:0.71875rem; font-weight:600; color:var(--muted); }
       .adm-card { background:var(--card); border:1px solid var(--border); border-radius:0.625rem; overflow:hidden; }
-      .adm-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 0.875rem; padding:0.625rem 0.875rem; border-bottom:1px solid var(--border-light); }
+      .adm-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:0.625rem 0.875rem; padding:0.875rem; border-bottom:1px solid var(--border-light); }
       .adm-title { font-size:0.8125rem; font-weight:700; color:var(--navy); }
       .adm-count { font-size:0.75rem; color:var(--muted); font-variant-numeric:tabular-nums; }
       .adm-strip select, .adm-card select, .adm-card input[type=number], .adm-card input[type=email], .adm-card input[type=text] {
@@ -187,7 +187,48 @@ export function renderAdmin(accessConfig, data) {
       .adm-check input:checked { background:var(--navy-sub); }
       .adm-check input:checked::after { left:0.875rem; }
       .adm-check input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-      .adm-teams { display:flex; flex-wrap:wrap; gap:0.25rem; }
+      .adm-teams { display:flex; flex-wrap:wrap; gap:0.4375rem 0.375rem; }
+      /* ===== #142 (Jerin, 17 Sep 2026 — option C of the mock-up): room to breathe, quieter controls, grouped =====
+         Measured before: ~7px above and below a 25px control, team chips 3.6px apart. Scoped to the two grouped tables (.adm-roomy) so
+         Scoring's grid and Department → Family keep their look. Every control, value and handler is unchanged — only how they sit. */
+      .ac-table.adm-roomy th { padding:0.625rem 0.75rem; }
+      .ac-table.adm-roomy td { padding:0.875rem 0.75rem; }
+      .ac-table.adm-roomy tbody tr.grp-row td, .ac-table.adm-roomy tbody tr.grp-row:hover td { padding:0.5rem 0.75rem; background:#f7f9fc; border-top:1px solid var(--border); }
+      .ac-table.adm-roomy tbody tr.grp-row:first-child td { border-top:0; }
+      .adm-grp { display:inline-flex; align-items:center; gap:0.5rem; white-space:nowrap; }
+      .adm-grp i { width:0.5rem; height:0.5rem; border-radius:2px; flex:none; }
+      .adm-grp b { font-size:0.75rem; font-weight:700; color:var(--navy); }
+      .adm-grp .adm-grp-n { font-size:0.71875rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .adm-grp .adm-grp-n b { font-size:inherit; font-weight:600; color:var(--text-secondary); }
+      .adm-card .adm-roomy select.ac-role, .adm-card .adm-roomy select.cfg-pod { height:1.625rem; border-radius:62.4375rem; padding:0 1.5rem 0 0.75rem; border-color:transparent; }
+      .adm-card .adm-roomy select.ac-role:hover, .adm-card .adm-roomy select.cfg-pod:hover { border-color:#9db2d6; }
+      .adm-card .adm-roomy select.adm-quiet { background-size:0 0; }
+      .adm-card .adm-roomy tr:hover select.adm-quiet, .adm-card .adm-roomy select.adm-quiet:focus { background-size:auto; }
+      .adm-card .adm-roomy .adm-cap input { width:3.75rem; height:1.625rem; border-color:transparent; background-color:#f3f6fb; }
+      .adm-card .adm-roomy .adm-cap input:hover, .adm-card .adm-roomy .adm-cap input:focus { border-color:#9db2d6; background-color:var(--card); }
+      .adm-roomy .adm-capbar { width:5rem; height:0.375rem; }
+      .adm-date { display:inline-grid; min-width:6.25rem; }
+      .adm-date > * { grid-area:1 / 1; }
+      .adm-card .adm-date input.cfg-date { opacity:0; width:100%; height:100%; min-height:1.5rem; border:0; padding:0; cursor:pointer; }
+      .adm-date-face { display:inline-flex; align-items:center; justify-self:start; height:1.5rem; padding:0 0.5rem; border:1px solid transparent; border-radius:0.375rem; font-size:0.75rem; color:#b3bccd; pointer-events:none; white-space:nowrap; }
+      .adm-date.is-set .adm-date-face { background:#eef2f8; color:var(--accent-deep); font-weight:600; font-size:0.71875rem; }
+      .adm-date:hover .adm-date-face { border-color:#9db2d6; }
+      .adm-date:focus-within .adm-date-face { outline:2px solid var(--accent); outline-offset:1px; }
+      .adm-roomy .ac-actions .btn { border-color:transparent; background:none; box-shadow:none; color:var(--accent-deep); }
+      .adm-roomy .ac-actions .btn:hover { background:var(--accent-light); }
+      .adm-roomy .ac-actions .ac-del { color:var(--muted); font-weight:500; }
+      .adm-roomy .ac-actions .ac-del:hover { color:var(--red); background:#f7edf0; }
+      @media (hover:hover) {   /* quiet until the row is in use; without hover (a phone) the actions simply stay visible */
+        .adm-roomy .ac-actions > .btn { opacity:.45; transition:opacity .12s; }
+        .adm-roomy tr:hover .ac-actions > .btn, .adm-roomy tr:focus-within .ac-actions > .btn { opacity:1; }
+      }
+      @media (prefers-reduced-motion: reduce) { .adm-roomy .ac-actions > .btn { transition:none; } }
+      .adm-dgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(19rem, 1fr)); gap:0.75rem; padding:0.875rem; }
+      .adm-dcard { border:1px solid var(--border-light); border-radius:0.625rem; padding:0.75rem 0.875rem; display:grid; gap:0.5rem; align-content:start; }
+      .adm-dcard.is-empty { background:#fafbfd; }
+      .adm-dcard header { display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; }
+      .adm-dcard header b { font-weight:600; color:var(--text); }
+      .adm-dcard header span { font-size:0.71875rem; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
       .adm-team { font-size:0.6875rem; font-weight:500; line-height:1rem; padding:2px 0.5rem; border-radius:0.375rem; background:var(--border-light); color:var(--text-secondary); white-space:nowrap; }
       /* Scoring's side list — the look Jerin picked from mock-up 2 (15 Sep 2026): the chosen row lifts, with a navy edge and a count badge. */
       .adm-split { display:grid; grid-template-columns:16.25rem minmax(0,1fr); gap:0.875rem; align-items:start; }
@@ -271,7 +312,7 @@ export function renderAdmin(accessConfig, data) {
             <select id="acFilterInvite"><option value="">All</option><option value="invited">Invited</option><option value="not-invited">Not invited</option><option value="unpublished">Not published yet</option></select></label>
           <span id="acFilterCount" class="adm-count"></span>
         </div>
-        <div class="cfg-scroll"><table class="ac-table">
+        <div class="cfg-scroll"><table class="ac-table adm-roomy">
           <thead><tr>
             <th style="min-width:16.25rem">Email</th>
             <th style="width:9.375rem">Role</th>
@@ -303,7 +344,7 @@ export function renderAdmin(accessConfig, data) {
           <span class="adm-grow"></span>
           <label class="adm-check"><input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" class="adm-count"></span></label>
         </div>
-        <div class="cfg-scroll"><table class="ac-table">
+        <div class="cfg-scroll"><table class="ac-table adm-roomy">
           <thead><tr><th style="min-width:14.375rem">Recruiter</th><th style="width:9.375rem">Pod</th><th style="width:10.625rem">Capacity (Score)</th><th style="width:8.75rem">Type</th><th style="width:9.375rem">Started on</th><th style="width:9.375rem">Left on</th><th style="width:14.375rem">In quarter</th><th style="width:7.5rem">Ashby account</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
@@ -317,17 +358,12 @@ export function renderAdmin(accessConfig, data) {
           <span class="adm-title">Departments &amp; Teams</span>
           <span class="adm-count">${deptNames.length} departments · ${teamCount} teams · a read-only copy of Ashby's tree</span>
         </div>
-        <div class="cfg-scroll"><table class="ac-table">
-          <thead><tr><th style="width:14.375rem">Department</th><th>Teams</th></tr></thead>
-          <tbody>
-            ${deptNames.map(dept => `<tr>
-              <td style="white-space:nowrap;vertical-align:top"><b style="font-weight:600;color:var(--text)">${dept}</b>${countTag(DEPT_TREE[dept].length)}</td>
-              <td>${DEPT_TREE[dept].length
-                ? `<div class="adm-teams">${DEPT_TREE[dept].map(t => `<span class="adm-team">${t}</span>`).join('')}</div>`
-                : '<span class="adm-count">No teams</span>'}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table></div>
+        <div class="adm-dgrid">
+          ${deptNames.map(dept => { const t = DEPT_TREE[dept]; return `<article class="adm-dcard${t.length ? '' : ' is-empty'}">
+            <header><b>${dept}</b><span>${t.length ? t.length + (t.length === 1 ? ' team' : ' teams') : 'No teams'}</span></header>
+            ${t.length ? `<div class="adm-teams">${t.map(x => `<span class="adm-team">${x}</span>`).join('')}</div>` : ''}
+          </article>`; }).join('')}
+        </div>
       </div>
       ${defsBlock('admin-depts')}
     </div>
@@ -506,7 +542,7 @@ export function initAdminAccess(accessConfig, data) {
     const shown = work.users.map((u, i) => [u, i]).filter(([u]) => passesFilters(u));
     if (cnt) cnt.textContent = `${shown.length} of ${work.users.length} people`;
     if (!shown.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:0.875rem">No users match these filters</td></tr>'; return; }
-    body.innerHTML = shown.map(([u, i]) => {
+    const rowHtml = (u, i) => {
       const restricted = u.role === 'restricted', type = acUserType(u);
       return `<tr>
         <td>${acWho(u.email)}</td>
@@ -518,6 +554,16 @@ export function initAdminAccess(accessConfig, data) {
             </div>` : `<span class="adm-count">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
         <td><div class="ac-actions">${inviteState(u)}${inviteCell(u, i)}<button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></div></td>
       </tr>`;
+    };
+    // #142 (Jerin, 17 Sep — option C): grouped under a heading per user type. Rows still edit by their place in work.users (data-i) and
+    // every change redraws, so a new user type moves the person into that group. Sorting a column sorts within each group (table-sort.js).
+    const byType = new Map(['Admin', 'Recruitment Team', 'Hiring Manager', 'Others'].map(g => [g, []]));
+    shown.forEach(([u, i]) => { const t = acUserType(u); if (!byType.has(t)) byType.set(t, []); byType.get(t).push([u, i]); });
+    body.innerHTML = [...byType].filter(([, rows]) => rows.length).map(([g, rows]) => {
+      const sent = rows.filter(([u]) => invites[(u.email || '').toLowerCase()]).length;
+      return `<tr class="grp-row"><td colspan="5"><span class="adm-grp"><i style="background:${AC_TYPE_COL[g] || '#9aa3b8'}"></i><b>${acEsc(g)}</b>`
+        + `<span class="adm-grp-n">${rows.length} ${rows.length === 1 ? 'person' : 'people'} · ${sent} invited</span></span></td></tr>`
+        + rows.map(([u, i]) => rowHtml(u, i)).join('');
     }).join('');
     body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
     body.querySelectorAll('.ac-type').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].userType = s.value; setDirtyAc(true); renderRows(); }));
@@ -658,31 +704,48 @@ export function initAdminMetricConfig(data) {
     // and the Ashby account. The inputs, their values and what each change writes are exactly as before.
     const capMax = Math.max(1, ...sorted.map(r => +capacityOf(r.name, q) || 0));
     const capPct = (v) => Math.min(100, Math.round((+v || 0) / capMax * 100));
-    body.innerHTML = sorted.map(r => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false;
-      const pod = podOf(name, q), cap = capacityOf(name, q), ut = userTypeOf(name, ext); return `<tr>
+    // #142: a quiet face over the real date box — "15 Jul 2026" when set, "—" when not. The input underneath keeps its class, data
+    // attributes, value and change handler; clicking anywhere on the face opens its picker.
+    const fmtDay = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || ''); return m ? `${+m[3]} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+m[2] - 1]} ${m[1]}` : ''; };
+    const dateBox = (name, f, label) => { const v = (dates[name] || {})[f] || '';
+      return `<span class="adm-date${v ? ' is-set' : ''}"><input type="date" class="cfg-date${v ? '' : ' is-empty'}" data-name="${name}" data-f="${f}" value="${v}" aria-label="${label} for ${name}"><span class="adm-date-face" aria-hidden="true">${v ? fmtDay(v) : '—'}</span></span>`; };
+    const fmtCap = (n) => (+n || 0).toLocaleString('en-IN');
+    const rowHtml = (r) => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false;
+      const pod = podOf(name, q), cap = capacityOf(name, q), ut = userTypeOf(name, ext); return `<tr data-pod="${pod}">
       <td><span class="adm-who">${avatar(name, pod)}<b>${name}</b></span></td>
       <td><select class="cfg-pod pod-${podClass(pod)}" data-name="${name}" aria-label="Pod for ${name}">${podOpts.map(p => `<option value="${p}"${p === pod ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
       <td><span class="adm-cap"><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${cap}" aria-label="Capacity for ${name}"><span class="adm-capbar"><span style="width:${capPct(cap)}%"></span></span></span></td>
       <td><select class="cfg-utype adm-quiet${ut === 'Agency' ? ' is-agency' : ''}" data-name="${name}" title="${ext.has(name)
         ? 'Ashby marks this account as an External Recruiter.'
         : 'Ashby does not mark this account as an External Recruiter.'}">${USER_TYPES.map(t => `<option value="${t}"${t === ut ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-      <td><input type="date" class="cfg-date${(dates[name] || {}).start ? '' : ' is-empty'}" data-name="${name}" data-f="start" value="${(dates[name] || {}).start || ''}" aria-label="Started on for ${name}"></td>
-      <td><input type="date" class="cfg-date${(dates[name] || {}).end ? '' : ' is-empty'}" data-name="${name}" data-f="end" value="${(dates[name] || {}).end || ''}" aria-label="Left on for ${name}"></td>
+      <td>${dateBox(name, 'start', 'Started on')}</td>
+      <td>${dateBox(name, 'end', 'Left on')}</td>
       <td>${(() => { const s = here(r); const q0 = String(q).replace(/^(\d{4})-(Q\d)$/, '$2 $1');
         const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
         const cls = !s.in ? ' is-out' : (/left/.test(s.note) ? ' is-left' : (/joined/.test(s.note) ? ' is-joined' : ''));
         return `<span class="adm-inq${cls}" title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}">${txt}</span>`; })()}</td>
-      <td><span class="adm-acct ${unk ? 'is-unk' : (off ? 'is-off' : 'is-on')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; }).join('')
+      <td><span class="adm-acct ${unk ? 'is-unk' : (off ? 'is-off' : 'is-on')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; };
+    // #142 (Jerin, 17 Sep — option C): grouped under each pod, in pod order, with its recruiters and their capacity for the quarter.
+    const podsListed = [...podOpts, ...new Set(sorted.map(r => podOf(r.name, q)).filter(p => !podOpts.includes(p)))];
+    body.innerHTML = podsListed.map(p => [p, sorted.filter(r => podOf(r.name, q) === p)]).filter(([, rs]) => rs.length).map(([p, rs]) =>
+      `<tr class="grp-row" data-pod="${p}"><td colspan="8"><span class="adm-grp"><span class="adm-podchip pl-pod-${podClass(p)}">${p}</span>`
+      + `<span class="adm-grp-n">${rs.length} ${rs.length === 1 ? 'recruiter' : 'recruiters'} · capacity <b class="grp-cap">${fmtCap(rs.reduce((t, r) => t + (+capacityOf(r.name, q) || 0), 0))}</b></span></span></td></tr>`
+      + rs.map(rowHtml).join('')).join('')
       || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1rem">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
-    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => {
-      setPod(sel.dataset.name, sel.value, cfgQ()); touched(); updatePodSummary();
-      sel.className = 'cfg-pod pod-' + podClass(sel.value);
-      const av = sel.closest('tr')?.querySelector('.pl-av'); if (av) av.className = 'pl-av pl-pod-' + podClass(sel.value);
-    }));
+    // #142: redraw on a pod change so the recruiter moves into that pod's group and both headings' totals follow.
+    body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); renderPodCapacity(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => {
       setCapacity(inp.dataset.name, inp.value, cfgQ()); touched();
       const bar = inp.closest('.adm-cap')?.querySelector('.adm-capbar span'); if (bar) bar.style.width = capPct(inp.value) + '%';
+      // #142: the group heading's capacity total follows as you type (a redraw here would take the cursor out of the box).
+      const pod = inp.closest('tr')?.dataset.pod, head = pod != null && [...body.querySelectorAll('tr.grp-row')].find(t => t.dataset.pod === pod);
+      if (head) head.querySelector('.grp-cap').textContent = fmtCap([...body.querySelectorAll('tr:not(.grp-row)')].filter(t => t.dataset.pod === pod).reduce((t, tr) => t + (+tr.querySelector('.cfg-cap')?.value || 0), 0));
     }));
+    body.querySelectorAll('.adm-date input.cfg-date').forEach(inp => {
+      const open = () => { try { inp.showPicker(); } catch (e) { /* not supported: the box still takes typed dates */ } };
+      inp.addEventListener('click', open);
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); open(); } });
+    });
     body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); sel.classList.toggle('is-agency', sel.value === 'Agency'); }));   // #11b
     // #111: dates are per person, not per quarter. Re-render on change so 'In quarter' and the list follow at once.
     body.querySelectorAll('.cfg-date').forEach(inp => inp.addEventListener('change', () => { inp.classList.toggle('is-empty', !inp.value); setRecruiterDate(inp.dataset.name, inp.dataset.f, inp.value); touched(); renderPodCapacity(); }));

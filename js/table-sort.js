@@ -22,7 +22,7 @@ export function initTableSorting() {
     thead.querySelectorAll('th').forEach(h => { delete h.dataset.sort; });
     th.dataset.sort = asc ? 'asc' : 'desc';
 
-    dataRows.sort((a, b) => {
+    const cmp = (a, b) => {
       const aCell = a.cells[colIdx];
       const bCell = b.cells[colIdx];
       if (!aCell || !bCell) return 0;
@@ -33,9 +33,13 @@ export function initTableSorting() {
       const bNum = parseFloat(bVal);
       if (!isNaN(aNum) && !isNaN(bNum)) return asc ? aNum - bNum : bNum - aNum;
       return asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-    });
+    };
 
-    dataRows.forEach(r => tbody.appendChild(r));
+    // #142 (17 Sep 2026): a table grouped under heading rows (tr.grp-row) sorts WITHIN each group, so the headings stay put.
+    // A table with no heading rows is one group with no heading, and sorts exactly as before.
+    const groups = [{ head: null, rows: [] }];
+    dataRows.forEach(r => { if (r.classList.contains('grp-row')) groups.push({ head: r, rows: [] }); else groups[groups.length - 1].rows.push(r); });
+    groups.forEach(g => { g.rows.sort(cmp); if (g.head) tbody.appendChild(g.head); g.rows.forEach(r => tbody.appendChild(r)); });
     const totalsRow = tbody.querySelector('.totals-row');
     if (totalsRow) tbody.appendChild(totalsRow);
   });
