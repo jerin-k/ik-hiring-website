@@ -10,6 +10,7 @@ import { renderEfficiency, initEfficiencyFilters } from './pages/efficiency.js';
 // The hidden Sourcing page was removed (#120, 14 Sep 2026): it counted applications, contradicting Sourcing Mix (joiners).
 import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
+import { initFilterDropdowns } from './filter-dropdowns.js';   // 17 Sep: filter dropdowns open in full, never clipped by their row
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
 
 // Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
@@ -75,6 +76,7 @@ async function onAuthSuccess(user) {
   setupSignout();
   setupRefreshButton();
   initTableSorting();
+  initFilterDropdowns();
   // #4 (2026-08-22): a refresh used to dump you back on Overview. The active tab now lives in the URL hash,
   // so reloading returns you to where you were, and back/forward work. Falls back to Overview when the hash is
   // empty or names a page this user cannot see (navigateTo re-checks access anyway).
