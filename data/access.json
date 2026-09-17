@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-16T13:21:58.546Z",
+  "updatedAt": "2026-09-17T06:25:48.076Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -101,19 +101,22 @@
     },
     {
       "email": "burhan@interviewkickstart.com",
-      "role": "restricted",
+      "role": "full_access",
       "tabs": [
-        "hm-report"
+        "hm-report",
+        "recruiter",
+        "efficiency"
       ],
       "departments": [
-        "US Business",
-        "Marketing"
+        "B2B",
+        "Marketing",
+        "US Business"
       ],
       "userType": "Hiring Manager"
     },
     {
       "email": "raghav@interviewkickstart.com",
-      "role": "restricted",
+      "role": "full_access",
       "tabs": [
         "hm-report"
       ],
@@ -124,7 +127,7 @@
     },
     {
       "email": "manish.chawla@interviewkickstart.com",
-      "role": "restricted",
+      "role": "full_access",
       "tabs": [
         "hm-report"
       ],
@@ -135,7 +138,7 @@
     },
     {
       "email": "sreejit@interviewkickstart.com",
-      "role": "restricted",
+      "role": "full_access",
       "tabs": [
         "hm-report"
       ],
@@ -147,7 +150,7 @@
     },
     {
       "email": "kushal@interviewkickstart.com",
-      "role": "restricted",
+      "role": "full_access",
       "tabs": [
         "hm-report"
       ],
