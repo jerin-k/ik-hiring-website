@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-17T06:25:48.076Z",
+  "updatedAt": "2026-09-17T06:31:15.731Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -161,7 +161,7 @@
     },
     {
       "email": "talent@interviewkickstart.com",
-      "role": "restricted",
+      "role": "full_access",
       "tabs": [
         "hm-report"
       ],
