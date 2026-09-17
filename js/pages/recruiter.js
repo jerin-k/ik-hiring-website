@@ -325,8 +325,6 @@ export function renderRecruiter(data) {
       .ms-btn { appearance:none; height:1.75rem; padding:0 0.6875rem; border:1px solid var(--border); border-radius:0.5rem; font-size:0.75rem; font-weight:500;
         background:var(--card); color:var(--text); cursor:pointer; min-width:7.5rem; text-align:left; white-space:nowrap; }
       .ms-btn:hover { border-color:var(--muted); }
-      .ms-panel { position:absolute; top:2.375rem; left:0; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:0.5rem;
-        padding:0.375rem; min-width:11.25rem; max-height:16.25rem; overflow:auto; box-shadow:0 0.375rem 1.25rem rgba(15,23,42,0.12); }
       .ms-opt { display:flex; align-items:center; gap:0.4375rem; padding:0.3125rem 0.5rem; font-size:0.75rem; font-weight:500; border-radius:0.375rem; cursor:pointer; white-space:nowrap; }
       .ms-opt:hover { background:var(--border-light); }
 
