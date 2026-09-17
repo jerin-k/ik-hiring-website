@@ -2465,7 +2465,7 @@ export function initRecruiterFilters(baseData) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // ===== Momentum render (Pod -> Recruiter -> Stage; last 30 days of range, descending) =====
+  // ===== Momentum render (Pod -> Recruiter -> Stage; every day of the range, descending) =====
   function velDates() {
     const toV = document.getElementById('recVelTo')?.value;
     const fromV = document.getElementById('recVelFrom')?.value;
@@ -2474,7 +2474,11 @@ export function initRecruiterFilters(baseData) {
     if (end > today) end = today; // never show future dates — cap the window at today
     const start = fromV ? new Date(fromV + 'T00:00:00') : null;
     const out = [];
-    for (let i = 0; i < 30; i++) {
+    // #141c (Jerin, 17 Sep): every day From → To, newest first. It used to stop at 30 days, so a From earlier than that moved
+    // nothing (Rule 13). A long range scrolls sideways (Jerin, 31 Aug: "let that lead to scrolling, its ok"). From is always set
+    // from the period; without one the grid keeps the old 30 days, so it can never run away.
+    const days = start ? Math.floor((end - start) / 86400000) + 1 : 30;
+    for (let i = 0; i < days; i++) {
       const d = new Date(end); d.setDate(end.getDate() - i);
       if (start && d < start) break;
       out.push(d);
@@ -2944,6 +2948,9 @@ export function initRecruiterFilters(baseData) {
     activeTab = name;
     // #133: Joining Pending is live, so the period boxes give way to the DOJ boxes there. Expand all stays: it opens the pod / recruiter tree.
     toggleJpFilters('rec', document.getElementById('recPeriod'), name === 'joiningpending');
+    // #141b (Jerin, 17 Sep): Data Hygiene ignores Pod, Recruiter, Job, From and To on purpose, so they hide there — a filter shown
+    // over a panel must move its numbers (Rule 13). Year and Quarter stay: they decide several of its lists.
+    ['msPod', 'msRec', 'msJob', 'recVelFrom', 'recVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'hygiene'));
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -2981,7 +2988,7 @@ export function initRecruiterFilters(baseData) {
   document.addEventListener('click', closeMsPanels);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
-  // Date filter — #129: narrows every panel (and still sets Momentum's 30-day window), so a change re-renders the whole tab
+  // Date filter — #129: narrows every panel (and sets Momentum's day columns), so a change re-renders the whole tab
   ['recVelFrom', 'recVelTo'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', renderAll));
   ['recDojMonth', 'recDojFrom', 'recDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));   // #133

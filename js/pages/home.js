@@ -1,6 +1,7 @@
 import { getData } from '../data.js';
 import { defsBlock } from '../definitions.js';
 import { canAccessPage } from '../access.js';
+import { reportingQuarters } from '../period.js';   // #141e
 
 // #135: kept from renderHome so a card only links to a tab this user may open.
 let homeAccess = null;
@@ -10,25 +11,13 @@ export function renderHome(access) {
   const data = getData();
   if (!data) return '<p>Loading...</p>';
 
-  const currentYear = new Date().getFullYear();
-  const startYear = 2026;
-  const endYear = Math.max(currentYear, 2026);
-  const sortedYears = [];
-  for (let y = endYear; y >= startYear; y--) sortedYears.push(String(y));
-
+  // #141e (Jerin, 17 Sep): the quarters every other tab offers — Q3 2026 to the current quarter, newest first (#127). Overview used to
+  // offer the whole year and Q1 / Q2 2026 (figures from before anything was cleaned up) and a Q4 that read all zeros before it began.
   return `
     <div id="home-period-holder" hidden>
       <div>
         <select id="period-selector" style="padding:0.375rem 0.75rem;border:1px solid var(--border);border-radius:0.375rem;font-size:0.75rem;font-weight:500;background:var(--card);color:var(--text);cursor:pointer;min-width:6.875rem;">
-          ${sortedYears.map(y => `<option value="${y}">${y}</option>`).join('')}
-          ${sortedYears.map(y => `
-            <optgroup label="${y} Quarters">
-              <option value="${y}-Q1">Q1 ${y}</option>
-              <option value="${y}-Q2">Q2 ${y}</option>
-              <option value="${y}-Q3">Q3 ${y}</option>
-              <option value="${y}-Q4">Q4 ${y}</option>
-            </optgroup>
-          `).join('')}
+          ${reportingQuarters().slice().reverse().map(q => `<option value="${q}">${q.slice(5)} ${q.slice(0, 4)}</option>`).join('')}
         </select>
       </div>
     </div>
