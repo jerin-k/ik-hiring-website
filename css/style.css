@@ -1189,7 +1189,8 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .hm-summary th, .hm-summary td { padding-left: 0.5rem; padding-right: 0.5rem; }
 .hm-summary td.gapcell { min-width: 0; }
 .hm-summary .sublab { white-space: normal; }
-.hm-summary th.jn-th { text-align: left; white-space: normal; }
+/* #151: every heading on this table is centred (the cells below stay left) — see hm-report.js's own style block. */
+.hm-summary th.jn-th { white-space: normal; }
 .hm-summary td.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.4; white-space: normal;
   overflow-wrap: anywhere; vertical-align: top; }
 .hm-summary td.jn-sum { color: var(--muted); font-size: 0.6875rem; }

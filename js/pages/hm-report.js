@@ -271,13 +271,25 @@ export function renderHmReport(data) {
          4.75rem, and Who is joining / Remarks get real width. Widths live HERE because this block loads after
          style.css and wins at equal specificity. */
       .hm-report .hm-summary { width:100%; min-width:76.5rem; table-layout:fixed; }
-      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:14rem; }
+      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { width:14rem; }
+      .hm-report .hm-summary td:first-child { text-align:left; }   /* the heading above it is centred like the rest (#151) */
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
-        text-align:right; width:4.5rem; white-space:nowrap; font-variant-numeric:tabular-nums; }
-      /* A clipped heading ("TOTAL OPEN…") is worse than a two-line one, so headings wrap in the narrow columns. */
-      .hm-report .hm-summary th:not(:first-child) { white-space:normal; line-height:1.25; vertical-align:bottom; }
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:16rem; text-align:left; white-space:normal; }
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; text-align:left; white-space:normal; }
+        width:4.5rem; font-variant-numeric:tabular-nums; }
+      .hm-report .hm-summary td:not(:first-child) { white-space:nowrap; }
+      /* #151 (Jerin, 19 Sep — mock-up v3, option G): single numbers CENTRED, wordy cells LEFT, and one heading row that
+         is centred both ways, in sentence case, on a pale band with thin dividers. A clipped heading is worse than a
+         two-line one, so headings wrap. */
+      .hm-report .hm-summary td:not(:first-child) { text-align:center; }
+      .hm-report .hm-summary td:nth-child(8), .hm-report .hm-summary td:nth-child(9) { text-align:left; }
+      .hm-report .hm-summary th {
+        text-align:center; vertical-align:middle; text-transform:none; letter-spacing:0; white-space:normal;
+        line-height:1.25; height:2.9rem; color:var(--accent-deep); background:#eef2f8;
+        border-bottom:2px solid #b9c7e0; border-right:1px solid #dae1ee; }
+      .hm-report .hm-summary th:last-child { border-right:0; }
+      /* the Delta bar and its caption centre under the heading like every other number */
+      .hm-report .hm-summary .deltacell { justify-content:center; }
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:16rem; white-space:normal; }
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; white-space:normal; }
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
       .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:6.5rem; }   /* Dropped + % caption */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:9.5rem; }   /* Delta: track + number + caption */
@@ -316,7 +328,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Delta</th><th>Missed</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th>Missed</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
