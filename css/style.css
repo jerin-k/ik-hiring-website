@@ -758,10 +758,18 @@ th.c-rec,  td.c-rec  { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-cand, td.c-cand { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-open, td.c-open { width: 9rem; min-width: 9rem; max-width: 9rem; }
 th.c-stage, td.c-stage { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; }
+/* #146: whether the JOB behind a Data Hygiene row is still Open, or Closed/Archived. One word, so it is the
+   narrowest of the text families — sized for "Archived" and never wrapped, since a wrapped one-word column
+   just looks broken. It appears on every hygiene list that names a job. */
+th.c-jstat, td.c-jstat { width: 6rem; min-width: 6rem; max-width: 6rem; text-align: left; }
 th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage,
 td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage {
   white-space: normal; overflow-wrap: anywhere; }
 td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage { text-align: left; }
+/* A closed or archived job is the signal "this row probably needs nobody" — quieter than a live one.
+   ⚠ NOT scoped to `td.c-jstat`: js/table-cols.js stamps the family onto flat tables but leaves the Unassigned
+   TREE's cells unclassed, so a scoped rule greyed seven lists out of eight and silently missed the tree. */
+.js-shut { color: var(--muted); }
 /* A pinned text column cannot let an inline pill hold it open at its own width, or the wrap never happens. */
 td.c-dept .pl-dept, td.c-job .pl-job, td.c-rec .pl-rec, td.c-cand .pl-cand { white-space: normal; }
 

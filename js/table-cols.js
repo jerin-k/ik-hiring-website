@@ -17,13 +17,14 @@
 //   c-bar           a number with a bar beside it             9.5rem
 //   c-date          a date with its context under it          9rem
 //   c-dept c-job c-rec c-cand c-open c-stage                  one width each, WRAPPING
+//   c-jstat         a job's Open / Closed / Archived state      6rem, one word, never wrapped
 //   c-txt           opt out — size yourself (IDs, free text)
 //
 // 🚨 A heading row is not one cell per column. The Fulfilment tables use rowspan="2" for the ungrouped measures
 // and colspan="2" for the Heads/Score pairs, so header cell #5 is not column #5. headingsByColumn() lays the
 // header out as a real grid and reports the BOTTOM-most heading of each column, which is the one that names it.
 
-const FAMILIES = ['c-num', 'c-pct', 'c-cap', 'c-bar', 'c-date', 'c-dept', 'c-job', 'c-rec', 'c-cand', 'c-open', 'c-stage', 'c-txt'];
+const FAMILIES = ['c-num', 'c-pct', 'c-cap', 'c-bar', 'c-date', 'c-dept', 'c-job', 'c-rec', 'c-cand', 'c-open', 'c-stage', 'c-jstat', 'c-txt'];
 
 // Lay the <thead> out as a grid, honouring rowspan and colspan, and return the deepest heading cell per column.
 function headingsByColumn(table) {

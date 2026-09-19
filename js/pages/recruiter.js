@@ -521,28 +521,28 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="unassigned">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:18.75rem">Department / Job / Candidate</th><th class="c-stage">Stage</th><th class="c-date">Applied</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Department / Job / Candidate</th><th class="c-jstat">Job status</th><th class="c-stage">Stage</th><th class="c-date">Applied</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
               <tbody id="hygUnassignedBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="multirec" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-job">Job</th><th class="c-cand">Candidate</th><th style="min-width:15rem">Recruiters tagged</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
+              <thead><tr><th class="c-job">Job</th><th class="c-jstat">Job status</th><th class="c-cand">Candidate</th><th style="min-width:15rem">Recruiters tagged</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
               <tbody id="hygMultiRecBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="multisrc" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-job">Job</th><th class="c-cand">Candidate</th><th style="min-width:15rem">Sourcers tagged</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
+              <thead><tr><th class="c-job">Job</th><th class="c-jstat">Job status</th><th class="c-cand">Candidate</th><th style="min-width:15rem">Sourcers tagged</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
               <tbody id="hygMultiSrcBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nosrc" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-dept">Department</th><th>Outcome</th><th class="c-date">Start date</th><th class="c-rec">Recruiter</th></tr></thead>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th>Outcome</th><th class="c-date">Start date</th><th class="c-rec">Recruiter</th></tr></thead>
               <tbody id="hygNoSrcBody"></tbody>
             </table></div>
           </div>
@@ -578,21 +578,21 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="offergap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-dept">Department</th><th class="c-stage">Stage</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th class="c-stage">Stage</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
               <tbody id="hygOfferGapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="hiredgap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-dept">Department</th><th class="c-stage">Stage</th><th>Status</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th class="c-stage">Stage</th><th>Application status</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
               <tbody id="hygHiredGapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nodate" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-dept">Department</th><th>Job status</th><th class="c-txt">Opening ID</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th class="c-txt">Opening ID</th></tr></thead>
               <tbody id="hygNoDateBody"></tbody>
             </table></div>
           </div>
@@ -606,7 +606,7 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="unscored" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-dept">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th class="c-num">Applications</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th class="c-num">Applications</th></tr></thead>
               <tbody id="hygUnscoredBody"></tbody>
             </table></div>
           </div>
@@ -2158,11 +2158,20 @@ export function initRecruiterFilters(baseData) {
     const multiSrc = floor ? (dq.multiSourcer || []) : [];
     const byLast = (a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || ''));
     const jobBy8 = {}; (data.jobs || []).forEach(j => { jobBy8[j.id] = j; });
+    // #146 (Jerin, 19 Sep 2026): every hygiene row that names a job says whether that job is still Open, or
+    // already Closed/Archived — which is what decides whether anybody needs to act on the row at all.
+    // 🔑 Resolved by job ID, never by title: several titles are shared across departments (Rule 11b).
+    const jobStatusOf = (job8) => (jobBy8[job8] || {}).status || '';
+    const jobStatusCell = (job8) => {
+      const st = jobStatusOf(job8);
+      if (!st) return '<td>—</td>';
+      return `<td><span class="${st === 'Open' ? '' : 'js-shut'}">${esc(st)}</span></td>`;
+    };
 
     // --- Unassigned: Department -> Job -> Candidate (Jerin: "listed department-wise") ---
     const uBody = document.getElementById('hygUnassignedBody');
     if (uBody) {
-      if (!floor) uBody.innerHTML = waitRow(5);
+      if (!floor) uBody.innerHTML = waitRow(6);
       else {
         const byDept = {};
         unassigned.forEach(u => {
@@ -2176,18 +2185,18 @@ export function initRecruiterFilters(baseData) {
         let html = '';
         Object.keys(byDept).sort((a, b) => sizeOf(byDept[b]) - sizeOf(byDept[a]) || a.localeCompare(b)).forEach((dn, di) => {
           const jobs = byDept[dn], nD = sizeOf(jobs), nJ = Object.keys(jobs).length;
-          html += `<tr class="lvl-pod" data-pod="u${di}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${esc(dn)}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${nD}</span></td><td colspan="4" style="color:var(--muted);font-size:0.6875rem">${nD} candidate${nD === 1 ? '' : 's'} across ${nJ} job${nJ === 1 ? '' : 's'}</td></tr>`;
+          html += `<tr class="lvl-pod" data-pod="u${di}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${esc(dn)}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${nD}</span></td><td colspan="5" style="color:var(--muted);font-size:0.6875rem">${nD} candidate${nD === 1 ? '' : 's'} across ${nJ} job${nJ === 1 ? '' : 's'}</td></tr>`;
           Object.keys(jobs).sort((a, b) => jobs[b].length - jobs[a].length || a.localeCompare(b)).forEach((jt, ji) => {
             const rk = `u${di}-${ji}`, rows = jobs[jt];
-            html += `<tr class="lvl-rec" data-pod="u${di}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:1.625rem;font-weight:500">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${rows.length}</span></td><td colspan="4"></td></tr>`;
+            html += `<tr class="lvl-rec" data-pod="u${di}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:1.625rem;font-weight:500">${CARET}${esc(jt)}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${rows.length}</span></td>${jobStatusCell(rows[0] && rows[0].job8)}<td colspan="4"></td></tr>`;
             rows.slice().sort(byLast).forEach(u => {
-              html += `<tr class="lvl-stage" data-pod="u${di}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem">${esc(u.candidate || '(candidate name not captured)')}</td><td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${esc(u.lastActivity || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
+              html += `<tr class="lvl-stage" data-pod="u${di}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem">${esc(u.candidate || '(candidate name not captured)')}</td><td></td><td>${esc(u.stage || '')}</td><td>${esc(u.createdAt || '')}</td><td>${esc(u.lastActivity || '')}</td><td>${mono(u.applicationId)}</td></tr>`;
             });
           });
         });
         const total = unassignedTotal;
-        if (html && total > unassigned.length) html += `<tr><td colspan="5" style="color:var(--muted);font-size:0.6875rem">Showing the ${unassigned.length.toLocaleString()} with the most recent activity, of ${total.toLocaleString()}. The CSV holds the same rows.</td></tr>`;
-        uBody.innerHTML = html || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">Nobody unassigned since ${FLOOR_LONG}. ✓</td></tr>`;
+        if (html && total > unassigned.length) html += `<tr><td colspan="6" style="color:var(--muted);font-size:0.6875rem">Showing the ${unassigned.length.toLocaleString()} with the most recent activity, of ${total.toLocaleString()}. The CSV holds the same rows.</td></tr>`;
+        uBody.innerHTML = html || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">Nobody unassigned since ${FLOOR_LONG}. ✓</td></tr>`;
         wireVelTree(uBody);
       }
     }
@@ -2195,11 +2204,11 @@ export function initRecruiterFilters(baseData) {
     // --- Multiple Recruiters / Multiple Sourcers ---
     const jobTitleBy8 = {}; (data.jobs || []).forEach(j => { jobTitleBy8[j.id] = j.title; });
     const anomalyRows = list => list.slice().sort(byLast).map(m =>
-      `<tr><td>${esc(jobTitleBy8[m.job8] || m.job8 || '')}</td><td>${esc(m.candidate || '—')}</td><td>${(m.names || []).map(esc).join(', ')}</td><td>${esc(m.lastActivity || '')}</td><td>${mono(m.app)}</td></tr>`).join('');
+      `<tr><td>${esc(jobTitleBy8[m.job8] || m.job8 || '')}</td>${jobStatusCell(m.job8)}<td>${esc(m.candidate || '—')}</td><td>${(m.names || []).map(esc).join(', ')}</td><td>${esc(m.lastActivity || '')}</td><td>${mono(m.app)}</td></tr>`).join('');
     const mrBody = document.getElementById('hygMultiRecBody');
-    if (mrBody) mrBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiRec) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">No application has more than one Recruiter since ${FLOOR_LONG}. ✓</td></tr>`);
+    if (mrBody) mrBody.innerHTML = !floor ? waitRow(6) : (anomalyRows(multiRec) || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">No application has more than one Recruiter since ${FLOOR_LONG}. ✓</td></tr>`);
     const msBody = document.getElementById('hygMultiSrcBody');
-    if (msBody) msBody.innerHTML = !floor ? waitRow(5) : (anomalyRows(multiSrc) || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">No application has more than one Sourcer since ${FLOOR_LONG}. ✓</td></tr>`);
+    if (msBody) msBody.innerHTML = !floor ? waitRow(6) : (anomalyRows(multiSrc) || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">No application has more than one Sourcer since ${FLOOR_LONG}. ✓</td></tr>`);
 
     // --- Opening-link gaps: one array from the pipeline, split by whether it is still actionable. #13: an offer counts when it was
     // MADE or the person JOINS on or after the floor (Jerin: "offers in Q3 or DOJ in Q3 - or later"). ---
@@ -2209,13 +2218,13 @@ export function initRecruiterFilters(baseData) {
     const gapDone = gaps.filter(g => !g.needsFix);
     const ogBody = document.getElementById('hygOfferGapBody');
     if (ogBody) {
-      ogBody.innerHTML = gapLive.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:1rem">Every live offer since ${FLOOR_LONG} has an opening attached. ✓</td></tr>`;
+      ogBody.innerHTML = gapLive.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td>${jobStatusCell(g.jobId8)}<td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="8" style="text-align:center;color:var(--green);padding:1rem">Every live offer since ${FLOOR_LONG} has an opening attached. ✓</td></tr>`;
     }
     const hgBody = document.getElementById('hygHiredGapBody');
     if (hgBody) {
-      hgBody.innerHTML = gapDone.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td><td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Nothing here since ${FLOOR_LONG}.</td></tr>`;
+      hgBody.innerHTML = gapDone.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td>${jobStatusCell(g.jobId8)}<td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Nothing here since ${FLOOR_LONG}.</td></tr>`;
     }
 
     // --- Roles that score zero for the selected quarter ---
@@ -2242,8 +2251,8 @@ export function initRecruiterFilters(baseData) {
     if (ndBody) {
       ndBody.innerHTML = noDate.map(o => `<tr>
         <td style="font-weight:500">${esc(o.title || '(job not found)')}${o.jobs > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">+${o.jobs - 1} more job${o.jobs > 2 ? 's' : ''}</span>` : ''}</td>
+        <td><span class="${o.status === 'Open' ? '' : 'js-shut'}">${esc(o.status || '—')}</span></td>
         <td>${esc(o.department || '—')}</td>
-        <td class="${o.status === 'Open' ? 'warn' : 'zero'}">${esc(o.status || '—')}</td>
         <td>${mono(o.openingId || '')}</td></tr>`).join('')
         || `<tr><td colspan="4" style="text-align:center;color:var(--green);padding:1rem">Every opening has an opened date. ✓</td></tr>`;
     }
@@ -2282,12 +2291,13 @@ export function initRecruiterFilters(baseData) {
     if (usBody) {
       usBody.innerHTML = unscored.map(({ j, reason }) => `<tr>
         <td style="font-weight:500">${esc(j.title || '(untitled)')}</td>
+        ${jobStatusCell(j.id)}
         <td>${esc(j.department || '—')}</td>
         <td class="${reason === 'Level' ? 'zero' : ''}">${esc(j.level || '—')}</td>
         <td>${esc(j.complexity || '—')}</td>
         <td style="color:var(--orange);font-weight:500">${reason}</td>
         <td>${j.total || 0}</td></tr>`).join('')
-        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">Every role scores for this quarter. ✓</td></tr>`;
+        || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:1rem">Every role scores for this quarter. ✓</td></tr>`;
     }
 
     // --- Other anomalies ---
@@ -2358,8 +2368,8 @@ export function initRecruiterFilters(baseData) {
     const nsBody = document.getElementById('hygNoSrcBody');
     if (nsBody) {
       const nsColour = { 'Joined': 'var(--green)', 'Joining pending': 'var(--orange)', 'Dropped after offer': 'var(--muted)' };
-      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr><td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td><td>${esc(e.department)}</td><td><span style="font-size:0.6875rem;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td><td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
-        || `<tr><td colspan="6" style="text-align:center;color:var(--green);padding:1rem">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
+      nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr><td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td>${jobStatusCell(e.jobId8)}<td>${esc(e.department)}</td><td><span style="font-size:0.6875rem;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td><td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
+        || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:1rem">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
     }
 
     // --- Pod Not Set: the numbers this tab deliberately leaves out. getFilteredRecs() drops anyone whose pod resolves to "Unassigned"
@@ -2434,14 +2444,14 @@ export function initRecruiterFilters(baseData) {
 
     // --- CSV export per list (client-side; no backend) ---
     hygCsv = {
-      unassigned: () => [['Department', 'Job', 'Candidate', 'Stage', 'Applied', 'Last activity', 'Application ID'],
-        ...unassigned.slice().sort(byLast).map(u => { const jd = jobBy8[u.job8] || {}; return [u.department || jd.department || '', u.jobTitle || jd.title || u.job8 || '', u.candidate || '', u.stage || '', u.createdAt || '', u.lastActivity || '', u.applicationId || '']; })],
-      multirec: () => [['Job', 'Candidate', 'Recruiters tagged', 'Last activity', 'Application ID'],
-        ...multiRec.slice().sort(byLast).map(m => [jobTitleBy8[m.job8] || m.job8 || '', m.candidate || '', (m.names || []).join(' | '), m.lastActivity || '', m.app || ''])],
-      multisrc: () => [['Job', 'Candidate', 'Sourcers tagged', 'Last activity', 'Application ID'],
-        ...multiSrc.slice().sort(byLast).map(m => [jobTitleBy8[m.job8] || m.job8 || '', m.candidate || '', (m.names || []).join(' | '), m.lastActivity || '', m.app || ''])],
-      nosrc: () => [['Candidate', 'Job', 'Department', 'Outcome', 'Start date', 'Offer created', 'Recruiter', 'Quarter'],
-        ...noSrc.map(({ e, outcome }) => [String(e.candidate || '').trim(), e.jobTitle || '', e.department || '', outcome, e.startDate || '', e.offerCreatedAt || '', e.recruiter || '', q])],
+      unassigned: () => [['Department', 'Job', 'Job status', 'Candidate', 'Stage', 'Applied', 'Last activity', 'Application ID'],
+        ...unassigned.slice().sort(byLast).map(u => { const jd = jobBy8[u.job8] || {}; return [u.department || jd.department || '', u.jobTitle || jd.title || u.job8 || '', jobStatusOf(u.job8), u.candidate || '', u.stage || '', u.createdAt || '', u.lastActivity || '', u.applicationId || '']; })],
+      multirec: () => [['Job', 'Job status', 'Candidate', 'Recruiters tagged', 'Last activity', 'Application ID'],
+        ...multiRec.slice().sort(byLast).map(m => [jobTitleBy8[m.job8] || m.job8 || '', jobStatusOf(m.job8), m.candidate || '', (m.names || []).join(' | '), m.lastActivity || '', m.app || ''])],
+      multisrc: () => [['Job', 'Job status', 'Candidate', 'Sourcers tagged', 'Last activity', 'Application ID'],
+        ...multiSrc.slice().sort(byLast).map(m => [jobTitleBy8[m.job8] || m.job8 || '', jobStatusOf(m.job8), m.candidate || '', (m.names || []).join(' | '), m.lastActivity || '', m.app || ''])],
+      nosrc: () => [['Candidate', 'Job', 'Job status', 'Department', 'Outcome', 'Start date', 'Offer created', 'Recruiter', 'Quarter'],
+        ...noSrc.map(({ e, outcome }) => [String(e.candidate || '').trim(), e.jobTitle || '', jobStatusOf(e.jobId8), e.department || '', outcome, e.startDate || '', e.offerCreatedAt || '', e.recruiter || '', q])],
       dates: () => [['Check', 'Recruiter', 'Quarter', 'Work found', 'Started on', 'Left on'],
         ...datesOut.map(({ r, qq, w, d }) => ['Work credited outside their dates', r.name, qq, workTxt(w), d.start || '', d.end || '']),
         ...datesNoEnd.map(r => ['Ashby account disabled, no Left on date', r.name, lastWorkQ(r.name), '', (datesMap[r.name] || {}).start || '', '']),
@@ -2450,16 +2460,16 @@ export function initRecruiterFilters(baseData) {
         ...noPod.map(({ r, total, offers, hired, jp }) => [r.name, total, offers, hired, jp])],
       nocap: () => [['Recruiter', 'Pod', 'Offers (all-time)', 'Hired (all-time)', 'Joining pending'],
         ...noCap.map(({ r, pod, offers, hired, jp }) => [r.name, pod, offers, hired, jp])],
-      offergap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Offer made', 'DOJ', 'Recruiter'],
-        ...gapLive.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
-      hiredgap: () => [['Candidate', 'Job', 'Department', 'Stage', 'Status', 'Offer made', 'DOJ', 'Recruiter'],
-        ...gapDone.map(g => [g.candidate || '', g.job || '', g.department || '', g.subStage || '', g.appStatus || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
+      offergap: () => [['Candidate', 'Job', 'Job status', 'Department', 'Stage', 'Offer made', 'DOJ', 'Recruiter'],
+        ...gapLive.map(g => [g.candidate || '', g.job || '', jobStatusOf(g.jobId8), g.department || '', g.subStage || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
+      hiredgap: () => [['Candidate', 'Job', 'Job status', 'Department', 'Stage', 'Application status', 'Offer made', 'DOJ', 'Recruiter'],
+        ...gapDone.map(g => [g.candidate || '', g.job || '', jobStatusOf(g.jobId8), g.department || '', g.subStage || '', g.appStatus || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
       noopening: () => [['Job', 'Department', 'New candidates', 'R1 screened', 'Assessed', 'Finished stays', 'Interviews', 'Openings in Ashby'],
         ...noOpening.map(x => [x.j.title || '', x.j.department || '', x.tofu, x.r1, x.assessed, x.stays, x.interviews, x.openings])],
-      nodate: () => [['Job', 'Department', 'Job status', 'Opening ID', 'Jobs on this opening'],
-        ...noDate.map(o => [o.title || '', o.department || '', o.status || '', o.openingId || '', o.jobs || 1])],
-      unscored: () => [['Job', 'Department', 'Level', 'Complexity', 'Reason', 'Applications'],
-        ...unscored.map(({ j, reason }) => [j.title || '', j.department || '', j.level || '', j.complexity || '', reason || '', j.total || 0])],
+      nodate: () => [['Job', 'Job status', 'Department', 'Opening ID', 'Jobs on this opening'],
+        ...noDate.map(o => [o.title || '', o.status || '', o.department || '', o.openingId || '', o.jobs || 1])],
+      unscored: () => [['Job', 'Job status', 'Department', 'Level', 'Complexity', 'Reason', 'Applications'],
+        ...unscored.map(({ j, reason }) => [j.title || '', jobStatusOf(j.id), j.department || '', j.level || '', j.complexity || '', reason || '', j.total || 0])],
       anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
     };
   }
