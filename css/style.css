@@ -269,11 +269,22 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   position: sticky; top: 0; z-index: 41;
   background: #e2e9f5; border-color: #cdd8ea; border-bottom: 1px solid #cdd8ea; border-radius: 0;
 }
-.sc-stick-filters {
-  position: sticky; top: var(--sc-band, 0px); z-index: 40;
-  background: #e2e9f5; border-bottom: 2px solid #b9c7e0;
-  box-shadow: 0 0.1875rem 0.45rem rgba(34, 52, 79, 0.10);
-  border-radius: 0 0 0.625rem 0.625rem;
+.sc-stick-filters { position: sticky; top: var(--sc-band, 0px); z-index: 40; }
+/* 🚨 Jerin, 19 Sep: "the filter panel thats frozen looks transparent". It WAS transparent, all day.
+   `.rec-filters, .eff-filters, .hm-filters, .iv-filters` further down this file sets
+   `background: none !important; border: 0 !important; box-shadow: none !important` — the 31 Aug "one quiet
+   row" change. Same specificity as a plain `.sc-stick-filters`, declared LATER, and !important on top, so the
+   frozen row lost its background, its bottom rule AND its shadow while the band above kept its tint. A frozen
+   row with no background is not a frozen row: the table scrolls straight under it.
+   The id raises specificity above that rule; !important is needed because the loser here is !important too.
+   ⚠ Do not "simplify" this back to a plain class selector. */
+#page-content .sc-stick-filters {
+  background: #e2e9f5 !important;
+  border-bottom: 2px solid #b9c7e0 !important;
+  box-shadow: 0 0.1875rem 0.45rem rgba(34, 52, 79, 0.10) !important;
+  border-radius: 0 0 0.625rem 0.625rem !important;
+  /* the two rows are one block, so no page showing through between them */
+  margin-top: 0 !important;
 }
 /* the page's own name, where the navy block used to say it */
 .sc-name {
