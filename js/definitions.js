@@ -592,6 +592,33 @@ export const DEFINITIONS = {
     ]
   },
 
+  // #145b (Jerin, 19 Sep 2026 — option A). The mirror of 'eff-pipeline', split by pod and recruiter. The one
+  // thing it has to explain that the other does not is the untagged row: most of the pipeline has no
+  // recruiter, and a reader who does not know that would misread every row under it.
+  'rec-pipeline': {
+    summary: 'How these numbers are worked out',
+    intro: 'The same live snapshot as the Pipeline panel on Overall Efficiency and the Hiring Manager tab &mdash; where candidates stand right now &mdash; split by <strong>pod, then recruiter, then job</strong>. It is the one table on this page whose numbers the period does not change, so From and To are hidden on this sub-tab. Shading: a deeper teal behind a number means more people, compared within that stage&rsquo;s column; zeros stay grey.',
+    confirmed: 'Definitions confirmed with Jerin \u00b7 added to this tab, with the untagged row (#145b, option A) 19 Sep 2026',
+    groups: [
+      {
+        heading: 'Reading the table',
+        items: [
+          ['The numbers', 'How many candidates are in that stage <strong>today</strong>; archived candidates are left out. <strong>Hired</strong> is everyone hired on the role so far, because a hired candidate stays at Hired.'],
+          ['In pipeline', 'The stage columns shown, added up &mdash; the people standing somewhere in the process right now. &#9888; Overall Efficiency&rsquo;s Pipeline panel has a column called <strong>Total</strong> instead, and it means something different: every application the role ever had, archived ones included. Compare the <em>stage</em> columns between the two panels, never those two.'],
+          ['Pod / Recruiter / Job', 'Pods, then the recruiters in them, then the roles each recruiter is tagged on. Click a pod to open it, then a recruiter. A candidate counts for the recruiter tagged on <strong>that candidate</strong>, not on the job &mdash; half the live roles have more than one recruiter, so a job cannot be split any other way.'],
+          ['No recruiter tagged', 'The last row. These are candidates with <strong>nobody tagged on them</strong> &mdash; on 19 September that was 24,566 of the 31,046 people in a pipeline, four out of five, most of them sitting in App Review where nobody has picked them up yet. They are shown rather than dropped so this panel adds up to the same total as the Pipeline panel on Overall Efficiency. <strong>Use the Data Hygiene sub-tab to get them tagged.</strong>'],
+          ['What Year and Quarter do', 'They decide <strong>which roles are listed</strong> &mdash; only those with an opening in the selected period. Each role&rsquo;s own counts do not change with it.'],
+          ['Stages and Hide zero-pipeline', 'The <strong>Stages</strong> dropdown chooses which stage columns appear; with nothing picked every stage shows. <em>Hide zero-pipeline</em> drops anyone with nobody in the stages shown &mdash; which is also how you set App Review aside and see only the stages recruiters actively work.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['It will not match this tab&rsquo;s other panels', 'Everything else here measures what a recruiter <em>did</em> in a period. This measures where the pipeline <em>is</em>, today, including work nobody is credited for.'],
+      ['Recruiter not listed on this tab', 'A second grey row, above the untagged one. These candidates <em>are</em> tagged &mdash; to somebody this tab leaves out, because they have left or have no pod set for the quarter. They earn no row and no credit inside a pod, which is this tab&rsquo;s standing rule, but their candidates are still standing in the process, so they are counted here rather than dropped.'],
+      ['Time in Process answers &ldquo;how long&rdquo;', 'This table says how many people are at each stage, never how long they have been there. The waiting times live on the Time in Process sub-tab.'],
+      ['A recruiter with no pod is not here', 'As everywhere on this tab, a recruiter with no pod set for the quarter is left out of the rows and the total. Admin &rarr; Pod &amp; Capacity fixes that.'],
+    ]
+  },
   'eff-pipeline': {
     summary: 'How these numbers are worked out',
     intro: 'The same live snapshot the Hiring Manager tab shows, on this tab’s Department and Job filters: where candidates stand right now. It is the one table on this page whose numbers the period does not change, so From and To are hidden on this sub-tab. Shading: a deeper teal behind a number means more people, compared within that stage’s column (departments with departments, jobs with jobs); zeros stay grey.',
