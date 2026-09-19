@@ -1181,13 +1181,24 @@ td.tis .gs-wait .tis-wait { color:inherit; }
    Option B of the mock-up: both live INSIDE the cell. The names stay small and left-aligned so a column of
    numbers is never mistaken for a column of text; a long list collapses to "+N more" rather than stretching
    the row. Remarks are saved by js/job-notes.js — amber means this browser has it and the server does not. */
-.hm-summary th.jn-th { text-align: left; }
-.hm-summary td.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.45; max-width: 15rem; white-space: normal; vertical-align: top; }
+/* #150b (Jerin, 19 Sep: "its blahh. Data overlapping too."): nine columns were splitting the width equally, so the
+   two text cells got 117px each and every name overflowed into Remarks. The seven number columns now shrink to their
+   content and the text columns take what is left. */
+/* Column WIDTHS for this table live in the page's own <style> in hm-report.js — that block loads after this file
+   and wins at equal specificity, so setting them here would do nothing (the trap that hid this bug). */
+.hm-summary th, .hm-summary td { padding-left: 0.5rem; padding-right: 0.5rem; }
+.hm-summary td.gapcell { min-width: 0; }
+.hm-summary .sublab { white-space: normal; }
+.hm-summary th.jn-th { text-align: left; white-space: normal; }
+.hm-summary td.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.4; white-space: normal;
+  overflow-wrap: anywhere; vertical-align: top; }
 .hm-summary td.jn-sum { color: var(--muted); font-size: 0.6875rem; }
-.jn-who .jn-p { display: block; }
-.jn-who .jn-p b { font-weight: 600; color: var(--text-secondary); }
-.jn-who .jn-d { color: var(--green); font-weight: 600; margin-left: 0.3125rem; font-variant-numeric: tabular-nums; }
-.jn-who .jn-s { color: var(--muted); margin-left: 0.3125rem; }
+/* One person, two lines: the name, then a quiet meta line. Inline name + date + stage ran past the cell. */
+.jn-who .jn-p { display: block; margin-bottom: 0.25rem; }
+.jn-who .jn-p:last-of-type { margin-bottom: 0; }
+.jn-who .jn-p b { display: block; font-weight: 600; color: var(--text-secondary); }
+.jn-who .jn-m { display: block; font-size: 0.625rem; color: var(--muted); }
+.jn-who .jn-d { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
 .jn-who .jn-extra { display: none; }
 .jn-who.jn-open .jn-extra { display: block; }
 .jn-more, .jn-add, .jn-text {
@@ -1195,7 +1206,8 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 }
 .jn-more { color: var(--accent-deep); font-weight: 600; margin-top: 0.125rem; }
 .jn-more:hover, .jn-add:hover, .jn-text:hover { text-decoration: underline; }
-.jn-add { color: var(--muted); }
+.jn-add { color: #aeb6c8; font-weight: 600; letter-spacing: 0.01em; }
+.hm-summary tr:hover .jn-add, .jn-add:focus-visible { color: var(--accent-deep); }
 .jn-text { color: var(--text-secondary); display: block; }
 .jn-rem .jn-by { display: block; color: var(--muted); font-size: 0.625rem; margin-top: 0.125rem; }
 .jn-unsaved .jn-text { color: var(--orange); }
