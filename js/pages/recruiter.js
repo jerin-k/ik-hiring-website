@@ -424,8 +424,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Position Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:15rem">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Current Qtr</th><th colspan="2" class="stage-hdr">JP — Upcoming Qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:15rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th rowspan="2" class="stage-hdr">JP total</th><th colspan="2" class="stage-hdr">JP — current qtr</th><th colspan="2" class="stage-hdr">JP — upcoming qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
@@ -433,8 +433,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr">Joined total</th><th colspan="2" class="stage-hdr">Joined — prev qtr openings</th><th colspan="2" class="stage-hdr">Joined — current qtr openings</th><th rowspan="2" class="stage-hdr">JP total</th><th colspan="2" class="stage-hdr">JP — prev qtr openings</th><th colspan="2" class="stage-hdr">JP — current qtr openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
@@ -442,8 +442,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Others (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr" style="text-align:right">Capacity<br><span style="font-weight:400;text-transform:none">Score</span></th><th rowspan="2" class="stage-hdr">Joined<br>Total</th><th colspan="2" class="stage-hdr">Joined — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">Joined — Current Qtr Openings</th><th rowspan="2" class="stage-hdr">JP<br>Total</th><th colspan="2" class="stage-hdr">JP — Prev Qtr Openings</th><th colspan="2" class="stage-hdr">JP — Current Qtr Openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr">Capacity<br>Utilisation</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr">Joined total</th><th colspan="2" class="stage-hdr">Joined — prev qtr openings</th><th colspan="2" class="stage-hdr">Joined — current qtr openings</th><th rowspan="2" class="stage-hdr">JP total</th><th colspan="2" class="stage-hdr">JP — prev qtr openings</th><th colspan="2" class="stage-hdr">JP — current qtr openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOthersBody"></tbody>
       </table></div>
@@ -1359,15 +1359,20 @@ export function initRecruiterFilters(baseData) {
       // the outcome. Do not put Offered back.
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
-        return `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal HC / Score
-          + (narrowed() ? `<td class="score" title="${NARROW_CAP_NOTE}">${DASH}</td>` : `<td class="score">${c(v.capSc)}</td>`)                               // Capacity Score
+        // #148 option B (Jerin, 19 Sep 2026): Capacity and Capacity Utilisation now sit together at the front.
+        // Capacity Utilisation used to be the 16th column and fell outside the panel; beside the capacity it
+        // is measured against, it is both readable and in view. THE ORDER HERE MUST MATCH THE HEADER ROWS
+        // ABOVE — they are written out by hand, so changing one without the other silently shifts every
+        // number one column sideways.
+        return (narrowed() ? `<td class="score" title="${NARROW_CAP_NOTE}">${DASH}</td>` : `<td class="score">${c(v.capSc)}</td>`)   // Capacity
+          + utilCell(v)                                                           // Capacity used
+          + `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal heads / score
           + (isSales                                                          // #39: Sales/Others split Joined
               ? joinedCells(v)                                                  //   total + prev-qtr + current-qtr
               : `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
           + jpCells(v)                                                          // Joining Pending: total + 2 buckets
           + dropCells(v)                                                        // Drop HC / Score + % subtext
-          + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v)                     // Gap HC / Score + bar
-          + utilCell(v);                                                          // Capacity Utilisation
+          + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v);                    // Delta heads / score + bar
       };
 
       const recFulfil = (r) => {

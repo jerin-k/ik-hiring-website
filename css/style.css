@@ -533,9 +533,21 @@ tr:hover td { background: #f8fafc; }
 }
 
 /* ===== Throughput Stage Cells ===== */
-.stage-hdr { background: var(--border-light) !important; text-align: center !important; border-left: 1px solid var(--border);
-  color: var(--text-secondary); }
-.stage-sub { text-align: center !important; font-size: 0.625rem !important; font-weight: 500 !important; color: var(--muted); }
+/* #148 option B (Jerin, 19 Sep 2026): the grouped header kept BOTH columns per measure and was restyled
+   instead. The capitals came from the bare `th` rule, not from here — hence the text-transform reset. The
+   band, the 2px rule and the 1px dividers are #151's house style, so these tables now match every other
+   table on the site; the group row is a shade deeper than the Heads/Score row beneath it so the pairing
+   reads without a heavier border. ⚠ Jerin chose B knowing it stays 16 columns and still runs past the
+   panel — that was on the mock-up. It fixes the reading, not the width. */
+table.metrics thead th { text-transform: none; letter-spacing: 0; white-space: normal; line-height: 1.25; }
+.stage-hdr { background: #e4ebf6 !important; text-align: center !important; vertical-align: middle;
+  border-left: 1px solid #b9c7e0; border-bottom: 1px solid #cdd8ea;
+  color: var(--accent-deep); font-weight: 600; }
+.stage-sub { text-align: center !important; font-size: 0.625rem !important; font-weight: 500 !important;
+  color: var(--muted); background: #eef2f8 !important; border-left: 1px solid #dae1ee;
+  border-bottom: 2px solid #b9c7e0 !important; }
+/* the first sub-cell of each pair opens a group, so it carries the group's heavier rule */
+.stage-sub.grp-open { border-left: 1px solid #b9c7e0; }
 td.stage-cell { border-left: 1px solid var(--border-light); }
 td.stage-first { border-left: 1px solid var(--border); }
 
