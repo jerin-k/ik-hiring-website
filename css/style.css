@@ -1218,6 +1218,9 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .jn-ta:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 0.1875rem rgba(78,107,166,0.16); }
 .jn-guard { font-size: 0.625rem; color: var(--muted); margin: 0.25rem 0 0; }
 .jn-guard.bad { color: var(--red); }
+/* #152a: the note saved, but under a different Google account than the dashboard sign-in. Amber, not red —
+   nothing was lost and nothing needs redoing; only the name on it is wrong. */
+.jn-guard.warn { color: var(--orange); }
 .jn-actions { display: flex; gap: 0.375rem; margin-top: 0.375rem; }
 .jn-btn { font: inherit; font-size: 0.6875rem; font-weight: 600; cursor: pointer; border-radius: 0.4375rem; padding: 0.1875rem 0.625rem;
   border: 1px solid var(--accent); background: var(--accent); color: #fff; }
