@@ -52,9 +52,14 @@ function jnWhoCell(o) {
   const list = [...(o.jpWho || [])].sort((a, b) => String(a.doj || '9999').localeCompare(String(b.doj || '9999'))
     || String(a.candidate || '').localeCompare(String(b.candidate || '')));
   if (!list.length) return '<td class="jn-cell"><span class="zero">—</span></td>';
-  const line = (c, i) => `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
-    + `<span class="jn-d">${esc(dayLabel(c.doj) || 'date not set')}</span>`
-    + (c.subStage ? `<span class="jn-s">${esc(c.subStage)}</span>` : '') + '</span>';
+  // Name on its own line, then a quiet meta line. "date not set" repeated down the column was noise, so a missing
+  // date simply leaves the stage to speak (Jerin, 19 Sep).
+  const line = (c, i) => {
+    const d = dayLabel(c.doj), st = c.subStage ? esc(c.subStage) : '';
+    const meta = [d ? `<span class="jn-d">${esc(d)}</span>` : '', st].filter(Boolean).join(' · ');
+    return `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
+      + (meta ? `<span class="jn-m">${meta}</span>` : '') + '</span>';
+  };
   const more = list.length > SHOW_FIRST
     ? `<button type="button" class="jn-more" data-jn-more="1">+${list.length - SHOW_FIRST} more</button>` : '';
   return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}</td>`;
@@ -63,7 +68,9 @@ function jnRemarkCell(o) {
   const n = o.job8 ? noteOf(o.job8) : null;
   if (!o.job8) return '<td class="jn-cell"><span class="zero">—</span></td>';
   if (!n || !n.text) {
-    return `<td class="jn-cell jn-rem" data-job8="${esc(o.job8)}"><button type="button" class="jn-add" data-jn-edit="1">Add a remark</button></td>`;
+    // "Add a remark" down every row was nine repetitions of the same sentence; the column heading already says what
+    // this is, so the empty state is a quiet affordance (Jerin, 19 Sep).
+    return `<td class="jn-cell jn-rem" data-job8="${esc(o.job8)}"><button type="button" class="jn-add" data-jn-edit="1" title="Add a remark">+ Add</button></td>`;
   }
   const who = n.unsaved ? 'Unsaved — in this browser only' : `${esc(n.by || 'someone')} · ${esc(n.at ? dayLabel(n.at) : '')}`;
   return `<td class="jn-cell jn-rem${n.unsaved ? ' jn-unsaved' : ''}" data-job8="${esc(o.job8)}">`
@@ -259,13 +266,21 @@ export function renderHmReport(data) {
       /* #13 (2026-08-23): min-width was 720px while the six numeric columns alone need 840, so the table grew
          past it and the ROLE NAME column was squeezed to 0px — that is the 'weird spacing'. The name column
          now has a real width and min-width covers the whole row. */
-      .hm-report .hm-summary { width:100%; min-width:68.75rem; table-layout:fixed; }
-      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:16.25rem; }
+      /* #150b (Jerin, 19 Sep — "its blahh. Data overlapping too."): the number columns held 8.125rem each for figures
+         like "32", which left the two text columns 117px and pushed their contents into one another. Numbers are now
+         4.75rem, and Who is joining / Remarks get real width. Widths live HERE because this block loads after
+         style.css and wins at equal specificity. */
+      .hm-report .hm-summary { width:100%; min-width:76.5rem; table-layout:fixed; }
+      .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { text-align:left; width:14rem; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
-        text-align:right; width:8.125rem; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        text-align:right; width:4.5rem; white-space:nowrap; font-variant-numeric:tabular-nums; }
+      /* A clipped heading ("TOTAL OPEN…") is worse than a two-line one, so headings wrap in the narrow columns. */
+      .hm-report .hm-summary th:not(:first-child) { white-space:normal; line-height:1.25; vertical-align:bottom; }
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:16rem; text-align:left; white-space:normal; }
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; text-align:left; white-space:normal; }
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
-      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:9.375rem; }   /* Dropped + % caption */
-      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:11.25rem; }   /* Delta: track + number + caption */
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:6.5rem; }   /* Dropped + % caption */
+      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:9.5rem; }   /* Delta: track + number + caption */
 
     </style>
 
@@ -588,7 +603,7 @@ export function initHmFilters(data) {
       const cap = delta > 0
         ? `${delta} of ${v.total} still to fill`
         : (delta < 0
-          ? `${-delta} more people in closing than positions opened`
+          ? `${-delta} more in closing than opened`
           : (v.total > 0 ? 'nothing outstanding' : '\u2014'));
       // Drop % denominator INCLUDES Dropped itself (Jerin, 2026-08-22): of everything that reached a
       // conclusion or is about to, what share fell out.
