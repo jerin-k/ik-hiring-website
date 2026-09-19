@@ -125,8 +125,14 @@ export function renderAdmin(accessConfig, data) {
       .adm-card input.cfg-date::-webkit-calendar-picker-indicator { opacity:.45; cursor:pointer; }
       .adm-card input.cfg-date:hover::-webkit-calendar-picker-indicator { opacity:.8; }
       .ac-table { width:100%; border-collapse:collapse; border:0; border-radius:0; }
-      .ac-table th { text-align:left; font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; padding:0.5rem 0.75rem;
-        background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+      /* #151b: the house heading style. This block loads AFTER style.css and wins at equal specificity (Rule 12),
+         so the bare th rule there could not reach Admin — these four tables kept their CAPITALS and their left
+         edge until this rule was changed too. The COLUMN WIDTHS below stay exactly as #142 set them: Admin is a
+         settings screen whose spacing Jerin chose panel by panel, not one of the reporting tables.
+         NOTE no backticks in this comment: the whole block is inside a JS template literal. */
+      .ac-table th { text-align:center; vertical-align:middle; font-size:0.6875rem; text-transform:none; letter-spacing:0; color:var(--accent-deep); font-weight:600; padding:0.5rem 0.75rem;
+        background:#eef2f8; border-bottom:2px solid #b9c7e0; border-right:1px solid #dae1ee; white-space:normal; line-height:1.25; }
+      .ac-table th:last-child { border-right:0; }
       .ac-table td { padding:0.5rem 0.75rem; border-top:1px solid var(--border-light); vertical-align:middle; font-size:0.78125rem; color:var(--text-secondary); }
       .ac-table tbody tr:first-child td { border-top:0; }
       .ac-table tbody tr:hover td { background:#f8fafc; }
@@ -244,7 +250,8 @@ export function renderAdmin(accessConfig, data) {
       .adm-row em { font-style:normal; font-size:0.6875rem; font-weight:700; color:var(--accent-deep); background:#e4eaf5; border-radius:0.3125rem; padding:1px 0.4375rem; font-variant-numeric:tabular-nums; }
       .adm-main { min-width:0; }
       .cfg-grid th, .cfg-grid td { text-align:center; white-space:nowrap; }
-      .cfg-grid th:first-child, .cfg-grid td:first-child { text-align:left; min-width:13.125rem; white-space:normal; }
+      .cfg-grid th:first-child, .cfg-grid td:first-child { min-width:13.125rem; white-space:normal; }
+      .cfg-grid td:first-child { text-align:left; }   /* #151b: the heading above it centres like every other */
       .cfg-grid th .tier-name { display:block; margin-bottom:0.3125rem; }
       .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; color:var(--navy); text-align:left; padding:0.375rem 0.75rem; }
       .adm-card .cfg-grid input.tier-pts { width:3.375rem; height:1.5rem; padding:0 0.25rem; text-align:center; font-size:0.6875rem; font-weight:700; }
@@ -265,7 +272,8 @@ export function renderAdmin(accessConfig, data) {
       .adm-card select.cfg-fam.is-exclude { color:var(--muted); border-style:dashed; }
       .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:0.875rem; padding:0.875rem; }
       .cfg-ref table { width:100%; font-size:0.75rem; }
-      .cfg-ref th { text-align:left; color:var(--muted); font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; }
+      /* #151b: house heading style — this per-page rule was the third place CAPITALS were set (Rule 12). */
+      .cfg-ref th { text-align:center; color:var(--accent-deep); font-size:0.6875rem; text-transform:none; letter-spacing:0; }
       .cfg-scroll { overflow-x:auto; }
       @media (max-width:48.375rem) { .adm-split { grid-template-columns:1fr; } }
       /* .adm-subtabs is the recessed .subtab-band and .adm-subtab inherits .subtab-chip — see style.css */
@@ -345,7 +353,7 @@ export function renderAdmin(accessConfig, data) {
           <label class="adm-check"><input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" class="adm-count"></span></label>
         </div>
         <div class="cfg-scroll"><table class="ac-table adm-roomy">
-          <thead><tr><th style="min-width:14.375rem">Recruiter</th><th style="width:9.375rem">Pod</th><th style="width:10.625rem">Capacity (Score)</th><th style="width:8.75rem">Type</th><th style="width:9.375rem">Started on</th><th style="width:9.375rem">Left on</th><th style="width:14.375rem">In quarter</th><th style="width:7.5rem">Ashby account</th></tr></thead>
+          <thead><tr><th style="min-width:14.375rem">Recruiter</th><th style="width:9.375rem">Pod</th><th style="width:10.625rem">Capacity (score)</th><th style="width:8.75rem">Type</th><th style="width:9.375rem">Started on</th><th style="width:9.375rem">Left on</th><th style="width:14.375rem">In quarter</th><th style="width:7.5rem">Ashby account</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
       </div>
@@ -387,7 +395,7 @@ export function renderAdmin(accessConfig, data) {
             <div class="adm-card">
               <div class="adm-toolbar"><span class="adm-title">Department → Family</span></div>
               <div class="cfg-scroll"><table class="ac-table">
-                <thead><tr><th style="min-width:12.5rem">Ashby Department</th><th style="width:10.625rem">Family</th><th>Note</th></tr></thead>
+                <thead><tr><th style="min-width:12.5rem">Ashby department</th><th style="width:10.625rem">Family</th><th>Note</th></tr></thead>
                 <tbody id="cfgDeptBody"></tbody>
               </table></div>
             </div>
@@ -755,7 +763,7 @@ export function initAdminMetricConfig(data) {
     const head = document.getElementById('cfgGridHead'); if (!head) return;
     const q = cfgQ();
     const grid = gridForQuarter(q);
-    head.innerHTML = `<tr><th>Role Classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-name">${n}</span><input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}" aria-label="Points for ${n}"></th>`).join('')}</tr>`;
+    head.innerHTML = `<tr><th>Role classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-name">${n}</span><input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}" aria-label="Points for ${n}"></th>`).join('')}</tr>`;
     let html = '', lastFam = null;
     CLASSIFICATIONS.forEach(([fam, cls]) => {
       if (fam !== lastFam) { html += `<tr class="fam-sep"><td colspan="${SCORE_TIERS.length + 1}">${fam}</td></tr>`; lastFam = fam; }

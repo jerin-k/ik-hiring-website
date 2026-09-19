@@ -534,23 +534,37 @@ table {
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== #151b (Jerin, 19 Sep 2026 — option B + width option 2): THE house style for every heading row =====
+   #151a settled the rules on the HM Department Summary and Jerin asked for them everywhere. This ONE rule is
+   what carries them to all 26 remaining tables: it used to set CAPITALS, a left edge, the page ground and a
+   1px rule, and those four things were the entire difference between that table and the rest of the site.
+   🔑 Sentence case comes from `text-transform: none` — the words themselves are written in sentence case in
+   the markup, so a heading reads the way it was typed. Proper nouns and acronyms (R1, OA, HM, DOJ, JP) keep
+   their capitals because they are spelt that way.
+   🔑 `white-space: normal` is deliberate: a clipped heading is worse than a two-line one (#151a), and it is
+   also what lets a number column hold its 3.5rem width instead of being stretched by its own label. */
 th {
-  background: var(--bg);
-  text-align: left;
+  background: #eef2f8;
+  text-align: center;
+  vertical-align: middle;
   padding: 0.625rem 0.75rem;
   font-weight: 600;
   font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--accent-deep);
   position: sticky;
   top: 0;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border);
+  white-space: normal;
+  border-bottom: 2px solid #b9c7e0;
+  border-right: 1px solid #dae1ee;
 }
+th:last-child { border-right: 0; }
 
 th { cursor: pointer; user-select: none; }
-th:hover { background: var(--border-light); }
+/* hover DEEPENS the band instead of replacing it — a heading that loses its ground on hover reads as a hole. */
+th:hover { background: #e4ebf6; }
 th[data-sort="asc"]::after { content: " \2191"; font-size: 0.625rem; color: var(--accent); }
 th[data-sort="desc"]::after { content: " \2193"; font-size: 0.625rem; color: var(--accent); }
 
@@ -597,8 +611,12 @@ td.stage-first { border-left: 1px solid var(--border); }
    numbers right-aligned so digits line up, a visible rule only at GROUP boundaries (not every column,
    which turns the table into a grid), and a first column that stays put while the metrics scroll. */
 table.metrics { font-variant-numeric: tabular-nums; }
+/* #151b option B (Jerin, 19 Sep 2026): every number is CENTRED. These columns were right-aligned so the digits
+   lined up, which is why the widths had to move in the same change — a centred number in a column that sized
+   itself to its own heading is ragged, and the eye loses the vertical line. The `.c-*` widths further down are
+   the other half of this rule; do not centre numbers without them. */
 table.metrics th:not(:first-child),
-table.metrics td:not(:first-child) { text-align: right; }
+table.metrics td:not(:first-child) { text-align: center; }
 table.metrics th.stage-hdr,
 table.metrics th.stage-sub { text-align: center !important; }
 
@@ -613,7 +631,14 @@ table.metrics td:first-child {
   position: sticky; left: 0; z-index: 2; text-align: left;
   background: var(--card); background: inherit;
 }
-table.metrics thead th:first-child { z-index: 3; background: var(--bg); }
+/* 🚨 THE #148 MISS, found by the #151b audit: #148 restyled the grouped heading cells (.stage-hdr / .stage-sub)
+   but not the FIRST one, so "Pod / Recruiter / Job" sat on the page ground in the old grey beside its restyled
+   neighbours on all three Fulfilment tables. It is a heading, so it takes the heading band and is centred both
+   ways like every other heading (#151a settled that over a left-aligned first column). */
+table.metrics thead th:first-child { z-index: 3; background: #eef2f8; text-align: center; }
+/* A rowspan=2 group cell ends on the header's own bottom edge, so it carries the 2px rule, not .stage-hdr's
+   light 1px divider — that 1px is there to sit ABOVE the Heads/Score row, and these cells have none below them. */
+table.metrics thead th[rowspan="2"] { border-bottom: 2px solid #b9c7e0; }
 table.metrics tbody tr { background: var(--card); }
 table.metrics tbody tr:hover { background: #f8fafc; }
 /* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */
@@ -638,6 +663,104 @@ table.metrics.wide-fulfil th.stage-hdr { white-space: normal; max-width: 5.25rem
 table.metrics.wide-fulfil th.stage-sub { padding-top: 0.25rem; padding-bottom: 0.375rem; }
 /* Captions under a number ("12 not linked", "18% of outcomes") must not be what widens a column. */
 table.metrics.wide-fulfil td .sublab { white-space: nowrap; font-size: 0.5625rem; }
+
+/* ===== #151b width option 2 (Jerin, 19 Sep 2026) — ONE WIDTH PER FAMILY =====
+   Jerin: "i want you to fix the differential width for number columns. And any other set of columns that are
+   similar in nature." He is right that this had to ship WITH the centring (option B): centred numbers in
+   columns that each sized themselves to their own heading read worse than the right-aligned ones we had,
+   because the eye loses the vertical line.
+
+   MEASURED in the running site, every page and every sub-tab (19 Sep): 119 number columns held 14 different
+   widths, from 32.9px to 49.1px at the narrow end — that is the raggedness. The widest number anywhere on the
+   site is FIVE DIGITS, so 3.5rem holds six and nothing here can ever clip.
+   🔑 109 of the 119 land on exactly 3.5rem once the number cells' side padding comes down to 0.375rem. The
+   other 10 are held open by a single long word in their own HEADING — "Progressed", "Interviews", "Dropped",
+   "Leadership", "Semi-Niche" — which cannot be wrapped or broken without mangling it. Those columns take the
+   width their word needs and no more, which is still one rule rather than fourteen hand-set widths.
+   🚨 These are `width`, never `table-layout: fixed`. In auto layout a column is never narrower than its
+   content, so a long value or a long heading widens its own column instead of being cut off. That is the
+   whole safety of doing this in one pass across 27 tables.
+
+   🚨 PINNED TEXT COLUMNS MUST WRAP. A fixed width on a text column whose cell is `nowrap` does not hold the
+   text in — it lets it run straight over its neighbour, which is the #150b overlap (Job over Recruiter) and
+   the fault Jerin spotted in the widths mock-up itself. Every `.c-*` text family below therefore sets
+   `white-space: normal` and `overflow-wrap: anywhere`. A long job title goes to two lines: that is the
+   accepted cost of option 2.
+   ⚠ Option 2 costs about 385px on the widest Fulfilment tables (950 ➡ 1,335). Jerin took that knowingly.
+
+   The family is declared ONCE, on the heading cell, and js/table-cols.js mirrors it down the column — so the
+   HEADER decides and the body follows, the same way the table computes and the chart reads (Rule 3). */
+
+/* 🚨 `min-width`, not `width`. A `width` on a table cell is only a PREFERENCE: the bare `table` rule sets
+   `width: 100%`, so when 16 columns want more room than the panel has, the layout distributes what there is
+   and quietly ignores every declared width — measured 19 Sep, the 3.5rem columns came out at 37.7px and the
+   7.8rem ones at 61.9px. A `min-width` is a floor the layout may not go under: the columns hold their size and
+   the table grows past the panel instead, which `.scroll-table` already scrolls. The day columns on Momentum
+   have worked this way since long before this task, and they are where the 3.5rem figure came from. */
+
+/* --- numbers: one width, centred; the VALUE never wraps, the HEADING always may --- */
+/* 🚨 `nowrap` belongs on the cell, never on the heading. Putting it on both is what held "Interviews (2026-Q3)"
+   open to 121px and "Hello Christy" to 76px against a common 50.4: a heading that cannot wrap stretches its own
+   column, which is the exact behaviour the bare `th` rule sets `white-space: normal` to prevent. A wrapped
+   heading is house style (#151a) and a two-line heading over a 3.5rem column is the point, not a defect. */
+th.c-num, td.c-num, th.c-pct, td.c-pct { width: 3.5rem; min-width: 3.5rem; text-align: center;
+  padding-left: 0.375rem; padding-right: 0.375rem; font-variant-numeric: tabular-nums; }
+td.c-num, td.c-pct { white-space: nowrap; }
+/* a number with a caption under it ("+1 sourced", "17% of outcomes") — the CAPTION drives the width */
+th.c-cap, td.c-cap { width: 7.8rem; min-width: 7.8rem; text-align: center;
+  padding-left: 0.375rem; padding-right: 0.375rem; font-variant-numeric: tabular-nums; }
+/* a number with a bar beside it (Delta, Joining conversion, Capacity used) — 9.5rem is the width #151a
+   already settled for Delta on the HM Department Summary, so this is that same decision applied everywhere */
+th.c-bar, td.c-bar { width: 9.5rem; min-width: 9.5rem; text-align: center;
+  padding-left: 0.375rem; padding-right: 0.375rem; }
+/* a date with its context under it ("6 Oct · in 2 weeks") */
+th.c-date, td.c-date { width: 9rem; min-width: 9rem; text-align: center; }
+td.c-date { text-align: left; }
+
+/* --- the text families: one width each, wherever the column appears --- */
+th.c-dept, td.c-dept { width: 10rem; min-width: 10rem; max-width: 10rem; }
+th.c-job,  td.c-job  { width: 17rem; min-width: 17rem; max-width: 17rem; }
+th.c-rec,  td.c-rec  { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
+th.c-cand, td.c-cand { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
+th.c-open, td.c-open { width: 9rem; min-width: 9rem; max-width: 9rem; }
+th.c-stage, td.c-stage { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; }
+th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage,
+td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage {
+  white-space: normal; overflow-wrap: anywhere; }
+td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage { text-align: left; }
+/* A pinned text column cannot let an inline pill hold it open at its own width, or the wrap never happens. */
+td.c-dept .pl-dept, td.c-job .pl-job, td.c-rec .pl-rec, td.c-cand .pl-cand { white-space: normal; }
+
+/* 🚨 A SAFETY NET, and the one place this design is data-dependent. Which columns count as "a number with a
+   caption" is read from the cells themselves (js/table-cols.js), because that is a structural fact rather than
+   a guess. But #108's "+N sourced" line only APPEARS where a role actually has a sourcer — so today Goal·Heads
+   and Delta·Heads carry no caption and are sized as plain numbers, and a new sourcer tomorrow would put a
+   caption into a 3.5rem column. This makes that degrade into a second line inside the column instead of
+   spilling over the column beside it, which is the #150b overlap. Widening those columns in advance would
+   have cost another 124px on the widest table, past what Jerin was shown and accepted. [[project_credit-rule-108]] */
+td.c-num .sublab, td.c-pct .sublab { white-space: normal; }
+/* Same reason, the other way round: `.sublab` is `nowrap` globally, so Overall Efficiency's Delta caption — a
+   whole sentence, "-1 more in closing than opened" — held its column at 149.2px. Letting a caption wrap inside
+   its own column is what the HM Department Summary already does (`.hm-summary .sublab`), so this is #151a's
+   decision applied to the two families that carry captions. The Sales/Others tables keep their nowrap: their
+   caption font is smaller and those columns already sit on the family width. */
+td.c-bar .sublab, td.c-cap .sublab { white-space: normal; }
+
+/* 🚨 THE SLACK RULE, and it is what makes every width above actually hold. A `min-width` stops a column being
+   squeezed, but it does nothing about the opposite case: when a table is NARROWER than its panel, the layout
+   shares the spare width out among the columns, and the number columns grow again by different amounts —
+   measured on the Pipeline table at 53.3, 62.3, 62.5, 66.6, 69.8 and 76.4px against a common 50.4. Giving the
+   first column `width: 100%` makes it greedy: every other column is served its own width first and the name or
+   tree column swallows whatever is left. That is also the right place for the room — it holds the long job
+   titles. Any `max-width` already on a first column still caps it. */
+table.cols-sized > * > tr > :first-child { width: 100%; }
+
+/* `.c-txt` opts a column OUT of every family — an ID, a free-text note, anything that must size itself.
+   🚨 It sets NOTHING but the body alignment. The first version also set `overflow-wrap: anywhere`, copied from
+   the pinned text families, and that collapsed the Application ID column to 29.5px: a UUID has no spaces, so
+   "break anywhere" made its narrowest possible width ONE CHARACTER and the layout duly gave it that. A column
+   that must size itself to its content has to be left alone. */
+td.c-txt { text-align: left; }
 
 /* ===== Filter Bar ===== */
 /* multi-select checkbox dropdown (shared: Recruiter + HM tabs) */
@@ -931,12 +1054,19 @@ td.gapcell { min-width: 9.375rem; }
 
 /* ===== #9 (2026-08-22): HM Current Pipeline — uniform column grid =====
    The stage columns were sized by their content, so every column was a different width and the numbers did
-   not line up down the table. Fixed layout gives one width to the role column and one to every stage. */
-#hm3Table { table-layout: fixed; width: 100%; min-width: 55rem; }
+   not line up down the table. Fixed layout gave one width to the role column and one to every stage.
+   #151b (19 Sep 2026): `table-layout: fixed` is GONE, and this is not a loss — the stage columns are now
+   `c-num` like every other count on the site, so they are held to the same 3.5rem by the shared rule instead
+   of by a rule of their own. 🚨 Dropping it also removes a real hazard: under fixed layout a heading that is
+   one long word ("Documentation") cannot wrap and cannot shrink, so it simply spills over the heading beside
+   it — the #150b overlap in another costume. In auto layout a column is never narrower than its own content,
+   so the long ones open up by exactly as much as they need and nothing overlaps. */
+#hm3Table { width: 100%; min-width: 55rem; }
+/* min-width, not width: a fixed width here beat the slack rule at ID specificity, so the spare width went back
+   into the stage columns and made them 53, 62, 66, 69 and 76px again. */
 #hm3Table th:first-child,
-#hm3Table td:first-child { width: 17.5rem; text-align: left; }
-#hm3Table th:not(:first-child),
-#hm3Table td:not(:first-child) { width: 4.5rem; text-align: right; }
+#hm3Table td:first-child { min-width: 17.5rem; }
+#hm3Table td:first-child { text-align: left; }
 
 /* ===== #10 Option A (2026-08-22): HM Throughput conversion heat =====
    One cell per stage instead of an In / Out / % triple. The number is how many entered the stage; the tint is
@@ -1037,7 +1167,9 @@ details.defs.defs-full > .defs-body { border: 1px solid var(--border); border-ra
    own <style> block — the Overall Efficiency page would otherwise render without it.
    Six columns across the full width left every figure marooned mid-cell, a long way from the header above
    it ("table alignment is off" — Jerin). Pin the numeric columns and let the name column absorb the slack. */
-.join-table th:not(:first-child), .join-table td:not(:first-child) { width: 7.375rem; }
+/* #151b: the per-column widths here are now the shared families (c-num / c-cap / c-bar), which this rule used
+   to override at higher specificity — every count sat at 7.375rem instead of the site width of 3.5rem. */
+.join-table th:not(:first-child), .join-table td:not(:first-child) { width: auto; }
 .join-table th:last-child, .join-table td:last-child { width: 11.625rem; }
 .join-table td:first-child, .join-table th:first-child { width: auto; min-width: 13.75rem; }
 .join-table td.gapcell { min-width: 0; }
@@ -1102,7 +1234,7 @@ details.defs.defs-full > .defs-body { border: 1px solid var(--border); border-ra
    Two figures per cell: the median for candidates who FINISHED the stage, and under it in amber how many
    are still sitting there and how long they have waited. Before this the two were pooled into one median,
    which made the column measure how long ago the quarter was rather than how long the stage takes. */
-td.tis { text-align: right; white-space: nowrap; line-height: 1.25; }
+td.tis { text-align: center; white-space: nowrap; line-height: 1.25; }   /* #151b option B */
 td.tis .tis-med { display: block; font-variant-numeric: tabular-nums; }
 td.tis .tis-med.over { color: var(--red); font-weight: 700; }
 td.tis .tis-med.none { color: var(--muted); }
@@ -1227,7 +1359,8 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
    date says when (rose once passed), chips mark the opening quarter (peach = an earlier quarter's) and what to fix in Ashby (amber dashed),
    and each recruiter carries their initials in their pod's colour. `.pl-list` also left-aligns the Recruiter tab's `.metrics` tables. */
 table.pl-list td { vertical-align: middle; }
-table.pl-list th:not(:first-child),
+/* #151b: only the cells are left-aligned. The heading row is centred everywhere on the site, including over a
+   left-aligned column — that is what #151a settled on the HM Department Summary. */
 table.pl-list td:not(:first-child) { text-align: left; }
 .pl-cand { font-weight: 600; color: var(--text); white-space: nowrap; }
 .pl-dept { font-weight: 500; color: var(--navy); white-space: nowrap; }
@@ -1289,7 +1422,9 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .gs-w1 { background:#fff6dc; color:#8a5a00; }
 .gs-w2 { background:#fde2a8; color:#6f4700; }
 .gs-w3 { background:#f3dbe2; color:#9b3f5c; }
-.gs-share { display:inline-flex; align-items:center; justify-content:flex-end; gap:0.5rem; width:100%; min-width:9.375rem; }
+/* #151b: 8.75rem is the content box of a 9.5rem bar column, so the Sourcing share bar now sits on the bar
+   family's width instead of pushing its column 9px past it. The track still has 5.5rem to draw in. */
+.gs-share { display:inline-flex; align-items:center; justify-content:flex-end; gap:0.5rem; width:100%; min-width:8.75rem; }
 .gs-track { flex:1; max-width:7.5rem; height:0.4375rem; border-radius:0.25rem; background:var(--border-light); overflow:hidden; }
 .gs-fill { display:block; height:100%; border-radius:0.25rem; background:#9fb3d6; }
 .gs-share.gs-name .gs-fill { opacity:.55; }

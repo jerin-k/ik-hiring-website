@@ -117,9 +117,9 @@ export function renderInterviewer(data, opts = {}) {
     <div class="scroll-table"><table>
       <thead><tr>
         <th style="min-width:17.5rem">Department / Panelist / Job</th>
-        <th id="ivThInterviews">Interviews</th>
-        <th>Feedback Coverage<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
-        <th>Avg Turnaround<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
+        <th id="ivThInterviews" class="c-num">Interviews</th>
+        <th class="c-cap">Feedback coverage<span style="font-weight:400;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
+        <th class="c-num">Avg turnaround<span style="font-weight:400;letter-spacing:0;color:var(--muted)"> (all-time)</span></th>
       </tr></thead>
       <tbody id="ivBody"></tbody>
     </table></div>

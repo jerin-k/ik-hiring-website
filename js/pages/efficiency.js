@@ -125,11 +125,15 @@ export function renderEfficiency(data) {
       .evel-table tbody tr.lvl-quiet td { color:var(--muted); }
       .evel-table tbody tr.lvl-quiet td:not(:first-child) { font-weight:400; }
       .evel-table th.wknd { box-shadow:inset 0 -2px 0 rgba(163,50,83,0.38); }
-      .evel-table th:not(:first-child), .evel-table td:not(:first-child) { text-align:right; }
+      /* #151b option B: centred, like every other number. The day columns already hold 3.5rem below — that
+         existing width is what the site-wide number width was measured against. */
+      .evel-table th:not(:first-child), .evel-table td:not(:first-child) { text-align:center; }
       .evel-table th:nth-child(n+3), .evel-table td:nth-child(n+3) { min-width:3.5rem; }
-      .evel-table th:nth-child(1), .evel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:16.25rem; min-width:16.25rem; max-width:16.25rem; text-align:left; white-space:normal; }
+      .evel-table th:nth-child(1), .evel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:16.25rem; min-width:16.25rem; max-width:16.25rem; white-space:normal; }
+      .evel-table td:nth-child(1) { text-align:left; }   /* #151b: the heading above it centres like every other */
       .evel-table th:nth-child(2), .evel-table td:nth-child(2) { position:sticky; left:16.25rem; z-index:2; min-width:6rem; border-right:2px solid var(--border); }
-      .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:var(--bg); }
+      /* #151b: the heading band, not the page ground — these two are sticky, so they must be opaque (147a). */
+      .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:#eef2f8; }
       .evel-table tbody td:nth-child(1), .evel-table tbody td:nth-child(2) { background:var(--card); }
 
       /* per-department chart cards */
@@ -176,7 +180,7 @@ export function renderEfficiency(data) {
 
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:17.5rem">Department / Job</th><th colspan="2" class="stage-hdr">Total Positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining Pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th colspan="2" class="stage-hdr">Missed</th></tr>
+          <tr><th rowspan="2" style="min-width:17.5rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th colspan="2" class="stage-hdr">Missed</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
@@ -188,7 +192,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="effJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Sub-stage</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiningpending')}
@@ -198,7 +202,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiners')}
@@ -224,9 +228,9 @@ export function renderEfficiency(data) {
       <div class="scroll-table"><table class="metrics">
         <thead><tr>
           <th style="min-width:17.5rem">Department / Job</th>
-          <th>Added at R1</th>
-          <th>Progressed</th>
-          <th>%</th>
+          <th class="c-num">Added at R1</th>
+          <th class="c-num">Progressed</th>
+          <th class="c-pct">%</th>
         </tr></thead>
         <tbody id="effScreenBody"></tbody>
       </table></div>
@@ -281,11 +285,11 @@ export function renderEfficiency(data) {
       <div class="scroll-table"><table class="metrics join-table">
         <thead><tr>
           <th>Department / Job</th>
-          <th>Offered</th>
-          <th>Joined</th>
-          <th>Joining Pending</th>
-          <th>Dropped</th>
-          <th>Joining Conversion</th>
+          <th class="c-num">Offered</th>
+          <th class="c-num">Joined</th>
+          <th class="c-num">Joining pending</th>
+          <th class="c-cap">Dropped</th>
+          <th class="c-bar">Joining conversion</th>
         </tr></thead>
         <tbody id="effJoinBody"></tbody>
       </table></div>
@@ -299,7 +303,7 @@ export function renderEfficiency(data) {
       <h3 class="subsection-title">Channel mix — where joiners came from</h3>
       <div class="chart-wrap" style="margin:0 0 1.25rem;height:28.75rem;position:relative"><canvas id="effSourceChart"></canvas></div>
       <div class="scroll-table"><table>
-        <thead><tr><th style="min-width:21.25rem" id="effSourceTh">Department / Job / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:21.25rem" id="effSourceTh">Department / Job / Source type / Source name</th><th class="c-num">Joiners</th><th class="c-bar">%</th></tr></thead>
         <tbody id="effSourceBody"></tbody>
       </table></div>
       ${defsBlock('eff-sourcing')}
@@ -1167,8 +1171,8 @@ export function initEfficiencyFilters(data) {
     const openIds = per ? jobsWithOpeningIn(data, qq => per.includes(qq)) : null;   // #125
     const deptOfJob = (j) => resolveDeptTeam(j.department).dept || j.department || 'Unknown';
 
-    head.innerHTML = '<tr><th style="min-width:17.5rem">Department / Job</th><th>Total</th>'
-      + visStages.map(s => `<th>${PIPE_LABELS[s]}</th>`).join('') + '</tr>';
+    head.innerHTML = '<tr><th style="min-width:17.5rem">Department / Job</th><th class="c-num">Total</th>'
+      + visStages.map(s => `<th class="c-num">${PIPE_LABELS[s]}</th>`).join('') + '</tr>';
 
     const groups = {};
     (data.jobs || []).forEach(j => {

@@ -12,6 +12,7 @@ import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/adm
 import { initTableSorting } from './table-sort.js';
 import { initFilterDropdowns } from './filter-dropdowns.js';   // 17 Sep: filter dropdowns open in full, never clipped by their row
 import { mountStickyChrome } from './sticky-chrome.js';   // #147 C+: the sub-tab band + filter row are what freeze, not the navy block
+import { watchColumnFamilies } from './table-cols.js';   // #151b: a column's family is declared on its heading and mirrored down the column
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
 
 // Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
@@ -248,7 +249,19 @@ function navigateTo(page, sub) {
   }
 
   mountStickyChrome();   // #147 C+: measure the frozen block and publish its height for the table headings
+  startColumnFamilies();   // #151b: one width per family, carried from each heading down its column
   applySub(currentSub);
+}
+
+// #151b: ONE observer for the whole session, on #page-content — every page rebuilds its tables inside it, so a
+// table is stamped with its column families whoever rendered it and whenever, including lazily drawn sub-tabs.
+let columnFamiliesWatching = false;
+function startColumnFamilies() {
+  if (columnFamiliesWatching) return;
+  const root = document.getElementById('page-content');
+  if (!root) return;
+  watchColumnFamilies(root);
+  columnFamiliesWatching = true;
 }
 
 // Browser back/forward, and any hash typed by hand, route through the same entry point.

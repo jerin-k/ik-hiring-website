@@ -348,7 +348,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Sub-stage</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiningpending')}
@@ -358,7 +358,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiners')}
@@ -1049,8 +1049,8 @@ export function initHmFilters(data) {
       return true;
     }).sort(byDept);
 
-    let hdr = '<tr><th>Department</th><th>Total</th>';
-    visStages.forEach(s => { hdr += `<th>${STAGE_LABELS[s]}</th>`; });
+    let hdr = '<tr><th>Department</th><th class="c-num">Total</th>';   /* first column = the dept ➡ job tree, no family */
+    visStages.forEach(s => { hdr += `<th class="c-num">${STAGE_LABELS[s]}</th>`; });
     hdr += '</tr>';
     document.getElementById('hm3Head').innerHTML = hdr;
 
