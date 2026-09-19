@@ -312,11 +312,14 @@ export function renderRecruiter(data) {
          a quiet week (Jerin, 2026-08-29). Deliberately an underline and not a fill — the column is context,
          not an alert. */
       .vel-table th.wknd { box-shadow:inset 0 -2px 0 rgba(163,50,83,0.38); }
-      .vel-table th:not(:first-child), .vel-table td:not(:first-child) { text-align:right; }
+      /* #151b option B: centred, like every other number (the day columns keep their 3.5rem width). */
+      .vel-table th:not(:first-child), .vel-table td:not(:first-child) { text-align:center; }
       .vel-table th:nth-child(n+3), .vel-table td:nth-child(n+3) { min-width:3.5rem; }
-      .vel-table th:nth-child(1), .vel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:15.625rem; min-width:15.625rem; max-width:15.625rem; text-align:left; white-space:normal; }
+      .vel-table th:nth-child(1), .vel-table td:nth-child(1) { position:sticky; left:0; z-index:2; width:15.625rem; min-width:15.625rem; max-width:15.625rem; white-space:normal; }
+      .vel-table td:nth-child(1) { text-align:left; }   /* #151b: the heading above it centres like every other */
       .vel-table th:nth-child(2), .vel-table td:nth-child(2) { position:sticky; left:15.625rem; z-index:2; min-width:6rem; border-right:2px solid var(--border); }
-      .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:var(--bg); }
+      /* #151b: the heading band, not the page ground — these two are sticky, so they must be opaque (147a). */
+      .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:#eef2f8; }
       .vel-table tbody td:nth-child(1), .vel-table tbody td:nth-child(2) { background:var(--card); }
       .vel-table tbody tr.lvl-pod td:nth-child(1), .vel-table tbody tr.lvl-pod td:nth-child(2) { background:var(--border-light); }
 
@@ -345,7 +348,8 @@ export function renderRecruiter(data) {
       .cfg-grid .tier-pts { width:2.875rem; text-align:center; padding:2px; font-size:0.6875rem; }
       .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:1rem; }
       .cfg-ref table { width:100%; font-size:0.75rem; }
-      .cfg-ref th { text-align:left; color:var(--muted); font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.03em; }
+      /* #151b: house heading style, kept identical to admin.js's copy so the two cannot drift. */
+      .cfg-ref th { text-align:center; color:var(--accent-deep); font-size:0.6875rem; text-transform:none; letter-spacing:0; }
     </style>
 
     <div class="rec-subtabs subtab-band">
@@ -396,9 +400,9 @@ export function renderRecruiter(data) {
         <thead>
           <tr>
             <th style="min-width:16.25rem">Pod / Recruiter / Job</th>
-            <th>Added at R1</th>
-            <th>Progressed</th>
-            <th>%</th>
+            <th class="c-num">Added at R1</th>
+            <th class="c-num">Progressed</th>
+            <th class="c-pct">%</th>
           </tr>
         </thead>
         <tbody id="recScreenBody"></tbody>
@@ -410,7 +414,7 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="joining" style="display:none">
       <div class="chart-wrap" style="height:17.5rem"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
-        <thead><tr><th>Pod / Recruiter</th><th>Offered</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Joining Conversion</th></tr></thead>
+        <thead><tr><th>Pod / Recruiter</th><th class="c-num">Offered</th><th class="c-num">Joined</th><th class="c-num">Joining pending</th><th class="c-cap">Dropped</th><th class="c-bar">Joining conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
       ${defsBlock('rec-joining')}
@@ -457,7 +461,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Sub-stage</th><th>Opening quarter</th>
+          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
       </table></div>
@@ -470,7 +474,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Opening quarter</th>
+          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
       </table></div>
@@ -483,7 +487,7 @@ export function renderRecruiter(data) {
       <p class="sub-note" id="recSourceNote" style="display:none;color:var(--orange)"></p>
       <div class="chart-wrap" style="height:20rem"><canvas id="recSourceChart"></canvas></div>
       <div class="scroll-table"><table class="metrics">
-        <thead><tr><th style="min-width:20rem">Pod / Recruiter / Source type / Source name</th><th>Joiners</th><th>%</th></tr></thead>
+        <thead><tr><th style="min-width:20rem">Pod / Recruiter / Source type / Source name</th><th class="c-num">Joiners</th><th class="c-bar">%</th></tr></thead>
         <tbody id="recSourceBody"></tbody>
       </table></div>
       ${defsBlock('rec-sourcing')}
@@ -517,28 +521,28 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="unassigned">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:18.75rem">Department / Job / Candidate</th><th>Stage</th><th>Applied</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Department / Job / Candidate</th><th class="c-stage">Stage</th><th class="c-date">Applied</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
               <tbody id="hygUnassignedBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="multirec" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:12.5rem">Job</th><th>Candidate</th><th style="min-width:15rem">Recruiters tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <thead><tr><th class="c-job">Job</th><th class="c-cand">Candidate</th><th style="min-width:15rem">Recruiters tagged</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
               <tbody id="hygMultiRecBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="multisrc" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:12.5rem">Job</th><th>Candidate</th><th style="min-width:15rem">Sourcers tagged</th><th>Last activity</th><th>Application ID</th></tr></thead>
+              <thead><tr><th class="c-job">Job</th><th class="c-cand">Candidate</th><th style="min-width:15rem">Sourcers tagged</th><th class="c-date">Last activity</th><th class="c-txt">Application ID</th></tr></thead>
               <tbody id="hygMultiSrcBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nosrc" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:11.25rem">Candidate</th><th style="min-width:12.5rem">Job</th><th>Department</th><th>Outcome</th><th>Start date</th><th>Recruiter</th></tr></thead>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-dept">Department</th><th>Outcome</th><th class="c-date">Start date</th><th class="c-rec">Recruiter</th></tr></thead>
               <tbody id="hygNoSrcBody"></tbody>
             </table></div>
           </div>
@@ -546,12 +550,12 @@ export function renderRecruiter(data) {
           <div class="hyg-panel" data-h="dates" style="display:none">
             <h5 style="font-size:0.75rem;font-weight:600;color:var(--text);margin:0 0 0.375rem">Work credited outside their dates <span id="hygDatesOutN" style="color:var(--muted);font-weight:400"></span></h5>
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Quarter</th><th>Work found</th><th>Started on</th><th>Left on</th></tr></thead>
+              <thead><tr><th class="c-rec">Recruiter</th><th>Quarter</th><th class="c-num">Work found</th><th class="c-date">Started on</th><th class="c-date">Left on</th></tr></thead>
               <tbody id="hygDatesOutBody"></tbody>
             </table></div>
             <h5 style="font-size:0.75rem;font-weight:600;color:var(--text);margin:0.875rem 0 0.375rem">Ashby account disabled, no Left on date <span id="hygDatesNoEndN" style="color:var(--muted);font-weight:400"></span></h5>
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Started on</th><th>Last quarter with work</th></tr></thead>
+              <thead><tr><th class="c-rec">Recruiter</th><th class="c-date">Started on</th><th>Last quarter with work</th></tr></thead>
               <tbody id="hygDatesNoEndBody"></tbody>
             </table></div>
             <h5 style="font-size:0.75rem;font-weight:600;color:var(--text);margin:0.875rem 0 0.375rem">No Started on date</h5>
@@ -560,49 +564,49 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="nopod" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Applications (all-time)</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
+              <thead><tr><th class="c-rec">Recruiter</th><th class="c-num">Applications (all-time)</th><th class="c-num">Offers (all-time)</th><th class="c-num">Hired (all-time)</th><th class="c-num">Joining pending</th></tr></thead>
               <tbody id="hygNoPodBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nocap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:15rem">Recruiter</th><th>Pod</th><th>Offers (all-time)</th><th>Hired (all-time)</th><th>Joining pending</th></tr></thead>
+              <thead><tr><th class="c-rec">Recruiter</th><th>Pod</th><th class="c-num">Offers (all-time)</th><th class="c-num">Hired (all-time)</th><th class="c-num">Joining pending</th></tr></thead>
               <tbody id="hygNoCapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="offergap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:11.25rem">Candidate</th><th style="min-width:12.5rem">Job</th><th>Department</th><th>Stage</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-dept">Department</th><th class="c-stage">Stage</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
               <tbody id="hygOfferGapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="hiredgap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:11.25rem">Candidate</th><th style="min-width:12.5rem">Job</th><th>Department</th><th>Stage</th><th>Status</th><th>Offer made</th><th>DOJ</th><th>Recruiter</th></tr></thead>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-dept">Department</th><th class="c-stage">Stage</th><th>Status</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
               <tbody id="hygHiredGapBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nodate" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:18.75rem">Job</th><th style="min-width:9.375rem">Department</th><th>Job status</th><th>Opening ID</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-dept">Department</th><th>Job status</th><th class="c-txt">Opening ID</th></tr></thead>
               <tbody id="hygNoDateBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="noopening" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:16.25rem">Job</th><th style="min-width:9.375rem">Department</th><th>New candidates</th><th>R1 screened</th><th>Assessed</th><th>Finished stays</th><th>Interviews</th><th style="min-width:13.75rem">Openings in Ashby</th></tr></thead>
+              <thead><tr><th style="min-width:16.25rem">Job</th><th class="c-dept">Department</th><th class="c-num">New candidates</th><th class="c-num">R1 screened</th><th class="c-num">Assessed</th><th class="c-num">Finished stays</th><th class="c-num">Interviews</th><th style="min-width:13.75rem">Openings in Ashby</th></tr></thead>
               <tbody id="hygNoOpeningBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="unscored" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th style="min-width:18.75rem">Job</th><th style="min-width:9.375rem">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th>Applications</th></tr></thead>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-dept">Department</th><th>Level</th><th>Complexity</th><th>Missing</th><th class="c-num">Applications</th></tr></thead>
               <tbody id="hygUnscoredBody"></tbody>
             </table></div>
           </div>
@@ -2041,7 +2045,7 @@ export function initRecruiterFilters(baseData) {
         if (jobs.length) jobs.forEach(({ bj, h }) => {
           html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(h)}</tr>`;
         });
-        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero" style="text-align:right">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
+        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
       });
     });
     body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
