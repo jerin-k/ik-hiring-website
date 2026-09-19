@@ -1176,3 +1176,37 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .gs-fill { display:block; height:100%; border-radius:0.25rem; background:#9fb3d6; }
 .gs-share.gs-name .gs-fill { opacity:.55; }
 .gs-share b { min-width:2.75rem; text-align:right; font-weight:600; }
+
+/* ===== #150 (Jerin, 19 Sep 2026) — "Who is joining" and "Remarks" on the Hiring Manager job row =====
+   Option B of the mock-up: both live INSIDE the cell. The names stay small and left-aligned so a column of
+   numbers is never mistaken for a column of text; a long list collapses to "+N more" rather than stretching
+   the row. Remarks are saved by js/job-notes.js — amber means this browser has it and the server does not. */
+.hm-summary th.jn-th { text-align: left; }
+.hm-summary td.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.45; max-width: 15rem; white-space: normal; vertical-align: top; }
+.hm-summary td.jn-sum { color: var(--muted); font-size: 0.6875rem; }
+.jn-who .jn-p { display: block; }
+.jn-who .jn-p b { font-weight: 600; color: var(--text-secondary); }
+.jn-who .jn-d { color: var(--green); font-weight: 600; margin-left: 0.3125rem; font-variant-numeric: tabular-nums; }
+.jn-who .jn-s { color: var(--muted); margin-left: 0.3125rem; }
+.jn-who .jn-extra { display: none; }
+.jn-who.jn-open .jn-extra { display: block; }
+.jn-more, .jn-add, .jn-text {
+  font: inherit; font-size: 0.6875rem; background: none; border: 0; padding: 0; cursor: pointer; text-align: left;
+}
+.jn-more { color: var(--accent-deep); font-weight: 600; margin-top: 0.125rem; }
+.jn-more:hover, .jn-add:hover, .jn-text:hover { text-decoration: underline; }
+.jn-add { color: var(--muted); }
+.jn-text { color: var(--text-secondary); display: block; }
+.jn-rem .jn-by { display: block; color: var(--muted); font-size: 0.625rem; margin-top: 0.125rem; }
+.jn-unsaved .jn-text { color: var(--orange); }
+.jn-unsaved .jn-by { color: var(--orange); }
+.jn-ta { width: 100%; min-width: 12.5rem; min-height: 3.75rem; resize: vertical; font-family: inherit; font-size: 0.6875rem;
+  line-height: 1.5; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.375rem 0.5rem; background: var(--card); color: var(--text); }
+.jn-ta:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 0.1875rem rgba(78,107,166,0.16); }
+.jn-guard { font-size: 0.625rem; color: var(--muted); margin: 0.25rem 0 0; }
+.jn-guard.bad { color: var(--red); }
+.jn-actions { display: flex; gap: 0.375rem; margin-top: 0.375rem; }
+.jn-btn { font: inherit; font-size: 0.6875rem; font-weight: 600; cursor: pointer; border-radius: 0.4375rem; padding: 0.1875rem 0.625rem;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+.jn-btn.quiet { background: var(--card); color: var(--accent-deep); }
+.jn-btn:disabled { opacity: 0.45; cursor: default; }
