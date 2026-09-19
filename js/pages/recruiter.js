@@ -2,10 +2,13 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuart
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
-import { shadeMomentum, shadeTis, shareBars, colorShareBars } from '../grid-shade.js';   // #137c
+import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
+// #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
+// so all three name the stages identically and in the same order. One owner, three readers.
+import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
@@ -370,6 +373,7 @@ export function renderRecruiter(data) {
       <button class="rec-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="rec-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="rec-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
+      <button class="rec-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
       <button class="rec-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="rec-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
       <button class="rec-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
@@ -419,6 +423,26 @@ export function renderRecruiter(data) {
         <tbody id="recScreenBody"></tbody>
       </table></div>
       ${defsBlock('rec-screening')}
+    </div>
+
+    <!-- PANEL: Pipeline (#145b, Jerin 19 Sep 2026 — option A of two, chosen from the mock-up).
+         Overall Efficiency's Pipeline panel split by POD ➡ RECRUITER ➡ JOB. The per-recruiter stage counts
+         come from recruiters[].byJob[].pipeline, written by the same pass over the same applications that
+         fills jobs[].pipeline — so these rows sum to that panel's rows by construction, not by luck.
+         🚨 The "No recruiter tagged" row is NOT optional dressing: 79% of everyone in a pipeline has nobody
+         tagged (24,566 of 31,046 on 19 Sep). Without that row this panel would quietly show a fifth of the
+         pipeline under the same name Overall Efficiency uses for all of it. -->
+    <div class="rec-panel" data-panel="pipeline" style="display:none">
+      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> &mdash; counts show where candidates stand today, not in the selected period. Click a pod to drill in.</p>
+      <div class="tp-controls">
+        <div class="ms" id="recMsPipeStage"></div>
+        <label><input type="checkbox" id="recPipeHideEmpty" checked> Hide zero-pipeline</label>
+      </div>
+      <div class="scroll-table"><table class="metrics">
+        <thead id="recPipeHead"></thead>
+        <tbody id="recPipeBody"></tbody>
+      </table></div>
+      ${defsBlock('rec-pipeline')}
     </div>
 
     <!-- PANEL: Joining Conversion -->
@@ -882,7 +906,7 @@ export function initRecruiterFilters(baseData) {
   // Per-recruiter Fulfilment aggregates, written by the table render and read by its chart.
   let lastFulfil = {};
 
-  let msPod = null, msRec = null, msJob = null;
+  let msPod = null, msRec = null, msJob = null, msRecPipeStage = null;   // #145b
 
   // Quarter selected in the global filter (Year+Quarter) — drives pod grouping + capacity lookups.
   // The year the selector is on. "All" resolves to the first real year in the list (2026 today) — the same
@@ -1131,6 +1155,9 @@ export function initRecruiterFilters(baseData) {
         wireVelTree(screenBody);
       }
     }
+
+    // ===== Pipeline (#145b) =====
+    renderRecPipeline();
 
     // ===== Joining Conversion =====
     const joinBody = document.getElementById('recJoinBody');
@@ -3027,6 +3054,126 @@ export function initRecruiterFilters(baseData) {
         plugins: { legend: { position: 'top', align: 'center', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 11, boxHeight: 11, padding: 12, font: { size: 11 } } } },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'Joiners', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } } });
   }
+  // #145b (Jerin, 19 Sep 2026 — option A). Where every candidate stands today, by pod, recruiter and job.
+  //
+  // 🚨 WHY THE "No recruiter tagged" ROW EXISTS. Recruiter attribution is per CANDIDATE, and most candidates
+  // have none: 24,566 of the 31,046 people in a pipeline on 19 Sep — 79% — and still 56% once App Review is
+  // set aside. Every other panel on this tab is allowed to show only tagged work, because it measures what a
+  // recruiter DID. This one measures where the pipeline IS, and the same panel exists on Overall Efficiency
+  // counting all of it. Dropping the untagged people would put a fifth of the pipeline under a name the other
+  // tab uses for the whole of it — the "same panel, two numbers" bug this project keeps hitting. So they get
+  // their own row, greyed, and the two tabs reconcile line by line.
+  //
+  // 🔑 The counts come from recruiters[].byJob[].pipeline, filled by the SAME pass over the SAME applications
+  // that fills jobs[].pipeline (DataRefresh.gs). Measured 19 Sep: 100 of 100 jobs agree exactly, stage by
+  // stage. That is Rule 3's structural fix — the two cannot drift because nothing computes them twice.
+  function renderRecPipeline() {
+    const head = document.getElementById('recPipeHead'), body = document.getElementById('recPipeBody');
+    if (!head || !body) return;
+
+    const stPick = msRecPipeStage ? msRecPipeStage.getSelected() : [];
+    const visStages = PIPE_KEYS.filter(k => !stPick.length || stPick.includes(PIPE_LABELS[k]));
+    const hideEmpty = !!document.getElementById('recPipeHideEmpty')?.checked;
+    const jsel = msJob ? msJob.getSelected() : [];
+    const pods = msPod ? msPod.getSelected() : [];
+    const names = msRec ? msRec.getSelected() : [];
+    const q = selQuarter();
+    // #125: the same job scope Overall Efficiency's Pipeline panel uses, so the two stay comparable.
+    const per = selQuarters();
+    const openIds = per && per.length ? jobsWithOpeningIn(baseData, qq => per.includes(qq)) : null;
+
+    head.innerHTML = '<tr><th style="min-width:16.25rem">Pod / Recruiter / Job</th><th class="c-num">In pipeline</th>'
+      + visStages.map(k => `<th class="c-num">${PIPE_LABELS[k]}</th>`).join('') + '</tr>';
+
+    const keepJob = (bj) => {
+      const j8 = String(bj.jobId || '').slice(0, 8);     // ⚠ byJob carries the FULL uuid; jobs[].id is 8 chars
+      if (openIds && !openIds.has(j8)) return false;
+      if (jsel.length && !jsel.includes(bj.title)) return false;
+      return true;
+    };
+    const add = (acc, p) => { visStages.forEach(k => { if (p[k]) acc[k] = (acc[k] || 0) + p[k]; }); return acc; };
+    const sum = (o) => visStages.reduce((t, k) => t + (o[k] || 0), 0);
+    // 🚨 THE FIRST COLUMN IS CALLED "In pipeline", NOT "Total", and the name is load-bearing. Overall
+    // Efficiency's Pipeline panel has a Total column meaning every application on the role, ARCHIVED ONES
+    // INCLUDED — its own definitions say so — which is a different measure entirely: 30,981 against the 8,139
+    // people actually standing in a stage. Two different measures under one column name on two mirror panels
+    // is the bug this project keeps hitting, so this column says what it is and adds the stages up.
+    // ✅ What DOES reconcile, and is the check to run after any change here: this panel's stage columns equal
+    // that panel's stage columns exactly — measured 8,139 = 8,139 on 19 Sep.
+    const cells = (o, bold) => {
+      const w = bold ? ' style="font-weight:600"' : '';
+      return `<td${w}>${sum(o).toLocaleString()}</td>` + visStages.map(k => {
+        const v = o[k] || 0;
+        if (k === 'hired' && v > 0) return `<td class="good">${v.toLocaleString()}</td>`;
+        if (k === 'offer' && v > 0) return `<td style="color:var(--blue);font-weight:600">${v.toLocaleString()}</td>`;
+        return `<td${v === 0 ? ' class="zero"' : ''}>${v ? v.toLocaleString() : 0}</td>`;
+      }).join('');
+    };
+    // one recruiter's jobs, already narrowed, with their stage counts
+    const jobsOf = (rec) => (rec.byJob || []).filter(bj => bj.pipeline && keepJob(bj))
+      .map(bj => ({ title: bj.title || String(bj.jobId || '').slice(0, 8), p: bj.pipeline }))
+      .filter(x => !hideEmpty || sum(x.p) > 0)
+      .sort((a, b) => sum(b.p) - sum(a.p) || String(a.title).localeCompare(String(b.title)));
+
+    // the pods, from the same grouping every other panel on this tab uses
+    const groups = groupByPod(getFilteredRecs(q), q);
+    const blocks = groups.map(G => ({
+      label: G.pod, untagged: false,
+      recs: G.recs.map(r => ({ name: r.name, tag: inactiveTag(r), jobs: jobsOf(r) })),
+    }));
+
+    // …then the two groups of people this tab would otherwise drop. Both are shown for the same reason:
+    // this panel says where the pipeline IS, and the panel of the same name on Overall Efficiency counts all
+    // of it. Leaving either out would put a smaller number under the same name on two mirror tabs.
+    // Neither answers to Pod or Recruiter — they have no pod and no listed recruiter — so both hide as soon
+    // as either of those filters is used, rather than sitting there ignoring it (Rule 13).
+    if (!pods.length && !names.length) {
+      // 1 · tagged to somebody this tab does not list: they left, or they have no pod set for the quarter
+      //     (#111 / #23). The tab's rule is that such a recruiter earns no row and no credit, and that rule
+      //     is kept — they are NOT placed inside a pod — but their candidates are still standing somewhere.
+      const shown = new Set(groups.flatMap(G => G.recs.map(r => r.name)));
+      const offTab = allRecs.filter(r => r.name !== 'Unassigned' && !shown.has(r.name))
+        .map(r => ({ name: r.name, tag: inactiveTag(r), jobs: jobsOf(r) }))
+        .filter(r => r.jobs.length);
+      if (offTab.length) blocks.push({ label: 'Recruiter not listed on this tab', untagged: true, recs: offTab });
+
+      // 2 · nobody tagged at all — four out of five of the pipeline
+      const un = allRecs.find(r => r.name === 'Unassigned');
+      const unJobs = un ? jobsOf(un) : [];
+      if (unJobs.length) blocks.push({ label: 'No recruiter tagged', untagged: true, recs: [{ name: '', tag: '', jobs: unJobs }] });
+    }
+
+    let html = '', grand = {};
+    blocks.forEach((B, pi) => {
+      const podAgg = {};
+      B.recs.forEach(r => r.jobs.forEach(j => add(podAgg, j.p)));
+      if (hideEmpty && sum(podAgg) === 0) return;
+      add(grand, podAgg);
+      const nR = (B.untagged && !B.recs[0].name) ? 0 : B.recs.length;
+      html += `<tr class="lvl-pod" data-pod="p${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600${B.untagged ? ';color:var(--muted)' : ''}">${CARET}${hyEsc(B.label)}${nR ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${nR}</span>` : ''}</td>${cells(podAgg, true)}</tr>`;
+      B.recs.forEach((r, ri) => {
+        const rk = `pp${pi}-${ri}`;
+        const recAgg = {};
+        r.jobs.forEach(j => add(recAgg, j.p));
+        if (hideEmpty && sum(recAgg) === 0) return;
+        const label = !B.untagged ? hyEsc(r.name) + r.tag
+          : r.name ? hyEsc(r.name) + r.tag                       // the off-tab block names its recruiters
+          : 'Every job with people nobody has picked up';         // the untagged block has no name to give
+        html += `<tr class="lvl-rec" data-pod="p${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
+          <td style="padding-left:1.625rem;font-weight:500${B.untagged ? ';color:var(--muted)' : ''}">${CARET}${label}</td>${cells(recAgg, false)}</tr>`;
+        r.jobs.forEach(j => {
+          html += `<tr class="lvl-stage" data-pod="p${pi}" data-parent-rec="${rk}" style="display:none">
+            <td style="padding-left:3.25rem;color:var(--muted)">${hyEsc(j.title)}</td>${cells(j.p, false)}</tr>`;
+        });
+      });
+    });
+    if (html) html += `<tr class="totals-row"><td>Total</td>${cells(grand, true)}</tr>`;
+    body.innerHTML = html || `<tr><td colspan="${visStages.length + 2}" style="text-align:center;color:var(--muted);padding:1rem">Nobody is in a pipeline for the jobs and stages selected.</td></tr>`;
+    wireVelTree(body);
+    shadePipeline(body);   // #137c — the same grid shading the mirror panel carries
+  }
+
   function renderActiveChart() {
     if (activeTab === 'velocity') buildVelChart();
     else if (activeTab === 'screening') buildScreenChart();
@@ -3041,7 +3188,11 @@ export function initRecruiterFilters(baseData) {
     toggleJpFilters('rec', document.getElementById('recPeriod'), name === 'joiningpending');
     // #141b (Jerin, 17 Sep): Data Hygiene ignores Pod, Recruiter, Job, From and To on purpose, so they hide there — a filter shown
     // over a panel must move its numbers (Rule 13). Year and Quarter stay: they decide several of its lists.
-    ['msPod', 'msRec', 'msJob', 'recVelFrom', 'recVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'hygiene'));
+    ['msPod', 'msRec', 'msJob'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'hygiene'));
+    // #145b: Pipeline is LIVE — it says where people stand today — so a date range cannot narrow it and the
+    // From / To boxes hide there too, the same as on Overall Efficiency's Pipeline panel. Year and Quarter
+    // stay: they decide which jobs are in scope (#125). A control shown over a panel must move its numbers.
+    ['recVelFrom', 'recVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'hygiene' && name !== 'pipeline'));
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -3084,6 +3235,10 @@ export function initRecruiterFilters(baseData) {
   }
 
   // Global filters (apply to all sub-tabs) — Pod / Recruiter / Job are multi-select
+  // #145b: the Pipeline panel's own pair. #147c adopts `.tp-controls` into the frozen filter row and shows
+  // it only while this sub-tab is the one on screen, so no page module has to manage that.
+  msRecPipeStage = makeMultiSelect(document.getElementById('recMsPipeStage'), 'Stages', PIPE_KEYS.map(k => PIPE_LABELS[k]), renderRecPipeline);
+  document.getElementById('recPipeHideEmpty')?.addEventListener('change', renderRecPipeline);
   msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_OPTIONS, renderAll);
   msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);
   const jobNames = [...new Set((baseData.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
