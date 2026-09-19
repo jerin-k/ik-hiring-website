@@ -254,6 +254,17 @@ export function renderRecruiter(data) {
       .hy-big { display:grid; justify-items:end; line-height:1; }
       .hy-big b { font-size:1.75rem; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--navy); }
       .hy-big span { font-size:0.65625rem; color:var(--muted); margin-top:0.3125rem; text-transform:uppercase; letter-spacing:.05em; }
+      /* #146b — the Job status filter. Chips, because that is this site's control language; the active one
+         takes the same navy as an active sub-tab so it reads as "this is what you are looking at". */
+      .hy-jf { display:flex; align-items:center; gap:0.375rem; flex-wrap:wrap; margin:0.875rem 0 0; }
+      .hy-jf-lab { font-size:0.71875rem; font-weight:500; color:var(--muted); margin-right:0.125rem; }
+      .hy-jf-chip { appearance:none; font-family:inherit; cursor:pointer; background:var(--card);
+        border:1px solid var(--border); border-radius:0.4375rem; padding:0.21875rem 0.625rem;
+        font-size:0.71875rem; font-weight:500; color:var(--text-secondary); transition:color .15s, background-color .15s, border-color .15s; }
+      .hy-jf-chip:hover { border-color:#b9c4d8; color:var(--text); }
+      .hy-jf-chip.on, .hy-jf-chip.on:hover { background:var(--navy-sub); border-color:var(--navy-sub); color:#fff; font-weight:600; }
+      .hy-jf-chip:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+      .hy-jf-note { font-size:0.6875rem; color:var(--muted); margin-left:0.25rem; font-variant-numeric:tabular-nums; }
       .hyg-dl { appearance:none; display:inline-flex; align-items:center; gap:0.4375rem; background:var(--card); border:1px solid var(--border);
         border-radius:0.5rem; padding:0.4375rem 0.75rem; font-size:0.75rem; font-weight:600; color:var(--text-secondary); cursor:pointer; white-space:nowrap; font-family:inherit; }
       .hyg-dl:hover { color:var(--text); border-color:#b9c4d8; }
@@ -2069,6 +2080,16 @@ export function initRecruiterFilters(baseData) {
   // before the pipeline change and that list waits for the next refresh.
   const HYG_IDS = HYGIENE_LISTS.map(l => l.id);
   let hygActive = (() => { try { const v = localStorage.getItem('ik_hyg_list'); return HYG_IDS.includes(v) ? v : HYG_IDS[0]; } catch (e) { return HYG_IDS[0]; } })();
+  // #146b (Jerin, 19 Sep 2026): "Where is the status filter i asked for?" #146 put the Job status COLUMN on
+  // every list that names a job; this is the control that acts on it. It reads the SAME field the column
+  // shows, so what you filter by and what you read can never drift apart.
+  // 🚨 It applies to all eight of those lists at once, not just the one on screen — the panels are rendered
+  // together and only shown/hidden, so a filter that knew which list was active would leave the others stale.
+  const HY_JS_OPTS = [['all', 'All'], ['open', 'Open'], ['shut', 'Closed & archived']];
+  const HY_JS_LISTS = new Set(['unassigned', 'multirec', 'multisrc', 'nosrc', 'offergap', 'hiredgap', 'nodate', 'unscored']);
+  const HY_JS_LABEL = { all: 'All', open: 'Open', shut: 'Closed & archived' };
+  let hygJobStatus = (() => { try { const v = localStorage.getItem('ik_hyg_jobstatus'); return HY_JS_OPTS.some(o => o[0] === v) ? v : 'all'; } catch (e) { return 'all'; } })();
+  let hygTotals = {};   // the unfiltered counts, so the header can say "of N" instead of losing the total
   let hygCounts = {}, hygScopeLabel = {};
   const HY_TICK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.4l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const HY_CHEV = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3.5 1.8L6.7 5 3.5 8.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -2088,7 +2109,10 @@ export function initRecruiterFilters(baseData) {
     const tally = { fix: 0, record: 0, clear: 0, wait: 0 };
     HYGIENE_LISTS.forEach(l => { tally[hyState(l)]++; });
     const setHtml = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
-    setHtml('hyRailCount', `${HYGIENE_LISTS.length} lists`);
+    // #146b: with the filter on, these dots and counts describe the FILTERED lists. Say so here, or the rail
+    // reads as the whole compliance picture when it is only part of it.
+    setHtml('hyRailCount', `${HYGIENE_LISTS.length} lists` +
+      (hygJobStatus === 'all' ? '' : ` · job status: ${hyEsc(HY_JS_LABEL[hygJobStatus].toLowerCase())}`));
     setHtml('hyStateBar', ['fix', 'record', 'clear', 'wait'].filter(k => tally[k]).map(k => `<i class="s-${k}" style="flex:${tally[k]}"></i>`).join(''));
     setHtml('hyLegend', ['fix', 'record', 'clear'].map(k => `<span><i class="hy-dot ${k}"></i><b>${tally[k]}</b> ${HY_LABEL[k].toLowerCase()}</span>`).join(''));
     const groups = [...new Set(HYGIENE_LISTS.map(l => l.group))];
@@ -2098,6 +2122,19 @@ export function initRecruiterFilters(baseData) {
       return `<div class="hy-grp"><span>${hyEsc(g)}</span><em>${toFix ? toFix + ' to fix' : 'all clear'}</em></div>` +
         items.map(l => `<button type="button" class="hy-row" role="option" data-id="${l.id}" aria-selected="${l.id === hygActive}" tabindex="${l.id === hygActive ? 0 : -1}"><i class="hy-dot ${hyState(l)}"></i><span class="hy-name">${hyEsc(l.name)}</span>${hyBadge(l)}<span class="hy-sub">${hyEsc(l.sub)}</span></button>`).join('');
     }).join('');
+  }
+  // #146b — the Job status control. Shown ONLY on the lists that carry the column: a control on a list it
+  // cannot act on is a control that moves no number, which is the one thing a filter must never be (Rule 13).
+  function jobStatusFilterRow(l) {
+    if (!HY_JS_LISTS.has(l.id)) return '';
+    const shown = hygCounts[l.id], total = hygTotals[l.id];
+    const hiding = hygJobStatus !== 'all' && shown != null && total != null && total > shown;
+    return `
+      <div class="hy-jf">
+        <span class="hy-jf-lab">Job status</span>
+        ${HY_JS_OPTS.map(([k, lab]) => `<button type="button" class="hy-jf-chip${k === hygJobStatus ? ' on' : ''}" data-js="${k}">${hyEsc(lab)}</button>`).join('')}
+        ${hiding ? `<span class="hy-jf-note">showing ${shown.toLocaleString()} of ${total.toLocaleString()}</span>` : ''}
+      </div>`;
   }
   function renderHygHead() {
     const head = document.getElementById('hyHead'); if (!head) return;
@@ -2115,6 +2152,7 @@ export function initRecruiterFilters(baseData) {
           <button type="button" class="hyg-dl" data-dl="${l.id}">${HY_DL}<span>Download CSV</span></button>
         </div>
       </div>
+      ${jobStatusFilterRow(l)}
       <div class="hy-facts">
         <div class="hy-fact"><h4>Why it matters</h4><p>${hyEsc(l.why)}</p></div>
         <div class="hy-fact"><h4>Where to fix it</h4><div class="hy-path">${l.fix.map(x => `<span>${hyEsc(x)}</span>`).join(HY_CHEV)}</div></div>
@@ -2145,18 +2183,6 @@ export function initRecruiterFilters(baseData) {
     const waitRow = cols => `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:1rem">This list starts on ${FLOOR_LONG} from the next data refresh.</td></tr>`;
     // #126 (Jerin, 15 Sep 2026): everyone in Joining Pending with no Recruiter tagged is listed too, whatever their dates — the Recruiter
     // tables cannot credit them, and nothing else puts them in front of the team. Anyone the pipeline already listed is not repeated.
-    const listedU = new Set((dq.unassigned || []).map(u => (u.job8 || '') + '|' + String(u.candidate || '').trim().toLowerCase()));
-    const jpNoRec = floor ? (data.joiningPendingCases || [])
-      .filter(c => (!c.recruiter || c.recruiter === 'Unassigned')
-        && !listedU.has((c.jobId8 || '') + '|' + String(c.candidate || '').trim().toLowerCase()))
-      .map(c => ({ candidate: c.candidate, department: c.department, job8: c.jobId8, jobTitle: c.job || c.jobTitle,
-                   stage: c.subStage ? `${c.subStage} · Joining Pending` : 'Joining Pending', createdAt: '', lastActivity: '', applicationId: '' }))
-      : [];
-    const unassigned = floor ? (dq.unassigned || []).concat(jpNoRec) : [];
-    const unassignedTotal = floor ? (dq.unassignedSinceFloor != null ? dq.unassignedSinceFloor : (dq.unassigned || []).length) + jpNoRec.length : null;
-    const multiRec = floor ? (dq.multiRecruiter || []) : [];
-    const multiSrc = floor ? (dq.multiSourcer || []) : [];
-    const byLast = (a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || ''));
     const jobBy8 = {}; (data.jobs || []).forEach(j => { jobBy8[j.id] = j; });
     // #146 (Jerin, 19 Sep 2026): every hygiene row that names a job says whether that job is still Open, or
     // already Closed/Archived — which is what decides whether anybody needs to act on the row at all.
@@ -2167,7 +2193,31 @@ export function initRecruiterFilters(baseData) {
       if (!st) return '<td>—</td>';
       return `<td><span class="${st === 'Open' ? '' : 'js-shut'}">${esc(st)}</span></td>`;
     };
+    // #146b — the filter, acting on that same field. ⚠ A row whose job cannot be resolved (no id, or a job the
+    // pipeline did not carry) is kept only under "All": putting it under Open or under Closed would be a claim
+    // the data does not support, and silently dropping it from both would hide work.
+    const jsOn = hygJobStatus !== 'all';
+    const keepStatus = (st) => !jsOn || (st ? (hygJobStatus === 'open' ? st === 'Open' : st !== 'Open') : false);
+    const keepJob = (job8) => keepStatus(jobStatusOf(job8));
 
+    const listedU = new Set((dq.unassigned || []).map(u => (u.job8 || '') + '|' + String(u.candidate || '').trim().toLowerCase()));
+    const jpNoRec = floor ? (data.joiningPendingCases || [])
+      .filter(c => (!c.recruiter || c.recruiter === 'Unassigned')
+        && !listedU.has((c.jobId8 || '') + '|' + String(c.candidate || '').trim().toLowerCase()))
+      .map(c => ({ candidate: c.candidate, department: c.department, job8: c.jobId8, jobTitle: c.job || c.jobTitle,
+                   stage: c.subStage ? `${c.subStage} · Joining Pending` : 'Joining Pending', createdAt: '', lastActivity: '', applicationId: '' }))
+      : [];
+    const unassignedAll = floor ? (dq.unassigned || []).concat(jpNoRec) : [];
+    const unassigned = unassignedAll.filter(u => keepJob(u.job8));
+    // The pipeline's own total covers rows this page never received, so it is only true unfiltered.
+    const unassignedTotal = !floor ? null
+      : jsOn ? unassigned.length
+      : (dq.unassignedSinceFloor != null ? dq.unassignedSinceFloor : (dq.unassigned || []).length) + jpNoRec.length;
+    const multiRecAll = floor ? (dq.multiRecruiter || []) : [];
+    const multiSrcAll = floor ? (dq.multiSourcer || []) : [];
+    const multiRec = multiRecAll.filter(m => keepJob(m.job8));
+    const multiSrc = multiSrcAll.filter(m => keepJob(m.job8));
+    const byLast = (a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || ''));
     // --- Unassigned: Department -> Job -> Candidate (Jerin: "listed department-wise") ---
     const uBody = document.getElementById('hygUnassignedBody');
     if (uBody) {
@@ -2213,7 +2263,8 @@ export function initRecruiterFilters(baseData) {
     // --- Opening-link gaps: one array from the pipeline, split by whether it is still actionable. #13: an offer counts when it was
     // MADE or the person JOINS on or after the floor (Jerin: "offers in Q3 or DOJ in Q3 - or later"). ---
     const onFloor = g => (g.offerCreatedAt && g.offerCreatedAt >= FLOOR) || (g.doj && g.doj >= FLOOR);
-    const gaps = (data.offerLinkGaps || []).filter(onFloor);
+    const gapsAll = (data.offerLinkGaps || []).filter(onFloor);
+    const gaps = gapsAll.filter(g => keepJob(g.jobId8));
     const gapLive = gaps.filter(g => g.needsFix);
     const gapDone = gaps.filter(g => !g.needsFix);
     const ogBody = document.getElementById('hygOfferGapBody');
@@ -2232,8 +2283,10 @@ export function initRecruiterFilters(baseData) {
     // classified — for Tech/NonTech that means a missing Level; SME scores on Complexity alone (Level
     // irrelevant) and PA scores by title, so neither is flagged for a blank Level. A missing Complexity
     // defaults to Normal and does NOT zero a role. Exclude-dept roles (Test) score zero by design — skipped.
-    const unscored = (data.jobs || [])
-      .filter(j => scoreForRole(j, q) === 0 && familyForJob(j.department, j.title) !== 'Exclude')
+    const unscoredAll = (data.jobs || [])
+      .filter(j => scoreForRole(j, q) === 0 && familyForJob(j.department, j.title) !== 'Exclude');
+    const unscored = unscoredAll
+      .filter(j => keepStatus(j.status || ''))   // #146b — this list IS jobs, so the status is on the row
       .map(j => {
         const fam = familyForJob(j.department, j.title);
         const reason = (fam === 'Tech' || fam === 'NonTech') && (!j.level || j.level === 'NA') ? 'Level'
@@ -2243,7 +2296,9 @@ export function initRecruiterFilters(baseData) {
       .sort((a, b) => (b.j.total || 0) - (a.j.total || 0));
     // Openings with no opened date. The pipeline emits ONE row per opening (not per opening x job), so this list reconciles exactly
     // with dataQuality.openingsNoOpenedAt. An opening with no date is skipped by the bucket loop, so it never reaches Total Openings.
-    const noDate = (data.openingsNoDate || []).slice()
+    const noDateAll = (data.openingsNoDate || []).slice();
+    const noDate = noDateAll
+      .filter(o => keepStatus(o.status || ''))   // #146b — an opening row carries its job's status already
       .sort((a, b) => (b.status === 'Open') - (a.status === 'Open')
         || (a.department || '').localeCompare(b.department || '')
         || (a.title || '').localeCompare(b.title || ''));
@@ -2363,7 +2418,8 @@ export function initRecruiterFilters(baseData) {
       const k = String(e.candidate || '').trim().toLowerCase() + '|' + (e.jobTitle || '');
       if (!nsBest[k] || NS_ORDER[outcome] < NS_ORDER[nsBest[k].outcome]) nsBest[k] = { e, outcome };
     });
-    const noSrc = Object.values(nsBest).sort((a, b) => NS_ORDER[a.outcome] - NS_ORDER[b.outcome]
+    const noSrcAll = Object.values(nsBest);
+    const noSrc = noSrcAll.filter(({ e }) => keepJob(e.jobId8)).sort((a, b) => NS_ORDER[a.outcome] - NS_ORDER[b.outcome]
       || String(a.e.startDate || a.e.offerCreatedAt || '').localeCompare(String(b.e.startDate || b.e.offerCreatedAt || '')));
     const nsBody = document.getElementById('hygNoSrcBody');
     if (nsBody) {
@@ -2421,10 +2477,24 @@ export function initRecruiterFilters(baseData) {
 
     // --- the side list: counts, date scopes, then draw ---
     const sinceFloor = (key, rows) => floor ? (dq[key] != null ? dq[key] : rows.length) : null;
+    // #146b: with the filter on, `sinceFloor` must not reach for the pipeline's own total — that total counts
+    // rows this page never received, so it cannot be filtered and would leave a count that disagrees with the
+    // table under it. The filtered array length is the honest number.
+    const sinceFloorJS = (key, arr) => jsOn ? arr.length : sinceFloor(key, arr);
+    hygTotals = {
+      unassigned: !floor ? null : (dq.unassignedSinceFloor != null ? dq.unassignedSinceFloor : (dq.unassigned || []).length) + jpNoRec.length,
+      multirec: sinceFloor('multiRecruiterSinceFloor', multiRecAll),
+      multisrc: sinceFloor('multiSourcerSinceFloor', multiSrcAll),
+      nosrc: noSrcAll.length,
+      offergap: gapsAll.filter(g => g.needsFix).length,
+      hiredgap: gapsAll.filter(g => !g.needsFix).length,
+      nodate: noDateAll.length,
+      unscored: unscoredAll.length,
+    };
     hygCounts = {
       unassigned: unassignedTotal,   // #126: includes Joining Pending people with no Recruiter
-      multirec: sinceFloor('multiRecruiterSinceFloor', multiRec),
-      multisrc: sinceFloor('multiSourcerSinceFloor', multiSrc),
+      multirec: sinceFloorJS('multiRecruiterSinceFloor', multiRec),
+      multisrc: sinceFloorJS('multiSourcerSinceFloor', multiSrc),
       nosrc: noSrc.length,
       dates: datesOut.length + datesNoEnd.length,   // #111: the no-start list is informational
       nopod: noPod.length,
@@ -2985,6 +3055,18 @@ export function initRecruiterFilters(baseData) {
     hySplit.addEventListener('click', (e) => {
       const row = e.target.closest('.hy-row');
       if (row) { selectHyg(row.dataset.id, false); return; }
+      // #146b: the Job status chips. A full re-render, because the filter changes the ROWS, the counts in the
+      // header, the dots in the rail and what the CSV exports — everything it touches has to move together.
+      const js = e.target.closest('.hy-jf-chip');
+      if (js) {
+        const v = js.dataset.js;
+        if (v && v !== hygJobStatus) {
+          hygJobStatus = v;
+          try { localStorage.setItem('ik_hyg_jobstatus', v); } catch (err) { /* a per-viewer convenience only */ }
+          renderHygiene();
+        }
+        return;
+      }
       const b = e.target.closest('.hyg-dl'); if (!b) return;
       const key = b.dataset.dl, build = hygCsv[key];
       if (!build) return;
