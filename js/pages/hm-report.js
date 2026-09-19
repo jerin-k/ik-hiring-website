@@ -2,6 +2,7 @@ import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
+import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX } from '../job-notes.js';   // #150
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
@@ -347,7 +348,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Sub-Stage</th><th>Recruiter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Sub-stage</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening quarter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiningpending')}
@@ -357,7 +358,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Candidate</th><th>Recruiter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening quarter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiners')}
@@ -965,18 +966,22 @@ export function initHmFilters(data) {
     }
 
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
       return;
     }
-    // Newest opening quarter first, unlinked rows last (they have no quarter to sort on).
-    list.sort((a, b) => {
-      const qa = a.openingQuarter || '', qb = b.openingQuarter || '';
-      if (qa !== qb) { if (!qa) return 1; if (!qb) return -1; return qa > qb ? -1 : 1; }
-      return (a.candidate || '').localeCompare(b.candidate || '');
+    // #149: the tree sorts itself — SOONEST first, because this list looks forward. Inside a date, by name.
+    list.sort((a, b) => (a.candidate || '').localeCompare(b.candidate || ''));
+    // #149 option A: month ➡ date ➡ people. Month and DOJ are headings now, so they come off the person rows;
+    // Opening Quarter moves to the far right. `live` gives the date headings their "in 3 days / passed" line
+    // and tags a month wholly in the past as Overdue in place (Jerin, 19 Sep — not moved to the bottom).
+    body.innerHTML = monthTreeRows(list, {
+      dayOf: c => c.doj,
+      nameOf: c => c.candidate,
+      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c._dept)}${tdJob(c.job)}${tdQuarter(c.openingQuarter)}`,
+      cols: 6, order: 'soonest', live: true,
+      split: items => stageSplit(items, c => c.subStage),
     });
-    // #137: the cells come from people-cells.js — badges, dates and chips; the columns and the order above are unchanged.
-    body.innerHTML = list.map(c => `<tr>${tdQuarter(c.openingQuarter)}${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c._dept)}`
-      + `${tdJob(c.job)}${tdCandidate(c.candidate)}${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}</tr>`).join('');
+    pinMonthHeadings(body);
   }
 
   // ===== #130c (Jerin, 15 Sep 2026): Joiners — one row per PERSON moved to Hired =====
@@ -999,14 +1004,19 @@ export function initHmFilters(data) {
         : '';
     }
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="5" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
       return;
     }
-    // Most recent joining date first.
-    list.sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
-    // #137: the cells come from people-cells.js; the pod colour and the earlier-quarter check use each person's own start date.
-    body.innerHTML = list.map(e => `<tr>${tdQuarter(e.openingQuarter, e.startDate)}${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e._dept)}`
-      + `${tdJob(e.jobTitle)}${tdCandidate(e.candidate)}${tdRecruiter(e.recruiter, e.startDate)}</tr>`).join('');
+    // #149: NEWEST month first here — this list looks back, where Joining Pending looks forward.
+    list.sort((a, b) => String(a.candidate || '').localeCompare(String(b.candidate || '')));
+    // #149 option A. No sub-stage split: everyone on this list is Hired, which is one stage.
+    body.innerHTML = monthTreeRows(list, {
+      dayOf: e => e.startDate,
+      nameOf: e => e.candidate,
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e._dept)}${tdJob(e.jobTitle)}${tdQuarter(e.openingQuarter, e.startDate)}`,
+      cols: 5, order: 'newest',
+    });
+    pinMonthHeadings(body);
   }
 
   // ===== Section 3: Current Pipeline (Department -> Job tree) =====

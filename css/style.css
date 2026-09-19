@@ -294,6 +294,34 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .sc-slot { display: contents; }
 .sc-slot .tp-controls { margin: 0; gap: 0.625rem; }
 .sc-hide { display: none !important; }
+
+/* ===== #149 option A — the people lists as a Month ➡ Date ➡ people tree =====
+   The month heading is a sticky ROW (a sticky span inside a cell can only travel its own row's height), and
+   its `top` is set from the measured column-header height by js/people-tree.js. It can only pin at all
+   because 147b gave every table its own scrolling box. */
+tr.pt-m > td {
+  background: #e7edf7; color: var(--navy); font-weight: 600; font-size: 0.75rem;
+  border-bottom: 1px solid #cdd8ea; padding: 0.3125rem 0.75rem;
+}
+tr.pt-m { position: sticky; z-index: 4; }          /* `top` comes from pinMonthHeadings() */
+tr.pt-m.pt-overdue > td, tr.pt-m.pt-nodate > td { background: #fdf3e7; color: #8a5a12; }
+.pt-tag {
+  font-size: 0.5625rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #fff; background: var(--orange); border-radius: 0.1875rem; padding: 0.0625rem 0.25rem; margin-left: 0.4375rem;
+}
+tr.pt-d > td {
+  background: #f5f8fc; color: var(--accent-deep); font-weight: 600; font-size: 0.6875rem;
+  padding: 0.25rem 0.75rem 0.25rem 1.5rem; border-bottom: 1px solid var(--border-light);
+}
+.pt-dname .pt-sub { color: var(--muted); font-weight: 400; margin-left: 0.4375rem; }
+.pt-dname .pt-sub.pt-late { color: var(--red); font-weight: 600; }
+tr.pt-p > td.pt-name { padding-left: 2.5rem; font-weight: 500; color: var(--text); }
+.pt-count {
+  display: inline-block; min-width: 1.125rem; text-align: center; margin-left: 0.4375rem;
+  font-size: 0.625rem; font-weight: 600; color: var(--muted);
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 0 0.3125rem;
+}
+.pt-split { color: var(--muted); font-weight: 400; font-size: 0.625rem; margin-left: 0.625rem; }
 .sc-ask:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* #147b was fixed by giving .scroll-table a max-height (see the Tables section below), NOT by putting a
