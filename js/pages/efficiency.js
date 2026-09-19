@@ -2,6 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
+import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 // #145a (Jerin, 19 Sep 2026): the Pipeline panel moves here as it stands on the Hiring Manager tab, so it reads
@@ -187,7 +188,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="effJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th>DOJ</th><th style="min-width:10rem">Candidate</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Sub-stage</th><th>Recruiter</th><th>Opening</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Sub-stage</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiningpending')}
@@ -197,7 +198,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th>DOJ</th><th style="min-width:10rem">Candidate</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Recruiter</th><th>Opening</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th>Recruiter</th><th style="min-width:9.375rem">Department</th><th style="min-width:12.5rem">Job</th><th>Opening</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiners')}
@@ -769,10 +770,16 @@ export function initEfficiencyFilters(data) {
       .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
       .filter(c => !jsel.length || jsel.includes(c.job))
       .filter(c => inDojFilter(c.doj, dojF));
-    // #137: the cells come from people-cells.js — badges, dates and chips; the columns and the rows are unchanged.
-    body.innerHTML = rows.length ? rows.map(c => `<tr>${tdDoj(c.doj, { live: true })}${tdCandidate(c.candidate)}${tdDept(c.department)}`
-      + `${tdJob(c.job)}${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdLinked(c.linked)}</tr>`).join('')
-      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">No offers in play under these filters.</td></tr>`;
+    // #149 option A: month ➡ date ➡ people, soonest first — the twin of Hiring Manager's list, and Rule 3
+    // says the two move together.
+    body.innerHTML = rows.length ? monthTreeRows(rows, {
+      dayOf: c => c.doj,
+      nameOf: c => c.candidate,
+      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c.department)}${tdJob(c.job)}${tdLinked(c.linked)}`,
+      cols: 6, order: 'soonest', live: true,
+      split: items => stageSplit(items, c => c.subStage),
+    }) : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">No offers in play under these filters.</td></tr>`;
+    pinMonthHeadings(body);
     // #130b: on its own sub-tab now, so it says it is live — the dates above it do not apply.
     const cap = document.getElementById('effJPCaption');
     if (cap) {
@@ -794,10 +801,14 @@ export function initEfficiencyFilters(data) {
       .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
       .filter(e => !jsel.length || jsel.includes(e.jobTitle))
       .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
-    // #137: the cells come from people-cells.js; the pod colour and the earlier-quarter check use each person's own start date.
-    body.innerHTML = rows.length ? rows.map(e => `<tr>${tdDoj(e.startDate)}${tdCandidate(e.candidate)}${tdDept(e.department)}`
-      + `${tdJob(e.jobTitle)}${tdRecruiter(e.recruiter, e.startDate)}${tdLinked(!!e.openingId)}</tr>`).join('')
-      : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
+    // #149 option A: newest month first here — this list looks back. No sub-stage: everyone is Hired.
+    body.innerHTML = rows.length ? monthTreeRows(rows, {
+      dayOf: e => e.startDate,
+      nameOf: e => e.candidate,
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdLinked(!!e.openingId)}`,
+      cols: 5, order: 'newest',
+    }) : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
+    pinMonthHeadings(body);
     const cap = document.getElementById('effJoinersCaption');
     if (cap) {
       const unlinked = rows.filter(e => !e.openingId).length;

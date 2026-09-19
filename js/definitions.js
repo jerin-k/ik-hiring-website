@@ -71,15 +71,17 @@ export const DEFINITIONS = {
   'hm-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — the people behind the Joining Pending card on <strong>Position Fulfilment</strong>. It is a <strong>live</strong> list: it shows who is in closing today, so on this sub-tab <strong>Year</strong>, <strong>Quarter</strong>, <strong>From</strong> and <strong>To</strong> give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>. The <strong>Department</strong> and <strong>Job</strong> filters narrow it too.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026 · month ➔ date ➔ people, option A (#149) 19 Sep 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Opening Quarter', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against. A peach label marks an opening from a quarter before the one we are in. It reads <em>Not linked</em> when neither exists — offers in that state are listed in <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.'],
-          ['Month and DOJ', 'The candidate’s date of joining, and its month. Under the date: how far away it is — in rose once the date has passed and they are still not moved to Hired. <em>Not set</em> when there is no DOJ yet.'],
-          ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now. The badge fills in one step at a time — Ref Check, Documentation, Offer Created, Offer Sent, Offer Accepted — so it darkens as they get closer to joining.'],
-          ['Department, Job, Candidate, Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby, with their initials in their pod’s colour. <em>No recruiter</em> means none is tagged in Ashby.'],
+          ['Joining date / person', 'The list is a tree (#149): <strong>joining month</strong>, then <strong>joining date</strong>, then the people under it — each group heading carrying its own count, so the month and the date come off the person rows entirely. The month heading stays at the top of the table while its dates scroll past. A month wholly in the past is tagged <em>Overdue</em> where it sits. Anyone with no date is kept in a final <strong>Date not set</strong> group — never dropped, so the names always add up to the number beside them.'],
+          
+          ['Opening quarter — the last column', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against. A peach label marks an opening from a quarter before the one we are in. It reads <em>Not linked</em> when neither exists — offers in that state are listed in <strong>Recruiter Efficiency → Data Hygiene → Offers Missing Opening Link</strong>.'],
+          ['What the date headings say', 'The candidate’s date of joining. Under the date: how far away it is — in rose once the date has passed and they are still not moved to Hired. <em>Not set</em> when there is no DOJ yet.'],
+          ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now. The badge fills in one step at a time — Ref Check, Documentation, Offer Created, Offer Sent, Offer Accepted — so it darkens as they get closer to joining.'],
+          ['Department, Job and Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby, with their initials in their pod’s colour. <em>No recruiter</em> means none is tagged in Ashby.'],
           ['DOJ Month, DOJ From and DOJ To', 'In the filter row, on this sub-tab only, in place of Year, Quarter, From and To. They narrow the list by <strong>date of joining</strong>: pick a month, a range, or both, and either end of the range can be left empty. Anyone with <strong>no DOJ yet</strong> drops out while any of them is set; with all three empty, everyone in closing is listed.'],
         ]
       },
@@ -92,14 +94,16 @@ export const DEFINITIONS = {
   'hm-joiners': {
     summary: 'How this list is worked out',
     intro: 'One row per <strong>person</strong> who joined: moved to the <em>Hired</em> stage — an accepted offer alone does not count — with a <strong>start date</strong> between the <strong>From</strong> and <strong>To</strong> dates, most recent first. The <strong>Department</strong> and <strong>Job</strong> filters narrow it.',
-    confirmed: 'Added with Jerin · 15 Sep 2026 (#130) · the opening read from the hire (#131) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026',
+    confirmed: 'Added with Jerin · 15 Sep 2026 (#130) · the opening read from the hire (#131) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026 · month ➔ date ➔ people, option A (#149) 19 Sep 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['Opening Quarter', 'The quarter of the opening they were <strong>hired into</strong>: the one named on their offer or, when the offer names none, the one picked when they were moved to Hired, read from Ashby’s Openings screen. A peach label marks an opening from a quarter before the one they started in. It reads <em>Not linked</em> only when neither is known.'],
-          ['Month and DOJ', 'The day they started (their date of joining), with its weekday under it, and its month.'],
-          ['Department, Job, Candidate, Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby, with their initials in their pod’s colour for the quarter they started in. <em>No recruiter</em> means none is tagged in Ashby.'],
+          ['Joining date / person', 'The list is a tree (#149): <strong>joining month</strong>, then <strong>joining date</strong>, then the people under it — each group heading carrying its own count, so the month and the date come off the person rows entirely. The month heading stays at the top of the table while its dates scroll past. A month wholly in the past is tagged <em>Overdue</em> where it sits. Anyone with no date is kept in a final <strong>Date not set</strong> group — never dropped, so the names always add up to the number beside them.'],
+          
+          ['Opening quarter — the last column', 'The quarter of the opening they were <strong>hired into</strong>: the one named on their offer or, when the offer names none, the one picked when they were moved to Hired, read from Ashby’s Openings screen. A peach label marks an opening from a quarter before the one they started in. It reads <em>Not linked</em> only when neither is known.'],
+          ['What the date headings say', 'The day they started (their date of joining), with its weekday under it, and its month.'],
+          ['Department, Job and Recruiter', 'The role, the person, and the Recruiter on their hiring team in Ashby, with their initials in their pod’s colour for the quarter they started in. <em>No recruiter</em> means none is tagged in Ashby.'],
         ]
       },
     ],
@@ -225,16 +229,16 @@ export const DEFINITIONS = {
   'rec-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Every person in closing — <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. A <strong>live</strong> list: each person sits in their recruiter’s pod for the quarter we are in today. On this sub-tab <strong>Year</strong>, <strong>Quarter</strong>, <strong>From</strong> and <strong>To</strong> give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it too, and <em>Expand all</em> opens every pod and recruiter.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026 · month ➔ date ➔ people, option A (#149) 19 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
           ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the quarter we are in today, earliest joining date first. The number tag beside a pod or a recruiter is how many people sit under it, and each recruiter carries their initials in their pod’s colour. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
-          ['Opening Quarter', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against (<em>Not linked</em> when neither exists). A peach label marks an opening from a quarter before the one we are in.'],
+          ['Opening quarter — moved to the last column (#149)', 'The quarter of the opening they are tied to in Ashby: the one named on their offer or, when there is none, the opening Ashby’s Openings screen shows them against (<em>Not linked</em> when neither exists). A peach label marks an opening from a quarter before the one we are in.'],
           ['Month and DOJ', 'The joining date, and its month. Under the date: how far away it is — in rose once the date has passed and they are still not moved to Hired. <em>Not set</em> when there is no DOJ yet.'],
           ['Department and Job', 'The role they are joining.'],
-          ['Sub-Stage', 'Which of Ref Check, Documentation or Offer they are in now. The badge fills in one step at a time — Ref Check, Documentation, Offer Created, Offer Sent, Offer Accepted — so it darkens as they get closer to joining.'],
+          ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now. The badge fills in one step at a time — Ref Check, Documentation, Offer Created, Offer Sent, Offer Accepted — so it darkens as they get closer to joining.'],
           ['DOJ Month, DOJ From and DOJ To', 'In the filter row, on this sub-tab only, in place of Year, Quarter, From and To. They narrow the list by <strong>date of joining</strong>: pick a month, a range, or both, and either end of the range can be left empty. Anyone with <strong>no DOJ yet</strong> drops out while any of them is set; with all three empty, everyone in closing is listed.'],
         ]
       },
@@ -247,13 +251,13 @@ export const DEFINITIONS = {
   'rec-joiners': {
     summary: 'How this list is worked out',
     intro: 'Everyone who joined — moved to the <em>Hired</em> stage (an accepted offer alone does not count), with a <strong>start date</strong> between the <strong>From</strong> and <strong>To</strong> dates — one row each, grouped <strong>Pod → Recruiter → Candidate</strong>. The <strong>Pod</strong>, <strong>Recruiter</strong> and <strong>Job</strong> filters narrow it.',
-    confirmed: 'Added with Jerin · 15 Sep 2026 (#130) · the opening read from the hire (#131) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026',
+    confirmed: 'Added with Jerin · 15 Sep 2026 (#130) · the opening read from the hire (#131) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026 · month ➔ date ➔ people, option A (#149) 19 Sep 2026',
     groups: [
       {
         heading: 'Reading it',
         items: [
           ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter’s pod for the selected quarter, most recent joining date first. The number tag beside a pod or a recruiter is how many people sit under it, and each recruiter carries their initials in their pod’s colour. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears in the <em>No recruiter in this view</em> group at the bottom with the reason beside their name — so the list always accounts for everybody.'],
-          ['Opening Quarter', 'The quarter of the opening they were <strong>hired into</strong>: the one named on their offer or, when the offer names none, the one picked when they were moved to Hired, read from Ashby’s Openings screen (<em>Not linked</em> only when neither is known). A peach label marks an opening from a quarter before the one they started in.'],
+          ['Opening quarter — moved to the last column (#149)', 'The quarter of the opening they were <strong>hired into</strong>: the one named on their offer or, when the offer names none, the one picked when they were moved to Hired, read from Ashby’s Openings screen (<em>Not linked</em> only when neither is known). A peach label marks an opening from a quarter before the one they started in.'],
           ['Month and DOJ', 'The day they started, with its weekday under it, and its month.'],
           ['Department and Job', 'The role they joined.'],
         ]
@@ -459,13 +463,15 @@ export const DEFINITIONS = {
   'eff-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so on this sub-tab <strong>Year</strong>, <strong>Quarter</strong>, <strong>From</strong> and <strong>To</strong> give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>. The <strong>Department</strong> and <strong>Job</strong> filters narrow it too.',
-    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 25 Aug 2026 · on its own sub-tab (#130) 15 Sep 2026 · the opening Ashby shows them tied to (#132) 15 Sep 2026 · DOJ boxes replace the period boxes (#133) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026 · month ➔ date ➔ people, option A (#149) 19 Sep 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['DOJ', 'The joining date. Under it: how far away it is — in rose once the date has passed and they are still not moved to Hired. <em>Not set</em> when there is no DOJ yet.'],
-          ['Candidate', 'The person.'],
+          ['Joining date / person', 'The list is a tree (#149): <strong>joining month</strong>, then <strong>joining date</strong>, then the people under it — each group heading carrying its own count, so the month and the date come off the person rows entirely. The month heading stays at the top of the table while its dates scroll past. A month wholly in the past is tagged <em>Overdue</em> where it sits. Anyone with no date is kept in a final <strong>Date not set</strong> group — never dropped, so the names always add up to the number beside them.'],
+          
+          ['What the date headings say', 'The joining date. Under it: how far away it is — in rose once the date has passed and they are still not moved to Hired. <em>Not set</em> when there is no DOJ yet.'],
+          ['The person', 'The person.'],
           ['Department and Job', 'The role they are joining.'],
           ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now. The badge fills in one step at a time — Ref Check, Documentation, Offer Created, Offer Sent, Offer Accepted — so it darkens as they get closer to joining.'],
           ['Recruiter', 'The Recruiter on their hiring team in Ashby, with their initials in their pod’s colour. <em>No recruiter</em> means none is tagged in Ashby.'],
@@ -482,13 +488,15 @@ export const DEFINITIONS = {
   'eff-joiners': {
     summary: 'How this list is worked out',
     intro: 'Everyone who joined — moved to the <em>Hired</em> stage (an accepted offer alone does not count), with a <strong>start date</strong> between the <strong>From</strong> and <strong>To</strong> dates — one row each, most recent first. The <strong>Department</strong> and <strong>Job</strong> filters narrow it.',
-    confirmed: 'Added with Jerin · 15 Sep 2026 (#130) · the opening read from the hire (#131) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026',
+    confirmed: 'Added with Jerin · 15 Sep 2026 (#130) · the opening read from the hire (#131) 15 Sep 2026 · badges and date labels (#137) 15 Sep 2026 · month ➔ date ➔ people, option A (#149) 19 Sep 2026',
     groups: [
       {
         heading: 'The columns',
         items: [
-          ['DOJ', 'The day they started, with its weekday under it.'],
-          ['Candidate', 'The person.'],
+          ['Joining date / person', 'The list is a tree (#149): <strong>joining month</strong>, then <strong>joining date</strong>, then the people under it — each group heading carrying its own count, so the month and the date come off the person rows entirely. The month heading stays at the top of the table while its dates scroll past. A month wholly in the past is tagged <em>Overdue</em> where it sits. Anyone with no date is kept in a final <strong>Date not set</strong> group — never dropped, so the names always add up to the number beside them.'],
+          
+          ['What the date headings say', 'The day they started, with its weekday under it.'],
+          ['The person', 'The person.'],
           ['Department and Job', 'The role they joined.'],
           ['Recruiter', 'The Recruiter on their hiring team in Ashby, with their initials in their pod’s colour. <em>No recruiter</em> means none is tagged in Ashby.'],
           ['Opening', '<em>Linked</em> when they were hired into a known opening: the one named on their offer or, when the offer names none, the one picked when they were moved to Hired, read from Ashby’s Openings screen. <em>Not linked</em> only when neither is known.'],

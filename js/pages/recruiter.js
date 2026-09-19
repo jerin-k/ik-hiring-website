@@ -457,7 +457,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Sub-Stage</th>
+          <th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Sub-stage</th><th>Opening quarter</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
       </table></div>
@@ -470,7 +470,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Opening Quarter</th><th>Month</th><th>DOJ</th><th>Department</th><th>Job</th>
+          <th>Month</th><th>DOJ</th><th>Department</th><th>Job</th><th>Opening quarter</th>
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
       </table></div>
@@ -1624,8 +1624,9 @@ export function initRecruiterFilters(baseData) {
         rest: 6,
         isLinked: c => c.linked,
         sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
-        cells: c => `${tdQuarter(c.openingQuarter)}${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
-          + `${tdJob(c.job || c.jobTitle)}${tdStage(c.subStage)}`
+        // #149 rule 6: only Opening Quarter moves, to the far right. Everything else stays as it was.
+        cells: c => `${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
+          + `${tdJob(c.job || c.jobTitle)}${tdStage(c.subStage)}${tdQuarter(c.openingQuarter)}`
       });
       jpBody.innerHTML = jp.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">Nobody in closing under these filters.</td></tr>`;
       // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
@@ -1650,7 +1651,8 @@ export function initRecruiterFilters(baseData) {
         rest: 5,
         isLinked: e => !!e.openingId,
         sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
-        cells: e => `${tdQuarter(e.openingQuarter, e.startDate)}${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}`
+        // #149 rule 6: only Opening Quarter moves, to the far right.
+        cells: e => `${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdQuarter(e.openingQuarter, e.startDate)}`
       });
       joinersBody.innerHTML = jn.html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
       wireTreePath(joinersBody);
