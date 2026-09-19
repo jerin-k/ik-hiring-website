@@ -2,8 +2,11 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
-import { shadeMomentum, shadeTis, shareBars, colorShareBars } from '../grid-shade.js';   // #137c
+import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
 import { renderInterviewer, initInterviewer } from './interviewer.js';
+// #145a (Jerin, 19 Sep 2026): the Pipeline panel moves here as it stands on the Hiring Manager tab, so it reads
+// that tab's stage list — one list for both tables.
+import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
@@ -148,6 +151,7 @@ export function renderEfficiency(data) {
       <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
       <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <button class="eff-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
@@ -243,6 +247,20 @@ export function renderEfficiency(data) {
       ${defsBlock('eff-throughput')}
     </div>
 
+    <!-- PANEL: Pipeline (#145a, Jerin 19 Sep 2026) — the Hiring Manager tab's live snapshot, on this tab's Department / Job filters -->
+    <div class="eff-panel" data-panel="pipeline" style="display:none">
+      <p class="sub-note" style="color:var(--orange)"><strong>Live</strong> — counts show where candidates stand today, not in the selected period. Click a department to drill in.</p>
+      <div class="tp-controls">
+        <div class="ms" id="effMsPipeStage"></div>
+        <label><input type="checkbox" id="effPipeHideEmpty" checked> Hide zero-pipeline</label>
+      </div>
+      <div class="scroll-table"><table id="effPipeTable">
+        <thead id="effPipeHead"></thead>
+        <tbody id="effPipeBody"></tbody>
+      </table></div>
+      ${defsBlock('eff-pipeline')}
+    </div>
+
     <!-- PANEL: Time in Process -->
     <div class="eff-panel" data-panel="timeinprocess" style="display:none">
       <p class="sub-note" id="effTisNote" style="display:none"></p>
@@ -310,7 +328,7 @@ export function initEfficiencyFilters(data) {
   const tisSplit = hasWaitSplit(rollups);
   const arDwellJob = data.appReviewDwellByJob || null;       // {job8:{days:count}} — App Review dwell (still-parked candidates)
   let activeTab = 'fulfilment';
-  let msPod = null, msDept = null, msJob = null, msEffTpStage = null;
+  let msPod = null, msDept = null, msJob = null, msEffTpStage = null, msEffPipeStage = null;   // #145a
 
   const expandAll = () => !!document.getElementById('effExpandAll')?.checked;
 
@@ -1123,6 +1141,65 @@ export function initEfficiencyFilters(data) {
     buildTpChartEff(selQuarter(), vis);
   }
 
+  // ===== Pipeline — the live snapshot (#145a, Jerin 19 Sep 2026) =====
+  // The same table the Hiring Manager tab shows, on this tab's Department / Job filters. The COUNTS are where
+  // candidates stand today and no period narrows them (which is why From / To hide on this sub-tab, Rule 13);
+  // Year and Quarter decide which ROLES are listed — only those with an opening opened in the period (#125).
+  function renderPipeline() {
+    const head = document.getElementById('effPipeHead'), body = document.getElementById('effPipeBody');
+    if (!head || !body) return;
+    const stPick = msEffPipeStage ? msEffPipeStage.getSelected() : [];
+    const visStages = PIPE_KEYS.filter(k => !stPick.length || stPick.includes(PIPE_LABELS[k]));
+    const dsel = msDept ? msDept.getSelected() : [], jsel = msJob ? msJob.getSelected() : [];
+    const hideEmpty = !!document.getElementById('effPipeHideEmpty')?.checked;
+    const per = tisPeriod();
+    const openIds = per ? jobsWithOpeningIn(data, qq => per.includes(qq)) : null;   // #125
+    const deptOfJob = (j) => resolveDeptTeam(j.department).dept || j.department || 'Unknown';
+
+    head.innerHTML = '<tr><th style="min-width:17.5rem">Department / Job</th><th>Total</th>'
+      + visStages.map(s => `<th>${PIPE_LABELS[s]}</th>`).join('') + '</tr>';
+
+    const groups = {};
+    (data.jobs || []).forEach(j => {
+      if (!j.pipeline) return;
+      const dept = deptOfJob(j);
+      if (dsel.length && !dsel.includes(dept)) return;
+      if (jsel.length && !jsel.includes(j.title)) return;
+      if (openIds && !openIds.has(String(j.id || '').slice(0, 8))) return;
+      if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return;
+      const G = groups[dept] || (groups[dept] = { total: 0, stages: {}, jobs: [] });
+      G.total += (j.total || 0);
+      visStages.forEach(k => { G.stages[k] = (G.stages[k] || 0) + (j.pipeline[k] || 0); });
+      G.jobs.push(j);
+    });
+
+    // Hired stays green and Offer blue, exactly as on the Hiring Manager tab.
+    const cells = (total, stages) => `<td style="font-weight:600">${total}</td>` + visStages.map(k => {
+      const v = stages[k] || 0;
+      if (k === 'hired' && v > 0) return `<td class="good">${v}</td>`;
+      if (k === 'offer' && v > 0) return `<td style="color:var(--blue);font-weight:600">${v}</td>`;
+      return `<td${v === 0 ? ' class="zero"' : ''}>${v}</td>`;
+    }).join('');
+
+    const totalsAll = {}; visStages.forEach(k => { totalsAll[k] = 0; });
+    let grand = 0, html = '';
+    Object.keys(groups).sort((a, b) => a.localeCompare(b)).forEach((dept, di) => {
+      const G = groups[dept];
+      grand += G.total; visStages.forEach(k => { totalsAll[k] += (G.stages[k] || 0); });
+      G.jobs.sort((a, b) => (b.total || 0) - (a.total || 0) || String(a.title || '').localeCompare(String(b.title || '')));
+      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${G.jobs.length}</span></td>${cells(G.total, G.stages)}</tr>`;
+      G.jobs.forEach((j, ji) => {
+        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--muted)">${j.title}</td>${cells(j.total, j.pipeline)}</tr>`;
+      });
+    });
+    body.innerHTML = html
+      ? html + `<tr class="totals-row"><td>Total</td>${cells(grand, totalsAll)}</tr>`
+      : `<tr><td colspan="${visStages.length + 2}" style="text-align:center;color:var(--muted);padding:1rem">No roles match the filter.</td></tr>`;
+    wireTreePath(body, expandAll());
+    shadePipeline(body);   // #137c
+  }
+
   // Quarter keys the Year/Quarter selector covers; null = all-time. Separate from selQuarter(), which
   // always resolves to ONE quarter for pod grouping and capacity even when the selector reads "All".
   // Adds up {quarter: {a, b}} over a period (an array of quarter keys; null = every quarter present).
@@ -1669,6 +1746,7 @@ export function initEfficiencyFilters(data) {
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
     else if (activeTab === 'throughput') renderThroughput();   // its chart is built inside renderThroughput
+    else if (activeTab === 'pipeline') renderPipeline();   // #145a
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
     else if (activeTab === 'joining') renderJoining();   // its chart is built inside renderJoining
     else if (activeTab === 'sourcing') renderSourcing();
@@ -1711,6 +1789,9 @@ export function initEfficiencyFilters(data) {
     // the two flat people lists, where it would move nothing (Rule 13).
     toggleJpFilters('eff', document.getElementById('effPeriod'), name === 'joiningpending');
     showControl(document.getElementById('effExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
+    // #145a: Pipeline counts are live, and its roles follow Year and Quarter, so From and To would move nothing
+    // there — they hide, exactly as on the Hiring Manager tab (#141d, Rule 13).
+    ['effVelFrom', 'effVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.eff-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.eff-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -1731,6 +1812,9 @@ export function initEfficiencyFilters(data) {
   // #122: the Stages dropdown + Hide zero-pipeline above the Throughput squares.
   msEffTpStage = makeMultiSelect(document.getElementById('effMsTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('effTpHideEmpty')?.addEventListener('change', renderThroughput);
+  // #145a: the same two controls over the Pipeline table.
+  msEffPipeStage = makeMultiSelect(document.getElementById('effMsPipeStage'), 'Stages', PIPE_KEYS.map(k => PIPE_LABELS[k]), renderPipeline);
+  document.getElementById('effPipeHideEmpty')?.addEventListener('change', renderPipeline);
 
   // #129: the dates narrow every panel, so a change re-renders whichever is showing (they used to redraw Momentum only).
   ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));

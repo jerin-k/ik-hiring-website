@@ -12,8 +12,10 @@ import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
-const STAGES_ORDER = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
-const STAGE_LABELS = {
+// #145a (19 Sep 2026): exported so the Overall Efficiency Pipeline reads the SAME stage list and labels — one
+// list, so the two tables can never drift apart (Rule 3).
+export const STAGES_ORDER = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
+export const STAGE_LABELS = {
   appReview:'App Review', helloChristy:'Hello Christy', taScreen:'TA Screen', hmReview:'HM Review', oa:'OA',
   r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
   refCheck:'Ref Check', docSub:'Doc Sub', offer:'Offer', hired:'Hired'
