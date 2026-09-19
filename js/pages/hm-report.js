@@ -3,6 +3,7 @@ import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
 import { shadePipeline } from '../grid-shade.js';   // #137c
+import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX } from '../job-notes.js';   // #150
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
@@ -34,6 +35,110 @@ const deptOf = v => splitDT(v).dept;
 const byDept = (a, b) => a._dept.localeCompare(b._dept) || ((b.total || 0) - (a.total || 0)) || String(a.title || '').localeCompare(String(b.title || ''));
 
 const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
+
+// ===== #150 (Jerin, 19 Sep 2026) — the two cells at the end of the job row =====
+// "Who is joining" lists the people behind the Joining Pending number beside it — collected in the same loop,
+// so the two can never disagree. It is LIVE, like that column: From / To do not narrow it.
+// "Remarks" is free text the team writes against the JOB; it is saved by js/job-notes.js and survives until edited.
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const SHOW_FIRST = 3;   // names visible before "+N more"
+
+function dayLabel(iso) {
+  if (!iso || iso.length < 10) return '';
+  const d = +iso.slice(8, 10), m = parseInt(iso.slice(5, 7), 10);
+  return `${d} ${MON[m - 1] || ''}`;
+}
+function jnWhoCell(o) {
+  const list = [...(o.jpWho || [])].sort((a, b) => String(a.doj || '9999').localeCompare(String(b.doj || '9999'))
+    || String(a.candidate || '').localeCompare(String(b.candidate || '')));
+  if (!list.length) return '<td class="jn-cell"><span class="zero">—</span></td>';
+  const line = (c, i) => `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
+    + `<span class="jn-d">${esc(dayLabel(c.doj) || 'date not set')}</span>`
+    + (c.subStage ? `<span class="jn-s">${esc(c.subStage)}</span>` : '') + '</span>';
+  const more = list.length > SHOW_FIRST
+    ? `<button type="button" class="jn-more" data-jn-more="1">+${list.length - SHOW_FIRST} more</button>` : '';
+  return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}</td>`;
+}
+function jnRemarkCell(o) {
+  const n = o.job8 ? noteOf(o.job8) : null;
+  if (!o.job8) return '<td class="jn-cell"><span class="zero">—</span></td>';
+  if (!n || !n.text) {
+    return `<td class="jn-cell jn-rem" data-job8="${esc(o.job8)}"><button type="button" class="jn-add" data-jn-edit="1">Add a remark</button></td>`;
+  }
+  const who = n.unsaved ? 'Unsaved — in this browser only' : `${esc(n.by || 'someone')} · ${esc(n.at ? dayLabel(n.at) : '')}`;
+  return `<td class="jn-cell jn-rem${n.unsaved ? ' jn-unsaved' : ''}" data-job8="${esc(o.job8)}">`
+    + `<button type="button" class="jn-text" data-jn-edit="1" title="Edit this remark">${esc(n.text)}</button>`
+    + `<span class="jn-by">${who}</span></td>`;
+}
+// ONE delegated listener for the life of the table: expand a long list, open an editor, save or cancel it.
+// ⚠ renderSection1 runs on every filter change and again when the notes land, so this must not stack — two
+// listeners toggled the same class twice and the list appeared frozen (found in the 19 Sep preview).
+function wireJobNotes(body) {
+  if (body.dataset.jnWired === '1') return;
+  body.dataset.jnWired = '1';
+  body.addEventListener('click', async (ev) => {
+    const moreBtn = ev.target.closest('[data-jn-more]');
+    if (moreBtn) {
+      ev.stopPropagation();
+      const cell = moreBtn.closest('td');
+      const open = cell.classList.toggle('jn-open');
+      moreBtn.textContent = open ? 'Show fewer' : `+${cell.querySelectorAll('.jn-extra').length} more`;
+      return;
+    }
+    const edit = ev.target.closest('[data-jn-edit]');
+    if (edit) { ev.stopPropagation(); openEditor(edit.closest('td')); return; }
+  });
+}
+// Close the editor by redrawing THIS CELL only — a full re-render would throw away which departments the
+// reader had open and where they were on the page, for a change that touches one cell.
+function closeEditor(cell) {
+  const job8 = cell.dataset.job8 || '';
+  cell.className = 'jn-cell jn-rem';
+  cell.outerHTML = jnRemarkCell({ job8 });
+  // The department row counts how many of its roles carry a remark, so keep it honest after a save.
+  const body = document.getElementById('hm1Body');
+  if (!body) return;
+  body.querySelectorAll('tr.dept-header').forEach(h => {
+    const g = h.dataset.g;
+    const leaves = [...body.querySelectorAll(`tr.leaf[data-g="${g}"]`)];
+    const written = leaves.filter(r => r.querySelector('.jn-text')).length;
+    const c = h.cells[h.cells.length - 1];
+    if (c) c.innerHTML = written ? `${written} of ${leaves.length} written` : '<span class="zero">—</span>';
+  });
+}
+function openEditor(cell) {
+  if (!cell || cell.querySelector('textarea')) return;
+  const job8 = cell.dataset.job8 || '';
+  const n = noteOf(job8) || { text: '' };
+  cell.innerHTML = `<textarea class="jn-ta" maxlength="${NOTE_MAX + 200}" rows="3"
+      placeholder="What should a hiring manager know about this role?">${esc(n.text)}</textarea>
+    <p class="jn-guard">Visible to anyone with the link — no candidate names, salaries, phone numbers or email addresses.</p>
+    <div class="jn-actions"><button type="button" class="jn-btn quiet" data-jn-cancel="1">Cancel</button>
+      <button type="button" class="jn-btn" data-jn-save="1">Save</button></div>`;
+  const ta = cell.querySelector('textarea'), guard = cell.querySelector('.jn-guard'), save = cell.querySelector('[data-jn-save]');
+  const check = () => {
+    const bad = guardProblem(ta.value);
+    guard.textContent = bad || 'Visible to anyone with the link — no candidate names, salaries, phone numbers or email addresses.';
+    guard.classList.toggle('bad', !!bad);
+    save.disabled = !!bad;
+  };
+  ta.addEventListener('input', check); ta.addEventListener('click', e => e.stopPropagation()); check();
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  cell.querySelector('[data-jn-cancel]').addEventListener('click', (e) => { e.stopPropagation(); closeEditor(cell); });
+  save.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    save.disabled = true; save.textContent = 'Saving…';
+    const res = await publishNote(job8, ta.value);
+    if (res.ok) { closeEditor(cell); return; }
+    // Never claim a save we cannot see (#144). The note is kept locally and the cell says so.
+    guard.textContent = res.reason; guard.classList.add('bad');
+    save.disabled = false; save.textContent = 'Save';
+    const done = document.createElement('button');
+    done.type = 'button'; done.className = 'jn-btn quiet'; done.textContent = 'Close';
+    done.addEventListener('click', (e2) => { e2.stopPropagation(); closeEditor(cell); });
+    cell.querySelector('.jn-actions').appendChild(done);
+  });
+}
 
 // YYYY-MM-DD -> "YYYY-QN" (Position Opened Quarter)
 function quarterOf(dateStr) {
@@ -196,7 +301,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Delta</th><th>Missed</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total Openings</th><th>Joined</th><th>Joining Pending</th><th>Dropped</th><th>Delta</th><th>Missed</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -412,7 +517,8 @@ export function initHmFilters(data) {
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
       G.total += t; G.joined += jn; G.open += op; G.missed += ms;
-      G.jobs.push({ title: rec.title, total: t, joined: jn, open: op, missed: ms, jpP: 0, drop: 0 });
+      // #150: job8 rides on the row — the Remarks cell is filed by job id, never by title.
+      G.jobs.push({ title: rec.title, job8: job8.slice(0, 8), total: t, joined: jn, open: op, missed: ms, jpP: 0, drop: 0, jpWho: [] });
     });
     // ===== CANDIDATE-SIDE COLUMNS (people, not openings) — definition set by Jerin 2026-08-22 =====
     // Joining Pending = every candidate currently parked in Ref Check, Documentation or Offer.
@@ -422,13 +528,17 @@ export function initHmFilters(data) {
     // Rows are added for jobs that have people in closing but NO opening in the period: restricting to
     // openings showed 88 of 166 pending people and hid 45 of SME - India's 46.
     const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title));
-    function bump(dept, title, field) {
+    // #150: `who` is the Joining Pending case behind this +1. The names in the cell are collected in the SAME
+    // loop as the number beside them, so the cell and the column can never disagree (Rule 3).
+    function bump(dept, title, field, who) {
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
       G[field] += 1;
       let row = G.jobs.find(j => j.title === title);
-      if (!row) { row = { title, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0 }; G.jobs.push(row); }
+      if (!row) { row = { title, job8: (who && who.jobId8) || '', total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [] }; G.jobs.push(row); }
+      if (!row.job8 && who && who.jobId8) row.job8 = who.jobId8;
       row[field] += 1;
+      if (who) { (row.jpWho || (row.jpWho = [])).push(who); (G.jpWho || (G.jpWho = [])).push(who); }
     }
     // ...MINUS anyone whose opening belongs to an EARLIER quarter (Jerin, 2026-08-22): their offer is last
     // quarter's demand still in flight, and counting it here would inflate the current quarter every time.
@@ -439,7 +549,7 @@ export function initHmFilters(data) {
       const dept = deptOf(c.department || '') || 'Unknown', title = c.job || c.jobTitle || '(no job)';
       if (!inScope(dept, title)) return;
       if (c.openingQuarter && fromQ && fromQ !== '\u2014' && c.openingQuarter < fromQ) return;
-      bump(dept, title, 'jpP');
+      bump(dept, title, 'jpP', c);   // #150: the case itself, for the "Who is joining" cell
     });
     dropRows(data).forEach(e => {
       if (!dropIn(e, rg, winQs)) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
@@ -499,17 +609,21 @@ export function initHmFilters(data) {
     let html = '';
     deptArr.forEach((D, gi) => {
       const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
+      const withNote = jobs2.filter(j => (noteOf(j.job8) || {}).text).length;
       html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}</tr>`;
+        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
+        + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
+        + `<td class="jn-cell jn-sum">${withNote ? `${withNote} of ${jobs2.length} written` : '<span class="zero">—</span>'}</td></tr>`;
       jobs2.forEach(o => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${o.title}</td>${metrics(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${o.title}</td>${metrics(o)}${jnWhoCell(o)}${jnRemarkCell(o)}</tr>`;
       });
     });
-    html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}</tr>`;
+    html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
     wireTree(body);
+    wireJobNotes(body);   // #150
 
     // Chart: one bar per department, stacked Joined / Open / Missed — and each of those split again into
     // the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29). Darkest band is
@@ -992,4 +1106,6 @@ export function initHmFilters(data) {
   applyYearQuarter();
 
   showTab('positions');
+  // #150: the saved remarks arrive on their own clock — the table draws immediately and fills them in when they land.
+  loadNotes().then(() => { if (activeTab === 'positions') renderSection1(); });
 }

@@ -48,6 +48,8 @@ export const DEFINITIONS = {
           ['Dropped', 'As above — reached Ref Check, Documentation or Offer, then archived — with their share of all outcomes underneath.'],
           ['Delta', 'Total Openings \u2212 Joined \u2212 Joining Pending. <strong>It can go negative, and that is allowed</strong> \u2014 it means more people are in closing than positions recorded, which happens when an offer was never linked to an opening. It shrinks as those links get fixed.'],
           ['Missed', 'Positions carried forward to the next quarter.'],
+          ['Who is joining', 'The people behind the <strong>Joining Pending</strong> number on the same row, with the date they are due to start and the stage they are at. It is counted the same way, so the names always add up to that number. Like it, the list is <strong>live</strong> — the From and To dates do not change it. Long lists collapse; <em>+N more</em> opens them.'],
+          ['Remarks', 'A note your team writes against the <strong>role</strong>, not a candidate — it stays until somebody edits it, and everybody sees the same note. Anyone who can open this tab can write one. 🚨 It is saved to a file that <strong>anyone with the link can read</strong>, so it must never hold candidate names, salaries, phone numbers or email addresses; an email address or a long number is refused. Amber means the note is in your browser only and the server has not confirmed it yet.'],
         ]
       },
       {
