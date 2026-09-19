@@ -91,12 +91,19 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 /* ONE freeze for the whole top block (Jerin, 2026-08-31). .header and .nav-strip were each sticky, with
    the nav pinned at a hard-coded top:53px — two freezes, and a magic number that breaks the moment the
    header wraps at a narrow width. The wrapper sticks; the children are ordinary flow inside it.
-   🚨 #147 option C+ (Jerin, 19 Sep 2026) REVERSED THIS: the navy block now scrolls away and the sub-tab band
-   plus the filter row freeze in its place — 72px against this block's 105px, so every filter stays reachable
-   and the page GAINS 33px. The band picks up the page name and the Ask Ashby AI link (js/sticky-chrome.js)
-   so nothing is lost on the way past. Options A and B (freeze all of it) measured 130px against 66 in the
-   mock-up — Jerin's own ~136-against-~92 from 31 Aug, which is why they lost. */
-.topbar { position: static; }
+   🚨 #147 option C+ (Jerin, 19 Sep 2026) REVERSED THIS: the navy block scrolled away entirely and the sub-tab
+   band plus the filter row froze in its place — 74px against this block's 105px.
+   🚨 #156 (Jerin, 19 Sep 2026, option A of three from the mock-up) PUT THE MAIN TAB STRIP BACK IN: the brand
+   line folds away on scroll, the white tab strip stays, and the band and filter row freeze under it. Measured
+   117px against C+'s 74 — 43px, which is one row of a 33px table out of 21. He weighed that against a tab
+   MENU on the band (+0px) and a slimmed strip (+29px) with all three in front of him and chose this one.
+   🚨 THE STRIP CANNOT BE STICKY ON ITS OWN. A sticky element is released the moment its own PARENT's box
+   leaves the screen, and the strip's parent is this block — in the first mock it held for 43px and then rode
+   away, leaving a see-through gap above the band with table rows sliding through it. So the BLOCK sticks,
+   pulled up by exactly the brand line's height: the line folds out of sight, the strip is what is left.
+   🚨 --sc-fold is MEASURED by js/sticky-chrome.js. A hard-coded fold breaks the moment the header wraps at a
+   narrow width — which is the same trap as the old `top: 53px` two paragraphs up. Do not write a number here. */
+.topbar { position: sticky; top: var(--sc-fold, 0px); z-index: 42; }
 .header {
   background: var(--navy);
   border-bottom: 0;
@@ -259,14 +266,19 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 }
 .subtab-band .period { margin-left: auto; display: flex; align-items: center; gap: 0.4375rem; }
 
-/* ===== #147 option C+ — the frozen block =====
-   Two sticky siblings rather than a new wrapper, so no page module had to be restructured. The band sits at
-   the top; the filter row sits directly under it at the band's MEASURED height. Both heights are published
-   as --sc-band / --sc-frozen by js/sticky-chrome.js and are never written as constants here.
-   The two rows are tinted as one block (147a) and carry a single rule and shadow at the bottom edge, so it
-   reads as one frozen thing and not as two rows that happen to be stuck. */
+/* ===== #147 option C+, extended by #156 — the frozen block =====
+   Sticky siblings rather than a new wrapper, so no page module had to be restructured. Since #156 the block
+   is three pieces deep: the main tab strip (inside .topbar above), then the band, then the filter row. Each
+   sits at the MEASURED bottom edge of the one above it. js/sticky-chrome.js publishes all four figures and
+   none of them is ever written as a constant here:
+     --sc-fold    MINUS the brand line's height — how far .topbar is pulled up so the line folds away
+     --sc-nav     the frozen tab strip's height — where the band starts
+     --sc-band    strip + band — where the filter row starts
+     --sc-frozen  the whole frozen block — where everything below it starts (holdTableChrome, .scroll-table)
+   The band and filter row are tinted as one block (147a) and carry a single rule and shadow at the bottom
+   edge, so they read as one frozen thing and not as rows that happen to be stuck. */
 .sc-stick-band {
-  position: sticky; top: 0; z-index: 41;
+  position: sticky; top: var(--sc-nav, 0px); z-index: 41;
   background: #e2e9f5; border-color: #cdd8ea; border-bottom: 1px solid #cdd8ea; border-radius: 0;
 }
 .sc-stick-filters { position: sticky; top: var(--sc-band, 0px); z-index: 40; }
@@ -286,13 +298,14 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
   /* the two rows are one block, so no page showing through between them */
   margin-top: 0 !important;
 }
-/* the page's own name, where the navy block used to say it */
-.sc-name {
-  font-size: 0.75rem; font-weight: 700; color: var(--navy); white-space: nowrap;
-  display: inline-flex; align-items: center; padding-right: 0.5rem; margin-right: 0.125rem;
-  border-right: 1px solid #b9c7e0;
-}
-/* and its Ask Ashby AI link, carried down from the header that now scrolls away */
+/* #156: `.sc-name` is GONE. The band carried the page's name only because C+ let the whole navy block scroll
+   away, main tabs included. Now the frozen tab strip sits directly above the band and names the page in white,
+   so the band's copy was the same thing said twice — Jerin spotted it when he asked for this ("that probably
+   changes the mention of the tab name alongside the sub-tab pane"), and Rule 3 says it goes in the SAME edit.
+   Removing it costs no height: the band measured 36px with it and 36px without — the sub-tab chips set that.
+   ⚠ `.sc-ask` below does NOT go with it. The Ask Ashby AI pill's original lives in the brand line, which still
+   folds away on scroll, so the band's copy is the only one left while you are reading. */
+/* the Ask Ashby AI link, carried down from the brand line that folds away */
 .sc-ask {
   margin-left: auto; font-size: 0.6875rem; font-weight: 600; color: var(--accent-deep); text-decoration: none;
   border: 1px solid #cdd8ea; background: var(--card); border-radius: 999px; padding: 0.0625rem 0.5rem;
