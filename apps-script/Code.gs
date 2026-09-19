@@ -63,6 +63,9 @@ function doGet(e) {
 
   if (page === 'doPublish') { return publishConfigPage_(e, userEmail); }
 
+  // #150 (19 Sep 2026): one remark against one job. Any role but 'none' may write; the guard runs server-side too.
+  if (page === 'doPublishNote') { return publishNotePage_(e, userEmail); }
+
   if (page === 'admin') {
     var access = getUserAccess(userEmail);
     if (!access || access.role !== 'admin') {
@@ -655,4 +658,53 @@ function inviteEmailHtml_(u) {
     + 'You are receiving this because a dashboard admin gave your Interview Kickstart account access. The dashboard is for internal use only.'
     + '</td></tr></table>'
     + '</td></tr></table></body></html>';
+}
+
+// ===== #150 JOB REMARKS (Jerin, 19 Sep 2026) — the note the team writes against a JOB =====
+// Anyone on the published access list (any role but 'none') may write one; everyone with the tab reads it.
+// Called as a TOP-LEVEL GET from a popup, because a cross-site fetch or POST reaches Apps Script with no Google
+// login at all — the same reason the dashboard's Refresh button has been silently doing nothing (#144). The page
+// then confirms by READING data/job_notes.json back, so a save is never reported that the server cannot show.
+// 🚨 That file is pushed to a PUBLIC repo, so the guard the browser applies runs AGAIN here: a check that lives
+// only in the browser protects nobody who edits the URL.
+function publishNotePage_(e, userEmail) {
+  var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
+  var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Save remark'); };
+  var role = publishedRole_(userEmail);
+  if (!role || role === 'none') return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not on the published access list, so remarks cannot be saved from this account.</p>');
+  try {
+    var job8 = String(e.parameter.jnjob || '').toLowerCase().slice(0, 8);
+    if (!/^[0-9a-f]{8}$/.test(job8)) return page('<h2 style="color:#be123c">Not saved</h2><p>That is not a job id.</p>');
+    var text = '';
+    if (e.parameter.jndata) text = Utilities.newBlob(Utilities.base64DecodeWebSafe(e.parameter.jndata)).getDataAsString().trim();
+    if (text.length > 600) return page('<h2 style="color:#be123c">Not saved</h2><p>A remark is capped at 600 characters.</p>');
+    if (/[\w.+-]+@[\w.-]+\.\w{2,}/.test(text) || /\b\d{7,}\b/.test(text)) return page('<h2 style="color:#be123c">Not saved</h2><p>This note is publicly readable, so an email address or a long number cannot go into it.</p>');
+    var doc = null;
+    try { doc = loadDriveJson_('job_notes.json'); } catch (eR) { doc = null; }
+    if (!doc || typeof doc !== 'object' || !doc.notes) doc = { schema: 1, updatedAt: null, notes: {} };
+    if (text) doc.notes[job8] = { text: text, by: userEmail, at: new Date().toISOString() };
+    else delete doc.notes[job8];
+    doc.updatedAt = new Date().toISOString();
+    saveDriveJson_('job_notes.json', doc);
+    pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Remark on job ' + job8 + ' by ' + userEmail);
+    return page('<h2 style="color:#0f766e">Saved</h2><p>' + (text ? 'Remark saved' : 'Remark cleared') + ' by ' + userEmail + '. You can close this window.</p>');
+  } catch (err) {
+    return page('<h2 style="color:#be123c">Not saved</h2><p>' + String(err) + '</p>');
+  }
+}
+
+// The published access.json decides, exactly as isPublishedAdmin_ does for a publish (#124) — but writing a remark
+// needs only a place on the list, not the admin role (Jerin, 19 Sep: "anyone who can open the tab").
+function publishedRole_(email) {
+  email = String(email || '').toLowerCase();
+  var access = null;
+  try { access = loadDriveJson_('access.json'); } catch (eA) { access = null; }
+  if (access && access.users && access.users.length) {
+    for (var i = 0; i < access.users.length; i++) {
+      if (String(access.users[i].email || '').toLowerCase() === email) return access.users[i].role || 'none';
+    }
+    return 'none';
+  }
+  var old = getUserAccess(email);
+  return (old && old.role) || 'none';
 }
