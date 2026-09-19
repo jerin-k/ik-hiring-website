@@ -124,29 +124,49 @@ function setupRefreshButton() {
   // is not something every viewer should be able to fire. Removed from the DOM rather than disabled —
   // a greyed-out control invites people to ask why they cannot use it.
   if (!currentAccess || currentAccess.role !== 'admin') { btn.remove(); return; }
+  // #144 (Jerin, 19 Sep 2026 — "fix it fully"). WHAT WAS WRONG, and why it looked fine for weeks:
+  //
+  //   fetch(WEBAPP_URL + '?action=refresh', { mode: 'no-cors' })
+  //
+  // Two faults in one line. `no-cors` makes the response OPAQUE — the promise resolves whatever comes back,
+  // so a Google sign-in page, a 403 and a real run were indistinguishable and the button always said
+  // "Refresh scheduled". And a cross-site fetch carries no Google session, so the request reached the web app
+  // as nobody: Apps Script answered with the sign-in page and `doGet` never ran. Nothing had reached the
+  // pipeline since at least 14 Sep, and the Executions log showed exactly that — no executions at all.
+  //
+  // 🚨 THE SAME TRAP IS WAITING FOR ANY FUTURE CALL TO THE WEB APP. It cannot be fixed with `credentials:
+  // 'include'`: Google does not answer cross-site XHR for /exec at all. The only thing that carries the
+  // signed-in session is a REAL BROWSING CONTEXT, which is why `js/access-config.js` opens a window for
+  // Send invite and Publish rather than fetching. This now does the same.
+  //
+  // What the window shows is the web app's own answer — `{"status":"ok","message":"Refresh scheduled. Data
+  // will update in 2-4 minutes."}` — so the person sees the truth from the pipeline itself rather than a
+  // hopeful message from this page. This page deliberately claims NOTHING about whether the run succeeded:
+  // it cannot read across origins, and pretending otherwise is the bug being fixed.
   btn.addEventListener('click', () => {
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spin">&#x21bb;</span> Refreshing...';
-    fetch(WEBAPP_URL + '?action=refresh', { mode: 'no-cors' }).then(() => {
-      btn.innerHTML = '&#x2713; Refresh scheduled';
-      btn.style.color = 'var(--green)';
-      btn.style.borderColor = 'var(--green)';
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = '&#x21bb; Refresh Data';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-      }, 5000);
-    }).catch(() => {
-      btn.innerHTML = '&#x2717; Failed';
+    const win = window.open(WEBAPP_URL + '?action=refresh', 'ikRefresh', 'width=560,height=300');
+    if (!win) {
+      // the honest failure: nothing was started, and the person needs to do something about it
+      btn.innerHTML = '&#x2717; Allow pop-ups, then retry';
       btn.style.color = 'var(--red)';
+      btn.style.borderColor = 'var(--red)';
+      btn.title = 'The refresh runs in a small window so it carries your Google sign-in. Your browser blocked it.';
       setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = '&#x21bb; Refresh Data';
+        btn.innerHTML = '&#x21bb; Refresh';
         btn.style.color = '';
         btn.style.borderColor = '';
-      }, 3000);
-    });
+        btn.title = 'Trigger Ashby data refresh';
+      }, 6000);
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '&#x2197; Started in a new window';
+    btn.title = 'The new window shows what the pipeline said. New numbers land here in 2-4 minutes, after a reload.';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '&#x21bb; Refresh';
+      btn.title = 'Trigger Ashby data refresh';
+    }, 8000);
   });
 }
 
