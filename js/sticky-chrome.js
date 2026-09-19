@@ -21,6 +21,7 @@
 // on a narrow window, and the band wraps once a page has enough sub-tabs.
 
 const BAND_SEL = '.subtab-band';
+const CTRL_SEL = '.tp-controls';   // #147c: the second control row, one per panel that has one
 const FILTERS_RE = /(^|\s)[a-z]+-filters(\s|$)/;   // .hm-filters, .rec-filters, .eff-filters, .iv-filters…
 
 let observer = null;
@@ -52,6 +53,33 @@ function askLink() {
   a.title = src.getAttribute('title') || '';
   a.innerHTML = '<span aria-hidden="true">✦</span> Ask Ashby AI';
   return a;
+}
+
+// #147c (Jerin, 19 Sep 2026): "merge the second filter row into it". The Stages multi-select and Hide
+// zero-pipeline live INSIDE the Throughput and Pipeline panels, so after #147a they scrolled away while the
+// real filter row stayed frozen — two rows of controls behaving differently. They are now adopted into the
+// frozen row, and only the active panel's pair is shown. Done here rather than in each page module because
+// the sub-tab key (`data-tab`) and the panel key (`data-panel`) already match, so one rule covers both pages.
+// ⚠ Runs AFTER each page's own init, so the multi-selects are already mounted; moving a node keeps its
+// listeners, and `document.getElementById` still finds it in its new home.
+function syncPanelControls(filters) {
+  const content = document.getElementById('page-content');
+  if (!content || !filters) return;
+  let slot = filters.querySelector('.sc-slot');
+  if (!slot) { slot = document.createElement('span'); slot.className = 'sc-slot'; filters.appendChild(slot); }
+
+  content.querySelectorAll(CTRL_SEL).forEach((el) => {
+    if (el.closest('.sc-slot')) return;                       // already adopted
+    const panel = el.closest('[data-panel]');
+    el.dataset.scPanel = panel ? (panel.dataset.panel || '') : '';
+    slot.appendChild(el);
+  });
+
+  const active = content.querySelector('.subtab-chip.active');
+  const key = active ? (active.dataset.tab || '') : '';
+  slot.querySelectorAll(CTRL_SEL).forEach((el) => {
+    el.classList.toggle('sc-hide', el.dataset.scPanel !== key);
+  });
 }
 
 function publish(band, filters) {
@@ -93,6 +121,20 @@ export function mountStickyChrome() {
   if (!band.querySelector('.sc-ask')) {
     const a = askLink();
     if (a) band.appendChild(a);
+  }
+
+  syncPanelControls(filters);
+  // The sub-tab is switched by a click that each page handles itself, so follow the same click rather than
+  // asking every page module to call back. A tick later, so the page has swapped its panels first.
+  if (!content.dataset.scWired) {
+    content.dataset.scWired = '1';
+    content.addEventListener('click', (e) => {
+      if (!e.target.closest('.subtab-chip')) return;
+      setTimeout(() => {
+        const b = document.querySelector('#page-content ' + BAND_SEL);
+        syncPanelControls(b && filtersAfter(b));
+      }, 0);
+    });
   }
 
   publish(band, filters);
