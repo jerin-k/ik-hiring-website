@@ -303,15 +303,11 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
    so the band's copy was the same thing said twice — Jerin spotted it when he asked for this ("that probably
    changes the mention of the tab name alongside the sub-tab pane"), and Rule 3 says it goes in the SAME edit.
    Removing it costs no height: the band measured 36px with it and 36px without — the sub-tab chips set that.
-   ⚠ `.sc-ask` below does NOT go with it. The Ask Ashby AI pill's original lives in the brand line, which still
-   folds away on scroll, so the band's copy is the only one left while you are reading. */
-/* the Ask Ashby AI link, carried down from the brand line that folds away */
-.sc-ask {
-  margin-left: auto; font-size: 0.6875rem; font-weight: 600; color: var(--accent-deep); text-decoration: none;
-  border: 1px solid #cdd8ea; background: var(--card); border-radius: 999px; padding: 0.0625rem 0.5rem;
-  white-space: nowrap; display: inline-flex; align-items: center; gap: 0.25rem;
-}
-.sc-ask:hover { border-color: var(--accent); }
+   ⚠ #156b then removed the band's Ask Ashby AI pill too, at Jerin's word — so the band now carries ONLY the
+   sub-tabs. Nothing on it duplicates the chrome above it. */
+/* #156b (Jerin, 19 Sep 2026): "Why is there an 'Ask Ashby AI' on my sub tab pane? Didnt ask for it! Its ok
+   being up-top alone!" The band's copy and its three rules are gone — it lives once, in the brand line
+   (`.ask-ashby` above), and folds away with it. Nothing on the band now duplicates the chrome above it. */
 /* #147c — the panel's own control row, adopted into the frozen filter row. `display: contents` lets the
    adopted controls sit as ordinary items in that flex row rather than as a nested box, and the margins the
    row carried when it stood alone are dropped so it adds no height. */
@@ -349,7 +345,6 @@ tr.pt-p > td.pt-name { padding-left: 2.5rem; font-weight: 500; color: var(--text
   background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 0 0.3125rem;
 }
 .pt-split { color: var(--muted); font-weight: 400; font-size: 0.625rem; margin-left: 0.625rem; }
-.sc-ask:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* #147b was fixed by giving .scroll-table a max-height (see the Tables section below), NOT by putting a
    `top` on the heading — that route was measured on 19 Sep and it DISPLACES the heading over the first
