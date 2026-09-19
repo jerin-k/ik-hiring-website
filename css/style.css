@@ -290,19 +290,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .sc-ask:hover { border-color: var(--accent); }
 .sc-ask:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* 🚨 147b IS NOT DONE, AND `top: var(--sc-frozen)` IS NOT THE FIX — MEASURED 19 Sep, DO NOT RE-TRY IT.
-   `.scroll-table` sets `overflow-x: auto`, and CSS forces the other axis to `auto` with it, so the WRAPPER is
-   the scroll container for everything inside it — not the window. Two consequences, both measured on the real
-   Hiring Manager page:
-     1. A table heading NEVER pins to the window today. It has `position:sticky; top:0`, but that means the top
-        of the wrapper's scrollport, and the wrapper does not scroll vertically (clientHeight == scrollHeight),
-        so the heading simply rides away with the table. At scroll 1200 it is off-screen above.
-     2. Giving it `top: 72px` therefore does not park it under the frozen block — it DISPLACES it 72px down
-        inside its own table, straight over the first data row. Confirmed overlapping; `top:0` does not.
-   So a heading that stays in view needs the table to have its own scrolling viewport (a max-height on
-   .scroll-table, heading sticky at top:0 within it) or .scroll-table to stop being a scroll container. That is
-   a real change to how every wide table behaves and it is 147b's own job — not a line of CSS here.
-   --sc-frozen is still published by js/sticky-chrome.js and is correct; nothing reads it yet. */
+/* #147b was fixed by giving .scroll-table a max-height (see the Tables section below), NOT by putting a
+   `top` on the heading — that route was measured on 19 Sep and it DISPLACES the heading over the first
+   data row instead of parking it under the frozen block. Do not reintroduce it. */
 
 /* ===== The filter row =====
    Was a tinted panel with a border, a shadow and ALL-CAPS accent labels — visually the loudest thing on a
@@ -458,14 +448,33 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 }
 
 /* ===== Tables ===== */
+/* #147b option A (Jerin, 19 Sep 2026): EVERY table gets its own scrolling box, so its heading row stays.
+   Every `th` in this file is already `position: sticky; top: 0` — it just never had a scroll container to
+   stick inside, because this wrapper had no height limit, so headings simply rode away with the table. The
+   max-height is the whole fix: the rows now scroll INSIDE the table and the heading holds at the top of it.
+   🔑 Sized against the FROZEN BLOCK, not the raw window — `--sc-frozen` is measured live by
+   js/sticky-chrome.js (#147a), so the box shrinks on pages whose filter row is taller and on a narrow window
+   where rows wrap. The 7rem allowance covers the card heading above the table and the gap below it.
+   🔑 `max()` keeps a floor on a short screen; `max-height` only ever CAPS, so a four-row table still renders
+   at its natural height with no box and no scrollbar — which is what made option A safe to apply to all. */
 .scroll-table {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: max(18rem, calc(100vh - var(--sc-frozen, 0px) - 7rem));
   border-radius: 0.625rem;
   margin-bottom: 1.25rem;
   border: 1px solid var(--border);
   background: var(--card);
 }
-.scroll-table > table { border: 0; border-radius: 0; }
+/* 🚨 #147b: `overflow: visible` is what actually makes the heading stick, and it is not obvious.
+   The bare `table` rule above sets `overflow: hidden` to clip its own rounded corners — but an ancestor with
+   `overflow: hidden` BETWEEN a sticky element and its scroll container becomes that element's scroll
+   container, and a table does not scroll, so the heading had nowhere to stick and simply rode away. Measured
+   19 Sep: a plain control div in the same wrapper stuck perfectly while the `th` did not, and switching
+   `border-collapse` (the usual suspect) changed nothing at all.
+   Inside a wrapper the table's own radius is already removed on this very line, so the clipping was doing
+   nothing here anyway. Do not put `overflow: hidden` back on a table inside .scroll-table. */
+.scroll-table > table { border: 0; border-radius: 0; overflow: visible; }
 
 table {
   width: 100%;
