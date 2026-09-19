@@ -505,15 +505,23 @@ tr.pt-p > td.pt-name { padding-left: 2.5rem; font-weight: 500; color: var(--text
    where rows wrap. The 7rem allowance covers the card heading above the table and the gap below it.
    🔑 `max()` keeps a floor on a short screen; `max-height` only ever CAPS, so a four-row table still renders
    at its natural height with no box and no scrollbar — which is what made option A safe to apply to all. */
+/* #155 (Jerin, 19 Sep 2026, on the full-page mock — "this looks good actually"): the box no longer scrolls
+   UP AND DOWN. The page does, so the pointer can be anywhere. What stays is the sideways scroll, which cannot
+   move — the Fulfilment tables are ~1,200px in a ~975px panel — and the heading is held under the frozen block
+   by holdTableChrome() in js/sticky-chrome.js instead of by `position: sticky`.
+   ⚠ `overflow-y: visible` computes to `auto` next to `overflow-x: auto` (a browser rule), so this box is still
+   technically a scroll container. It never actually scrolls vertically because nothing caps its height — which
+   is the whole point, and also why the heading has to be held by script rather than by CSS. */
 .scroll-table {
   overflow-x: auto;
-  overflow-y: auto;
-  max-height: max(18rem, calc(100vh - var(--sc-frozen, 0px) - 7rem));
+  overflow-y: visible;
   border-radius: 0.625rem;
   margin-bottom: 1.25rem;
   border: 1px solid var(--border);
   background: var(--card);
 }
+/* The held heading has to paint over the rows it passes; the sticky first column stays above it. */
+.scroll-table > table > thead { position: relative; z-index: 6; }
 /* 🚨 #147b: `overflow: visible` is what actually makes the heading stick, and it is not obvious.
    The bare `table` rule above sets `overflow: hidden` to clip its own rounded corners — but an ancestor with
    `overflow: hidden` BETWEEN a sticky element and its scroll container becomes that element's scroll
@@ -562,6 +570,13 @@ th {
   border-right: 1px solid #dae1ee;
 }
 th:last-child { border-right: 0; }
+
+/* #154: a heading row BELOW another one starts where the one above it ends, never at the same place. `--grp-h`
+   is measured per table by js/sticky-chrome.js; with it unset this is `top: 0`, which is today's behaviour for
+   every single-row heading. The group row also paints above the row beneath it, so a wrapped label that grows
+   mid-scroll covers the sub-heading rather than being covered by it. */
+thead tr:first-child th { z-index: 2; }
+thead tr:nth-child(2) th { top: var(--grp-h, 0px); z-index: 1; }
 
 th { cursor: pointer; user-select: none; }
 /* hover DEEPENS the band instead of replacing it — a heading that loses its ground on hover reads as a hole. */
@@ -636,7 +651,7 @@ table.metrics td:first-child {
    but not the FIRST one, so "Pod / Recruiter / Job" sat on the page ground in the old grey beside its restyled
    neighbours on all three Fulfilment tables. It is a heading, so it takes the heading band and is centred both
    ways like every other heading (#151a settled that over a left-aligned first column). */
-table.metrics thead th:first-child { z-index: 3; background: #eef2f8; text-align: center; }
+table.metrics thead th:first-child { z-index: 4; background: #eef2f8; text-align: center; }   /* #154: above both heading rows */
 /* A rowspan=2 group cell ends on the header's own bottom edge, so it carries the 2px rule, not .stage-hdr's
    light 1px divider — that 1px is there to sit ABOVE the Heads/Score row, and these cells have none below them. */
 table.metrics thead th[rowspan="2"] { border-bottom: 2px solid #b9c7e0; }

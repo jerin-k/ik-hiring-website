@@ -82,6 +82,108 @@ function syncPanelControls(filters) {
   });
 }
 
+// #154 (Jerin, 19 Sep 2026 — "the row title filter freeze, its frozen wrong!"). The three Position Fulfilment
+// tables have TWO heading rows: the measure groups (Goal · Joined · Drop · Delta) over their Heads/Score pairs.
+// Every `th` on the site is `position: sticky; top: 0`, so once #147b gave each table a scroll box BOTH rows
+// pinned to the same place and collapsed onto each other the moment you scrolled inside the table — the group
+// names ended up drawn on top of the Heads/Score row, which is what Jerin photographed.
+// The second row has to start where the first one ends, and 🚨 that height is MEASURED, never hard-coded — the
+// same rule as the frozen block above. It genuinely changes: a group label like "Joined — prev qtr openings"
+// wraps to two or three lines depending on the window, and `.wide-fulfil` caps its width so it wraps sooner.
+let headObserver = null;
+
+function measureGroupRow(thead) {
+  const table = thead.parentElement;
+  if (!table || thead.rows.length < 2) return;
+  const h = Math.round(thead.rows[0].getBoundingClientRect().height);
+  if (h > 0) table.style.setProperty('--grp-h', h + 'px');
+}
+
+export function pinGroupHeadings(root) {
+  const content = root || document.getElementById('page-content');
+  if (!content) return;
+  if (headObserver) { headObserver.disconnect(); headObserver = null; }
+  const heads = [...content.querySelectorAll('table > thead')].filter((t) => t.rows.length >= 2);
+  heads.forEach(measureGroupRow);
+  if (!heads.length || typeof ResizeObserver !== 'function') return;
+  // Re-measure whenever a group row changes shape — a narrower window wraps its labels and makes it taller.
+  headObserver = new ResizeObserver((entries) => {
+    entries.forEach((e) => { const thead = e.target.parentElement; if (thead) measureGroupRow(thead); });
+  });
+  heads.forEach((t) => headObserver.observe(t.rows[0]));
+}
+
+// #155 (Jerin, 19 Sep 2026, after seeing option B as a full page — "this looks good actually").
+//
+// WHAT CHANGED: the tables no longer scroll inside their own box. They sit in the page, the PAGE scrolls, and
+// the pointer can be anywhere to move down. Each table keeps its sideways scroll, because it has to: the
+// Fulfilment tables are ~1,200px in a ~975px panel.
+//
+// 🚨 WHY THIS IS SCRIPT AND NOT CSS. A box that scrolls sideways is a scroll container in BOTH directions —
+// a browser rule, not a setting — so a `position: sticky` heading inside it can only ever freeze against that
+// box, never against the page. Measured 19 Sep: with the box's vertical scroll switched off the heading rode
+// away 1:1 with the page (3953 ➡ 3553 ➡ 3153 over 400px steps). Holding it by hand is the only way to get a
+// frozen heading AND a page that scrolls from anywhere.
+//
+// 🚨 IT RUNS OFF THE SCROLL EVENT, NOT requestAnimationFrame. rAF does not run in a background tab, so a
+// heading held inside it only catches up when you look at the tab — which is the one thing a frozen heading
+// must never do. (The same trap cost time twice on 19 Sep: here and in js/table-cols.js.)
+//
+// 🔑 It also fixes #154 by construction: the whole <thead> moves as ONE block, so a two-row heading can never
+// collapse onto itself the way it did when each row was pinned separately.
+
+// A held element's rect includes the translate we last gave it, so its untransformed position is read back
+// from the rect minus that offset. Cheaper and steadier than clearing every transform to re-measure.
+function baseTop(el) { return el.getBoundingClientRect().top - (el._holdY || 0); }
+
+function setHold(el, y) {
+  y = Math.max(0, Math.round(y));
+  if (el._holdY === y) return;
+  el._holdY = y;
+  el.style.transform = y ? 'translateY(' + y + 'px)' : '';
+}
+
+function holdTable(table, top) {
+  const head = table.tHead;
+  const r = table.getBoundingClientRect();
+  let headH = 0;
+  if (head) {
+    headH = head.getBoundingClientRect().height;
+    // never past the end of its own table, or a heading drifts over whatever comes next
+    setHold(head, Math.min(top - r.top, r.height - headH - 2));
+  }
+  // #149's month headings sit under the heading row, and travel only as far as their own group's last row.
+  const months = table.querySelectorAll('tbody > tr.pt-m');
+  if (!months.length) return;
+  const bases = [];
+  months.forEach((row) => bases.push(baseTop(row)));
+  months.forEach((row, i) => {
+    const next = i + 1 < bases.length ? bases[i + 1] : r.bottom;
+    const h = row.getBoundingClientRect().height;
+    setHold(row, Math.min(top + headH - bases[i], next - bases[i] - h));
+  });
+}
+
+export function holdTableChrome() {
+  const content = document.getElementById('page-content');
+  if (!content) return;
+  const top = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sc-frozen')) || 0);
+  content.querySelectorAll('.scroll-table > table').forEach((t) => holdTable(t, top));
+}
+
+let holdWired = false;
+function wireHold() {
+  if (holdWired) return;
+  holdWired = true;
+  window.addEventListener('scroll', holdTableChrome, { passive: true });
+  window.addEventListener('resize', holdTableChrome);
+  // a filter or a sub-tab rebuilds a tbody, which changes every base position
+  const content = document.getElementById('page-content');
+  if (content && typeof MutationObserver === 'function') {
+    new MutationObserver(() => holdTableChrome()).observe(content, { childList: true, subtree: true });
+  }
+}
+
 function publish(band, filters) {
   const root = document.documentElement;
   const b = band ? Math.round(band.getBoundingClientRect().height) : 0;
@@ -100,6 +202,9 @@ export function mountStickyChrome() {
   if (!band) {
     document.documentElement.style.setProperty('--sc-band', '0px');
     document.documentElement.style.setProperty('--sc-frozen', '0px');
+    pinGroupHeadings(content);
+    wireHold();
+    holdTableChrome();
     return;
   }
   const filters = filtersAfter(band);
@@ -133,11 +238,16 @@ export function mountStickyChrome() {
       setTimeout(() => {
         const b = document.querySelector('#page-content ' + BAND_SEL);
         syncPanelControls(b && filtersAfter(b));
+        pinGroupHeadings(content);   // #154: a panel's tables are only laid out once it is shown
+        holdTableChrome();           // #155: and their headings need placing against the frozen block
       }, 0);
     });
   }
 
   publish(band, filters);
+  pinGroupHeadings(content);   // #154: the second heading row starts where the first one ends
+  wireHold();                  // #155: the page scrolls; the headings are held under the frozen block
+  holdTableChrome();
 
   // Re-measure whenever either row changes shape: the DOJ boxes appear on one sub-tab, the rows wrap at
   // narrow widths, and a page's band wraps once it has enough sub-tabs.
