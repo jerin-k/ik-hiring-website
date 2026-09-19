@@ -1131,8 +1131,7 @@ export function initRecruiterFilters(baseData) {
         const pct = Math.round(((v.j + v.p) / v.o) * 100);
         const band = pct >= 50 ? '' : (pct >= 20 ? ' mid' : ' low');
         return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${pct}%"></i></span>`
-          + `<span class="dnum">${pct}%</span></span>`
-          + `<span class="sublab">${v.j + v.p} of ${v.o}</span></td>`;
+          + `<span class="dnum">${pct}%</span></span></td>`;   // #153: the "N of N" caption is gone — Offered, Joined and Joining pending are all columns on this same row
       };
       const cells = (v, bold) => {
         const w = bold ? ' style="font-weight:600"' : '';
@@ -1306,19 +1305,17 @@ export function initRecruiterFilters(baseData) {
         if (v.gSc == null) return `<td class="score">${DASH}</td>`;
         const fill = v.aSc > 0 ? Math.max(0, Math.min(100, Math.round(((v.aSc - v.gSc) / v.aSc) * 100))) : 0;
         const cls = v.gSc === 0 ? 'done' : (fill < 75 ? 'short' : '');
-        // Caption is derived from Goal MINUS Gap, never from the raw outcome. At pod level Gap is the sum of
-        // each recruiter's shortfall, so a pod whose total output exceeds its total goal can still carry a real
-        // gap — quoting the raw outcome there produced "2252 of 1313 · 81%", three numbers that disagree.
-        const done = Math.round(v.aSc - v.gSc);
-        const cap = v.aSc > 0
-          ? (v.gSc === 0 ? `${Math.round(v.aSc)} of ${Math.round(v.aSc)} · goal met` : `${done} of ${Math.round(v.aSc)} · ${fill}%`)
-          : 'no goal set';
+        // #153 (Jerin, 19 Sep 2026): the caption under this number is GONE — it read "219 of 441 · 50%",
+        // "goal met" or "no goal set". The bar and the number carry the shortfall on their own.
+        // ⚠ If it is ever brought back, derive it from Goal MINUS Gap and never from the raw outcome: at pod
+        // level Gap is the SUM of each recruiter's shortfall, so a pod whose total output beats its total goal
+        // still carries a real gap, and quoting the raw outcome there produced "2252 of 1313 · 81%" — three
+        // numbers that disagreed with each other.
         // #19 (2026-08-23): same treatment as the HM Delta cell — a slim track that fills with the SHORTFALL,
         // number beside it, so the bar and the number can never point in opposite directions.
         const gapPct = v.aSc > 0 ? Math.max(0, Math.min(100, Math.round((v.gSc / v.aSc) * 100))) : 0;
         return `<td class="score gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
-          + `<span class="dnum ${v.gSc === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${Math.round(v.gSc)}</span></span>`
-          + `<span class="sublab">${cap}</span></td>`;
+          + `<span class="dnum ${v.gSc === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${Math.round(v.gSc)}</span></span></td>`;
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
       const utilCell = (v) => {
@@ -1333,13 +1330,14 @@ export function initRecruiterFilters(baseData) {
       //   figure above it, so every HC column still adds up to real people. Blank when there is nothing.
       const srcSub = (n) => (n > 0 ? `<span class="sublab">+${seatFmt(n)} sourced</span>` : '');
 
-      // #39: Joined, split the same way and rendered by the same shape as jpCells — Total, then the two
-      // buckets. The unlinked count rides under bucket B as a caption so the column never reads as measured.
+      // #39: Joined, split the same way and rendered by the same shape as jpCells — Total, then the two buckets.
+      // #153 (Jerin, 19 Sep 2026): the "<N> unlinked" caption under bucket B is GONE. The joiners it counted —
+      // people with no opening on the offer and none found on the hire — are still listed in full on
+      // Data Hygiene ➡ Hired Missing Opening Link, which is where they can actually be fixed.
       const joinedCells = (v) => {
         const j = v.jx || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } };
-        const pair = (x, sub) => `<td>${x.hc || `<span class="zero">0</span>`}${sub || ''}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
-        const unl = (j.u && j.u.hc) ? `<span class="sublab">${j.u.hc} unlinked</span>` : '';
-        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>` + pair(j.a) + pair(j.b, unl);
+        const pair = (x) => `<td>${x.hc || `<span class="zero">0</span>`}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
+        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>` + pair(j.a) + pair(j.b);
       };
 
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
@@ -1354,7 +1352,9 @@ export function initRecruiterFilters(baseData) {
         const j = v.jp || { t: { hc: 0 } };
         const den = (v.xHC || 0) + (j.t.hc || 0) + (v.dHC || 0);
         const pct = den > 0 ? Math.round(((v.dHC || 0) / den) * 100) : null;
-        const sub = v.dHC > 0 && pct != null ? `<span class="sublab">${pct}% of outcomes</span>` : '';
+        // #153 (Jerin, 19 Sep 2026): "of outcomes" is gone — the percentage on its own is enough. What it is a
+        // percentage OF is spelled out in the definitions block under the panel.
+        const sub = v.dHC > 0 && pct != null ? `<span class="sublab">${pct}%</span>` : '';
         return `<td class="${v.dHC > 0 ? 'bad' : ''}">${v.dHC ? v.dHC : `<span class="zero">0</span>`}${srcSub(v.dSo)}${sub}</td>`
           + `<td class="score">${v.dSc ? Math.round(v.dSc) : `<span class="zero">0</span>`}</td>`;
       };

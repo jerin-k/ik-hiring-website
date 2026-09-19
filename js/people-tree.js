@@ -33,18 +33,23 @@ const todayUtc = () => { const n = new Date(); return Date.UTC(n.getFullYear(), 
 const monthLabel = (ym) => `${MON[+ym.slice(5, 7) - 1]} ${ym.slice(0, 4)}`;
 const countTag = (n) => `<span class="pt-count">${n}</span>`;
 
-// The date heading carries the same context the DOJ cell used to: the weekday, and on a live list how far
-// away it is — which is the whole reason a joining date is worth reading.
-function dateLabel(day, live) {
+// #153b (Jerin, 19 Sep 2026 — option B): the line BESIDE the date is gone. It used to read the weekday on
+// Joiners, and "Wed · Passed · 276 days ago" on Joining Pending.
+// 🚨 The LATE state is not lost with it. The heading itself turns rose once the date has gone by and nobody has
+// been moved to Hired — the same treatment the Recruiter DOJ cell got in #153, so the two tabs say it the same
+// way — and the full sentence, weekday included, is on hover. That matters here more than anywhere: the person
+// rows under these headings carry no date at all, so this heading is the only date on the row.
+function dateBits(day, live) {
   const d = new Date(utcDay(day));
   const shown = `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-  if (!live) return `${shown}<span class="pt-sub">${WD[d.getUTCDay()]}</span>`;
+  const wd = WD[d.getUTCDay()];
+  if (!live) return { shown, cls: '', title: wd };
   const diff = Math.round((utcDay(day) - todayUtc()) / 864e5);
   const when = diff < 0 ? `Passed · ${-diff} day${diff === -1 ? '' : 's'} ago`
     : diff === 0 ? 'Today'
       : diff === 1 ? 'Tomorrow'
         : diff <= 13 ? `In ${diff} days` : `In ${Math.round(diff / 7)} weeks`;
-  return `${shown}<span class="pt-sub${diff < 0 ? ' pt-late' : ''}">${WD[d.getUTCDay()]} · ${when}</span>`;
+  return { shown, cls: diff < 0 ? ' pt-late' : '', title: `${wd} · ${when}` };
 }
 
 // items -> "Offer accepted 12 · Offer sent 8", in the order the stages actually happen.
@@ -93,7 +98,7 @@ export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soon
   const personRow = (i) => `<tr class="pt-p"><td class="pt-name">${esc(nameOf(i) || '(no name)')}</td>${cells(i)}</tr>`;
   const sortDays = (ds) => ds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0) * dir);
   const dateBlock = (day, people) =>
-    `<tr class="pt-d"><td colspan="${cols}"><span class="pt-dname">${dateLabel(day, live)}</span>${countTag(people.length)}</td></tr>`
+    ((dl) => `<tr class="pt-d"><td colspan="${cols}"><span class="pt-dname${dl.cls}" title="${esc(dl.title)}">${dl.shown}</span>${countTag(people.length)}</td></tr>`)(dateBits(day, live))
     + people.map(personRow).join('');
 
   // #149a option D (Jerin, 19 Sep, after seeing it live): every month wholly in the past folds into ONE
