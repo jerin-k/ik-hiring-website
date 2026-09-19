@@ -12,8 +12,8 @@
 //
 // NOW (#156, option A): the MAIN TAB STRIP is back in the frozen block. The brand line folds away on scroll,
 // the white tab strip stays, and the band and filter row freeze under it — 117px. The band's page name has
-// gone with the change, because the strip above it says the same thing; the Ask Ashby AI pill stays, because
-// its original is in the brand line and that still folds away. See publish() for how the four heights work.
+// gone with the change, because the strip above it says the same thing. #156b took the Ask Ashby AI pill off
+// the band too, at Jerin's word — it lives once, up top. See publish() for how the four heights work.
 //
 // Options A and B (freeze everything, with and without the title folding away) were measured at 130px in the
 // mock-up against today's 66 there — which is Jerin's own ~136-against-~92 from 30–31 Aug, the reason he
@@ -40,21 +40,10 @@ function filtersAfter(band) {
   return n && FILTERS_RE.test(n.className || '') ? n : null;
 }
 
-// The Ask Ashby AI link lives in the navy header, which now scrolls away — so the frozen band carries its
-// own copy. Href and title are read from the original so there is still only one place to change them.
-function askLink() {
-  const src = document.getElementById('askAshby');
-  if (!src) return null;
-  const a = document.createElement('a');
-  a.className = 'sc-ask';
-  a.id = 'scAskAshby';
-  a.href = src.getAttribute('href');
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  a.title = src.getAttribute('title') || '';
-  a.innerHTML = '<span aria-hidden="true">✦</span> Ask Ashby AI';
-  return a;
-}
+// #156b (Jerin, 19 Sep 2026): "Why is there an 'Ask Ashby AI' on my sub tab pane? Didnt ask for it! Its ok
+// being up-top alone!" The band's copy is gone. It only existed because #147 C+ let the whole navy block
+// scroll away; he is content for the pill to live once, in the brand line, and to fold away with it.
+// The original `askLink()` helper went with it — a builder nobody calls is Rule 12's other half.
 
 // #147c (Jerin, 19 Sep 2026): "merge the second filter row into it". The Stages multi-select and Hide
 // zero-pipeline live INSIDE the Throughput and Pipeline panels, so after #147a they scrolled away while the
@@ -273,11 +262,10 @@ export function mountStickyChrome() {
   const stale = band.querySelector('.sc-name');
   if (stale) stale.remove();
 
-  // the Ask Ashby AI link at the right — this one STAYS: its original folds away with the brand line
-  if (!band.querySelector('.sc-ask')) {
-    const a = askLink();
-    if (a) band.appendChild(a);
-  }
+  // #156b: no Ask Ashby AI pill on the band either — it lives once, in the brand line. Clear a stale one the
+  // same way as the page name, so a band built by an older render cannot leave one behind.
+  const staleAsk = band.querySelector('.sc-ask');
+  if (staleAsk) staleAsk.remove();
 
   syncPanelControls(filters);
   // The sub-tab is switched by a click that each page handles itself, so follow the same click rather than
