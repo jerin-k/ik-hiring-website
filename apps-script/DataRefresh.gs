@@ -295,7 +295,17 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
         var recKey = isHired ? 'hired' : (stageKey && STAGEKEY_TO_RECKEY[stageKey]);
         if (recKey) rc[recKey]++;
         if (isHired) rc.offer++;
-        if (jobId) { var bj = rc.byJob[jobId] || (rc.byJob[jobId] = { jobId: jobId, title: jd ? jd.title : '', department: jd ? jd.department : '', total: 0, offer: 0, hired: 0 }); bj.total++; if (stageName === 'Offer' || isHired) bj.offer++; if (isHired) bj.hired++; }
+        if (jobId) { var bj = rc.byJob[jobId] || (rc.byJob[jobId] = { jobId: jobId, title: jd ? jd.title : '', department: jd ? jd.department : '', total: 0, offer: 0, hired: 0, pipeline: {} }); bj.total++; if (stageName === 'Offer' || isHired) bj.offer++; if (isHired) bj.hired++;
+        // #145b (2026-09-19): the recruiter's OWN live pipeline, per job, for the Recruiter Efficiency
+        // Pipeline sub-tab. Built from the same isHired / stageKey pair that fills jd.pipeline a few lines
+        // above, in the same iteration over the same application - so the recruiter rows sum to the job row
+        // exactly, by construction rather than by anyone remembering to keep the two in step (Rule 3).
+        // jobs[].pipeline CANNOT be split by a job's recruiter list instead: 48 of 100 live jobs have more
+        // than one recruiter and 39% of everyone in a pipeline sits on a shared job, so that split would
+        // either double-count them or lose them. Recruiter attribution is per CANDIDATE, not per job, which
+        // is why the tally belongs here. Only non-zero stages are written: about 1% of dashboard.json.
+        var bpk = isHired ? 'hired' : stageKey;
+        if (bpk && PIPELINE_KEYS.indexOf(bpk) > -1) bj.pipeline[bpk] = (bj.pipeline[bpk] || 0) + 1; }
       }
       var srcType = app.source && app.source.sourceType ? (app.source.sourceType.title || app.source.sourceType) : null;
       if (typeof srcType === 'object') srcType = null;
