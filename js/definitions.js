@@ -42,9 +42,9 @@ export const DEFINITIONS = {
         heading: 'Department Summary — the columns',
         items: [
           ['Department', "Ashby's top-level department. Click the row to open the individual roles inside it."],
-          ['Total Openings', 'Positions opened in the period, as above.'],
+          ['Total openings', 'Positions opened in the period, as above.'],
           ['Joined', 'Positions someone has been moved to Hired into (Ashby marks the opening <em>Filled</em>).'],
-          ['Joining Pending', 'People currently in Ref Check, Documentation or Offer — same rule as the card.'],
+          ['Joining pending', 'People currently in Ref Check, Documentation or Offer — same rule as the card.'],
           ['Dropped', 'As above — reached Ref Check, Documentation or Offer, then archived — with their share of all outcomes underneath.'],
           ['Delta', 'Total Openings \u2212 Joined \u2212 Joining Pending. <strong>It can go negative, and that is allowed</strong> \u2014 it means more people are in closing than positions recorded, which happens when an offer was never linked to an opening. It shrinks as those links get fixed.'],
           ['Missed', 'Positions carried forward to the next quarter.'],
