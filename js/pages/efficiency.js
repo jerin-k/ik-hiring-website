@@ -720,16 +720,14 @@ export function initEfficiencyFilters(data) {
     // the number beside it, so the bar and the number can never point in opposite directions.
     // A NEGATIVE gap draws an empty track and says why in words — more people are in closing than there are
     // positions, which is real and shrinks as offers get linked to openings.
+    // #153 (Jerin, 19 Sep 2026): the caption under this number is GONE — it read "56 of 58 · 97%", "covered",
+    // or "1 more in closing than opened" when Delta went negative. 🚨 A NEGATIVE Delta is still real and still
+    // allowed (Rule 1) — it now says so through the rose number alone, and the definitions block under the
+    // panel explains it in words.
     const gapCell = (x) => {
       const pct = x.total > 0 ? Math.max(0, Math.min(100, Math.round((x.gap / x.total) * 100))) : 0;
-      const cap = x.gap < 0
-        ? `${-x.gap} more in closing than opened`
-        : (x.total > 0
-          ? (x.gap === 0 ? `${x.total} of ${x.total} · covered` : `${x.total - x.gap} of ${x.total} · ${100 - pct}%`)
-          : '\u2014');
       return `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${pct}%"></i></span>`
-        + `<span class="dnum ${x.gap === 0 ? 'none' : (pct >= 50 ? 'high' : '')}">${x.gap}</span></span>`
-        + `<span class="sublab">${cap}</span></td>`;
+        + `<span class="dnum ${x.gap === 0 ? 'none' : (pct >= 50 ? 'high' : '')}">${x.gap}</span></span></td>`;
     };
     // Column order mirrors HM → Department Summary exactly:
     // Total Positions · Joined · Joining Pending · Drop · Gap · Missed. Each carries its Score alongside.
@@ -741,7 +739,7 @@ export function initEfficiencyFilters(data) {
         + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td class="score">${z(x.jS)}</td>`
         + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td class="score">${z(x.pS)}</td>`
         + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
-        + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}% of outcomes</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
+        + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
         + gapCell(x) + `<td class="score">${x.gS}</td>`
         + `<td style="color:var(--red)">${z(x.missed)}</td><td class="score">${z(x.mS)}</td>`;
     };
@@ -1058,7 +1056,7 @@ export function initEfficiencyFilters(data) {
       const p = Math.round(((v.j + v.p) / v.o) * 100);
       const band = p >= 50 ? '' : (p >= 20 ? ' mid' : ' low');
       return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${p}%"></i></span>`
-        + `<span class="dnum">${p}%</span></span><span class="sublab">${v.j + v.p} of ${v.o}</span></td>`;
+        + `<span class="dnum">${p}%</span></span></td>`;   // #153: the "N of N" caption is gone — Offered, Joined and Joining pending are columns on this same row
     };
     const cells = (v, bold) => {
       const w = bold ? ' style="font-weight:600"' : '';

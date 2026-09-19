@@ -326,8 +326,9 @@ tr.pt-d > td {
   background: #f5f8fc; color: var(--accent-deep); font-weight: 600; font-size: 0.6875rem;
   padding: 0.25rem 0.75rem 0.25rem 1.5rem; border-bottom: 1px solid var(--border-light);
 }
-.pt-dname .pt-sub { color: var(--muted); font-weight: 400; margin-left: 0.4375rem; }
-.pt-dname .pt-sub.pt-late { color: var(--red); font-weight: 600; }
+/* #153b: the trailing weekday/countdown span is gone, so its two rules go with it — a class that styles
+   nothing is this codebase's favourite bug (Rule 12). The late state moves onto the heading itself. */
+.pt-dname.pt-late { color: var(--red); }
 tr.pt-p > td.pt-name { padding-left: 2.5rem; font-weight: 500; color: var(--text); }
 .pt-count {
   display: inline-block; min-width: 1.125rem; text-align: center; margin-left: 0.4375rem;
@@ -706,15 +707,20 @@ table.metrics.wide-fulfil td .sublab { white-space: nowrap; font-size: 0.5625rem
 th.c-num, td.c-num, th.c-pct, td.c-pct { width: 3.5rem; min-width: 3.5rem; text-align: center;
   padding-left: 0.375rem; padding-right: 0.375rem; font-variant-numeric: tabular-nums; }
 td.c-num, td.c-pct { white-space: nowrap; }
-/* a number with a caption under it ("+1 sourced", "17% of outcomes") — the CAPTION drives the width */
-th.c-cap, td.c-cap { width: 7.8rem; min-width: 7.8rem; text-align: center;
+/* A number with a caption under it ("+1 sourced", "971 of 1114") — the CAPTION drives the width, so this
+   number moves whenever the captions do. #153 (19 Sep 2026) cut the wordy ones: the widest caption on the site
+   went from "100% of outcomes" (90px) to "971 of 1114" (48.6px), so 7.8rem was leaving 53px of empty space in
+   every one of these columns. Measured: 48.6 + 10.8 of padding = 59.4px, so 4.25rem holds it with room. */
+th.c-cap, td.c-cap { width: 4.25rem; min-width: 4.25rem; text-align: center;
   padding-left: 0.375rem; padding-right: 0.375rem; font-variant-numeric: tabular-nums; }
 /* a number with a bar beside it (Delta, Joining conversion, Capacity used) — 9.5rem is the width #151a
    already settled for Delta on the HM Department Summary, so this is that same decision applied everywhere */
 th.c-bar, td.c-bar { width: 9.5rem; min-width: 9.5rem; text-align: center;
   padding-left: 0.375rem; padding-right: 0.375rem; }
-/* a date with its context under it ("6 Oct · in 2 weeks") */
-th.c-date, td.c-date { width: 9rem; min-width: 9rem; text-align: center; }
+/* A date. It used to carry its weekday and countdown underneath, which is what made it 9rem; #153 dropped
+   that line, so the column now only has to hold the date itself. The widest is a date from another year —
+   "17 Dec 2025", 66.8px — plus the standard 21.6px of cell padding. */
+th.c-date, td.c-date { width: 6.5rem; min-width: 6.5rem; text-align: center; }
 td.c-date { text-align: left; }
 
 /* --- the text families: one width each, wherever the column appears --- */
@@ -1368,9 +1374,10 @@ table.pl-list td:not(:first-child) { text-align: left; }
 .pl-mon { color: var(--muted); font-size: 0.71875rem; white-space: nowrap; }
 .pl-doj b { display: block; font-weight: 600; color: var(--text); white-space: nowrap; line-height: 1rem; }
 .pl-doj small { display: block; font-size: 0.65625rem; color: var(--muted); white-space: nowrap; line-height: 0.875rem; }
-.pl-doj.pl-passed small { color: var(--red); font-weight: 600; }
-.pl-doj.pl-today b, .pl-doj.pl-today small { color: #1E7590; }
-.pl-doj.pl-today small { font-weight: 700; }
+/* #153: the caption under the date is gone, so the state it used to carry moves onto the DATE itself —
+   a joining date that has passed with nobody moved to Hired still reads rose, and today still reads teal. */
+.pl-doj.pl-passed b { color: var(--red); }
+.pl-doj.pl-today b { color: #1E7590; font-weight: 700; }
 .pl-stage { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.1875rem 0.5rem 0.1875rem 0.4375rem; border-radius: 0.375rem;
   font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
 .pl-ticks { display: inline-flex; gap: 2px; }

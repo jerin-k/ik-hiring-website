@@ -46,15 +46,20 @@ export function tdDoj(day, { live = false } = {}) {
   const t = utcDay(day), dt = new Date(t), sv = day.slice(0, 10).replace(/-/g, '');
   const sameYear = dt.getUTCFullYear() === new Date().getFullYear();
   const shown = `${dt.getUTCDate()} ${MON[dt.getUTCMonth()]}${sameYear ? '' : ' ' + dt.getUTCFullYear()}`, wd = WD[dt.getUTCDay()];
-  if (!live) return `<td class="pl-doj" data-sv="${sv}" title="${day.slice(0, 10)}"><b>${shown}</b><small>${wd}</small></td>`;
+  // #153 (Jerin, 19 Sep 2026): the caption under the joining date is GONE on BOTH lists — the bare weekday on
+  // Joiners (F2) and the countdown on Joining Pending (F). 🚨 What the countdown also carried was the LATE
+  // signal, and that is not lost: the `pl-passed` / `pl-today` classes stay on the cell and now colour the DATE
+  // itself, so a joining date that has gone by without the person being moved to Hired still reads rose at a
+  // glance. The full sentence is still on hover, in the cell's title.
+  if (!live) return `<td class="pl-doj" data-sv="${sv}" title="${day.slice(0, 10)}"><b>${shown}</b></td>`;
   const diff = Math.round((t - todayUtc()) / 864e5);
   if (diff < 0) {
-    return `<td class="pl-doj pl-passed" data-sv="${sv}" title="${day.slice(0, 10)} — the joining date has passed and they are not moved to Hired yet">`
-      + `<b>${shown}</b><small>Passed · ${-diff} day${diff === -1 ? '' : 's'} ago</small></td>`;
+    return `<td class="pl-doj pl-passed" data-sv="${sv}" title="${day.slice(0, 10)} — the joining date has passed and they are not moved to Hired yet: ${-diff} day${diff === -1 ? '' : 's'} ago">`
+      + `<b>${shown}</b></td>`;
   }
-  if (diff === 0) return `<td class="pl-doj pl-today" data-sv="${sv}" title="${day.slice(0, 10)}"><b>${shown}</b><small>Today</small></td>`;
+  if (diff === 0) return `<td class="pl-doj pl-today" data-sv="${sv}" title="${day.slice(0, 10)} — today"><b>${shown}</b></td>`;
   const when = diff === 1 ? 'tomorrow' : diff <= 13 ? `in ${diff} days` : `in ${Math.round(diff / 7)} weeks`;
-  return `<td class="pl-doj" data-sv="${sv}" title="${day.slice(0, 10)}"><b>${shown}</b><small>${wd} · ${when}</small></td>`;
+  return `<td class="pl-doj" data-sv="${sv}" title="${day.slice(0, 10)} — ${wd} · ${when}"><b>${shown}</b></td>`;
 }
 
 // The badge fills in one step per stage of closing, so it darkens as the person gets closer to joining; it sorts in that order too.

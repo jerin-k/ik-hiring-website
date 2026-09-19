@@ -622,25 +622,23 @@ export function initHmFilters(data) {
       // #1 Option A (2026-08-22): the bar used to fill with COVERAGE while the bold number counted the GAP,
       // so a nearly-full-looking cell could sit beside a 7. Both now measure the same thing — the shortfall.
       const gapPct = v.total > 0 ? Math.max(0, Math.min(100, Math.round((delta / v.total) * 100))) : 0;
-      const cap = delta > 0
-        ? `${delta} of ${v.total} still to fill`
-        : (delta < 0
-          ? `${-delta} more in closing than opened`
-          : (v.total > 0 ? 'nothing outstanding' : '\u2014'));
+      // #153 (Jerin, 19 Sep 2026): the caption under Delta is GONE — it read "13 of 32 still to fill",
+      // "nothing outstanding", or "1 more in closing than opened" when Delta went negative. 🚨 Rule 1 still
+      // holds: a NEGATIVE Delta is correct and is never clamped. It now reads as a rose minus number, with the
+      // reason in the definitions block under the panel rather than on every row.
       // Drop % denominator INCLUDES Dropped itself (Jerin, 2026-08-22): of everything that reached a
       // conclusion or is about to, what share fell out.
       const den = v.joined + v.jpP + v.drop;
       const dpct = den > 0 ? Math.round((v.drop / den) * 100) : null;
       const dropCell = v.drop
         ? `<span style="color:var(--red);font-weight:600">${v.drop}</span>`
-          + (dpct !== null ? `<span class="sublab">${dpct}% of outcomes</span>` : '')
+          + (dpct !== null ? `<span class="sublab">${dpct}%</span>` : '')   // #153: "of outcomes" dropped; the definitions block says what it is a share of
         : `<span class="zero">0</span>`;
       return `<td style="font-weight:600">${v.total}</td><td class="good">${v.joined}</td>`
         + `<td style="color:var(--orange)">${v.jpP || `<span class="zero">0</span>`}</td>`
         + `<td class="gapcell">${dropCell}</td>`
         + `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
-        + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span>`
-        + `<span class="sublab">${cap}</span></td>`
+        + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span></td>`
         + `<td style="color:var(--red)">${v.missed}</td>`;
     };
     let html = '';
