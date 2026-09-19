@@ -136,14 +136,23 @@ function openEditor(cell) {
     e.stopPropagation();
     save.disabled = true; save.textContent = 'Saving…';
     const res = await publishNote(job8, ta.value);
-    if (res.ok) { closeEditor(cell); return; }
-    // Never claim a save we cannot see (#144). The note is kept locally and the cell says so.
-    guard.textContent = res.reason; guard.classList.add('bad');
-    save.disabled = false; save.textContent = 'Save';
-    const done = document.createElement('button');
-    done.type = 'button'; done.className = 'jn-btn quiet'; done.textContent = 'Close';
-    done.addEventListener('click', (e2) => { e2.stopPropagation(); closeEditor(cell); });
-    cell.querySelector('.jn-actions').appendChild(done);
+    if (res.ok && !res.warn) { closeEditor(cell); return; }
+    // Two different endings, and they must not read alike:
+    //  · res.warn — the note IS saved, but under a different Google account than the dashboard sign-in (#152a).
+    //    Amber, and the Save button says Saved, because nothing needs doing again.
+    //  · res.reason — we could NOT see the save. Never claim one we cannot see (#144); the note is kept locally
+    //    and the cell stays marked unsaved.
+    guard.textContent = res.warn || res.reason;
+    guard.classList.toggle('warn', !!res.warn);
+    guard.classList.toggle('bad', !res.warn);
+    if (res.ok) { save.textContent = 'Saved'; } else { save.disabled = false; save.textContent = 'Save'; }
+    if (!cell.querySelector('[data-jn-done]')) {   // pressing Save twice must not stack up Close buttons
+      const done = document.createElement('button');
+      done.type = 'button'; done.className = 'jn-btn quiet'; done.textContent = 'Close';
+      done.setAttribute('data-jn-done', '1');
+      done.addEventListener('click', (e2) => { e2.stopPropagation(); closeEditor(cell); });
+      cell.querySelector('.jn-actions').appendChild(done);
+    }
   });
 }
 

@@ -22,6 +22,8 @@ const CONFIRM_URL = 'https://api.github.com/repos/jerin-k/ik-hiring-website/cont
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 const DRAFT_LS = 'ik_job_notes_draft';   // {job8: text} — notes this browser has typed but not confirmed saved
 
+import { getStoredUser } from './auth.js';   // #152a — who the DASHBOARD thinks is signed in
+
 export const NOTE_MAX = 600;
 
 let published = {};     // job8 -> { text, by, at }   as the server has it
@@ -108,6 +110,28 @@ export function guardProblem(text) {
   return null;
 }
 
+// 🚨 #152a (measured 19 Sep 2026). A remark saved from the talent@ account came back signed
+// jerin@interviewkickstart.com. Nothing refused or substituted it: talent@ is on the access list with
+// full_access, so the server never SAW talent@. The cause is that the save window is a top-level navigation to
+// script.google.com, and that carries the Google account THIS BROWSER is signed into — a different thing
+// entirely from the account signed into the dashboard, which is a Google Sign-in token this page holds. With
+// two accounts open, Google runs the save as the browser's default one.
+//
+// We cannot change which account Google uses from here. What we can do is refuse to let the wrong name pass
+// unnoticed: the save already reads the note back, so compare the name that landed with the name we expect.
+// Returns a sentence to show the writer, or null when everything agrees.
+export function bylineWarning(by, me) {
+  const mine = String(me == null ? ((getStoredUser() || {}).email || '') : me).trim().toLowerCase();
+  const signed = String(by || '').trim().toLowerCase();
+  if (!mine) return null;   // localhost / DEV_MODE — nobody signed in, so there is nothing to compare against
+  if (!signed) return 'Saved — but no name was recorded against it. The server could not tell who was saving.';
+  if (signed !== mine) {
+    return `Saved — but signed ${signed}, not you (${mine}). The save window uses whichever Google account this `
+      + `BROWSER is signed into, not the one you signed into the dashboard with.`;
+  }
+  return null;
+}
+
 const b64url = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 // #152: the contents API first (it reads git itself, so a write shows up at once), the cached raw file only as
@@ -165,7 +189,9 @@ export async function publishNote(job8, text) {
       published = live.notes; loadedAt = live.updatedAt || null;
       delete drafts[k]; writeDrafts();
       try { w.close(); } catch (e) { }
-      return { ok: true };
+      // #152a: a CLEAR leaves no record, so there is no name to check — only a written note has a byline.
+      const warn = clean ? bylineWarning(got && got.by) : null;
+      return warn ? { ok: true, warn } : { ok: true };
     }
   }
   return { ok: false, reason: 'Your note is safe here, but the server has not confirmed it yet. Look at the small window for a sign-in or permission message. If it said Saved, reload in a minute and the amber mark clears itself.' };
