@@ -582,6 +582,29 @@ export const DEFINITIONS = {
     ]
   },
 
+  'eff-pipeline': {
+    summary: 'How these numbers are worked out',
+    intro: 'The same live snapshot the Hiring Manager tab shows, on this tab’s Department and Job filters: where candidates stand right now. It is the one table on this page whose numbers the period does not change, so From and To are hidden on this sub-tab. Shading: a deeper teal behind a number means more people, compared within that stage’s column (departments with departments, jobs with jobs); zeros stay grey.',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · shading (#137c) 15 Sep 2026 · From / To hidden here (#141d) 17 Sep 2026 · added to this tab (#145a) 19 Sep 2026',
+    groups: [
+      {
+        heading: 'Reading the table',
+        items: [
+          ['The numbers', 'How many candidates are in that stage <strong>today</strong>; archived candidates are left out. <strong>Hired</strong> is everyone hired on the role so far, because a hired candidate stays at Hired.'],
+          ['Total', 'Every application on the role, archived ones included — so it is bigger than the stage columns added up.'],
+          ['What Year and Quarter do', 'They decide <strong>which roles are listed</strong> — only those with an opening in the selected period — so department and total rows change with it. With Year and Quarter both on <em>All</em>, the period starts on 1 July 2026. Each role’s own counts do not.'],
+          ['Department / Job', 'Departments, then the roles inside them. Click a department to open it.'],
+          ['Stages and Hide zero-pipeline', 'The <strong>Stages</strong> dropdown chooses which stage columns appear; with nothing picked every stage shows, the same as on Throughput. <em>Hide zero-pipeline</em> drops roles with nobody in the stages shown.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Do not add it to the Throughput numbers', 'Throughput counts movement during a period; this one counts people standing still today. Different questions, different totals.'],
+      ['Time in Process answers "how long"', 'This table says how many people are at each stage, never how long they have been there. The waiting times live on the Time in Process sub-tab.'],
+      ['Online Assessment is thin, not empty', 'It is genuinely used, but its volumes are small next to App Review and R1, so read a single role’s OA numbers with care.'],
+    ]
+  },
+
   'eff-tis': {
     summary: 'How these numbers are worked out',
     intro: 'How long each step actually takes, <strong>Department → Job</strong>. Every cell holds two things: the <strong>median days for candidates who finished the stage</strong>, and underneath in amber, <strong>how many are still sitting there</strong> and how long they have waited. Shading: a deeper slate behind a median means a slower stage compared with the rest of its column, and the waiting label darkens the longer people have waited — pale amber under 7 days, darker up to 30, rose after 30.',
