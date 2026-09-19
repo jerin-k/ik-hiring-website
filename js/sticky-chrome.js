@@ -6,10 +6,14 @@
 // where `top:0` means the VIEWPORT — so the heading slid UNDERNEATH the navy block and vanished at exactly
 // the moment you needed it to name the column you were reading.
 //
-// AFTER: the navy block scrolls away with the page, and the SUB-TAB BAND + FILTER ROW freeze in its place as
-// one tinted block. Measured on the real page: 72px against the old 105px, so every filter stays reachable
-// AND the page gives back 33px of screen. The band takes on the page's name at the left and the Ask Ashby AI
-// link at the right, so nothing is lost when the navy block goes — that is the "+" in C+.
+// THEN (#147 C+): the navy block scrolled away entirely and the SUB-TAB BAND + FILTER ROW froze in its place
+// as one tinted block — 74px against the old 105px. The band took on the page's name and the Ask Ashby AI
+// link so nothing was lost on the way past; that was the "+" in C+.
+//
+// NOW (#156, option A): the MAIN TAB STRIP is back in the frozen block. The brand line folds away on scroll,
+// the white tab strip stays, and the band and filter row freeze under it — 117px. The band's page name has
+// gone with the change, because the strip above it says the same thing; the Ask Ashby AI pill stays, because
+// its original is in the brand line and that still folds away. See publish() for how the four heights work.
 //
 // Options A and B (freeze everything, with and without the title folding away) were measured at 130px in the
 // mock-up against today's 66 there — which is Jerin's own ~136-against-~92 from 30–31 Aug, the reason he
@@ -26,12 +30,9 @@ const FILTERS_RE = /(^|\s)[a-z]+-filters(\s|$)/;   // .hm-filters, .rec-filters,
 
 let observer = null;
 
-// One source of truth for the page's name: whatever the main tab strip says is active. If that is ever
-// renamed, this follows it rather than drifting.
-function activePageName() {
-  const t = document.querySelector('.nav-strip .nav-tab.active');
-  return t ? t.textContent.trim() : '';
-}
+// #156: activePageName() went with `.sc-name`. The frozen tab strip names the page itself now, in white, so
+// nothing has to copy it onto the band. (Rule 12 — a helper feeding nothing is the same bug as a class
+// styling nothing.) If a page name is ever needed again, read `.nav-strip .nav-tab.active`.
 
 // The filter row is the band's next sibling on every page that has one.
 function filtersAfter(band) {
@@ -184,24 +185,79 @@ function wireHold() {
   }
 }
 
+// #156 (Jerin, 19 Sep 2026 — option A of three, chosen from the mock-up). The MAIN TAB STRIP stays frozen.
+//
+// The brand line folds away on scroll and the white tab strip is left at the top, with the band and filter
+// row under it. Measured on the real page: 117px against C+'s 74. That 43px is one row of a 33px table out
+// of 21 — he weighed it against a tab menu on the band (+0px) and a slimmed strip (+29px) and chose this.
+//
+// 🚨 THE STRIP CANNOT BE STICKY ON ITS OWN — the mistake the first mock-up shipped with, and Jerin caught it
+// ("I think A & C are buggy"). A sticky element is released as soon as its own PARENT's box leaves the screen,
+// and the strip lives inside .topbar; it held for 43px, then rode away leaving a see-through gap above the
+// band. `.topbar` is the sticky element instead, pulled up by exactly the brand line's height.
+//
+// 🚨 EVERY ONE OF THESE FOUR FIGURES IS MEASURED. The brand line's height genuinely changes — it WRAPS at a
+// narrow width, which is what broke the hard-coded `top: 53px` on 31 Aug. Do not turn any of them into a
+// constant, and do not read them off a design mock: the site renders at 90%, so 1rem is 14.4px, not 16.
 function publish(band, filters) {
   const root = document.documentElement;
+  const header = document.querySelector('.header');
+  const nav = document.querySelector('.nav-strip');
+  const h = header ? Math.round(header.getBoundingClientRect().height) : 0;
+  const n = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
   const b = band ? Math.round(band.getBoundingClientRect().height) : 0;
   const f = filters ? Math.round(filters.getBoundingClientRect().height) : 0;
-  root.style.setProperty('--sc-band', b + 'px');
-  root.style.setProperty('--sc-frozen', (b + f) + 'px');
+  root.style.setProperty('--sc-fold', (-h) + 'px');   // .topbar's sticky top — the line folds out of sight
+  root.style.setProperty('--sc-nav', n + 'px');       // where the band starts
+  root.style.setProperty('--sc-band', (n + b) + 'px');            // where the filter row starts
+  root.style.setProperty('--sc-frozen', (n + b + f) + 'px');      // where everything below the block starts
 }
 
-// Call after every page render. Safe to call on a page with no sub-tab band (Overview) — it simply clears
-// the variables so table headings fall back to the top of the window, which is correct there.
+// Re-measure whenever any piece of the block changes shape. The band and filter row change for the reasons
+// they always did — the DOJ boxes appear on one sub-tab (#133), the rows wrap at narrow widths, a band wraps
+// once its page has enough sub-tabs. #156 adds the two that matter most: the BRAND LINE wraps at a narrow
+// width (the fold distance is wrong the instant it does) and the TAB STRIP wraps once there are enough tabs.
+// Watched on every page, including the ones with no band at all.
+// 🚨 The window's own resize event is wired TOO, not just as an old-browser fallback. A ResizeObserver only
+// fires as part of the browser's rendering work, which a background tab does not do — the same trap that made
+// #155 use the scroll event instead of requestAnimationFrame. Since the one thing that wraps the brand line
+// IS a window resize, listening for it directly covers the real case without depending on rendering running.
+// The observer still earns its place for content-driven changes: the DOJ boxes appearing on a sub-tab (#133),
+// a filter row growing, a band wrapping once its page has enough sub-tabs.
+let chromeResize = null;
+
+function observeChrome(band, filters) {
+  const header = document.querySelector('.header');
+  const nav = document.querySelector('.nav-strip');
+  const remeasure = () => publish(band, filters);
+
+  // one listener, not one per render — mountStickyChrome runs again on every page change
+  if (chromeResize) window.removeEventListener('resize', chromeResize);
+  chromeResize = remeasure;
+  window.addEventListener('resize', chromeResize);
+
+  if (typeof ResizeObserver === 'function') {
+    observer = new ResizeObserver(remeasure);
+    if (header) observer.observe(header);
+    if (nav) observer.observe(nav);
+    if (band) observer.observe(band);
+    if (filters) observer.observe(filters);
+  }
+}
+
+// Call after every page render. Safe to call on a page with no sub-tab band (Overview) — since #156 the tab
+// strip is frozen there too, so the figures are published with the strip alone.
 export function mountStickyChrome() {
   if (observer) { observer.disconnect(); observer = null; }
 
   const content = document.getElementById('page-content');
   const band = content && content.querySelector(BAND_SEL);
   if (!band) {
-    document.documentElement.style.setProperty('--sc-band', '0px');
-    document.documentElement.style.setProperty('--sc-frozen', '0px');
+    // Overview has no sub-tab band, but since #156 the tab strip is frozen on EVERY page — so the figures are
+    // still published (strip only), and a heading on this page parks under the strip rather than at the top
+    // of the window. `publish` reads the header and nav itself, so it needs nothing from here.
+    publish(null, null);
+    observeChrome(null, null);
     pinGroupHeadings(content);
     wireHold();
     holdTableChrome();
@@ -212,17 +268,12 @@ export function mountStickyChrome() {
   band.classList.add('sc-stick-band');
   if (filters) filters.classList.add('sc-stick-filters');
 
-  // the page's name, at the left of the band
-  if (!band.querySelector('.sc-name')) {
-    const name = document.createElement('span');
-    name.className = 'sc-name';
-    name.textContent = activePageName();
-    band.insertBefore(name, band.firstChild);
-  } else {
-    band.querySelector('.sc-name').textContent = activePageName();
-  }
+  // #156: the page's name is NOT put on the band any more — the frozen tab strip above says it. A band built
+  // by an older render could still carry one, so take it out rather than leave a duplicate on screen.
+  const stale = band.querySelector('.sc-name');
+  if (stale) stale.remove();
 
-  // …and the Ask Ashby AI link at the right
+  // the Ask Ashby AI link at the right — this one STAYS: its original folds away with the brand line
   if (!band.querySelector('.sc-ask')) {
     const a = askLink();
     if (a) band.appendChild(a);
@@ -245,17 +296,8 @@ export function mountStickyChrome() {
   }
 
   publish(band, filters);
+  observeChrome(band, filters);
   pinGroupHeadings(content);   // #154: the second heading row starts where the first one ends
   wireHold();                  // #155: the page scrolls; the headings are held under the frozen block
   holdTableChrome();
-
-  // Re-measure whenever either row changes shape: the DOJ boxes appear on one sub-tab, the rows wrap at
-  // narrow widths, and a page's band wraps once it has enough sub-tabs.
-  if (typeof ResizeObserver === 'function') {
-    observer = new ResizeObserver(() => publish(band, filters));
-    observer.observe(band);
-    if (filters) observer.observe(filters);
-  } else {
-    window.addEventListener('resize', () => publish(band, filters));   // older browsers: good enough
-  }
 }
