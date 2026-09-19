@@ -172,8 +172,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 }
 .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
 .refresh-btn:disabled { opacity: .5; cursor: not-allowed; }
-.refresh-btn .spin { display: inline-block; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* #144: the spinner went with the blind fetch it belonged to. There is nothing to wait for now — the
+   refresh opens in its own window and answers there — and a rule styling markup nobody emits is Rule 12. */
 
 /* ===== #79 (Jerin, 15 Sep 2026): "Ask Ashby AI" — Ashby's own Assistant in a new tab =====
    "Make it look as fancy as possible": a slowly turning gradient ring, a twinkling sparkle, a light sweep across the pill and a
