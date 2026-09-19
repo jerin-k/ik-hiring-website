@@ -6,9 +6,15 @@
 // began, so forty rows down you were reading names with no idea which week they belonged to.
 //
 // AFTER: month and date become headings that carry their own counts, so they come off the person rows
-// entirely; Opening Quarter moves to the far right. ⚠ The tree ADDS rows — 45 becomes 66 on Joining Pending,
-// because the group headings are rows too. That is the trade Jerin took: more scrolling, in exchange for
-// always knowing where you are. Option C (months closed by default) was the alternative and was not chosen.
+// entirely; Opening Quarter moves to the far right. ⚠ The tree ADDS rows, because the group headings are rows
+// too. That is the trade Jerin took: more scrolling, in exchange for always knowing where you are. Option C
+// (months closed by default) was the alternative and was not chosen.
+//
+// #149a (Jerin, seeing it live the same day): *"dont like the yellow"*. Measured cause — SIX of the eight
+// month headings were amber (five overdue months plus Date not set), so the colour read as decoration rather
+// than attention, and it was doing two different jobs at once: "overdue" is a problem, "no date recorded" is
+// missing information. He chose option D: the past months FOLD into one Overdue group, and the wash is gone
+// in favour of a thin left edge (see .pt-overdue / .pt-nodate in style.css).
 //
 // 🚨 THE MONTH HEADING IS A STICKY <tr>, NOT A STICKY SPAN. A sticky span inside a table cell can only travel
 // the height of its own row, so the first attempt at pinning did nothing at all. And its `top` is MEASURED
@@ -62,8 +68,9 @@ export function stageSplit(items, stageOf) {
  *   cols         -> total columns, for the group rows' colspan
  *   order        -> 'soonest' (Joining Pending looks forward) | 'newest' (Joiners looks back)
  *   split(items) -> optional text for the month row
- *   live         -> true on Joining Pending: date headings say how far away they are, and a month wholly in
- *                   the past is tagged OVERDUE in place (Jerin, 19 Sep — not moved to the bottom)
+ *   live         -> true on Joining Pending: date headings say how far away they are, and every month wholly
+ *                   in the past folds into ONE "Overdue" group at the top (#149a). False on Joiners, where a
+ *                   past joining date is just the past.
  */
 export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soonest', split = null, live = false }) {
   const dated = [], undated = [];
@@ -84,22 +91,41 @@ export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soon
   let html = '';
 
   const personRow = (i) => `<tr class="pt-p"><td class="pt-name">${esc(nameOf(i) || '(no name)')}</td>${cells(i)}</tr>`;
+  const sortDays = (ds) => ds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0) * dir);
+  const dateBlock = (day, people) =>
+    `<tr class="pt-d"><td colspan="${cols}"><span class="pt-dname">${dateLabel(day, live)}</span>${countTag(people.length)}</td></tr>`
+    + people.map(personRow).join('');
 
+  // #149a option D (Jerin, 19 Sep, after seeing it live): every month wholly in the past folds into ONE
+  // "Overdue" group instead of one heading each. On Joining Pending five of the seven dated months held a
+  // SINGLE person and were all stale, so the list opened on five near-empty headings — eight headings became
+  // four. It is one thing to chase, which is what they actually are. Joiners never folds: `live` is false
+  // there and a past joining date is simply the past, not a problem.
+  const lateMonths = [], currentMonths = [];
   months.forEach((ym) => {
-    const days = byMonth.get(ym);
+    const latest = Math.max(...[...byMonth.get(ym).keys()].map(utcDay));
+    (live && latest < today ? lateMonths : currentMonths).push(ym);
+  });
+
+  if (lateMonths.length) {
+    const days = new Map();
+    lateMonths.forEach((ym) => byMonth.get(ym).forEach((v, d) => days.set(d, (days.get(d) || []).concat(v))));
     const all = [...days.values()].flat();
-    // "overdue" means the whole month is behind us and these people still have not joined
-    const late = live && Math.max(...[...days.keys()].map(utcDay)) < today;
-    html += `<tr class="pt-m${late ? ' pt-overdue' : ''}"><td colspan="${cols}">`
-      + `<span class="pt-mname">${monthLabel(ym)}</span>${countTag(all.length)}`
-      + (late ? '<span class="pt-tag">Overdue</span>' : '')
+    html += `<tr class="pt-m pt-overdue"><td colspan="${cols}">`
+      + `<span class="pt-mname">Overdue</span>${countTag(all.length)}`
       + (split ? `<span class="pt-split">${esc(split(all))}</span>` : '')
       + '</td></tr>';
-    [...days.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0) * dir).forEach((d) => {
-      const people = days.get(d);
-      html += `<tr class="pt-d"><td colspan="${cols}"><span class="pt-dname">${dateLabel(d, live)}</span>${countTag(people.length)}</td></tr>`;
-      people.forEach((i) => { html += personRow(i); });
-    });
+    sortDays([...days.keys()]).forEach((d) => { html += dateBlock(d, days.get(d)); });
+  }
+
+  currentMonths.forEach((ym) => {
+    const days = byMonth.get(ym);
+    const all = [...days.values()].flat();
+    html += `<tr class="pt-m"><td colspan="${cols}">`
+      + `<span class="pt-mname">${monthLabel(ym)}</span>${countTag(all.length)}`
+      + (split ? `<span class="pt-split">${esc(split(all))}</span>` : '')
+      + '</td></tr>';
+    sortDays([...days.keys()]).forEach((d) => { html += dateBlock(d, days.get(d)); });
   });
 
   if (undated.length) {
