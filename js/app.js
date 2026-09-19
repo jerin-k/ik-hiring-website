@@ -11,6 +11,7 @@ import { renderEfficiency, initEfficiencyFilters } from './pages/efficiency.js';
 import { renderAdmin, initAdminMetricConfig, initAdminAccess } from './pages/admin.js';
 import { initTableSorting } from './table-sort.js';
 import { initFilterDropdowns } from './filter-dropdowns.js';   // 17 Sep: filter dropdowns open in full, never clipped by their row
+import { mountStickyChrome } from './sticky-chrome.js';   // #147 C+: the sub-tab band + filter row are what freeze, not the navy block
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
 
 // Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
@@ -246,6 +247,7 @@ function navigateTo(page, sub) {
       break;
   }
 
+  mountStickyChrome();   // #147 C+: measure the frozen block and publish its height for the table headings
   applySub(currentSub);
 }
 
