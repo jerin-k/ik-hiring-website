@@ -5,6 +5,7 @@ import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecru
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX } from '../job-notes.js';   // #150
+import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
@@ -36,6 +37,26 @@ const deptOf = v => splitDT(v).dept;
 const byDept = (a, b) => a._dept.localeCompare(b._dept) || ((b.total || 0) - (a.total || 0)) || String(a.title || '').localeCompare(String(b.title || ''));
 
 const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
+// ===== #157: the Specialization/Topic level (SME - US and SME - India only) =====
+// A job that has topics gets its own caret; a job that does not stays a plain leaf (no caret, cursor:default),
+// so a row never pretends to expand.
+const TCARET = '<span class="caret caret-t" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
+const OPEN_STATE = { joined: 'Filled', open: 'Open', missed: 'Missed' };
+// 🚨 B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic and puts an em dash in the
+// rest. Total openings / Joined / Missed count POSITIONS and split by topic; Joining pending, Dropped and Delta
+// count PEOPLE, and Ashby ties a person to an opening only at hire, so they have no per-topic value at all.
+// Do NOT "helpfully" put a number in a dashed cell - a wrong number here looks right and nobody will question it.
+const DASH = '<td class="nosplit"><span class="zero">—</span></td>';
+const topicMetrics = (t) =>
+  `<td style="font-weight:600">${t.total}</td>`
+  + `<td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
+  + DASH + DASH + DASH
+  + `<td class="${t.missed ? '' : 'zero'}"${t.missed ? ' style="color:var(--red)"' : ''}>${t.missed}</td>`;
+const openingMetrics = (op) =>
+  `<td>1</td>`
+  + `<td class="${op.state === 'joined' ? 'good' : 'zero'}">${op.state === 'joined' ? 1 : 0}</td>`
+  + DASH + DASH + DASH
+  + `<td class="${op.state === 'missed' ? '' : 'zero'}"${op.state === 'missed' ? ' style="color:var(--red)"' : ''}>${op.state === 'missed' ? 1 : 0}</td>`;
 
 // ===== #150 (Jerin, 19 Sep 2026) — the two cells at the end of the job row =====
 // "Who is joining" lists the people behind the Joining Pending number beside it — collected in the same loop,
@@ -220,21 +241,61 @@ function computeThroughput(p, total) {
 // carried its number twice: once inside the bar in white, once above it in slate. The global plugin
 // already handles grouped vs stacked correctly, so this file just uses it.
 
-// Collapse/expand a 2-level Department -> leaf tree. dept-header rows have data-g; leaf rows have data-g.
+// Collapse/expand the tree. Two levels until #157 added a third and fourth for SME:
+//   Department (tr.dept-header, data-g) -> Job (tr.leaf, data-g) -> Topic (tr.lv-topic) -> Opening (tr.lv-open)
+// 🔑 A child is visible only when EVERY ancestor is open, so collapsing a department has to hide the topic and
+// opening rows under it too - not just the job rows. Hiding one level and leaving a deeper one on screen was
+// the obvious bug here; closing a parent therefore also RESETS its children's own open state, so reopening it
+// shows the job rows and nothing deeper.
 function wireTree(tbody) {
   const expandAll = document.getElementById('hmExpandAll')?.checked;
+  const setCaret = (row, sel, open) => { const c = row.querySelector(sel); if (c) c.textContent = open ? '▾' : '▸'; };
+  const q = (sel) => tbody.querySelectorAll(sel);
+
+  const closeJob = (job8) => {
+    q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = 'none'; r.dataset.oexp = '0'; setCaret(r, '.caret-o', false); });
+    q(`tr.lv-open[data-job8="${job8}"]`).forEach(r => { r.style.display = 'none'; });
+  };
+
   tbody.querySelectorAll('tr.dept-header').forEach(h => {
-    if (expandAll) {
-      h.dataset.exp = '1';
-      const c = h.querySelector('.caret'); if (c) c.textContent = '▾';
-      tbody.querySelectorAll(`tr.leaf[data-g="${h.dataset.g}"]`).forEach(r => { r.style.display = ''; });
-    }
-    h.addEventListener('click', () => {
-      const gi = h.dataset.g;
-      const exp = h.dataset.exp === '1';
-      h.dataset.exp = exp ? '0' : '1';
-      const c = h.querySelector('.caret'); if (c) c.textContent = exp ? '▸' : '▾';
-      tbody.querySelectorAll(`tr.leaf[data-g="${gi}"]`).forEach(r => { r.style.display = exp ? 'none' : ''; });
+    const gi = h.dataset.g;
+    const openDept = (on) => {
+      h.dataset.exp = on ? '1' : '0';
+      setCaret(h, '.caret', on);
+      q(`tr.leaf[data-g="${gi}"]`).forEach(r => { r.style.display = on ? '' : 'none'; });
+      if (!on) {
+        // collapsing the department closes everything under it, at every depth
+        q(`tr.leaf[data-g="${gi}"]`).forEach(r => { if (r.dataset.job8) { r.dataset.texp = '0'; setCaret(r, '.caret-t', false); closeJob(r.dataset.job8); } });
+      }
+    };
+    if (expandAll) openDept(true);
+    h.addEventListener('click', () => openDept(h.dataset.exp !== '1'));
+  });
+
+  // Job -> its topic rows. Only jobs that HAVE topics carry data-job8, so plain leaves stay inert.
+  tbody.querySelectorAll('tr.leaf[data-job8]').forEach(j => {
+    j.addEventListener('click', (e) => {
+      if (e.target.closest('.jn-cell')) return;   // #150: the Remarks cell owns its own clicks
+      const job8 = j.dataset.job8;
+      const on = j.dataset.texp !== '1';
+      j.dataset.texp = on ? '1' : '0';
+      setCaret(j, '.caret-t', on);
+      if (on) q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = ''; });
+      else closeJob(job8);
+    });
+  });
+
+  // Topic -> its opening rows.
+  tbody.querySelectorAll('tr.lv-topic').forEach(t => {
+    t.addEventListener('click', () => {
+      const key = t.dataset.topic;
+      const on = t.dataset.oexp !== '1';
+      t.dataset.oexp = on ? '1' : '0';
+      setCaret(t, '.caret-o', on);
+      // match in JS, not in a selector: a topic name can carry quotes, brackets and ampersands
+      // ("Agentic System Design for EM's", "DS Math (Probability, & Statistics)"), which no amount of
+      // attribute-selector escaping handles cleanly.
+      [...q('tr.lv-open')].filter(r => r.dataset.topic === key).forEach(r => { r.style.display = on ? '' : 'none'; });
     });
   });
 }
@@ -539,6 +600,10 @@ export function initHmFilters(data) {
     // Total = Joined + Open + Missed. A role opened in Q2 therefore still counts
     // toward Q2 while it stays open — the old filter dropped it the moment the
     // report window moved past its opened date.
+    // #157: the topic level, built from the SAME window the job rows below use - whole quarters when the
+    // window covers them, otherwise the India-time days - so topics close the job row by construction (Rule 3).
+    const tIdx = topicIndex(data, { wholeWin, winQs, dayOK, inDay: (d) => inRange(d, rg) });
+
     const groups = {};
     Object.entries(ob).forEach(([job8, rec]) => {
       const dept = deptOf(rec.department || '') || 'Unknown';
@@ -650,8 +715,25 @@ export function initHmFilters(data) {
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${withNote ? `${withNote} of ${jobs2.length} written` : '<span class="zero">—</span>'}</td></tr>`;
       jobs2.forEach(o => {
-        html += `<tr class="leaf" data-g="${gi}" style="display:none">
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${o.title}</td>${metrics(o)}${jnWhoCell(o)}${jnRemarkCell(o)}</tr>`;
+        // #157: only the two SME departments open past the job. Everything else is a plain leaf with no
+        // caret and cursor:default - a row that does not pretend to expand.
+        const topics = hasTopicLevel(tIdx, D.dept, o.job8) ? tIdx[o.job8] : null;
+        html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${topics ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${jnWhoCell(o)}${jnRemarkCell(o)}</tr>`;
+        if (!topics) return;
+        topics.forEach(t => {
+          const tk = `${o.job8}|${t.topic}`;
+          const unset = t.topic === NO_TOPIC;
+          html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" data-oexp="0" style="display:none;cursor:pointer">`
+            + `<td style="padding-left:3.25rem"><span class="caret caret-o" style="display:inline-block;width:0.875rem;color:var(--muted)">&#9656;</span>`
+            + `<span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
+            + topicMetrics(t) + `<td class="jn-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+          t.openings.forEach(op => {
+            html += `<tr class="lv-open" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" style="display:none">`
+              + `<td style="padding-left:4.875rem"><span class="oid">${esc(op.id)}</span> <span class="ost ost-${esc(op.state)}">${OPEN_STATE[op.state] || op.state}</span></td>`
+              + openingMetrics(op) + `<td class="jn-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+          });
+        });
       });
     });
     html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="jn-cell"></td></tr>`;
