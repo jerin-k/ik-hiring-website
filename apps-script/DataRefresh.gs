@@ -733,6 +733,12 @@ function refreshDashboardData() {
     // #157: the opening's own topic, and the fill-rate counters. Computed once per OPENING (not per
     // opening x job) so the stats count openings, while openingRows below keeps the bucket grain.
     var oTopic = openingCustomFieldByTitle_(o, /specializ|specialis/i);
+    var oOwnerIds = [];
+    ((o.latestVersion && o.latestVersion.hiringTeam) || []).forEach(function (mem) {
+      if (mem.role === 'Recruiter' || mem.roleId === '22db8dc8-83f4-40de-8376-87efff4a6eb6') {
+        if (mem.userId) oOwnerIds.push(mem.userId);
+      }
+    });
     var oInScope = (q >= OPENING_ROWS_FROM);
     if (oInScope) {
       openingTopicStats.scoped++;
@@ -751,8 +757,14 @@ function refreshDashboardData() {
       if (dOpen) { var bd = b.days || (b.days = {}); var dd = bd[dOpen] || (bd[dOpen] = { total: 0, joined: 0, open: 0, missed: 0 }); dd.total++; dd[cls]++; }
       // #157: emitted HERE, immediately after the bucket it belongs to, so a row can never exist for an
       // opening the buckets did not count, nor the reverse. jpTied is filled in after the offer overlay.
+      // #157: the opening's own Recruiter role - the SAME source the Goal uses
+      // (computeOwnedSeatsByRoleQ_ reads latestVersion.hiringTeam off this very object). Ids now, names
+      // later: user.list has not been fetched at this point in the run.
+      // 🚨 Carry the 1/n share too. The Goal splits an opening's credit between co-recruiters, so a topic
+      // row that counted a whole opening per owner would NOT sum back to the Goal.
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
-        quarter: q, day: dOpen || null, state: cls, topic: oTopic, jpTied: 0 });
+        quarter: q, day: dOpen || null, state: cls, topic: oTopic, jpTied: 0,
+        ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
   });
 
@@ -823,6 +835,17 @@ function refreshDashboardData() {
   var RECRUITER_SEAT_ROLES = { 'Elevated Access': 1, 'Organization Admin': 1 };
   var enabledById = {}, userNameById = {}, roleById = {};
   try { ashbyListAll_('/user.list').forEach(function (u) { enabledById[u.id] = (u.isEnabled !== false); roleById[u.id] = u.globalRole || null; var nm = ((u.firstName || '') + ' ' + (u.lastName || '')).trim(); if (nm) userNameById[u.id] = nm; }); Logger.log('user.list: ' + Object.keys(enabledById).length + ' users'); } catch (e) { Logger.log('user.list failed: ' + e.message); }
+
+  // #157: now that user.list has been read, turn the owner ids into names. Done here and not in the
+  // buckets loop because userNameById does not exist yet at that point in the run.
+  openingRows.forEach(function (r) {
+    var nm = [];
+    (r.ownerIds || []).forEach(function (uid) { if (userNameById[uid]) nm.push(userNameById[uid]); });
+    r.owners = nm;
+    delete r.ownerIds;   // ids are of no use to the frontend and only bloat a PUBLIC file
+  });
+  Logger.log('#157 opening owners resolved: ' + openingRows.filter(function (r) { return r.owners.length; }).length
+    + ' of ' + openingRows.length + ' rows carry a recruiter');
 
   var jobsList = [];
   for (var jid2 in jobLookup) { var j2 = jobLookup[jid2]; if (j2.applied === 0) continue;
