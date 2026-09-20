@@ -4,6 +4,7 @@ import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
+import { topicIndex, hasTopicLevel, NO_TOPIC } from '../opening-topics.js';   // #157
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
@@ -55,6 +56,18 @@ function pctClass(val) {
 }
 const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
 const DASH = '<span class="zero">—</span>';
+// ===== #157: a topic row on the Recruiter table =====
+// 🚨 Only the GOAL splits by topic here. Capacity is configured per RECRUITER for the whole quarter, and
+// Joined / Joining Pending / Drop / Delta all count PEOPLE - Ashby ties a person to a specific opening only at
+// hire - so none of them has an honest per-topic value. They show an em dash, never a number.
+// The Goal is summed from each opening's own 1/n share, which is exactly what goalOf() sums, so a job's topic
+// rows add back up to the job row above them (Rule 3).
+const recTopicCells = (t, ncol) => {
+  const d = `<td class="nosplit">${DASH}</td>`;
+  const num = (v) => `<td>${Math.round(v * 100) / 100}</td>`;
+  // label + Capacity + Capacity used + Goal(2) + the rest
+  return d + d + num(t.hc) + num(t.sc) + d.repeat(Math.max(0, ncol - 5));
+};
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function last7Dates() {
@@ -98,6 +111,11 @@ function wireVelTree(tbody) {
         if (exp) { r.dataset.exp = '0'; const rc = r.querySelector('.caret'); if (rc) rc.textContent = '▸'; }
       });
       if (exp) tbody.querySelectorAll(`tr.lvl-stage[data-pod="${pi}"]`).forEach(s => { s.style.display = 'none'; });
+      // #157: a pod collapsing takes the topic rows with it, not just the job rows, and resets their carets
+      if (exp) {
+        tbody.querySelectorAll(`tr.lvl-topic[data-pod="${pi}"]`).forEach(s2 => { s2.style.display = 'none'; });
+        tbody.querySelectorAll(`tr.lvl-stage[data-pod="${pi}"]`).forEach(s2 => { s2.dataset.exp = '0'; const sc2 = s2.querySelector('.caret'); if (sc2) sc2.textContent = '\u25b8'; });
+      }
     });
   });
   tbody.querySelectorAll('tr.lvl-rec').forEach(h => {
@@ -107,6 +125,21 @@ function wireVelTree(tbody) {
       h.dataset.exp = exp ? '0' : '1';
       const c = h.querySelector('.caret'); if (c) c.textContent = exp ? '▸' : '▾';
       tbody.querySelectorAll(`tr.lvl-stage[data-parent-rec="${rk}"]`).forEach(s => { s.style.display = exp ? 'none' : ''; });
+      // #157: same when a recruiter collapses
+      tbody.querySelectorAll(`tr.lvl-topic[data-parent-rec="${rk}"]`).forEach(s2 => { s2.style.display = 'none'; });
+      if (exp) tbody.querySelectorAll(`tr.lvl-stage[data-parent-rec="${rk}"]`).forEach(s2 => { s2.dataset.exp = '0'; const sc2 = s2.querySelector('.caret'); if (sc2) sc2.textContent = '\u25b8'; });
+    });
+  });
+  // #157: a job with topics toggles them. Only SME job rows carry data-job8, so every other row stays inert.
+  tbody.querySelectorAll('tr.lvl-stage[data-job8]').forEach(j => {
+    j.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = j.dataset.key;
+      const exp = j.dataset.exp === '1';
+      j.dataset.exp = exp ? '0' : '1';
+      const c = j.querySelector('.caret'); if (c) c.textContent = exp ? '\u25b8' : '\u25be';
+      [...tbody.querySelectorAll('tr.lvl-topic')].filter(r => r.dataset.key === key)
+        .forEach(r => { r.style.display = exp ? 'none' : ''; });
     });
   });
   if (document.getElementById('recExpandAll')?.checked) {
@@ -1218,6 +1251,11 @@ export function initRecruiterFilters(baseData) {
     function fulfilRows(gs, mode) {
       const q = selQuarter();
       const isSales = mode === 'hire';
+      // #157: the topic index, on the SAME window this table uses - the selected quarter when the From/To
+      // range covers it, the India-time days otherwise - so a job's topic rows close the job row (Rule 3).
+      const tRg = selRange();
+      const tIdx = topicIndex(data, { wholeWin: wholeQuarter(), winQs: [q],
+                                      dayOK: hasDayData(data), inDay: (d) => inRange(d, tRg) });
       // 1 label + Goal(2) + Capacity(1) + Joined(2) + JP total(1) + JP A(2) + JP B(2) + Drop(2) + Gap(2)
       // + Utilisation(1) = 16 on Non-Sales.
       // #39: the Sales/Others tables split Joined the way JP is split — Total(1) + A(2) + B(2) replaces the
@@ -1545,8 +1583,26 @@ export function initRecruiterFilters(baseData) {
                            gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc),
                            aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: Math.max(0, jaSo - juSo) };   // #108
               roleAch.push({ title: m.title || '(untitled)', achievedSc: juSc });   // unrounded: the chart shares out the row's rounded total (#120)
-              html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-                <td style="padding-left:3.25rem;color:var(--muted)">${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
+              // #157: only SME jobs open further, and only the Goal splits by topic - everything else on this
+              // table counts PEOPLE or is per-recruiter config, so it dashes. 🚨 The topic Goal is summed from
+              // each opening's OWN 1/n share, which is exactly what goalOf() sums, so the rows close the job.
+              const j8t = (bj.jobId || '').slice(0, 8);
+              const tKey = j8t + '|' + rk;
+              const tops = hasTopicLevel(tIdx, m.department || '', j8t)
+                ? tIdx[j8t].map(t => {
+                    const mine = t.openings.filter(o => (o.owners || []).includes(r.name));
+                    const hc = mine.reduce((x, o) => x + (o.share || 0), 0);
+                    return { topic: t.topic, hc: Math.round(hc * 10000) / 10000, sc: Math.round(hc * sc * 10000) / 10000, n: mine.length };
+                  }).filter(t => t.n)
+                : null;
+              html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
+                <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
+              (tops || []).forEach(t => {
+                html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
+                  + `<td style="padding-left:4.875rem"><span class="${t.topic === NO_TOPIC ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
+                  + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${t.n} opening${t.n === 1 ? '' : 's'}</span></td>`
+                  + recTopicCells(t, ncol) + `</tr>`;
+              });
             });
           } else {
             html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">

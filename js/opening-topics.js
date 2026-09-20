@@ -56,7 +56,11 @@ export function topicIndex(data, sel) {
     t.total++;
     if (r.state === 'joined' || r.state === 'open' || r.state === 'missed') t[r.state]++;
     t.jpTied += r.jpTied || 0;
-    t.openings.push({ id: r.openingId, state: r.state, jpTied: r.jpTied || 0 });
+    // `quarter` rides along because Overall Efficiency prices each opening at the points of ITS OWN
+    // quarter, exactly as jobSplit() prices the buckets. `owners`/`share` ride along for the Recruiter
+    // page, where an opening's credit is split 1/n between co-recruiters.
+    t.openings.push({ id: r.openingId, state: r.state, jpTied: r.jpTied || 0, quarter: r.quarter,
+                      owners: r.owners || [], share: r.share || 0 });
   });
 
   const out = {};
