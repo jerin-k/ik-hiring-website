@@ -153,6 +153,20 @@ function jobCustomField_(job, cfId) {
 }
 // Employment Type (PTC / FTC / ...) is matched on the field TITLE rather than a hardcoded id: unlike Level and
 // Complexity we never captured its uuid, and a title match survives the field being recreated in Ashby.
+// #157: the same idea for an OPENING's own custom field. opening.list already returns
+// latestVersion.customFields, so reading the Specialization/Topic here costs NO extra API call
+// (measured 16 Sep). Read valueLabel, never value - value is the option id, not the words.
+function openingCustomFieldByTitle_(o, re) {
+  var cfs = (o.latestVersion && o.latestVersion.customFields) || [];
+  for (var i = 0; i < cfs.length; i++) {
+    var t = cfs[i].title || cfs[i].name || '';
+    if (!re.test(t)) continue;
+    var v = cfs[i].valueLabel != null ? cfs[i].valueLabel : cfs[i].value;
+    if (v && typeof v !== 'string' && v.length === 1) v = v[0];
+    return (v === '' || v == null) ? null : String(v);
+  }
+  return null;
+}
 function jobCustomFieldByTitle_(job, re) {
   var cfs = job.customFields || [];
   for (var i = 0; i < cfs.length; i++) {
@@ -663,6 +677,14 @@ function refreshDashboardData() {
   var openingsByJob = {};
   var openingsNoOpenedAt = 0;
   var openingsNoDate = [];
+  // ===== #157 - the wiring for Specialization/Topic (SME Specific) =====
+  // ONE ROW PER OPENING x JOB, pushed from inside the openingBuckets loop below, so every row here is an
+  // opening that loop COUNTED - the rows reconcile with Total / Joined / Missed by construction rather than
+  // by a second calculation (Rule 3). Scoped from 2026-Q3 because the dashboard shows nothing earlier (#127).
+  // 🚨 Same grain as the buckets: an opening on two jobs yields two rows, exactly as it counts twice in Total.
+  var OPENING_ROWS_FROM = '2026-Q3';
+  var openingRows = [];
+  var openingTopicStats = { scoped: 0, withTopic: 0, sme: 0, smeWithTopic: 0, jpTied: 0 };
   allOpenings.forEach(function(o) { if (o.isArchived) return; var ids = (o.latestVersion && o.latestVersion.jobIds) || []; ids.forEach(function(jid) { (openingsByJob[jid] || (openingsByJob[jid] = [])).push(o); }); });
   var openingsList = [];
   allJobs.forEach(function(j) {
@@ -708,12 +730,29 @@ function refreshDashboardData() {
     // #129: the same count keyed by the India-time DAY the opening opened (the clock quarterIST_ reads), from
     // reportFloorDay_() on, so the From / To boxes can narrow Positions. A quarter's days add up to that quarter.
     var dOpen = dayIST_(iso); if (dOpen && dOpen < reportFloorDay_()) dOpen = null;
+    // #157: the opening's own topic, and the fill-rate counters. Computed once per OPENING (not per
+    // opening x job) so the stats count openings, while openingRows below keeps the bucket grain.
+    var oTopic = openingCustomFieldByTitle_(o, /specializ|specialis/i);
+    var oInScope = (q >= OPENING_ROWS_FROM);
+    if (oInScope) {
+      openingTopicStats.scoped++;
+      if (oTopic) openingTopicStats.withTopic++;
+      var oDept0 = (jobLookup[jobIds[0]] || {}).department || '';
+      if (oDept0 === 'SME - US' || oDept0 === 'SME - India') {
+        openingTopicStats.sme++;
+        if (oTopic) openingTopicStats.smeWithTopic++;
+      }
+    }
     jobIds.forEach(function (jid) {
       var jd = jobLookup[jid] || {}; var j8 = jid.substring(0, 8);
       var b = openingBuckets[j8] || (openingBuckets[j8] = { jobId8: j8, title: jd.title || '', department: jd.department || '', team: jd.team || '', status: jd.status || '', quarters: {} });
       var qq = b.quarters[q] || (b.quarters[q] = { total: 0, joined: 0, open: 0, missed: 0 });
       qq.total++; qq[cls]++;
       if (dOpen) { var bd = b.days || (b.days = {}); var dd = bd[dOpen] || (bd[dOpen] = { total: 0, joined: 0, open: 0, missed: 0 }); dd.total++; dd[cls]++; }
+      // #157: emitted HERE, immediately after the bucket it belongs to, so a row can never exist for an
+      // opening the buckets did not count, nor the reverse. jpTied is filled in after the offer overlay.
+      if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
+        quarter: q, day: dOpen || null, state: cls, topic: oTopic, jpTied: 0 });
     });
   });
 
@@ -737,6 +776,7 @@ function refreshDashboardData() {
   // ===== openings pending overlay (JP #52, 2026-08-20) — open opening + live linked offer =====
   var openingById_ = {}; allOpenings.forEach(function (o) { openingById_[o.id] = o; });
   var pendingOpeningSet_ = {}, jpByRecruiter = {}, offerMissingLink = 0;
+  var jpTiedByOpening8_ = {};   // #157: how many people in closing name THIS opening on their offer
   offerResult.events.forEach(function (e) {
     if (!e.offerOpeningId) { if (!(e.offerStatus && /declin|reject|cancel/i.test(e.offerStatus))) offerMissingLink++; return; }
     if (e.offerStatus && /declin|reject|cancel/i.test(e.offerStatus)) return;
@@ -744,6 +784,11 @@ function refreshDashboardData() {
     if (!o || o.closedAt) return;
     if (o.closeReasonId === CR_ONHOLD || o.closeReasonId === CR_SHELVED) return;
     pendingOpeningSet_[e.offerOpeningId] = true;
+    // #157: the set above loses the count (one opening, many offers); this keeps it. Keyed on the same
+    // 8-char id the rows use. This is the ONLY person-to-opening link the public API exposes - it stays 0
+    // until whoever creates the offer picks an opening, which is the team habit, not a gap in the code.
+    var op8_ = String(e.offerOpeningId).substring(0, 8);
+    jpTiedByOpening8_[op8_] = (jpTiedByOpening8_[op8_] || 0) + 1;
     if (e.recruiter) jpByRecruiter[e.recruiter] = (jpByRecruiter[e.recruiter] || 0) + 1;
   });
   var openingPendingByJobQ = {};
@@ -757,6 +802,17 @@ function refreshDashboardData() {
       bb[q2] = (bb[q2] || 0) + 1;
     });
   }
+  // #157: stamp the person-to-opening count onto the rows. It happens HERE, after the offer overlay, because
+  // that is where offer -> opening is resolved; the rows themselves were built in the buckets loop above.
+  // 🚨 A row is per opening x job, so summing jpTied across rows double-counts an opening that spans two
+  // jobs - exactly as Total does. Sum it per job, never across the whole array.
+  openingRows.forEach(function (r) { r.jpTied = jpTiedByOpening8_[r.openingId] || 0; });
+  openingTopicStats.jpTied = Object.keys(jpTiedByOpening8_).length;
+  Logger.log('#157 openings from ' + OPENING_ROWS_FROM + ': ' + openingTopicStats.scoped + ' scoped, '
+    + openingTopicStats.withTopic + ' with a topic | SME ' + openingTopicStats.sme + ' of which '
+    + openingTopicStats.smeWithTopic + ' with a topic | openings carrying a live linked offer: '
+    + openingTopicStats.jpTied + ' | rows emitted: ' + openingRows.length);
+
   // user.list -> isEnabled (Active/Inactive) + userId -> name (panelist / interviewer display names)
   // 🚨 isEnabled is USELESS as an offboarding signal here: it is true for all 446 Ashby users (verified
   // 2026-08-22) because IK never disables accounts. The real signal is the SEAT: an active recruiter holds
@@ -1121,7 +1177,7 @@ function refreshDashboardData() {
   var jobIndex_ = {};
   for (var _jx in jobLookup) { var _jl = jobLookup[_jx]; if (!_jl || excludedJobIds[_jx]) continue; jobIndex_[String(_jx).substring(0, 8)] = { title: _jl.title || '', department: _jl.department || '' }; }
   var dashboard = {
-    lastUpdated: new Date().toISOString(), schemaVersion: 5, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
+    lastUpdated: new Date().toISOString(), schemaVersion: 5, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
     openingPendingByJobQ: openingPendingByJobQ,
