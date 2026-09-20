@@ -18,7 +18,7 @@ export const DEFINITIONS = {
   'hm-positions': {
     summary: 'How these numbers are worked out',
     intro: 'Everything on this page is built from Ashby <strong>openings</strong> (the positions being filled) and <strong>offers</strong> (the people). Those two are counted differently, which is the single most common source of confusion here — see <em>Worth knowing</em> at the bottom.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026 · From / To narrows every panel to the day (#129) 15 Sep 2026 \u00b7 Pipeline hides From / To (#141d) 17 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026 · From / To narrows every panel to the day (#129) 15 Sep 2026 \u00b7 Pipeline hides From / To (#141d) 17 Sep 2026 · Specialisation level for SME (#157) 20 Sep 2026',
     groups: [
       {
         heading: 'The six cards at the top',
@@ -29,6 +29,15 @@ export const DEFINITIONS = {
           ['Missed', 'Positions closed with the reason <em>carry forward</em> — the hire did not happen in that quarter and moved to the next one.'],
           ['Joining Pending', 'Counts <strong>people</strong>, not positions: everyone sitting in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, minus anyone whose opening was raised in a quarter before the period you picked. It is a <strong>live</strong> figure: it shows who is in closing today, and the period only decides which openings count as earlier.'],
           ['Dropped', 'Someone who reached <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> and was then <strong>archived</strong> \u2014 declined, withdrew, or closed with the offer still open. Counted on the day they first got there, <strong>once</strong> per person, when that day is between the <strong>From</strong> and <strong>To</strong> dates. The small print is its share of outcomes: Dropped \u00f7 (Joined + Joining Pending + Dropped).'],
+        ]
+      },
+      {
+        heading: 'Specialisation — SME - US and SME - India only',
+        items: [
+          ['Why only these two', 'In these two departments one role can run several different topics at once, with a separate position opened for each. Everywhere else a role is one thing, so a job simply does not open any further — no arrow, nothing to click.'],
+          ['What the level shows', 'Open an SME role and its positions are split by the <strong>Specialization/Topic</strong> recorded against each one in Ashby. Open a topic and you see the individual positions, each with its own ID and whether it is <em>Filled</em>, <em>Open</em> or <em>Missed</em>. The topics always add up to the role above them — they are the same positions, grouped.'],
+          ['(topic not set)', 'Positions where nobody has filled the topic in yet. This is <strong>not</strong> an error: the field is new and is being filled in from Q4, so for now most positions land here. The size of that row is simply how much is left to fill in.'],
+          ['Why some columns show a dash', 'Only <strong>Total openings</strong>, <strong>Joined</strong> and <strong>Missed</strong> can be split by topic, because those count positions and a position carries its own topic. <strong>Joining pending</strong>, <strong>Dropped</strong> and <strong>Delta</strong> count <em>people</em>, and Ashby only ties a person to a specific position when they are hired — so there is no honest per-topic figure, and a dash is shown rather than a number that would look right and be wrong. Those figures are correct on the role row above.'],
         ]
       },
       {
