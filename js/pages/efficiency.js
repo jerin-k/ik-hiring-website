@@ -15,6 +15,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
+import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat } from '../chart-style.js';
@@ -62,6 +63,19 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 
 // Generic N-level collapsible tree. Rows carry data-path ("0", "0-1", "0-1-2"…) + data-haschild for
 // expandable rows. Clicking shows only direct children; collapsing hides + resets all descendants.
+
+// ===== #157: the Specialization/Topic level on Overall Efficiency =====
+const OPEN_STATE = { joined: 'Filled', open: 'Open', missed: 'Missed' };
+// B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic - Total positions, Joined and
+// Missed, in BOTH halves (heads and score). Joining pending, Drop and Delta count PEOPLE, and Ashby ties a
+// person to an opening only at hire, so there is no honest per-topic figure and an em dash is shown instead.
+// 🚨 Never put a number in a dashed cell: a wrong one here looks right and nobody will question it.
+const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td><td class="score nosplit"><span class="zero">\u2014</span></td>';
+const topicCells = (x) =>
+  `<td style="font-weight:600">${x.total}</td><td class="score">${x.tS}</td>`
+  + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td><td class="score">${x.jS}</td>`
+  + EFF_DASH + EFF_DASH + EFF_DASH
+  + `<td${x.missed ? ' style="color:var(--red)"' : ' class="zero"'}>${x.missed}</td><td class="score">${x.mS}</td>`;
 
 function wireTreePath(tbody, expandAll) {
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
@@ -744,6 +758,10 @@ export function initEfficiencyFilters(data) {
         + `<td style="color:var(--red)">${z(x.missed)}</td><td class="score">${z(x.mS)}</td>`;
     };
     const rows = fulfilRows(per);
+    // #157: same window as the job rows above - whole quarters when the range covers them, India-time days
+    // otherwise - so the topic rows close the job row instead of being a second, drifting calculation.
+    const PM = peopleMaps(per);
+    const tIdx = topicIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
       const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${sum.unscored} unscored</span>` : '';
@@ -753,7 +771,32 @@ export function initEfficiencyFilters(data) {
         const meta = sp.scoreable
           ? `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span>`
           : `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--orange)">unscored</span>`;
-        html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--muted)">${j.title}${meta}</td>${cells(sp, false)}</tr>`;
+        // #157: only the two SME departments open past the job. A job with no topics stays a plain row with
+        // no caret - it must not look clickable when there is nothing under it.
+        const tops = hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8)) ? tIdx[(j.jid || '').slice(0, 8)] : null;
+        html += `<tr data-path="${di}-${ji}"${tops ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+          + `<td style="padding-left:1.875rem;color:var(--muted)">${tops ? CARET : ''}${j.title}${meta}`
+          + `${tops && tops.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tops.length} topics</span>` : ''}</td>${cells(sp, false)}</tr>`;
+        if (!tops) return;
+        // Each opening is priced at the points of ITS OWN quarter, exactly as jobSplit() prices the buckets -
+        // so the topic rows close the job row in BOTH halves, heads and score (Rule 3).
+        tops.forEach((t, ti) => {
+          const pt = (qq) => scoreOf(j, qq, PM);
+          let tS = 0, jS = 0, mS = 0;
+          t.openings.forEach(o => { const s1 = pt(o.quarter || PM.atQ);
+            tS += s1; if (o.state === 'joined') jS += s1; if (o.state === 'missed') mS += s1; });
+          html += `<tr data-path="${di}-${ji}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer">`
+            + `<td style="padding-left:3.25rem">${CARET}<span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
+            + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${t.total} opening${t.total === 1 ? '' : 's'}</span></td>`
+            + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS, jS, mS }) + `</tr>`;
+          t.openings.forEach((o, oi) => {
+            const s1 = pt(o.quarter || PM.atQ);
+            html += `<tr data-path="${di}-${ji}-${ti}-${oi}" style="display:none">`
+              + `<td style="padding-left:4.875rem"><span class="oid">${o.id}</span> <span class="ost ost-${o.state}">${OPEN_STATE[o.state] || o.state}</span></td>`
+              + topicCells({ total: 1, joined: o.state === 'joined' ? 1 : 0, missed: o.state === 'missed' ? 1 : 0,
+                             tS: s1, jS: o.state === 'joined' ? s1 : 0, mS: o.state === 'missed' ? s1 : 0 }) + `</tr>`;
+          });
+        });
       });
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
