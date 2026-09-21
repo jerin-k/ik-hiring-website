@@ -41,7 +41,6 @@ const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;co
 // A job that has topics gets its own caret; a job that does not stays a plain leaf (no caret, cursor:default),
 // so a row never pretends to expand.
 const TCARET = '<span class="caret caret-t" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
-const OPEN_STATE = { joined: 'Filled', open: 'Open', missed: 'Missed' };
 // 🚨 B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic and puts an em dash in the
 // rest. Total openings / Joined / Missed count POSITIONS and split by topic; Joining pending, Dropped and Delta
 // count PEOPLE, and Ashby ties a person to an opening only at hire, so they have no per-topic value at all.
@@ -52,11 +51,6 @@ const topicMetrics = (t) =>
   + `<td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
   + DASH + DASH + DASH
   + `<td class="${t.missed ? '' : 'zero'}"${t.missed ? ' style="color:var(--red)"' : ''}>${t.missed}</td>`;
-const openingMetrics = (op) =>
-  `<td>1</td>`
-  + `<td class="${op.state === 'joined' ? 'good' : 'zero'}">${op.state === 'joined' ? 1 : 0}</td>`
-  + DASH + DASH + DASH
-  + `<td class="${op.state === 'missed' ? '' : 'zero'}"${op.state === 'missed' ? ' style="color:var(--red)"' : ''}>${op.state === 'missed' ? 1 : 0}</td>`;
 
 // ===== #150 (Jerin, 19 Sep 2026) — the two cells at the end of the job row =====
 // "Who is joining" lists the people behind the Joining Pending number beside it — collected in the same loop,
@@ -241,10 +235,12 @@ function computeThroughput(p, total) {
 // carried its number twice: once inside the bar in white, once above it in slate. The global plugin
 // already handles grouped vs stacked correctly, so this file just uses it.
 
-// Collapse/expand the tree. Two levels until #157 added a third and fourth for SME:
-//   Department (tr.dept-header, data-g) -> Job (tr.leaf, data-g) -> Topic (tr.lv-topic) -> Opening (tr.lv-open)
-// 🔑 A child is visible only when EVERY ancestor is open, so collapsing a department has to hide the topic and
-// opening rows under it too - not just the job rows. Hiding one level and leaving a deeper one on screen was
+// Collapse/expand the tree. Two levels until #157 added a third for SME:
+//   Department (tr.dept-header, data-g) -> Job (tr.leaf, data-g) -> Topic (tr.lv-topic)
+// 🚨 #157c (Jerin, 21 Sep): the tree STOPS at the topic - "i need the topic branch, not a topic to opening branch".
+// The opening rows under a topic were removed; do not bring them back.
+// 🔑 A child is visible only when EVERY ancestor is open, so collapsing a department has to hide the topic
+// rows under it too - not just the job rows. Hiding one level and leaving a deeper one on screen was
 // the obvious bug here; closing a parent therefore also RESETS its children's own open state, so reopening it
 // shows the job rows and nothing deeper.
 function wireTree(tbody) {
@@ -253,8 +249,7 @@ function wireTree(tbody) {
   const q = (sel) => tbody.querySelectorAll(sel);
 
   const closeJob = (job8) => {
-    q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = 'none'; r.dataset.oexp = '0'; setCaret(r, '.caret-o', false); });
-    q(`tr.lv-open[data-job8="${job8}"]`).forEach(r => { r.style.display = 'none'; });
+    q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = 'none'; });
   };
 
   tbody.querySelectorAll('tr.dept-header').forEach(h => {
@@ -282,20 +277,6 @@ function wireTree(tbody) {
       setCaret(j, '.caret-t', on);
       if (on) q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = ''; });
       else closeJob(job8);
-    });
-  });
-
-  // Topic -> its opening rows.
-  tbody.querySelectorAll('tr.lv-topic').forEach(t => {
-    t.addEventListener('click', () => {
-      const key = t.dataset.topic;
-      const on = t.dataset.oexp !== '1';
-      t.dataset.oexp = on ? '1' : '0';
-      setCaret(t, '.caret-o', on);
-      // match in JS, not in a selector: a topic name can carry quotes, brackets and ampersands
-      // ("Agentic System Design for EM's", "DS Math (Probability, & Statistics)"), which no amount of
-      // attribute-selector escaping handles cleanly.
-      [...q('tr.lv-open')].filter(r => r.dataset.topic === key).forEach(r => { r.style.display = on ? '' : 'none'; });
     });
   });
 }
@@ -724,15 +705,10 @@ export function initHmFilters(data) {
         topics.forEach(t => {
           const tk = `${o.job8}|${t.topic}`;
           const unset = t.topic === NO_TOPIC;
-          html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" data-oexp="0" style="display:none;cursor:pointer">`
-            + `<td style="padding-left:3.25rem"><span class="caret caret-o" style="display:inline-block;width:0.875rem;color:var(--muted)">&#9656;</span>`
-            + `<span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
+          // #157c: a topic row is the bottom of the tree - no caret, nothing to open under it.
+          html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" style="display:none">`
+            + `<td style="padding-left:3.25rem"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
             + topicMetrics(t) + `<td class="jn-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
-          t.openings.forEach(op => {
-            html += `<tr class="lv-open" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" style="display:none">`
-              + `<td style="padding-left:4.875rem"><span class="oid">${esc(op.id)}</span> <span class="ost ost-${esc(op.state)}">${OPEN_STATE[op.state] || op.state}</span></td>`
-              + openingMetrics(op) + `<td class="jn-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
-          });
         });
       });
     });
