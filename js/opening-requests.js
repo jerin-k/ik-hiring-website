@@ -10,7 +10,9 @@
 // public GitHub repo never sees one. The dashboard only carries a button that opens that window.
 // 🔑 The server re-checks everything that matters (who may raise, required fields, active recruiter). The checks
 // here are for the person filling the form in — fast, and in plain words.
-// Phase 2 (approve / send back) and phase 3 (Claude creates in Ashby) are NOT here; each has its own go.
+// Phase 2 (GO: Jerin, 21 Sep): Jerin or Gopu approves, or sends back with a note, inside the request's own thread; a
+// sent-back request can be revised and resubmitted as a new request that names the one it revises.
+// Phase 3 (Claude creates the opening in Ashby) is NOT here; it has its own go.
 
 import { loadDashboardData } from './data.js';
 import { loadMetricConfig } from './metric-config.js';
@@ -245,8 +247,9 @@ export async function mountOpeningRequests(root, backend) {
   }
 
   function railHtml() {
-    const mine = S.requests.filter(x => x.requesterEmail === S.me.email);
-    const others = S.requests.filter(x => x.requesterEmail !== S.me.email);
+    const waiting = S.me.isApprover ? S.requests.filter(x => x.status === 'For approval') : [];
+    const mine = S.requests.filter(x => x.requesterEmail === S.me.email && !waiting.includes(x));
+    const others = S.requests.filter(x => x.requesterEmail !== S.me.email && !waiting.includes(x));
     const item = (x) => `<button type="button" class="or-req${S.active === x.id ? ' on' : ''}" data-open="${esc(x.id)}">
         <b>${esc(x.id)} · ${esc(x.topic || x.jobTitle)} × ${esc(x.count)}</b><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span>
         <small>${esc(x.jobTitle)}${x.requesterEmail !== S.me.email ? ' · ' + esc(x.requesterName) : ''} · ${esc(niceStamp(x.createdAt))}</small></button>`;
@@ -254,7 +257,8 @@ export async function mountOpeningRequests(root, backend) {
         <b>New request${S.draft && S.draft.topic ? ' · ' + esc(S.draft.topic) : ''}</b><span class="or-st s-draft">Draft</span>
         <small>${esc((S.jobById[S.draft.jobId] || {}).title || 'not submitted yet')}</small></button>` : '';
     return `<button type="button" class="or-new" data-act="new">+ Create Opening</button>
-      <div class="or-rail-h"><span>Your requests</span><span>${mine.length}</span></div>
+      ${waiting.length ? `<div class="or-rail-h or-wait-h"><span>Waiting for your approval</span><span>${waiting.length}</span></div>${waiting.map(item).join('')}` : ''}
+      <div class="or-rail-h${waiting.length ? ' or-gap' : ''}"><span>Your requests</span><span>${mine.length}</span></div>
       ${draft}${mine.map(item).join('') || (draft ? '' : '<p class="or-empty">None yet. Start one with Create Opening.</p>')}
       ${S.me.isApprover && others.length ? `<div class="or-rail-h or-gap"><span>Everyone else's</span><span>${others.length}</span></div>${others.map(item).join('')}` : ''}`;
   }
@@ -269,7 +273,7 @@ export async function mountOpeningRequests(root, backend) {
     if (S.active !== 'draft') return savedThreadHtml(S.requests.find(x => x.id === S.active));
     const ev = evaluate(S.draft, ctx());
     const job = S.jobById[S.draft.jobId];
-    return `<div class="or-th-h"><b>New request</b><span class="or-st s-draft">Draft</span>
+    return `<div class="or-th-h"><b>${S.draft.revises ? `Revising ${esc(S.draft.revises)}` : 'New request'}</b><span class="or-st s-draft">Draft</span>
         <span class="or-m">${esc(job ? job.title : 'pick a job')}</span></div>
       ${S.thread.map(m => msgHtml(m, ev)).join('')}
       ${S.asking ? askHtml(S.asking) : ''}
@@ -393,8 +397,13 @@ export async function mountOpeningRequests(root, backend) {
 
   function savedThreadHtml(x) {
     if (!x) return '<div class="or-hello"><p>That request is not in your list.</p></div>';
-    let carded = false;
-    const t = (x.transcript || []).map(m => {
+    // The card takes the place of the draft message, which is always the conversation's FIRST line. If a request has no
+    // such line (saved some other way), the card goes on top instead of replacing a real message.
+    const tr = x.transcript || [];
+    let carded = !(tr[0] && tr[0].who === 'claude');
+    const cardTop = carded ? `<div class="or-row"><span class="or-av c">C</span><div><div class="or-bub">Request by <b>${esc(x.requesterName)}</b>.${cardHtml(summaryCard(x))}</div></div></div>` : '';
+    const t = cardTop + tr.map(m => {
+      if (m.who === 'approver') return `<div class="or-row"><span class="or-av j">${esc(initials(m.name))}</span><div><div class="or-who"><b>${esc(m.name)}</b> · ${esc(niceStamp(m.at))}</div><div class="or-bub">${esc(m.text)}</div></div></div>`;
       if (m.who === 'me') return `<div class="or-row me"><div class="or-bub">${esc(m.text)}</div><span class="or-av r">${esc(initials(x.requesterName))}</span></div>`;
       // the first message carried the form: show the request as submitted in its place
       const body = carded ? esc(m.text) : `The draft, as ${esc(x.requesterName)} submitted it.${cardHtml(summaryCard(x))}`;
@@ -403,8 +412,54 @@ export async function mountOpeningRequests(root, backend) {
     }).join('');
     return `<div class="or-th-h"><b>${esc(x.id)}</b><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span>
         <span class="or-m">${esc(x.jobTitle)} · ${x.slackTs ? 'Slack thread in #ta-core-team' : 'no Slack thread (Slack is off)'}</span></div>
-      ${t || `<div class="or-row"><span class="or-av c">C</span><div><div class="or-bub">Request by <b>${esc(x.requesterName)}</b>.${cardHtml(summaryCard(x))}</div></div></div>`}
-      ${x.status === 'For approval' ? `<div class="or-divider">Waiting for Jerin or Gopu</div>` : ''}`;
+      ${t}
+      ${x.revises ? `<p class="or-muted or-small">Revises <button type="button" class="or-link" data-open="${esc(x.revises)}">${esc(x.revises)}</button>.</p>` : ''}
+      ${decisionHtml(x)}`;
+  }
+
+  // Who can do what next on a saved request. Approvers decide while it waits; the requester revises once it is sent back.
+  function decisionHtml(x) {
+    if (S.busy) return '<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-typing">Saving…</div></div>';
+    const err = S.error ? `<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-bad">${esc(S.error)}</div></div>` : '';
+    if (x.status === 'For approval' && S.me.isApprover) {
+      return `<div class="or-divider">Your decision</div>${err}
+        <div class="or-decide">
+          <div class="or-btns"><button type="button" class="or-b g" data-act="approve">Approve</button>
+            <button type="button" class="or-b x" data-act="sendback">Send back with note</button></div>
+          ${S.sendingBack ? `<div class="or-why"><textarea class="or-in" rows="2" maxlength="600" id="orNote" placeholder="What should ${esc(x.requesterName)} change?"></textarea>
+            <button type="button" class="or-b x" data-act="sendback-go">Send back</button></div>` : ''}
+        </div>`;
+    }
+    if (x.status === 'For approval') return `<div class="or-divider">Waiting for Jerin or Gopu</div>`;
+    if (x.status === 'Sent back' && x.requesterEmail === S.me.email) {
+      return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise">Revise and resubmit</button></div>`;
+    }
+    return err;
+  }
+
+  async function decide(decision, note) {
+    const id = S.active;
+    S.busy = true; S.error = ''; render();
+    let res;
+    try { res = await backend.call('orDecide', id, decision, note || ''); }
+    catch (e) { S.busy = false; S.error = `Couldn't save the decision: ${e && e.message || e}.`; render(); return; }
+    S.busy = false; S.sendingBack = false;
+    if (!res || !res.ok) { S.error = `Not saved: ${(res && res.message) || 'the server refused it'}.`; render(); return; }
+    const i = S.requests.findIndex(r => r.id === id);
+    if (i >= 0) S.requests[i] = res.request;
+    render();
+  }
+
+  function revise(x) {
+    S.active = 'draft'; S.submitted = false; S.asking = null; S.answers = {}; S.error = '';
+    S.draft = Object.assign(newDraft(), {
+      jobId: x.jobId, count: x.count, recruiter: x.recruiter, roleType: x.roleType, employmentType: x.employmentType,
+      complexity: x.complexity, topic: x.topic, openDate: x.openDate >= todayIST() ? x.openDate : todayIST(),
+      replacementOf: x.replacementOf, sourcer: x.sourcer, note: x.note, team: x.team, location: x.location,
+      description: x.description, revises: x.id });
+    S.thread = [{ who: 'claude', at: new Date().toISOString(), form: true,
+      text: `Here's ${x.id} again to revise.${x.decisionNote ? ` ${x.decidedBy} said: "${x.decisionNote}"` : ''} Change what's needed and submit. It goes for approval as a new request.` }];
+    render();
   }
 
   // ---------------- behaviour ----------------
@@ -412,7 +467,7 @@ export async function mountOpeningRequests(root, backend) {
     root.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => {
       const id = b.dataset.open;
       if (id !== 'draft' && S.active === 'draft' && !S.submitted && !confirm('Leave this draft? It has not been submitted.')) return;
-      if (id !== 'draft') { S.active = id; S.draft = null; S.asking = null; S.submitted = false; }
+      if (id !== 'draft') { S.active = id; S.draft = null; S.asking = null; S.submitted = false; S.sendingBack = false; S.error = ''; }
       render();
     }));
     root.querySelectorAll('[data-act="new"]').forEach(b => b.addEventListener('click', () => {
@@ -432,6 +487,10 @@ export async function mountOpeningRequests(root, backend) {
       });
     });
     const act = (name, fn) => root.querySelectorAll(`[data-act="${name}"]`).forEach(b => b.addEventListener('click', fn));
+    act('approve', () => decide('approve', ''));
+    act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) n.focus(); });
+    act('sendback-go', () => { const n = String((root.querySelector('#orNote') || {}).value || '').trim(); if (n) decide('sendback', n); });
+    act('revise', () => revise(S.requests.find(r => r.id === S.active)));
     act('discard', () => { if (confirm('Discard this draft?')) { S.active = null; S.draft = null; render(); } });
     act('submit', onSubmit);
     act('retry', () => { S.error = ''; send(); });
@@ -541,7 +600,7 @@ export async function mountOpeningRequests(root, backend) {
       roleType: ev.roleType, employmentType: ev.employmentType, levelNow: ev.levelNow, levelSet: ev.levelSet,
       complexity: d.complexity, topic: String(d.topic).trim(), openDate: d.openDate, replacementOf: String(d.replacementOf || '').trim(),
       sourcer: String(d.sourcer || '').trim(), note: String(d.note || '').trim(), name: ev.name, pts: ev.pts, tier: ev.tier,
-      quarter: ev.quarter, freeOpening: S.answers.free || '', answers: S.answers,
+      quarter: ev.quarter, freeOpening: S.answers.free || '', answers: S.answers, revises: d.revises || '',
       checks: ev.checks.map(c => `${c.kind}: ${c.text}`), transcript: S.thread.map(m => ({ who: m.who, at: m.at, text: m.text })),
     };
     let saved;
