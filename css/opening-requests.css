@@ -83,6 +83,15 @@ body { margin: 0; background: var(--or-bg); color: var(--or-text);
 .or-small { font-size: 0.8125rem; margin: 0; }
 .or-link { border: 0; background: none; padding: 0; color: var(--or-accent-deep); text-decoration: underline; cursor: pointer; }
 
+/* 112a: an approver's edit — the change list, previewed in the form and kept in the thread; old struck, new in teal */
+.or-edit-sum { padding: 0.5625rem 0.875rem; border-top: 1px solid var(--or-border-light); font-size: 0.84375rem; color: var(--or-text-2); }
+.or-edits { list-style: none; margin: 0.375rem 0 0; padding: 0; display: grid; gap: 0.1875rem; font-size: 0.8125rem; }
+.or-edits li { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 0.75rem; }
+.or-edits li > span:first-child { color: var(--or-muted); font-weight: 600; font-size: 0.78125rem; }
+.or-edits s { color: var(--or-muted); }
+.or-edits b { color: var(--or-teal-ink); }
+.or-edit-note { margin-top: 0.375rem; }
+
 /* the draft form, inside Claude's message */
 /* overflow stays VISIBLE: the job search list hangs below its box and would be clipped otherwise */
 .or-form { background: var(--or-card); border: 1px solid #c9d3e5; border-radius: 0.75rem; margin-top: 0.625rem; color: var(--or-text); }
@@ -133,4 +142,5 @@ textarea.or-in { resize: vertical; }
   .or-bar small { display: none; }
   .or-thread { padding: 0.875rem 0.75rem 2.5rem; }
   .or-kv { grid-template-columns: 1fr; }
+  .or-edits li { grid-template-columns: 1fr; gap: 0; }
 }
