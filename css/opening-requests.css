@@ -75,8 +75,9 @@ body { margin: 0; background: var(--or-bg); color: var(--or-text);
 .or-why { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; margin-top: 0.625rem; align-items: end; }
 
 /* the draft form, inside Claude's message */
-.or-form { background: var(--or-card); border: 1px solid #c9d3e5; border-radius: 0.75rem; overflow: hidden; margin-top: 0.625rem; color: var(--or-text); }
-.or-form-h { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.5rem 0.875rem; background: #f3f6fb; border-bottom: 1px solid var(--or-border-light);
+/* overflow stays VISIBLE: the job search list hangs below its box and would be clipped otherwise */
+.or-form { background: var(--or-card); border: 1px solid #c9d3e5; border-radius: 0.75rem; margin-top: 0.625rem; color: var(--or-text); }
+.or-form-h { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.5rem 0.875rem; background: #f3f6fb; border-bottom: 1px solid var(--or-border-light); border-radius: 0.75rem 0.75rem 0 0;
   font-size: 0.75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--or-muted); }
 .or-fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .or-f { display: grid; gap: 0.1875rem; align-content: start; padding: 0.5rem 0.875rem; border-top: 1px solid var(--or-border-light);
@@ -93,6 +94,14 @@ textarea.or-in { resize: vertical; }
 .or-in.bad { background: var(--or-amber-bg); border-color: #e0b84f; }
 .or-note { font-size: 0.75rem; color: var(--or-muted); line-height: 1.35; }
 .or-note.auto { color: var(--or-teal-ink); } .or-note.bad { color: var(--or-amber); font-weight: 600; }
+/* the job search (Jerin, 21 Sep): a list under the box, grouped by department */
+.or-pick { position: relative; }
+.or-pick-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 0.25rem); max-height: 20rem; overflow-y: auto;
+  background: var(--or-card); border: 1px solid #c9d3e5; border-radius: 0.5rem; box-shadow: 0 0.75rem 1.75rem -0.75rem rgba(34,52,79,.35); padding: 0.25rem 0; }
+.or-pick-g { padding: 0.375rem 0.75rem 0.125rem; font-size: 0.71875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9aa3bd; }
+.or-pick-i { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 0.375rem 0.75rem 0.375rem 1.25rem; cursor: pointer; font-size: 0.875rem; }
+.or-pick-i:hover, .or-pick-i.on { background: var(--or-accent-light); color: var(--or-accent-deep); }
+.or-pick-none { padding: 0.5rem 0.75rem; color: var(--or-muted); font-size: 0.84375rem; }
 .or-namebar { padding: 0.5625rem 0.875rem; border-top: 1px solid var(--or-border-light); background: #f7f9fc; font-size: 0.84375rem; }
 .or-chk { list-style: none; margin: 0; padding: 0.5rem 0.875rem; display: grid; gap: 0.3125rem; border-top: 1px solid var(--or-border-light); }
 .or-c { display: grid; grid-template-columns: 1.125rem 1fr; gap: 0.5rem; font-size: 0.8125rem; align-items: start; }
