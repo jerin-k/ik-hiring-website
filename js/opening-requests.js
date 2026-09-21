@@ -212,8 +212,11 @@ export async function mountOpeningRequests(root, backend) {
     .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
   (S.data.jobs || []).forEach(j => { S.jobById[j.id] = j; });
   const ctx = () => ({ jobById: S.jobById, recruiters: S.recruiters, data: S.data, meta: S.meta });
-  const teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams
+  let teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams
     : [...new Set((S.data.jobs || []).map(j => j.team).filter(Boolean))].sort();
+  // ⏳ TEMPORARY (Jerin, 21 Sep: "add the test department to the team list till we finish testing this out"). Jerin and Gopu
+  // only, so a recruiter can never file a real request under it. REMOVE when #112 testing ends (worklist 112 says so).
+  if (S.me.isApprover && !teamList.includes('Test')) teamList = teamList.concat('Test');
   const locationList = S.meta.locations || [];
 
   const roleTypes = (S.options.roleType && S.options.roleType.length) ? S.options.roleType : ROLE_TYPES;
