@@ -292,14 +292,6 @@ export async function mountOpeningRequests(root, backend) {
     const dis = locked ? ' disabled' : '';
     const job = S.jobById[d.jobId];
     const opt = (list, cur, ph) => `<option value="">${esc(ph)}</option>` + list.map(v => `<option${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
-    const jobOpts = '<option value="">Pick the job…</option>' + (() => {
-      let html = '', dep = null;
-      S.jobs.forEach(j => {
-        if (j.department !== dep) { if (dep !== null) html += '</optgroup>'; dep = j.department; html += `<optgroup label="${esc(dep || '(no department)')}">`; }
-        html += `<option value="${esc(j.id)}"${j.id === d.jobId ? ' selected' : ''}>${esc(j.title)}</option>`;
-      });
-      return html + (dep !== null ? '</optgroup>' : '');
-    })();
     const auto = (k) => ev.notes[k] && ev.notes[k].kind === 'auto';
     const nBlock = ev.blockers.length;
     const levelField = (() => {
@@ -313,7 +305,8 @@ export async function mountOpeningRequests(root, backend) {
     return `<div class="or-form">
       <div class="or-form-h"><span>Opening draft</span><span>${nBlock ? `${nBlock} thing${nBlock === 1 ? '' : 's'} still needed` : 'Ready to submit'}</span></div>
       <div class="or-fgrid">
-        <label class="or-f wide"><span>Job</span><select class="or-in" data-f="jobId"${dis}>${jobOpts}</select>
+        <label class="or-f wide"><span>Job</span><div class="or-pick"><input class="or-in" type="search" data-q="job" autocomplete="off"
+            placeholder="Search open jobs by title or department…" value="${esc(job ? job.title : '')}"${dis}><div class="or-pick-list" hidden></div></div>
           ${job ? `<span class="or-note">${esc(job.department)} · ${esc(job.status)} in Ashby · Level ${esc(job.level || 'NA')}${job.complexity ? ' · ' + esc(job.complexity) : ''}</span>` : ''}</label>
         <label class="or-f"><span>Team</span><select class="or-in${ev.notes.team ? ' auto' : ''}" data-f="team"${dis}>${opt(teamList.includes(d.team) || !d.team ? teamList : [d.team].concat(teamList), d.team, 'Pick the team…')}</select>${note(ev.notes.team)}</label>
         <label class="or-f"><span>Location</span>${locationList.length
@@ -364,7 +357,7 @@ export async function mountOpeningRequests(root, backend) {
     if (a.key === 'drop') {
       return `<div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b></div>
         <div class="or-bub">${a.drops} ${a.drops === 1 ? 'person' : 'people'} dropped on this job this quarter. If this request is to refill one of those positions, its opening is still there: reuse it rather than open a new one.
-          <div class="or-btns"><button type="button" class="or-b p" data-ans="not-refill">Not a refill: new positions</button>
+          <div class="or-btns"><button type="button" class="or-b p" data-ans="not-refill">Over &amp; above; proceed</button>
             <button type="button" class="or-b" data-ans="edit">Edit the draft</button></div></div></div></div>`;
     }
     const x = a.open[0];
@@ -431,14 +424,6 @@ export async function mountOpeningRequests(root, backend) {
       el.addEventListener(ev, () => {
         const f = el.dataset.f;
         S.draft[f] = f === 'count' ? parseInt(el.value, 10) || 0 : el.value;
-        if (f === 'jobId') {
-          S.draft.levelPick = '';
-          const j = S.jobById[el.value], m = (S.meta.jobs || {})[el.value] || {};
-          if (j && j.complexity && !S.draft.complexity && complexities.includes(j.complexity)) S.draft.complexity = j.complexity;
-          // Team and Location start from the job in Ashby; a location is only filled in when the job has exactly one
-          S.draft.team = m.team || (j && j.team) || '';
-          S.draft.location = (m.locations && m.locations.length === 1) ? m.locations[0] : '';
-        }
         if (ev === 'change') { render(); return; }
         // typing: redraw without losing the caret
         const pos = el.selectionStart; render();
@@ -457,6 +442,54 @@ export async function mountOpeningRequests(root, backend) {
       S.answers.free = `${S.draft.count === 1 ? 'A new position' : `All ${S.draft.count} new`}: ${t}`; S.why = null; nextQuestion();
     });
     root.querySelectorAll('[data-ans]').forEach(b => b.addEventListener('click', () => answer(b.dataset.ans, b.textContent.trim())));
+    wireJobSearch();
+  }
+
+  function pickJob(id) {
+    const j = S.jobById[id], m = (S.meta.jobs || {})[id] || {};
+    S.draft.jobId = id; S.draft.levelPick = '';
+    if (j && j.complexity && !S.draft.complexity && complexities.includes(j.complexity)) S.draft.complexity = j.complexity;
+    // Team and Location start from the job in Ashby; a location is only filled in when the job has exactly one
+    S.draft.team = m.team || (j && j.team) || '';
+    S.draft.location = (m.locations && m.locations.length === 1) ? m.locations[0] : '';
+    render();
+  }
+
+  // The job search: every word typed must appear in the title or the department. The list redraws on its own, so typing
+  // never re-renders the form and never loses the caret.
+  function wireJobSearch() {
+    const q = root.querySelector('[data-q="job"]');
+    if (!q) return;
+    const list = q.parentElement.querySelector('.or-pick-list');
+    let hi = 0, items = [];
+    const draw = (text) => {
+      const words = String(text == null ? q.value : text).toLowerCase().split(/\s+/).filter(Boolean);
+      items = S.jobs.filter(j => { const t = `${j.title || ''} ${j.department || ''}`.toLowerCase(); return words.every(w => t.includes(w)); }).slice(0, 80);
+      hi = Math.max(0, Math.min(hi, items.length - 1));
+      let html = '', dep = null;
+      items.forEach((j, i) => {
+        if (j.department !== dep) { dep = j.department; html += `<div class="or-pick-g">${esc(dep || '(no department)')}</div>`; }
+        html += `<button type="button" tabindex="-1" class="or-pick-i${i === hi ? ' on' : ''}" data-job="${esc(j.id)}">${esc(j.title)}</button>`;
+      });
+      list.innerHTML = html || '<div class="or-pick-none">No open job matches.</div>';
+      list.hidden = false;
+      const on = list.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+    };
+    // clicking into a box that already holds the picked job shows the WHOLE list, not just that one job
+    q.addEventListener('focus', () => { const j = S.jobById[S.draft && S.draft.jobId]; q.select(); draw(j && q.value === j.title ? '' : q.value); });
+    q.addEventListener('input', () => { hi = 0; draw(); });
+    q.addEventListener('keydown', (e) => {
+      const cur = () => { const j = S.jobById[S.draft && S.draft.jobId]; return j && q.value === j.title ? '' : q.value; };
+      if (e.key === 'ArrowDown') { hi = Math.min(hi + 1, items.length - 1); draw(cur()); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { hi = Math.max(hi - 1, 0); draw(cur()); e.preventDefault(); }
+      else if (e.key === 'Enter') { if (items[hi]) pickJob(items[hi].id); e.preventDefault(); }
+      else if (e.key === 'Escape') { list.hidden = true; }
+    });
+    list.addEventListener('mousedown', (e) => { const b = e.target.closest('[data-job]'); if (b) { e.preventDefault(); pickJob(b.dataset.job); } });
+    q.addEventListener('blur', () => setTimeout(() => {
+      list.hidden = true;
+      const j = S.jobById[S.draft && S.draft.jobId]; if (root.contains(q)) q.value = j ? j.title : '';
+    }, 150));
   }
 
   function onSubmit() {
