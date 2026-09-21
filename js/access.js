@@ -18,6 +18,12 @@ export async function loadAccessConfig() {
   return accessConfig;
 }
 
+// #112 (21 Sep 2026): the person's userType on the published list (Recruitment Team · Hiring Manager · Admin · Others).
+export function accessUserType(email) {
+  const u = accessConfig && (accessConfig.users || []).find(x => String(x.email || '').toLowerCase() === String(email || '').toLowerCase());
+  return (u && u.userType) || '';
+}
+
 export function getUserAccess(email) {
   if (!accessConfig) return { role: 'none', pages: [] };
 

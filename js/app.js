@@ -1,6 +1,6 @@
 import './ui-scale.js';   // #140: first, so every chart is built by the scaled Chart
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
-import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
+import { loadAccessConfig, getUserAccess, canAccessPage, accessUserType } from './access.js';
 import { loadDashboardData, getFilteredData, getLastUpdated } from './data.js';
 import { loadMetricConfig } from './metric-config.js';
 import { renderHome, initHomeFilters } from './pages/home.js';
@@ -77,6 +77,7 @@ async function onAuthSuccess(user) {
   buildNavStrip();
   setupSignout();
   setupRefreshButton();
+  setupOpeningRequests(user);   // #112
   initTableSorting();
   initFilterDropdowns();
   // #4 (2026-08-22): a refresh used to dump you back on Overview. The active tab now lives in the URL hash,
@@ -116,6 +117,18 @@ function buildNavStrip() {
 }
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
+
+// #112 (Jerin, 21 Sep 2026): the Opening Requests window lives in the Apps Script web app, because requests are private and
+// this site is public. The button only OPENS it, in a new tab (a real browsing context carries the Google sign-in, #144);
+// it is shown to the Recruitment Team and Admins, and the web app checks the same list again before it shows anything.
+function setupOpeningRequests(user) {
+  const a = document.getElementById('orOpen');
+  if (!a) return;
+  const t = accessUserType(user && user.email);
+  if (t !== 'Recruitment Team' && t !== 'Admin') { a.remove(); return; }
+  a.href = WEBAPP_URL + '?page=requests';
+  a.hidden = false;
+}
 
 function setupRefreshButton() {
   const btn = document.getElementById('refreshBtn');
