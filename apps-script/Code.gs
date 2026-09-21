@@ -63,6 +63,9 @@ function doGet(e) {
 
   if (page === 'doPublish') { return publishConfigPage_(e, userEmail); }
 
+  // #112 phase 1 (Jerin, 16 Sep 2026): the Opening Requests window. Its gate (orUser_) runs inside, on EVERY call.
+  if (page === 'requests') { return requestsPage_(e); }
+
   // #150 (19 Sep 2026): one remark against one job. Any role but 'none' may write; the guard runs server-side too.
   if (page === 'doPublishNote') { return publishNotePage_(e, userEmail); }
 
@@ -707,4 +710,367 @@ function publishedRole_(email) {
   }
   var old = getUserAccess(email);
   return (old && old.role) || 'none';
+}
+
+// ===== #112 phase 1 (GO: Jerin, 16 Sep 2026) — Opening Requests, in its own window: /exec?page=requests =====
+// The page served here is a thin shell. The screen itself is js/opening-requests.js on the LIVE SITE, imported as a
+// module, so a change to the screen ships with a git push and needs no redeploy. Every read and write below runs
+// through google.script.run inside the viewer's signed-in session.
+// 🔒 PRIVATE: requests live in a Drive Sheet in the Ashby Hiring Dashboards folder (id in Script Properties,
+//    OR_SHEET_ID), NEVER in the public GitHub repo.
+// 👥 Who may use it: userType Recruitment Team or Admin in the PUBLISHED access.json — the same list the dashboard reads —
+//    re-checked on EVERY call, not only when the page loads.
+// 💬 Slack stays OFF until Jerin puts a bot token in Script Properties (SLACK_BOT_TOKEN). Claude never handles tokens.
+//    Optional SLACK_IDS = {"email": "U0123..."} turns names into @mentions.
+// Phase 2 (GO: Jerin, 21 Sep): orDecide — Jerin or Gopu approves, or sends back with a note. 112a (GO: Jerin, 21 Sep):
+// orEditApprove — they change the request first, and each change is recorded. Phase 3 (Claude creates the opening in
+// Ashby) is NOT here; it has its own go.
+var OR_ASSETS = 'https://hiring.interviewkickstart.com';
+var OR_FOLDER_ID = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
+var OR_SLACK_CHANNEL = 'C0B7Q5TG10R';   // #ta-core-team
+var OR_APPROVERS = [['jerin@interviewkickstart.com', 'Jerin'], ['gopu.nair@interviewkickstart.com', 'Gopu']];
+var OR_COLS = ['id', 'createdAt', 'status', 'requesterEmail', 'requesterName', 'jobId', 'jobTitle', 'department', 'count', 'recruiter',
+  'roleType', 'employmentType', 'levelNow', 'levelSet', 'complexity', 'topic', 'openDate', 'replacementOf', 'sourcer', 'note',
+  'name', 'pts', 'tier', 'quarter', 'freeOpening', 'answers', 'checks', 'transcript', 'slackTs', 'updatedAt',
+  // 21 Sep (Jerin: "as per screenshot" of Ashby's Create Opening): added at the END, so rows already saved keep their places
+  'team', 'location', 'description',
+  // 21 Sep, phase 2: who decided, when, why, and the request a resubmission revises
+  'decidedBy', 'decidedAt', 'decisionNote', 'revises',
+  // 21 Sep, 112a: what an approver changed before approving, each change old ➔ new
+  'edits'];
+var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1 };
+var OR_NUM = { count: 1, pts: 1 };
+// 112a: what an approver may change, in the order a change list reads. Name and Points each follow from the fields above
+// them (recruiter + topic, job + level + complexity), so they change on their own and are listed because they are what
+// gets created. OR_EDIT_ALSO follows from the job and the open date: written with the rest, never listed.
+var OR_EDIT = [['jobTitle', 'Job'], ['count', 'How many'], ['recruiter', 'Recruiter'], ['team', 'Team'], ['location', 'Location'],
+  ['roleType', 'Role Type'], ['employmentType', 'Employment Type'], ['levelSet', 'Job Level'], ['complexity', 'Role Complexity'],
+  ['topic', 'Topic'], ['openDate', 'Open date'], ['replacementOf', 'Replacement of'], ['sourcer', 'Sourcer'],
+  ['description', 'Description'], ['name', 'Name'], ['pts', 'Points each']];
+var OR_EDIT_ALSO = ['jobId', 'department', 'levelNow', 'tier', 'quarter'];
+
+function orUser_() {
+  var email = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+  var access = null;
+  try { access = loadDriveJson_('access.json'); } catch (e) { access = null; }
+  var u = null;
+  ((access && access.users) || []).forEach(function (x) { if (String(x.email || '').toLowerCase() === email) u = x; });
+  var userType = (u && u.userType) || '';
+  var approver = OR_APPROVERS.some(function (a) { return a[0] === email; });
+  return { email: email, userType: approver && !userType ? 'Admin' : userType, isApprover: approver,
+           allowed: !!email && (userType === 'Recruitment Team' || userType === 'Admin' || approver) };
+}
+
+function requestsPage_(e) {
+  var me = orUser_();
+  var h = function (s) { return String(s || '').replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  if (!me.allowed) {
+    return HtmlService.createHtmlOutput('<div style="font-family:system-ui,sans-serif;padding:3rem 1.5rem;text-align:center">'
+      + '<h2 style="color:#22344f">Opening Requests</h2><p style="color:#6b7391">' + h(me.email || 'This account')
+      + ' is not on the Recruitment Team list, so it cannot raise opening requests. Ask Jerin or Gopu.</p></div>').setTitle('Opening Requests');
+  }
+  var v = new Date().getTime();
+  var open = String((e && e.parameter && e.parameter.id) || '').replace(/[^A-Za-z0-9-]/g, '');
+  var html = '<link rel="stylesheet" href="' + OR_ASSETS + '/css/opening-requests.css?v=' + v + '">'
+    + '<div id="or-root"><div class="or-loading">Loading your requests…</div></div>'
+    + '<script type="module">'
+    + 'import { mountOpeningRequests } from "' + OR_ASSETS + '/js/opening-requests.js?v=' + v + '";'
+    + 'const call = (fn, ...a) => new Promise((ok, bad) => google.script.run.withSuccessHandler(ok).withFailureHandler(bad)[fn](...a));'
+    + 'mountOpeningRequests(document.getElementById("or-root"), { call, openId: ' + JSON.stringify(open) + ' });'
+    + '</script>';
+  return HtmlService.createHtmlOutput(html).setTitle('Opening Requests').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// Everything the window needs to start: who is asking, who can own an opening, the Ashby field options, and the requests
+// this person may see (their own; Jerin and Gopu see everyone's).
+function orBoot() {
+  var me = orUser_();
+  if (!me.allowed) return { ok: false, message: 'This window is for the Recruitment Team, Jerin and Gopu.' };
+  var users = orAshbyUsers_();
+  var access = null;
+  try { access = loadDriveJson_('access.json'); } catch (e) { access = null; }
+  var team = {};
+  ((access && access.users) || []).forEach(function (x) {
+    if (x.userType === 'Recruitment Team' || x.userType === 'Admin') team[String(x.email || '').toLowerCase()] = 1;
+  });
+  var mine = null;
+  users.forEach(function (u) { if (u.email === me.email) mine = u; });
+  var all = orReadAll_();
+  var visible = me.isApprover ? all : all.filter(function (r) { return r.requesterEmail === me.email; });
+  visible.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  return {
+    ok: true,
+    me: { email: me.email, name: mine ? mine.name : me.email, userType: me.userType, isApprover: me.isApprover },
+    recruiters: users.filter(function (u) { return team[u.email]; }),
+    people: users,                 // a sourcer can be any active Ashby user
+    meta: orMeta_(),               // Ashby's teams and locations, and each Open job's own team and locations
+    requests: visible,
+    options: orOptions_(),
+    slackOn: !!PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN')
+  };
+}
+
+// What the server insists on before a request is saved, and before an approver's edit is kept (112a). The window checks
+// far more, for the person filling it in; these are the ones that must never be skipped. '' means fine.
+function orValidate_(p) {
+  var need = ['jobId', 'jobTitle', 'recruiter', 'team', 'location', 'roleType', 'employmentType', 'complexity', 'topic', 'openDate'];
+  var miss = need.filter(function (k) { return !String(p[k] || '').trim(); });
+  var count = parseInt(p.count, 10);
+  if (!(count >= 1 && count <= 25)) miss.push('how many');
+  if (p.roleType === 'Replacement' && !String(p.replacementOf || '').trim()) miss.push('replacement of');
+  if (miss.length) return 'missing ' + miss.join(', ');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.openDate)) || String(p.openDate) < '2026-07-01') return 'the open date must be on or after 1 Jul 2026';
+  if (!orAshbyUsers_().some(function (u) { return u.name === p.recruiter; })) return p.recruiter + ' is not an active Ashby user';
+  return '';
+}
+
+// The server re-checks what matters before anything is saved. The window's checks are for the person filling it in.
+function orSubmit(p) {
+  var me = orUser_();
+  if (!me.allowed) return { ok: false, message: 'This account is not on the Recruitment Team list.' };
+  p = p || {};
+  var bad = orValidate_(p);
+  if (bad) return { ok: false, message: bad };
+  var count = parseInt(p.count, 10), mine = null;
+  orAshbyUsers_().forEach(function (u) { if (u.email === me.email) mine = u; });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = orSheet_(), last = sh.getLastRow(), n = 0;
+    if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach(function (r) { var m = /^OR-(\d+)$/.exec(String(r[0])); if (m) n = Math.max(n, +m[1]); });
+    var now = new Date().toISOString();
+    var rq = {};
+    OR_COLS.forEach(function (k) { rq[k] = (p[k] == null) ? '' : p[k]; });
+    rq.id = 'OR-' + ('00' + (n + 1)).slice(-3);
+    rq.createdAt = now; rq.updatedAt = now; rq.status = 'For approval';
+    rq.requesterEmail = me.email; rq.requesterName = mine ? mine.name : me.email;
+    rq.count = count; rq.pts = Number(p.pts) || 0;
+    rq.checks = Array.isArray(p.checks) ? p.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }) : [];
+    rq.answers = (p.answers && typeof p.answers === 'object') ? p.answers : {};
+    rq.revises = /^OR-\d+$/.test(String(p.revises || '')) ? String(p.revises) : '';
+    rq.decidedBy = ''; rq.decidedAt = ''; rq.decisionNote = ''; rq.edits = [];
+    var tr = (Array.isArray(p.transcript) ? p.transcript : []).slice(0, 60).map(function (m) {
+      return { who: m && m.who === 'me' ? 'me' : 'claude', at: String((m && m.at) || now), text: String((m && m.text) || '').slice(0, 1000) };
+    });
+    var slackOn = !!PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
+    tr.push({ who: 'claude', at: now, text: 'Sent to Jerin and Gopu for approval. '
+      + (slackOn ? 'They have been tagged in the Slack thread.' : 'Slack is off for now, so they will see it here.') });
+    rq.transcript = tr;
+    rq.slackTs = slackOn ? orSlackNew_(rq) : '';
+    var row = OR_COLS.map(function (k) { return OR_JSON[k] ? JSON.stringify(rq[k]) : String(rq[k] == null ? '' : rq[k]); });
+    // Written as TEXT: a Sheet turns "2026-09-21" into a date at midnight, which is the date trap #1 in CLAUDE.md.
+    sh.getRange(sh.getLastRow() + 1, 1, 1, OR_COLS.length).setNumberFormat('@').setValues([row]);
+    SpreadsheetApp.flush();
+    return { ok: true, request: rq };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// The private Sheet. Created ONCE in the dashboard's Drive folder; its id is kept in Script Properties. If the id is set
+// but the Sheet cannot be opened, this STOPS rather than quietly starting a second, empty Sheet.
+function orSheet_() {
+  var props = PropertiesService.getScriptProperties(), id = props.getProperty('OR_SHEET_ID');
+  if (id) return orEnsureHead_(SpreadsheetApp.openById(id).getSheets()[0]);
+  var ss = SpreadsheetApp.create('Opening Requests (#112) - private');
+  DriveApp.getFileById(ss.getId()).moveTo(DriveApp.getFolderById(OR_FOLDER_ID));
+  var sh = ss.getSheets()[0];
+  sh.setName('Requests');
+  sh.getRange(1, 1, 1, OR_COLS.length).setNumberFormat('@').setValues([OR_COLS]).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  props.setProperty('OR_SHEET_ID', ss.getId());
+  Logger.log('#112: created the requests Sheet ' + ss.getUrl());
+  return sh;
+}
+
+// New columns are only ever ADDED at the end of OR_COLS. If the saved header is not a leading part of OR_COLS the columns
+// would no longer line up with the rows, so this stops instead of writing.
+function orEnsureHead_(sh) {
+  var have = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String).filter(String);
+  for (var i = 0; i < have.length; i++) if (have[i] !== OR_COLS[i]) throw new Error('#112: the requests Sheet header does not match (' + have[i] + ')');
+  if (have.length < OR_COLS.length) sh.getRange(1, 1, 1, OR_COLS.length).setNumberFormat('@').setValues([OR_COLS]).setFontWeight('bold');
+  return sh;
+}
+
+function orRowObj_(head, r) {
+  var o = {};
+  head.forEach(function (k, i) {
+    var x = r[i];
+    if (OR_JSON[k]) { try { x = JSON.parse(x || (k === 'answers' ? '{}' : '[]')); } catch (e) { x = k === 'answers' ? {} : []; } }
+    else if (OR_NUM[k]) x = Number(x) || 0;
+    else x = String(x == null ? '' : x);
+    o[k] = x;
+  });
+  return o;
+}
+
+function orReadAll_() {
+  var v = orSheet_().getDataRange().getValues();
+  if (v.length < 2) return [];
+  var head = v[0].map(String);
+  return v.slice(1).filter(function (r) { return r[0]; }).map(function (r) { return orRowObj_(head, r); });
+}
+
+// Phase 2: Jerin or Gopu decides. Only a request still "For approval" can be decided, checked under the lock, so two
+// approvers pressing at once cannot both decide it. A send-back must say why.
+function orDecide(id, decision, note) { return orDecide_(id, decision, note, null); }
+
+// 112a (Jerin, 21 Sep: "1 option needed would be for approval to edit & approve"): the approver changes the request in
+// the same draft form and approves it in one step. The edit is re-checked as a new request is, each change is recorded
+// old ➔ new in the thread (and Slack), and the row keeps the approved values. An edit that changes nothing is a plain
+// approval.
+function orEditApprove(id, p, note) { return orDecide_(id, 'approve', note, p || {}); }
+
+function orDecide_(id, decision, note, edit) {
+  var me = orUser_();
+  if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can approve or send back' };
+  decision = String(decision || ''); note = String(note || '').trim().slice(0, 600);
+  if (decision !== 'approve' && decision !== 'sendback') return { ok: false, message: 'unknown decision' };
+  if (decision === 'sendback' && !note) return { ok: false, message: 'say what should change' };
+  var bad = edit ? orValidate_(edit) : '';
+  if (bad) return { ok: false, message: bad };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = orSheet_(), v = sh.getDataRange().getValues(), head = v[0].map(String), col = {};
+    head.forEach(function (k, i) { col[k] = i; });
+    var r = -1;
+    for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
+    if (r < 0) return { ok: false, message: id + ' was not found' };
+    var status = String(v[r][col.status]);
+    if (status !== 'For approval') return { ok: false, message: id + ' is already ' + status + (v[r][col.decidedBy] ? ' (by ' + v[r][col.decidedBy] + ')' : '') };
+    var mine = null;
+    orAshbyUsers_().forEach(function (u) { if (u.email === me.email) mine = u; });
+    var who = mine ? mine.name : me.email, now = new Date().toISOString();
+    // 112a: the edit against what was submitted, field by field. Only what differs is written or listed.
+    var old = orRowObj_(head, v[r]), set = {}, edits = [];
+    if (edit) {
+      OR_EDIT.map(function (f) { return f[0]; }).concat(OR_EDIT_ALSO).forEach(function (k) {
+        var nv = OR_NUM[k] ? String(k === 'count' ? parseInt(edit[k], 10) : (Number(edit[k]) || 0)) : String(edit[k] == null ? '' : edit[k]).trim();
+        if (nv !== String(old[k])) set[k] = nv;
+      });
+      OR_EDIT.forEach(function (f) { if (set[f[0]] != null) edits.push({ field: f[1], from: String(old[f[0]]), to: set[f[0]] }); });
+      if (edits.length) {
+        set.edits = JSON.stringify(edits);
+        if (Array.isArray(edit.checks)) set.checks = JSON.stringify(edit.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }));
+      }
+    }
+    var list = edits.map(function (x) { return x.field + ' ' + (x.from || '(blank)') + ' ➔ ' + (x.to || '(blank)'); }).join('; ');
+    var tr = [];
+    try { tr = JSON.parse(v[r][col.transcript] || '[]'); } catch (e) { tr = []; }
+    var said = { who: 'approver', name: who, at: now, text: decision !== 'approve' ? 'Sent back: ' + note
+      : (edits.length ? 'Edited and approved. ' + list + '.' : 'Approved.') + (note ? ' ' + note : '') };
+    if (edits.length) { said.edits = edits; said.note = note; }
+    tr.push(said);
+    tr.push({ who: 'claude', at: now, text: decision === 'approve'
+      ? 'Approved by ' + who + (edits.length ? ' with ' + edits.length + ' change' + (edits.length === 1 ? '' : 's') + ', listed above' : '')
+        + '. Claude creates the opening in Ashby in its next working session and marks it Created here.'
+      : 'Sent back by ' + who + '. Revise the draft and submit it again with "Revise and resubmit".' });
+    set.status = decision === 'approve' ? 'Approved' : 'Sent back';
+    set.decidedBy = who; set.decidedAt = now; set.decisionNote = note; set.updatedAt = now; set.transcript = JSON.stringify(tr);
+    Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
+    SpreadsheetApp.flush();
+    var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
+    if (rq.slackTs) orSlackPost_((decision === 'approve' ? (edits.length ? 'Edited and approved by ' : 'Approved by ') : 'Sent back by ') + orSlackEsc_(who)
+      + (edits.length ? ': ' + orSlackEsc_(list) + (note ? ' · ' + orSlackEsc_(note) : '') : (note ? ': ' + orSlackEsc_(note) : ''))
+      + ' · ' + orSlackAt_(rq.requesterEmail, rq.requesterName), rq.slackTs);
+    return { ok: true, request: rq };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Active Ashby users with their full Ashby name — the name that goes into the opening name. Cached for six hours.
+function orAshbyUsers_() {
+  var c = CacheService.getScriptCache(), k = 'or_users_v1', hit = c.get(k);
+  if (hit) return JSON.parse(hit);
+  var out = [];
+  ashbyListAll_('/user.list').forEach(function (u) {
+    if (u.isEnabled === false || !u.email) return;
+    var name = ((u.firstName || '') + ' ' + (u.lastName || '')).trim();
+    if (name) out.push({ name: name, email: String(u.email).toLowerCase() });
+  });
+  out.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  try { c.put(k, JSON.stringify(out), 21600); } catch (e) { /* too big to cache: fine, just slower */ }
+  return out;
+}
+
+// The option lists of the three Opening fields the form sets, read from Ashby so the form offers exactly what Ashby
+// accepts. Cached for six hours. Empty lists fall back to the window's built-in ones.
+function orOptions_() {
+  var c = CacheService.getScriptCache(), k = 'or_opts_v1', hit = c.get(k);
+  if (hit) return JSON.parse(hit);
+  var out = { roleType: [], employmentType: [], complexity: [] };
+  try {
+    ashbyListAll_('/customField.list').forEach(function (f) {
+      if (f.isArchived || String(f.objectType || '').toLowerCase() !== 'opening') return;
+      var t = String(f.title || '');
+      var key = /^role type/i.test(t) ? 'roleType' : (/^employment type/i.test(t) ? 'employmentType' : (/role complexity/i.test(t) ? 'complexity' : null));
+      if (!key) return;
+      out[key] = (f.selectableValues || f.options || []).filter(function (x) { return !x.isArchived; })
+        .map(function (x) { return String(x.label || x.value || ''); }).filter(String);
+    });
+  } catch (e) { Logger.log('#112 orOptions_: ' + e.message); }
+  try { c.put(k, JSON.stringify(out), 21600); } catch (e) { /* ignore */ }
+  return out;
+}
+
+// Ashby's teams and locations (both required on an opening), and each Open job's own team and locations so the form can
+// start from them. Cached for six hours.
+function orMeta_() {
+  var c = CacheService.getScriptCache(), k = 'or_meta_v1', hit = c.get(k);
+  if (hit) return JSON.parse(hit);
+  var out = { teams: [], locations: [], jobs: {} };
+  try {
+    var dept = {}, locs = {};
+    ashbyListAll_('/department.list').forEach(function (d) { if (!d.isArchived && d.name) dept[d.id] = d.name; });
+    ashbyListAll_('/location.list').forEach(function (l) { if (!l.isArchived && l.name) locs[l.id] = l.name; });
+    var uniq = function (xs) { var s = {}; return xs.filter(function (x) { return x && !s[x] && (s[x] = 1); }); };
+    out.teams = uniq(Object.keys(dept).map(function (id) { return dept[id]; })).sort();
+    out.locations = uniq(Object.keys(locs).map(function (id) { return locs[id]; })).sort();
+    ashbyListAll_('/job.list').forEach(function (j) {
+      if (j.status !== 'Open') return;
+      var ids = [].concat(j.locationId || [], j.locationIds || [], j.secondaryLocationIds || []);
+      out.jobs[String(j.id).slice(0, 8)] = { team: dept[j.departmentId] || '',
+        locations: uniq(ids.map(function (id) { return locs[id]; })) };
+    });
+  } catch (e) { Logger.log('#112 orMeta_: ' + e.message); }
+  try { c.put(k, JSON.stringify(out), 21600); } catch (e) { /* ignore */ }
+  return out;
+}
+
+// ---- Slack: one thread per request. Runs ONLY when SLACK_BOT_TOKEN is set. ----
+function orSlackEsc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function orSlackAt_(email, name) {
+  var ids = {};
+  try { ids = JSON.parse(PropertiesService.getScriptProperties().getProperty('SLACK_IDS') || '{}'); } catch (e) { ids = {}; }
+  var id = ids[String(email || '').toLowerCase()];
+  return id ? '<@' + id + '>' : orSlackEsc_(name);
+}
+function orSlackNew_(rq) {
+  try {
+    var at = orSlackAt_;
+    var url = ScriptApp.getService().getUrl() + '?page=requests&id=' + rq.id;
+    var ts = orSlackPost_(rq.id + ' · *' + rq.count + ' × ' + orSlackEsc_(rq.jobTitle) + '* · started by ' + at(rq.requesterEmail, rq.requesterName)
+      + ' · <' + url + '|Open the request>', '');
+    if (!ts) return '';
+    if (rq.freeOpening) orSlackPost_('Opening already on the job: ' + orSlackEsc_(rq.freeOpening), ts);
+    orSlackPost_('For approval ' + OR_APPROVERS.map(function (a) { return at(a[0], a[1]); }).join(' ') + ' · cc ' + at(rq.requesterEmail, rq.requesterName)
+      + ' · `' + orSlackEsc_(rq.name) + '`' + (rq.count > 1 ? ' × ' + rq.count : '') + ' · ' + orSlackEsc_([rq.team, rq.location, rq.roleType, rq.employmentType, rq.complexity].filter(String).join(' · '))
+      + (rq.levelSet && rq.levelSet !== rq.levelNow ? ' · job Level ' + orSlackEsc_(rq.levelNow) + ' → ' + orSlackEsc_(rq.levelSet) : ''), ts);
+    return ts;
+  } catch (e) { Logger.log('#112 Slack failed: ' + e.message); return ''; }
+}
+function orSlackPost_(text, threadTs) {
+  var token = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
+  if (!token) return '';
+  var body = { channel: OR_SLACK_CHANNEL, text: text, unfurl_links: false };
+  if (threadTs) body.thread_ts = threadTs;
+  var res = UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', { method: 'post', contentType: 'application/json; charset=utf-8',
+    headers: { Authorization: 'Bearer ' + token }, payload: JSON.stringify(body), muteHttpExceptions: true });
+  var j = {};
+  try { j = JSON.parse(res.getContentText() || '{}'); } catch (e) { j = {}; }
+  if (!j.ok) { Logger.log('#112 Slack refused: ' + (j.error || res.getResponseCode())); return ''; }
+  return j.ts || '';
 }
