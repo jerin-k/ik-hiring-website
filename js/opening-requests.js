@@ -69,6 +69,14 @@ function evaluate(d, ctx) {
   // How many
   if (!(d.count >= 1 && d.count <= 25)) block('Say how many openings (1 to 25).');
 
+  // Team and Location are required on Ashby's Create Opening form (Jerin, 21 Sep: "as per screenshot")
+  const meta = (ctx.meta && ctx.meta.jobs && ctx.meta.jobs[d.jobId]) || {};
+  const jobTeam = meta.team || job.team || '';
+  if (!d.team) block('Pick the Team (Ashby requires it on the opening).');
+  else if (jobTeam && d.team === jobTeam) r.notes.team = { kind: 'auto', text: 'The job\'s team in Ashby' };
+  if (!d.location) block('Pick the Location (Ashby requires it on the opening).');
+  else if ((meta.locations || []).includes(d.location)) r.notes.location = { kind: 'auto', text: 'A location of this job in Ashby' };
+
   // Recruiter is an active Ashby user
   const rec = ctx.recruiters.find(x => x.name === d.recruiter);
   if (!d.recruiter) block('Pick the recruiter who will own the opening.');
@@ -196,10 +204,15 @@ export async function mountOpeningRequests(root, backend) {
   }
   S.me = boot.me; S.requests = boot.requests || []; S.recruiters = boot.recruiters || [];
   S.options = boot.options || {}; S.slackOn = !!boot.slackOn;
+  S.meta = boot.meta || { teams: [], locations: [], jobs: {} };
+  S.people = boot.people || S.recruiters;   // every active Ashby user: a sourcer need not be on the Recruitment Team
   S.jobs = (S.data.jobs || []).filter(j => j.status === 'Open' && familyForJob(j.department, j.title) !== 'Exclude')
     .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
   (S.data.jobs || []).forEach(j => { S.jobById[j.id] = j; });
-  const ctx = () => ({ jobById: S.jobById, recruiters: S.recruiters, data: S.data });
+  const ctx = () => ({ jobById: S.jobById, recruiters: S.recruiters, data: S.data, meta: S.meta });
+  const teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams
+    : [...new Set((S.data.jobs || []).map(j => j.team).filter(Boolean))].sort();
+  const locationList = S.meta.locations || [];
 
   const roleTypes = (S.options.roleType && S.options.roleType.length) ? S.options.roleType : ROLE_TYPES;
   const empTypes = (S.options.employmentType && S.options.employmentType.length) ? S.options.employmentType : ['FTE', 'PTE', 'PTC - Direct'];
@@ -208,7 +221,8 @@ export async function mountOpeningRequests(root, backend) {
   function newDraft() {
     const mine = S.recruiters.find(x => x.email === S.me.email);
     return { jobId: '', count: 1, recruiter: mine ? mine.name : '', roleType: '', employmentType: '', levelPick: '',
-             complexity: '', topic: '', openDate: todayIST(), replacementOf: '', sourcer: '', note: '' };
+             complexity: '', topic: '', openDate: todayIST(), replacementOf: '', sourcer: '', note: '',
+             team: '', location: '', description: '' };
   }
 
   function startNew() {
@@ -301,6 +315,10 @@ export async function mountOpeningRequests(root, backend) {
       <div class="or-fgrid">
         <label class="or-f wide"><span>Job</span><select class="or-in" data-f="jobId"${dis}>${jobOpts}</select>
           ${job ? `<span class="or-note">${esc(job.department)} · ${esc(job.status)} in Ashby · Level ${esc(job.level || 'NA')}${job.complexity ? ' · ' + esc(job.complexity) : ''}</span>` : ''}</label>
+        <label class="or-f"><span>Team</span><select class="or-in${ev.notes.team ? ' auto' : ''}" data-f="team"${dis}>${opt(teamList.includes(d.team) || !d.team ? teamList : [d.team].concat(teamList), d.team, 'Pick the team…')}</select>${note(ev.notes.team)}</label>
+        <label class="or-f"><span>Location</span>${locationList.length
+          ? `<select class="or-in${ev.notes.location ? ' auto' : ''}" data-f="location"${dis}>${opt(locationList, d.location, 'Pick the location…')}</select>`
+          : `<input class="or-in" type="text" maxlength="80" data-f="location" value="${esc(d.location)}" placeholder="Location"${dis}>`}${note(ev.notes.location)}</label>
         <label class="or-f"><span>How many openings</span><input class="or-in" type="number" min="1" max="25" data-f="count" value="${esc(d.count)}"${dis}></label>
         <label class="or-f"><span>Recruiter</span><select class="or-in${S.recruiters.some(x => x.email === S.me.email && x.name === d.recruiter) ? ' auto' : ''}" data-f="recruiter"${dis}>${opt(S.recruiters.map(x => x.name), d.recruiter, 'Pick the recruiter…')}</select>
           ${d.recruiter && S.recruiters.some(x => x.name === d.recruiter) ? '<span class="or-note auto">Full Ashby name · active user</span>' : ''}</label>
@@ -312,7 +330,9 @@ export async function mountOpeningRequests(root, backend) {
         <label class="or-f"><span>Topic</span><input class="or-in" type="text" maxlength="60" data-f="topic" value="${esc(d.topic)}" placeholder="e.g. Agentic AI"${dis}>${note(ev.notes.topic)}</label>
         <label class="or-f"><span>Open date</span><input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}</label>
         ${ev.roleType === 'Replacement' ? `<label class="or-f"><span>Replacement of</span><input class="or-in" type="text" maxlength="80" data-f="replacementOf" value="${esc(d.replacementOf)}" placeholder="Who is leaving"${dis}></label>` : ''}
-        <label class="or-f"><span>Sourcer (optional)</span><input class="or-in" type="text" maxlength="80" data-f="sourcer" value="${esc(d.sourcer)}" placeholder="Only if a sourcer works it"${dis}></label>
+        <label class="or-f"><span>Sourcer (optional)</span><select class="or-in" data-f="sourcer"${dis}>${opt(S.people.map(x => x.name), d.sourcer, 'No sourcer')}</select>
+          ${d.sourcer ? '<span class="or-note">Splits Joined, Joining pending and Drop 50/50. The Goal stays with the recruiter.</span>' : ''}</label>
+        <label class="or-f wide"><span>Description (optional)</span><input class="or-in" type="text" maxlength="120" data-f="description" value="${esc(d.description)}" placeholder="Shown on the opening in Ashby"${dis}></label>
         <label class="or-f wide"><span>Note to approvers</span><textarea class="or-in" rows="2" maxlength="600" data-f="note" placeholder="Why now, cohort dates, anything they should know"${dis}>${esc(d.note)}</textarea></label>
       </div>
       <div class="or-namebar">Name: <code>${esc(ev.name)}</code>${ev.tier ? ' · ' + esc(ev.tier) : ''} · ${pts}</div>
@@ -366,26 +386,31 @@ export async function mountOpeningRequests(root, backend) {
   function summaryCard(x) {
     const rows = [['Name', `${x.name}${x.count > 1 ? ` (× ${x.count})` : ''}`],
       ['Job', `${x.jobTitle} · ${x.department}`],
+      ['Team · Location', [x.team, x.location].filter(Boolean).join(' · ') || '—'],
       ['Fields', [x.roleType, x.employmentType, x.complexity, 'open ' + niceDay(x.openDate)].join(' · ')]];
     if (x.levelSet && x.levelSet !== x.levelNow) rows.push(['Job fix', `Level ${x.levelNow} → ${x.levelSet}`]);
     if (x.replacementOf) rows.push(['Replacement of', x.replacementOf]);
     if (x.sourcer) rows.push(['Sourcer', `${x.sourcer} (splits 50/50)`]);
     if (x.freeOpening) rows.push(['Free opening', x.freeOpening]);
     if (x.pts) rows.push(['Score', `${x.pts} pts each · +${x.pts * x.count} to ${x.recruiter}'s ${qLabel(x.quarter || '')} Goal`]);
+    if (x.description) rows.push(['Description', x.description]);
     if (x.note) rows.push(['Note', x.note]);
     return rows;
   }
 
   function savedThreadHtml(x) {
     if (!x) return '<div class="or-hello"><p>That request is not in your list.</p></div>';
-    const t = (x.transcript || []).map(m => m.who === 'me'
-      ? `<div class="or-row me"><div class="or-bub">${esc(m.text)}</div><span class="or-av r">${esc(initials(x.requesterName))}</span></div>`
-      : `<div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b> · ${esc(niceStamp(m.at))}</div><div class="or-bub">${esc(m.text)}</div></div></div>`).join('');
+    let carded = false;
+    const t = (x.transcript || []).map(m => {
+      if (m.who === 'me') return `<div class="or-row me"><div class="or-bub">${esc(m.text)}</div><span class="or-av r">${esc(initials(x.requesterName))}</span></div>`;
+      // the first message carried the form: show the request as submitted in its place
+      const body = carded ? esc(m.text) : `The draft, as ${esc(x.requesterName)} submitted it.${cardHtml(summaryCard(x))}`;
+      carded = true;
+      return `<div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b> · ${esc(niceStamp(m.at))}</div><div class="or-bub">${body}</div></div></div>`;
+    }).join('');
     return `<div class="or-th-h"><b>${esc(x.id)}</b><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span>
         <span class="or-m">${esc(x.jobTitle)} · ${x.slackTs ? 'Slack thread in #ta-core-team' : 'no Slack thread (Slack is off)'}</span></div>
-      <div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b> · ${esc(niceStamp(x.createdAt))}</div>
-        <div class="or-bub">Request by <b>${esc(x.requesterName)}</b>.${cardHtml(summaryCard(x))}</div></div></div>
-      ${t}
+      ${t || `<div class="or-row"><span class="or-av c">C</span><div><div class="or-bub">Request by <b>${esc(x.requesterName)}</b>.${cardHtml(summaryCard(x))}</div></div></div>`}
       ${x.status === 'For approval' ? `<div class="or-divider">Waiting for Jerin or Gopu</div>` : ''}`;
   }
 
@@ -406,7 +431,14 @@ export async function mountOpeningRequests(root, backend) {
       el.addEventListener(ev, () => {
         const f = el.dataset.f;
         S.draft[f] = f === 'count' ? parseInt(el.value, 10) || 0 : el.value;
-        if (f === 'jobId') { S.draft.levelPick = ''; const j = S.jobById[el.value]; if (j && j.complexity && !S.draft.complexity && complexities.includes(j.complexity)) S.draft.complexity = j.complexity; }
+        if (f === 'jobId') {
+          S.draft.levelPick = '';
+          const j = S.jobById[el.value], m = (S.meta.jobs || {})[el.value] || {};
+          if (j && j.complexity && !S.draft.complexity && complexities.includes(j.complexity)) S.draft.complexity = j.complexity;
+          // Team and Location start from the job in Ashby; a location is only filled in when the job has exactly one
+          S.draft.team = m.team || (j && j.team) || '';
+          S.draft.location = (m.locations && m.locations.length === 1) ? m.locations[0] : '';
+        }
         if (ev === 'change') { render(); return; }
         // typing: redraw without losing the caret
         const pos = el.selectionStart; render();
@@ -422,7 +454,7 @@ export async function mountOpeningRequests(root, backend) {
       const t = String((root.querySelector('#orWhy') || {}).value || '').trim();
       if (!t) return;
       S.thread.push({ who: 'me', at: new Date().toISOString(), text: t });
-      S.answers.free = `All ${S.draft.count} new: ${t}`; S.why = null; nextQuestion();
+      S.answers.free = `${S.draft.count === 1 ? 'A new position' : `All ${S.draft.count} new`}: ${t}`; S.why = null; nextQuestion();
     });
     root.querySelectorAll('[data-ans]').forEach(b => b.addEventListener('click', () => answer(b.dataset.ans, b.textContent.trim())));
   }
@@ -472,6 +504,7 @@ export async function mountOpeningRequests(root, backend) {
     S.asking = null; S.busy = true; S.error = ''; render();
     const payload = {
       jobId: d.jobId, jobTitle: job.title, department: job.department, count: d.count, recruiter: d.recruiter,
+      team: d.team, location: d.location, description: String(d.description || '').trim(),
       roleType: ev.roleType, employmentType: ev.employmentType, levelNow: ev.levelNow, levelSet: ev.levelSet,
       complexity: d.complexity, topic: String(d.topic).trim(), openDate: d.openDate, replacementOf: String(d.replacementOf || '').trim(),
       sourcer: String(d.sourcer || '').trim(), note: String(d.note || '').trim(), name: ev.name, pts: ev.pts, tier: ev.tier,
