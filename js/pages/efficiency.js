@@ -65,7 +65,6 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 // expandable rows. Clicking shows only direct children; collapsing hides + resets all descendants.
 
 // ===== #157: the Specialization/Topic level on Overall Efficiency =====
-const OPEN_STATE = { joined: 'Filled', open: 'Open', missed: 'Missed' };
 // B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic - Total positions, Joined and
 // Missed, in BOTH halves (heads and score). Joining pending, Drop and Delta count PEOPLE, and Ashby ties a
 // person to an opening only at hire, so there is no honest per-topic figure and an em dash is shown instead.
@@ -785,17 +784,11 @@ export function initEfficiencyFilters(data) {
           let tS = 0, jS = 0, mS = 0;
           t.openings.forEach(o => { const s1 = pt(o.quarter || PM.atQ);
             tS += s1; if (o.state === 'joined') jS += s1; if (o.state === 'missed') mS += s1; });
-          html += `<tr data-path="${di}-${ji}-${ti}" data-haschild data-exp="0" style="display:none;cursor:pointer">`
-            + `<td style="padding-left:3.25rem">${CARET}<span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
+          // #157c (Jerin, 21 Sep): the topic is the bottom of the tree - no caret, no opening rows under it.
+          html += `<tr data-path="${di}-${ji}-${ti}" style="display:none">`
+            + `<td style="padding-left:3.25rem"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
             + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${t.total} opening${t.total === 1 ? '' : 's'}</span></td>`
             + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS, jS, mS }) + `</tr>`;
-          t.openings.forEach((o, oi) => {
-            const s1 = pt(o.quarter || PM.atQ);
-            html += `<tr data-path="${di}-${ji}-${ti}-${oi}" style="display:none">`
-              + `<td style="padding-left:4.875rem"><span class="oid">${o.id}</span> <span class="ost ost-${o.state}">${OPEN_STATE[o.state] || o.state}</span></td>`
-              + topicCells({ total: 1, joined: o.state === 'joined' ? 1 : 0, missed: o.state === 'missed' ? 1 : 0,
-                             tS: s1, jS: o.state === 'joined' ? s1 : 0, mS: o.state === 'missed' ? s1 : 0 }) + `</tr>`;
-          });
         });
       });
     });

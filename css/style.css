@@ -1519,7 +1519,8 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .jn-btn:disabled { opacity: 0.45; cursor: default; }
 
 /* ===== #157 — the Specialization/Topic level (SME - US and SME - India only) =====
-   The tree grows two more levels under an SME job: Specialisation, then the Opening itself.
+   The tree grows ONE more level under an SME job: the Specialisation. #157c (21 Sep): it stops there -
+   the opening rows (and their .oid / .ost styles) were removed at Jerin's word.
    Every length is in rem under the 90% root (#140); 1rem = 14.4px, never px. */
 tr.leaf.has-topics { cursor: pointer; }
 tr.lv-topic { background: #fbfcfe; }
@@ -1528,13 +1529,6 @@ tr.lv-topic > td { border-bottom: 1px solid var(--border-light); }
 /* 🚨 A topic reading "(topic not set)" is the CORRECT state for Q3, not a broken join — the field ships for
    Q4. It is muted and italic so it reads as "nobody has filled this in yet" rather than as a topic named that. */
 .topic-unset { color: var(--muted); font-style: italic; }
-tr.lv-open > td:first-child { color: var(--muted); }
-.oid { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.6875rem; color: var(--muted); }
-.ost { display: inline-block; font-size: 0.625rem; font-weight: 600; line-height: 1.5; border-radius: 999px;
-       padding: 0 0.4rem; margin-left: 0.25rem; border: 1px solid var(--border); color: var(--muted); }
-.ost-joined { color: var(--green); border-color: #bcd9df; background: var(--green-light); }
-.ost-open   { color: var(--accent-deep); border-color: #cdd8ea; background: var(--accent-light); }
-.ost-missed { color: var(--red); border-color: #e3c6ce; background: var(--red-light); }
 /* B1: the columns a topic cannot split show an em dash, not a number and not a blank — a blank cell reads as
    "zero" and zero is a claim we cannot make. See definitions.js → hm-positions. */
 td.nosplit { color: #c1c7cf; }

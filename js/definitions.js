@@ -18,7 +18,7 @@ export const DEFINITIONS = {
   'hm-positions': {
     summary: 'How these numbers are worked out',
     intro: 'Everything on this page is built from Ashby <strong>openings</strong> (the positions being filled) and <strong>offers</strong> (the people). Those two are counted differently, which is the single most common source of confusion here — see <em>Worth knowing</em> at the bottom.',
-    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026 · From / To narrows every panel to the day (#129) 15 Sep 2026 \u00b7 Pipeline hides From / To (#141d) 17 Sep 2026 · Specialisation level for SME (#157) 20 Sep 2026',
+    confirmed: 'Definitions confirmed with Jerin · 24 Aug 2026 · Joined = someone moved to Hired into the position 14 Sep 2026 · From / To narrows every panel to the day (#129) 15 Sep 2026 \u00b7 Pipeline hides From / To (#141d) 17 Sep 2026 · Specialisation level for SME (#157) 20 Sep 2026 · the level stops at the topic (#157c) 21 Sep 2026',
     groups: [
       {
         heading: 'The six cards at the top',
@@ -35,7 +35,7 @@ export const DEFINITIONS = {
         heading: 'Specialisation — SME - US and SME - India only',
         items: [
           ['Why only these two', 'In these two departments one role can run several different topics at once, with a separate position opened for each. Everywhere else a role is one thing, so a job simply does not open any further — no arrow, nothing to click.'],
-          ['What the level shows', 'Open an SME role and its positions are split by the <strong>Specialization/Topic</strong> recorded against each one in Ashby. Open a topic and you see the individual positions, each with its own ID and whether it is <em>Filled</em>, <em>Open</em> or <em>Missed</em>. The topics always add up to the role above them — they are the same positions, grouped.'],
+          ['What the level shows', 'Open an SME role and its positions are split by the <strong>Specialization/Topic</strong> recorded against each one in Ashby. The topics always add up to the role above them — they are the same positions, grouped.'],
           ['(topic not set)', 'Positions where nobody has filled the topic in yet. This is <strong>not</strong> an error: the field is new and is being filled in from Q4, so for now most positions land here. The size of that row is simply how much is left to fill in.'],
           ['Why some columns show a dash', 'Only <strong>Total openings</strong>, <strong>Joined</strong> and <strong>Missed</strong> can be split by topic, because those count positions and a position carries its own topic. <strong>Joining pending</strong>, <strong>Dropped</strong> and <strong>Delta</strong> count <em>people</em>, and Ashby only ties a person to a specific position when they are hired — so there is no honest per-topic figure, and a dash is shown rather than a number that would look right and be wrong. Those figures are correct on the role row above.'],
         ]
