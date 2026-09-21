@@ -14,6 +14,7 @@
 // sent-back request can be revised and resubmitted as a new request that names the one it revises.
 // 112a (GO: Jerin, 21 Sep): Edit & approve — the approver opens the request in the same draft form, changes what is
 // needed and approves in one step; the server records each change, old ➔ new, in the thread.
+// #158 (Jerin, 22 Sep): the window's look is mock-up direction C in the dashboard's own colours — see the stylesheet.
 // Phase 3 (Claude creates the opening in Ashby) is NOT here; it has its own go.
 
 import { loadDashboardData } from './data.js';
@@ -45,6 +46,12 @@ function niceStamp(iso) {
   const day = ist.slice(0, 10) === todayIST() ? 'today' : niceDay(ist.slice(0, 10));
   return `${day} ${ist.slice(11, 16)}`;
 }
+// #158: the dashboard's own {ik} mark (index.html), so the window's header matches the site's
+const IK_MARK = '<svg class="ik-mark" viewBox="0 0 176 128" role="img" aria-label="Interview Kickstart" fill="none"><path d="M36.41 13.546C32.422 13.546 29.647 14.153 28.088 15.367C26.613 16.494 25.877 18.531 25.877 21.477V47.354C25.877 52.555 24.836 56.371 22.756 58.797C20.763 61.225 17.598 63.002 13.264 64.129C17.598 65.169 20.805 66.901 22.886 69.33C24.967 71.671 26.007 75.44 26.007 80.643V106.52C26.007 109.467 26.744 111.504 28.218 112.63C29.779 113.845 32.509 114.451 36.41 114.451V127.585C29.215 127.585 23.58 126.805 19.504 125.244C15.517 123.769 12.7 121.515 11.053 118.481C9.40499 115.446 8.582 111.502 8.582 106.647V82.07C8.582 78.171 7.976 75.482 6.761 74.008C5.547 72.447 3.294 71.667 0 71.667V56.453C3.294 56.453 5.548 55.673 6.761 54.112C7.976 52.551 8.582 49.82 8.582 45.921V21.344C8.582 16.403 9.40399 12.458 11.053 9.51099C12.7 6.47599 15.517 4.22299 19.504 2.74799C23.58 1.18599 29.214 0.406006 36.41 0.406006V13.546Z" fill="#3996D2"></path><path d="M139.488 0.412994C146.683 0.412994 152.275 1.193 156.262 2.754C160.337 4.229 163.155 6.482 164.714 9.517C166.36 12.464 167.185 16.41 167.185 21.35V45.927C167.185 49.827 167.791 52.56 169.006 54.119C170.22 55.679 172.473 56.459 175.767 56.459V71.674C172.473 71.674 170.219 72.454 169.006 74.015C167.791 75.491 167.185 78.176 167.185 82.078V106.655C167.185 111.509 166.361 115.454 164.714 118.489C163.153 121.522 160.337 123.778 156.262 125.251C152.275 126.812 146.683 127.593 139.488 127.593V114.459C143.389 114.459 146.077 113.852 147.551 112.638C149.112 111.511 149.892 109.474 149.892 106.528V80.651C149.892 75.449 150.932 71.677 153.012 69.338C155.093 66.91 158.257 65.177 162.505 64.137C158.17 63.01 154.963 61.234 152.882 58.805C150.889 56.378 149.892 52.565 149.892 47.363V21.486C149.892 18.539 149.112 16.502 147.551 15.375C146.076 14.161 143.39 13.554 139.488 13.554V0.412994Z" fill="#3996D2"></path><path d="M66.024 45.959V100.054H51.531V45.959H66.024V45.959Z" fill="#ffffff"></path><path d="M58.674 18.094C61.261 18.094 63.369 18.91 65.002 20.544C66.703 22.107 67.554 24.116 67.554 26.565C67.554 29.014 66.703 31.056 65.002 32.689C63.369 34.253 61.26 35.038 58.674 35.038C56.089 35.038 53.98 34.255 52.347 32.689C50.714 31.056 49.898 29.014 49.898 26.565C49.898 24.117 50.714 22.108 52.347 20.544C53.981 18.911 56.089 18.094 58.674 18.094Z" fill="#ffffff"></path><path d="M94.729 22.79V100.055H80.237V24.423L94.729 22.79Z" fill="#ffffff"></path><path d="M127.594 45.959L110.345 69.74L129.125 100.053H112.692L95.239 70.453L112.591 45.958L127.594 45.959Z" fill="#ffffff"></path></svg>';
+// Stroke icons for the buttons: they take the button's own text colour
+const ICONS = { plus: '<path d="M12 5v14M5 12h14"/>', check: '<path d="M5 12l5 5 9-10"/>', pen: '<path d="M4 20l4-1 11-11-3-3L5 16z"/>',
+  back: '<path d="M10 7l-5 5 5 5"/><path d="M5 12h14"/>' };
+const ico = (n) => `<svg class="or-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 
 const STATUS_CLASS = { 'Draft': 's-draft', 'For approval': 's-wait', 'Needs changes': 's-fix', 'Sent back': 's-back', 'Approved': 's-ok', 'Created': 's-done' };
@@ -255,8 +262,8 @@ export async function mountOpeningRequests(root, backend) {
   // ---------------- rendering ----------------
   function render() {
     root.innerHTML = `
-      <header class="or-bar"><span class="or-logo">ik</span><b>Opening Requests</b>
-        <small>signed in as ${esc(S.me.name || S.me.email)} · ${esc(S.me.userType || '')}</small></header>
+      <header class="or-bar">${IK_MARK}<b>Opening Requests</b>
+        <span class="or-user"><span>${esc(S.me.name || S.me.email)} · ${esc(S.me.userType || '')}</span><i aria-hidden="true">${esc(initials(S.me.name || S.me.email))}</i></span></header>
       <div class="or-split">
         <nav class="or-rail" aria-label="Requests">${railHtml()}</nav>
         <section class="or-thread" aria-live="polite">${threadHtml()}</section>
@@ -274,7 +281,7 @@ export async function mountOpeningRequests(root, backend) {
     const draft = S.active === 'draft' ? `<button type="button" class="or-req on" data-open="draft">
         <b>New request${S.draft && S.draft.topic ? ' · ' + esc(S.draft.topic) : ''}</b><span class="or-st s-draft">Draft</span>
         <small>${esc((S.jobById[S.draft.jobId] || {}).title || 'not submitted yet')}</small></button>` : '';
-    return `<button type="button" class="or-new" data-act="new">+ Create Opening</button>
+    return `<button type="button" class="or-new" data-act="new">${ico('plus')}Create Opening</button>
       ${waiting.length ? `<div class="or-rail-h or-wait-h"><span>Waiting for your approval</span><span>${waiting.length}</span></div>${waiting.map(item).join('')}` : ''}
       <div class="or-rail-h${waiting.length ? ' or-gap' : ''}"><span>Your requests</span><span>${mine.length}</span></div>
       ${draft}${mine.map(item).join('') || (draft ? '' : '<p class="or-empty">None yet. Start one with Create Opening.</p>')}
@@ -360,7 +367,7 @@ export async function mountOpeningRequests(root, backend) {
           : 'Nothing changed yet. Saving now approves the request as it stands.'}</div>
         <label class="or-f wide"><span>Note with your approval (optional)</span><textarea class="or-in" rows="2" maxlength="600" data-edit-note
           placeholder="Goes into the thread with the changes"${dis}>${esc(S.editNote)}</textarea></label>
-        <div class="or-btns"><button type="button" class="or-b g" data-act="edit-save"${nBlock ? ' disabled' : ''}>Save &amp; approve</button>
+        <div class="or-btns"><button type="button" class="or-b g" data-act="edit-save"${nBlock ? ' disabled' : ''}>${ico('check')}Save &amp; approve</button>
           <button type="button" class="or-b" data-act="edit-cancel">Cancel</button></div>`
       : (locked ? '' : `<div class="or-btns"><button type="button" class="or-b p" data-act="submit"${nBlock ? ' disabled' : ''}>Submit</button>
         <button type="button" class="or-b" data-act="discard">Discard draft</button></div>`)}
@@ -467,16 +474,16 @@ export async function mountOpeningRequests(root, backend) {
     if (x.status === 'For approval' && S.me.isApprover) {
       return `<div class="or-divider">Your decision</div>${err}
         <div class="or-decide">
-          <div class="or-btns"><button type="button" class="or-b g" data-act="approve">Approve</button>
-            <button type="button" class="or-b" data-act="edit">Edit &amp; approve</button>
-            <button type="button" class="or-b x" data-act="sendback">Send back with note</button></div>
+          <div class="or-btns"><button type="button" class="or-b g" data-act="approve">${ico('check')}Approve</button>
+            <button type="button" class="or-b" data-act="edit">${ico('pen')}Edit &amp; approve</button>
+            <button type="button" class="or-b x" data-act="sendback">${ico('back')}Send back with note</button></div>
           ${S.sendingBack ? `<div class="or-why"><textarea class="or-in" rows="2" maxlength="600" id="orNote" placeholder="What should ${esc(x.requesterName)} change?"></textarea>
-            <button type="button" class="or-b x" data-act="sendback-go">Send back</button></div>` : ''}
+            <button type="button" class="or-b x" data-act="sendback-go">${ico('back')}Send back</button></div>` : ''}
         </div>`;
     }
     if (x.status === 'For approval') return `<div class="or-divider">Waiting for Jerin or Gopu</div>`;
     if (x.status === 'Sent back' && x.requesterEmail === S.me.email) {
-      return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise">Revise and resubmit</button></div>`;
+      return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise">${ico('pen')}Revise and resubmit</button></div>`;
     }
     return err;
   }
