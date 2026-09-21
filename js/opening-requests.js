@@ -224,6 +224,7 @@ export async function mountOpeningRequests(root, backend) {
   }
   if (!boot || !boot.ok) {
     root.innerHTML = `<div class="or-loading or-err">${esc((boot && boot.message) || 'This window is for the Recruitment Team, Jerin and Gopu.')}</div>`;
+    signalReady();
     return;
   }
   S.me = boot.me; S.requests = boot.requests || []; S.recruiters = boot.recruiters || [];
@@ -712,4 +713,12 @@ export async function mountOpeningRequests(root, backend) {
   // ---------------- start ----------------
   if (backend.openId && S.requests.some(x => x.id === backend.openId)) S.active = backend.openId;
   render();
+  signalReady();
+}
+
+// 112d: when the window is shown inside https://hiring.interviewkickstart.com/requests (requests.html), tell that page it has drawn,
+// so it does not offer its "open in a new tab" fallback. Posted only to the site's two addresses; opened on its own, nobody listens.
+function signalReady() {
+  try { ['https://hiring.interviewkickstart.com', 'https://hiring-dashboard-phi.vercel.app'].forEach(o => window.top.postMessage({ orReady: true }, o)); }
+  catch (e) { /* not framed, or the browser refused: nothing to tell */ }
 }

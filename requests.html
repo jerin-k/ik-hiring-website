@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opening Requests — IK Hiring</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- #112d (Jerin, 22 Sep 2026: "Inside the site"): the Opening Requests window at a neat address,
+       https://hiring.interviewkickstart.com/requests. The window itself is the Apps Script web app (requests are private and
+       this site is public), shown here in a frame; web app V38 allows that. It signs people in with their own Google session.
+       A browser that will not share that session with a frame (Safari) gets a button to open the window in a new tab instead:
+       the window posts {orReady} to this page when it has drawn, and if nothing arrives the button appears. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #f4f6fb; }
+    body { font: 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #0f172a; }
+    #orFrame { display: block; width: 100%; height: 100vh; height: 100dvh; border: 0; }
+    .or-fallback { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 1rem; background: #f4f6fb; }
+    .or-fallback.on { display: flex; }
+    .or-fallback div { max-width: 28rem; text-align: center; background: #fff; border: 1px solid #dbe1ec; border-radius: 0.875rem; padding: 1.75rem 1.5rem;
+      box-shadow: 0 0.75rem 1.75rem -1.25rem rgba(34, 52, 79, .55); }
+    .or-fallback h1 { margin: 0 0 0.5rem; font-size: 1.25rem; color: #22344f; }
+    .or-fallback p { margin: 0 0 1.25rem; color: #6b7391; }
+    .or-fallback a { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 1.25rem; border-radius: 0.625rem;
+      background: #22344f; color: #fff; font-weight: 700; text-decoration: none; }
+    .or-fallback a:hover { background: #2d4a7c; }
+  </style>
+</head>
+<body>
+  <iframe id="orFrame" title="Opening Requests" allow="clipboard-write"></iframe>
+  <div class="or-fallback" id="orFallback" role="alert">
+    <div>
+      <h1>Opening Requests</h1>
+      <p>This browser would not open the window inside this page. Open it in its own tab instead: it is the same window.</p>
+      <a id="orOpenTab" target="_blank" rel="noopener">Open Opening Requests &#x2197;</a>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var WEBAPP = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
+      // a Slack link carries ?id=OR-005; the window opens that request
+      var id = (new URLSearchParams(location.search).get('id') || '').replace(/[^A-Za-z0-9-]/g, '');
+      var src = WEBAPP + '?page=requests' + (id ? '&id=' + encodeURIComponent(id) : '');
+      document.getElementById('orOpenTab').href = src;
+      var ready = false;
+      window.addEventListener('message', function (e) {
+        // the window runs on Google's own sandbox domains; accept its ready signal only from there
+        if (!/^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/.test(e.origin)) return;
+        if (e.data && e.data.orReady) { ready = true; window.__orReady = true; document.getElementById('orFallback').classList.remove('on'); }
+      });
+      setTimeout(function () { if (!ready) document.getElementById('orFallback').classList.add('on'); }, 15000);
+      document.getElementById('orFrame').src = src;
+    })();
+  </script>
+</body>
+</html>

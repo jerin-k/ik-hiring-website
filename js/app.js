@@ -126,7 +126,7 @@ function setupOpeningRequests(user) {
   if (!a) return;
   const t = accessUserType(user && user.email);
   if (t !== 'Recruitment Team' && t !== 'Admin') { a.remove(); return; }
-  a.href = WEBAPP_URL + '?page=requests';
+  a.href = '/requests';   // 112d (Jerin, 22 Sep): the neat address; requests.html shows the web app's window inside the site
   a.hidden = false;
 }
 
