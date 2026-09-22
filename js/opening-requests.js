@@ -173,7 +173,11 @@ function evaluate(d, ctx) {
     r.notes.topic = { kind: 'bad', text: `"${topic}" is too broad to tell two openings on this job apart. Something like "Agentic AI" or "System Design" works.` };
     check('q', `Topic "${topic}" looks too broad. Worth making it specific.`);
   } else r.notes.topic = { kind: 'plain', text: 'Specific enough ✓' };
-  r.name = `IK-Opening-### - ${d.recruiter || '<recruiter>'} - ${topic || '<topic>'}`;
+  // #159 (Jerin, 22 Sep): IK-<n> - <recruiter> - <Role Type> - <topic>, the pattern every Q3 opening was renamed to. The number
+  // is given when the opening is created. Role Type comes from r.mix, so SME India, SME US and PA read As per AOP; a request with
+  // several Role Types (112g) makes one opening per Role Type, and the name shows each of them.
+  const types = mixOrder(r.mix).filter(t => (r.mix[t] || 0) > 0);
+  r.name = `IK-### - ${d.recruiter || '<recruiter>'} - ${types.length ? types.join(' / ') : '<Role Type>'} - ${topic || '<topic>'}`;
 
   // Open date inside the current quarter
   const q = quarterOf(todayIST()), [qs, qe] = quarterBounds(q);
