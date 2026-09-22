@@ -142,6 +142,8 @@ function showReqBot(on) {
       // the window runs on Google's own sandbox domains; accept its ready signal only from there
       if (!/^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/.test(e.origin)) return;
       if (e.data && e.data.orReady) { ready = true; reqBot.querySelector('.reqbot-fallback').hidden = true; }
+      // the window asks who shows it: here it is the dashboard, so it drops its own title bar (Jerin, 22 Sep)
+      if (e.data && (e.data.orHello || e.data.orReady) && e.source) e.source.postMessage({ orHost: 'dashboard' }, e.origin);
     });
     setTimeout(() => { if (!ready) reqBot.querySelector('.reqbot-fallback').hidden = false; }, 15000);
     reqBot.querySelector('iframe').src = src;

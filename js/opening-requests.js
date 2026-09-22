@@ -230,6 +230,13 @@ export async function mountOpeningRequests(root, backend) {
               active: null, draft: null, thread: [], asking: null, answers: {}, busy: false, error: '',
               editing: null, editNote: '' };   // 112a: the request an approver is editing, and the note going with it
   root.classList.add('or-app');
+  // 112f (Jerin, 22 Sep: "This title panel is pointless. can remove"): inside the dashboard's Req Bot tab the window's own navy bar
+  // only repeats the dashboard's header, so it goes there. The window asks whoever shows it; only the dashboard answers
+  // {orHost: 'dashboard'}. On /requests (opened from a Slack link) nobody answers and the bar stays: it is that page's only title.
+  window.addEventListener('message', (e) => {
+    if (SITE_ORIGINS.includes(e.origin) && e.data && e.data.orHost === 'dashboard') root.classList.add('or-embedded');
+  });
+  try { SITE_ORIGINS.forEach(o => window.top.postMessage({ orHello: true }, o)); } catch (e) { /* not framed */ }
   root.innerHTML = '<div class="or-loading">Loading your requests and the latest dashboard data…</div>';
 
   let boot;
@@ -791,7 +798,8 @@ export async function mountOpeningRequests(root, backend) {
 
 // 112d: when the window is shown inside https://hiring.interviewkickstart.com/requests (requests.html), tell that page it has drawn,
 // so it does not offer its "open in a new tab" fallback. Posted only to the site's two addresses; opened on its own, nobody listens.
+const SITE_ORIGINS = ['https://hiring.interviewkickstart.com', 'https://hiring-dashboard-phi.vercel.app'];
 function signalReady() {
-  try { ['https://hiring.interviewkickstart.com', 'https://hiring-dashboard-phi.vercel.app'].forEach(o => window.top.postMessage({ orReady: true }, o)); }
+  try { SITE_ORIGINS.forEach(o => window.top.postMessage({ orReady: true }, o)); }
   catch (e) { /* not framed, or the browser refused: nothing to tell */ }
 }
