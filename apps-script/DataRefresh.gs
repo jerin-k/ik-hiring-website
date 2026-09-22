@@ -1006,7 +1006,10 @@ function refreshDashboardData() {
       recruiter: e.recruiter || null,
       sourcer: e.sourcer || null,   // #11 sourcer - the credit split needs it on JP too
       jobId8: e.jobId8 || null,     // #120a: the job itself - a title alone matches two jobs for some titles
-      linked: e.offerOpeningId ? true : false
+      linked: e.offerOpeningId ? true : false,
+      // #161 (Jerin, 22 Sep): WHICH opening the offer names, 8 chars as openingRows carries it, so the person sits under that
+      // opening's topic on the SME level. Null when the offer names none - the window then shows them on the job row.
+      openingId: e.offerOpeningId ? String(e.offerOpeningId).substring(0, 8) : null
     };
   });
   for (var aid3 in appResult.appMap) {
@@ -1016,7 +1019,7 @@ function refreshDashboardData() {
     if (!sub4) continue;
     if (am4.status === 'Hired' || am4.status === 'Archived') continue;
     var jd4 = am4.jobId ? jobLookup[am4.jobId] : null;
-    jpCaseByApp_[aid3] = { openingQuarter: null, month: null, doj: null, department: jd4 ? jd4.department : '', job: jd4 ? jd4.title : '', jobId8: am4.jobId ? String(am4.jobId).substring(0, 8) : null, candidate: am4.candidate || null, subStage: sub4, recruiter: am4.recruiter || null, sourcer: am4.sourcer || null, linked: false };
+    jpCaseByApp_[aid3] = { openingQuarter: null, month: null, doj: null, department: jd4 ? jd4.department : '', job: jd4 ? jd4.title : '', jobId8: am4.jobId ? String(am4.jobId).substring(0, 8) : null, candidate: am4.candidate || null, subStage: sub4, recruiter: am4.recruiter || null, sourcer: am4.sourcer || null, linked: false, openingId: null };
   }
   var joiningPendingCases = Object.keys(jpCaseByApp_).map(function(k) { return jpCaseByApp_[k]; });
   joiningPendingCases.sort(function(a, b) {
