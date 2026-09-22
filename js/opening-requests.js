@@ -68,13 +68,25 @@ const editsOf = (was, now) => EDIT_FIELDS.filter(([k]) => str(now[k]) !== str(wa
   .map(([k, field]) => ({ field, from: str(was[k]), to: str(now[k]) }));
 const editLi = (x) => `<li><span>${esc(x.field)}</span><span><s>${esc(x.from || 'blank')}</s> ➔ <b>${esc(x.to || 'blank')}</b></span></li>`;
 
+// 112g (Jerin, 22 Sep, Gopu's point: "2 New, 1 buffer & 2 replacement openings"; mock-up B): one request can hold several
+// Role Types. The draft keeps a count per Role Type (d.mix) and one name per Replacement opening (d.replacing) — each becomes
+// its own opening in Ashby, naming the one person it replaces. How many, the Role Type and Replacement of follow from them.
+const mixTotal = (m) => Object.values(m || {}).reduce((a, n) => a + (Number(n) || 0), 0);
+const mixOrder = (m) => ROLE_TYPES.concat(Object.keys(m || {}).filter(t => !ROLE_TYPES.includes(t)));
+const mixSummary = (m) => { const on = mixOrder(m).filter(t => (m[t] || 0) > 0); return on.length === 1 ? on[0] : on.map(t => `${t} ${m[t]}`).join(' · '); };
+const mixOf = (x) => {   // a saved request's mix; one saved before 112g had a single Role Type
+  if (x.mix && mixTotal(x.mix) > 0) return Object.assign({}, x.mix);
+  return x.roleType && x.count ? { [x.roleType]: Number(x.count) || 0 } : {};
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // The rules. ONE function, fed the draft and the dashboard data, returns what the form sets by itself, what it
 // flags, and what blocks Submit. Each line maps to a row of mock-up v4's rules table.
 // ---------------------------------------------------------------------------------------------------------------
 function evaluate(d, ctx) {
   const r = { roleType: d.roleType, employmentType: d.employmentType, levelNow: '', levelSet: '', complexity: d.complexity,
-              notes: {}, checks: [], blockers: [], pts: 0, tier: '', name: '' };
+              notes: {}, checks: [], blockers: [], pts: 0, tier: '', name: '',
+              mix: Object.assign({}, d.mix), total: mixTotal(d.mix), aopOnly: false, replacing: [], replacementOf: '' };
   const check = (kind, text) => r.checks.push({ kind, text });
   const block = (text) => { r.blockers.push(text); check('stop', text); };
   const job = ctx.jobById[d.jobId];
@@ -89,8 +101,11 @@ function evaluate(d, ctx) {
   else if (fam === 'Exclude' || /\btest\b/i.test(title)) block('This looks like a test job, which scores nothing. Pick the real job.');
   else check('ok', `${dept} · Open in Ashby`);
 
-  // How many
-  if (!(d.count >= 1 && d.count <= 25)) block('Say how many openings (1 to 25).');
+  // How many openings, by Role Type (112g). SME India, SME US and PA are always As per AOP, so every opening sits on that row.
+  r.aopOnly = sme || pa;
+  r.total = mixTotal(d.mix);
+  r.mix = r.aopOnly ? { 'As per AOP': r.total } : Object.assign({}, d.mix);
+  if (!(r.total >= 1 && r.total <= 25)) block('Say how many openings of each Role Type (1 to 25 in all).');
 
   // Team and Location are required on Ashby's Create Opening form (Jerin, 21 Sep: "as per screenshot")
   const meta = (ctx.meta && ctx.meta.jobs && ctx.meta.jobs[d.jobId]) || {};
@@ -107,12 +122,17 @@ function evaluate(d, ctx) {
   else check('ok', `Recruiter: ${d.recruiter}, full Ashby name, active user`);
 
   // Role Type: SME India, SME US and PA -> As per AOP (set by the form)
-  if (sme || pa) {
-    r.roleType = 'As per AOP';
+  if (r.aopOnly) {
     r.notes.roleType = { kind: 'auto', text: 'Always As per AOP for SME India, SME US and PA' };
     check('fix', 'Role Type set to As per AOP (SME India, SME US and PA rule)');
-  } else if (!d.roleType) block('Pick a Role Type.');
-  if (r.roleType === 'Replacement' && !String(d.replacementOf || '').trim()) block('Role Type is Replacement, so say who it replaces.');
+  }
+  r.roleType = mixSummary(r.mix);
+  // one name per Replacement opening (Jerin, 22 Sep: "its gonna be 1 opening per replacement")
+  const nRep = r.mix.Replacement || 0;
+  r.replacing = (d.replacing || []).slice(0, nRep).map(v => String(v || '').trim());
+  const named = r.replacing.filter(Boolean).length;
+  if (nRep > named) block(nRep === 1 ? 'Say who the Replacement opening replaces.' : `Name the person each Replacement opening replaces (${nRep - named} still to fill).`);
+  r.replacementOf = r.replacing.filter(Boolean).join('; ');
 
   // Employment Type by department (set by the form)
   const etAuto = dept === 'SME - India' ? 'PTC - Direct' : (dept === 'SME - US' ? 'PTE' : null);
@@ -249,7 +269,8 @@ export async function mountOpeningRequests(root, backend) {
 
   function newDraft() {
     const mine = S.recruiters.find(x => x.email === S.me.email);
-    return { jobId: '', count: 1, recruiter: mine ? mine.name : '', roleType: '', employmentType: '', levelPick: '',
+    return { jobId: '', count: 0, mix: Object.fromEntries(roleTypes.map(t => [t, 0])), replacing: [],
+             recruiter: mine ? mine.name : '', roleType: '', employmentType: '', levelPick: '',
              complexity: '', topic: '', openDate: todayIST(), replacementOf: '', sourcer: '', note: '',
              team: '', location: '', description: '' };
   }
@@ -332,8 +353,27 @@ export async function mountOpeningRequests(root, backend) {
       if (ev.levelSet && ev.levelSet !== ev.levelNow) return `<span class="or-in ro bad">${esc(ev.levelNow)} → ${esc(ev.levelSet)}</span>`;
       return `<span class="or-in ro auto">${esc(ev.levelNow)}</span>`;
     })();
-    const pts = ev.pts ? `<b>${ev.pts} pts</b> each · <b>+${ev.pts * (d.count || 0)}</b> to ${esc(d.recruiter || 'the recruiter')}'s ${esc(qLabel(ev.quarter || ''))} Goal` : '<span class="or-muted">score shows once the job and complexity are set</span>';
+    const pts = ev.pts ? `<b>${ev.pts} pts</b> each${ev.total > 1 ? ` · <b>${ev.total} openings</b>` : ''} · <b>+${ev.pts * (ev.total || 0)}</b> to ${esc(d.recruiter || 'the recruiter')}'s ${esc(qLabel(ev.quarter || ''))} Goal` : '<span class="or-muted">score shows once the job and complexity are set</span>';
     const changes = edit && job ? editsOf(edit, fieldsOf(d, ev)) : [];
+    // 112g, mock-up B: one row per Role Type with − / + (the number can be typed too), the names under Replacement, the total
+    // underneath. On an SME India / SME US / PA job only the As per AOP row is open.
+    const mixBlock = (() => {
+      const rows = roleTypes.map(t => {
+        const n = ev.mix[t] || 0, off = ev.aopOnly && t !== 'As per AOP', no = locked || off;
+        const row = `<div class="or-mix-row${n ? '' : ' zero'}${off ? ' off' : ''}"><span class="or-mix-rt">${esc(t)}</span>
+          <span class="or-step"><button type="button" data-mix="${esc(t)}" data-d="-1" aria-label="One fewer ${esc(t)} opening"${no || !n ? ' disabled' : ''}>−</button><input
+            class="or-step-n" type="number" min="0" max="25" inputmode="numeric" data-mix-n="${esc(t)}" value="${n}" aria-label="${esc(t)} openings"${no ? ' disabled' : ''}><button
+            type="button" data-mix="${esc(t)}" data-d="1" aria-label="One more ${esc(t)} opening"${no || ev.total >= 25 ? ' disabled' : ''}>+</button></span></div>`;
+        if (t !== 'Replacement' || !n) return row;
+        const names = Array.from({ length: n }, (_, i) => `<input class="or-in" type="text" maxlength="80" data-rep="${i}"
+          value="${esc((d.replacing || [])[i] || '')}" placeholder="Opening ${i + 1} replaces… (name)"${dis}>`).join('');
+        return row + `<div class="or-mix-sub"><span class="or-note">Who does each one replace? One name per opening: each becomes its own opening in Ashby.</span>
+          <div class="or-mix-names">${names}</div></div>`;
+      }).join('');
+      const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
+      return `<div class="or-f wide"><span>How many openings, by Role Type</span><div class="or-mix">${rows}
+        <div class="or-mix-total"><b>Total ${ev.total} opening${ev.total === 1 ? '' : 's'}</b><span>${parts || 'Use + to add openings'}</span></div></div>${note(ev.notes.roleType)}</div>`;
+    })();
     const state = nBlock ? `${nBlock} thing${nBlock === 1 ? '' : 's'} still needed`
       : (edit ? (changes.length ? `${changes.length} change${changes.length === 1 ? '' : 's'}` : 'No changes yet') : 'Ready to submit');
     return `<div class="or-form">
@@ -346,17 +386,15 @@ export async function mountOpeningRequests(root, backend) {
         <label class="or-f"><span>Location</span>${locationList.length
           ? `<select class="or-in${ev.notes.location ? ' auto' : ''}" data-f="location"${dis}>${opt(locationList, d.location, 'Pick the location…')}</select>`
           : `<input class="or-in" type="text" maxlength="80" data-f="location" value="${esc(d.location)}" placeholder="Location"${dis}>`}${note(ev.notes.location)}</label>
-        <label class="or-f"><span>How many openings</span><input class="or-in" type="number" min="1" max="25" data-f="count" value="${esc(d.count)}"${dis}></label>
+        ${mixBlock}
         <label class="or-f"><span>Recruiter</span><select class="or-in${S.recruiters.some(x => x.email === S.me.email && x.name === d.recruiter) ? ' auto' : ''}" data-f="recruiter"${dis}>${opt(S.recruiters.map(x => x.name), d.recruiter, 'Pick the recruiter…')}</select>
           ${d.recruiter && S.recruiters.some(x => x.name === d.recruiter) ? '<span class="or-note auto">Full Ashby name · active user</span>' : ''}</label>
-        <label class="or-f"><span>Role Type</span>${auto('roleType') ? `<span class="or-in ro auto">${esc(ev.roleType)}</span>` : `<select class="or-in" data-f="roleType"${dis}>${opt(roleTypes, d.roleType, 'Pick…')}</select>`}${note(ev.notes.roleType)}</label>
         <label class="or-f"><span>Employment Type</span>${auto('employmentType') ? `<span class="or-in ro auto">${esc(ev.employmentType)}</span>` : `<select class="or-in" data-f="employmentType"${dis}>${opt(empTypes, d.employmentType, 'Pick…')}</select>`}${note(ev.notes.employmentType)}</label>
         <label class="or-f"><span>Job Level (in Ashby)</span>${levelField}${note(ev.notes.level)}</label>
         <label class="or-f"><span>Role Complexity</span><select class="or-in" data-f="complexity"${dis}>${opt(complexities, d.complexity, 'Pick one…')}</select>
           <span class="or-note${job && d.complexity && d.complexity === job.complexity ? ' auto' : ''}">${job && d.complexity && d.complexity === job.complexity ? 'As set on the job in Ashby. Change it if this opening differs.' : 'Pick one; a blank would score as Normal'}</span></label>
         <label class="or-f"><span>Topic</span><input class="or-in" type="text" maxlength="60" data-f="topic" value="${esc(d.topic)}" placeholder="e.g. Agentic AI"${dis}>${note(ev.notes.topic)}</label>
         <label class="or-f"><span>Open date</span><input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}</label>
-        ${ev.roleType === 'Replacement' ? `<label class="or-f"><span>Replacement of</span><input class="or-in" type="text" maxlength="80" data-f="replacementOf" value="${esc(d.replacementOf)}" placeholder="Who is leaving"${dis}></label>` : ''}
         <label class="or-f"><span>Sourcer (optional)</span><select class="or-in" data-f="sourcer"${dis}>${opt(S.people.map(x => x.name), d.sourcer, 'No sourcer')}</select>
           ${d.sourcer ? '<span class="or-note">Splits Joined, Joining pending and Drop 50/50. The Goal stays with the recruiter.</span>' : ''}</label>
         <label class="or-f wide"><span>Description (optional)</span><input class="or-in" type="text" maxlength="120" data-f="description" value="${esc(d.description)}" placeholder="Shown on the opening in Ashby"${dis}></label>
@@ -382,15 +420,16 @@ export async function mountOpeningRequests(root, backend) {
       const list = a.rows.slice(0, 6).map(o => `<li>Opening <code>${esc(o.openingId)}</code> · opened ${esc(niceDay(o.day))}${o.owners && o.owners.length ? ' · ' + esc(o.owners.join(', ')) : ''}${o.topic ? ' · ' + esc(o.topic) : ''}</li>`).join('')
         + (a.rows.length > 6 ? `<li>and ${a.rows.length - 6} more</li>` : '')
         + (a.older ? `<li>${a.older} older one${a.older === 1 ? '' : 's'}, opened before Q3 2026, still Open</li>` : '');
-      const k = Math.min(a.nFree, d.count);
+      const k = Math.min(a.nFree, d.count), oneType = Object.values(d.mix || {}).filter(n => n > 0).length <= 1;
       const useBtn = k >= d.count
         ? `<button type="button" class="or-b" data-ans="use-all">Use ${a.nFree === 1 ? 'it' : (k < a.nFree ? `${k} of them` : 'them')}, no new opening</button>`
-        : `<button type="button" class="or-b" data-ans="use-some">Use ${k} of them, request ${d.count - k} new</button>`;
+        : (oneType ? `<button type="button" class="or-b" data-ans="use-some">Use ${k} of them, request ${d.count - k} new</button>` : '');
       return `<div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b></div>
         <div class="or-bub">Before this goes for approval: this job already has <b>${a.nFree} Open opening${a.nFree === 1 ? '' : 's'}</b> with nobody tied to ${a.nFree === 1 ? 'it' : 'them'}.
           <ul class="or-list">${list}</ul>
           ${a.inClosing ? `<span class="or-note">${a.inClosing} ${a.inClosing === 1 ? 'person is' : 'people are'} in closing on this job (Ref Check, Documentation or Offer) and may be headed for ${a.nFree === 1 ? 'it' : 'some of these'}.</span>` : ''}
           Could ${a.nFree === 1 ? 'it' : 'they'} cover ${d.count === 1 ? 'this request' : `some of the ${d.count}`}?
+          ${useBtn ? '' : `<span class="or-note">To use some of them, choose <b>Edit the draft</b> and lower the rows.</span>`}
           <div class="or-btns">${useBtn}<button type="button" class="or-b p" data-ans="all-new">${d.count === 1 ? 'It\'s a new position' : `All ${d.count} are new positions`}</button>
             <button type="button" class="or-b" data-ans="edit">Edit the draft</button></div>
           ${S.why === 'free' ? whyBox('Say briefly why the Open one can\'t be used (it goes to the approvers).') : ''}</div></div></div>`;
@@ -421,7 +460,8 @@ export async function mountOpeningRequests(root, backend) {
     const rows = [['Name', `${x.name}${x.count > 1 ? ` (× ${x.count})` : ''}`],
       ['Job', `${x.jobTitle} · ${x.department}`],
       ['Team · Location', [x.team, x.location].filter(Boolean).join(' · ') || '—'],
-      ['Fields', [x.roleType, x.employmentType, x.complexity, 'open ' + niceDay(x.openDate)].join(' · ')]];
+      ['Fields', [Object.keys(mixOf(x)).length > 1 ? '' : x.roleType, x.employmentType, x.complexity, 'open ' + niceDay(x.openDate)].filter(Boolean).join(' · ')]];
+    if (Object.keys(mixOf(x)).length > 1) rows.splice(3, 0, ['Role Types', x.roleType]);   // 112g
     if (x.levelSet && x.levelSet !== x.levelNow) rows.push(['Job fix', `Level ${x.levelNow} → ${x.levelSet}`]);
     if (x.replacementOf) rows.push(['Replacement of', x.replacementOf]);
     if (x.sourcer) rows.push(['Sourcer', `${x.sourcer} (splits 50/50)`]);
@@ -513,6 +553,8 @@ export async function mountOpeningRequests(root, backend) {
       jobId: x.jobId, count: x.count, recruiter: x.recruiter, roleType: x.roleType, employmentType: x.employmentType,
       complexity: x.complexity, topic: x.topic, openDate: x.openDate, replacementOf: x.replacementOf, sourcer: x.sourcer,
       note: x.note, team: x.team, location: x.location, description: x.description });
+    d.mix = Object.assign(d.mix, mixOf(x));   // 112g
+    d.replacing = String(x.replacementOf || '').split(';').map(v => v.trim()).filter(Boolean);
     // a Level the requester had to pick (a Tech or NonTech job with none in Ashby) comes back picked
     if (evaluate(d, ctx()).levelPicked) d.levelPick = x.levelSet || '';
     return d;
@@ -569,6 +611,25 @@ export async function mountOpeningRequests(root, backend) {
         if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* number/date inputs */ } }
       });
     });
+    // 112g: the Role Type rows. − and + step a row, the number can be typed; a SME / PA job keeps everything on As per AOP.
+    const setMix = (t, n) => {
+      const eff = evaluate(S.draft, ctx()).mix;   // folds a SME / PA job's openings onto As per AOP first
+      const next = Object.fromEntries(roleTypes.map(k => [k, eff[k] || 0]));
+      next[t] = Math.max(0, Math.min(25, n));
+      S.draft.mix = next; S.draft.count = mixTotal(next);
+    };
+    root.querySelectorAll('[data-mix]').forEach(b => b.addEventListener('click', () => {
+      setMix(b.dataset.mix, (evaluate(S.draft, ctx()).mix[b.dataset.mix] || 0) + Number(b.dataset.d)); render();
+    }));
+    const keep = (sel, pos) => { const again = root.querySelector(sel); if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } };
+    root.querySelectorAll('[data-mix-n]').forEach(el => el.addEventListener('input', () => {
+      const t = el.dataset.mixN;
+      setMix(t, parseInt(el.value, 10) || 0); render(); keep(`[data-mix-n="${CSS.escape(t)}"]`, 0);
+    }));
+    root.querySelectorAll('[data-rep]').forEach(el => el.addEventListener('input', () => {
+      const i = Number(el.dataset.rep), pos = el.selectionStart;
+      S.draft.replacing = (S.draft.replacing || []).slice(); S.draft.replacing[i] = el.value; render(); keep(`[data-rep="${i}"]`, pos);
+    }));
     const act = (name, fn) => root.querySelectorAll(`[data-act="${name}"]`).forEach(b => b.addEventListener('click', fn));
     act('approve', () => decide('approve', ''));
     act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) n.focus(); });
@@ -645,6 +706,8 @@ export async function mountOpeningRequests(root, backend) {
   function onSubmit() {
     const ev = evaluate(S.draft, ctx());
     if (ev.blockers.length) return;
+    S.draft.mix = Object.fromEntries(roleTypes.map(k => [k, ev.mix[k] || 0]));   // 112g: as the form shows it (SME / PA folded)
+    S.draft.count = ev.total;
     S.thread.push({ who: 'me', at: new Date().toISOString(), text: 'Submit' });
     S.queue = questionsFor(S.draft, ctx(), S.requests);
     nextQuestion();
@@ -673,6 +736,8 @@ export async function mountOpeningRequests(root, backend) {
         S.asking = null; S.queue = []; S.submitted = true; render(); return;
       }
       d.count = d.count - k;
+      const t = Object.keys(d.mix || {}).find(x => d.mix[x] > 0);   // 112g: offered only when one Role Type is asked for
+      if (t) d.mix = Object.assign({}, d.mix, { [t]: d.count });
       S.answers.free = `Use ${k} existing Open opening${k === 1 ? '' : 's'}; request ${d.count} new`;
       S.thread.push({ who: 'claude', at: new Date().toISOString(), text: `Done: the request is now for ${d.count} new opening${d.count === 1 ? '' : 's'}, and the existing one${k === 1 ? '' : 's'} stay${k === 1 ? 's' : ''} as they are.` });
     } else {
@@ -686,12 +751,12 @@ export async function mountOpeningRequests(root, backend) {
   function fieldsOf(d, ev) {
     const job = S.jobById[d.jobId];
     return {
-      jobId: d.jobId, jobTitle: job.title, department: job.department, count: d.count, recruiter: d.recruiter,
+      jobId: d.jobId, jobTitle: job.title, department: job.department, count: ev.total, recruiter: d.recruiter,
       team: d.team, location: d.location, description: String(d.description || '').trim(),
       roleType: ev.roleType, employmentType: ev.employmentType, levelNow: ev.levelNow, levelSet: ev.levelSet,
       complexity: d.complexity, topic: String(d.topic).trim(), openDate: d.openDate,
-      // only a Replacement names who it replaces: the field is hidden otherwise, and a leftover name must not travel with it
-      replacementOf: ev.roleType === 'Replacement' ? String(d.replacementOf || '').trim() : '',
+      // one name per Replacement opening; a name left over from a row set back to fewer does not travel (112g)
+      replacementOf: ev.replacementOf, mix: Object.fromEntries(Object.entries(ev.mix).filter(([, n]) => n > 0)),
       sourcer: String(d.sourcer || '').trim(), name: ev.name, pts: ev.pts, tier: ev.tier, quarter: ev.quarter,
       checks: ev.checks.map(c => `${c.kind}: ${c.text}`),
     };

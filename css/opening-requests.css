@@ -133,6 +133,26 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
 .or-pick-i { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 0.375rem 0.75rem 0.375rem 1.25rem; cursor: pointer; font-size: 0.875rem; }
 .or-pick-i:hover, .or-pick-i.on { background: var(--or-accent-light); color: var(--or-accent-deep); }
 .or-pick-none { padding: 0.5rem 0.75rem; color: var(--or-muted); font-size: 0.84375rem; }
+/* 112g (mock-up B): How many openings, by Role Type — a row per Role Type with − / +, the names under Replacement, the total
+   underneath on the navy of the header. A row at 0 fades; on an SME / PA job the rows other than As per AOP are shut. */
+.or-mix { display: grid; margin-top: 0.25rem; border: 1px solid var(--or-border-light); border-radius: 0.625rem; overflow: hidden; }
+.or-mix-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.375rem 0.5rem 0.375rem 0.875rem;
+  border-top: 1px solid var(--or-border-light); }
+.or-mix-row:first-child { border-top: 0; }
+.or-mix-rt { font-weight: 600; font-size: 0.875rem; color: var(--or-text); }
+.or-mix-row.zero .or-mix-rt { color: var(--or-faint); font-weight: 500; }
+.or-mix-row.off { background: #f7f9fc; }
+.or-step { display: inline-flex; align-items: center; border: 1px solid var(--or-line); border-radius: 0.625rem; background: var(--or-card); }
+.or-step button { width: 2.5rem; height: 2.375rem; border: 0; background: none; font-size: 1.125rem; line-height: 1; color: var(--or-accent-deep); cursor: pointer; }
+.or-step button:disabled { color: var(--or-line); cursor: default; }
+.or-step-n { width: 2.75rem; height: 2.375rem; border: 0; background: none; text-align: center; font-weight: 700; font-size: 0.9375rem; -moz-appearance: textfield; }
+.or-step-n::-webkit-inner-spin-button, .or-step-n::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.or-step-n:focus { outline: 2px solid var(--or-accent-light); }
+.or-mix-row.zero .or-step-n, .or-step-n:disabled { color: var(--or-faint); font-weight: 500; }
+.or-mix-sub { display: grid; gap: 0.375rem; padding: 0.5rem 0.875rem 0.625rem 1.75rem; background: #fbfcfe; border-top: 1px dashed var(--or-border); }
+.or-mix-names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.375rem; }
+.or-mix-total { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0.875rem; background: var(--or-navy); color: #fff; }
+.or-mix-total b { font-size: 0.9375rem; } .or-mix-total span { font-size: 0.8125rem; color: var(--or-navy-ink); text-align: right; }
 .or-namebar { padding: 0.625rem 1rem; border-top: 1px solid var(--or-border-light); background: #f7f9fc; font-size: 0.84375rem; }
 .or-chk { list-style: none; margin: 0; padding: 0.625rem 1rem; display: grid; gap: 0.3125rem; border-top: 1px solid var(--or-border-light); }
 .or-c { display: grid; grid-template-columns: 1.125rem 1fr; gap: 0.5rem; font-size: 0.8125rem; align-items: start; }
@@ -158,4 +178,5 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
   .or-decide { padding-left: 0; }
   .or-kv { grid-template-columns: 1fr; }
   .or-edits li { grid-template-columns: 1fr; gap: 0; }
+  .or-mix-names { grid-template-columns: 1fr; }
 }
