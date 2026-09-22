@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-09-22T12:01:55.726Z",
+  "updatedAt": "2026-09-22T12:16:58.652Z",
   "notes": {
     "092e9d9b": {
       "text": "Test",
@@ -36,6 +36,11 @@
       "text": "Closed",
       "by": "gopu.nair@interviewkickstart.com",
       "at": "2026-09-22T12:01:55.726Z"
+    },
+    "b71e6679": {
+      "text": "Ref check stage - Akashleena",
+      "by": "gopu.nair@interviewkickstart.com",
+      "at": "2026-09-22T12:16:58.652Z"
     }
   }
 }
