@@ -36,6 +36,9 @@ body { margin: 0; background: var(--or-bg); color: var(--or-text);
   font-weight: 700; color: #fff; background: var(--or-navy-line); flex-shrink: 0; }
 
 .or-split { display: grid; grid-template-columns: 21rem minmax(0, 1fr); min-height: calc(100vh - 4rem); }
+/* 112f: inside the dashboard's Req Bot tab the dashboard's own header says it all (js: or-embedded) */
+.or-app.or-embedded .or-bar { display: none; }
+.or-app.or-embedded .or-split { min-height: 100vh; }
 .or-rail { background: var(--or-bg); border-right: 1px solid var(--or-border); padding: 1.125rem 0.875rem; display: flex; flex-direction: column; gap: 0.375rem; }
 .or-new { display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; border-radius: 0.75rem;
   background: var(--or-navy); color: #fff !important; font-weight: 700; border: 0; cursor: pointer; box-shadow: var(--or-lift); }
