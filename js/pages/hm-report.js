@@ -42,15 +42,32 @@ const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;co
 // so a row never pretends to expand.
 const TCARET = '<span class="caret caret-t" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
 // 🚨 B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic and puts an em dash in the
-// rest. Total openings / Joined / Missed count POSITIONS and split by topic; Joining pending, Dropped and Delta
-// count PEOPLE, and Ashby ties a person to an opening only at hire, so they have no per-topic value at all.
+// rest. Total openings / Joined / Missed count POSITIONS and split by topic. #161 (Jerin, 22 Sep, option A): Joining
+// pending splits too, for the people whose OFFER names an opening (or who are locked on one) - they sit under that
+// opening's topic; everyone else stays on the job row with a small remark, so the topics plus the job row's list add
+// up to the job's Joining pending. Dropped and Delta stay dashed: a drop can never be tied to an opening (Rule 8).
 // Do NOT "helpfully" put a number in a dashed cell - a wrong number here looks right and nobody will question it.
 const DASH = '<td class="nosplit"><span class="zero">—</span></td>';
-const topicMetrics = (t) =>
+const topicMetrics = (t, jp) =>
   `<td style="font-weight:600">${t.total}</td>`
   + `<td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
-  + DASH + DASH + DASH
+  + `<td style="color:var(--orange)">${jp || '<span class="zero">0</span>'}</td>`
+  + DASH + DASH
   + `<td class="${t.missed ? '' : 'zero'}"${t.missed ? ' style="color:var(--red)"' : ''}>${t.missed}</td>`;
+
+// #161: the opening a person in closing is tied to (the pipeline's 8-char id, or a full id from a hire-link 'lock'),
+// the topic rows they fall under, and - for the ones who fall under none - why, in the words Jerin asked for.
+const op8 = (c) => (c && c.openingId ? String(c.openingId).slice(0, 8) : '');
+function splitWho(who, topics) {
+  const at = {};
+  topics.forEach(t => t.openings.forEach(o => { at[String(o.id).slice(0, 8)] = t.topic; }));
+  const by = {}, rest = [];
+  (who || []).forEach(c => { const tp = at[op8(c)]; if (tp) (by[tp] || (by[tp] = [])).push(c); else rest.push(c); });
+  return { by, rest };
+}
+const whyUntied = (c) => op8(c) ? 'opening not in this period'
+  : c.linked ? 'offer names an opening'   // a data file from before 22 Sep knows THAT, not WHICH
+  : /^Offer/.test(c.subStage || '') ? 'offer names no opening' : 'offer not initiated';
 
 // ===== #150 (Jerin, 19 Sep 2026) — the two cells at the end of the job row =====
 // "Who is joining" lists the people behind the Joining Pending number beside it — collected in the same loop,
@@ -64,21 +81,25 @@ function dayLabel(iso) {
   const d = +iso.slice(8, 10), m = parseInt(iso.slice(5, 7), 10);
   return `${d} ${MON[m - 1] || ''}`;
 }
-function jnWhoCell(o) {
+function jnWhoCell(o, opt = {}) {
   const list = [...(o.jpWho || [])].sort((a, b) => String(a.doj || '9999').localeCompare(String(b.doj || '9999'))
     || String(a.candidate || '').localeCompare(String(b.candidate || '')));
-  if (!list.length) return '<td class="jn-cell"><span class="zero">—</span></td>';
+  // #161: on a job with topics, the people under its topics are named there; this line says how many, so the job row
+  // still accounts for everyone behind its Joining pending figure.
+  const under = opt.under ? `<span class="jn-under">${opt.under} under ${opt.under === 1 ? 'its topic' : 'their topics'}</span>` : '';
+  if (!list.length) return under ? `<td class="jn-cell jn-who">${under}</td>` : '<td class="jn-cell"><span class="zero">—</span></td>';
   // Name on its own line, then a quiet meta line. "date not set" repeated down the column was noise, so a missing
   // date simply leaves the stage to speak (Jerin, 19 Sep).
   const line = (c, i) => {
     const d = dayLabel(c.doj), st = c.subStage ? esc(c.subStage) : '';
     const meta = [d ? `<span class="jn-d">${esc(d)}</span>` : '', st].filter(Boolean).join(' · ');
+    const why = opt.note ? opt.note(c) : '';
     return `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
-      + (meta ? `<span class="jn-m">${meta}</span>` : '') + '</span>';
+      + (meta ? `<span class="jn-m">${meta}</span>` : '') + (why ? `<span class="jn-r">${esc(why)}</span>` : '') + '</span>';
   };
   const more = list.length > SHOW_FIRST
     ? `<button type="button" class="jn-more" data-jn-more="1">+${list.length - SHOW_FIRST} more</button>` : '';
-  return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}</td>`;
+  return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}${under}</td>`;
 }
 function jnRemarkCell(o) {
   const n = o.job8 ? noteOf(o.job8) : null;
@@ -709,16 +730,20 @@ export function initHmFilters(data) {
         // #157: only the two SME departments open past the job. Everything else is a plain leaf with no
         // caret and cursor:default - a row that does not pretend to expand.
         const topics = hasTopicLevel(tIdx, D.dept, o.job8) ? tIdx[o.job8] : null;
+        // #161 (option A): the job's people split by the topic of the opening they are tied to; the job row keeps the rest.
+        const split = topics ? splitWho(o.jpWho, topics) : null;
+        const who = split ? jnWhoCell({ jpWho: split.rest }, { note: whyUntied, under: o.jpWho.length - split.rest.length }) : jnWhoCell(o);
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${topics ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${jnWhoCell(o)}${jnRemarkCell(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${who}${jnRemarkCell(o)}</tr>`;
         if (!topics) return;
         topics.forEach(t => {
+          const tw = split.by[t.topic] || [];
           const tk = `${o.job8}|${t.topic}`;
           const unset = t.topic === NO_TOPIC;
           // #157c: a topic row is the bottom of the tree - no caret, nothing to open under it.
           html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" style="display:none">`
             + `<td style="padding-left:3.25rem"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
-            + topicMetrics(t) + `<td class="jn-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+            + topicMetrics(t, tw.length) + jnWhoCell({ jpWho: tw }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
         });
       });
     });
