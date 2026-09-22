@@ -56,17 +56,26 @@ function pctClass(val) {
 }
 const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;color:var(--muted)">▸</span>';
 const DASH = '<span class="zero">—</span>';
-// ===== #157: a topic row on the Recruiter table =====
-// 🚨 Only the GOAL splits by topic here. Capacity is configured per RECRUITER for the whole quarter, and
-// Joined / Joining Pending / Drop / Delta all count PEOPLE - Ashby ties a person to a specific opening only at
-// hire - so none of them has an honest per-topic value. They show an em dash, never a number.
-// The Goal is summed from each opening's own 1/n share, which is exactly what goalOf() sums, so a job's topic
-// rows add back up to the job row above them (Rule 3).
-const recTopicCells = (t, ncol) => {
+// ===== #157: a topic row on the Recruiter table · #161b: Joining Pending splits too =====
+// 🚨 The GOAL splits by topic, summed from each opening's own 1/n share - exactly what goalOf() sums, so a job's
+// topic rows add back up to the job row above them (Rule 3).
+// #161b (Jerin, 22 Sep): the three JOINING PENDING columns split as well, for this recruiter's people whose offer names
+// an opening of the topic - heads, score, the 50/50 sourcer credit and its "+N sourced" line, all through the SAME
+// jpCells() the job row uses, so the two can never render differently.
+// Capacity is configured per RECRUITER for the whole quarter, and Joined / Drop / Delta count PEOPLE with no tie to an
+// opening before hire (a drop can never have one at all - Rule 8), so those stay an em dash. Never put a number in a
+// dashed cell: a wrong one here looks right and nobody will question it.
+//
+// 🚨 COLUMN ARITHMETIC - keep in step with cells() and with the <thead> of both tables.
+//   label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(ncol-14) + JP(5) + Drop(2) + Delta(1) + gap(1) = ncol
+//   Joined is 2 cells on Non-Sales (ncol 16) and 5 on Sales/Others (ncol 19, the #39 Total+A+B split).
+const recTopicCells = (t, ncol, jpHtml) => {
   const d = `<td class="nosplit">${DASH}</td>`;
   const num = (v) => `<td>${Math.round(v * 100) / 100}</td>`;
-  // label + Capacity + Capacity used + Goal(2) + the rest
-  return d + d + num(t.hc) + num(t.sc) + d.repeat(Math.max(0, ncol - 5));
+  return d + d + num(t.hc) + num(t.sc)      // Capacity, Capacity used, Goal heads + score
+    + d.repeat(Math.max(0, ncol - 14))      // Joined
+    + jpHtml                                // Joining Pending: total + Current Qtr + Upcoming/Prev Qtr
+    + d.repeat(4);                          // Drop(2), Delta(1), the Delta bar(1)
 };
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1281,6 +1290,23 @@ export function initRecruiterFilters(baseData) {
       const jpOf = (rec) => ({ t: JP.total[rec] || Z, a: JP.bucketA[rec] || Z, b: JP.bucketB[rec] || Z });
       const jpOfJob = (rec, title) => { const k = rec + '|' + (title || '');
         return { t: JP.totalJ[k] || Z, a: JP.bucketAJ[k] || Z, b: JP.bucketBJ[k] || Z }; };
+      // #161b (Jerin, 22 Sep): the same figure one level down — this recruiter's people in closing whose OFFER names an
+      // opening of this topic. Shaped exactly like jpOfJob so the topic row renders through the same jpCells().
+      // 🚨 It reads EVERY opening of the topic, not only the ones this recruiter owns: the tie is offer ➔ opening, and who
+      // owns the opening does not decide whose candidate it is. Anyone of theirs with no opening, or on a topic they own
+      // nothing in, has no topic row to sit on and is counted on the job row only — so the topic rows are a SUBSET of the
+      // job row above, never a replacement for it, exactly as on the Hiring Manager tab (#161, option A).
+      const jpOfTopic = (rec, title, openings) => {
+        const acc = { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 } };
+        (openings || []).forEach(o => {
+          const k = rec + '|' + (title || '') + '|' + String(o.id).slice(0, 8);
+          [['t', JP.totalO], ['a', JP.bucketAO], ['b', JP.bucketBO]].forEach(([slot, m]) => {
+            const v = m[k]; if (!v) return;
+            acc[slot].hc += v.hc; acc[slot].sc += v.sc; acc[slot].so += v.so || 0;
+          });
+        });
+        return acc;
+      };
       // #129: Non-Sales reads its Joined from joinByRec below. These maps also used to carry Non-Sales offers by DECIDED date — Ashby's bulk
       // data-entry stamp (CLAUDE.md date trap 2) — and all that did was add empty job rows under Non-Sales recruiters.
       const outByRec = isSales ? OM.sales : {};
@@ -1596,8 +1622,17 @@ export function initRecruiterFilters(baseData) {
                 ? tIdx[j8t].map(t => {
                     const mine = t.openings.filter(o => (o.owners || []).includes(r.name));
                     const hc = mine.reduce((x, o) => x + (o.share || 0), 0);
-                    return { topic: t.topic, hc: Math.round(hc * 10000) / 10000, sc: Math.round(hc * sc * 10000) / 10000, n: mine.length };
-                  }).filter(t => t.n)
+                    // #161b: the Goal comes from the openings THIS recruiter owns; Joining Pending comes from the
+                    // people tied to ANY opening of the topic - two different questions, see jpOfTopic.
+                    return { topic: t.topic, hc: Math.round(hc * 10000) / 10000, sc: Math.round(hc * sc * 10000) / 10000, n: mine.length,
+                             jp: jpOfTopic(r.name, m.title, t.openings) };
+                  })
+                    // #161b option B (Jerin, 22 Sep): a topic row appears where this recruiter OWNS an opening in it, OR where
+                    // they hold credit on somebody in closing against one - as recruiter (hc) or as sourcer (so). Without the
+                    // second test a pure sourcer never gets a topic row at all, so the "+N sourced" line Jerin asked for at
+                    // this level could never appear anywhere: V Pooja sourced the MCP candidate and owns no MCP opening.
+                    // Such a row shows a Goal of 0 and says "no openings of theirs" where the opening count sits.
+                    .filter(t => t.n || t.jp.t.hc || t.jp.t.so)
                 : null;
               // #160a: the same rule on THIS recruiter's own openings - if none of theirs carries a real topic, the job
               // stays a plain row for them, even when a colleague's opening on the job has one.
@@ -1607,8 +1642,8 @@ export function initRecruiterFilters(baseData) {
               (tops || []).forEach(t => {
                 html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
                   + `<td style="padding-left:4.875rem"><span class="${t.topic === NO_TOPIC ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
-                  + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${t.n} opening${t.n === 1 ? '' : 's'}</span></td>`
-                  + recTopicCells(t, ncol) + `</tr>`;
+                  + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${t.n ? `${t.n} opening${t.n === 1 ? '' : 's'}` : 'no openings of theirs'}</span></td>`
+                  + recTopicCells(t, ncol, jpCells({ jp: t.jp })) + `</tr>`;
               });
             });
           } else {
@@ -1882,6 +1917,11 @@ export function initRecruiterFilters(baseData) {
     // Job-level too, keyed recruiter|job title. Job rows used to print a hard 0 in every JP column, which
     // reads as "nobody in closing on this role" when the real answer was "not worked out per job".
     const bucketAJ = {}, bucketBJ = {};
+    // #161b: and once more at the OPENING grain, keyed `recruiter|job title|opening8`, so a topic row can add up
+    // the openings under it. Fed through the SAME addCredit as the two above, so the 50/50 sourcer split, the head
+    // rule and the "+N sourced" count cannot drift from the job row it sits under (Rule 3). `scratch` catches the
+    // per-recruiter side of that call, which nothing reads.
+    const bucketAO = {}, bucketBO = {}, scratch = {};
     // #11: the same addCredit used by Joined and Drop, so Joining Pending divides credit identically.
     // ⚠ JP job keys are `name|JOB TITLE`, not `name|jobId8` — the cases carry no job id.
     (data.joiningPendingCases || []).forEach(c => {
@@ -1890,7 +1930,10 @@ export function initRecruiterFilters(baseData) {
       const sc = scoreForRole({ department: c.department, title: c.job || c.jobTitle, level: j.level, complexity: j.complexity }, q);
       const oq = c.openingQuarter || null, dq = qOf(c.doj || c.startDate);
       const jt = c.job || c.jobTitle || '';
-      const bump = (mR, mJ) => addCredit(mR, mJ, jt, rec, c.sourcer, c.department, sc);
+      // #161b: the 8-char opening id the pipeline puts on a case (a hire-link 'lock' writes a full one, so slice).
+      const o8 = c.openingId ? String(c.openingId).slice(0, 8) : '';
+      const bump = (mR, mJ, mO) => { addCredit(mR, mJ, jt, rec, c.sourcer, c.department, sc);
+        if (o8) addCredit(scratch, mO, jt + '|' + o8, rec, c.sourcer, c.department, sc); };
       // #27 (Jerin, 2026-08-24) — the settled definitions, one line each. Do not re-derive them.
       if (isSales) {
         // A: the opening was raised in an EARLIER quarter, whatever the joining date — the same test as Joined — Prev Qtr Openings.
@@ -1898,8 +1941,8 @@ export function initRecruiterFilters(baseData) {
         //    opening, or joining later, was filed under Current Qtr Openings.
         // B: everyone else in closing — i.e. the whole population MINUS A, so A + B is the total.
         // ⚠ B used to test `dq !== prevQ`, which is a different question entirely and read 85 of 153.
-        if (oq && oq < q) bump(bucketA, bucketAJ);
-        else bump(bucketB, bucketBJ);
+        if (oq && oq < q) bump(bucketA, bucketAJ, bucketAO);
+        else bump(bucketB, bucketBJ, bucketBO);
       } else {
         // A: everyone except those sitting on an EARLIER quarter's opening (the HM card rule), MINUS anyone
         //    whose joining date falls in the NEXT quarter.
@@ -1907,8 +1950,8 @@ export function initRecruiterFilters(baseData) {
         // That last clause on A is what makes the two DISJOINT (Jerin, 2026-08-24). Without it everyone in B
         // was also in A — their opening is this quarter, so nothing excluded them — and Total = A + B counted
         // them twice. It reads 0 today only because no offer carried an opening link before 2026-07-25.
-        if (!(oq && oq < q) && dq !== nextQ) bump(bucketA, bucketAJ);
-        if (oq === q && dq === nextQ) bump(bucketB, bucketBJ);
+        if (!(oq && oq < q) && dq !== nextQ) bump(bucketA, bucketAJ, bucketAO);
+        if (oq === q && dq === nextQ) bump(bucketB, bucketBJ, bucketBO);
       }
     });
     // Total is the two sub-columns ADDED, never a separate count — that is what stops the three JP figures
@@ -1917,7 +1960,8 @@ export function initRecruiterFilters(baseData) {
     const sum = (...ms) => { const out = {}; ms.forEach(m => Object.entries(m).forEach(([k, v]) => {
       const t = out[k] || (out[k] = { hc: 0, sc: 0, so: 0 }); t.hc += v.hc; t.sc += v.sc; t.so += v.so || 0; })); return out; };
     return { total: sum(bucketA, bucketB), bucketA, bucketB,
-             totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ };
+             totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ,
+             totalO: sum(bucketAO, bucketBO), bucketAO, bucketBO };   // #161b
   }
 
   // Offered -> Hired for ONE quarter, per recruiter and per (recruiter, job).
