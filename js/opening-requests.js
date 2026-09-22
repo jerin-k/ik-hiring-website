@@ -7,11 +7,12 @@
 // 🔑 WHERE THIS RUNS: not on the dashboard. The Apps Script web app serves a thin page at `/exec?page=requests`
 // (Code.gs → requestsPage_) that imports THIS module from the live site. Every read and write goes through
 // `google.script.run` inside the signed-in Google session, so requests stay PRIVATE (a Drive Sheet), and the
-// public GitHub repo never sees one. The dashboard only carries a button that opens that window.
+// public GitHub repo never sees one. The dashboard frames that window as its Req Bot tab, and /requests frames it too.
 // 🔑 The server re-checks everything that matters (who may raise, required fields, active recruiter). The checks
 // here are for the person filling the form in — fast, and in plain words.
-// Phase 2 (GO: Jerin, 21 Sep): Jerin or Gopu approves, or sends back with a note, inside the request's own thread; a
-// sent-back request can be revised and resubmitted as a new request that names the one it revises.
+// Phase 2 (GO: Jerin, 21 Sep): Jerin or Gopu approves, or sends back with a note, inside the request's own thread.
+// 112e (Jerin, 22 Sep: "for send back cases, dont create a new sequence number"): the person who raised a sent-back request
+// revises it IN PLACE — same OR number, same thread here and in Slack — and it goes back for approval (server: orResubmit).
 // 112a (GO: Jerin, 21 Sep): Edit & approve — the approver opens the request in the same draft form, changes what is
 // needed and approves in one step; the server records each change, old ➔ new, in the thread.
 // #158 (Jerin, 22 Sep): the window's look is mock-up direction C in the dashboard's own colours — see the stylesheet.
@@ -438,7 +439,7 @@ export async function mountOpeningRequests(root, backend) {
     const tr = x.transcript || [];
     let carded = !(tr[0] && tr[0].who === 'claude');
     const cardTop = carded ? `<div class="or-row"><span class="or-av c">C</span><div><div class="or-bub">Request by <b>${esc(x.requesterName)}</b>.${cardHtml(summaryCard(x))}</div></div></div>` : '';
-    const nEd = (x.edits || []).length;
+    const nEd = (x.edits || []).length, nRe = tr.filter(m => m.who === 'me' && m.resubmit).length;
     const t = cardTop + tr.map(m => {
       if (m.who === 'approver') {
         // 112a: an edit shows as its change list, old ➔ new, with the approver's note under it
@@ -447,10 +448,14 @@ export async function mountOpeningRequests(root, backend) {
           : esc(m.text);
         return `<div class="or-row"><span class="or-av j">${esc(initials(m.name))}</span><div><div class="or-who"><b>${esc(m.name)}</b> · ${esc(niceStamp(m.at))}</div><div class="or-bub">${said}</div></div></div>`;
       }
-      if (m.who === 'me') return `<div class="or-row me"><div class="or-bub">${esc(m.text)}</div><span class="or-av r">${esc(initials(x.requesterName))}</span></div>`;
+      // 112e: a resubmission shows what the requester changed, old ➔ new
+      if (m.who === 'me') return `<div class="or-row me"><div class="or-bub">${m.resubmit && m.edits && m.edits.length
+        ? `Resubmitted with ${m.edits.length} change${m.edits.length === 1 ? '' : 's'}.<ul class="or-edits">${m.edits.map(editLi).join('')}</ul>`
+        : esc(m.text)}</div><span class="or-av r">${esc(initials(x.requesterName))}</span></div>`;
       // the first message carried the form: show the request in its place — as submitted, or as approved after an edit
       const body = carded ? esc(m.text) : (nEd
         ? `The request as approved: ${esc(x.requesterName)}'s draft with the ${nEd} change${nEd === 1 ? '' : 's'} ${esc(x.decidedBy)} made, listed below.`
+        : nRe ? `The request as it stands now: ${esc(x.requesterName)} resubmitted it after it was sent back, with the changes listed below.`
         : `The draft, as ${esc(x.requesterName)} submitted it.`) + cardHtml(summaryCard(x));
       carded = true;
       return `<div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b> · ${esc(niceStamp(m.at))}</div><div class="or-bub">${body}</div></div></div>`;
@@ -533,7 +538,7 @@ export async function mountOpeningRequests(root, backend) {
     S.active = 'draft'; S.submitted = false; S.asking = null; S.answers = {}; S.error = '';
     S.draft = Object.assign(draftFrom(x), { openDate: x.openDate >= todayIST() ? x.openDate : todayIST(), revises: x.id });
     S.thread = [{ who: 'claude', at: new Date().toISOString(), form: true,
-      text: `Here's ${x.id} again to revise.${x.decisionNote ? ` ${x.decidedBy} said: "${x.decisionNote}"` : ''} Change what's needed and submit. It goes for approval as a new request.` }];
+      text: `Here's ${x.id} again to revise.${x.decisionNote ? ` ${x.decidedBy} said: "${x.decisionNote}"` : ''} Change what's needed and submit. It goes back for approval as ${x.id}, in the same thread.` }];
     render();
   }
 
@@ -700,10 +705,13 @@ export async function mountOpeningRequests(root, backend) {
       transcript: S.thread.map(m => ({ who: m.who, at: m.at, text: m.text })),
     });
     let saved;
-    try { saved = await backend.call('orSubmit', payload); }
+    // 112e: a revision of a sent-back request goes back under its own number; anything else is a new request
+    try { saved = await (d.revises ? backend.call('orResubmit', d.revises, payload) : backend.call('orSubmit', payload)); }
     catch (e) { S.busy = false; S.error = `Couldn't save: ${e && e.message || e}. Nothing was sent.`; render(); return; }
     S.busy = false;
     if (!saved || !saved.ok) { S.error = `Not sent: ${(saved && saved.message) || 'the server refused it'}.`; render(); return; }
+    const was = S.requests.findIndex(r => r.id === saved.request.id);
+    if (was >= 0) S.requests.splice(was, 1);
     S.requests.unshift(saved.request);
     S.submitted = true;
     S.active = saved.request.id;

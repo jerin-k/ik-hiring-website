@@ -18,11 +18,10 @@ export async function loadAccessConfig() {
   return accessConfig;
 }
 
-// #112 (21 Sep 2026): the person's userType on the published list (Recruitment Team · Hiring Manager · Admin · Others).
-export function accessUserType(email) {
-  const u = accessConfig && (accessConfig.users || []).find(x => String(x.email || '').toLowerCase() === String(email || '').toLowerCase());
-  return (u && u.userType) || '';
-}
+// #112 Req Bot (Jerin, 22 Sep 2026: "move 'Opening Request' as a tab before Admin. Call it 'Req Bot'"): the tab goes to the
+// Recruitment Team and Admins by User type (Admin → Access), whatever their role; the web app checks the same list again
+// before it shows anything.
+const REQ_BOT_TYPES = ['Recruitment Team', 'Admin'];
 
 export function getUserAccess(email) {
   if (!accessConfig) return { role: 'none', pages: [] };
@@ -30,7 +29,9 @@ export function getUserAccess(email) {
   const user = accessConfig.users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
   if (user) {
-    return buildAccess(user);
+    const access = buildAccess(user);
+    if (access.role !== 'none' && REQ_BOT_TYPES.includes(user.userType)) access.pages.push('reqbot');
+    return access;
   }
 
   return buildAccess({ role: accessConfig.defaultRole || 'none' });

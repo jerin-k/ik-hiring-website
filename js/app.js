@@ -1,6 +1,6 @@
 import './ui-scale.js';   // #140: first, so every chart is built by the scaled Chart
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
-import { loadAccessConfig, getUserAccess, canAccessPage, accessUserType } from './access.js';
+import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
 import { loadDashboardData, getFilteredData, getLastUpdated } from './data.js';
 import { loadMetricConfig } from './metric-config.js';
 import { renderHome, initHomeFilters } from './pages/home.js';
@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { id: 'hm-report', title: 'Hiring Manager' },
   { id: 'recruiter', title: 'Recruiter Efficiency' },
   { id: 'efficiency', title: 'Overall Efficiency' },
+  { id: 'reqbot', title: 'Req Bot' },   // #112: Opening Requests, for the Recruitment Team and Admins (access.js)
   { id: 'admin', title: 'Admin' },
 ];
 
@@ -77,7 +78,6 @@ async function onAuthSuccess(user) {
   buildNavStrip();
   setupSignout();
   setupRefreshButton();
-  setupOpeningRequests(user);   // #112
   initTableSorting();
   initFilterDropdowns();
   // #4 (2026-08-22): a refresh used to dump you back on Overview. The active tab now lives in the URL hash,
@@ -118,16 +118,35 @@ function buildNavStrip() {
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
-// #112 (Jerin, 21 Sep 2026): the Opening Requests window lives in the Apps Script web app, because requests are private and
-// this site is public. The button only OPENS it, in a new tab (a real browsing context carries the Google sign-in, #144);
-// it is shown to the Recruitment Team and Admins, and the web app checks the same list again before it shows anything.
-function setupOpeningRequests(user) {
-  const a = document.getElementById('orOpen');
-  if (!a) return;
-  const t = accessUserType(user && user.email);
-  if (t !== 'Recruitment Team' && t !== 'Admin') { a.remove(); return; }
-  a.href = '/requests';   // 112d (Jerin, 22 Sep): the neat address; requests.html shows the web app's window inside the site
-  a.hidden = false;
+// #112 Req Bot (Jerin, 22 Sep 2026: "move 'Opening Request' as a tab before Admin. Call it 'Req Bot'"; it replaced the header
+// button). The Opening Requests window lives in the Apps Script web app, because requests are private and this site is public,
+// so the tab FRAMES it, as /requests does (web app V38 allows that; a frame is a real browsing context, so it carries the
+// person's own Google sign-in — #144). Built ONCE and kept, hidden on the other tabs: the window takes a few seconds to start,
+// and coming back to the tab should not start it again. A browser that will not share the sign-in with a frame (Safari) gets
+// a button to open the same window in a new tab: the window posts {orReady} when it has drawn, and without it the button shows.
+let reqBot = null;
+function showReqBot(on) {
+  if (!on) { if (reqBot) reqBot.hidden = true; return; }
+  if (!reqBot) {
+    const src = WEBAPP_URL + '?page=requests';
+    reqBot = document.createElement('div');
+    reqBot.className = 'reqbot';
+    reqBot.innerHTML = `<iframe class="reqbot-frame" title="Req Bot: opening requests" allow="clipboard-write"></iframe>
+      <div class="reqbot-fallback" hidden role="alert"><div>
+        <h2>Req Bot</h2>
+        <p>This browser would not open the requests window inside the dashboard. Open it in its own tab instead: it is the same window.</p>
+        <a href="${src}" target="_blank" rel="noopener">Open Req Bot &#x2197;</a></div></div>`;
+    document.getElementById('page-content').after(reqBot);
+    let ready = false;
+    window.addEventListener('message', (e) => {
+      // the window runs on Google's own sandbox domains; accept its ready signal only from there
+      if (!/^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/.test(e.origin)) return;
+      if (e.data && e.data.orReady) { ready = true; reqBot.querySelector('.reqbot-fallback').hidden = true; }
+    });
+    setTimeout(() => { if (!ready) reqBot.querySelector('.reqbot-fallback').hidden = false; }, 15000);
+    reqBot.querySelector('iframe').src = src;
+  }
+  reqBot.hidden = false;
 }
 
 function setupRefreshButton() {
@@ -256,6 +275,7 @@ function navigateTo(page, sub) {
 
   const content = document.getElementById('page-content');
   const data = getFilteredData(currentAccess);
+  showReqBot(page === 'reqbot');
 
   switch (page) {
     case 'home':
@@ -273,6 +293,9 @@ function navigateTo(page, sub) {
     case 'efficiency':
       content.innerHTML = renderEfficiency(data);
       initEfficiencyFilters(data);
+      break;
+    case 'reqbot':
+      content.innerHTML = '';   // the window sits beside #page-content, kept between visits (showReqBot)
       break;
     case 'admin':
       content.innerHTML = renderAdmin(accessConfig, data);
