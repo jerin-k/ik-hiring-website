@@ -4,7 +4,7 @@ import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
-import { topicIndex, hasTopicLevel, NO_TOPIC } from '../opening-topics.js';   // #157
+import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
@@ -146,6 +146,10 @@ function wireVelTree(tbody) {
     tbody.querySelectorAll('tr.lvl-pod').forEach(h => { h.dataset.exp = '1'; const c = h.querySelector('.caret'); if (c) c.textContent = '▾'; });
     tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.style.display = ''; r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; });
     tbody.querySelectorAll('tr.lvl-stage').forEach(s => { s.style.display = ''; });
+    // #160b (Jerin, 22 Sep: "the topic is not expanded when Expand is ticked"): Expand all reaches the bottom of the
+    // tree, so every job with topics opens too.
+    tbody.querySelectorAll('tr.lvl-stage[data-job8]').forEach(s => { s.dataset.exp = '1'; const c = s.querySelector('.caret'); if (c) c.textContent = '▾'; });
+    tbody.querySelectorAll('tr.lvl-topic').forEach(t => { t.style.display = ''; });
   }
 }
 
@@ -1588,13 +1592,16 @@ export function initRecruiterFilters(baseData) {
               // each opening's OWN 1/n share, which is exactly what goalOf() sums, so the rows close the job.
               const j8t = (bj.jobId || '').slice(0, 8);
               const tKey = j8t + '|' + rk;
-              const tops = hasTopicLevel(tIdx, m.department || '', j8t)
+              let tops = hasTopicLevel(tIdx, m.department || '', j8t)
                 ? tIdx[j8t].map(t => {
                     const mine = t.openings.filter(o => (o.owners || []).includes(r.name));
                     const hc = mine.reduce((x, o) => x + (o.share || 0), 0);
                     return { topic: t.topic, hc: Math.round(hc * 10000) / 10000, sc: Math.round(hc * sc * 10000) / 10000, n: mine.length };
                   }).filter(t => t.n)
                 : null;
+              // #160a: the same rule on THIS recruiter's own openings - if none of theirs carries a real topic, the job
+              // stays a plain row for them, even when a colleague's opening on the job has one.
+              if (!hasRealTopic(tops)) tops = null;
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
                 <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
               (tops || []).forEach(t => {

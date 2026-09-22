@@ -279,6 +279,16 @@ function wireTree(tbody) {
       else closeJob(job8);
     });
   });
+
+  // #160b (Jerin, 22 Sep: "the topic is not expanded when Expand is ticked"): Expand all reaches the bottom of the
+  // tree - every job with topics opens as well, not just the departments.
+  if (expandAll) {
+    tbody.querySelectorAll('tr.leaf[data-job8]').forEach(j => {
+      j.dataset.texp = '1';
+      setCaret(j, '.caret-t', true);
+      q(`tr.lv-topic[data-job8="${j.dataset.job8}"]`).forEach(r => { r.style.display = ''; });
+    });
+  }
 }
 
 export function renderHmReport(data) {

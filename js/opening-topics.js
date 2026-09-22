@@ -77,10 +77,16 @@ export function topicIndex(data, sel) {
   return out;
 }
 
-/** True when this job has a topic level worth drawing: an SME department AND at least one opening in period. */
+/** True when this job has a topic level worth drawing: an SME department AND at least one opening in period that
+ *  carries a REAL topic. #160a (Jerin, 22 Sep): "no topic set can be only in jobs where some topic is set. Otherwise,
+ *  this isnt required." A job whose every opening is untopiced stays a plain row like any other department's, so a
+ *  `(topic not set)` row only ever appears beside a real topic - and there it stays, so the level still closes the job. */
 export function hasTopicLevel(index, dept, job8) {
-  return deptHasTopics(dept) && !!(index[job8] && index[job8].length);
+  return deptHasTopics(dept) && !!(index[job8] && index[job8].some((t) => t.topic !== NO_TOPIC));
 }
+
+/** The same test on a list already narrowed to one person's openings (the Recruiter page). */
+export const hasRealTopic = (tops) => !!(tops && tops.some((t) => t.topic !== NO_TOPIC));
 
 /** How many of a job's openings still have no topic — the team's backlog for that job, for a quiet caption. */
 export function untopiced(index, job8) {
