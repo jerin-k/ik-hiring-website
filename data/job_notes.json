@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-09-21T07:02:32.261Z",
+  "updatedAt": "2026-09-22T11:30:41.084Z",
   "notes": {
     "092e9d9b": {
       "text": "Test",
@@ -26,6 +26,11 @@
       "text": "- Test",
       "by": "gopu.nair@interviewkickstart.com",
       "at": "2026-09-21T07:02:32.261Z"
+    },
+    "0cd940a8": {
+      "text": "Priti - Ref check Stage",
+      "by": "gopu.nair@interviewkickstart.com",
+      "at": "2026-09-22T11:30:41.083Z"
     }
   }
 }
