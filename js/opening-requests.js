@@ -542,7 +542,31 @@ export async function mountOpeningRequests(root, backend) {
     if (x.status === 'Sent back' && x.requesterEmail === S.me.email) {
       return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise">${ico('pen')}Revise and resubmit</button></div>`;
     }
+    // Phase 3 (Jerin, 23 Sep): approved and waiting for Claude to make it in Ashby. While we are still testing, an approver can
+    // send it to the Ashby TEST job instead — its department is skipped at ingestion, so nothing made there reaches a figure.
+    if (x.status === 'Approved') {
+      const test = x.testJob === 'yes', n = Number(x.count) || 1;
+      return `<div class="or-divider">What happens next</div>${err}
+        <div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b></div>
+          <div class="or-bub">I create ${n === 1 ? 'this position' : `these ${n} positions`} in Ashby in my next working session${test ? ' <b>on the test job</b>' : ''}, then mark this Created and list ${n === 1 ? 'it' : 'them'} here.
+            ${test ? `<span class="or-note">Test job: ${esc(x.jobTitle)} is replaced by the sandbox job, and nothing made there reaches the dashboard.</span>` : ''}</div></div></div>
+        ${S.me.isApprover ? `<div class="or-btns"><button type="button" class="or-b${test ? '' : ' x'}" data-act="testjob">${ico(test ? 'back' : 'pen')}${test ? 'Use the real job after all' : 'Create on the test job instead'}</button></div>` : ''}`;
+    }
+    if (x.status === 'Created') return `<div class="or-divider">Created in Ashby</div>${err}${openingsHtml(x)}`;
     return err;
+  }
+
+  // What Claude actually made, one line per opening, linking to it in Ashby.
+  function openingsHtml(x) {
+    const list = x.openings || [];
+    if (!list.length) return `<p class="or-small or-muted">Nothing recorded against this request yet.</p>`;
+    const want = Number(x.count) || list.length;
+    return `<ul class="or-opens">${list.map(o => `<li><span>${o.url
+        ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name || o.id)}</a>`
+        : esc(o.name || o.id)}</span><span class="or-open-s">${esc(o.state || '')}</span></li>`).join('')}</ul>
+      ${list.length < want ? `<p class="or-small or-muted">${list.length} of ${want} so far — the rest follow in the next session.</p>` : ''}
+      ${x.testJob === 'yes' ? `<p class="or-small or-muted">Made on the test job, so no dashboard number moves.</p>` : ''}
+      ${x.fulfilledBy ? `<p class="or-small or-muted">Recorded by ${esc(x.fulfilledBy)} · ${esc(niceStamp(x.fulfilledAt))}.</p>` : ''}`;
   }
 
   async function decide(decision, note) {
@@ -646,6 +670,19 @@ export async function mountOpeningRequests(root, backend) {
     act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) n.focus(); });
     act('sendback-go', () => { const n = String((root.querySelector('#orNote') || {}).value || '').trim(); if (n) decide('sendback', n); });
     act('revise', () => revise(S.requests.find(r => r.id === S.active)));
+    act('testjob', async () => {                                     // phase 3: the temporary test-job switch
+      const x = S.requests.find(r => r.id === S.active), on = x.testJob !== 'yes';
+      if (on && !confirm(`Create ${x.id} on the Ashby TEST job instead of ${x.jobTitle}?\n\nNothing made there reaches the dashboard.`)) return;
+      S.busy = true; S.error = ''; render();
+      let res;
+      try { res = await backend.call('orSetTestJob', x.id, on); }
+      catch (e) { S.busy = false; S.error = `Couldn't change the job: ${e && e.message || e}.`; render(); return; }
+      S.busy = false;
+      if (!res || !res.ok) { S.error = `Not changed: ${(res && res.message) || 'the server refused it'}.`; render(); return; }
+      const i = S.requests.findIndex(r => r.id === x.id);
+      if (i >= 0) S.requests[i] = res.request;
+      render();
+    });
     act('edit', () => {
       const x = S.requests.find(r => r.id === S.active);
       S.editing = x.id; S.draft = draftFrom(x); S.editNote = ''; S.sendingBack = false; S.error = ''; render();
