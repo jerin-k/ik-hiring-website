@@ -727,6 +727,8 @@ function publishedRole_(email) {
 // Ashby) is NOT here; it has its own go.
 // 112d (Jerin, 22 Sep: "Inside the site"): people open it at https://hiring.interviewkickstart.com/requests, which shows this
 // page inside the site, so the page allows being shown there (ALLOWALL, as AdminPage already does) and Slack links go there.
+// 112e (Jerin, 22 Sep: "for send back cases, dont create a new sequence number"): orResubmit — a sent-back request is revised in
+// place, keeping its OR number, its row and its Slack thread, and goes back for approval.
 var OR_ASSETS = 'https://hiring.interviewkickstart.com';
 var OR_FOLDER_ID = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
 var OR_SLACK_CHANNEL = 'C0B7Q5TG10R';   // #ta-core-team
@@ -739,8 +741,10 @@ var OR_COLS = ['id', 'createdAt', 'status', 'requesterEmail', 'requesterName', '
   // 21 Sep, phase 2: who decided, when, why, and the request a resubmission revises
   'decidedBy', 'decidedAt', 'decisionNote', 'revises',
   // 21 Sep, 112a: what an approver changed before approving, each change old ➔ new
-  'edits'];
-var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1 };
+  'edits',
+  // 22 Sep, 112g: the openings by Role Type, e.g. {"New":2,"Replacement":2,"Buffer":1}; count is their total
+  'mix'];
+var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1, mix: 1 };
 var OR_NUM = { count: 1, pts: 1 };
 // 112a: what an approver may change, in the order a change list reads. Name and Points each follow from the fields above
 // them (recruiter + topic, job + level + complexity), so they change on their own and are listed because they are what
@@ -749,7 +753,7 @@ var OR_EDIT = [['jobTitle', 'Job'], ['count', 'How many'], ['recruiter', 'Recrui
   ['roleType', 'Role Type'], ['employmentType', 'Employment Type'], ['levelSet', 'Job Level'], ['complexity', 'Role Complexity'],
   ['topic', 'Topic'], ['openDate', 'Open date'], ['replacementOf', 'Replacement of'], ['sourcer', 'Sourcer'],
   ['description', 'Description'], ['name', 'Name'], ['pts', 'Points each']];
-var OR_EDIT_ALSO = ['jobId', 'department', 'levelNow', 'tier', 'quarter'];
+var OR_EDIT_ALSO = ['jobId', 'department', 'levelNow', 'tier', 'quarter', 'mix'];
 
 function orUser_() {
   var email = String(Session.getActiveUser().getEmail() || '').toLowerCase();
@@ -821,11 +825,27 @@ function orValidate_(p) {
   var miss = need.filter(function (k) { return !String(p[k] || '').trim(); });
   var count = parseInt(p.count, 10);
   if (!(count >= 1 && count <= 25)) miss.push('how many');
-  if (p.roleType === 'Replacement' && !String(p.replacementOf || '').trim()) miss.push('replacement of');
+  var mix = orMix_(p.mix), types = Object.keys(mix);
+  if (types.length) {   // 112g: several Role Types in one request
+    var names = String(p.replacementOf || '').split(';').filter(function (x) { return x.trim(); }).length;
+    if ((mix.Replacement || 0) > names) miss.push('replacement of (one name for each of the ' + mix.Replacement + ' Replacement openings)');
+  } else if (p.roleType === 'Replacement' && !String(p.replacementOf || '').trim()) miss.push('replacement of');
   if (miss.length) return 'missing ' + miss.join(', ');
+  var sum = types.reduce(function (a, t) { return a + mix[t]; }, 0);
+  if (types.length && sum !== count) return 'the Role Types add up to ' + sum + ' openings, not ' + count;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.openDate)) || String(p.openDate) < '2026-07-01') return 'the open date must be on or after 1 Jul 2026';
   if (!orAshbyUsers_().some(function (u) { return u.name === p.recruiter; })) return p.recruiter + ' is not an active Ashby user';
   return '';
+}
+
+// 112g: the openings by Role Type as the server keeps them: whole numbers 1-25, zero rows dropped.
+function orMix_(m) {
+  var out = {};
+  if (m && typeof m === 'object') Object.keys(m).forEach(function (t) {
+    var n = parseInt(m[t], 10);
+    if (n >= 1 && n <= 25 && String(t).length <= 40) out[String(t)] = n;
+  });
+  return out;
 }
 
 // The server re-checks what matters before anything is saved. The window's checks are for the person filling it in.
@@ -853,7 +873,7 @@ function orSubmit(p) {
     rq.checks = Array.isArray(p.checks) ? p.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }) : [];
     rq.answers = (p.answers && typeof p.answers === 'object') ? p.answers : {};
     rq.revises = /^OR-\d+$/.test(String(p.revises || '')) ? String(p.revises) : '';
-    rq.decidedBy = ''; rq.decidedAt = ''; rq.decisionNote = ''; rq.edits = [];
+    rq.decidedBy = ''; rq.decidedAt = ''; rq.decisionNote = ''; rq.edits = []; rq.mix = orMix_(p.mix);
     var tr = (Array.isArray(p.transcript) ? p.transcript : []).slice(0, 60).map(function (m) {
       return { who: m && m.who === 'me' ? 'me' : 'claude', at: String((m && m.at) || now), text: String((m && m.text) || '').slice(0, 1000) };
     });
@@ -901,7 +921,7 @@ function orRowObj_(head, r) {
   var o = {};
   head.forEach(function (k, i) {
     var x = r[i];
-    if (OR_JSON[k]) { try { x = JSON.parse(x || (k === 'answers' ? '{}' : '[]')); } catch (e) { x = k === 'answers' ? {} : []; } }
+    if (OR_JSON[k]) { var obj = k === 'answers' || k === 'mix'; try { x = JSON.parse(x || (obj ? '{}' : '[]')); } catch (e) { x = obj ? {} : []; } }
     else if (OR_NUM[k]) x = Number(x) || 0;
     else x = String(x == null ? '' : x);
     o[k] = x;
@@ -925,6 +945,68 @@ function orDecide(id, decision, note) { return orDecide_(id, decision, note, nul
 // old ➔ new in the thread (and Slack), and the row keeps the approved values. An edit that changes nothing is a plain
 // approval.
 function orEditApprove(id, p, note) { return orDecide_(id, 'approve', note, p || {}); }
+
+// 112a / 112e: a saved request against new values, field by field. Only what differs is set, and listed old ➔ new.
+function orDiff_(old, p) {
+  var set = {}, edits = [];
+  OR_EDIT.map(function (f) { return f[0]; }).concat(OR_EDIT_ALSO).forEach(function (k) {
+    if (k === 'mix') { var nm = JSON.stringify(orMix_(p.mix)); if (nm !== JSON.stringify(orMix_(old.mix))) set.mix = nm; return; }
+    var nv = OR_NUM[k] ? String(k === 'count' ? parseInt(p[k], 10) : (Number(p[k]) || 0)) : String(p[k] == null ? '' : p[k]).trim();
+    if (nv !== String(old[k])) set[k] = nv;
+  });
+  OR_EDIT.forEach(function (f) { if (set[f[0]] != null) edits.push({ field: f[1], from: String(old[f[0]]), to: set[f[0]] }); });
+  return { set: set, edits: edits };
+}
+
+// 112e (Jerin, 22 Sep: "for send back cases, dont create a new sequence number" · "Send back can be retained in the same thread,
+// both in the site & in Slack"): the person who raised a sent-back request revises it IN PLACE — the same OR number, row and
+// Slack thread — and it goes back to Jerin and Gopu. Held to the same checks as a new request; each change is recorded old ➔ new.
+function orResubmit(id, p) {
+  var me = orUser_();
+  if (!me.allowed) return { ok: false, message: 'This account is not on the Recruitment Team list.' };
+  p = p || {};
+  var bad = orValidate_(p);
+  if (bad) return { ok: false, message: bad };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = orSheet_(), v = sh.getDataRange().getValues(), head = v[0].map(String), col = {};
+    head.forEach(function (k, i) { col[k] = i; });
+    var r = -1;
+    for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
+    if (r < 0) return { ok: false, message: id + ' was not found' };
+    var old = orRowObj_(head, v[r]);
+    if (old.requesterEmail !== me.email) return { ok: false, message: 'only ' + old.requesterName + ', who raised ' + id + ', can resubmit it' };
+    if (old.status !== 'Sent back') return { ok: false, message: id + ' is ' + old.status + ', so it cannot be resubmitted' };
+    var d = orDiff_(old, p), set = d.set, edits = d.edits, now = new Date().toISOString();
+    var note = String(p.note || '').trim().slice(0, 1000);
+    if (note !== old.note) { set.note = note; edits.push({ field: 'Note', from: old.note, to: note }); }
+    set.checks = JSON.stringify(Array.isArray(p.checks) ? p.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }) : []);
+    set.answers = JSON.stringify((p.answers && typeof p.answers === 'object') ? p.answers : {});
+    set.freeOpening = String(p.freeOpening || '');
+    var slackOn = !!PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
+    var tr = old.transcript.concat((Array.isArray(p.transcript) ? p.transcript : []).slice(0, 60).map(function (m) {
+      return { who: m && m.who === 'me' ? 'me' : 'claude', at: String((m && m.at) || now), text: String((m && m.text) || '').slice(0, 1000) };
+    }));
+    tr.push({ who: 'me', at: now, resubmit: true, edits: edits,
+      text: edits.length ? 'Resubmitted with ' + edits.length + ' change' + (edits.length === 1 ? '' : 's') + '.' : 'Resubmitted with no changes.' });
+    tr.push({ who: 'claude', at: now, text: 'Back with Jerin and Gopu for approval, still as ' + id + '. '
+      + (slackOn ? 'They have been tagged in the same Slack thread.' : 'Slack is off for now, so they will see it here.') });
+    set.transcript = JSON.stringify(tr);
+    set.status = 'For approval'; set.decidedBy = ''; set.decidedAt = ''; set.decisionNote = ''; set.updatedAt = now;
+    Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
+    SpreadsheetApp.flush();
+    var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
+    if (slackOn && rq.slackTs) orSlackResubmit_(rq, edits);
+    else if (slackOn) {   // raised while Slack was off: its thread starts now
+      rq.slackTs = orSlackNew_(rq);
+      if (rq.slackTs) sh.getRange(r + 1, col.slackTs + 1).setNumberFormat('@').setValue(rq.slackTs);
+    }
+    return { ok: true, request: rq };
+  } finally {
+    lock.releaseLock();
+  }
+}
 
 function orDecide_(id, decision, note, edit) {
   var me = orUser_();
@@ -950,11 +1032,8 @@ function orDecide_(id, decision, note, edit) {
     // 112a: the edit against what was submitted, field by field. Only what differs is written or listed.
     var old = orRowObj_(head, v[r]), set = {}, edits = [];
     if (edit) {
-      OR_EDIT.map(function (f) { return f[0]; }).concat(OR_EDIT_ALSO).forEach(function (k) {
-        var nv = OR_NUM[k] ? String(k === 'count' ? parseInt(edit[k], 10) : (Number(edit[k]) || 0)) : String(edit[k] == null ? '' : edit[k]).trim();
-        if (nv !== String(old[k])) set[k] = nv;
-      });
-      OR_EDIT.forEach(function (f) { if (set[f[0]] != null) edits.push({ field: f[1], from: String(old[f[0]]), to: set[f[0]] }); });
+      var d = orDiff_(old, edit);
+      set = d.set; edits = d.edits;
       if (edits.length) {
         set.edits = JSON.stringify(edits);
         if (Array.isArray(edit.checks)) set.checks = JSON.stringify(edit.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }));
@@ -976,9 +1055,7 @@ function orDecide_(id, decision, note, edit) {
     Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
     SpreadsheetApp.flush();
     var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
-    if (rq.slackTs) orSlackPost_((decision === 'approve' ? (edits.length ? 'Edited and approved by ' : 'Approved by ') : 'Sent back by ') + orSlackEsc_(who)
-      + (edits.length ? ': ' + orSlackEsc_(list) + (note ? ' · ' + orSlackEsc_(note) : '') : (note ? ': ' + orSlackEsc_(note) : ''))
-      + ' · ' + orSlackAt_(rq.requesterEmail, rq.requesterName), rq.slackTs);
+    if (rq.slackTs) orSlackPost_(orSlackDecision_(rq, decision, who, edits, note), rq.slackTs);
     return { ok: true, request: rq };
   } finally {
     lock.releaseLock();
@@ -1045,7 +1122,82 @@ function orMeta_() {
 }
 
 // ---- Slack: one thread per request. Runs ONLY when SLACK_BOT_TOKEN is set. ----
+// 112b look (Jerin, 22 Sep): the first message says who raised how many openings for which job, tags Jerin and Gopu and cc's
+// the person raising it; the first reply is the request in full as bullets under five headings (mock A: a two-column card,
+// B, was tried first, and Slack stacks its columns into one long column in a thread); each decision replies in the same thread.
 function orSlackEsc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function orSlackVal_(v, max) {
+  v = String(v == null ? '' : v).trim();
+  if (max && v.length > max) v = v.slice(0, max - 1) + '…';
+  return v ? orSlackEsc_(v) : 'none';
+}
+function orSlackQuote_(s) { return String(s).split('\n').map(function (l) { return '> ' + orSlackEsc_(l); }).join('\n'); }
+// The request in full: every field of Ashby's Create Opening plus the score, then what the checks and questions turned up.
+function orSlackCard_(rq) {
+  var n = Number(rq.count) || 1, pts = Number(rq.pts) || 0;
+  var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rq.openDate || '')), qm = /^(\d{4})-Q(\d)$/.exec(String(rq.quarter || ''));
+  var date = dm ? (+dm[3]) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+dm[2] - 1] + ' ' + dm[1]
+    + (qm ? ' (Q' + qm[2] + ' ' + qm[1] + ')' : '') : orSlackVal_(rq.openDate);
+  var now = String(rq.levelNow || '').trim(), set = String(rq.levelSet || '').trim();
+  var level = !set ? orSlackVal_(now) : set === now ? orSlackEsc_(set) + ' (on the job, unchanged)'
+    : (now ? orSlackEsc_(now) + ' ➔ ' : '') + orSlackEsc_(set) + " (the job's Level changes)";
+  var score = pts ? (rq.tier ? orSlackEsc_(rq.tier) + ' · ' : '') + pts + ' points each · +' + (pts * n) + ' to ' + orSlackEsc_(rq.recruiter) + "'s Goal" : 'not scored';
+  var line = function (v) { return String(v == null ? '' : v).replace(/\s*\n\s*/g, ' / '); };   // a line break would end the bullet
+  var li = function (label, v) { return '• *' + label + ':* ' + v; };
+  var worth = [], ans = rq.answers || {}, asked = {
+    free: 'Open openings are already on this job with nobody tied to them',
+    drop: 'People dropped on this job this quarter',
+    dup: 'Another request on this job is in progress' };
+  (Array.isArray(rq.checks) ? rq.checks : []).forEach(function (c) {
+    var m = /^(fix|q|info): (.*)$/.exec(String(c));
+    if (m) worth.push(orSlackEsc_(m[2]));
+  });
+  Object.keys(ans).forEach(function (k) { if (ans[k]) worth.push(orSlackEsc_(asked[k] || k) + '. Answer: _' + orSlackEsc_(ans[k]) + '_'); });
+  if (rq.revises) worth.push('Revises ' + orSlackEsc_(rq.revises) + ', which was sent back');
+  var name = orSlackEsc_(String(rq.name || '').replace(/`/g, "'"));
+  return ['*Opening name:* `' + name + '` × ' + n,
+    '', '*The opening*', li('Job', orSlackVal_(rq.jobTitle)), li('How many', String(n)), li('Team', orSlackVal_(rq.team)),
+    li('Location', orSlackVal_(rq.location)), li('Open date', date), li('Description', orSlackVal_(line(rq.description), 600)),
+    '', '*People*', li('Recruiter', orSlackVal_(rq.recruiter)), li('Sourcer', orSlackVal_(rq.sourcer)),
+    '', '*Ashby fields*', li('Employment Type', orSlackVal_(rq.employmentType)), li('Role Type', orSlackVal_(rq.roleType)),
+    li('Replacement of', orSlackVal_(rq.replacementOf)), li('Role Complexity', orSlackVal_(rq.complexity)),
+    li('Specialization/Topic', orSlackVal_(rq.topic)), li('Job Level', level),
+    '', '*Score*', '• ' + score,
+    '', '*Worth knowing*'].concat(worth.map(function (w) { return '• ' + w; }), [li('Note', orSlackVal_(line(rq.note), 600))]).join('\n');
+}
+// Approved · Sent back (the note quoted) · Edited and approved (each change old ➔ new, the old struck through).
+function orSlackDecision_(rq, decision, who, edits, note) {
+  var at = orSlackAt_(rq.requesterEmail, rq.requesterName), k = edits.length;
+  if (decision !== 'approve') return '*Sent back* by ' + orSlackEsc_(who) + ' · ' + at + ', please revise and resubmit\n' + orSlackQuote_(note);
+  return (k ? '*Edited and approved* by ' + orSlackEsc_(who) + ' · ' + k + ' change' + (k === 1 ? '' : 's') : '*Approved* by ' + orSlackEsc_(who))
+    + ' · cc ' + at
+    + edits.map(orSlackChange_).join('')
+    + (note ? '\n' + orSlackQuote_(note) : '');
+}
+function orSlackChange_(x) {
+  var flat = function (v) { return String(v == null ? '' : v).replace(/\s*\n\s*/g, ' / '); };
+  return '\n• *' + orSlackEsc_(x.field) + ':* ~' + orSlackVal_(flat(x.from)) + '~ ➔ ' + orSlackVal_(flat(x.to));
+}
+// 112e: a resubmission goes back into the request's own thread: the first message is brought up to date (the number of
+// openings or the job may have changed), the approvers are tagged with what changed, and the request in full follows.
+function orSlackResubmit_(rq, edits) {
+  try {
+    var k = edits.length;
+    orSlackUpdate_(rq.slackTs, orSlackTop_(rq));
+    orSlackPost_('*Resubmitted* by ' + orSlackEsc_(rq.requesterName) + ' · ' + (k ? k + ' change' + (k === 1 ? '' : 's') : 'no changes')
+      + ' · *For approval* ' + OR_APPROVERS.map(function (a) { return orSlackAt_(a[0], a[1]); }).join(' ')
+      + edits.map(orSlackChange_).join(''), rq.slackTs);
+    orSlackPost_(orSlackCard_(rq), rq.slackTs);
+  } catch (e) { Logger.log('#112 Slack failed: ' + e.message); }
+}
+// The thread's first message: who raised how many openings for which job, the approvers tagged, the requester cc'd.
+function orSlackTop_(rq) {
+  var n = Number(rq.count) || 1, at = orSlackAt_;
+  return '*' + rq.id + '* · ' + orSlackEsc_(rq.requesterName) + ' has raised *' + n + ' opening' + (n === 1 ? '' : 's')
+    + '* for the *' + orSlackEsc_(rq.jobTitle) + '* job.\n*For approval* ' + OR_APPROVERS.map(function (a) { return at(a[0], a[1]); }).join(' ')
+    + ' · cc ' + at(rq.requesterEmail, rq.requesterName)
+    + ' · <' + OR_ASSETS + '/requests?id=' + rq.id + '|Open the request>';   // 112d: the neat address; it opens the window inside the site
+}
 function orSlackAt_(email, name) {
   var ids = {};
   try { ids = JSON.parse(PropertiesService.getScriptProperties().getProperty('SLACK_IDS') || '{}'); } catch (e) { ids = {}; }
@@ -1054,27 +1206,25 @@ function orSlackAt_(email, name) {
 }
 function orSlackNew_(rq) {
   try {
-    var at = orSlackAt_;
-    var url = OR_ASSETS + '/requests?id=' + rq.id;   // 112d: the neat address; it opens the window inside the site
-    var ts = orSlackPost_(rq.id + ' · *' + rq.count + ' × ' + orSlackEsc_(rq.jobTitle) + '* · started by ' + at(rq.requesterEmail, rq.requesterName)
-      + ' · <' + url + '|Open the request>', '');
+    var ts = orSlackPost_(orSlackTop_(rq), '');
     if (!ts) return '';
-    if (rq.freeOpening) orSlackPost_('Opening already on the job: ' + orSlackEsc_(rq.freeOpening), ts);
-    orSlackPost_('For approval ' + OR_APPROVERS.map(function (a) { return at(a[0], a[1]); }).join(' ') + ' · cc ' + at(rq.requesterEmail, rq.requesterName)
-      + ' · `' + orSlackEsc_(rq.name) + '`' + (rq.count > 1 ? ' × ' + rq.count : '') + ' · ' + orSlackEsc_([rq.team, rq.location, rq.roleType, rq.employmentType, rq.complexity].filter(String).join(' · '))
-      + (rq.levelSet && rq.levelSet !== rq.levelNow ? ' · job Level ' + orSlackEsc_(rq.levelNow) + ' → ' + orSlackEsc_(rq.levelSet) : ''), ts);
+    orSlackPost_(orSlackCard_(rq), ts);   // the free-opening answer is in its Worth knowing, no longer a reply of its own
     return ts;
   } catch (e) { Logger.log('#112 Slack failed: ' + e.message); return ''; }
 }
 function orSlackPost_(text, threadTs) {
-  var token = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
-  if (!token) return '';
   var body = { channel: OR_SLACK_CHANNEL, text: text, unfurl_links: false };
   if (threadTs) body.thread_ts = threadTs;
-  var res = UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', { method: 'post', contentType: 'application/json; charset=utf-8',
+  return orSlackCall_('chat.postMessage', body).ts || '';
+}
+function orSlackUpdate_(ts, text) { return !!(ts && orSlackCall_('chat.update', { channel: OR_SLACK_CHANNEL, ts: ts, text: text }).ok); }
+function orSlackCall_(method, body) {
+  var token = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
+  if (!token) return {};
+  var res = UrlFetchApp.fetch('https://slack.com/api/' + method, { method: 'post', contentType: 'application/json; charset=utf-8',
     headers: { Authorization: 'Bearer ' + token }, payload: JSON.stringify(body), muteHttpExceptions: true });
   var j = {};
   try { j = JSON.parse(res.getContentText() || '{}'); } catch (e) { j = {}; }
-  if (!j.ok) { Logger.log('#112 Slack refused: ' + (j.error || res.getResponseCode())); return ''; }
-  return j.ts || '';
+  if (!j.ok) Logger.log('#112 Slack refused (' + method + '): ' + (j.error || res.getResponseCode()));
+  return j;
 }
