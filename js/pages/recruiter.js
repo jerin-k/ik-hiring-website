@@ -187,7 +187,7 @@ function wireTreePath(tbody) {
     });
   });
   if (document.getElementById('recExpandAll')?.checked) {
-    tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.dataset.haschild) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
+    tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.hasAttribute('data-haschild')) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
   }
 }
 

@@ -66,14 +66,17 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 
 // ===== #157: the Specialization/Topic level on Overall Efficiency =====
 // B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic - Total positions, Joined and
-// Missed, in BOTH halves (heads and score). Joining pending, Drop and Delta count PEOPLE, and Ashby ties a
-// person to an opening only at hire, so there is no honest per-topic figure and an em dash is shown instead.
+// Missed, in BOTH halves (heads and score). #161 (Jerin, 22 Sep): Joining pending splits too, for the people whose
+// OFFER names an opening under the topic (or who are locked on one) - the mirror of the Hiring Manager tab. Drop and
+// Delta stay dashed: a drop can never be tied to an opening (Rule 8), and Delta would mix in the untied people.
 // 🚨 Never put a number in a dashed cell: a wrong one here looks right and nobody will question it.
 const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td><td class="score nosplit"><span class="zero">\u2014</span></td>';
 const topicCells = (x) =>
   `<td style="font-weight:600">${x.total}</td><td class="score">${x.tS}</td>`
   + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td><td class="score">${x.jS}</td>`
-  + EFF_DASH + EFF_DASH + EFF_DASH
+  + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
+  + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`
+  + EFF_DASH + EFF_DASH
   + `<td${x.missed ? ' style="color:var(--red)"' : ' class="zero"'}>${x.missed}</td><td class="score">${x.mS}</td>`;
 
 function wireTreePath(tbody, expandAll) {
@@ -93,7 +96,7 @@ function wireTreePath(tbody, expandAll) {
     });
   });
   if (expandAll) {
-    tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.dataset.haschild) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
+    tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.hasAttribute('data-haschild')) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
   }
 }
 
@@ -615,11 +618,12 @@ export function initEfficiencyFilters(data) {
   // STARTS — the Hiring Manager card's rule — and each drop keeps its quarter so its Score is priced at that quarter's points.
   function peopleMaps(per) {
     const startQ = per ? per[0] : null;
-    const jp = {}, drop = {};
+    const jp = {}, jpc = {}, drop = {};
     (data.joiningPendingCases || []).forEach(c => {
       if (c.openingQuarter && startQ && c.openingQuarter < startQ) return;
       const k = dkey(c.department) + '|' + (c.job || c.jobTitle || '');
       jp[k] = (jp[k] || 0) + 1;
+      (jpc[k] || (jpc[k] = [])).push(c);   // #161: the same people, kept, so a topic row can count the ones tied to its openings
     });
     // #129: the From / To range, and whether it covers the whole period. A drop counts when the day they first reached Ref Check /
     // Documentation / Offer is inside the range, and is priced at that day's quarter (a row from before 15 Sep has no day: whole periods only).
@@ -629,7 +633,7 @@ export function initEfficiencyFilters(data) {
       const k = dkey(e.department) + '|' + (e.jobTitle || '');
       (drop[k] || (drop[k] = [])).push(e.day ? quarterOfDay(e.day) : e.quarter);
     });
-    return { jp, drop, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };
+    return { jp, jpc, drop, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };
   }
   // A role's points in one quarter. The job tree prices every role at PM.atQ; any other quarter of the period is priced here, once.
   function scoreOf(j, qq, PM) {
@@ -779,16 +783,22 @@ export function initEfficiencyFilters(data) {
         if (!tops) return;
         // Each opening is priced at the points of ITS OWN quarter, exactly as jobSplit() prices the buckets -
         // so the topic rows close the job row in BOTH halves, heads and score (Rule 3).
+        // #161: the job's people in closing, by the opening they are tied to - priced at the job's points, exactly as
+        // jobSplit() prices the job's own Joining pending, so a topic's pS is a share of the job's pS.
+        const ids8 = (t) => new Set(t.openings.map(o => String(o.id).slice(0, 8)));
+        const jobPeople = PM.jpc[dept + '|' + (j.title || '')] || [];
         tops.forEach((t, ti) => {
           const pt = (qq) => scoreOf(j, qq, PM);
           let tS = 0, jS = 0, mS = 0;
           t.openings.forEach(o => { const s1 = pt(o.quarter || PM.atQ);
             tS += s1; if (o.state === 'joined') jS += s1; if (o.state === 'missed') mS += s1; });
+          const mine = ids8(t), pending = jobPeople.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8))).length;
+          const pS = pending * pt(PM.atQ);
           // #157c (Jerin, 21 Sep): the topic is the bottom of the tree - no caret, no opening rows under it.
           html += `<tr data-path="${di}-${ji}-${ti}" style="display:none">`
             + `<td style="padding-left:3.25rem"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
             + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${t.total} opening${t.total === 1 ? '' : 's'}</span></td>`
-            + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS, jS, mS }) + `</tr>`;
+            + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS, jS, mS, pending, pS }) + `</tr>`;
         });
       });
     });

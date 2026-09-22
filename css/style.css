@@ -1510,6 +1510,9 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .jn-who .jn-p b { display: block; font-weight: 600; color: var(--text-secondary); }
 .jn-who .jn-m { display: block; font-size: 0.625rem; color: var(--muted); }
 .jn-who .jn-d { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* #161: why someone in closing is not under a topic, and how many are - quiet, one step below the meta line */
+.jn-who .jn-r { display: block; font-size: 0.625rem; font-style: italic; color: var(--orange); }
+.jn-who .jn-under { display: block; margin-top: 0.25rem; font-size: 0.625rem; color: var(--muted); }
 .jn-who .jn-extra { display: none; }
 .jn-who.jn-open .jn-extra { display: block; }
 .jn-more, .jn-add, .jn-text {
