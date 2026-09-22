@@ -725,6 +725,8 @@ function publishedRole_(email) {
 // Phase 2 (GO: Jerin, 21 Sep): orDecide — Jerin or Gopu approves, or sends back with a note. 112a (GO: Jerin, 21 Sep):
 // orEditApprove — they change the request first, and each change is recorded. Phase 3 (Claude creates the opening in
 // Ashby) is NOT here; it has its own go.
+// 112d (Jerin, 22 Sep: "Inside the site"): people open it at https://hiring.interviewkickstart.com/requests, which shows this
+// page inside the site, so the page allows being shown there (ALLOWALL, as AdminPage already does) and Slack links go there.
 var OR_ASSETS = 'https://hiring.interviewkickstart.com';
 var OR_FOLDER_ID = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
 var OR_SLACK_CHANNEL = 'C0B7Q5TG10R';   // #ta-core-team
@@ -767,7 +769,8 @@ function requestsPage_(e) {
   if (!me.allowed) {
     return HtmlService.createHtmlOutput('<div style="font-family:system-ui,sans-serif;padding:3rem 1.5rem;text-align:center">'
       + '<h2 style="color:#22344f">Opening Requests</h2><p style="color:#6b7391">' + h(me.email || 'This account')
-      + ' is not on the Recruitment Team list, so it cannot raise opening requests. Ask Jerin or Gopu.</p></div>').setTitle('Opening Requests');
+      + ' is not on the Recruitment Team list, so it cannot raise opening requests. Ask Jerin or Gopu.</p></div>').setTitle('Opening Requests')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   var v = new Date().getTime();
   var open = String((e && e.parameter && e.parameter.id) || '').replace(/[^A-Za-z0-9-]/g, '');
@@ -778,7 +781,8 @@ function requestsPage_(e) {
     + 'const call = (fn, ...a) => new Promise((ok, bad) => google.script.run.withSuccessHandler(ok).withFailureHandler(bad)[fn](...a));'
     + 'mountOpeningRequests(document.getElementById("or-root"), { call, openId: ' + JSON.stringify(open) + ' });'
     + '</script>';
-  return HtmlService.createHtmlOutput(html).setTitle('Opening Requests').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  return HtmlService.createHtmlOutput(html).setTitle('Opening Requests').addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // Everything the window needs to start: who is asking, who can own an opening, the Ashby field options, and the requests
@@ -1051,7 +1055,7 @@ function orSlackAt_(email, name) {
 function orSlackNew_(rq) {
   try {
     var at = orSlackAt_;
-    var url = ScriptApp.getService().getUrl() + '?page=requests&id=' + rq.id;
+    var url = OR_ASSETS + '/requests?id=' + rq.id;   // 112d: the neat address; it opens the window inside the site
     var ts = orSlackPost_(rq.id + ' · *' + rq.count + ' × ' + orSlackEsc_(rq.jobTitle) + '* · started by ' + at(rq.requesterEmail, rq.requesterName)
       + ' · <' + url + '|Open the request>', '');
     if (!ts) return '';
