@@ -2,6 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
+import { tdTopic, topicLookup } from '../people-cells.js';   // #168: which topic each person was really for
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
 import { renderInterviewer, initInterviewer } from './interviewer.js';
@@ -208,7 +209,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="effJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-topic">Topic</th><th class="c-open">Opening</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiningpending')}
@@ -218,7 +219,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-topic">Topic</th><th class="c-open">Opening</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiners')}
@@ -823,8 +824,8 @@ export function initEfficiencyFilters(data) {
     body.innerHTML = rows.length ? monthTreeRows(rows, {
       dayOf: c => c.doj,
       nameOf: c => c.candidate,
-      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c.department)}${tdJob(c.job)}${tdLinked(c.linked)}`,
-      cols: 6, order: 'soonest', live: true,
+      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c.department)}${tdJob(c.job)}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdLinked(c.linked)}`,
+      cols: 7, order: 'soonest', live: true,   // #168: Topic joined the row
       split: items => stageSplit(items, c => c.subStage),
     }) : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">No offers in play under these filters.</td></tr>`;
     pinMonthHeadings(body);
@@ -853,8 +854,8 @@ export function initEfficiencyFilters(data) {
     body.innerHTML = rows.length ? monthTreeRows(rows, {
       dayOf: e => e.startDate,
       nameOf: e => e.candidate,
-      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdLinked(!!e.openingId)}`,
-      cols: 5, order: 'newest',
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdLinked(!!e.openingId)}`,
+      cols: 6, order: 'newest',   // #168: Topic joined the row
     }) : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
     pinMonthHeadings(body);
     const cap = document.getElementById('effJoinersCaption');

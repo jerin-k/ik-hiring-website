@@ -109,14 +109,20 @@ export const realTopic = (t) => {
   return s && !NOT_A_TOPIC.test(s) ? s : null;
 };
 
+// Memoised on the data object itself, so a caller can say topicLookup(data) inside a per-row cell function
+// without rebuilding the index for every person. A new payload (a refresh) is a new object, so it rebuilds then
+// and only then.
+let tlData = null, tlIdx = null;
 export function topicLookup(data) {
+  if (data && data === tlData && tlIdx) return tlIdx;
   const byOpening = {}, jobUses = {};
   ((data && data.openingRows) || []).forEach((r) => {
     const t = realTopic(r.topic);
     if (r.openingId) byOpening[String(r.openingId).slice(0, 8)] = t;
     if (t && r.jobId8) jobUses[r.jobId8] = true;
   });
-  return { byOpening, jobUses };
+  tlData = data; tlIdx = { byOpening, jobUses };
+  return tlIdx;
 }
 
 // `why` is deliberately plain English and deliberately NOT a number: it names the next action.
