@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-17T06:31:15.731Z",
+  "updatedAt": "2026-09-23T06:21:08.278Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -169,6 +169,11 @@
         "Engineering"
       ],
       "userType": "Hiring Manager"
+    },
+    {
+      "email": "karthika saran <karthika@interviewkickstart.com>",
+      "role": "admin",
+      "userType": "Admin"
     }
   ]
 }
