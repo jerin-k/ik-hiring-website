@@ -1677,7 +1677,11 @@ export function initRecruiterFilters(baseData) {
                     // second test a pure sourcer never gets a topic row at all, so the "+N sourced" line Jerin asked for at
                     // this level could never appear anywhere: V Pooja sourced the MCP candidate and owns no MCP opening.
                     // Such a row shows a Goal of 0 and says "no openings of theirs" where the opening count sits.
-                    .filter(t => t.n || t.jp.t.hc || t.jp.t.so)
+                    // #168 (Jerin, 23 Sep): a JOINER of theirs opens the topic too. Same logic as option B above —
+                    // without it, someone hired against a topic this recruiter owns no opening in had no row to sit
+                    // on and fell into the leftovers line, which made that line look like a data problem when it was
+                    // really just a missing row. Now the leftovers hold only people whose offer names NO opening.
+                    .filter(t => t.n || t.jp.t.hc || t.jp.t.so || (t.jx && (t.jx.hc || t.jx.so)))
                 : null;
               // #160a: the same rule on THIS recruiter's own openings - if none of theirs carries a real topic, the job
               // stays a plain row for them, even when a colleague's opening on the job has one.
