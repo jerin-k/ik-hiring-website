@@ -783,7 +783,7 @@ function refreshDashboardData() {
   Logger.log('archived_apps (for drop backfill): ' + appResult.archivedApps.length);
   // #167 (Jerin, 23 Sep 2026): pick up people archived SINCE the one-time backfill, so a drop stops vanishing.
   // Runs here, before dropEvents is built below, so anyone collected shows up in THIS run's numbers.
-  try { collectNewArchivedLateStage_(appResult.archivedApps); }
+  try { collectNewArchivedLateStage_(appResult.archivedApps, startTime); }
   catch (e) { Logger.log('#167 collector failed (not fatal): ' + e); }
   Logger.log('scoped_apps (reached screening+): ' + appResult.histApps.length);
   var offerResult = fetchAndProcessOffers_(startTime, appResult.appMap, excludedJobIds);
@@ -1333,10 +1333,23 @@ function loadDriveJson_(name) {
 // Bounded hard, because it runs inside the refresh: at most NEW_ARCH_CAP_ history calls and 90 seconds. If a
 // backlog is bigger than that it drains over the next few runs rather than risking the refresh's own budget.
 // The log line reports the REMAINING backlog, so it says plainly whether it is keeping up.
-var NEW_ARCH_CAP_ = 120;
-var NEW_ARCH_MS_ = 90000;
+// #167b (23 Sep 2026, same night): the first run carrying this collector went from 825s to 1500s+ and was
+// heading for the 30-minute ceiling. I do NOT yet know that the collector is the cause - the sweep's own log
+// line will say - but the 6 AM run inherits this code, and a refresh that times out leaves the whole team on
+// stale numbers overnight. So the budget comes down now as insurance, and the diagnosis follows the evidence.
+// Cheaper per run simply means the backlog drains over more runs; nothing is lost either way.
+var NEW_ARCH_CAP_ = 40;
+var NEW_ARCH_MS_ = 45000;
+var NEW_ARCH_SKIP_AFTER_MS_ = 8 * 60 * 1000;   // if the refresh has already used this long, do not start at all
 
-function collectNewArchivedLateStage_(archivedApps) {
+function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
+  // The refresh comes FIRST. If it has already spent most of its budget, this stands down entirely rather
+  // than risk the publish - the backlog will still be there next run.
+  if (refreshStartedAt && (Date.now() - refreshStartedAt) > NEW_ARCH_SKIP_AFTER_MS_) {
+    Logger.log('#167 sweep SKIPPED: the refresh has already run '
+      + Math.round((Date.now() - refreshStartedAt) / 1000) + 's, leaving its budget alone');
+    return 0;
+  }
   var list = archivedApps || (loadDriveJson_('archived_apps.json') || {}).apps || [];
   if (!list.length) { Logger.log('#167: no archived apps to check'); return 0; }
   var store = loadDriveJson_('archived_late_stage.json') || { done: {}, hits: {} };
@@ -1367,7 +1380,7 @@ function collectNewArchivedLateStage_(archivedApps) {
     } catch (e) { errs++; }
   }
   if (fetched) saveDriveJson_('archived_late_stage.json', store);
-  Logger.log('#167 new-archive sweep: ' + seen + ' archived, ' + undone + ' not yet collected, '
+  Logger.log('#167 new-archive sweep took ' + Math.round((Date.now() - t0) / 1000) + 's: ' + seen + ' archived, ' + undone + ' not yet collected, '
     + fetched + ' fetched this run, ' + kept + ' were late-stage (= new drops), ' + errs + ' errors, '
     + Math.max(0, undone - fetched) + ' left for the next run');
   return kept;
@@ -1671,12 +1684,18 @@ function manualRefresh_() {
 // MailApp is already consented (added for #118 Send invite, 14 Sep), so this adds no new OAuth scope and cannot
 // break the installable triggers. Never lets a mail problem fail the refresh: the caller swallows what this throws.
 function notifyAdminsRefreshDone_(startedAt, ok, err, kind) {
+  // #163c (Jerin, 23 Sep 2026: "No email received"). It ran and said NOTHING, because I wrote two silent
+  // returns and no logging - "never let a mail problem fail the refresh" turned into "never let anyone find out
+  // why". Every exit now names itself in the log, so ONE more run explains it instead of another guess.
   var access = null;
-  try { access = loadDriveJson_('access.json'); } catch (e) { return; }
+  try { access = loadDriveJson_('access.json'); }
+  catch (e) { Logger.log('#163 NO EMAIL: access.json could not be read: ' + e); return; }
+  if (!access) { Logger.log('#163 NO EMAIL: access.json read as empty'); return; }
   var admins = ((access && access.users) || []).filter(function (u) {
     return u && u.email && String(u.role || '').toLowerCase() === 'admin';
   }).map(function (u) { return u.email; });
-  if (!admins.length) return;
+  Logger.log('#163 admins found: ' + admins.length);
+  if (!admins.length) { Logger.log('#163 NO EMAIL: no user in access.json has role=admin'); return; }
 
   var tz = 'Asia/Calcutta';
   var finished = Utilities.formatDate(new Date(), tz, 'd MMM yyyy, h:mm a');
@@ -1693,7 +1712,16 @@ function notifyAdminsRefreshDone_(startedAt, ok, err, kind) {
     + (ok ? '' : '<p style="margin:0 0 12px;color:#b45a72">' + String(err || 'no message').replace(/[<>]/g, '') + '</p>')
     + '<p style="margin:0 0 12px;color:#6b7391">If you already had the dashboard open, that tab will offer you a Reload.</p>'
     + '<p style="margin:0"><a href="' + site + '" style="color:#4E6BA6">Open the Hiring Dashboard</a></p></div>';
-  MailApp.sendEmail({ to: admins.join(','), subject: subject, htmlBody: body, name: 'IK Hiring Dashboard' });
+  // Its own try, so a send failure is reported as a SEND failure and not mistaken for anything else.
+  // getRemainingDailyQuota is logged too: a quota wall is silent otherwise and looks identical to success.
+  try {
+    Logger.log('#163 sending to ' + admins.length + ' admin(s); MailApp quota left: ' + MailApp.getRemainingDailyQuota());
+    MailApp.sendEmail({ to: admins.join(','), subject: subject, htmlBody: body, name: 'IK Hiring Dashboard' });
+    Logger.log('#163 EMAIL SENT (' + which + ')');
+  } catch (eSend) {
+    Logger.log('#163 NO EMAIL: MailApp.sendEmail threw: ' + eSend);
+    throw eSend;   // let the caller log it too - this must never be swallowed in silence again
+  }
 }
 function serveJsonData() { var d = loadExistingDashboard_(); return ContentService.createTextOutput(JSON.stringify(d || { error: 'No data' })).setMimeType(ContentService.MimeType.JSON); }
 function setupTwiceDailyTrigger() {
