@@ -192,14 +192,19 @@ function publish(band, filters) {
   const root = document.documentElement;
   const header = document.querySelector('.header');
   const nav = document.querySelector('.nav-strip');
+  // #164: the "this tab is out of date" band also lives inside .topbar, under the tab strip, and it comes and
+  // goes while the page is open. It is a FIFTH measured height — left out, every heading below would hold at
+  // the old figure and sit on top of it. It is usually absent, and then it measures 0 like any other piece.
+  const upd = document.querySelector('.update-band');
   const h = header ? Math.round(header.getBoundingClientRect().height) : 0;
   const n = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
+  const u = upd ? Math.round(upd.getBoundingClientRect().height) : 0;
   const b = band ? Math.round(band.getBoundingClientRect().height) : 0;
   const f = filters ? Math.round(filters.getBoundingClientRect().height) : 0;
   root.style.setProperty('--sc-fold', (-h) + 'px');   // .topbar's sticky top — the line folds out of sight
-  root.style.setProperty('--sc-nav', n + 'px');       // where the band starts
-  root.style.setProperty('--sc-band', (n + b) + 'px');            // where the filter row starts
-  root.style.setProperty('--sc-frozen', (n + b + f) + 'px');      // where everything below the block starts
+  root.style.setProperty('--sc-nav', (n + u) + 'px');             // where the band starts
+  root.style.setProperty('--sc-band', (n + u + b) + 'px');        // where the filter row starts
+  root.style.setProperty('--sc-frozen', (n + u + b + f) + 'px');  // where everything below the block starts
 }
 
 // Re-measure whenever any piece of the block changes shape. The band and filter row change for the reasons

@@ -1,0 +1,33 @@
+#!/bin/sh
+# ===== #164 (Jerin, 23 Sep 2026): stamp the build so an open tab can notice a deploy =====
+#
+# A dashboard tab left open runs the code it downloaded when it was opened. js/build-watch.js re-reads
+# /version.json and offers a reload when the stamp changes — so something has to change the stamp on every
+# deploy. Doing that by hand is exactly the kind of step that gets forgotten, so it happens here instead.
+#
+# 🔑 ONLY code commits bump it. The pipeline's twice-daily data pushes go through the GitHub API and run no
+#    local hook at all, so a data refresh can never look like a deploy; and data/ is excluded here as well for
+#    the times data is committed from this machine. apps-script/ is excluded because .vercelignore keeps it
+#    out of the deployment — those files are not the site.
+#
+# FAILS SAFE: if this hook is ever missing (a fresh clone — hooks are not version-controlled), the stamp
+# simply stops moving and nobody is prompted. It cannot produce a false alarm.
+#
+# Installed by: cp tools/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+changed=$(git diff --cached --name-only --diff-filter=ACMRD \
+  | grep -v '^data/' \
+  | grep -v '^apps-script/' \
+  | grep -v '^version\.json$')
+
+[ -z "$changed" ] && exit 0
+
+stamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+cat > version.json <<JSON
+{
+  "build": "$stamp",
+  "note": "#164. Stamped automatically by .git/hooks/pre-commit whenever CODE is committed here. Data-only commits from the pipeline never touch it, so a refresh does not look like a deploy. An open dashboard tab re-reads this file and offers a reload when the value changes."
+}
+JSON
+git add version.json
+exit 0

@@ -1554,3 +1554,47 @@ tr.lv-topic > td { border-bottom: 1px solid var(--border-light); }
 /* B1: the columns a topic cannot split show an em dash, not a number and not a blank — a blank cell reads as
    "zero" and zero is a claim we cannot make. See definitions.js → hm-positions. */
 td.nosplit { color: #c1c7cf; }
+
+/* ===== #164 (Jerin, 23 Sep 2026): "This tab is out of date" =====
+   A tab left open runs the code and the numbers it downloaded when it was opened, with nothing on screen to
+   say so — it cost an hour on 23 Sep. This band is how the page admits it. It sits INSIDE .topbar, under the
+   tab strip, so it freezes with the header block and cannot be scrolled past; sticky-chrome's publish() counts
+   its height as a fifth measured piece. Amber because it is a warning about what is on screen, not a chart
+   colour. Built by js/build-watch.js, which never reloads on its own. */
+.update-band {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1.75rem;
+  background: var(--orange-light);
+  border-bottom: 1px solid #ecdcb4;   /* the amber relative of --border; there is no token for it */
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.update-band strong { color: #8a5406; font-weight: 600; }   /* --orange one step darker, for the lead clause */
+.update-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--orange);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0.1875rem rgba(161, 98, 7, .16);
+}
+.update-band .update-spacer { flex: 1; }
+/* 🚨 font-family: inherit — a <button> does not inherit the page font (see the design system's traps). */
+.update-reload {
+  flex-shrink: 0;
+  padding: 0.3125rem 0.8125rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.update-reload:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
