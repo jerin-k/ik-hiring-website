@@ -91,3 +91,42 @@ export const tdLinked = (linked) => (linked
   : '<td data-sv="0"><span class="pl-chip pl-fix">Not linked</span></td>');
 
 export const countTag = (n) => `<span class="pl-count">${n}</span>`;
+
+// ===== #168 part 2 (Jerin, 23 Sep 2026): "need to have the names called" =====
+// The two people lists already name everyone. What they never said is WHICH TOPIC each person was really for —
+// and, when that cannot be shown, WHY. Without the why, a blank reads as "no topic exists" when the truth is
+// usually "nobody linked the offer to an opening", which is a different job for a different person.
+//
+// 🔑 JERIN'S RULE, the same one that scopes the Data Hygiene list: this only means anything on a job where
+//    OTHER openings already carry a real topic. A job that does not use topics at all gets a plain dash, not a
+//    reproach — and a topic typed as "NA" is not a topic, which is how those openings are NAMED (#159).
+//
+// topicLookup(data) is built once per render and handed to tdTopic, so a list of 200 people does not rebuild it
+// 200 times, and both lists read the identical index — they can never disagree about who is on which topic.
+const NOT_A_TOPIC = /^(na|n\/a|n\.a\.|none|-|--)$/i;
+export const realTopic = (t) => {
+  const s = String(t ?? '').trim();
+  return s && !NOT_A_TOPIC.test(s) ? s : null;
+};
+
+export function topicLookup(data) {
+  const byOpening = {}, jobUses = {};
+  ((data && data.openingRows) || []).forEach((r) => {
+    const t = realTopic(r.topic);
+    if (r.openingId) byOpening[String(r.openingId).slice(0, 8)] = t;
+    if (t && r.jobId8) jobUses[r.jobId8] = true;
+  });
+  return { byOpening, jobUses };
+}
+
+// `why` is deliberately plain English and deliberately NOT a number: it names the next action.
+export function tdTopic(openingId, job8, idx) {
+  const known = idx || { byOpening: {}, jobUses: {} };
+  if (!known.jobUses[job8]) return `<td class="pl-topic" data-sv="">${DASH}</td>`;   // this job does not use topics
+  const key = String(openingId ?? '').slice(0, 8);
+  const why = (txt) => `<td class="pl-topic" data-sv=""><span class="pl-topic-why">${txt}</span></td>`;
+  if (!key) return why('no opening on the offer');
+  if (!(key in known.byOpening)) return why('opening not in this period');
+  const t = known.byOpening[key];
+  return t ? `<td class="pl-topic" data-sv="${esc(t)}">${esc(t)}</td>` : why('opening has no topic');
+}
