@@ -950,6 +950,8 @@ export const HYGIENE_LISTS = [
     why: 'Recruiter Joined cannot tell whether these people filled this quarter’s opening or an earlier one.', fix: ['Ashby', 'View Offer', 'Update Offer', 'Opening'] },
   { id: 'nodate', group: 'Offers & openings', name: 'Openings Missing Opened Date', sub: 'Invisible in Total Openings', scope: 'all', unit: 'openings',
     why: 'An opening with no opened date is left out of Total Openings on Hiring Manager and Overall Efficiency entirely.', fix: ['Ashby', 'Job', 'Openings', 'Opened at'] },
+  { id: 'notopic', group: 'Offers & openings', name: 'Openings Missing a Topic', sub: 'On SME roles that use topics elsewhere', scope: 'quarter', unit: 'openings',
+    why: 'Anyone hired, or in Reference Check / Documentation / Offer, against one of these sits under “(topic not set)” instead of the topic they were really for — so no single topic can be judged on its own. Only roles where OTHER openings already carry a topic are listed: a role that does not use topics at all is not a gap (Jerin, 23 Sep 2026).', fix: ['Ashby', 'Job', 'Openings', 'Specialization/Topic'] },
   { id: 'noopening', group: 'Offers & openings', name: 'Jobs Recruiting Without an Opening', sub: 'Open jobs worked with no opening this quarter', scope: 'quarter', unit: 'jobs',
     why: 'Momentum, Screening Efficiency, Throughput, Time in Process and Panelists list only jobs with an opening opened in the quarter, so this work is hidden there until the job gets one.', fix: ['Ashby', 'Job', 'Openings', 'Create or date the opening'] },
   { id: 'unscored', group: 'Offers & openings', name: 'Roles Missing Score Inputs', sub: 'Adds headcount but no Score', scope: 'quarter', unit: 'roles',

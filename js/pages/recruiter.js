@@ -686,6 +686,13 @@ export function renderRecruiter(data) {
             </table></div>
           </div>
 
+          <div class="hyg-panel" data-h="notopic" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th class="c-txt">Opening ID</th><th class="c-num">Topics already set</th></tr></thead>
+              <tbody id="hygNoTopicBody"></tbody>
+            </table></div>
+          </div>
+
           <div class="hyg-panel" data-h="noopening" style="display:none">
             <div class="scroll-table"><table>
               <thead><tr><th style="min-width:16.25rem">Job</th><th class="c-dept">Department</th><th class="c-num">New candidates</th><th class="c-num">R1 screened</th><th class="c-num">Assessed</th><th class="c-num">Finished stays</th><th class="c-num">Interviews</th><th style="min-width:13.75rem">Openings in Ashby</th></tr></thead>
@@ -2288,7 +2295,7 @@ export function initRecruiterFilters(baseData) {
   // 🚨 It applies to all eight of those lists at once, not just the one on screen — the panels are rendered
   // together and only shown/hidden, so a filter that knew which list was active would leave the others stale.
   const HY_JS_OPTS = [['all', 'All'], ['open', 'Open'], ['shut', 'Closed & archived']];
-  const HY_JS_LISTS = new Set(['unassigned', 'multirec', 'multisrc', 'nosrc', 'offergap', 'hiredgap', 'nodate', 'unscored']);
+  const HY_JS_LISTS = new Set(['unassigned', 'multirec', 'multisrc', 'nosrc', 'offergap', 'hiredgap', 'nodate', 'unscored', 'notopic']);
   const HY_JS_LABEL = { all: 'All', open: 'Open', shut: 'Closed & archived' };
   let hygJobStatus = (() => { try { const v = localStorage.getItem('ik_hyg_jobstatus'); return HY_JS_OPTS.some(o => o[0] === v) ? v : 'all'; } catch (e) { return 'all'; } })();
   let hygTotals = {};   // the unfiltered counts, so the header can say "of N" instead of losing the total
@@ -2504,6 +2511,51 @@ export function initRecruiterFilters(baseData) {
       .sort((a, b) => (b.status === 'Open') - (a.status === 'Open')
         || (a.department || '').localeCompare(b.department || '')
         || (a.title || '').localeCompare(b.title || ''));
+    // ===== #168 part 3 (Jerin, 23 Sep 2026): SME openings with no Specialization/Topic =====
+    // 🔑 JERIN'S RULE, and it is the important part: *"This is only if few openings in a job have topics &
+    //    others dont."* A job where NOTHING carries a topic simply does not use them — listing those would bury
+    //    the real gaps in noise. This is the same test the tables already apply: "(topic not set)" appears only
+    //    inside a job that has real topics elsewhere (#160a). On the 23 Sep data it is the difference between
+    //    40 rows of noise and 15 rows worth acting on, across 4 jobs.
+    // WHY IT MATTERS: anyone hired or in closing against one of these lands on the "(topic not set)" row instead
+    // of the topic they were really for, so no topic can be judged on its own and the work cannot be shared out.
+    // Computed here from openingRows rather than in the pipeline: it needs no new field, and a hygiene list that
+    // waits for a backend release is a hygiene list nobody gets.
+    const noTopicAll = (() => {
+      const byJob = {};
+      (data.openingRows || []).forEach(r => {
+        if (r.quarter !== q) return;
+        const j = jobBy8[r.jobId8];
+        if (!j || !/^SME/.test(String(j.department || ''))) return;   // the topic level is SME - US / SME - India only
+        (byJob[r.jobId8] || (byJob[r.jobId8] = [])).push(r);
+      });
+      const out = [];
+      Object.keys(byJob).forEach(j8 => {
+        const rs = byJob[j8], withT = rs.filter(r => r.topic).length;
+        if (!withT) return;                       // this job does not use topics at all — not a gap
+        const j = jobBy8[j8] || {};
+        rs.filter(r => !r.topic).forEach(r => out.push({
+          openingId: r.openingId, jobId8: j8, title: j.title || '', department: j.department || '',
+          status: jobStatusOf(j8), withT, total: rs.length }));
+      });
+      return out;
+    })();
+    const noTopic = noTopicAll
+      .filter(o => keepStatus(o.status || ''))   // #146b
+      .sort((a, b) => (b.status === 'Open') - (a.status === 'Open')
+        || (a.department || '').localeCompare(b.department || '')
+        || (a.title || '').localeCompare(b.title || ''));
+    const ntBody = document.getElementById('hygNoTopicBody');
+    if (ntBody) {
+      ntBody.innerHTML = noTopic.map(o => `<tr>
+        <td style="font-weight:500">${esc(o.title || '(job not found)')}</td>
+        ${jobStatusCell(o.jobId8)}
+        <td>${esc(o.department || '—')}</td>
+        <td>${mono(o.openingId || '')}</td>
+        <td class="c-num">${o.withT} of ${o.total}</td></tr>`).join('')
+        || `<tr><td colspan="5" style="text-align:center;color:var(--green);padding:1rem">Every SME opening on a role that uses topics has one. &#x2713;</td></tr>`;
+    }
+
     const ndBody = document.getElementById('hygNoDateBody');
     if (ndBody) {
       ndBody.innerHTML = noDate.map(o => `<tr>
@@ -2691,6 +2743,7 @@ export function initRecruiterFilters(baseData) {
       offergap: gapsAll.filter(g => g.needsFix).length,
       hiredgap: gapsAll.filter(g => !g.needsFix).length,
       nodate: noDateAll.length,
+      notopic: noTopicAll.length,   // #168 part 3
       unscored: unscoredAll.length,
     };
     hygCounts = {
@@ -2704,6 +2757,7 @@ export function initRecruiterFilters(baseData) {
       offergap: gapLive.length,
       hiredgap: gapDone.length,
       nodate: noDate.length,
+      notopic: noTopic.length,       // #168 part 3
       noopening: noOpening.length,   // #125
       unscored: unscored.length,
       anomalies: anomList.length,
@@ -2740,6 +2794,8 @@ export function initRecruiterFilters(baseData) {
         ...noOpening.map(x => [x.j.title || '', x.j.department || '', x.tofu, x.r1, x.assessed, x.stays, x.interviews, x.openings])],
       nodate: () => [['Job', 'Job status', 'Department', 'Opening ID', 'Jobs on this opening'],
         ...noDate.map(o => [o.title || '', o.status || '', o.department || '', o.openingId || '', o.jobs || 1])],
+      notopic: () => [['Job', 'Job status', 'Department', 'Opening ID', 'Topics already set on this job'],
+        ...noTopic.map(o => [o.title || '', o.status || '', o.department || '', o.openingId || '', `${o.withT} of ${o.total}`])],
       unscored: () => [['Job', 'Job status', 'Department', 'Level', 'Complexity', 'Reason', 'Applications'],
         ...unscored.map(({ j, reason }) => [j.title || '', jobStatusOf(j.id), j.department || '', j.level || '', j.complexity || '', reason || '', j.total || 0])],
       anomalies: () => [['Anomaly', 'Detail', 'What to do'], ...anomList.map(a => [a.what, a.detail, a.fix])]
