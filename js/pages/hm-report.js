@@ -2,6 +2,7 @@ import { getData, jobsWithOpeningIn } from '../data.js';
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
+import { tdTopic, topicLookup } from '../people-cells.js';   // #168: which topic each person was really for
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX } from '../job-notes.js';   // #150
@@ -421,7 +422,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiningpending')}
@@ -431,7 +432,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiners')}
@@ -1068,8 +1069,8 @@ export function initHmFilters(data) {
     body.innerHTML = monthTreeRows(list, {
       dayOf: c => c.doj,
       nameOf: c => c.candidate,
-      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c._dept)}${tdJob(c.job)}${tdQuarter(c.openingQuarter)}`,
-      cols: 6, order: 'soonest', live: true,
+      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c._dept)}${tdJob(c.job)}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdQuarter(c.openingQuarter)}`,
+      cols: 7, order: 'soonest', live: true,
       split: items => stageSplit(items, c => c.subStage),
     });
     pinMonthHeadings(body);
@@ -1104,8 +1105,8 @@ export function initHmFilters(data) {
     body.innerHTML = monthTreeRows(list, {
       dayOf: e => e.startDate,
       nameOf: e => e.candidate,
-      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e._dept)}${tdJob(e.jobTitle)}${tdQuarter(e.openingQuarter, e.startDate)}`,
-      cols: 5, order: 'newest',
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e._dept)}${tdJob(e.jobTitle)}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,
+      cols: 6, order: 'newest',
     });
     pinMonthHeadings(body);
   }
