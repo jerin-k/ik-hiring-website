@@ -47,6 +47,34 @@ function doGet(e) {
       triggeredAt: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
+  // #162 (Jerin, 23 Sep 2026 - "Poor UI play"): the same job as ?action=refresh, answered as a FRAMED PAGE
+  // instead of raw JSON, so the dashboard can trigger the run from a hidden frame and draw its own small card
+  // rather than throwing open a window of somebody else's JSON.
+  // WHY THIS HAS TO EXIST - ContentService CANNOT be framed by a third-party site. Measured 23 Sep from
+  //    hiring.interviewkickstart.com, with a control: a TOP-LEVEL load of ?action=orQueue returns its JSON,
+  //    while the IDENTICAL url inside an iframe returns 403. Same browser, same session, same url - so it is
+  //    the framing, not the sign-in. Only HtmlService can declare ALLOWALL. ?action=refresh is therefore left
+  //    exactly as it was (the card's "Open in a window" fallback still uses it) and this is a second door.
+  //    window.top and named origins, exactly as opening-requests.js posts {orReady}: Apps Script nests the
+  //    user code two frames down, so 'parent' is Google's own wrapper, not the dashboard.
+  if (action === 'refreshUi') {
+    var rOk = true, rMsg = 'Refresh scheduled. Data will update in 2-4 minutes.';
+    try {
+      ScriptApp.getProjectTriggers().forEach(function (t) {
+        if (t.getHandlerFunction() === 'manualRefresh_') ScriptApp.deleteTrigger(t);
+      });
+      ScriptApp.newTrigger('manualRefresh_').timeBased().after(1000).create();
+    } catch (rErr) { rOk = false; rMsg = String((rErr && rErr.message) || rErr); }
+    var rPayload = JSON.stringify({ ikRefresh: rOk ? 'started' : 'failed', message: rMsg, at: new Date().toISOString() });
+    var rOrigins = JSON.stringify(['https://hiring.interviewkickstart.com', 'https://hiring-dashboard-phi.vercel.app']);
+    return HtmlService.createHtmlOutput(
+        '<div style="font:13px system-ui,sans-serif;color:#6b7391;padding:8px">'
+      + (rOk ? 'Refresh scheduled.' : 'Could not start the refresh.') + '</div>'
+      + '<script>(function(){var m=' + rPayload + ',o=' + rOrigins + ';'
+      + 'o.forEach(function(x){try{window.top.postMessage(m,x)}catch(e){}});})();</script>')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // JSON data endpoint — serves dashboard.json from Drive
   if (action === 'data') {
     return serveJsonData();
