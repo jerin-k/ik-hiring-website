@@ -52,6 +52,33 @@ function doGet(e) {
     return serveJsonData();
   }
 
+  // ===== #112 phase 3b (GO: Jerin, 23 Sep 2026) — the two steps that are CLAUDE's, as plain addresses =====
+  // The requests screen is a sandboxed frame, so google.script.run is unreachable from anything Claude can run in the
+  // page. Every other step in the flow is a person pressing a button; these two are not. Same shape as the two actions
+  // above: a GET that returns JSON, running as the signed-in viewer — so orUser_()'s approver gate still decides.
+  //   ?action=orQueue     -> the approved requests still waiting to be created
+  //   ?action=orCreated&id=OR-007&openings=<json array>&note=...  -> record what was made
+  // 🚨 Never widen these past orUser_(). They read and write the private requests Sheet.
+  if (action === 'orQueue' || action === 'orCreated') {
+    var out;
+    try {
+      if (action === 'orQueue') {
+        out = orQueue();
+      } else {
+        var rid = String((e.parameter && e.parameter.id) || '');
+        var raw = String((e.parameter && e.parameter.openings) || '[]');
+        var list;
+        try { list = JSON.parse(raw); } catch (pe) { list = null; }
+        out = !rid ? { ok: false, message: 'no request id was given' }
+            : !list || !list.length ? { ok: false, message: 'openings must be a JSON array of {id, name, url, state}' }
+            : orMarkCreated(rid, list, String((e.parameter && e.parameter.note) || ''));
+      }
+    } catch (err) {
+      out = { ok: false, message: String((err && err.message) || err) };
+    }
+    return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  }
+
 
 
   // JSON API endpoint for the Vercel dashboard
@@ -743,8 +770,11 @@ var OR_COLS = ['id', 'createdAt', 'status', 'requesterEmail', 'requesterName', '
   // 21 Sep, 112a: what an approver changed before approving, each change old ➔ new
   'edits',
   // 22 Sep, 112g: the openings by Role Type, e.g. {"New":2,"Replacement":2,"Buffer":1}; count is their total
-  'mix'];
-var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1, mix: 1 };
+  'mix',
+  // 23 Sep, phase 3: testJob = create against the Ashby TEST job instead of the real one (approvers only, while we test);
+  // openings = what was actually made, [{id, name, url, state}]; fulfilledBy / fulfilledAt = who marked it Created and when
+  'testJob', 'openings', 'fulfilledBy', 'fulfilledAt'];
+var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1, mix: 1, openings: 1 };
 var OR_NUM = { count: 1, pts: 1 };
 // 112a: what an approver may change, in the order a change list reads. Name and Points each follow from the fields above
 // them (recruiter + topic, job + level + complexity), so they change on their own and are listed because they are what
@@ -1060,6 +1090,129 @@ function orDecide_(id, decision, note, edit) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ===== #112 phase 3 (GO: Jerin, 23 Sep 2026) — Claude creates the opening in Ashby, then marks the request Created =====
+// Creating an opening is UI-ONLY: opening.create writes on an EMPTY body, ignores jobId and openedAt, and cannot supply the
+// required custom fields. So Claude drives Ashby's own Create Opening form in a browser and calls orMarkCreated afterwards.
+// Nothing here talks to Ashby — the server only hands out the queue and records what came back, so a half-finished run can
+// always be re-read and finished, and every opening is recorded against the request that asked for it.
+
+// The Ashby TEST job, for trying the flow end to end without touching a real one. Its department is Test, which the pipeline
+// skips at ingestion, so nothing created here can reach the dashboard.
+var OR_TEST_JOB = { id: 'e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f', title: 'Test - Project Hello Christy - Sales PA', department: 'Test', team: 'Test' };
+
+// While we are testing, an approver can point a request at that job instead of the real one. Allowed until the request is
+// Created — after that the openings exist and the switch would be a lie.
+function orSetTestJob(id, on) {
+  var me = orUser_();
+  if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can send a request to the test job' };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = orSheet_(), v = sh.getDataRange().getValues(), head = v[0].map(String), col = {};
+    head.forEach(function (k, i) { col[k] = i; });
+    var r = -1;
+    for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
+    if (r < 0) return { ok: false, message: id + ' was not found' };
+    if (String(v[r][col.status]) === 'Created') return { ok: false, message: id + ' is already Created, so it cannot be moved to the test job' };
+    sh.getRange(r + 1, col.testJob + 1).setNumberFormat('@').setValue(on ? 'yes' : '');
+    sh.getRange(r + 1, col.updatedAt + 1).setNumberFormat('@').setValue(new Date().toISOString());
+    SpreadsheetApp.flush();
+    return { ok: true, request: orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// What Claude picks up: every Approved request that has not been created yet, oldest first, with the job it should be created
+// against already resolved (the test job when the switch is on). `nextNumber` is only a STARTING POINT — 🚨 the number Ashby's
+// own create form suggests is 33 behind the truth, so Claude re-checks the highest live IK number in Ashby before naming
+// anything, and the caller passes back what it actually used.
+function orQueue() {
+  var me = orUser_();
+  if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can read the queue' };
+  var rows = orReadAll_(), out = [], highest = 0;
+  rows.forEach(function (rq) {
+    (rq.openings || []).forEach(function (o) {
+      var m = /^IK-(\d+)/.exec(String(o.name || ''));
+      if (m && Number(m[1]) > highest) highest = Number(m[1]);
+    });
+  });
+  rows.filter(function (rq) { return rq.status === 'Approved'; })
+      .sort(function (a, b) { return String(a.decidedAt || '').localeCompare(String(b.decidedAt || '')); })
+      .forEach(function (rq) {
+        var test = String(rq.testJob || '') === 'yes';
+        out.push({ id: rq.id, name: rq.name, count: rq.count, mix: rq.mix, recruiter: rq.recruiter, sourcer: rq.sourcer,
+          roleType: rq.roleType, employmentType: rq.employmentType, complexity: rq.complexity, topic: rq.topic,
+          levelSet: rq.levelSet, openDate: rq.openDate, replacementOf: rq.replacementOf, description: rq.description,
+          team: test ? OR_TEST_JOB.team : rq.team, location: rq.location,
+          jobId: test ? OR_TEST_JOB.id : rq.jobId, jobTitle: test ? OR_TEST_JOB.title : rq.jobTitle,
+          department: test ? OR_TEST_JOB.department : rq.department,
+          testJob: test, decidedBy: rq.decidedBy, decidedAt: rq.decidedAt, requesterName: rq.requesterName });
+      });
+  return { ok: true, queue: out, nextNumber: highest ? highest + 1 : null, testJob: OR_TEST_JOB };
+}
+
+// Claude calls this once the openings exist in Ashby. `openings` is [{id, name, url, state}] — one entry per opening actually
+// created, so a run that made 2 of 3 records 2 and the request stays Approved until the rest are done.
+// 🚨 A request is only Created when the count matches what was asked for; anything less is recorded and left Approved, which
+// is what makes a half-finished run safe to pick up again.
+function orMarkCreated(id, openings, note) {
+  var me = orUser_();
+  if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can record a created opening' };
+  var made = [];
+  (openings || []).slice(0, 25).forEach(function (o) {
+    if (!o || !o.id) return;
+    made.push({ id: String(o.id).slice(0, 60), name: String(o.name || '').slice(0, 200),
+                url: String(o.url || '').slice(0, 300), state: String(o.state || '').slice(0, 30) });
+  });
+  if (!made.length) return { ok: false, message: 'no openings were passed, so there is nothing to record' };
+  note = String(note || '').trim().slice(0, 600);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = orSheet_(), v = sh.getDataRange().getValues(), head = v[0].map(String), col = {};
+    head.forEach(function (k, i) { col[k] = i; });
+    var r = -1;
+    for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
+    if (r < 0) return { ok: false, message: id + ' was not found' };
+    var status = String(v[r][col.status]);
+    if (status !== 'Approved') return { ok: false, message: id + ' is ' + status + ', and only an Approved request can be created' };
+    var old = orRowObj_(head, v[r]);
+    // Openings already recorded on this request are kept; the same Ashby id is never recorded twice.
+    var have = {}, all = [];
+    (old.openings || []).forEach(function (o) { if (!have[o.id]) { have[o.id] = 1; all.push(o); } });
+    made.forEach(function (o) { if (!have[o.id]) { have[o.id] = 1; all.push(o); } });
+    var want = Number(old.count) || made.length, done = all.length >= want;
+    var mine = null;
+    orAshbyUsers_().forEach(function (u) { if (u.email === me.email) mine = u; });
+    var who = mine ? mine.name : me.email, now = new Date().toISOString();
+    var list = all.map(function (o) { return o.name || o.id; }).join(', ');
+    var tr = [];
+    try { tr = JSON.parse(v[r][col.transcript] || '[]'); } catch (e) { tr = []; }
+    tr.push({ who: 'claude', at: now, openings: all, text: done
+      ? 'Created in Ashby: ' + list + '.' + (old.testJob === 'yes' ? ' On the TEST job, so no dashboard number moves.' : '')
+        + (note ? ' ' + note : '')
+      : 'Created ' + all.length + ' of ' + want + ' so far: ' + list + '. The rest follow in the next session.' + (note ? ' ' + note : '') });
+    var set = { openings: JSON.stringify(all), updatedAt: now };
+    if (done) { set.status = 'Created'; set.fulfilledBy = who; set.fulfilledAt = now; }
+    Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
+    SpreadsheetApp.flush();
+    var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
+    if (rq.slackTs) orSlackPost_(orSlackCreated_(rq, all, want, done, note), rq.slackTs);
+    return { ok: true, request: rq, done: done, recorded: all.length, wanted: want };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function orSlackCreated_(rq, all, want, done, note) {
+  var lines = all.map(function (o) { return '> ' + (o.url ? '<' + o.url + '|' + orSlackEsc_(o.name || o.id) + '>' : orSlackEsc_(o.name || o.id))
+    + (o.state ? ' · ' + orSlackEsc_(o.state) : ''); });
+  return orSlackTop_(rq) + (done ? '*Created in Ashby*' : '*Created ' + all.length + ' of ' + want + ' so far*')
+    + (rq.testJob === 'yes' ? ' _(test job — no dashboard number moves)_' : '') + '\n' + lines.join('\n')
+    + (note ? '\n' + orSlackQuote_(note) : '');
 }
 
 // Active Ashby users with their full Ashby name — the name that goes into the opening name. Cached for six hours.
