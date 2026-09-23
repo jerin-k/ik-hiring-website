@@ -775,14 +775,19 @@ th.c-stage, td.c-stage { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; }
 /* #168 part 2: the topic a person was really for, or the reason it cannot be shown. Sized for a long
    topic name to wrap onto two lines rather than shove the columns beside it about. */
 th.c-topic, td.c-topic { width: 11rem; min-width: 11rem; max-width: 11rem; }
+/* #169: the opening's FULL NAME - "IK-403 - <recruiter> - <Role Type> - <topic>" - so it needs real room,
+   and it wraps rather than pushing the row sideways. The id fallback is quieter than a name. */
+th.c-open-name, td.c-open-name { width: 13rem; min-width: 13rem; max-width: 13rem; }
+.pl-open-name { max-width: 13rem; }
+.pl-open-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: var(--muted); }
 /* #146: whether the JOB behind a Data Hygiene row is still Open, or Closed/Archived. One word, so it is the
    narrowest of the text families — sized for "Archived" and never wrapped, since a wrapped one-word column
    just looks broken. It appears on every hygiene list that names a job. */
 th.c-jstat, td.c-jstat { width: 6rem; min-width: 6rem; max-width: 6rem; text-align: left; }
-th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage, th.c-topic,
-td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic {
+th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage, th.c-topic, th.c-open-name,
+td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic, td.c-open-name {
   white-space: normal; overflow-wrap: anywhere; }
-td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic { text-align: left; }
+td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic, td.c-open-name { text-align: left; }
 /* A closed or archived job is the signal "this row probably needs nobody" — quieter than a live one.
    ⚠ NOT scoped to `td.c-jstat`: js/table-cols.js stamps the family onto flat tables but leaves the Unassigned
    TREE's cells unclassed, so a scoped rule greyed seven lists out of eight and silently missed the tree. */
