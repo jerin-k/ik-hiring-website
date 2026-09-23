@@ -115,13 +115,17 @@ export const realTopic = (t) => {
 let tlData = null, tlIdx = null;
 export function topicLookup(data) {
   if (data && data === tlData && tlIdx) return tlIdx;
-  const byOpening = {}, jobUses = {};
+  const byOpening = {}, jobUses = {}, nameOf = {};
   ((data && data.openingRows) || []).forEach((r) => {
     const t = realTopic(r.topic);
-    if (r.openingId) byOpening[String(r.openingId).slice(0, 8)] = t;
+    if (r.openingId) {
+      const k = String(r.openingId).slice(0, 8);
+      byOpening[k] = t;
+      nameOf[k] = String(r.name || '').trim();   // #169: the opening's full name, "IK-403 - ..." (#159)
+    }
     if (t && r.jobId8) jobUses[r.jobId8] = true;
   });
-  tlData = data; tlIdx = { byOpening, jobUses };
+  tlData = data; tlIdx = { byOpening, jobUses, nameOf };
   return tlIdx;
 }
 
@@ -131,8 +135,27 @@ export function tdTopic(openingId, job8, idx) {
   if (!known.jobUses[job8]) return `<td class="pl-topic" data-sv="">${DASH}</td>`;   // this job does not use topics
   const key = String(openingId ?? '').slice(0, 8);
   const why = (txt) => `<td class="pl-topic" data-sv=""><span class="pl-topic-why">${txt}</span></td>`;
-  if (!key) return why('no opening on the offer');
-  if (!(key in known.byOpening)) return why('opening not in this period');
+  // #169: the Opening column beside this one already says "no opening on the offer" / "not in this period", so
+  // saying it again here would be noise. This column answers exactly one question: which TOPIC.
+  if (!key || !(key in known.byOpening)) return `<td class="pl-topic" data-sv="">${DASH}</td>`;
   const t = known.byOpening[key];
   return t ? `<td class="pl-topic" data-sv="${esc(t)}">${esc(t)}</td>` : why('opening has no topic');
+}
+
+// ===== #169 (Jerin, 23 Sep 2026): "Opening & Topic to be 2 columns; makes life cleaner/clearer for all" =====
+// The opening's FULL NAME - "IK-403 - <recruiter> - <Role Type> - <topic or NA>" (#159) - which is what the team
+// actually recognises. NOT gated on whether the job uses topics: every person either has an opening or does not,
+// and that is worth knowing on every role, not just SME ones.
+// ⚠ Until the pipeline's next run the name is absent (it was added to openingRows on 23 Sep), so this falls back
+//   to the 8-character id rather than showing an empty column. It upgrades itself at the next refresh.
+export function tdOpening(openingId, idx) {
+  const known = idx || { byOpening: {}, nameOf: {} };
+  const key = String(openingId ?? '').slice(0, 8);
+  const why = (txt) => `<td class="pl-open-name" data-sv=""><span class="pl-topic-why">${txt}</span></td>`;
+  if (!key) return why('no opening on the offer');
+  if (!(key in known.byOpening)) return why('not in this period');
+  const nm = (known.nameOf || {})[key];
+  if (nm) return `<td class="pl-open-name" data-sv="${esc(nm)}">${esc(nm)}</td>`;
+  return `<td class="pl-open-name" data-sv="${esc(key)}" title="The opening's name arrives with the next data refresh.">`
+    + `<span class="pl-open-id">${esc(key)}</span></td>`;
 }
