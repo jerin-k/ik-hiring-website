@@ -14,6 +14,7 @@ import { initFilterDropdowns } from './filter-dropdowns.js';   // 17 Sep: filter
 import { mountStickyChrome } from './sticky-chrome.js';   // #147 C+: the sub-tab band + filter row are what freeze, not the navy block
 import { watchColumnFamilies } from './table-cols.js';   // #151b: a column's family is declared on its heading and mirrored down the column
 import { startBuildWatch } from './build-watch.js';   // #164: a tab left open runs old code and old numbers — it says so, and offers a reload
+import { startRefresh } from './refresh-status.js';   // #162: Refresh runs in a hidden frame and reports in a card, not a window of raw JSON
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
 
 // Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
@@ -178,29 +179,17 @@ function setupRefreshButton() {
   // signed-in session is a REAL BROWSING CONTEXT, which is why `js/access-config.js` opens a window for
   // Send invite and Publish rather than fetching. This now does the same.
   //
-  // What the window shows is the web app's own answer — `{"status":"ok","message":"Refresh scheduled. Data
-  // will update in 2-4 minutes."}` — so the person sees the truth from the pipeline itself rather than a
-  // hopeful message from this page. This page deliberately claims NOTHING about whether the run succeeded:
-  // it cannot read across origins, and pretending otherwise is the bug being fixed.
+  // #162 (Jerin, 23 Sep 2026 — "Poor UI play"): that window showed the pipeline's RAW JSON, which was never
+  // the point of it. The browsing context is still what matters, but a HIDDEN IFRAME is one too — it carries
+  // the same Google session, which is why the Req Bot tab works — so the run is triggered in one and the
+  // answer is given in the dashboard's own card (js/refresh-status.js). No window, so no pop-up to block.
+  // 🚨 The card still claims nothing this page cannot see: it says "started", then WAITS for our own copy of
+  // the data to actually change before it says the numbers have landed.
   btn.addEventListener('click', () => {
-    const win = window.open(WEBAPP_URL + '?action=refresh', 'ikRefresh', 'width=560,height=300');
-    if (!win) {
-      // the honest failure: nothing was started, and the person needs to do something about it
-      btn.innerHTML = '&#x2717; Allow pop-ups, then retry';
-      btn.style.color = 'var(--red)';
-      btn.style.borderColor = 'var(--red)';
-      btn.title = 'The refresh runs in a small window so it carries your Google sign-in. Your browser blocked it.';
-      setTimeout(() => {
-        btn.innerHTML = '&#x21bb; Refresh';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-        btn.title = 'Trigger Ashby data refresh';
-      }, 6000);
-      return;
-    }
+    startRefresh(WEBAPP_URL);
     btn.disabled = true;
-    btn.innerHTML = '&#x2197; Started in a new window';
-    btn.title = 'The new window shows what the pipeline said. New numbers land here in 2-4 minutes, after a reload.';
+    btn.innerHTML = '&#x21bb; Refreshing&#x2026;';
+    btn.title = 'Ashby is being re-read. The card at the bottom right says when the new numbers land.';
     setTimeout(() => {
       btn.disabled = false;
       btn.innerHTML = '&#x21bb; Refresh';
