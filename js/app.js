@@ -13,6 +13,7 @@ import { initTableSorting } from './table-sort.js';
 import { initFilterDropdowns } from './filter-dropdowns.js';   // 17 Sep: filter dropdowns open in full, never clipped by their row
 import { mountStickyChrome } from './sticky-chrome.js';   // #147 C+: the sub-tab band + filter row are what freeze, not the navy block
 import { watchColumnFamilies } from './table-cols.js';   // #151b: a column's family is declared on its heading and mirrored down the column
+import { startBuildWatch } from './build-watch.js';   // #164: a tab left open runs old code and old numbers — it says so, and offers a reload
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
 
 // Register the global value-label plugin once (Chart is the UMD global from chart.umd.min.js). Every chart across
@@ -93,6 +94,10 @@ async function onAuthSuccess(user) {
         month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
       });
   }
+
+  // #164: from here on the page keeps asking whether the code and the numbers have moved on, and says so
+  // rather than quietly showing yesterday's. Last, so a failure here can never stop the dashboard drawing.
+  startBuildWatch();
 }
 
 function onAuthFailure(message) {
