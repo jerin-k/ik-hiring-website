@@ -305,6 +305,24 @@ export async function mountOpeningRequests(root, backend) {
     wire();
   }
 
+  // #112i (Jerin, 23 Sep 2026: "the page not scrolling when i select an option"). Choosing a job or a dropdown makes the
+  // form GROW — new checks appear, and often a new thing the requester must fill — but the view stayed exactly where it was,
+  // so it looked as though nothing had happened. Measured: picking a job added 237px below the fold and moved nothing.
+  // After a CHOICE (never after typing — that would fight the caret) bring the next thing that needs them into view: the
+  // first blocking check, or the Submit row once nothing blocks. Only when it is actually out of sight, so a choice made
+  // with everything already visible never jumps the page.
+  function revealNext() {
+    requestAnimationFrame(() => {
+      const el = root.querySelector('.or-chk li.or-c:has(i.stop)')
+        || [...root.querySelectorAll('.or-chk li.or-c')].find(li => (li.querySelector('i') || {}).className === 'stop')
+        || root.querySelector('[data-act="submit"]');
+      if (!el) return;
+      const r = el.getBoundingClientRect(), pad = 24;
+      if (r.top >= pad && r.bottom <= window.innerHeight - pad) return;   // already in view — leave the page alone
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+  }
+
   function railHtml() {
     const waiting = S.me.isApprover ? S.requests.filter(x => x.status === 'For approval') : [];
     const mine = S.requests.filter(x => x.requesterEmail === S.me.email && !waiting.includes(x));
@@ -639,7 +657,7 @@ export async function mountOpeningRequests(root, backend) {
       el.addEventListener(ev, () => {
         const f = el.dataset.f;
         S.draft[f] = f === 'count' ? parseInt(el.value, 10) || 0 : el.value;
-        if (ev === 'change') { render(); return; }
+        if (ev === 'change') { render(); revealNext(); return; }   // #112i: a choice, not typing
         // typing: redraw without losing the caret
         const pos = el.selectionStart; render();
         const again = root.querySelector(`[data-f="${f}"]`);
@@ -654,7 +672,7 @@ export async function mountOpeningRequests(root, backend) {
       S.draft.mix = next; S.draft.count = mixTotal(next);
     };
     root.querySelectorAll('[data-mix]').forEach(b => b.addEventListener('click', () => {
-      setMix(b.dataset.mix, (evaluate(S.draft, ctx()).mix[b.dataset.mix] || 0) + Number(b.dataset.d)); render();
+      setMix(b.dataset.mix, (evaluate(S.draft, ctx()).mix[b.dataset.mix] || 0) + Number(b.dataset.d)); render(); revealNext();   // #112i
     }));
     const keep = (sel, pos) => { const again = root.querySelector(sel); if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } };
     root.querySelectorAll('[data-mix-n]').forEach(el => el.addEventListener('input', () => {
@@ -712,6 +730,7 @@ export async function mountOpeningRequests(root, backend) {
     S.draft.team = m.team || (j && j.team) || '';
     S.draft.location = (m.locations && m.locations.length === 1) ? m.locations[0] : '';
     render();
+    revealNext();   // #112i: the job brings a batch of new checks with it
   }
 
   // The job search: every word typed must appear in the title or the department. The list redraws on its own, so typing
