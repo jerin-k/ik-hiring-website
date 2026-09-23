@@ -62,18 +62,26 @@ const DASH = '<span class="zero">—</span>';
 // #161b (Jerin, 22 Sep): the three JOINING PENDING columns split as well, for this recruiter's people whose offer names
 // an opening of the topic - heads, score, the 50/50 sourcer credit and its "+N sourced" line, all through the SAME
 // jpCells() the job row uses, so the two can never render differently.
-// Capacity is configured per RECRUITER for the whole quarter, and Joined / Drop / Delta count PEOPLE with no tie to an
-// opening before hire (a drop can never have one at all - Rule 8), so those stay an em dash. Never put a number in a
-// dashed cell: a wrong one here looks right and nobody will question it.
+// #166 (Jerin, 23 Sep): JOINED now splits too, wherever the joiner's offer names an opening of the topic.
+// 🚨 The reason it used to dash - "Joined counts PEOPLE with no tie to an opening before hire" - STOPPED BEING
+//    TRUE and the dash stayed. Since #131/#132 the hire links plus the offer's own openingId place 35 of 158 Q3
+//    joiners on an opening that carries a topic. CLAUDE.md Rule 11: when a measure is rebuilt, grep for what was
+//    excluded FOR the old one - such an exclusion never fails, it just quietly keeps hiding the answer.
+// Capacity is still per-RECRUITER config, and DROP still cannot be tied to an opening at all (Rule 8 - settled
+// with a control, four routes tested), so those two keep their dash. Delta keeps it as well: it is a shortfall
+// against a goal, and the remainder row below carries no goal to be short of. Never put a number in a dashed
+// cell: a wrong one here looks right and nobody will question it.
 //
 // 🚨 COLUMN ARITHMETIC - keep in step with cells() and with the <thead> of both tables.
 //   label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(ncol-14) + JP(5) + Drop(2) + Delta(1) + gap(1) = ncol
-//   Joined is 2 cells on Non-Sales (ncol 16) and 5 on Sales/Others (ncol 19, the #39 Total+A+B split).
-const recTopicCells = (t, ncol, jpHtml) => {
+//   Joined is 2 cells on Non-Sales (ncol 16) and 5 on Sales/Others (ncol 19, the #39 Total+A+B split), and the
+//   Sales five-way split is a different question, so joinedHtml is only ever supplied for the 2-cell shape.
+const recTopicCells = (t, ncol, jpHtml, joinedHtml) => {
   const d = `<td class="nosplit">${DASH}</td>`;
   const num = (v) => `<td>${Math.round(v * 100) / 100}</td>`;
+  const nJoin = Math.max(0, ncol - 14);
   return d + d + num(t.hc) + num(t.sc)      // Capacity, Capacity used, Goal heads + score
-    + d.repeat(Math.max(0, ncol - 14))      // Joined
+    + (joinedHtml && nJoin === 2 ? joinedHtml : d.repeat(nJoin))   // Joined (#166)
     + jpHtml                                // Joining Pending: total + Current Qtr + Upcoming/Prev Qtr
     + d.repeat(4);                          // Drop(2), Delta(1), the Delta bar(1)
 };
@@ -929,13 +937,18 @@ export function initRecruiterFilters(baseData) {
   // Post one outcome worth `sc` points into the per-name and per-name|job maps, divided between the two parties.
   // #108: the recruiter always takes the head; the sourcer takes their share of the points plus one on `so`, the
   // "+N sourced" count. The same person in both roles collects both halves and one head, and no sourced count.
-  const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc) => {
+  // #166: mOpen/open8 are optional and add a THIRD grain — rec|job|opening — so Joined can be read per SME
+  // topic without a second definition of credit. Everything still flows through this one splitOf(), so the
+  // 50/50 sourcer rule and "the head stays with the recruiter" (#108) cannot drift between the two grains.
+  const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc, mOpen, open8) => {
     const sp = splitOf(dept, srcr);
     const put = (name, f, head, sourced) => {
       if (!name || (!f && !head && !sourced)) return;
       const bump = (o) => { o.hc += head ? 1 : 0; o.sc += sc * f; o.so += sourced ? 1 : 0; };
       bump(mRec[name] || (mRec[name] = { hc: 0, sc: 0, so: 0 }));
       if (mJob) { const k = name + '|' + (job8 || ''); bump(mJob[k] || (mJob[k] = { hc: 0, sc: 0, so: 0 })); }
+      if (mOpen && open8) { const k = name + '|' + (job8 || '') + '|' + open8;
+        bump(mOpen[k] || (mOpen[k] = { hc: 0, sc: 0, so: 0 })); }
     };
     put(rec, sp.rec, sp.hcTo === 'rec', false);
     put(srcr, sp.src, sp.hcTo === 'src', !!srcr && srcr !== rec);
@@ -1307,6 +1320,24 @@ export function initRecruiterFilters(baseData) {
         });
         return acc;
       };
+      // ===== #166 (Jerin, 23 Sep 2026): Joined splits by topic too =====
+      // 🚨 THE DASH THAT OUTLIVED ITS REASON. Joined dashed out here because "Joined counts PEOPLE with no tie
+      // to an opening before hire". That was true when it was written and is NOT true now: since #131/#132 the
+      // hire links, plus the offer's own openingId, place 35 of 158 Q3 joiners on an opening that carries a
+      // topic. Jerin found it on Ritika's Agentic AI (US) rows, where 7 of 9 joiners are placeable.
+      // 🔑 CLAUDE.md Rule 11 — when a measure is rebuilt, grep for what was excluded FOR the old one. The
+      //    exclusion is invisible, looks deliberate, and nothing about it ever fails.
+      // Shaped exactly like jpOfTopic so both render through cells built the same way, and it reads EVERY
+      // opening of the topic for the same reason: the tie is offer ➔ opening, and who OWNS the opening does not
+      // decide whose candidate it is.
+      const joinOfTopic = (rec, job8, openings) => {
+        const acc = { hc: 0, sc: 0, so: 0 };
+        (openings || []).forEach(o => {
+          const v = joinByRecJobOpen[rec + '|' + (job8 || '') + '|' + String(o.id).slice(0, 8)];
+          if (v) { acc.hc += v.hc; acc.sc += v.sc; acc.so += v.so || 0; }
+        });
+        return acc;
+      };
       // #129: Non-Sales reads its Joined from joinByRec below. These maps also used to carry Non-Sales offers by DECIDED date — Ashby's bulk
       // data-entry stamp (CLAUDE.md date trap 2) — and all that did was add empty job rows under Non-Sales recruiters.
       const outByRec = isSales ? OM.sales : {};
@@ -1325,7 +1356,7 @@ export function initRecruiterFilters(baseData) {
       // Non-Sales also shows Joined · total — actual joiners, dated by START date, the same basis Sales uses.
       // Its two sub-columns (this-quarter vs later-quarter opening) split THIS number once offers carry an
       // opening; until then the total stands on its own rather than the column sitting empty.
-      const joinByRec = {}, joinByRecJob = {};
+      const joinByRec = {}, joinByRecJob = {}, joinByRecJobOpen = {};   // #166: the third grain, per opening
       // NON-SALES ONLY: minus anyone linked to an EARLIER quarter's opening — the same subtraction the
       // Joining Pending column uses, so both columns describe THIS quarter's work.
       // ⚠ SALES deliberately takes NO subtraction: its goal is joiners regardless of when the opening was
@@ -1335,7 +1366,11 @@ export function initRecruiterFilters(baseData) {
         if (!inRange(e.startDate, rg)) return;   // #129: started inside the From / To range (which sits inside the quarter)
         if (e.openingQuarter && e.openingQuarter < q) return;
         const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
-        addCredit(joinByRec, joinByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);   // #11
+        // #166: the LAST two arguments are the only new thing — the same joiner, also filed under the opening
+        // their offer names, so an SME topic row can show them. A joiner with no opening simply misses this
+        // grain and shows up in the "not tied to a topic" line, never silently on some topic that is not theirs.
+        addCredit(joinByRec, joinByRecJob, e.jobId8, rec, e.sourcer, e.department, sc,   // #11
+                  joinByRecJobOpen, String(e.openingId || '').slice(0, 8));
       });
       // Seats actually opened on a job in the SELECTED quarter, from openingBuckets — the only
       // quarter-scoped source of demand we have — SPLIT EQUALLY across the recruiters who work that job.
@@ -1435,6 +1470,15 @@ export function initRecruiterFilters(baseData) {
       // #108: the "+N sourced" second line — what this person SOURCED for someone else's row. Never added to the
       //   figure above it, so every HC column still adds up to real people. Blank when there is nothing.
       const srcSub = (n) => (n > 0 ? `<span class="sublab">+${seatFmt(n)} sourced</span>` : '');
+
+      // #166: the topic row's Joined pair. Built HERE, inside the render, so it uses the very same srcSub as
+      // every other row — the "+N sourced" line must read identically at all three grains or #108 has drifted.
+      // Sales/Others split Joined five ways (#39), which is a different question, so they keep the dash.
+      const joinTopicCells = (jx) => {
+        if (isSales || !jx) return null;
+        const r2 = (v) => Math.round(v * 100) / 100;
+        return `<td>${r2(jx.hc)}${srcSub(jx.so)}</td><td class="score">${r2(jx.sc)}</td>`;
+      };
 
       // #39: Joined, split the same way and rendered by the same shape as jpCells — Total, then the two buckets.
       // #153 (Jerin, 19 Sep 2026): the "<N> unlinked" caption under bucket B is GONE. The joiners it counted —
@@ -1625,7 +1669,8 @@ export function initRecruiterFilters(baseData) {
                     // #161b: the Goal comes from the openings THIS recruiter owns; Joining Pending comes from the
                     // people tied to ANY opening of the topic - two different questions, see jpOfTopic.
                     return { topic: t.topic, hc: Math.round(hc * 10000) / 10000, sc: Math.round(hc * sc * 10000) / 10000, n: mine.length,
-                             jp: jpOfTopic(r.name, m.title, t.openings) };
+                             jp: jpOfTopic(r.name, m.title, t.openings),
+                             jx: isSales ? null : joinOfTopic(r.name, j8t, t.openings) };   // #166
                   })
                     // #161b option B (Jerin, 22 Sep): a topic row appears where this recruiter OWNS an opening in it, OR where
                     // they hold credit on somebody in closing against one - as recruiter (hc) or as sourcer (so). Without the
@@ -1643,8 +1688,27 @@ export function initRecruiterFilters(baseData) {
                 html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
                   + `<td style="padding-left:4.875rem"><span class="${t.topic === NO_TOPIC ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
                   + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${t.n ? `${t.n} opening${t.n === 1 ? '' : 's'}` : 'no openings of theirs'}</span></td>`
-                  + recTopicCells(t, ncol, jpCells({ jp: t.jp })) + `</tr>`;
+                  + recTopicCells(t, ncol, jpCells({ jp: t.jp }), joinTopicCells(t.jx)) + `</tr>`;
               });
+              // #166 option A (Jerin, 23 Sep): the joiners this job HAS but no topic can claim — their offer names
+              // no opening, or it names one on a topic this recruiter owns nothing in. They get a line of their own
+              // so the Joined column still ADDS UP to the job row above it. Without it the topic rows would nearly
+              // add up, which is worse than a dash: a column that is almost right is one nobody questions.
+              // 🔑 It carries Joined ONLY. Goal has no remainder (the topic Goals already close the job by
+              // construction), and Joining Pending keeps the subset behaviour settled in #161 for the Hiring
+              // Manager tab — changing that here would put the two tabs out of step (Rule 3).
+              if (tops && tops.length && !isSales) {
+                const tiedHC = tops.reduce((s, t) => s + ((t.jx && t.jx.hc) || 0), 0);
+                const tiedSc = tops.reduce((s, t) => s + ((t.jx && t.jx.sc) || 0), 0);
+                const tiedSo = tops.reduce((s, t) => s + ((t.jx && t.jx.so) || 0), 0);
+                const rest = { hc: (jxHC || 0) - tiedHC, sc: (jxSc || 0) - tiedSc, so: (jxSo || 0) - tiedSo };
+                if (rest.hc > 0.005 || rest.sc > 0.005 || rest.so > 0.005) {
+                  html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
+                    + `<td style="padding-left:4.875rem"><span class="topic-unset">(not tied to a topic)</span>`
+                    + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">joined, no opening on the offer</span></td>`
+                    + recTopicCells({ hc: 0, sc: 0 }, ncol, jpCells({ jp: null }), joinTopicCells(rest)) + `</tr>`;
+                }
+              }
             });
           } else {
             html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
