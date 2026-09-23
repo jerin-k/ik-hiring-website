@@ -762,8 +762,15 @@ function refreshDashboardData() {
       // later: user.list has not been fetched at this point in the run.
       // 🚨 Carry the 1/n share too. The Goal splits an opening's credit between co-recruiters, so a topic
       // row that counted a whole opening per owner would NOT sum back to the Goal.
+      // #169 (Jerin, 23 Sep 2026): "Opnings full name is needed in the opening column". The dashboard has only
+      // ever carried the opening's 8-character id, which is no use to a person - the openings are NAMED
+      // "IK-403 - <recruiter> - <Role Type> - <topic or NA>" (#159) and that name is what the team recognises.
+      // 🚨 Read defensively across the shapes the opening object can take, because which one Ashby fills is not
+      //    documented. The 'named' count in the log line below is the proof: if it comes back 0, the field is
+      //    somewhere else and NOTHING on the dashboard is wrong - the column simply stays empty until it is fixed.
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
         quarter: q, day: dOpen || null, state: cls, topic: oTopic, jpTied: 0,
+        name: String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').trim(),
         ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
   });
@@ -774,6 +781,10 @@ function refreshDashboardData() {
   saveDriveJson_('scoped_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.histApps });
   saveDriveJson_('archived_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.archivedApps });
   Logger.log('archived_apps (for drop backfill): ' + appResult.archivedApps.length);
+  // #167 (Jerin, 23 Sep 2026): pick up people archived SINCE the one-time backfill, so a drop stops vanishing.
+  // Runs here, before dropEvents is built below, so anyone collected shows up in THIS run's numbers.
+  try { collectNewArchivedLateStage_(appResult.archivedApps); }
+  catch (e) { Logger.log('#167 collector failed (not fatal): ' + e); }
   Logger.log('scoped_apps (reached screening+): ' + appResult.histApps.length);
   var offerResult = fetchAndProcessOffers_(startTime, appResult.appMap, excludedJobIds);
 
@@ -823,7 +834,8 @@ function refreshDashboardData() {
   Logger.log('#157 openings from ' + OPENING_ROWS_FROM + ': ' + openingTopicStats.scoped + ' scoped, '
     + openingTopicStats.withTopic + ' with a topic | SME ' + openingTopicStats.sme + ' of which '
     + openingTopicStats.smeWithTopic + ' with a topic | openings carrying a live linked offer: '
-    + openingTopicStats.jpTied + ' | rows emitted: ' + openingRows.length);
+    + openingTopicStats.jpTied + ' | rows emitted: ' + openingRows.length
+    + ' | named: ' + openingRows.filter(function (r) { return !!r.name; }).length);   // #169
 
   // user.list -> isEnabled (Active/Inactive) + userId -> name (panelist / interviewer display names)
   // 🚨 isEnabled is USELESS as an offboarding signal here: it is true for all 446 Ashby users (verified
@@ -1229,6 +1241,11 @@ function refreshDashboardData() {
   // Mirror this project into the repo so the checked-in copy tracks what is actually running.
   // Wrapped: a sync failure must never take down the data refresh.
   try { pushSourceToGitHub(); } catch (e) { Logger.log("source sync error: " + e.message); }
+  // #163b (Jerin, 23 Sep 2026: "Email still didnt land for the 6pm refersg"). It did not, and that was my
+  // mistake: the email hung off manualRefresh_, but the 6 AM / 6 PM triggers call THIS function directly and
+  // never go through that wrapper. Sending from here covers every refresh there is, which is what he asked for.
+  try { notifyAdminsRefreshDone_(new Date(startTime), true, '', REFRESH_KIND_); }
+  catch (e) { Logger.log('163 notify failed: ' + e); }
   return dashboard;
 }
 
@@ -1301,6 +1318,61 @@ function loadDriveJson_(name) {
 // ⚠ This data feeds DROP ONLY. It is deliberately NOT fed into the velocity / throughput / time-in-stage
 // rollups - doing so would move Momentum, Screening Efficiency, Throughput and Time in Process, tabs that
 // have already been reviewed and signed off.
+// ===== #167 (Jerin, 23 Sep 2026): drops were going MISSING =====
+// Evan W. Carr reached Offer, sat 14 days, was archived "Withdrew from Process" - and appeared nowhere. He is
+// a Drop by the agreed definition, and the dashboard could not see him.
+// 🚨 WHY. dropEvents is built two ways: from an archived OFFER RECORD, and from archived_late_stage.json -
+//    which was a ONE-TIME backfill of 14,064 ids on 26 Aug and was never added to again. Someone archived
+//    after that date who never had an offer RECORD created fires NEITHER path. Reaching the Offer STAGE is not
+//    the same as having an offer RECORD. The shape of the data agreed: 9 drops in July, 4 in August, 2 in Sept.
+// 🔑 THE FIX IS NOT A NEW BACKFILL. archived_apps.json is rewritten on EVERY refresh, and the store already
+//    marks what it has seen - so all that was ever missing was something to collect the NEW ones. This walks
+//    the current archived list, skips everything already collected, and fetches only the remainder.
+// ⚠ Rule 8b still holds: the 14k historical ids are NEVER re-collected. store.done/hits is exactly what makes
+//   that true here - an id already in either map is skipped without a call.
+// Bounded hard, because it runs inside the refresh: at most NEW_ARCH_CAP_ history calls and 90 seconds. If a
+// backlog is bigger than that it drains over the next few runs rather than risking the refresh's own budget.
+// The log line reports the REMAINING backlog, so it says plainly whether it is keeping up.
+var NEW_ARCH_CAP_ = 120;
+var NEW_ARCH_MS_ = 90000;
+
+function collectNewArchivedLateStage_(archivedApps) {
+  var list = archivedApps || (loadDriveJson_('archived_apps.json') || {}).apps || [];
+  if (!list.length) { Logger.log('#167: no archived apps to check'); return 0; }
+  var store = loadDriveJson_('archived_late_stage.json') || { done: {}, hits: {} };
+  if (!store.done) store.done = {};
+  if (!store.hits) store.hits = {};
+
+  var t0 = Date.now(), seen = 0, fetched = 0, kept = 0, errs = 0, undone = 0;
+  for (var i = 0; i < list.length; i++) {
+    var a = list[i];
+    if (!a || !a.id) continue;
+    seen++;
+    if (store.done[a.id] || store.hits[a.id]) continue;   // collected already - never re-read (Rule 8b)
+    undone++;
+    if (fetched >= NEW_ARCH_CAP_ || Date.now() - t0 > NEW_ARCH_MS_) continue;   // count the rest, fetch none
+    fetched++;
+    try {
+      var res = ashbyPost_('/application.listHistory', { applicationId: a.id });
+      var hist = (res && (res.results || res.history)) || [];
+      var earliest = null;
+      for (var h = 0; h < hist.length; h++) {
+        var ht = hist[h];
+        if (!ht || !ht.enteredStageAt) continue;
+        if (LATE_STAGES_[ht.title] && (!earliest || String(ht.enteredStageAt) < String(earliest))) earliest = ht.enteredStageAt;
+      }
+      store.done[a.id] = 1;
+      // Only a LATE-stage arrival is a drop. Everyone else is marked done so they are never fetched again.
+      if (earliest) { store.hits[a.id] = { r: a.r || null, j: a.j || null, e: String(earliest).substring(0, 10) }; kept++; }
+    } catch (e) { errs++; }
+  }
+  if (fetched) saveDriveJson_('archived_late_stage.json', store);
+  Logger.log('#167 new-archive sweep: ' + seen + ' archived, ' + undone + ' not yet collected, '
+    + fetched + ' fetched this run, ' + kept + ' were late-stage (= new drops), ' + errs + ' errors, '
+    + Math.max(0, undone - fetched) + ' left for the next run');
+  return kept;
+}
+
 function backfillArchivedLateStage() {
   var startTime = Date.now();
   var list = (loadDriveJson_('archived_apps.json') || {}).apps || [];
@@ -1576,20 +1648,29 @@ function setupStageHistoryTriggers() {
 // ever said "scheduled", which is the moment nobody needs - the useful one is when the new numbers are actually
 // there. The 6 AM / 6 PM runs do not come through here, so they stay silent as before.
 // The refresh itself is unchanged: it still runs first, and its trigger is still cleaned up even when it throws.
+// #163b: which KIND of refresh this execution is. A global is enough - manualRefresh_ and
+// refreshDashboardData run inside the SAME execution, and a scheduled run never touches it.
+var REFRESH_KIND_ = 'scheduled';
+
 function manualRefresh_() {
+  REFRESH_KIND_ = 'manual';
   var startedAt = new Date();
   var ok = true, err = '';
   try { refreshDashboardData(); } catch (e) { ok = false; err = String((e && e.message) || e); }
   ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'manualRefresh_') ScriptApp.deleteTrigger(t); });
-  try { notifyAdminsRefreshDone_(startedAt, ok, err); } catch (e2) { Logger.log('163 notify failed: ' + e2); }
-  if (!ok) throw new Error(err);   // still fail loudly in Executions - the email is an addition, not a replacement
+  // Success is emailed from the END of refreshDashboardData now, so only a FAILURE is reported here -
+  // otherwise a manual refresh would send twice.
+  if (!ok) {
+    try { notifyAdminsRefreshDone_(startedAt, false, err, 'manual'); } catch (e2) { Logger.log('163 notify failed: ' + e2); }
+    throw new Error(err);
+  }
 }
 
 // #163. Admins come from the PUBLISHED access.json - the same list #124 made the authority for who may publish -
 // so adding or removing an admin there changes who is told, and there is no second list to keep in step.
 // MailApp is already consented (added for #118 Send invite, 14 Sep), so this adds no new OAuth scope and cannot
 // break the installable triggers. Never lets a mail problem fail the refresh: the caller swallows what this throws.
-function notifyAdminsRefreshDone_(startedAt, ok, err) {
+function notifyAdminsRefreshDone_(startedAt, ok, err, kind) {
   var access = null;
   try { access = loadDriveJson_('access.json'); } catch (e) { return; }
   var admins = ((access && access.users) || []).filter(function (u) {
@@ -1601,10 +1682,11 @@ function notifyAdminsRefreshDone_(startedAt, ok, err) {
   var finished = Utilities.formatDate(new Date(), tz, 'd MMM yyyy, h:mm a');
   var mins = Math.max(1, Math.round((new Date().getTime() - startedAt.getTime()) / 60000));
   var site = 'https://hiring.interviewkickstart.com';
-  var subject = ok ? 'Hiring Dashboard: refresh finished' : 'Hiring Dashboard: refresh FAILED';
+  var which = (kind === 'manual') ? 'manual refresh' : 'scheduled refresh';
+  var subject = ok ? 'Hiring Dashboard: ' + which + ' finished' : 'Hiring Dashboard: ' + which + ' FAILED';
   var lead = ok
-    ? 'The manual refresh has finished. The dashboard is showing the new numbers.'
-    : 'The manual refresh did not finish. The dashboard is still showing the previous numbers, which is the safe outcome - nothing was overwritten.';
+    ? 'The ' + which + ' has finished. The dashboard is showing the new numbers.'
+    : 'The ' + which + ' did not finish. The dashboard is still showing the previous numbers, which is the safe outcome - nothing was overwritten.';
   var body = '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">'
     + '<p style="margin:0 0 12px">' + lead + '</p>'
     + '<p style="margin:0 0 12px;color:#6b7391">Finished ' + finished + ' IST, about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' after it was started.</p>'
