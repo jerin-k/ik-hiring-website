@@ -1610,3 +1610,87 @@ td.nosplit { color: #c1c7cf; }
   transition: all .15s;
 }
 .update-reload:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+
+/* ===== #162 (Jerin, 23 Sep 2026): the Refresh card =====
+   Refresh used to throw open a window of the pipeline's raw JSON — "poor UI play". It now runs in a hidden
+   frame and reports here, in the dashboard's own colours. Three states, set on data-state: running (amber,
+   the work is in flight) · landed (teal, the numbers have actually moved — never a guess) · quiet (red, ten
+   minutes with nothing, and it says so). Built by js/refresh-status.js. */
+.refresh-toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  width: 20rem;
+  max-width: calc(100vw - 2.5rem);
+  z-index: 90;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 0.1875rem solid var(--orange);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, .14);
+  padding: 0.875rem 0.9375rem;
+}
+.refresh-toast[data-state="landed"] { border-top-color: var(--green); }
+.refresh-toast[data-state="quiet"]  { border-top-color: var(--red); }
+
+.refresh-toast-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.375rem;
+}
+.refresh-toast-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--orange);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0.1875rem rgba(161, 98, 7, .16);
+}
+.refresh-toast[data-state="landed"] .refresh-toast-dot { background: var(--green); box-shadow: 0 0 0 0.1875rem rgba(57, 138, 162, .16); }
+.refresh-toast[data-state="quiet"]  .refresh-toast-dot { background: var(--red);   box-shadow: 0 0 0 0.1875rem rgba(180, 90, 114, .16); }
+
+/* 🚨 font-family: inherit on every button — a <button> does not inherit the page font. */
+.refresh-toast-x {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.125rem;
+  cursor: pointer;
+}
+.refresh-toast-x:hover { color: var(--text); }
+.refresh-toast-body { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+.refresh-toast-detail { display: block; margin-top: 0.375rem; color: var(--red); }
+.refresh-toast-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8125rem; }
+.refresh-toast-btn {
+  padding: 0.3125rem 0.8125rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.refresh-toast-btn:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+.refresh-toast-ghost {
+  padding: 0.3125rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.refresh-toast-ghost:hover { border-color: var(--accent); color: var(--accent); }

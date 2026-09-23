@@ -51,7 +51,9 @@ async function readBuild() {
   } catch (e) { return null; }     // offline, or the file is not there yet: say nothing rather than guess
 }
 
-async function readDataStamp() {
+// Exported for #162: the Refresh button asks the same question this file asks — "have the numbers moved?" —
+// and must get its answer the same way, or the two would eventually disagree about what "new data" means.
+export async function readDataStamp() {
   try {
     const r = await fetch(DATA_URL, { method: 'HEAD', cache: 'no-store' });
     if (!r.ok) return null;
@@ -88,10 +90,7 @@ function paint() {
     <span><strong>This tab is out of date.</strong> ${sentence(pending)}</span>
     <span class="update-spacer"></span>
     <button type="button" class="update-reload">Reload</button>`;
-  el.querySelector('.update-reload').addEventListener('click', () => {
-    snapshotState();
-    location.reload();
-  });
+  el.querySelector('.update-reload').addEventListener('click', reloadKeepingPlace);
   topbar.appendChild(el);
   remeasure();
 }
@@ -147,6 +146,13 @@ function snapshotState() {
       scroll: Math.round(window.scrollY),
     }));
   } catch (e) { /* a convenience, never a reason to block the reload */ }
+}
+
+// The one way to reload in this app: keep your place, then go. #162's "the numbers have landed" card uses it
+// too, so there is a single definition of what a reload preserves.
+export function reloadKeepingPlace() {
+  snapshotState();
+  location.reload();
 }
 
 const tick = () => new Promise(r => setTimeout(r, 0));
