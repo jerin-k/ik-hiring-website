@@ -2,6 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuart
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
+import { tdTopic, topicLookup } from '../people-cells.js';   // #168 part 2: which topic each person was really for
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
@@ -550,7 +551,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
+          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-topic">Topic</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
       </table></div>
@@ -563,7 +564,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open">Opening quarter</th>
+          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
       </table></div>
@@ -1828,6 +1829,10 @@ export function initRecruiterFilters(baseData) {
       return { html, shown, unlinked, orphanCount };
     }
 
+    // #168 part 2: built ONCE and shared by both people lists below, so Joining Pending and Joiners can never
+    // disagree about which opening carries which topic. Cheap — one pass over openingRows.
+    const TOPIX = topicLookup(data);
+
     const jpBody = document.getElementById('recJPBody');
     if (jpBody) {
       // #133 (Jerin, 15 Sep 2026): a LIVE list, so it is grouped by the pods of the quarter we are in today — the Year / Quarter boxes are
@@ -1836,14 +1841,14 @@ export function initRecruiterFilters(baseData) {
       const nowRecs = sameQ ? recs : getFilteredRecs(qNow);
       const jp = peopleTree((data.joiningPendingCases || []).filter(c => inDojFilter(c.doj, dojF)), {
         q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
-        rest: 6,
+        rest: 7,   // #168 part 2: Topic joined the row
         isLinked: c => c.linked,
         sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
         // #149 rule 6: only Opening Quarter moves, to the far right. Everything else stays as it was.
         cells: c => `${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
-          + `${tdJob(c.job || c.jobTitle)}${tdStage(c.subStage)}${tdQuarter(c.openingQuarter)}`
+          + `${tdJob(c.job || c.jobTitle)}${tdTopic(c.openingId, c.jobId8, TOPIX)}${tdStage(c.subStage)}${tdQuarter(c.openingQuarter)}`
       });
-      jpBody.innerHTML = jp.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">Nobody in closing under these filters.</td></tr>`;
+      jpBody.innerHTML = jp.html || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Nobody in closing under these filters.</td></tr>`;
       // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
       // knows about .lvl-pod / .lvl-rec rows — so nothing here expanded at all and only the pod headers showed.
       wireTreePath(jpBody);
@@ -1863,13 +1868,13 @@ export function initRecruiterFilters(baseData) {
     if (joinersBody) {
       const rgJ = selRange();
       const jn = peopleTree((data.offerEvents || []).filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rgJ)), {
-        rest: 5,
+        rest: 6,   // #168 part 2: Topic joined the row
         isLinked: e => !!e.openingId,
         sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
         // #149 rule 6: only Opening Quarter moves, to the far right.
-        cells: e => `${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdQuarter(e.openingQuarter, e.startDate)}`
+        cells: e => `${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdTopic(e.openingId, e.jobId8, TOPIX)}${tdQuarter(e.openingQuarter, e.startDate)}`
       });
-      joinersBody.innerHTML = jn.html || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
+      joinersBody.innerHTML = jn.html || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
       wireTreePath(joinersBody);
       const capJ = document.getElementById('recJoinersCaption');
       if (capJ) capJ.innerHTML = jn.shown

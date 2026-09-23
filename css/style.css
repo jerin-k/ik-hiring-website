@@ -772,14 +772,17 @@ th.c-rec,  td.c-rec  { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-cand, td.c-cand { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-open, td.c-open { width: 9rem; min-width: 9rem; max-width: 9rem; }
 th.c-stage, td.c-stage { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; }
+/* #168 part 2: the topic a person was really for, or the reason it cannot be shown. Sized for a long
+   topic name to wrap onto two lines rather than shove the columns beside it about. */
+th.c-topic, td.c-topic { width: 11rem; min-width: 11rem; max-width: 11rem; }
 /* #146: whether the JOB behind a Data Hygiene row is still Open, or Closed/Archived. One word, so it is the
    narrowest of the text families — sized for "Archived" and never wrapped, since a wrapped one-word column
    just looks broken. It appears on every hygiene list that names a job. */
 th.c-jstat, td.c-jstat { width: 6rem; min-width: 6rem; max-width: 6rem; text-align: left; }
-th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage,
-td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage {
+th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage, th.c-topic,
+td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic {
   white-space: normal; overflow-wrap: anywhere; }
-td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage { text-align: left; }
+td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic { text-align: left; }
 /* A closed or archived job is the signal "this row probably needs nobody" — quieter than a live one.
    ⚠ NOT scoped to `td.c-jstat`: js/table-cols.js stamps the family onto flat tables but leaves the Unassigned
    TREE's cells unclassed, so a scoped rule greyed seven lists out of eight and silently missed the tree. */
@@ -1421,6 +1424,10 @@ table.pl-list td:not(:first-child) { text-align: left; }
 .pl-cand { font-weight: 600; color: var(--text); white-space: nowrap; }
 .pl-dept { font-weight: 500; color: var(--navy); white-space: nowrap; }
 .pl-job { max-width: 16.875rem; }
+/* #168 part 2: which topic each person was really for. When it cannot be shown, the cell says WHY in the same
+   quiet italic the tables use for "(topic not set)" — a reason is an instruction, a blank is a dead end. */
+.pl-topic { max-width: 14rem; }
+.pl-topic-why { color: var(--muted); font-style: italic; font-size: 0.71875rem; }
 .pl-mon { color: var(--muted); font-size: 0.71875rem; white-space: nowrap; }
 .pl-doj b { display: block; font-weight: 600; color: var(--text); white-space: nowrap; line-height: 1rem; }
 .pl-doj small { display: block; font-size: 0.65625rem; color: var(--muted); white-space: nowrap; line-height: 0.875rem; }
