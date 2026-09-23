@@ -1572,7 +1572,47 @@ function setupStageHistoryTriggers() {
 
 // ===== TRIGGERS / MANUAL =====
 
-function manualRefresh_() { refreshDashboardData(); ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'manualRefresh_') ScriptApp.deleteTrigger(t); }); }
+// #163 (Jerin, 23 Sep 2026): every Admin is told when a MANUAL refresh has FINISHED. The Refresh button only
+// ever said "scheduled", which is the moment nobody needs - the useful one is when the new numbers are actually
+// there. The 6 AM / 6 PM runs do not come through here, so they stay silent as before.
+// The refresh itself is unchanged: it still runs first, and its trigger is still cleaned up even when it throws.
+function manualRefresh_() {
+  var startedAt = new Date();
+  var ok = true, err = '';
+  try { refreshDashboardData(); } catch (e) { ok = false; err = String((e && e.message) || e); }
+  ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'manualRefresh_') ScriptApp.deleteTrigger(t); });
+  try { notifyAdminsRefreshDone_(startedAt, ok, err); } catch (e2) { Logger.log('163 notify failed: ' + e2); }
+  if (!ok) throw new Error(err);   // still fail loudly in Executions - the email is an addition, not a replacement
+}
+
+// #163. Admins come from the PUBLISHED access.json - the same list #124 made the authority for who may publish -
+// so adding or removing an admin there changes who is told, and there is no second list to keep in step.
+// MailApp is already consented (added for #118 Send invite, 14 Sep), so this adds no new OAuth scope and cannot
+// break the installable triggers. Never lets a mail problem fail the refresh: the caller swallows what this throws.
+function notifyAdminsRefreshDone_(startedAt, ok, err) {
+  var access = null;
+  try { access = loadDriveJson_('access.json'); } catch (e) { return; }
+  var admins = ((access && access.users) || []).filter(function (u) {
+    return u && u.email && String(u.role || '').toLowerCase() === 'admin';
+  }).map(function (u) { return u.email; });
+  if (!admins.length) return;
+
+  var tz = 'Asia/Calcutta';
+  var finished = Utilities.formatDate(new Date(), tz, 'd MMM yyyy, h:mm a');
+  var mins = Math.max(1, Math.round((new Date().getTime() - startedAt.getTime()) / 60000));
+  var site = 'https://hiring.interviewkickstart.com';
+  var subject = ok ? 'Hiring Dashboard: refresh finished' : 'Hiring Dashboard: refresh FAILED';
+  var lead = ok
+    ? 'The manual refresh has finished. The dashboard is showing the new numbers.'
+    : 'The manual refresh did not finish. The dashboard is still showing the previous numbers, which is the safe outcome - nothing was overwritten.';
+  var body = '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">'
+    + '<p style="margin:0 0 12px">' + lead + '</p>'
+    + '<p style="margin:0 0 12px;color:#6b7391">Finished ' + finished + ' IST, about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' after it was started.</p>'
+    + (ok ? '' : '<p style="margin:0 0 12px;color:#b45a72">' + String(err || 'no message').replace(/[<>]/g, '') + '</p>')
+    + '<p style="margin:0 0 12px;color:#6b7391">If you already had the dashboard open, that tab will offer you a Reload.</p>'
+    + '<p style="margin:0"><a href="' + site + '" style="color:#4E6BA6">Open the Hiring Dashboard</a></p></div>';
+  MailApp.sendEmail({ to: admins.join(','), subject: subject, htmlBody: body, name: 'IK Hiring Dashboard' });
+}
 function serveJsonData() { var d = loadExistingDashboard_(); return ContentService.createTextOutput(JSON.stringify(d || { error: 'No data' })).setMimeType(ContentService.MimeType.JSON); }
 function setupTwiceDailyTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'refreshDashboardData') ScriptApp.deleteTrigger(t); });
