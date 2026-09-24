@@ -16,6 +16,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
+import { openingScores, scoreOfOpening } from '../opening-score.js';   // #165
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -671,8 +672,35 @@ export function initEfficiencyFilters(data) {
     // can be in closing than there are positions when an offer carries no opening link. Hiding that behind a
     // zero makes the row's arithmetic impossible to check by eye.
     const gap = total - joined - pending;
-    const pS = pending * scoreOf(j, PM.atQ, PM);
-    const dS = dropQs.reduce((s, qq) => s + scoreOf(j, qq, PM), 0);
+    let pS = pending * scoreOf(j, PM.atQ, PM);
+    let dS = dropQs.reduce((s, qq) => s + scoreOf(j, qq, PM), 0);
+    // ===== #165 (Jerin, 24 Sep 2026: "Yes, total the score from openings.") =====
+    // 🔑 COUNTS ARE UNTOUCHED. Only the Score half of each pair is recomputed, by SUMMING the openings behind it
+    //    rather than multiplying a count by one rate — which is what two openings of different complexity makes
+    //    meaningless. Heads never move (Rule 1), so the columns still add up the way anyone reading them expects.
+    // ⚠ The first attempt did this by changing what j.score MEANS and left the multipliers alone, so a job's total
+    //    got multiplied by its own opening count again (780 ➔ 40,560). Reverted. The multiplication has to GO, and
+    //    that is why this sums row by row.
+    // 🚦 GATE: until the pipeline carries each opening's complexity, everything above stands.
+    const oIdx = openingScores(data);
+    if (oIdx.ready) {
+      const oMeta = { department: j.rawDept, title: j.rawTitle, level: j.level };
+      const inScope = (r) => PM.whole ? (!per || per.includes(r.quarter))
+                                      : (PM.dayOK && r.day && inRange(r.day, PM.rg));
+      let t2 = 0, j2 = 0, m2 = 0;
+      ((data.openingRows) || []).forEach(r => {
+        if (r.jobId8 !== j.jid || !inScope(r)) return;
+        const s = scoreOfOpening(r.openingId, oMeta, r.quarter, oIdx);
+        t2 += s;
+        if (r.state === 'joined') j2 += s; else if (r.state === 'missed') m2 += s;
+      });
+      tS = t2; jS = j2; mS = m2;
+      // A person in closing scores from THEIR OWN opening; one whose offer names no opening scores nothing.
+      pS = (PM.jpc[key] || []).reduce((sum, c) => sum + scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx), 0);
+      // A drop can NEVER be tied to an opening, so it scores nothing - heads only. Jerin, 24 Sep:
+      // "Drop can be based on heads, not score - that works!" This is the rule, not a gap.
+      dS = 0;
+    }
     return { total, joined, pending, drop, missed, gap, sc: j.score || 0, scoreable: j.scoreable,
       tS, jS, pS, dS, mS, gS: tS - jS - pS };
   }
