@@ -364,7 +364,20 @@ export async function mountOpeningRequests(root, backend) {
   }
 
   // ---------------- rendering ----------------
+  // #174 (Jerin, 24 Sep 2026: "when i add value in any placeholder or cliick on anything, the page scrolls to the
+  // bottom. Extremely annolying."). render() rebuilds the WHOLE screen on every keystroke, and the caret was then put
+  // back with focus() — which scrolls the element into view by default, and from inside a frame scrolls the HOST
+  // dashboard too. So an ordinary redraw moved the page. 🔑 A REDRAW MUST NEVER MOVE THE VIEW: the scroll position is
+  // held across it here, in ONE place, so no caller can jump the page by accident (the same shape as "the table
+  // computes, the chart reads"). Only two things may scroll, both deliberate and both AFTER the redraw — a new message
+  // arriving (revealMsg) and a new blocking check appearing (revealNext).
+  // ⚠ Count the RENDERED rows, not S.thread. Claude's questions, the saving line and an error are new things on screen
+  // that never go through S.thread, so watching the array missed exactly the replies Jerin was waiting to see.
+  let seenRows = 0, seenActive = false;
+  function scroller() { return document.scrollingElement || document.documentElement; }
   function render() {
+    const sc = scroller(), keepY = sc.scrollTop;
+    const switched = S.active !== seenActive;
     root.innerHTML = `
       <header class="or-bar">${IK_MARK}<b>Opening Requests</b>
         <span class="or-user"><span>${esc(S.me.name || S.me.email)} · ${esc(S.me.userType || '')}</span><i aria-hidden="true">${esc(initials(S.me.name || S.me.email))}</i></span></header>
@@ -373,6 +386,34 @@ export async function mountOpeningRequests(root, backend) {
         <section class="or-thread" aria-live="polite">${threadHtml()}</section>
       </div>`;
     wire();
+    const rows = root.querySelectorAll('.or-thread .or-row').length;
+    // #174: the redraw itself moves nothing. Opening a DIFFERENT request is not a redraw of the same screen, so it
+    // starts at the top instead of keeping an offset that meant something in another conversation.
+    sc.scrollTop = switched ? 0 : keepY;
+    const grew = !switched && rows > seenRows;
+    seenRows = rows; seenActive = S.active;
+    if (grew) revealMsg();                // #174b: whatever just appeared brings itself into view
+  }
+
+  // #174b. The other half of Jerin's note: "when we fill a value or select an option at the bottom and a new msg shows
+  // up, the chat doesnt auto scroll." revealNext() only ever looked at the form, never at the conversation, so a reply
+  // could land off-screen. A SHORT message is brought just far enough to be read in full; a tall one (the form itself)
+  // is shown from its top rather than its bottom, which is what "scrolls to the bottom" felt like.
+  function revealMsg() {
+    requestAnimationFrame(() => {
+      const rows = root.querySelectorAll('.or-thread .or-row');
+      bringIntoView(rows[rows.length - 1]);
+    });
+  }
+
+  // The ONE place anything on this screen is allowed to move the page. Only when the thing is actually out of sight,
+  // so an action taken with everything already visible never jumps. A tall element is shown from its TOP (reading
+  // starts there); a short one is moved the least distance that makes it readable.
+  function bringIntoView(el) {
+    if (!el) return;
+    const r = el.getBoundingClientRect(), pad = 24;
+    if (r.top >= pad && r.bottom <= window.innerHeight - pad) return;
+    el.scrollIntoView({ block: r.height > window.innerHeight - pad * 2 ? 'start' : 'nearest', behavior: 'smooth' });
   }
 
   // #112i (Jerin, 23 Sep 2026: "the page not scrolling when i select an option"). Choosing a job or a dropdown makes the
@@ -384,12 +425,10 @@ export async function mountOpeningRequests(root, backend) {
   function revealNext() {
     requestAnimationFrame(() => {
       const el = root.querySelector('.or-chk li.or-c:has(i.stop)')
-        || [...root.querySelectorAll('.or-chk li.or-c')].find(li => (li.querySelector('i') || {}).className === 'stop')
-        || root.querySelector('[data-act="submit"]');
-      if (!el) return;
-      const r = el.getBoundingClientRect(), pad = 24;
-      if (r.top >= pad && r.bottom <= window.innerHeight - pad) return;   // already in view — leave the page alone
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        || [...root.querySelectorAll('.or-chk li.or-c')].find(li => (li.querySelector('i') || {}).className === 'stop');
+      // #174: NO fallback to the Submit row. Submit is the last thing on the form, so "nothing is blocking" used to
+      // scroll the page to the very bottom — exactly the jump Jerin reported. Nothing blocking means nothing to reveal.
+      bringIntoView(el);
     });
   }
 
@@ -748,12 +787,12 @@ export async function mountOpeningRequests(root, backend) {
         // typing: redraw without losing the caret
         const pos = el.selectionStart; render();
         const again = root.querySelector(`[data-f="${f}"]`);
-        if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* number/date inputs */ } }
+        if (again) { again.focus({ preventScroll: true }); try { again.setSelectionRange(pos, pos); } catch (e) { /* number/date inputs */ } }
       });
     });
     // After a redraw, put the caret back where it was: a field that rerenders on every keystroke would otherwise lose
     // focus mid-word. (Lived with the Role-Type steppers before 170b; the per-line fields need it just the same.)
-    const keep = (sel, pos) => { const again = root.querySelector(sel); if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } };
+    const keep = (sel, pos) => { const again = root.querySelector(sel); if (again) { again.focus({ preventScroll: true }); try { again.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } };
     // 170b: the stepper adds and removes LINES. Growing keeps every line already filled in and adds blank ones;
     // shrinking drops from the end. A new line starts EMPTY - never a copy of the line above, because quietly putting
     // one recruiter's name on an opening somebody else owns is the mistake this whole change exists to stop.
@@ -788,7 +827,7 @@ export async function mountOpeningRequests(root, backend) {
     }));
     const act = (name, fn) => root.querySelectorAll(`[data-act="${name}"]`).forEach(b => b.addEventListener('click', fn));
     act('approve', () => decide('approve', ''));
-    act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) n.focus(); });
+    act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) { n.focus({ preventScroll: true }); bringIntoView(n); } });
     act('sendback-go', () => { const n = String((root.querySelector('#orNote') || {}).value || '').trim(); if (n) decide('sendback', n); });
     act('revise', () => revise(S.requests.find(r => r.id === S.active)));
     act('edit', () => {
@@ -884,7 +923,7 @@ export async function mountOpeningRequests(root, backend) {
       S.asking = null; S.queue = []; render(); return;
     }
     if (a.key === 'free') {
-      if (code === 'all-new') { S.why = 'free'; render(); const w = root.querySelector('#orWhy'); if (w) w.focus(); return; }
+      if (code === 'all-new') { S.why = 'free'; render(); const w = root.querySelector('#orWhy'); if (w) { w.focus({ preventScroll: true }); bringIntoView(w); } return; }
       const k = Math.min(a.nFree, (d.rows || []).length);
       S.thread.push({ who: 'me', at: new Date().toISOString(), text: label });
       if (code === 'use-all') {
