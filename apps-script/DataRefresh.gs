@@ -1223,7 +1223,7 @@ function refreshDashboardData() {
   var jobIndex_ = {};
   for (var _jx in jobLookup) { var _jl = jobLookup[_jx]; if (!_jl || excludedJobIds[_jx]) continue; jobIndex_[String(_jx).substring(0, 8)] = { title: _jl.title || '', department: _jl.department || '' }; }
   var dashboard = {
-    lastUpdated: new Date().toISOString(), schemaVersion: 5, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
+    lastUpdated: new Date().toISOString(), schemaVersion: 5, probe167: PROBE_167_, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
     openingPendingByJobQ: openingPendingByJobQ,
@@ -1330,7 +1330,7 @@ function loadDriveJson_(name) {
 // rollups - doing so would move Momentum, Screening Efficiency, Throughput and Time in Process, tabs that
 // have already been reviewed and signed off.
 // ===== #167 (Jerin, 23 Sep 2026): drops were going MISSING =====
-// Evan W. Carr reached Offer, sat 14 days, was archived "Withdrew from Process" - and appeared nowhere. He is
+// A candidate reached Offer, sat 14 days, was archived "Withdrew from Process" - and appeared nowhere. They are
 // a Drop by the agreed definition, and the dashboard could not see him.
 // 🚨 WHY. dropEvents is built two ways: from an archived OFFER RECORD, and from archived_late_stage.json -
 //    which was a ONE-TIME backfill of 14,064 ids on 26 Aug and was never added to again. Someone archived
@@ -1355,12 +1355,22 @@ var NEW_ARCH_MS_ = 45000;
 // the old guard by FIFTY SECONDS - a slightly slower app fetch and it would have skipped silently. The guard was written
 // as insurance when an UNCAPPED collector pushed a run to 29 min of a 30 min ceiling; capped at 40 calls / 45 s it can
 // no longer do that, and the run it now guards finishes in 757 s. 11 minutes keeps a real brake with usable headroom.
-var NEW_ARCH_SKIP_AFTER_MS_ = 11 * 60 * 1000;  // if the refresh has already used this long, do not start at all
+var NEW_ARCH_SKIP_AFTER_MS_ = 11 * 60 * 1000;
+// #167 PROBE (24 Sep 2026). Two fixes were built on a confident story and both were wrong, so this REPORTS
+// rather than guesses: it says, in the published data, which of the sweep's three exits loses a known drop -
+// stood down before starting / hit the 40-app cap / sorted last for want of an archive date.
+// No extra API calls. 🔒 Ids only, truncated as openingRows does - NEVER a candidate name: this file is synced
+// to the PUBLIC repo, which is how one leaked on 24 Sep. See [[project_pii-boundary]].
+var PROBE_167_APP_ = 'f2d68109-b653-43b3-abc0-5df0b39a5924';   // a known Q3 drop the dashboard cannot see
+var PROBE_167_ = null;  // if the refresh has already used this long, do not start at all
 
 function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
   // The refresh comes FIRST. If it has already spent most of its budget, this stands down entirely rather
   // than risk the publish - the backlog will still be there next run.
   if (refreshStartedAt && (Date.now() - refreshStartedAt) > NEW_ARCH_SKIP_AFTER_MS_) {
+    PROBE_167_ = { ran: false, exit: 'stood down before starting',
+      refreshElapsedS: Math.round((Date.now() - refreshStartedAt) / 1000),
+      guardS: Math.round(NEW_ARCH_SKIP_AFTER_MS_ / 1000) };
     Logger.log('#167 sweep SKIPPED: the refresh has already run '
       + Math.round((Date.now() - refreshStartedAt) / 1000) + 's, leaving its budget alone');
     return 0;
@@ -1375,7 +1385,7 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
   // #167c walked the list BACKWARDS on the assumption that its far end holds the most recent archives. It does not.
   // archivedApps is built while paging application.list, which is oldest-first BY CREATION, so the end of the list is
   // the most recently CREATED application. Someone created in March and archived last week sits in the MIDDLE, and a
-  // capped walk from EITHER end never reaches them. That is Evan W. Carr exactly: he reached Offer and sat 14 days, so
+  // capped walk from EITHER end never reaches them. That is the case above exactly (app f2d68109): Offer reached, 14 days there, so
   // his application is old and his archive is new. Walking backwards was no better than walking forwards for him.
   // 🔑 The fix is an ordering, not a bigger budget: collect the NEWEST ARCHIVE first and today's drop lands on the very
   //    next run, however long the historical tail is. `a` (archivedAt) is carried in for exactly this.
@@ -1410,6 +1420,24 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
     } catch (e) { errs++; }
   }
   if (fetched) saveDriveJson_('archived_late_stage.json', store);
+  try {
+    var pIn = null, pPos = -1;
+    for (var p1 = 0; p1 < list.length; p1++) if (list[p1] && list[p1].id === PROBE_167_APP_) pIn = list[p1];
+    for (var p2 = 0; p2 < todo.length; p2++) if (todo[p2] && todo[p2].id === PROBE_167_APP_) { pPos = p2; break; }
+    PROBE_167_ = { ran: true, exit: (fetched >= NEW_ARCH_CAP_ ? 'hit the ' + NEW_ARCH_CAP_ + '-app cap'
+                     : (Date.now() - t0 > NEW_ARCH_MS_ ? 'ran out of its ' + Math.round(NEW_ARCH_MS_/1000) + 's' : 'finished the queue')),
+      archivedSeen: seen, notYetCollected: undone, newestUncollectedArchive: newest,
+      fetchedThisRun: fetched, wereLateStage: kept, errors: errs, leftForNextRun: Math.max(0, undone - fetched),
+      tookS: Math.round((Date.now() - t0) / 1000),
+      target: { id8: PROBE_167_APP_.substring(0, 8),
+                inArchivedList: !!pIn,
+                archivedAt: pIn ? (pIn.a || null) : null,
+                hasRecruiter: pIn ? !!pIn.r : null,
+                alreadyCollected: !!(store.done[PROBE_167_APP_] || store.hits[PROBE_167_APP_]),
+                countedAsDrop: !!store.hits[PROBE_167_APP_],
+                queuePosition: pPos, queueLength: todo.length,
+                reachedThisRun: pPos >= 0 && pPos < fetched } };
+  } catch (e) { PROBE_167_ = { ran: true, exit: 'probe failed: ' + e }; }
   // #167d: the NEWEST uncollected archive date is the line that actually tells you whether this is keeping up - if it
   // reads today, the sweep is current; if it reads weeks ago, it is still digging out of the backlog.
   Logger.log('#167 new-archive sweep took ' + Math.round((Date.now() - t0) / 1000) + 's: ' + seen + ' archived, ' + undone + ' not yet collected, '
