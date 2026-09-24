@@ -5,6 +5,7 @@ import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar,
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
+import { openingScores, scoreOfOpening } from '../opening-score.js';   // #165
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
@@ -963,6 +964,18 @@ export function initRecruiterFilters(baseData) {
   // #166: mOpen/open8 are optional and add a THIRD grain — rec|job|opening — so Joined can be read per SME
   // topic without a second definition of credit. Everything still flows through this one splitOf(), so the
   // 50/50 sourcer rule and "the head stays with the recruiter" (#108) cannot drift between the two grains.
+  // #165 — a CLOSURE scores from the opening it is tied to, never from its job. One helper for all four call
+  // sites (Joined, Drop, Joining Pending, Sales) so the rule cannot drift between them.
+  // 🚦 GATE: until the pipeline carries each opening's complexity, nothing can answer the question — keep the
+  //    old job-based score rather than read every closure as zero.
+  // Once it can: no opening, or an opening with no complexity, scores NOTHING. Jerin confirmed twice what that
+  //    costs — every Drop scores zero for good, because a drop can never be tied to an opening. Heads are
+  //    untouched throughout; only points move.
+  const closureScore = (openingId, meta, q) => {
+    const idx = openingScores(data);
+    return idx.ready ? scoreOfOpening(openingId, meta, q, idx) : scoreForRole(meta, q);
+  };
+
   const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc, mOpen, open8) => {
     const sp = splitOf(dept, srcr);
     const put = (name, f, head, sourced) => {
@@ -1388,7 +1401,7 @@ export function initRecruiterFilters(baseData) {
         const rec = e.recruiter; if (!rec || !e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
         if (!inRange(e.startDate, rg)) return;   // #129: started inside the From / To range (which sits inside the quarter)
         if (e.openingQuarter && e.openingQuarter < q) return;
-        const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+        const sc = closureScore(e.openingId, { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);   // #165
         // #166: the LAST two arguments are the only new thing — the same joiner, also filed under the opening
         // their offer names, so an SME topic row can show them. A joiner with no opening simply misses this
         // grain and shows up in the "not tied to a topic" line, never silently on some topic that is not theirs.
@@ -1451,7 +1464,9 @@ export function initRecruiterFilters(baseData) {
       dropRows(data).forEach(e => {
         const rec = e.recruiter; if (!rec) return;
         if (!dropIn(e, rg, [q])) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
-        const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+        // #165: a drop can NEVER be tied to an opening (settled with a control), so once the rule is live this
+        // is always 0 points. The heads stay. Said ONCE in the Drop definitions block, never as a per-cell caption.
+        const sc = closureScore(null, { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         // #11: a sourcer carries their share of the bad news as well as the good ("split is everywhere").
         // ⚠ Drops found via stage history have their sourcer recovered from appMap in the pipeline, so a few
         // older archived rows can still be null — they then fall through as recruiter-only, which is correct.
@@ -2022,7 +2037,7 @@ export function initRecruiterFilters(baseData) {
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
       const j = meta[c.job || c.jobTitle || ''] || {};
-      const sc = scoreForRole({ department: c.department, title: c.job || c.jobTitle, level: j.level, complexity: j.complexity }, q);
+      const sc = closureScore(c.openingId, { department: c.department, title: c.job || c.jobTitle, level: j.level, complexity: j.complexity }, q);   // #165
       const oq = c.openingQuarter || null, dq = qOf(c.doj || c.startDate);
       const jt = c.job || c.jobTitle || '';
       // #161b: the 8-char opening id the pipeline puts on a case (a hire-link 'lock' writes a full one, so slice).
@@ -2184,7 +2199,7 @@ export function initRecruiterFilters(baseData) {
     const salesA = {}, salesB = {}, salesAJob = {}, salesBJob = {}, salesU = {}, salesUJob = {};
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      const sc = scoreForRole({ department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+      const sc = closureScore(e.openingId, { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);   // #165
       // #11: every one of these goes through addCredit, so the recruiter/sourcer division is identical
       // across Joined and its two opening-quarter buckets — they can never drift apart.
       if (e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg)) { // Joined = moved to Hired, not just an accepted offer · #129: inside From / To
