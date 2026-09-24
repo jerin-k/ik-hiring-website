@@ -898,7 +898,10 @@ export function initRecruiterFilters(baseData) {
   //      per-job rows too, so #100b is fixed even before the pipeline has run.
   //   3. neither    — no Goal (a data file older than 6 Sep; the pre-#1 equal split was removed in #129).
   const goalOf = (r, qq, only8) => {
-    let hc = 0, sc = 0, so = 0;
+    // #165e: `noCx` counts the openings that scored NOTHING because they carry no complexity — the number behind
+    // the caption under Goal. It stays 0 while the gate is down (cx === undefined), so no caption appears until
+    // the data can actually answer, and it counts openings, never people.
+    let hc = 0, sc = 0, so = 0, noCx = 0;
     if (usePairs) {
       const byJob = pairsFor(qq);
       const keys = only8 ? (byJob[only8] ? [only8] : []) : Object.keys(byJob);
@@ -922,11 +925,11 @@ export function initRecruiterFilters(baseData) {
           // ⚠ An opening carrying a Sourcer but NO Recruiter: the sourcer is its only owner, so they carry its Goal —
           //   otherwise that opening's points would be credited to nobody. Never seen in live data (0 of 658).
           const orphan = !pr.r;
-          if (isRec || orphan) { hc += n; sc += n * pts; }
+          if (isRec || orphan) { hc += n; sc += n * pts; if (pr.cx === '') noCx += n; }   // #165e
           else so += n;
         });
       });
-      return { hc, sc, so };
+      return { hc, sc, so, noCx };
     }
     if (useOwnedGoal) {
       const pick = (map) => { const o = (map && map[r.name] && map[r.name][qq]) || {};
@@ -939,11 +942,11 @@ export function initRecruiterFilters(baseData) {
       });
       const ownedSrc = pick(ownedBySrcQ);
       Object.keys(ownedSrc).forEach(j8 => { so += ownedSrc[j8] || 0; });   // sourced openings: a count, no points
-      return { hc, sc, so };
+      return { hc, sc, so, noCx };
     }
     // #129: the third basis (the pre-#1 equal split of a role's positions) called seatsOf, which exists only inside fulfilRows, so it
     // could only ever throw. Every data file since 10 Sep carries ownedSeatsPairQ, so it is gone rather than repaired.
-    return { hc, sc, so };
+    return { hc, sc, so, noCx };
   };
   // Every job this person has a Goal on in a quarter — as Recruiter or as Sourcer. Feeds the drill-down rows,
   // which must list a role the person only SOURCED or its Goals would not sum to the row above.
@@ -1508,6 +1511,11 @@ export function initRecruiterFilters(baseData) {
       // #108: the "+N sourced" second line — what this person SOURCED for someone else's row. Never added to the
       //   figure above it, so every HC column still adds up to real people. Blank when there is nothing.
       const srcSub = (n) => (n > 0 ? `<span class="sublab">+${seatFmt(n)} sourced</span>` : '');
+      // #165e (Jerin, 24 Sep 2026): "in cells that have scores that are Zero, mention a caption that X openings
+      // with no score — wont that help the recruiters to clean up their opening by updating the correct
+      // complexity?" It names the REAL reason, so the zero IS the clean-up list. 🚨 Goal only — never on Drop,
+      // where every row is zero for good and a caption would be a to-do list nobody can ever clear.
+      const cxSub = (n) => (n > 0 ? `<span class="sublab warn">${seatFmt(n)} opening${n === 1 ? '' : 's'} with no complexity</span>` : '');
 
       // #166: the topic row's Joined pair. Built HERE, inside the render, so it uses the very same srcSub as
       // every other row — the "+N sourced" line must read identically at all three grains or #108 has drifted.
@@ -1558,7 +1566,7 @@ export function initRecruiterFilters(baseData) {
         // number one column sideways.
         return (narrowed() ? `<td class="score" title="${NARROW_CAP_NOTE}">${DASH}</td>` : `<td class="score">${c(v.capSc)}</td>`)   // Capacity
           + utilCell(v)                                                           // Capacity used
-          + `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}</td>`      // Goal heads / score
+          + `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}${cxSub(v.aNoCx)}</td>`      // Goal heads / score + #165e caption
           + (isSales                                                          // #39: Sales/Others split Joined
               ? joinedCells(v)                                                  //   total + prev-qtr + current-qtr
               : `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
@@ -1597,7 +1605,7 @@ export function initRecruiterFilters(baseData) {
         return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
                  jx: isSales ? jxOf(r.name) : null,   // #39
                  gHC: Math.max(0, aHC - uHC), gSc: Math.max(0, aSc - uSc),
-                 aSo, xSo, uSo, dSo: dr.so || 0, gSo: Math.max(0, aSo - uSo) };
+                 aSo, xSo, uSo, dSo: dr.so || 0, gSo: Math.max(0, aSo - uSo), aNoCx: g0.noCx || 0 };   // #165e
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
       // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
@@ -1613,7 +1621,7 @@ export function initRecruiterFilters(baseData) {
 
       let html = '';
       gs.forEach((G, pi) => {
-        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0,
+        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0, aNoCx: 0,
                          aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
                          jp: { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 } },
                          // #39: roll the Joined split up the same way as the JP one, or every pod row would
@@ -1625,7 +1633,7 @@ export function initRecruiterFilters(baseData) {
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
           // it once ended up showing lifetime scores under a quarter heading. It now reads this.
           lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc, sales: isSales };
-          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo'].forEach(k => podAgg[k] += a[k]);
+          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo', 'aNoCx'].forEach(k => podAgg[k] += (a[k] || 0));   // #165e
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
           ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; podAgg.jp[k].so += a.jp[k].so || 0; });
@@ -1689,7 +1697,7 @@ export function initRecruiterFilters(baseData) {
               const jxHC = isSales ? jo.hc : jj.hc, jxSc = isSales ? jo.sc : jj.sc;
               const juHC = isSales ? jxHC : jxHC + jjp.t.hc, juSc = isSales ? jxSc : jxSc + jjp.t.sc;
               const jaSo = jg.so || 0, jxSo = jx0.so || 0, juSo = isSales ? jxSo : jxSo + (jjp.t.so || 0);
-              const jv = { aHC: jg.hc, aSc: jg.sc, capSc: null, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
+              const jv = { aHC: jg.hc, aSc: jg.sc, capSc: null, aNoCx: jg.noCx || 0, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
                            dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
                            gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc),

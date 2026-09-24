@@ -1110,6 +1110,11 @@ td.gapcell { min-width: 9.375rem; }
 .gapwrap > span { position: relative; font-weight: 600; color: var(--text); }
 .gapwrap > span.zero { color: var(--green); }
 .sublab { display: block; font-size: 0.625rem; color: var(--muted); margin-top: 0.1875rem; letter-spacing: .02em; white-space: nowrap; }
+/* #165e — the caption under a Goal score, naming the openings that scored nothing for want of a complexity.
+   ⚠ `.warn` alone loses here: it is declared far earlier in this file, so at equal specificity `.sublab`'s
+   muted colour wins and the caption reads as ordinary grey. Both classes together is what makes it amber.
+   It also has to WRAP — it is a sentence, not a figure, and `.sublab` is nowrap globally. */
+.sublab.warn { color: var(--orange); font-weight: 600; white-space: normal; }
 .util { font-weight: 600; }
 .util.over  { color: var(--green); }
 .util.well  { color: var(--accent); }
