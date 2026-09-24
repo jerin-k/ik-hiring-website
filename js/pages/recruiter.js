@@ -903,9 +903,16 @@ export function initRecruiterFilters(baseData) {
       const keys = only8 ? (byJob[only8] ? [only8] : []) : Object.keys(byJob);
       keys.forEach(j8 => {
         const m = jobMetaById(j8) || jobMeta({ jobId: j8 });
-        const pts = scoreForRole(m, qq);
+        const jobPts = scoreForRole(m, qq);   // pre-#165 basis — kept ONLY for the gate below
         (byJob[j8] || []).forEach(pr => {
           const n = pr.n || 0; if (!n) return;
+          // #165 (Jerin, 23 Sep 2026): the score comes from the OPENING's complexity, never the job's. The pipeline
+          // puts it on each bucket as `cx` (24 Sep). 🚦 GATE: `cx === undefined` means the pipeline has not run since,
+          // so nothing on the dashboard knows any opening's complexity — keep the old number rather than read every
+          // score as zero. Once it HAS run, `cx` is present and '' is a real value meaning no complexity, which under
+          // the settled rule scores NOTHING (never "Normal" — that silent default is the bug this fixes).
+          const pts = pr.cx === undefined ? jobPts
+                    : (pr.cx ? scoreForRole({ department: m.department, title: m.title, level: m.level, complexity: pr.cx }, qq) : 0);
           const isRec = pr.r === r.name, isSrc = pr.s === r.name;
           if (!isRec && !isSrc) return;
           // #108: the RECRUITER keeps the FULL Goal — every point and every head — whoever sourced the opening.
