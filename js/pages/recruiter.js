@@ -777,7 +777,15 @@ export function initRecruiterFilters(baseData) {
   // jobMeta() yields {department,title,level,complexity} for the scoring engine (falls back to byJob's own
   // title/department when the job isn't in jobs[] — e.g. archived with no current apps).
   const jobById = {}; (data.jobs || []).forEach(j => { jobById[j.id] = j; });
-  const jobMeta = (bj) => { const j = jobById[(bj.jobId || '').slice(0, 8)]; return { department: (j && j.department) || bj.department, title: (j && j.title) || bj.title, level: j && j.level, complexity: j && j.complexity }; };
+  // #173 (Jerin, 24 Sep 2026: "Loki has an orphan job at the bottom"): fall back to `jobIndex` for the name.
+  // 🚨 The cause is NOT that the job is archived — archived jobs ARE in `data.jobs`. The pipeline drops a job from
+  //    that list when it has **no applications in the current-year slice** (`if (j2.applied === 0) continue`), which is
+  //    what happens to an older role long after its candidates fall outside the window. `jobIndex` is the pipeline's
+  //    COMPLETE title/department map (334 jobs vs 124 in `data.jobs`), so the name is always there to be had.
+  // ⚠ Level and Complexity are in NEITHER fallback, so such a row still cannot be scored — that is #165's job, and
+  //   until then the row says "not scored" rather than printing a 0 that looks like a real answer.
+  const jobMeta = (bj) => { const j8 = (bj.jobId || '').slice(0, 8), j = jobById[j8], ix = (data.jobIndex || {})[j8];
+    return { department: (j && j.department) || bj.department || (ix && ix.department), title: (j && j.title) || bj.title || (ix && ix.title), level: j && j.level, complexity: j && j.complexity }; };
   const jobMetaById = (j8) => { const j = jobById[j8]; return j ? { department: j.department, title: j.title, level: j.level, complexity: j.complexity } : null; };
 
   // #1 opening-first reporting (2026-09-06): the Fulfilment GOAL now derives from the openings a recruiter
@@ -1695,7 +1703,7 @@ export function initRecruiterFilters(baseData) {
               // stays a plain row for them, even when a colleague's opening on the job has one.
               if (!hasRealTopic(tops)) tops = null;
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
-                <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''} · ${sc}pt</span></td>${cells(jv, false)}</tr>`;
+                <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}</span></td>${cells(jv, false)}</tr>`;
               (tops || []).forEach(t => {
                 html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
                   + `<td style="padding-left:4.875rem"><span class="${t.topic === NO_TOPIC ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`

@@ -384,7 +384,15 @@ export function initEfficiencyFilters(data) {
 
   // jobs[] keyed by 8-char id; recruiters[].byJob[].jobId is the full uuid → join on the prefix.
   const jobById = {}; jobs.forEach(j => { jobById[j.id] = j; });
-  const jobMeta = (bj) => { const j = jobById[(bj.jobId || '').slice(0, 8)]; return { department: (j && j.department) || bj.department, title: (j && j.title) || bj.title, level: j && j.level, complexity: j && j.complexity }; };
+  // #173 (Jerin, 24 Sep 2026: "Loki has an orphan job at the bottom"): fall back to `jobIndex` for the name.
+  // 🚨 The cause is NOT that the job is archived — archived jobs ARE in `data.jobs`. The pipeline drops a job from
+  //    that list when it has **no applications in the current-year slice** (`if (j2.applied === 0) continue`), which is
+  //    what happens to an older role long after its candidates fall outside the window. `jobIndex` is the pipeline's
+  //    COMPLETE title/department map (334 jobs vs 124 in `data.jobs`), so the name is always there to be had.
+  // ⚠ Level and Complexity are in NEITHER fallback, so such a row still cannot be scored — that is #165's job, and
+  //   until then the row says "not scored" rather than printing a 0 that looks like a real answer.
+  const jobMeta = (bj) => { const j8 = (bj.jobId || '').slice(0, 8), j = jobById[j8], ix = (data.jobIndex || {})[j8];
+    return { department: (j && j.department) || bj.department || (ix && ix.department), title: (j && j.title) || bj.title || (ix && ix.title), level: j && j.level, complexity: j && j.complexity }; };
 
   // Attribute every recruiter's byJob activity to their Pod → (parent) Department → Job for the quarter.
   // A job worked by recruiters across pods is split by each recruiter's own contribution (their offers/hires
