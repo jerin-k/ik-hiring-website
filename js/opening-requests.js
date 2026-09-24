@@ -330,7 +330,12 @@ export async function mountOpeningRequests(root, backend) {
   S.me = boot.me; S.requests = boot.requests || []; S.recruiters = boot.recruiters || [];
   S.options = boot.options || {}; S.slackOn = !!boot.slackOn;
   S.meta = boot.meta || { teams: [], locations: [], jobs: {} };
-  S.people = boot.people || S.recruiters;   // every active Ashby user: a sourcer need not be on the Recruitment Team
+  // 170c (Jerin, 24 Sep 2026: "same folks listed under recruiter are the ones to list under sourcer"). The Sourcer
+  // dropdown used to offer EVERY active Ashby user, on the reasoning that a sourcer need not be on the Recruitment
+  // Team. Nothing is lost by dropping that: 170a already widened the recruiter list to Admins and every Elevated
+  // Access / External Recruiter seat, so the agencies and external sourcers are in it — Sangha included. One list,
+  // one answer to "who can be named on an opening". `boot.people` still arrives from the backend and is now unused;
+  // leaving it there costs nothing and avoids a web-app publish.
   S.jobs = (S.data.jobs || []).filter(j => j.status === 'Open' && familyForJob(j.department, j.title) !== 'Exclude')
     .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
   (S.data.jobs || []).forEach(j => { S.jobById[j.id] = j; });
@@ -482,7 +487,11 @@ export async function mountOpeningRequests(root, backend) {
     const d = S.draft, locked = !!S.asking || S.busy || S.submitted;
     const dis = locked ? ' disabled' : '';
     const job = S.jobById[d.jobId];
-    const opt = (list, cur, ph) => `<option value="">${esc(ph)}</option>` + list.map(v => `<option${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    // A value already saved on a request stays selectable even when it is no longer in the list — someone who has
+    // since left, or (after 170c) a sourcer picked from the old wider list. Without this the <option> simply would not
+    // exist, the select would fall back to its placeholder, and the name would be silently dropped on the next save.
+    const opt = (list, cur, ph) => `<option value="">${esc(ph)}</option>`
+      + (cur && !list.includes(cur) ? [...list, cur] : list).map(v => `<option${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
     const auto = (k) => ev.notes[k] && ev.notes[k].kind === 'auto';
     const nBlock = ev.blockers.length;
     const levelField = (() => {
@@ -509,7 +518,7 @@ export async function mountOpeningRequests(root, backend) {
           : `<select class="or-in" data-row="${i}" data-rf="roleType" aria-label="Opening ${n} Role Type"${dis}>${opt(roleTypes, x.roleType, 'Role Type…')}</select>`;
         const head = `<div class="or-op-row"><span class="or-op-n">${n}</span>${rt}
           <select class="or-in" data-row="${i}" data-rf="recruiter" aria-label="Opening ${n} recruiter"${dis}>${opt(S.recruiters.map(u => u.name), x.recruiter, 'Recruiter…')}</select>
-          <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.people.map(u => u.name), x.sourcer, 'No sourcer')}</select></div>`;
+          <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select></div>`;
         if (x.roleType !== 'Replacement') return head;
         return head + `<div class="or-op-sub"><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
