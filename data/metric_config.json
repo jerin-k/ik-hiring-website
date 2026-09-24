@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-24T03:48:50.630Z",
+  "updatedAt": "2026-09-24T13:45:35.405Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -95,7 +95,7 @@
         "US SME - Complex": "Semi-Niche",
         "US SME - Uber Complex": "Niche",
         "India PA Junior": "Vanilla",
-        "India PA": "Regular",
+        "India PA": "Semi-Niche",
         "US PA Junior": "Vanilla",
         "US PA": "Semi-Niche",
         "NonTech - Intern - Normal": "Vanilla",
