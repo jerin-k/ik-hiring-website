@@ -1356,8 +1356,14 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
   if (!store.done) store.done = {};
   if (!store.hits) store.hits = {};
 
+  // 🚨 #167c (23 Sep 2026): WALK IT BACKWARDS. The first run of this collector fetched its whole budget and
+  // returned ZERO new drops - because application.list is OLDEST-FIRST, so archivedApps is too, and starting at
+  // index 0 spends the entire budget on the oldest uncollected records while the person somebody is actually
+  // asking about - archived today - sits at the far end and is never reached.
+  // 🔑 Newest first is the only order that makes a capped backfill useful: every run collects the most recent
+  //    archives, so today's drop appears on the very next run and the old backlog fills in behind it.
   var t0 = Date.now(), seen = 0, fetched = 0, kept = 0, errs = 0, undone = 0;
-  for (var i = 0; i < list.length; i++) {
+  for (var i = list.length - 1; i >= 0; i--) {
     var a = list[i];
     if (!a || !a.id) continue;
     seen++;
