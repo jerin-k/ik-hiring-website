@@ -277,7 +277,10 @@ function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
       // 2026-08-22 run — so a drop cannot be detected from the history feed alone. History supplies "did they
       // reach a late stage", status supplies "did they end archived"; a drop needs both.
       if (app.id && reachedScreening) histApps.push({ id: app.id, r: recruiter, j: jobId, s: app.status || null });
-      if (app.id && app.status === 'Archived') archivedApps.push({ id: app.id, r: recruiter, j: jobId });
+      // #167d (24 Sep 2026): carry `a` = archivedAt. It was there all along - application.list returns it, ISO 8601,
+      // null unless archived, and this pipeline already reads it further down - but archivedApps threw it away, which
+      // left the sweep below with nothing to order by. See collectNewArchivedLateStage_.
+      if (app.id && app.status === 'Archived') archivedApps.push({ id: app.id, r: recruiter, j: jobId, a: app.archivedAt || null });
       if (!recruiter && reachedScreening && hygMaybe) unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
 
       // App Review dwell: candidates sitting in App Review right now → days = today - createdAt (capped 0..365).
@@ -1340,7 +1343,11 @@ function loadDriveJson_(name) {
 // Cheaper per run simply means the backlog drains over more runs; nothing is lost either way.
 var NEW_ARCH_CAP_ = 40;
 var NEW_ARCH_MS_ = 45000;
-var NEW_ARCH_SKIP_AFTER_MS_ = 8 * 60 * 1000;   // if the refresh has already used this long, do not start at all
+// #167d (24 Sep 2026): was 8 minutes. MEASURED on the 24 Sep 6 AM run: the sweep was reached at 430 s, i.e. it cleared
+// the old guard by FIFTY SECONDS - a slightly slower app fetch and it would have skipped silently. The guard was written
+// as insurance when an UNCAPPED collector pushed a run to 29 min of a 30 min ceiling; capped at 40 calls / 45 s it can
+// no longer do that, and the run it now guards finishes in 757 s. 11 minutes keeps a real brake with usable headroom.
+var NEW_ARCH_SKIP_AFTER_MS_ = 11 * 60 * 1000;  // if the refresh has already used this long, do not start at all
 
 function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
   // The refresh comes FIRST. If it has already spent most of its budget, this stands down entirely rather
@@ -1356,23 +1363,32 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
   if (!store.done) store.done = {};
   if (!store.hits) store.hits = {};
 
-  // 🚨 #167c (23 Sep 2026): WALK IT BACKWARDS. The first run of this collector fetched its whole budget and
-  // returned ZERO new drops - because application.list is OLDEST-FIRST, so archivedApps is too, and starting at
-  // index 0 spends the entire budget on the oldest uncollected records while the person somebody is actually
-  // asking about - archived today - sits at the far end and is never reached.
-  // 🔑 Newest first is the only order that makes a capped backfill useful: every run collects the most recent
-  //    archives, so today's drop appears on the very next run and the old backlog fills in behind it.
-  var t0 = Date.now(), seen = 0, fetched = 0, kept = 0, errs = 0, undone = 0;
-  for (var i = list.length - 1; i >= 0; i--) {
+  // 🚨 #167d (24 Sep 2026): ORDER BY THE ARCHIVE DATE, NOT BY POSITION.
+  // #167c walked the list BACKWARDS on the assumption that its far end holds the most recent archives. It does not.
+  // archivedApps is built while paging application.list, which is oldest-first BY CREATION, so the end of the list is
+  // the most recently CREATED application. Someone created in March and archived last week sits in the MIDDLE, and a
+  // capped walk from EITHER end never reaches them. That is Evan W. Carr exactly: he reached Offer and sat 14 days, so
+  // his application is old and his archive is new. Walking backwards was no better than walking forwards for him.
+  // 🔑 The fix is an ordering, not a bigger budget: collect the NEWEST ARCHIVE first and today's drop lands on the very
+  //    next run, however long the historical tail is. `a` (archivedAt) is carried in for exactly this.
+  // ⚠ Undated records sort LAST on purpose - a record with no archive date is never "today's drop".
+  var t0 = Date.now(), seen = 0, fetched = 0, kept = 0, errs = 0, todo = [];
+  for (var i = 0; i < list.length; i++) {
     var a = list[i];
     if (!a || !a.id) continue;
     seen++;
     if (store.done[a.id] || store.hits[a.id]) continue;   // collected already - never re-read (Rule 8b)
-    undone++;
-    if (fetched >= NEW_ARCH_CAP_ || Date.now() - t0 > NEW_ARCH_MS_) continue;   // count the rest, fetch none
+    todo.push(a);
+  }
+  var undone = todo.length;
+  todo.sort(function (x, y) { return String(y.a || '').localeCompare(String(x.a || '')); });
+  var newest = todo.length ? (todo[0].a || 'no date') : 'none';
+  for (var t = 0; t < todo.length; t++) {
+    if (fetched >= NEW_ARCH_CAP_ || Date.now() - t0 > NEW_ARCH_MS_) break;   // the rest wait for the next run
+    var ap = todo[t];
     fetched++;
     try {
-      var res = ashbyPost_('/application.listHistory', { applicationId: a.id });
+      var res = ashbyPost_('/application.listHistory', { applicationId: ap.id });
       var hist = (res && (res.results || res.history)) || [];
       var earliest = null;
       for (var h = 0; h < hist.length; h++) {
@@ -1380,13 +1396,16 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
         if (!ht || !ht.enteredStageAt) continue;
         if (LATE_STAGES_[ht.title] && (!earliest || String(ht.enteredStageAt) < String(earliest))) earliest = ht.enteredStageAt;
       }
-      store.done[a.id] = 1;
+      store.done[ap.id] = 1;
       // Only a LATE-stage arrival is a drop. Everyone else is marked done so they are never fetched again.
-      if (earliest) { store.hits[a.id] = { r: a.r || null, j: a.j || null, e: String(earliest).substring(0, 10) }; kept++; }
+      if (earliest) { store.hits[ap.id] = { r: ap.r || null, j: ap.j || null, e: String(earliest).substring(0, 10) }; kept++; }
     } catch (e) { errs++; }
   }
   if (fetched) saveDriveJson_('archived_late_stage.json', store);
+  // #167d: the NEWEST uncollected archive date is the line that actually tells you whether this is keeping up - if it
+  // reads today, the sweep is current; if it reads weeks ago, it is still digging out of the backlog.
   Logger.log('#167 new-archive sweep took ' + Math.round((Date.now() - t0) / 1000) + 's: ' + seen + ' archived, ' + undone + ' not yet collected, '
+    + 'newest uncollected archive ' + newest + ', '
     + fetched + ' fetched this run, ' + kept + ' were late-stage (= new drops), ' + errs + ' errors, '
     + Math.max(0, undone - fetched) + ' left for the next run');
   return kept;
