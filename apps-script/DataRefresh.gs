@@ -736,6 +736,10 @@ function refreshDashboardData() {
     // #157: the opening's own topic, and the fill-rate counters. Computed once per OPENING (not per
     // opening x job) so the stats count openings, while openingRows below keeps the bucket grain.
     var oTopic = openingCustomFieldByTitle_(o, /specializ|specialis/i);
+    // #165a (Jerin, 23 Sep 2026: "Complexity is to be considered at a opening level, not job"). Costs NO extra
+    // API call - opening.list already returns latestVersion.customFields (same as #157's topic). Title match, not
+    // a captured uuid, so it survives the field being recreated. valueLabel, never value (value is the option id).
+    var oComplexity = openingCustomFieldByTitle_(o, /role complexity/i);
     var oOwnerIds = [];
     ((o.latestVersion && o.latestVersion.hiringTeam) || []).forEach(function (mem) {
       if (mem.role === 'Recruiter' || mem.roleId === '22db8dc8-83f4-40de-8376-87efff4a6eb6') {
@@ -772,7 +776,7 @@ function refreshDashboardData() {
       //    documented. The 'named' count in the log line below is the proof: if it comes back 0, the field is
       //    somewhere else and NOTHING on the dashboard is wrong - the column simply stays empty until it is fixed.
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
-        quarter: q, day: dOpen || null, state: cls, topic: oTopic, jpTied: 0,
+        quarter: q, day: dOpen || null, state: cls, topic: oTopic, complexity: oComplexity, jpTied: 0,
         name: String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').trim(),
         ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
@@ -838,6 +842,7 @@ function refreshDashboardData() {
     + openingTopicStats.withTopic + ' with a topic | SME ' + openingTopicStats.sme + ' of which '
     + openingTopicStats.smeWithTopic + ' with a topic | openings carrying a live linked offer: '
     + openingTopicStats.jpTied + ' | rows emitted: ' + openingRows.length
+    + ' | #165a with complexity: ' + openingRows.filter(function (r) { return !!r.complexity; }).length
     + ' | named: ' + openingRows.filter(function (r) { return !!r.name; }).length);   // #169
 
   // user.list -> isEnabled (Active/Inactive) + userId -> name (panelist / interviewer display names)
@@ -1249,6 +1254,9 @@ function refreshDashboardData() {
   // never go through that wrapper. Sending from here covers every refresh there is, which is what he asked for.
   try { notifyAdminsRefreshDone_(new Date(startTime), true, '', REFRESH_KIND_); }
   catch (e) { Logger.log('163 notify failed: ' + e); }
+  // #175: last thing, AFTER the data is safely written - re-installing triggers deletes the one that is
+  // currently running, so it must never sit in front of the work.
+  ensureTriggerPlan_();
   return dashboard;
 }
 
@@ -1749,11 +1757,28 @@ function notifyAdminsRefreshDone_(startedAt, ok, err, kind) {
   }
 }
 function serveJsonData() { var d = loadExistingDashboard_(); return ContentService.createTextOutput(JSON.stringify(d || { error: 'No data' })).setMimeType(ContentService.MimeType.JSON); }
-function setupTwiceDailyTrigger() {
+// #175 (Jerin, 24 Sep 2026): "need the below auto-refresh going fwd * 6AM * 1PM * 6PM".
+// Bump TRIGGER_PLAN_ to change the schedule; the next refresh re-installs it by itself.
+var TRIGGER_PLAN_ = '6-13-18 IST';
+function setupDailyTriggers() {
   ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'refreshDashboardData') ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger('refreshDashboardData').timeBased().atHour(6).everyDays(1).inTimezone('Asia/Kolkata').create();
-  ScriptApp.newTrigger('refreshDashboardData').timeBased().atHour(18).everyDays(1).inTimezone('Asia/Kolkata').create();
-  Logger.log('Triggers set: 6 AM and 6 PM IST');
+  [6, 13, 18].forEach(function (h) {
+    ScriptApp.newTrigger('refreshDashboardData').timeBased().atHour(h).everyDays(1).inTimezone('Asia/Kolkata').create();
+  });
+  Logger.log('#175 triggers set: 6 AM, 1 PM and 6 PM IST');
+}
+function setupTwiceDailyTrigger() { setupDailyTriggers(); }   // old name kept: it is in the editor's Run list
+// Installs the plan on the first run after it changes, so nobody has to find it in the Run menu.
+// Apps Script cannot read back the HOUR of an existing trigger, so a Script Property is the only way to tell
+// whether what is installed matches what we intend. Idempotent - it does the work once per plan change.
+function ensureTriggerPlan_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    if (props.getProperty('TRIGGER_PLAN') === TRIGGER_PLAN_) return;
+    setupDailyTriggers();
+    props.setProperty('TRIGGER_PLAN', TRIGGER_PLAN_);
+    Logger.log('#175 trigger plan installed: ' + TRIGGER_PLAN_);
+  } catch (e) { Logger.log('#175 ensureTriggerPlan_ FAILED (non-fatal, data already written): ' + e); }
 }
 function triggerRefreshNow() {
   ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'refreshDashboardData' && t.getTriggerSource() === ScriptApp.TriggerSource.CLOCK) ScriptApp.deleteTrigger(t); });
@@ -1841,6 +1866,9 @@ function computeOwnedSeatsPairQ_(allOpenings, recById, allById, byDay) {
     var q = quarterIST_(iso); if (!q) return;   // #115: India time
     if (o.closedAt && o.openingState !== 'Filled' && cr !== CR_HIRED && cr !== CR_CARRYFWD) return;   // #114: Filled = hired, reason or not (same rule as openingBuckets)
     if (byDay) { q = dayIST_(iso); if (!q || q < reportFloorDay_()) return; }   // #129
+    // #165a: the bucket keys on the OPENING's complexity too, so two openings on one job can score differently.
+    // '' is a real key meaning 'no complexity' - under the settled rule those score NOTHING, never Normal.
+    var cx = openingCustomFieldByTitle_(o, /role complexity/i) || '';
     var ht = lv.hiringTeam || [], recs = [], srcs = [];
     ht.forEach(function (mm) {
       if (mm.role === 'Recruiter' || mm.roleId === RID_REC) { var a = recById[mm.userId]; if (a) recs.push(a); }
@@ -1856,8 +1884,8 @@ function computeOwnedSeatsPairQ_(allOpenings, recById, allById, byDay) {
       recs.forEach(function (rn) {
         srcs.forEach(function (sn) {
           var hit = null;
-          for (var i = 0; i < arr.length; i++) if (arr[i].r === rn && arr[i].s === sn) { hit = arr[i]; break; }
-          if (!hit) { hit = { r: rn, s: sn, n: 0 }; arr.push(hit); }
+          for (var i = 0; i < arr.length; i++) if (arr[i].r === rn && arr[i].s === sn && arr[i].cx === cx) { hit = arr[i]; break; }
+          if (!hit) { hit = { r: rn, s: sn, cx: cx, n: 0 }; arr.push(hit); }
           hit.n = Math.round((hit.n + 1 / n) * 10000) / 10000;
         });
       });
