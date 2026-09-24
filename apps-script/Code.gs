@@ -799,19 +799,29 @@ var OR_COLS = ['id', 'createdAt', 'status', 'requesterEmail', 'requesterName', '
   'edits',
   // 22 Sep, 112g: the openings by Role Type, e.g. {"New":2,"Replacement":2,"Buffer":1}; count is their total
   'mix',
-  // 23 Sep, phase 3: testJob = create against the Ashby TEST job instead of the real one (approvers only, while we test);
+  // 23 Sep, phase 3: testJob = the retired test-job switch (24 Sep). Kept for history on OR-001..003; nothing reads it;
   // openings = what was actually made, [{id, name, url, state}]; fulfilledBy / fulfilledAt = who marked it Created and when
-  'testJob', 'openings', 'fulfilledBy', 'fulfilledAt'];
-var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1, mix: 1, openings: 1 };
+  'testJob', 'openings', 'fulfilledBy', 'fulfilledAt',
+  // 24 Sep, 170b (Jerin, 23 Sep: "A row per opening actually. Count is pointless; nix count."): the openings ASKED FOR,
+  // one entry per opening - [{roleType, recruiter, sourcer, replacementOf}] - because five openings are routinely five
+  // different people's work. `count`, `mix`, `roleType`, `recruiter`, `sourcer` and `replacementOf` are still written,
+  // DERIVED from these rows (orDerive_), so every older reader keeps getting the answer it has always read.
+  // 🚨 NOT the same column as `openings` above, which is what was actually MADE in Ashby.
+  'rows'];
+var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1, mix: 1, openings: 1, rows: 1 };
 var OR_NUM = { count: 1, pts: 1 };
 // 112a: what an approver may change, in the order a change list reads. Name and Points each follow from the fields above
 // them (recruiter + topic, job + level + complexity), so they change on their own and are listed because they are what
 // gets created. OR_EDIT_ALSO follows from the job and the open date: written with the rest, never listed.
-var OR_EDIT = [['jobTitle', 'Job'], ['count', 'How many'], ['recruiter', 'Recruiter'], ['team', 'Team'], ['location', 'Location'],
-  ['roleType', 'Role Type'], ['employmentType', 'Employment Type'], ['levelSet', 'Job Level'], ['complexity', 'Role Complexity'],
-  ['topic', 'Topic'], ['openDate', 'Open date'], ['replacementOf', 'Replacement of'], ['sourcer', 'Sourcer'],
+// 170b: Role Type, Recruiter, Sourcer and Replacement of now vary BY OPENING, so they are no longer listed one by one -
+// they would read as one muddled value for the whole request. They are still written (they moved to OR_EDIT_ALSO); the
+// single 'Openings' line below says what actually changed, row by row.
+var OR_EDIT = [['jobTitle', 'Job'], ['count', 'How many'], ['rows', 'Openings'], ['team', 'Team'], ['location', 'Location'],
+  ['employmentType', 'Employment Type'], ['levelSet', 'Job Level'], ['complexity', 'Role Complexity'],
+  ['topic', 'Topic'], ['openDate', 'Open date'],
   ['description', 'Description'], ['name', 'Name'], ['pts', 'Points each']];
-var OR_EDIT_ALSO = ['jobId', 'department', 'levelNow', 'tier', 'quarter', 'mix'];
+var OR_EDIT_ALSO = ['jobId', 'department', 'levelNow', 'tier', 'quarter', 'mix',
+  'roleType', 'recruiter', 'sourcer', 'replacementOf'];
 
 function orUser_() {
   var email = String(Session.getActiveUser().getEmail() || '').toLowerCase();
@@ -867,7 +877,14 @@ function orBoot() {
   return {
     ok: true,
     me: { email: me.email, name: mine ? mine.name : me.email, userType: me.userType, isApprover: me.isApprover },
-    recruiters: users.filter(function (u) { return team[u.email]; }),
+    // 170a (Jerin, 24 Sep 2026: "any Ashby elevated user & any Ashby External user ... They are the ones who wil own
+    // an opening"): who may be NAMED on an opening is NOT the same question as who may SIGN IN, and the sign-in list was
+    // answering both. It is @interviewkickstart.com only, so Sangha - an agency recruiter who owns 7 Q3 openings - could
+    // never be picked, and G Darshan, typed "Others", could not either. Ashby already knows who recruits: an Elevated
+    // Access or External Recruiter seat IS the person who ends up owning an opening.
+    // 🔑 A disabled Ashby account is already dropped by orAshbyUsers_, so retiring a test account in Ashby takes it out
+    //    of this list too - no rule about names, nothing to maintain here.
+    recruiters: users.filter(function (u) { return team[u.email] || OR_RECRUITER_SEATS[u.role]; }),
     people: users,                 // a sourcer can be any active Ashby user
     meta: orMeta_(),               // Ashby's teams and locations, and each Open job's own team and locations
     requests: visible,
@@ -876,23 +893,109 @@ function orBoot() {
   };
 }
 
+// ===== 170b - one row per opening =====
+// 🚨 EVERY reader goes through orRows_. A request saved before 24 Sep 2026 carries no `rows`, so one is rebuilt here
+//    from the old shape - count + mix + the single recruiter/sourcer + the semicolon-separated replacement names.
+//    Without that rebuild the requests already on the Sheet would read as zero openings and vanish from the queue.
+function orRows_(rq) {
+  if (rq && Array.isArray(rq.rows) && rq.rows.length) return rq.rows.slice(0, 25).map(orRow_);
+  var out = [], mix = orMix_(rq && rq.mix), types = Object.keys(mix);
+  var names = String((rq && rq.replacementOf) || '').split(';').map(function (x) { return x.trim(); }).filter(String);
+  var rec = String((rq && rq.recruiter) || ''), src = String((rq && rq.sourcer) || ''), ri = 0;
+  var add = function (t) {
+    out.push(orRow_({ roleType: t, recruiter: rec, sourcer: src,
+      replacementOf: t === 'Replacement' ? (names[ri++] || '') : '' }));
+  };
+  if (types.length) types.forEach(function (t) { for (var i = 0; i < mix[t]; i++) add(t); });
+  else { var n = parseInt((rq && rq.count), 10) || 1; for (var j = 0; j < n && j < 25; j++) add(String((rq && rq.roleType) || '')); }
+  return out;
+}
+
+// One requested opening, as the server keeps it.
+function orRow_(r) {
+  r = r || {};
+  return { roleType: String(r.roleType || '').trim().slice(0, 40), recruiter: String(r.recruiter || '').trim().slice(0, 80),
+           sourcer: String(r.sourcer || '').trim().slice(0, 80), replacementOf: String(r.replacementOf || '').trim().slice(0, 80) };
+}
+
+// What the old single-value columns are worth once the rows decide. Several different values read "A, B +2 more" so a
+// reader that has always read `recruiter` gets something true and legible rather than a silently arbitrary first row.
+function orDerive_(rows) {
+  var mix = {}, d = { count: rows.length, mix: mix };
+  rows.forEach(function (r) { if (r.roleType) mix[r.roleType] = (mix[r.roleType] || 0) + 1; });
+  ['roleType', 'recruiter', 'sourcer'].forEach(function (k) {
+    var seen = [];
+    rows.forEach(function (r) { if (r[k] && seen.indexOf(r[k]) < 0) seen.push(r[k]); });
+    d[k] = seen.length <= 2 ? seen.join(', ') : seen.slice(0, 2).join(', ') + ' +' + (seen.length - 2) + ' more';
+  });
+  d.replacementOf = rows.map(function (r) { return r.replacementOf; }).filter(String).join('; ');
+  return d;
+}
+
+// 170b: an approver's change to the openings, reported LINE BY LINE.
+// 🚨 A summary of the whole set hides the very thing that changed: moving one opening to another recruiter leaves the
+//    count and the Role-Type tally identical, so the change list read "5 openings (New 2 · Replacement 2 · Buffer 1)
+//    ➔ 5 openings (New 2 · Replacement 2 · Buffer 1)" - it announced a change and showed nothing. Measured, not guessed.
+// The window's own rowEdits() is the same rule; this one is what gets RECORDED.
+var OR_ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['sourcer', 'sourcer'], ['replacementOf', 'replaces']];
+
+function orRowLine_(r) {
+  return (r.roleType || '(no Role Type)') + ' — ' + (r.recruiter || '(no recruiter)')
+    + (r.sourcer ? ', sourced by ' + r.sourcer : '') + (r.replacementOf ? ', replacing ' + r.replacementOf : '');
+}
+
+function orRowEdits_(a, b) {
+  var out = [], n = Math.max(a.length, b.length);
+  for (var i = 0; i < n; i++) {
+    var was = a[i], now = b[i], where = 'Opening ' + (i + 1);
+    if (!was && now) { out.push({ field: where, from: '(not asked for)', to: orRowLine_(now) }); continue; }
+    if (was && !now) { out.push({ field: where, from: orRowLine_(was), to: '(dropped)' }); continue; }
+    OR_ROW_LABELS.forEach(function (f) {
+      if (String(was[f[0]] || '') === String(now[f[0]] || '')) return;
+      out.push({ field: where + ' ' + f[1], from: String(was[f[0]] || '—'), to: String(now[f[0]] || '—') });
+    });
+  }
+  return out;
+}
+
+// Rows first, then everything that follows from them. Called at every door a payload comes through (submit, resubmit,
+// an approver's edit) so validation, the change list and the Sheet can never disagree about what was asked for.
+function orNormalize_(p) {
+  p = p || {};
+  var rows = orRows_(p);
+  p.rows = rows;
+  var d = orDerive_(rows);
+  Object.keys(d).forEach(function (k) { p[k] = d[k]; });
+  return p;
+}
+
 // What the server insists on before a request is saved, and before an approver's edit is kept (112a). The window checks
 // far more, for the person filling it in; these are the ones that must never be skipped. '' means fine.
 function orValidate_(p) {
-  var need = ['jobId', 'jobTitle', 'recruiter', 'team', 'location', 'roleType', 'employmentType', 'complexity', 'topic', 'openDate'];
+  var need = ['jobId', 'jobTitle', 'team', 'location', 'employmentType', 'complexity', 'topic', 'openDate'];
   var miss = need.filter(function (k) { return !String(p[k] || '').trim(); });
-  var count = parseInt(p.count, 10);
-  if (!(count >= 1 && count <= 25)) miss.push('how many');
-  var mix = orMix_(p.mix), types = Object.keys(mix);
-  if (types.length) {   // 112g: several Role Types in one request
-    var names = String(p.replacementOf || '').split(';').filter(function (x) { return x.trim(); }).length;
-    if ((mix.Replacement || 0) > names) miss.push('replacement of (one name for each of the ' + mix.Replacement + ' Replacement openings)');
-  } else if (p.roleType === 'Replacement' && !String(p.replacementOf || '').trim()) miss.push('replacement of');
-  if (miss.length) return 'missing ' + miss.join(', ');
-  var sum = types.reduce(function (a, t) { return a + mix[t]; }, 0);
-  if (types.length && sum !== count) return 'the Role Types add up to ' + sum + ' openings, not ' + count;
+  // 170b: the openings are rows now, and each is checked on its own. The count is no longer typed, so it cannot
+  // disagree with the Role Types - that whole class of error is gone.
+  var rows = orRows_(p);
+  if (!(rows.length >= 1 && rows.length <= 25)) miss.push('how many openings (1 to 25)');
+  var byName = {};
+  orAshbyUsers_().forEach(function (u) { byName[u.name] = 1; });
+  var noType = [], noRec = [], badRec = [], badSrc = [], noName = [];
+  rows.forEach(function (r, i) {
+    var n = i + 1;
+    if (!r.roleType) noType.push(n);
+    if (!r.recruiter) noRec.push(n);
+    else if (!byName[r.recruiter]) badRec.push(n + ' (' + r.recruiter + ')');
+    if (r.sourcer && !byName[r.sourcer]) badSrc.push(n + ' (' + r.sourcer + ')');
+    if (r.roleType === 'Replacement' && !r.replacementOf) noName.push(n);
+  });
+  if (noType.length) miss.push('the Role Type on opening ' + noType.join(', '));
+  if (noRec.length) miss.push('the recruiter on opening ' + noRec.join(', '));
+  if (noName.length) miss.push('who is being replaced on opening ' + noName.join(', '));
+  if (miss.length) return 'missing ' + miss.join('; ');
+  if (badRec.length) return 'not an active Ashby user, so they cannot go on the opening: ' + badRec.join(', ');
+  if (badSrc.length) return 'not an active Ashby user, so they cannot be the sourcer: ' + badSrc.join(', ');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.openDate)) || String(p.openDate) < '2026-07-01') return 'the open date must be on or after 1 Jul 2026';
-  if (!orAshbyUsers_().some(function (u) { return u.name === p.recruiter; })) return p.recruiter + ' is not an active Ashby user';
   return '';
 }
 
@@ -910,7 +1013,7 @@ function orMix_(m) {
 function orSubmit(p) {
   var me = orUser_();
   if (!me.allowed) return { ok: false, message: 'This account is not on the Recruitment Team list.' };
-  p = p || {};
+  p = orNormalize_(p);   // 170b: rows first, then count/mix/recruiter/... derived from them
   var bad = orValidate_(p);
   if (bad) return { ok: false, message: bad };
   var count = parseInt(p.count, 10), mine = null;
@@ -931,7 +1034,8 @@ function orSubmit(p) {
     rq.checks = Array.isArray(p.checks) ? p.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }) : [];
     rq.answers = (p.answers && typeof p.answers === 'object') ? p.answers : {};
     rq.revises = /^OR-\d+$/.test(String(p.revises || '')) ? String(p.revises) : '';
-    rq.decidedBy = ''; rq.decidedAt = ''; rq.decisionNote = ''; rq.edits = []; rq.mix = orMix_(p.mix);
+    rq.decidedBy = ''; rq.decidedAt = ''; rq.decisionNote = ''; rq.edits = [];
+    rq.rows = p.rows; rq.mix = orMix_(p.mix);   // 170b: both already derived by orNormalize_
     var tr = (Array.isArray(p.transcript) ? p.transcript : []).slice(0, 60).map(function (m) {
       return { who: m && m.who === 'me' ? 'me' : 'claude', at: String((m && m.at) || now), text: String((m && m.text) || '').slice(0, 1000) };
     });
@@ -1009,10 +1113,17 @@ function orDiff_(old, p) {
   var set = {}, edits = [];
   OR_EDIT.map(function (f) { return f[0]; }).concat(OR_EDIT_ALSO).forEach(function (k) {
     if (k === 'mix') { var nm = JSON.stringify(orMix_(p.mix)); if (nm !== JSON.stringify(orMix_(old.mix))) set.mix = nm; return; }
+    // 170b: the rows are the request now. Compared as JSON so any row-level change is caught, but SHOWN as a sentence -
+    // raw JSON in an approver's change list would be unreadable.
+    if (k === 'rows') { var nr = JSON.stringify(orRows_(p)); if (nr !== JSON.stringify(orRows_(old))) set.rows = nr; return; }
     var nv = OR_NUM[k] ? String(k === 'count' ? parseInt(p[k], 10) : (Number(p[k]) || 0)) : String(p[k] == null ? '' : p[k]).trim();
     if (nv !== String(old[k])) set[k] = nv;
   });
-  OR_EDIT.forEach(function (f) { if (set[f[0]] != null) edits.push({ field: f[1], from: String(old[f[0]]), to: set[f[0]] }); });
+  OR_EDIT.forEach(function (f) {
+    if (set[f[0]] == null) return;
+    if (f[0] === 'rows') { orRowEdits_(orRows_(old), orRows_(p)).forEach(function (e) { edits.push(e); }); return; }
+    edits.push({ field: f[1], from: String(old[f[0]]), to: set[f[0]] });
+  });
   return { set: set, edits: edits };
 }
 
@@ -1022,7 +1133,7 @@ function orDiff_(old, p) {
 function orResubmit(id, p) {
   var me = orUser_();
   if (!me.allowed) return { ok: false, message: 'This account is not on the Recruitment Team list.' };
-  p = p || {};
+  p = orNormalize_(p);   // 170b
   var bad = orValidate_(p);
   if (bad) return { ok: false, message: bad };
   var lock = LockService.getScriptLock();
@@ -1072,6 +1183,7 @@ function orDecide_(id, decision, note, edit) {
   decision = String(decision || ''); note = String(note || '').trim().slice(0, 600);
   if (decision !== 'approve' && decision !== 'sendback') return { ok: false, message: 'unknown decision' };
   if (decision === 'sendback' && !note) return { ok: false, message: 'say what should change' };
+  if (edit) edit = orNormalize_(edit);   // 170b
   var bad = edit ? orValidate_(edit) : '';
   if (bad) return { ok: false, message: bad };
   var lock = LockService.getScriptLock();
@@ -1126,37 +1238,16 @@ function orDecide_(id, decision, note, edit) {
 // Nothing here talks to Ashby — the server only hands out the queue and records what came back, so a half-finished run can
 // always be re-read and finished, and every opening is recorded against the request that asked for it.
 
-// The Ashby TEST job, for trying the flow end to end without touching a real one. Its department is Test, which the pipeline
-// skips at ingestion, so nothing created here can reach the dashboard.
-var OR_TEST_JOB = { id: 'e38f7d54-090f-4b5c-94e1-4f1d2dc7b69f', title: 'Test - Project Hello Christy - Sales PA', department: 'Test', team: 'Test' };
+// 🗑 24 Sep 2026 (Jerin: "Yes"): the TEST-JOB SWITCH IS GONE. While #112 was being built, an approver could point a
+// request at a sandbox job whose department the pipeline skips, so nothing made reached a figure. It did its job -
+// OR-001 to OR-003 were all built on it, and OR-003 proved a four-opening request end to end - and it is now removed,
+// so an approved request is always created against the job it actually names.
+// The `testJob` COLUMN stays on the Sheet: OR-001 to OR-003 carry 'yes' and that is true history. Nothing reads it any
+// more, so a stray 'yes' can no longer redirect anything.
+// ⚠ A test job is still refused at the door: the window blocks any job whose title matches /test/ (see orValidate_'s
+//    counterpart in the window, `familyForJob` + the "This looks like a test job" check). That guard is NOT the switch
+//    and must stay.
 
-// While we are testing, an approver can point a request at that job instead of the real one. Allowed until the request is
-// Created — after that the openings exist and the switch would be a lie.
-function orSetTestJob(id, on) {
-  var me = orUser_();
-  if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can send a request to the test job' };
-  var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    var sh = orSheet_(), v = sh.getDataRange().getValues(), head = v[0].map(String), col = {};
-    head.forEach(function (k, i) { col[k] = i; });
-    var r = -1;
-    for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
-    if (r < 0) return { ok: false, message: id + ' was not found' };
-    if (String(v[r][col.status]) === 'Created') return { ok: false, message: id + ' is already Created, so it cannot be moved to the test job' };
-    sh.getRange(r + 1, col.testJob + 1).setNumberFormat('@').setValue(on ? 'yes' : '');
-    sh.getRange(r + 1, col.updatedAt + 1).setNumberFormat('@').setValue(new Date().toISOString());
-    SpreadsheetApp.flush();
-    return { ok: true, request: orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]) };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// What Claude picks up: every Approved request that has not been created yet, oldest first, with the job it should be created
-// against already resolved (the test job when the switch is on). `nextNumber` is only a STARTING POINT — 🚨 the number Ashby's
-// own create form suggests is 33 behind the truth, so Claude re-checks the highest live IK number in Ashby before naming
-// anything, and the caller passes back what it actually used.
 function orQueue() {
   var me = orUser_();
   if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can read the queue' };
@@ -1170,16 +1261,18 @@ function orQueue() {
   rows.filter(function (rq) { return rq.status === 'Approved'; })
       .sort(function (a, b) { return String(a.decidedAt || '').localeCompare(String(b.decidedAt || '')); })
       .forEach(function (rq) {
-        var test = String(rq.testJob || '') === 'yes';
-        out.push({ id: rq.id, name: rq.name, count: rq.count, mix: rq.mix, recruiter: rq.recruiter, sourcer: rq.sourcer,
+        // 170b: `rows` is what to create - one entry per opening, each with its own Role Type, recruiter and sourcer.
+        // The flat count/recruiter/sourcer/roleType stay for anything still reading them, but they are a SUMMARY:
+        // 🚨 build from `rows`, never from `recruiter`, which reads "Ritika Bhasin, Aditya Singh +2 more" on a mixed request.
+        out.push({ id: rq.id, name: rq.name, rows: orRows_(rq),
+          count: rq.count, mix: rq.mix, recruiter: rq.recruiter, sourcer: rq.sourcer,
           roleType: rq.roleType, employmentType: rq.employmentType, complexity: rq.complexity, topic: rq.topic,
           levelSet: rq.levelSet, openDate: rq.openDate, replacementOf: rq.replacementOf, description: rq.description,
-          team: test ? OR_TEST_JOB.team : rq.team, location: rq.location,
-          jobId: test ? OR_TEST_JOB.id : rq.jobId, jobTitle: test ? OR_TEST_JOB.title : rq.jobTitle,
-          department: test ? OR_TEST_JOB.department : rq.department,
-          testJob: test, decidedBy: rq.decidedBy, decidedAt: rq.decidedAt, requesterName: rq.requesterName });
+          team: rq.team, location: rq.location,
+          jobId: rq.jobId, jobTitle: rq.jobTitle, department: rq.department,
+          decidedBy: rq.decidedBy, decidedAt: rq.decidedAt, requesterName: rq.requesterName });
       });
-  return { ok: true, queue: out, nextNumber: highest ? highest + 1 : null, testJob: OR_TEST_JOB };
+  return { ok: true, queue: out, nextNumber: highest ? highest + 1 : null };
 }
 
 // Claude calls this once the openings exist in Ashby. `openings` is [{id, name, url, state}] — one entry per opening actually
@@ -1220,7 +1313,7 @@ function orMarkCreated(id, openings, note) {
     var tr = [];
     try { tr = JSON.parse(v[r][col.transcript] || '[]'); } catch (e) { tr = []; }
     tr.push({ who: 'claude', at: now, openings: all, text: done
-      ? 'Created in Ashby: ' + list + '.' + (old.testJob === 'yes' ? ' On the TEST job, so no dashboard number moves.' : '')
+      ? 'Created in Ashby: ' + list + '.'
         + (note ? ' ' + note : '')
       : 'Created ' + all.length + ' of ' + want + ' so far: ' + list + '. The rest follow in the next session.' + (note ? ' ' + note : '') });
     var set = { openings: JSON.stringify(all), updatedAt: now };
@@ -1238,20 +1331,28 @@ function orMarkCreated(id, openings, note) {
 function orSlackCreated_(rq, all, want, done, note) {
   var lines = all.map(function (o) { return '> ' + (o.url ? '<' + o.url + '|' + orSlackEsc_(o.name || o.id) + '>' : orSlackEsc_(o.name || o.id))
     + (o.state ? ' · ' + orSlackEsc_(o.state) : ''); });
-  return orSlackTop_(rq) + (done ? '*Created in Ashby*' : '*Created ' + all.length + ' of ' + want + ' so far*')
-    + (rq.testJob === 'yes' ? ' _(test job — no dashboard number moves)_' : '') + '\n' + lines.join('\n')
+  // ⚠ The status used to be glued straight onto the top line with no newline, which is why it read
+  //   "Open the requestCreated in Ashby". It lives inside orSlackTop_ now, so there is one place to get it right.
+  return orSlackTop_(rq, done ? { done: true } : { n: all.length, want: want })
+    + '\n' + lines.join('\n')
     + (note ? '\n' + orSlackQuote_(note) : '');
 }
 
 // Active Ashby users with their full Ashby name — the name that goes into the opening name. Cached for six hours.
+// 170a: the Ashby seats whose holders own openings. Read from user.list's globalRole, which is what Ashby calls the
+// seat; 'Elevated Access' is every working recruiter here, 'External Recruiter' is the agency side.
+var OR_RECRUITER_SEATS = { 'Elevated Access': 1, 'External Recruiter': 1 };
+
 function orAshbyUsers_() {
-  var c = CacheService.getScriptCache(), k = 'or_users_v1', hit = c.get(k);
+  // 🚨 The cache key MUST change whenever this shape changes - v1 entries carry no `role`, and a stale six-hour cache
+  //    would quietly hand the form the old shape, emptying the recruiter list for anyone not on the sign-in list.
+  var c = CacheService.getScriptCache(), k = 'or_users_v2', hit = c.get(k);
   if (hit) return JSON.parse(hit);
   var out = [];
   ashbyListAll_('/user.list').forEach(function (u) {
     if (u.isEnabled === false || !u.email) return;
     var name = ((u.firstName || '') + ' ' + (u.lastName || '')).trim();
-    if (name) out.push({ name: name, email: String(u.email).toLowerCase() });
+    if (name) out.push({ name: name, email: String(u.email).toLowerCase(), role: String(u.globalRole || '') });
   });
   out.sort(function (a, b) { return a.name.localeCompare(b.name); });
   try { c.put(k, JSON.stringify(out), 21600); } catch (e) { /* too big to cache: fine, just slower */ }
@@ -1322,7 +1423,15 @@ function orSlackCard_(rq) {
   var now = String(rq.levelNow || '').trim(), set = String(rq.levelSet || '').trim();
   var level = !set ? orSlackVal_(now) : set === now ? orSlackEsc_(set) + ' (on the job, unchanged)'
     : (now ? orSlackEsc_(now) + ' ➔ ' : '') + orSlackEsc_(set) + " (the job's Level changes)";
-  var score = pts ? (rq.tier ? orSlackEsc_(rq.tier) + ' · ' : '') + pts + ' points each · +' + (pts * n) + ' to ' + orSlackEsc_(rq.recruiter) + "'s Goal" : 'not scored';
+  // 170b: every opening has its own recruiter, so the Goal lands on several people. One "+N to X" per person.
+  var rows170 = orRows_(rq), goal = {}, goalOrder = [];
+  rows170.forEach(function (r) {
+    if (!r.recruiter) return;
+    if (goal[r.recruiter] == null) { goal[r.recruiter] = 0; goalOrder.push(r.recruiter); }
+    goal[r.recruiter] += pts;
+  });
+  var goalLine = goalOrder.map(function (nm) { return '+' + goal[nm] + ' ' + orSlackEsc_(nm); }).join(' · ');
+  var score = pts ? (rq.tier ? orSlackEsc_(rq.tier) + ' · ' : '') + pts + ' points each · Goal: ' + (goalLine || '+' + (pts * n)) : 'not scored';
   var line = function (v) { return String(v == null ? '' : v).replace(/\s*\n\s*/g, ' / '); };   // a line break would end the bullet
   var li = function (label, v) { return '• *' + label + ':* ' + v; };
   var worth = [], ans = rq.answers || {}, asked = {
@@ -1339,12 +1448,15 @@ function orSlackCard_(rq) {
   return ['*Opening name:* `' + name + '` × ' + n,
     '', '*The opening*', li('Job', orSlackVal_(rq.jobTitle)), li('How many', String(n)), li('Team', orSlackVal_(rq.team)),
     li('Location', orSlackVal_(rq.location)), li('Open date', date), li('Description', orSlackVal_(line(rq.description), 600)),
-    '', '*People*', li('Recruiter', orSlackVal_(rq.recruiter)), li('Sourcer', orSlackVal_(rq.sourcer)),
-    '', '*Ashby fields*', li('Employment Type', orSlackVal_(rq.employmentType)), li('Role Type', orSlackVal_(rq.roleType)),
-    li('Replacement of', orSlackVal_(rq.replacementOf)), li('Role Complexity', orSlackVal_(rq.complexity)),
+    '', '*The openings*'].concat(rows170.map(function (r, i) {
+      return '• *' + (i + 1) + '.* ' + orSlackEsc_(r.roleType || '(no Role Type)') + ' — ' + orSlackEsc_(r.recruiter || '(no recruiter)')
+        + (r.sourcer ? ', sourced by ' + orSlackEsc_(r.sourcer) : '')
+        + (r.replacementOf ? ', replacing ' + orSlackEsc_(r.replacementOf) : '');
+    }), [
+    '', '*Ashby fields*', li('Employment Type', orSlackVal_(rq.employmentType)), li('Role Complexity', orSlackVal_(rq.complexity)),
     li('Specialization/Topic', orSlackVal_(rq.topic)), li('Job Level', level),
     '', '*Score*', '• ' + score,
-    '', '*Worth knowing*'].concat(worth.map(function (w) { return '• ' + w; }), [li('Note', orSlackVal_(line(rq.note), 600))]).join('\n');
+    '', '*Worth knowing*']).concat(worth.map(function (w) { return '• ' + w; }), [li('Note', orSlackVal_(line(rq.note), 600))]).join('\n');
 }
 // Approved · Sent back (the note quoted) · Edited and approved (each change old ➔ new, the old struck through).
 function orSlackDecision_(rq, decision, who, edits, note) {
@@ -1372,12 +1484,27 @@ function orSlackResubmit_(rq, edits) {
   } catch (e) { Logger.log('#112 Slack failed: ' + e.message); }
 }
 // The thread's first message: who raised how many openings for which job, the approvers tagged, the requester cc'd.
-function orSlackTop_(rq) {
-  var n = Number(rq.count) || 1, at = orSlackAt_;
-  return '*' + rq.id + '* · ' + orSlackEsc_(rq.requesterName) + ' has raised *' + n + ' opening' + (n === 1 ? '' : 's')
-    + '* for the *' + orSlackEsc_(rq.jobTitle) + '* job.\n*For approval* ' + OR_APPROVERS.map(function (a) { return at(a[0], a[1]); }).join(' ')
-    + ' · cc ' + at(rq.requesterEmail, rq.requesterName)
-    + ' · <' + OR_ASSETS + '/requests?id=' + rq.id + '|Open the request>';   // 112d: the neat address; it opens the window inside the site
+// 🚨 24 Sep 2026 (Jerin, seeing a finished request still reading "has raised … *For approval*"): this message is EDITED
+// IN PLACE as the request moves, so it must describe the request as it stands NOW. A headline still saying "raised" and
+// a status still tagging the approvers, after the openings already exist in Ashby, is simply wrong.
+//   `made` absent   -> as raised, waiting on the approvers
+//   {done:true}     -> every opening exists: the headline says CREATED and nobody is tagged for action
+//   {n, want}       -> part way there, which is a real state (a run can be refused after 2 of 4)
+function orSlackTop_(rq, made) {
+  var n = orRows_(rq).length || Number(rq.count) || 1, at = orSlackAt_;
+  var job = ' for the *' + orSlackEsc_(rq.jobTitle) + '* job.';
+  var who = at(rq.requesterEmail, rq.requesterName);
+  // 112d: the neat address; it opens the window inside the site
+  var link = ' · <' + OR_ASSETS + '/requests?id=' + rq.id + '|Open the request>';
+  var count = '*' + n + ' opening' + (n === 1 ? '' : 's') + '*';
+  var raised = '*' + rq.id + '* · ' + orSlackEsc_(rq.requesterName) + ' has raised ' + count + job;
+  if (made && made.done) {
+    return '*' + rq.id + '* · ' + count + ' created in Ashby' + job
+      + '\n*Created* · raised by ' + who + (rq.decidedBy ? ' · approved by ' + orSlackEsc_(rq.decidedBy) : '') + link;
+  }
+  if (made) return raised + '\n*Created ' + made.n + ' of ' + made.want + ' so far* · raised by ' + who + link;
+  return raised + '\n*For approval* ' + OR_APPROVERS.map(function (a) { return at(a[0], a[1]); }).join(' ')
+    + ' · cc ' + who + link;
 }
 function orSlackAt_(email, name) {
   var ids = {};
