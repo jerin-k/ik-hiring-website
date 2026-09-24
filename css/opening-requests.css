@@ -156,6 +156,26 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
 .or-mix-names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.375rem; }
 .or-mix-total { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0.875rem; background: var(--or-navy); color: #fff; }
 .or-mix-total b { font-size: 0.9375rem; } .or-mix-total span { font-size: 0.8125rem; color: var(--or-navy-ink); text-align: right; }
+/* 170b (Jerin, 23 Sep 2026: "A row per opening actually. Count is pointless; nix count." · layout A, 24 Sep 2026):
+   ONE LINE PER OPENING inside the same .or-mix box the Role-Type rows used, so the panel keeps its shape. Four columns:
+   the line number, Role Type, Recruiter, Sourcer. "Replacing whom?" opens underneath the lines that need it, on the
+   same dashed sub-row the replacement names already used. Every length in rem under the 90% root (#140). */
+.or-op-head, .or-op-row { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem; align-items: center; }
+.or-op-head { padding: 0.4375rem 0.875rem; background: #f3f6fb; border-bottom: 1px solid var(--or-border-light);
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--or-muted); }
+.or-op-row { padding: 0.375rem 0.875rem; border-top: 1px solid var(--or-border-light); }
+.or-op-row:first-of-type { border-top: 0; }
+.or-op-n { font-weight: 700; color: var(--or-faint); font-size: 0.8125rem; text-align: center; }
+/* a select is shorter than a text input here, so the lines stay compact enough to read five at a glance */
+.or-op-row select.or-in { min-height: 2.125rem; padding-top: 0; padding-bottom: 0; }
+.or-op-sub { padding: 0.375rem 0.875rem 0.5rem 3.125rem; background: #fbfcfe; border-top: 1px dashed var(--or-border); }
+.or-op-sub label { display: block; font-size: 0.71875rem; color: var(--or-amber); font-weight: 600; margin-bottom: 0.1875rem; }
+/* each opening carries its own name once the recruiter is per line, so the name bar lists them */
+.or-names { list-style: none; margin: 0.25rem 0 0.375rem; padding: 0; display: grid; gap: 0.1875rem; }
+.or-names code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; color: var(--or-navy);
+  background: #e4eaf5; padding: 0.0625rem 0.375rem; border-radius: 0.3125rem; }
+
 .or-namebar { padding: 0.625rem 1rem; border-top: 1px solid var(--or-border-light); background: #f7f9fc; font-size: 0.84375rem; }
 .or-chk { list-style: none; margin: 0; padding: 0.625rem 1rem; display: grid; gap: 0.3125rem; border-top: 1px solid var(--or-border-light); }
 .or-c { display: grid; grid-template-columns: 1.125rem 1fr; gap: 0.5rem; font-size: 0.8125rem; align-items: start; }
@@ -182,6 +202,11 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
   .or-kv { grid-template-columns: 1fr; }
   .or-edits li { grid-template-columns: 1fr; gap: 0; }
   .or-mix-names { grid-template-columns: 1fr; }
+  /* 170b: four columns do not fit a phone. A line becomes its own little block, the number sitting above it. */
+  .or-op-head { display: none; }
+  .or-op-row { grid-template-columns: 1.75rem minmax(0, 1fr); gap: 0.375rem 0.5rem; padding: 0.5rem 0.875rem; }
+  .or-op-row > :nth-child(3), .or-op-row > :nth-child(4) { grid-column: 2; }
+  .or-op-sub { padding-left: 0.875rem; }
 }
 
 /* ===== #112 phase 3 (Jerin, 23 Sep 2026) — what Claude made in Ashby =====
