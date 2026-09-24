@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-14T18:17:43.478Z",
+  "updatedAt": "2026-09-24T03:48:50.630Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -28,8 +28,8 @@
       "Siva Sruthi V S": "Sales",
       "Praveetha A": "Sales",
       "Leenita Joseph Albert": "Sales",
-      "Sangha": "Others",
       "Gopu Nair V": "Others",
+      "Sangha": "Others",
       "G Darshan": "Others"
     }
   },
@@ -62,8 +62,8 @@
       "Tina Anisha Bibeiro": 180,
       "Unassigned": 220,
       "V Pooja": 210,
-      "Leenita Joseph Albert": 90,
-      "Praveetha A": 84,
+      "Praveetha A": 0,
+      "Leenita Joseph Albert": 0,
       "Sangha": 0
     },
     "2026-Q1": {
@@ -133,24 +133,6 @@
     "B2B": "NonTech",
     "Test": "Exclude"
   },
-  "userType": {
-    "Sangha": "Agency"
-  },
-  "recruiterDates": {
-    "Leenita Joseph Albert": {
-      "start": "2026-07-15"
-    },
-    "Praveetha A": {
-      "start": "2026-07-15"
-    },
-    "Sangha": {
-      "start": "2026-08-01"
-    },
-    "Kaashvika Kashyap": {
-      "end": "2026-07-31"
-    },
-    "Ankita Kabra": {
-      "end": "2026-07-31"
-    }
-  }
+  "userType": {},
+  "recruiterDates": {}
 }
