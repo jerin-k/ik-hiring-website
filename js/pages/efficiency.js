@@ -16,6 +16,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
+import { openingScores, scoreOfJob } from '../opening-score.js';   // #165
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -107,6 +108,18 @@ let effFulfilCombined = null, effSourceChart = null, effScreenChart = null, effJ
 const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
 
 export function renderEfficiency(data) {
+  // #165 (Jerin, 24 Sep 2026: "Yes, total the score from openings."). A JOB's score is the SUM of its openings'
+  // scores. That changes what this column MEANS, not just its value: it stops being "what this role is worth" and
+  // becomes "what this job's open positions are worth together". An opening with no complexity contributes its
+  // zero rather than vanishing, or the total quietly stops agreeing with the opening count beside it.
+  // 🚦 GATE: until the pipeline carries each opening's complexity, fall back to the job's own value — otherwise
+  //    every score here reads zero for a reason nobody could see.
+  const jobScore = (job8, meta, q) => {
+    const idx = openingScores(data);
+    if (!idx.ready) return scoreForRole(meta, q);
+    const s = scoreOfJob(job8, meta, q, idx);
+    return s === null ? scoreForRole(meta, q) : s;
+  };
   if (!data || !data.funnel) return '<p>No data available.</p>';
 
   const years = reportingYears();   // #127c: 2026 onwards; a new year appears on its first day
@@ -409,7 +422,7 @@ export function initEfficiencyFilters(data) {
         const jid = ((bj.jobId || '').slice(0, 8)) || (m.title || '?');
         const P = tree[pod] || (tree[pod] = { depts: {} });
         const D = P.depts[dept] || (P.depts[dept] = { jobs: {} });
-        const J = D.jobs[jid] || (D.jobs[jid] = { jid: jid, title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: scoreForRole(m, q),
+        const J = D.jobs[jid] || (D.jobs[jid] = { jid: jid, title: m.title || '(untitled)', level: m.level, complexity: m.complexity, dept, total: 0, offer: 0, hired: 0, score: jobScore(jid, m, q),   // #165
           rawDept: m.department, rawTitle: m.title });   // #126: what scoreOf() needs to price the role in another quarter
         J.total += bj.total || 0; J.offer += bj.offer || 0; J.hired += bj.hired || 0;
       });
@@ -479,7 +492,7 @@ export function initEfficiencyFilters(data) {
         jid, dept, openingOnly: true, unknown: !known,
         title: known ? b.title : `Unknown job (${jid}) — not in Ashby's job list`,
         level: undefined, complexity: undefined,
-        score: scoreForRole({ department: raw, title: b.title }, q), rawDept: raw, rawTitle: b.title,
+        score: jobScore(jid, { department: raw, title: b.title }, q), rawDept: raw   /* #165 */, rawTitle: b.title,
         total: 0, offer: 0, hired: 0
       };
     });
@@ -648,7 +661,7 @@ export function initEfficiencyFilters(data) {
   function scoreOf(j, qq, PM) {
     if (qq === PM.atQ) return j.score || 0;
     const k = (j.jid || (j.dept + '|' + j.title)) + '|' + qq;
-    if (!(k in PM.memo)) PM.memo[k] = scoreForRole({ department: j.rawDept, title: j.rawTitle, level: j.level, complexity: j.complexity }, qq);
+    if (!(k in PM.memo)) PM.memo[k] = jobScore(j.jid, { department: j.rawDept, title: j.rawTitle, level: j.level, complexity: j.complexity }, qq);   // #165
     return PM.memo[k];
   }
   function jobSplit(j, per, dept, PM) {
@@ -728,7 +741,7 @@ export function initEfficiencyFilters(data) {
       Object.keys(titles).forEach(title => {
         const m = metaByTitle[title] || {};
         const j = { jid: null, title, dept, level: m.level, complexity: m.complexity,
-                    score: scoreForRole({ department: dept, title, level: m.level, complexity: m.complexity }, q),
+                    score: jobScore(null, { department: dept, title, level: m.level, complexity: m.complexity }, q),   // #165: no job id ⇒ no openings ⇒ no score
                     rawDept: dept, rawTitle: title, scoreable: false };
         j.scoreable = isScoreable(j);
         grp.jobs.push({ j, sp: jobSplit(j, per, dept, PM) });
