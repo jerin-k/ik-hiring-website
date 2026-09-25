@@ -1,6 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock } from '../definitions.js';
+import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
@@ -426,7 +427,7 @@ export function initEfficiencyFilters(data) {
     const dsel = selDepts(), jsel = selJobs(); const out = [];
     Object.keys(P.depts).sort((a, b) => a.localeCompare(b)).forEach(dept => {
       if (dsel.length && !dsel.includes(dept)) return;
-      const arr = Object.values(P.depts[dept].jobs).filter(j => !jsel.length || jsel.includes(j.title)).sort((a, b) => (b.total || 0) - (a.total || 0));
+      const arr = Object.values(P.depts[dept].jobs).filter(j => matchesJobRow(jsel, data, j.jid, dept, j.title)).sort((a, b) => (b.total || 0) - (a.total || 0));   // #172c
       if (arr.length) out.push({ dept, jobs: arr });
     });
     return out;
@@ -516,7 +517,7 @@ export function initEfficiencyFilters(data) {
       if (dsel.length && !dsel.includes(dept)) return;
       const arr = Object.values(t[dept])
         .filter(j => withOpeningOnly || !j.openingOnly)
-        .filter(j => !jsel.length || jsel.includes(j.title))
+        .filter(j => matchesJobRow(jsel, data, j.jid, j.dept || j.rawDept, j.title))   // #172c
         .filter(j => !openIds || openIds.has(String(j.jid).slice(0, 8)))
         .map(j => ({ ...j, openings: openingsOf(j.jid, q), scoreable: isScoreable(j) }))
         .sort((a, b) => (b.total || 0) - (a.total || 0));
@@ -538,13 +539,20 @@ export function initEfficiencyFilters(data) {
   function makeMultiSelect(container, label, options, onChange) {
     if (!container) return null;
     const selected = new Set();
-    const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+    // #172c (25 Sep 2026): an option is either a plain string (unchanged, what every other dropdown passes)
+    // or { v, t } — `v` is the VALUE kept in `selected`, `t` is what the user reads. The Job dropdowns pass a
+    // JOB ID as `v`, so two jobs sharing a name stay distinct; everything else still passes strings.
+    const norm = (options || []).map(o => (o && typeof o === 'object')
+      ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
+    const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
+    const labelText = () => selected.size === 0 ? `${label}: All`
+      : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
     const esc = s => String(s).replace(/"/g, '&quot;');
     container.classList.add('ms');
     container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-      + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+      + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
       + `<div class="ms-list">`
-      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
+      + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}"> ${o.t}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
       + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
     const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -755,7 +763,8 @@ export function initEfficiencyFilters(data) {
       if (seen[key]) return;
       const i = key.indexOf('|'); const dept = key.slice(0, i), title = key.slice(i + 1);
       if (dsel.length && !dsel.includes(dept)) return;
-      if (jsel.length && !jsel.includes(title)) return;
+      // #172c: a leftover row has no job id — match the selection on department + title, which IS its identity.
+      if (!matchesJobRow(jsel, data, null, dept, title)) return;
       (extra[dept] || (extra[dept] = {}))[title] = 1;
     };
     Object.keys(PM.jp).forEach(addLeftover);
@@ -870,7 +879,7 @@ export function initEfficiencyFilters(data) {
     const dsel = selDepts(), jsel = selJobs(), dojF = dojFilterOf('eff');   // #133: the DOJ boxes replace the period on this sub-tab
     const rows = (data.joiningPendingCases || [])
       .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
-      .filter(c => !jsel.length || jsel.includes(c.job))
+      .filter(c => matchesJob(jsel, c.jobId8))   // #172c
       .filter(c => inDojFilter(c.doj, dojF));
     // #149 option A: month ➡ date ➡ people, soonest first — the twin of Hiring Manager's list, and Rule 3
     // says the two move together.
@@ -901,7 +910,7 @@ export function initEfficiencyFilters(data) {
     const rows = (data.offerEvents || [])
       .filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg))
       .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
-      .filter(e => !jsel.length || jsel.includes(e.jobTitle))
+      .filter(e => matchesJob(jsel, e.jobId8))   // #172c
       .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
     // #149 option A: newest month first here — this list looks back. No sub-stage: everyone is Hired.
     body.innerHTML = rows.length ? monthTreeRows(rows, {
@@ -1136,7 +1145,7 @@ export function initEfficiencyFilters(data) {
       if (seen[key] || !(c.o > 0)) return;
       const i = key.indexOf('|'), dept = key.slice(0, i), title = key.slice(i + 1);
       if (dsel.length && !dsel.includes(dept)) return;
-      if (jsel.length && !jsel.includes(title)) return;
+      if (!matchesJobRow(jsel, data, null, dept, title)) return;   // #172c
       let g = out.find(x => x.dept === dept);
       if (!g) { g = { dept, per: [] }; out.push(g); }
       g.per.push({ title: title || '(no job recorded)', c });
@@ -1277,7 +1286,7 @@ export function initEfficiencyFilters(data) {
       if (!j.pipeline) return;
       const dept = deptOfJob(j);
       if (dsel.length && !dsel.includes(dept)) return;
-      if (jsel.length && !jsel.includes(j.title)) return;
+      if (!matchesJobRow(jsel, data, j.jid, j.dept || j.rawDept, j.title)) return;   // #172c
       if (openIds && !openIds.has(String(j.id || '').slice(0, 8))) return;
       if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return;
       const G = groups[dept] || (groups[dept] = { total: 0, stages: {}, jobs: [] });
@@ -1914,12 +1923,13 @@ export function initEfficiencyFilters(data) {
 
   // Filters
   const deptNames = [...new Set(jobs.map(j => resolveDeptTeam(j.department).dept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const jobNames = [...new Set(jobs.map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  // #172c: ids, not names — same source set, labelled by job-filter.js (department only where it repeats).
+  const jobOptions = jobFilterOptions(data, new Set(jobs.map(j => j.id || j.jid).filter(Boolean)));
   // Pod filter removed (#18) — Overall Efficiency is Department → Job now. visiblePods() still returns
   // every pod for the sub-tabs not yet converted, so nothing else changes until they are.
   msPod = null;
   msDept = makeMultiSelect(document.getElementById('effMsDept'), 'Department', deptNames, renderAll);
-  msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobNames, renderAll);
+  msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobOptions, renderAll);   // #172c
   document.addEventListener('click', closeMsPanels);
   document.getElementById('effExpandAll')?.addEventListener('change', renderAll);
   // #122: the Stages dropdown + Hide zero-pipeline above the Throughput squares.

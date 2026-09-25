@@ -48,6 +48,7 @@ function allMonthKeys(data) {
 
 import { defsBlock } from '../definitions.js';
 import { HBAR, hbarHeight } from '../chart-style.js';
+import { jobFilterOptions, matchesJobRow } from '../job-filter.js';   // #172c
 import { reportingQuarters, selectionQuarters, quarterSpan, periodText,
          inRange, sumDayCount, coversQuarters, rangeTouchesQuarter, rangeText, hasDayData } from '../period.js';   // #127 · #129
 
@@ -143,7 +144,10 @@ export function initInterviewer(data, opts = {}) {
   const years = [...new Set(qkeys.map(k => k.slice(0, 4)))].sort().reverse();
   const names = [...new Set(ivs.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const depts = [...new Set(panelists.map(p => p.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const jobList = [...new Set(panelists.map(p => p.jobTitle).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  // #172c: job IDS, not names. 🚨 This panel is EMBEDDED in Hiring Manager and Overall Efficiency and is
+  // driven by the HOST tab's Job filter — both now hand it ids, so matching on `p.jobTitle` would have
+  // quietly emptied the panelist list the moment anyone filtered by job.
+  const jobList = jobFilterOptions(data, new Set(panelists.map(p => p.jobId8).filter(Boolean)));
   const orgByUser = {}; ivs.forEach(r => { if (r.userId) orgByUser[r.userId] = r; });
 
   const sel = (id) => {
@@ -206,7 +210,9 @@ export function initInterviewer(data, opts = {}) {
       return !ids.length || ids.some(j => idSel.has(String(j).slice(0, 8))); };
     return panelists
       .filter(p => !dSel.length || dSel.includes(p.dept))
-      .filter(p => !jSel.length || jSel.includes(p.jobTitle))
+      // #172c: 66 of 598 panelists carry no job id, so they fall back to department + title rather than
+      // disappearing the moment a job filter is applied.
+      .filter(p => matchesJobRow(jSel, data, p.jobId8, p.dept, p.jobTitle))
       .filter(inJobs)
       .filter(p => !nSel.length || nSel.includes(p.name))
       .map(p => ({ ...p, _count: periodCount(p, quarters, months) }))
@@ -465,13 +471,20 @@ function wireIvTree(tbody, expand) {
 function makeMultiSelect(container, label, options, onChange) {
   if (!container) return null;
   const selected = new Set();
-  const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+  // #172c (25 Sep 2026): an option is either a plain string (unchanged) or { v, t } — `v` is the VALUE kept
+  // in `selected`, `t` is what the user reads. The Job dropdown passes a JOB ID as `v` so two jobs sharing a
+  // name stay distinct. Same contract as the copies in hm-report / efficiency / recruiter.
+  const norm = (options || []).map(o => (o && typeof o === 'object')
+    ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
+  const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
+  const labelText = () => selected.size === 0 ? `${label}: All`
+    : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
   const q = s => String(s).replace(/"/g, '&quot;');
   container.classList.add('ms');
   container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-    + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+    + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
     + `<div class="ms-list">`
-    + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${q(o)}"> ${esc(o)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
+    + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${q(o.v)}"> ${esc(o.t)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
     + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
   const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
   const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');

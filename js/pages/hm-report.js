@@ -7,6 +7,7 @@ import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX } from '../job-notes.js';   // #150
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
+import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
@@ -519,19 +520,31 @@ export function initHmFilters(data) {
   // its own table. Now a single control in the main filter bar drives every panel and every chart on the tab.
   let msHmJob = null, msHmPanel = null, msHmTpStage = null, msHmPipeStage = null;
   const selJobs = () => (msHmJob ? msHmJob.getSelected() : []);
-  const jobTitles = [...new Set([...openings.map(o => o.title), ...jobs.map(j => j.title), ...((data.joiningPendingCases || []).map(c => c.job || c.jobTitle))].filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  // #172c: the SAME sources as before — openings, jobs, people in closing — but gathered as JOB IDS, so two
+  // jobs sharing a name stay two entries. Labels come from job-filter.js (department only where it repeats).
+  const jobFilterIds = new Set([...openings.map(o => o.jobId), ...jobs.map(j => j.id),
+    ...((data.joiningPendingCases || []).map(c => c.jobId8))].filter(Boolean).map(i => String(i).slice(0, 8)));
+  const jobOptions = jobFilterOptions(data, jobFilterIds);
+  const jobLook = jobLookup(data);
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
   // Kept identical across the HM / Recruiter / Overall-Efficiency tabs on purpose.
   function makeMultiSelect(container, label, options, onChange) {
     if (!container) return null;
     const selected = new Set();
-    const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+    // #172c (25 Sep 2026): an option is either a plain string (unchanged, what every other dropdown passes)
+    // or { v, t } — `v` is the VALUE kept in `selected`, `t` is what the user reads. The Job dropdowns pass a
+    // JOB ID as `v`, so two jobs sharing a name stay distinct; everything else still passes strings.
+    const norm = (options || []).map(o => (o && typeof o === 'object')
+      ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
+    const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
+    const labelText = () => selected.size === 0 ? `${label}: All`
+      : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
     const esc = s => String(s).replace(/"/g, '&quot;');
     container.classList.add('ms');
     container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-      + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+      + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
       + `<div class="ms-list">`
-      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
+      + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}"> ${o.t}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
       + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
     const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -621,7 +634,7 @@ export function initHmFilters(data) {
     Object.entries(ob).forEach(([job8, rec]) => {
       const dept = deptOf(rec.department || '') || 'Unknown';
       if (deptG && dept !== deptG) return;
-      if (jobSel.length && !jobSel.includes(rec.title)) return;
+      if (!matchesJob(jobSel, job8)) return;   // #172c: by id, not name
       let t = 0, jn = 0, op = 0, ms = 0;
       const add = (b) => { t += b.total || 0; jn += b.joined || 0; op += b.open || 0; ms += b.missed || 0; };
       // #129: a window covering whole quarters adds those quarters; a narrower one adds the positions opened on its days (openingBuckets
@@ -642,16 +655,23 @@ export function initHmFilters(data) {
     // covers 92/92) and is, so these two columns sit on different time bases — the caption says so.
     // Rows are added for jobs that have people in closing but NO opening in the period: restricting to
     // openings showed 88 of 166 pending people and hid 45 of SME - India's 46.
-    const inScope = (dept, title) => !(deptG && dept !== deptG) && !(jobSel.length && !jobSel.includes(title));
+    // #172c: the job id decides the Job filter; the title is only still here for the department check.
+    const inScope = (dept, title, job8) => !(deptG && dept !== deptG) && matchesJob(jobSel, job8);
     // #150: `who` is the Joining Pending case behind this +1. The names in the cell are collected in the SAME
     // loop as the number beside them, so the cell and the column can never disagree (Rule 3).
-    function bump(dept, title, field, who) {
+    function bump(dept, title, field, who, job8) {
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
       G[field] += 1;
-      let row = G.jobs.find(j => j.title === title);
-      if (!row) { row = { title, job8: (who && who.jobId8) || '', total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [] }; G.jobs.push(row); }
-      if (!row.job8 && who && who.jobId8) row.job8 = who.jobId8;
+      // 🚨 #172c / 172b(a): find the row by JOB ID. The positions half of this table is built from
+      // openingBuckets keyed by id, so matching people by NAME meant two same-named jobs in one department
+      // would split their positions across two rows while every person piled onto the first. Title is the
+      // fallback only for a record with no id — none today, measured 1,056 of 1,056.
+      const j8 = String(job8 || (who && who.jobId8) || '').slice(0, 8);
+      let row = j8 ? G.jobs.find(j => j.job8 === j8) : null;
+      if (!row) row = G.jobs.find(j => j.title === title && (!j8 || !j.job8));
+      if (!row) { row = { title, job8: j8, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [] }; G.jobs.push(row); }
+      if (!row.job8 && j8) row.job8 = j8;
       row[field] += 1;
       if (who) { (row.jpWho || (row.jpWho = [])).push(who); (G.jpWho || (G.jpWho = [])).push(who); }
     }
@@ -662,15 +682,15 @@ export function initHmFilters(data) {
     const fromQ = dateFrom ? quarterOf(dateFrom) : null;
     (data.joiningPendingCases || []).forEach(c => {
       const dept = deptOf(c.department || '') || 'Unknown', title = c.job || c.jobTitle || '(no job)';
-      if (!inScope(dept, title)) return;
+      if (!inScope(dept, title, c.jobId8)) return;
       if (c.openingQuarter && fromQ && fromQ !== '\u2014' && c.openingQuarter < fromQ) return;
-      bump(dept, title, 'jpP', c);   // #150: the case itself, for the "Who is joining" cell
+      bump(dept, title, 'jpP', c, c.jobId8);   // #150: the case itself, for the "Who is joining" cell
     });
     dropRows(data).forEach(e => {
       if (!dropIn(e, rg, winQs)) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
       const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
-      if (!inScope(dept, title)) return;
-      bump(dept, title, 'drop');
+      if (!inScope(dept, title, e.jobId8)) return;
+      bump(dept, title, 'drop', null, e.jobId8);
     });
 
     const deptArr = Object.values(groups).sort((a, b) => a.dept.localeCompare(b.dept));
@@ -905,7 +925,7 @@ export function initHmFilters(data) {
 
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
-      if (jobSel.length && !jobSel.includes(j.title)) return false;
+      if (!matchesJob(jobSel, j.id)) return false;   // #172c
       if (!j.pipeline) return false;
       if (openIds && !openIds.has(String(j.id).slice(0, 8))) return false;   // #125: an opening opened in From–To
       return true;
@@ -1041,7 +1061,7 @@ export function initHmFilters(data) {
     }));
     list = list.filter(c => {
       if (deptG && c._dept !== deptG) return false;
-      if (jobSel.length && !jobSel.includes(c.job)) return false;
+      if (!matchesJob(jobSel, c.jobId8)) return false;   // #172c
       if (!inDojFilter(c.doj, dojF)) return false;
       return true;
     });
@@ -1087,7 +1107,7 @@ export function initHmFilters(data) {
     const list = (data.offerEvents || [])
       .filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg))
       .map(e => ({ ...e, _dept: deptOf(e.department || '') }))
-      .filter(e => !(deptG && e._dept !== deptG) && !(jobSel.length && !jobSel.includes(e.jobTitle)));
+      .filter(e => !(deptG && e._dept !== deptG) && matchesJob(jobSel, e.jobId8));   // #172c
     const capEl = document.getElementById('hmJoinCaption');
     if (capEl) {
       const unlinked = list.filter(e => !e.openingQuarter).length;
@@ -1133,7 +1153,7 @@ export function initHmFilters(data) {
     });
     const filtered = jobs.filter(j => {
       if (deptG && j._dept !== deptG) return false;
-      if (jobSel.length && !jobSel.includes(j.title)) return false;
+      if (!matchesJob(jobSel, j.id)) return false;   // #172c
       if (!j.pipeline) return false;
       // #120: with a period set, a job needs an opening in it. An EMPTY set used to mean "list every job".
       if ((gFrom() || gTo()) && !openTitles.has(j.title)) return false;
@@ -1223,7 +1243,7 @@ export function initHmFilters(data) {
   document.getElementById('hmExpandAll')?.addEventListener('change', renderActive);
 
   // ONE Job multi-select in the main filter bar, wired to renderActive so it reaches every sub-tab.
-  msHmJob = makeMultiSelect(document.getElementById('msHmJob'), 'Job', jobTitles, renderActive);
+  msHmJob = makeMultiSelect(document.getElementById('msHmJob'), 'Job', jobOptions, renderActive);   // #172c: ids, not names
   // Panelist names are the long tail here (hundreds of rows) — the shared multi-select gives
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
