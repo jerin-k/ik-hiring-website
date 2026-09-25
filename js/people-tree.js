@@ -77,7 +77,9 @@ export function stageSplit(items, stageOf) {
  *                   in the past folds into ONE "Overdue" group at the top (#149a). False on Joiners, where a
  *                   past joining date is just the past.
  */
-export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soonest', split = null, live = false }) {
+// #176b: `captionOf` is OPTIONAL — a small line under the person's name (their points). A list that does not
+// pass it renders exactly as before, which is how the Hiring Manager tab stays out of #176b's scope.
+export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soonest', split = null, live = false, captionOf = null }) {
   const dated = [], undated = [];
   items.forEach((i) => (isDay(dayOf(i)) ? dated : undated).push(i));
 
@@ -95,7 +97,7 @@ export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soon
   const today = todayUtc();
   let html = '';
 
-  const personRow = (i) => `<tr class="pt-p"><td class="pt-name">${esc(nameOf(i) || '(no name)')}</td>${cells(i)}</tr>`;
+  const personRow = (i) => `<tr class="pt-p"><td class="pt-name">${esc(nameOf(i) || '(no name)')}${captionOf ? (captionOf(i) || '') : ''}</td>${cells(i)}</tr>`;
   const sortDays = (ds) => ds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0) * dir);
   const dateBlock = (day, people) =>
     ((dl) => `<tr class="pt-d"><td colspan="${cols}"><span class="pt-dname${dl.cls}" title="${esc(dl.title)}">${dl.shown}</span>${countTag(people.length)}</td></tr>`)(dateBits(day, live))

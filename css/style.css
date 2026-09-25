@@ -1699,3 +1699,18 @@ td.nosplit { color: #c1c7cf; }
   cursor: pointer;
 }
 .refresh-toast-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* #176b (Jerin, 25 Sep 2026): a person's points, as a caption UNDER their name.
+   🗣 "i just need point mentioned as a caption = below the name dude :)" — deliberately not a column.
+   `display:block` is what puts it on its own line; the name cell is nowrap, so without it the caption
+   would sit beside the name and widen the column, which is the thing this design exists to avoid.
+   Lengths in rem under the 90% root (#140), never px. */
+.pl-pts {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 0.125rem;
+  white-space: nowrap;
+}
+.pl-pts-zero { color: var(--orange); }

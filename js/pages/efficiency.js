@@ -2,7 +2,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock } from '../definitions.js';
 import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
-import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked } from '../people-cells.js';   // #137
+import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked, pointsCaption } from '../people-cells.js';   // #137 · #176b
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
@@ -370,6 +370,8 @@ export function initEfficiencyFilters(data) {
     const q = document.getElementById('effQuarter')?.value;
     return q ? qKey(selYear(), q) : currentQuarter();
   }
+  // #176b: jobs keyed by the 8-char id a Joining Pending case carries, for the level behind its points.
+  const effJob8 = {}; ((data && data.jobs) || []).forEach(j => { const k = String(j.id || '').slice(0, 8); if (k) effJob8[k] = j; });
   // #126 (Jerin, 15 Sep 2026): Fulfilment and Joining Conversion follow the WHOLE period (tisPeriod), the way the Hiring Manager tab
   // does — with Quarter on All they add up every quarter of the selected year, and with Year and Quarter both on All every quarter on
   // record (period null). "An earlier quarter's opening" means one raised before the period starts, and each quarter's positions score
@@ -888,6 +890,13 @@ export function initEfficiencyFilters(data) {
     body.innerHTML = rows.length ? monthTreeRows(rows, {
       dayOf: c => c.doj,
       nameOf: c => c.candidate,
+      // #176b: points under the name, same helper as the Recruiter tab so the two cannot drift (Rule 3).
+      // The opening supplies the complexity (#165); the level comes from the case's own job.
+      captionOf: c => pointsCaption(
+        scoreOfOpening(c.openingId,
+          { department: c.department, title: c.job || c.jobTitle, level: (effJob8[String(c.jobId8 || '').slice(0, 8)] || {}).level },
+          selQuarter(), openingScores(data)),
+        c.openingId ? 'no complexity' : 'no opening'),
       cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c.department)}${tdJob(c.job)}${tdOpening(c.openingId, topicLookup(data))}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdLinked(c.linked)}`,
       cols: 8, order: 'soonest', live: true,   // #168/#169: Opening + Topic
       split: items => stageSplit(items, c => c.subStage),
@@ -918,6 +927,10 @@ export function initEfficiencyFilters(data) {
     body.innerHTML = rows.length ? monthTreeRows(rows, {
       dayOf: e => e.startDate,
       nameOf: e => e.candidate,
+      // #176b: offerEvents carry their own level, so no job lookup is needed here.
+      captionOf: e => pointsCaption(
+        scoreOfOpening(e.openingId, { department: e.department, title: e.jobTitle, level: e.level }, selQuarter(), openingScores(data)),
+        e.openingId ? 'no complexity' : 'no opening'),
       cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdLinked(!!e.openingId)}`,
       cols: 7, order: 'newest',   // #168/#169: Opening + Topic
     }) : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
