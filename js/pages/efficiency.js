@@ -682,7 +682,7 @@ export function initEfficiencyFilters(data) {
     // can be in closing than there are positions when an offer carries no opening link. Hiding that behind a
     // zero makes the row's arithmetic impossible to check by eye.
     const gap = total - joined - pending;
-    let pS = pending * scoreOf(j, PM.atQ, PM);
+    let pS = pending * scoreOf(j, PM.atQ, PM), pNS = 0;   // #176c: pNS stays 0 until the gate below opens
     let dS = dropQs.reduce((s, qq) => s + scoreOf(j, qq, PM), 0);
     // ===== #165 (Jerin, 24 Sep 2026: "Yes, total the score from openings.") =====
     // 🔑 COUNTS ARE UNTOUCHED. Only the Score half of each pair is recomputed, by SUMMING the openings behind it
@@ -707,20 +707,25 @@ export function initEfficiencyFilters(data) {
       tS = t2; jS = j2; mS = m2;
       // A person in closing scores from THEIR OWN opening; one whose offer names no opening scores nothing.
       pS = (PM.jpc[key] || []).reduce((sum, c) => sum + scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx), 0);
+      // #176c (Jerin, 25 Sep 2026): how many of those people scored NOTHING — no opening on their offer, or an
+      // opening with no complexity. Counted from the SAME list that produced pS, so it can never disagree with it.
+      // 🚨 This tab reads HIGHER than the Recruiter tab (19 vs 4 on 25 Sep) and both are right: Overall Efficiency
+      //    groups by job and so keeps the people who have no recruiter named, whom the Recruiter tab cannot place.
+      pNS = (PM.jpc[key] || []).filter(c => !scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx)).length;
       // A drop can NEVER be tied to an opening, so it scores nothing - heads only. Jerin, 24 Sep:
       // "Drop can be based on heads, not score - that works!" This is the rule, not a gap.
       dS = 0;
     }
     return { total, joined, pending, drop, missed, gap, sc: j.score || 0, scoreable: j.scoreable,
-      tS, jS, pS, dS, mS, gS: tS - jS - pS };
+      tS, jS, pS, pNS, dS, mS, gS: tS - jS - pS };   // #176c
   }
   const sumSplits = (arr) => arr.reduce((a, x) => ({
     total: a.total + x.total, joined: a.joined + x.joined, pending: a.pending + x.pending,
     drop: a.drop + x.drop, missed: a.missed + x.missed, gap: a.gap + x.gap,
-    tS: a.tS + x.tS, jS: a.jS + x.jS, pS: a.pS + x.pS, dS: a.dS + x.dS, mS: a.mS + x.mS, gS: a.gS + x.gS,
+    tS: a.tS + x.tS, jS: a.jS + x.jS, pS: a.pS + x.pS, pNS: a.pNS + (x.pNS || 0), dS: a.dS + x.dS, mS: a.mS + x.mS, gS: a.gS + x.gS,   // #176c
     unscored: a.unscored + (x.scoreable ? 0 : (x.total > 0 ? 1 : 0))
   }), { total: 0, joined: 0, pending: 0, drop: 0, missed: 0, gap: 0,
-        tS: 0, jS: 0, pS: 0, dS: 0, mS: 0, gS: 0, unscored: 0 });
+        tS: 0, jS: 0, pS: 0, pNS: 0, dS: 0, mS: 0, gS: 0, unscored: 0 });
 
   // Departments with any positions this quarter. "Unknown" is NO LONGER excluded: it holds the jobs Ashby's
   // job list never returned (DRAFT status — see the pipeline note in Data Hygiene), and two of those carry
@@ -819,7 +824,11 @@ export function initEfficiencyFilters(data) {
       const dropPct = (() => { const den = x.joined + x.pending + x.drop; return den > 0 ? Math.round((x.drop / den) * 100) : null; })();
       return `<td${w}>${z(x.total)}</td><td class="score">${z(x.tS)}</td>`
         + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td class="score">${z(x.jS)}</td>`
-        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td><td class="score">${z(x.pS)}</td>`
+        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
+        // #176c: same caption, same words as the Recruiter tab's nsSub — the mirror tab is a default check.
+        // ⚠ Deliberately NOT on the topic rows below: a topic prices its people at the JOB's points
+        //   (pending × pt), not their own opening's, so a "no score" count there would not match its own number.
+        + `<td class="score">${z(x.pS)}${x.pNS > 0 ? `<span class="sublab warn">${x.pNS} no score</span>` : ''}</td>`
         + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
         + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
         + gapCell(x) + `<td class="score">${x.gS}</td>`
