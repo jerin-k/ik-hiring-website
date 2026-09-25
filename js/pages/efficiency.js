@@ -738,8 +738,18 @@ export function initEfficiencyFilters(data) {
     // exactly the kind of quiet shortfall that is impossible to spot by looking at the number, so every
     // (department, role) carrying people gets a row whether or not the tree knows the job — the same thing
     // the HM tab does when it builds its rows straight from the cases.
-    const metaByTitle = {};
-    (data.jobs || []).forEach(j => { if (j.title && !metaByTitle[j.title]) metaByTitle[j.title] = j; });
+    // #172: same defect as the Recruiter tab's jpMaps, and the MIRROR-TAB check is what found it here —
+    // a title map takes the FIRST job of that name, and two can share one ("Manager, CRM" = L3 Marketing /
+    // L4 Business - India, either side of the grid's L1-L3 | L4-L6 boundary). `metaById` is exact.
+    // ⚠ The leftover rows themselves stay keyed `dept|title` on purpose — that is what stops a person whose
+    // role has no job-tree row vanishing (it once read 165 against the HM tab's 167). Only the LEVEL and
+    // COMPLEXITY lookup moves to the id, resolved from the cases that row is built from.
+    const metaByTitle = {}, metaById = {};
+    (data.jobs || []).forEach(j => {
+      if (j.title && !metaByTitle[j.title]) metaByTitle[j.title] = j;
+      const id8 = String(j.id || '').slice(0, 8);
+      if (id8 && !metaById[id8]) metaById[id8] = j;
+    });
     const extra = {};
     const addLeftover = (key) => {
       if (seen[key]) return;
@@ -754,7 +764,14 @@ export function initEfficiencyFilters(data) {
       let grp = out.find(g => g.dept === dept);
       if (!grp) { grp = { dept, jobs: [], sum: null }; out.push(grp); }
       Object.keys(titles).forEach(title => {
-        const m = metaByTitle[title] || {};
+        // #172: prefer the job the CASES on this row actually point at; fall back to the title map.
+        const jpCases = (PM.jpc && PM.jpc[dept + '|' + title]) || [];
+        let m = null;
+        for (let i = 0; i < jpCases.length && !m; i++) {
+          const id8 = jpCases[i] && jpCases[i].jobId8;
+          if (id8 && metaById[id8]) m = metaById[id8];
+        }
+        m = m || metaByTitle[title] || {};
         const j = { jid: null, title, dept, level: m.level, complexity: m.complexity,
                     score: scoreForRole({ department: dept, title, level: m.level, complexity: m.complexity }, q),
                     rawDept: dept, rawTitle: title, scoreable: false };
