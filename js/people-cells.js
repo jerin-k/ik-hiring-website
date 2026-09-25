@@ -20,8 +20,25 @@ const todayUtc = () => { const n = new Date(); return Date.UTC(n.getFullYear(), 
 // The quarter a chip or a pod colour is judged against: the day's own quarter (a start date), else the quarter we are in (a live list).
 const refQuarter = (day) => (isDay(day) ? quarterOfDay(day) : currentQuarter());
 
-export function tdCandidate(name, style) {
-  return `<td class="pl-cand"${style ? ` style="${style}"` : ''}>${name ? esc(name) : DASH}</td>`;
+export function tdCandidate(name, style, caption) {
+  return `<td class="pl-cand"${style ? ` style="${style}"` : ''}>${name ? esc(name) : DASH}${caption || ''}</td>`;
+}
+
+// ===== #176b (Jerin, 25 Sep 2026) — a person's points, as a CAPTION under their name =====
+// 🗣 "i just need point mentioned as a caption = below the name dude :)" — NOT a new column. Two column
+// designs were mocked and both rejected: the table is already eight columns wide, so a Points column either
+// falls off the right edge or pushes everything along. The page already had the lighter convention sitting
+// on its job rows ("L2 · Normal · 20pt"); this is the same idea one level down.
+// 🔑 ONE helper for every list, so the Recruiter tab and Overall Efficiency cannot word or style it
+// differently (Rule 3). Scope is those two tabs only — the Hiring Manager tab is deliberately NOT included
+// (Jerin: "Dont need it in HM"), which costs nothing here because HM simply never passes a caption.
+// A zero says WHY in amber: with 8 of 156 joiners scoring zero today that is a short, fixable list, and a
+// bare 0 is a number nobody can act on (the #165e rule).
+export function pointsCaption(pts, reason) {
+  if (pts == null) return '';
+  const n = Math.round(pts);
+  if (n > 0) return `<span class="pl-pts">${n} pt</span>`;
+  return `<span class="pl-pts pl-pts-zero">0 pt${reason ? ` \u00b7 ${esc(reason)}` : ''}</span>`;
 }
 export const tdDept = (d) => `<td class="pl-dept">${d ? esc(d) : DASH}</td>`;
 export const tdJob = (j) => `<td class="pl-job">${j ? esc(j) : DASH}</td>`;

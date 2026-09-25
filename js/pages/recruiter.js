@@ -1,7 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
-import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag } from '../people-cells.js';   // #137
+import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
@@ -781,6 +781,9 @@ export function initRecruiterFilters(baseData) {
   // jobMeta() yields {department,title,level,complexity} for the scoring engine (falls back to byJob's own
   // title/department when the job isn't in jobs[] — e.g. archived with no current apps).
   const jobById = {}; (data.jobs || []).forEach(j => { jobById[j.id] = j; });
+  // #176b: the same jobs keyed by the 8-char id, which is what a Joining Pending case carries. 🚨 jobById
+  // above is keyed by the FULL id - indexing it with an 8-char key silently misses every time.
+  const jobById8 = {}; (data.jobs || []).forEach(j => { const k = String(j.id || '').slice(0, 8); if (k) jobById8[k] = j; });
   // #173 (Jerin, 24 Sep 2026: "Loki has an orphan job at the bottom"): fall back to `jobIndex` for the name.
   // 🚨 The cause is NOT that the job is archived — archived jobs ARE in `data.jobs`. The pipeline drops a job from
   //    that list when it has **no applications in the current-year slice** (`if (j2.applied === 0) continue`), which is
@@ -1817,7 +1820,8 @@ export function initRecruiterFilters(baseData) {
     // #130 (Jerin, 15 Sep 2026): both people lists sit on their own sub-tabs now — Joining Pending and the new Joiners — and ONE tree
     // draws both, so they group, reconcile and explain their last group the same way. `rest` = the columns after the first.
     // #133: the quarter, the recruiters shown and their pod groups are arguments — Joining Pending passes TODAY's quarter, Joiners the selected one.
-    function peopleTree(cases, { rest, cells, isLinked, sortBy, q2 = selQuarter(), inRecs = recs, inGroups = groups }) {
+    // #176b: `captionOf` is optional — the person's points, drawn under their name by tdCandidate.
+    function peopleTree(cases, { rest, cells, isLinked, sortBy, q2 = selQuarter(), inRecs = recs, inGroups = groups, captionOf = null }) {
       const byRec = {}, noRec = [];
       cases.forEach(c => {
         const rec = c.recruiter;
@@ -1856,7 +1860,7 @@ export function initRecruiterFilters(baseData) {
       const recName = (name, pod) => `<span class="pl-rec">${avatar(name, pod)}${name}</span>`;
       const candRow = (c, path) => {
         shown++; if (!isLinked(c)) unlinked++;
-        return `<tr data-path="${path}" style="display:none">${tdCandidate(c.candidate, 'padding-left:3.25rem')}${cells(c)}</tr>`;
+        return `<tr data-path="${path}" style="display:none">${tdCandidate(c.candidate, 'padding-left:3.25rem', captionOf ? captionOf(c) : '')}${cells(c)}</tr>`;
       };
       inGroups.forEach((G, pi) => {
         const mine = G.recs.filter(r => visible.has(r.name) && (byRec[r.name] || []).length);
@@ -1912,6 +1916,13 @@ export function initRecruiterFilters(baseData) {
         q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
         rest: 8,   // #168/#169: Opening + Topic joined the row
         isLinked: c => c.linked,
+        // #176b: the person's points, from the OPENING they are tied to. Level comes from their job; the
+        // opening supplies the complexity (#165), so no opening or a blank one scores 0 and says which.
+        captionOf: (c) => pointsCaption(
+          scoreOfOpening(c.openingId,
+            { department: c.department, title: c.job || c.jobTitle, level: (jobById8[String(c.jobId8 || '').slice(0, 8)] || {}).level },
+            qNow, openingScores(data)),
+          c.openingId ? 'no complexity' : 'no opening'),
         sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
         // #149 rule 6: only Opening Quarter moves, to the far right. Everything else stays as it was.
         cells: c => `${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
@@ -1939,6 +1950,10 @@ export function initRecruiterFilters(baseData) {
       const jn = peopleTree((data.offerEvents || []).filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rgJ)), {
         rest: 7,   // #168/#169: Opening + Topic joined the row
         isLinked: e => !!e.openingId,
+        // #176b: offerEvents carry their own level, so no job lookup is needed here.
+        captionOf: (e) => pointsCaption(
+          scoreOfOpening(e.openingId, { department: e.department, title: e.jobTitle, level: e.level }, selQuarter(), openingScores(data)),
+          e.openingId ? 'no complexity' : 'no opening'),
         sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
         // #149 rule 6: only Opening Quarter moves, to the far right.
         cells: e => `${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, TOPIX)}${tdTopic(e.openingId, e.jobId8, TOPIX)}${tdQuarter(e.openingQuarter, e.startDate)}`
