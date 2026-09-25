@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-09-25T06:35:15.477Z",
+  "updatedAt": "2026-09-25T07:18:53.785Z",
   "notes": {
     "092e9d9b": {
       "text": "Test",
@@ -51,11 +51,6 @@
       "text": "Closed",
       "by": "gopu.nair@interviewkickstart.com",
       "at": "2026-09-22T12:40:45.827Z"
-    },
-    "cfc5ab55": {
-      "text": "Closed",
-      "by": "gopu.nair@interviewkickstart.com",
-      "at": "2026-09-22T13:11:24.596Z"
     },
     "b9a5a189": {
       "text": "1 closed",
