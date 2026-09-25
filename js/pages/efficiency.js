@@ -17,7 +17,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
-import { openingScores, scoreOfOpening } from '../opening-score.js';   // #165
+import { openingScores, scoreOfOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -835,7 +835,9 @@ export function initEfficiencyFilters(data) {
         <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells(sum, true)}</tr>`;
       jobs.forEach(({ j, sp }, ji) => {
         const meta = sp.scoreable
-          ? `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt</span>`
+          // #176a: the caption reads the OPENINGS, and shows a RANGE when they differ. Same helper as the
+          // Recruiter tab so the two tabs cannot word it differently (Rule 3).
+          ? `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${jobScoreCaption(jobScoreSpread((j.jid || '').slice(0, 8), { department: j.rawDept || j.dept, title: j.rawTitle || j.title, level: j.level }, scoreQOf(per), openingScores(data)), j.level, `${j.level || ''}${j.complexity ? ' · ' + j.complexity : ''} · ${j.score}pt`)}</span>`
           : `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--orange)">unscored</span>`;
         // #157: only the two SME departments open past the job. A job with no topics stays a plain row with
         // no caret - it must not look clickable when there is nothing under it.

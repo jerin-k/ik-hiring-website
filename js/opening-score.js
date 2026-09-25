@@ -71,3 +71,40 @@ export function noScoreReason(openingIds, idx) {
   if (!blank) return '';
   return blank === 1 ? '1 opening with no complexity' : `${blank} openings with no complexity`;
 }
+
+// ===== #176a (Jerin, 25 Sep 2026) — say what a job's score is MADE OF =====
+// 🗣 "Range will help." The job row used to print the JOB's own complexity and the rate derived from it —
+// the exact field #165 took OUT of the maths — so the caption could disagree with the number beside it.
+// It now reads the OPENINGS, which is what actually scores.
+//
+// Returns null when the pipeline cannot answer yet (callers then keep the old caption), otherwise:
+//   { n, min, max, same, cxLabel, blanks }
+// `min`/`max` are per-opening RATES, not the job total: the caption has always shown a rate, and the row's
+// own Goal column multiplies it by the openings owned. A blank opening scores 0 by rule, so it drags `min`
+// to 0 — which is the point, it makes an unscored opening visible on the row instead of silently averaged.
+export function jobScoreSpread(job8, meta, quarter, idx) {
+  if (!idx || !idx.ready) return null;
+  const list = (idx.jobOpenings && idx.jobOpenings[job8]) || [];
+  if (!list.length) return null;
+  const vals = list.map((op) => scoreOfOpening(op, meta, quarter, idx));
+  const cxs = [];
+  list.forEach((op) => {
+    const cx = idx.cxOf[k8(op)] || '(none)';
+    if (cxs.indexOf(cx) < 0) cxs.push(cx);
+  });
+  const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  return {
+    n: vals.length, min: Math.round(min), max: Math.round(max), same: min === max,
+    cxLabel: cxs.join('/'),                                   // "Normal" · "Normal/Complex" · "Normal/(none)"
+    blanks: list.filter((op) => !idx.cxOf[k8(op)]).length
+  };
+}
+
+// The caption itself, so the Recruiter tab and Overall Efficiency cannot word it differently (Rule 3).
+// `fallback` is what to print when the spread cannot be computed — the old job-based caption.
+export function jobScoreCaption(spread, level, fallback) {
+  if (!spread) return fallback;
+  const lvl = level ? String(level) : '';
+  const pts = spread.same ? `${spread.max}pt` : `${spread.min}–${spread.max}pt`;
+  return [lvl, spread.cxLabel, pts].filter(Boolean).join(' · ');
+}

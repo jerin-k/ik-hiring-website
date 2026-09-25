@@ -5,7 +5,7 @@ import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar,
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
-import { openingScores, scoreOfOpening } from '../opening-score.js';   // #165
+import { openingScores, scoreOfOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
 import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
@@ -1764,7 +1764,7 @@ export function initRecruiterFilters(baseData) {
               // stays a plain row for them, even when a colleague's opening on the job has one.
               if (!hasRealTopic(tops)) tops = null;
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
-                <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}</span></td>${cells(jv, false)}</tr>`;
+                <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${jobScoreCaption(jobScoreSpread(j8t, m, q, openingScores(data)), m.level, `${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}`)}</span></td>${cells(jv, false)}</tr>`;
               (tops || []).forEach(t => {
                 html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
                   + `<td style="padding-left:4.875rem"><span class="${t.topic === NO_TOPIC ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
