@@ -999,11 +999,11 @@ export function initRecruiterFilters(baseData) {
     const sp = splitOf(dept, srcr);
     const put = (name, f, head, sourced) => {
       if (!name || (!f && !head && !sourced)) return;
-      const bump = (o) => { o.hc += head ? 1 : 0; o.sc += sc * f; o.so += sourced ? 1 : 0; };
-      bump(mRec[name] || (mRec[name] = { hc: 0, sc: 0, so: 0 }));
-      if (mJob) { const k = name + '|' + (job8 || ''); bump(mJob[k] || (mJob[k] = { hc: 0, sc: 0, so: 0 })); }
+      const bump = (o) => { o.hc += head ? 1 : 0; o.sc += sc * f; o.so += sourced ? 1 : 0; o.ns += (head && !sc) ? 1 : 0; };   // #176c
+      bump(mRec[name] || (mRec[name] = { hc: 0, sc: 0, so: 0, ns: 0 }));
+      if (mJob) { const k = name + '|' + (job8 || ''); bump(mJob[k] || (mJob[k] = { hc: 0, sc: 0, so: 0, ns: 0 })); }
       if (mOpen && open8) { const k = name + '|' + (job8 || '') + '|' + open8;
-        bump(mOpen[k] || (mOpen[k] = { hc: 0, sc: 0, so: 0 })); }
+        bump(mOpen[k] || (mOpen[k] = { hc: 0, sc: 0, so: 0, ns: 0 })); }
     };
     put(rec, sp.rec, sp.hcTo === 'rec', false);
     put(srcr, sp.src, sp.hcTo === 'src', !!srcr && srcr !== rec);
@@ -1364,7 +1364,7 @@ export function initRecruiterFilters(baseData) {
       const rg = selRange();   // #129: Joined, Drop, Goal and Capacity below all follow the From / To range
       const OM = outcomeMaps(q, rg);
       const JP = jpMaps(q, isSales);
-      const Z = { hc: 0, sc: 0, so: 0 };
+      const Z = { hc: 0, sc: 0, so: 0, ns: 0 };
       const jpOf = (rec) => ({ t: JP.total[rec] || Z, a: JP.bucketA[rec] || Z, b: JP.bucketB[rec] || Z });
       const jpOfJob = (rec, title) => { const k = rec + '|' + (title || '');
         return { t: JP.totalJ[k] || Z, a: JP.bucketAJ[k] || Z, b: JP.bucketBJ[k] || Z }; };
@@ -1375,12 +1375,12 @@ export function initRecruiterFilters(baseData) {
       // nothing in, has no topic row to sit on and is counted on the job row only — so the topic rows are a SUBSET of the
       // job row above, never a replacement for it, exactly as on the Hiring Manager tab (#161, option A).
       const jpOfTopic = (rec, title, openings) => {
-        const acc = { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 } };
+        const acc = { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } };
         (openings || []).forEach(o => {
           const k = rec + '|' + (title || '') + '|' + String(o.id).slice(0, 8);
           [['t', JP.totalO], ['a', JP.bucketAO], ['b', JP.bucketBO]].forEach(([slot, m]) => {
             const v = m[k]; if (!v) return;
-            acc[slot].hc += v.hc; acc[slot].sc += v.sc; acc[slot].so += v.so || 0;
+            acc[slot].hc += v.hc; acc[slot].sc += v.sc; acc[slot].so += v.so || 0; acc[slot].ns += v.ns || 0;   // #176c
           });
         });
         return acc;
@@ -1396,7 +1396,7 @@ export function initRecruiterFilters(baseData) {
       // opening of the topic for the same reason: the tie is offer ➔ opening, and who OWNS the opening does not
       // decide whose candidate it is.
       const joinOfTopic = (rec, job8, openings) => {
-        const acc = { hc: 0, sc: 0, so: 0 };
+        const acc = { hc: 0, sc: 0, so: 0, ns: 0 };
         (openings || []).forEach(o => {
           const v = joinByRecJobOpen[rec + '|' + (job8 || '') + '|' + String(o.id).slice(0, 8)];
           if (v) { acc.hc += v.hc; acc.sc += v.sc; acc.so += v.so || 0; }
@@ -1407,8 +1407,8 @@ export function initRecruiterFilters(baseData) {
       // data-entry stamp (CLAUDE.md date trap 2) — and all that did was add empty job rows under Non-Sales recruiters.
       const outByRec = isSales ? OM.sales : {};
       const outByRecJob = isSales ? OM.salesJob : {};
-      const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0, so: 0 };
-      const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
+      const outOf = (rec) => outByRec[rec] || { hc: 0, sc: 0, so: 0, ns: 0 };
+      const outOfJob = (rec, jid) => outByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0, ns: 0 };
       // #39: the Joined split, shaped exactly like jpOf/jpOfJob so the two blocks render through the same
       // helper. Sales/Others only — Non-Sales keeps a single Joined pair (its own split is a different
       // question entirely: it varies the START date, not the opening. See the header comments.)
@@ -1501,10 +1501,10 @@ export function initRecruiterFilters(baseData) {
         // older archived rows can still be null — they then fall through as recruiter-only, which is correct.
         addCredit(dropByRec, dropByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);
       });
-      const dropOf = (rec) => dropByRec[rec] || { hc: 0, sc: 0, so: 0 };
-      const dropOfJob = (rec, jid) => dropByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
-      const joinOf = (rec) => joinByRec[rec] || { hc: 0, sc: 0, so: 0 };
-      const joinOfJob = (rec, jid) => joinByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0 };
+      const dropOf = (rec) => dropByRec[rec] || { hc: 0, sc: 0, so: 0, ns: 0 };
+      const dropOfJob = (rec, jid) => dropByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0, ns: 0 };
+      const joinOf = (rec) => joinByRec[rec] || { hc: 0, sc: 0, so: 0, ns: 0 };
+      const joinOfJob = (rec, jid) => joinByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0, ns: 0 };
       const c = x => (x == null ? DASH : x);
       const pctOf = (num, den) => (den > 0 ? Math.round((num / den) * 100) : null);
 
@@ -1541,6 +1541,16 @@ export function initRecruiterFilters(baseData) {
       // with no score — wont that help the recruiters to clean up their opening by updating the correct
       // complexity?" It names the REAL reason, so the zero IS the clean-up list. 🚨 Goal only — never on Drop,
       // where every row is zero for good and a caption would be a to-do list nobody can ever clear.
+      // ===== #176c (Jerin, 25 Sep 2026) — a score has to say how much of it is missing =====
+      // 🗣 "just mention below the score a caption 'X without Score'", then wording B: "1 no score" — A ("1 without
+      // score") wrapped onto two lines in a 61px column and made every affected row taller.
+      // It counts HEADS on this row whose own score is zero, so it is the same population as the Heads cell beside
+      // it — never an estimate. Why there is no estimate: Jerin killed that idea on 25 Sep ("lets not do that").
+      // 🚨 A NEW FIELD ON THIS ROW MUST BE ADDED IN FOUR PLACES or it reads 0 and nothing fails: addCredit's bump,
+      //    sum() in jpMaps (which builds `total` from the two buckets by NAMING each field), the podAgg roll-up,
+      //    and here. The first build of this missed sum() and rendered nothing, with a clean console.
+      // 🚨 JP total ONLY (Jerin: "This works") — never on the two JP sub-columns, and never on the HM tab.
+      const nsSub = (n) => (n > 0 ? `<span class="sublab warn">${n} no score</span>` : '');
       const cxSub = (n) => (n > 0 ? `<span class="sublab warn">${seatFmt(n)} opening${n === 1 ? '' : 's'} with no complexity</span>` : '');
 
       // #166: the topic row's Joined pair. Built HERE, inside the render, so it uses the very same srcSub as
@@ -1564,7 +1574,7 @@ export function initRecruiterFilters(baseData) {
 
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
       const jpCells = (v) => {
-        const j = v.jp || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } };
+        const j = v.jp || { t: { hc: 0, sc: 0, ns: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } };
         const pair = (x) => `<td>${x.hc || `<span class="zero">0</span>`}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
         // #171 (Jerin, 25 Sep 2026): the JP TOTAL now carries its Score, like every other column family here.
         // 🗣 "do you remember why we didnt add a total column for JP scores?" -> "Wasnt deliberate." It was an
@@ -1572,7 +1582,7 @@ export function initRecruiterFilters(baseData) {
         // while BOTH sub-columns showed Heads and Score, and Overall Efficiency already showed both. It equals
         // the two sub-column Scores added - no new arithmetic, which is why it can never disagree with them.
         return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>`
-          + `<td class="score" style="font-weight:600">${j.t.sc ? Math.round(j.t.sc) : `<span class="zero">0</span>`}</td>`
+          + `<td class="score" style="font-weight:600">${j.t.sc ? Math.round(j.t.sc) : `<span class="zero">0</span>`}${nsSub(j.t.ns)}</td>`   // #176c
           + pair(j.a) + pair(j.b);
       };
       // Drop carries its rate as a caption: of everything that reached a conclusion or is about to, what
@@ -1656,11 +1666,11 @@ export function initRecruiterFilters(baseData) {
       gs.forEach((G, pi) => {
         const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0, aNoCx: 0,
                          aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
-                         jp: { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 } },
+                         jp: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } },
                          // #39: roll the Joined split up the same way as the JP one, or every pod row would
                          // print 0 in three columns while its recruiters underneath show real numbers — the
                          // exact bug the JP roll-up comment below was written about.
-                         jx: { t: { hc: 0, sc: 0, so: 0 }, a: { hc: 0, sc: 0, so: 0 }, b: { hc: 0, sc: 0, so: 0 }, u: { hc: 0, sc: 0, so: 0 } } };
+                         jx: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 }, u: { hc: 0, sc: 0, so: 0, ns: 0 } } };
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
@@ -1669,7 +1679,7 @@ export function initRecruiterFilters(baseData) {
           ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo', 'aNoCx'].forEach(k => podAgg[k] += (a[k] || 0));   // #165e
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
-          ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; podAgg.jp[k].so += a.jp[k].so || 0; });
+          ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; podAgg.jp[k].so += a.jp[k].so || 0; podAgg.jp[k].ns += a.jp[k].ns || 0; });   // #176c
           if (a.jx) ['t', 'a', 'b', 'u'].forEach(k => { podAgg.jx[k].hc += a.jx[k].hc; podAgg.jx[k].sc += a.jx[k].sc; podAgg.jx[k].so += a.jx[k].so || 0; });   // #39
           shown.push({ r, a }); });
         if (!shown.length) return;
@@ -2133,7 +2143,7 @@ export function initRecruiterFilters(baseData) {
     // on this tab from drifting apart again. It is why Non-Sales and Sales totals differ by the carried-over
     // person: Non-Sales is measured on offers, so last quarter's opening should not count toward it.
     const sum = (...ms) => { const out = {}; ms.forEach(m => Object.entries(m).forEach(([k, v]) => {
-      const t = out[k] || (out[k] = { hc: 0, sc: 0, so: 0 }); t.hc += v.hc; t.sc += v.sc; t.so += v.so || 0; })); return out; };
+      const t = out[k] || (out[k] = { hc: 0, sc: 0, so: 0, ns: 0 }); t.hc += v.hc; t.sc += v.sc; t.so += v.so || 0; t.ns += v.ns || 0; })); return out; };   // #176c
     return { total: sum(bucketA, bucketB), bucketA, bucketB,
              totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ,
              totalO: sum(bucketAO, bucketBO), bucketAO, bucketBO };   // #161b
