@@ -23,6 +23,57 @@ import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
+// ===== #179 (Jerin, 25 Sep 2026) — FIVE Position Fulfilment tables, ONE PER POD =====
+// 🗣 "all pods can have its own tables; hope thats clear." · on one SME table or two: 🗣 "2 is better."
+// The hard-coded Sales / Non-Sales / Others split is GONE. Each pod has its own table so it can carry its
+// own rule, and every header row is now GENERATED FROM THIS ONE LIST — the three hand-written <thead>
+// blocks CLAUDE.md warned about (change one without the others and every number shifts a column sideways)
+// no longer exist, so that whole class of bug is gone by construction.
+//
+//   count  'hire'  = Joined only, and NO earlier-quarter subtraction. Sales' rule, unchanged.
+//          'offer' = Joined + Joining pending, both less anyone on an EARLIER quarter's opening.
+//   drop   true    = Delta also subtracts Drop (Lateral only, #179c).
+//   capUnit / goalUnit (#179f) = what the table is measured on, said in the heading itself.
+//
+// 🚨 SPLITTING SME OUT HAD TO PIN ITS COUNTING. Until today the rule came from WHICH TABLE a pod sat in
+//    ('offer' vs 'hire'), not from the pod — so moving SME to a table of its own without carrying `count`
+//    across would have stopped the earlier-quarter subtraction and made 5 Q3 joiners reappear. `count` is
+//    that rule, written down per pod instead of inferred from the table's position on the page.
+// 🚨 Jerin's order, not POD_OPTIONS' order: Sales · SME-US · SME-India · Lateral · Others.
+const FULFIL_TABLES = [
+  { key: 'sales',    pod: 'Sales',     count: 'hire',  drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'smeus',    pod: 'SME-US',    count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '15rem' },
+  { key: 'smeindia', pod: 'SME-India', count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '15rem' },
+  { key: 'lateral',  pod: 'Lateral',   count: 'offer', drop: true,  capUnit: 'Offers',  goalUnit: 'Offers',  lblWidth: '15rem' },
+  { key: 'others',   pod: 'Others',    count: 'hire',  drop: false, capUnit: 'NA',      goalUnit: 'Joiners', lblWidth: '12.5rem' },
+];
+
+// 🚨 COLUMN ARITHMETIC, in one place now: label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(2)
+//    + Joining pending(2) + Drop(2) + Delta(1) + Delta bar(1) = 13 on EVERY table. cells() and jpCells()
+//    still have to match it, but the five header rows can no longer disagree with each other.
+const FULFIL_NCOL = 13;
+const fulfilHeadHtml = (T) => `
+  <tr><th rowspan="2" style="min-width:${T.lblWidth}">Pod / Recruiter / Job</th>
+      <th rowspan="2" class="stage-hdr">Capacity (${T.capUnit})</th>
+      <th rowspan="2" class="stage-hdr">Capacity used</th>
+      <th colspan="2" class="stage-hdr">Goal (${T.goalUnit})</th>
+      <th colspan="2" class="stage-hdr">Joined</th>
+      <th colspan="2" class="stage-hdr">Joining pending</th>
+      <th colspan="2" class="stage-hdr">Drop</th>
+      <th colspan="2" class="stage-hdr">Delta</th></tr>
+  <tr>${'<th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th>'.repeat(5)}</tr>`;
+// #179e: the chart sits INSIDE its own block, under the table's heading — one chart per table, each reading
+// only the recruiters that table rendered. 🚨 Rule 3 still holds: THE TABLE COMPUTES, THE CHART READS.
+const fulfilBlockHtml = (T, i) => `
+  <div class="fulfil-block" id="fulfilBlock-${T.key}">
+    <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:${i ? '1.75rem' : '0'} 0 0.5rem">Position Fulfilment — ${T.pod}</h4>
+    <div class="chart-wrap" style="height:17.5rem"><canvas id="fulfilChart-${T.key}"></canvas></div>
+    <div class="scroll-table"><table class="metrics wide-fulfil">
+      <thead>${fulfilHeadHtml(T)}</thead>
+      <tbody id="fulfilBody-${T.key}"></tbody>
+    </table></div>
+  </div>`;
+
 // ===== DROP (unified, 2026-08-26) =====
 // Jerin's definition: moved to Ref Check / Documentation / Offer in a quarter (earliest of the three) and
 // was then archived. The pipeline emits `dropEvents` already DEDUPED BY APPLICATION with one date each, so
@@ -227,7 +278,9 @@ function saveTarget(name, type, val) {
   localStorage.setItem(T_KEY, JSON.stringify(t));
 }
 
-let recScreenChart = null, recJoinChart = null, recFulfilChart = null, recSourceChart = null;
+let recScreenChart = null, recJoinChart = null, recSourceChart = null;
+// #179e: one Fulfilment chart per table, keyed by the table's key — not one chart above all of them.
+let recFulfilCharts = {};
 // One shared function, so revisiting the tab does not stack another document listener each time (#120, 14 Sep 2026).
 const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
 
@@ -518,36 +571,12 @@ export function renderRecruiter(data) {
     </div>
 
     <!-- PANEL: Position Fulfilment -->
+    <!-- #179a (Jerin, 25 Sep 2026): FIVE tables, one per pod, each with its own chart under its own
+         heading. Every block - heading, header row, chart and body - is generated from FULFIL_TABLES, so
+         the five can never drift apart the way three hand-written <thead>s did. -->
     <div class="rec-panel" data-panel="fulfilment">
-      <div class="chart-wrap" style="height:17.5rem"><canvas id="recFulfilChart"></canvas></div>
-
-
-      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Position Fulfilment — Non-Sales</h4>
-      <div class="scroll-table"><table class="metrics">
-        <thead>
-          <tr><th rowspan="2" style="min-width:15rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
-          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
-        </thead>
-        <tbody id="recFulfilOfferBody"></tbody>
-      </table></div>
-
-      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Sales (Hires)</h4>
-      <div class="scroll-table"><table class="metrics wide-fulfil">
-        <thead>
-          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
-          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
-        </thead>
-        <tbody id="recFulfilHireBody"></tbody>
-      </table></div>
-
-      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Others (Hires)</h4>
-      <div class="scroll-table"><table class="metrics wide-fulfil">
-        <thead>
-          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
-          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
-        </thead>
-        <tbody id="recFulfilOthersBody"></tbody>
-      </table></div>
+      ${FULFIL_TABLES.map(fulfilBlockHtml).join('')}
+      <p class="sub-note" id="recFulfilStray" style="color:var(--orange);display:none"></p>
 
       ${defsBlock('rec-fulfilment')}
     </div>
@@ -1322,29 +1351,37 @@ export function initRecruiterFilters(baseData) {
       wirePodTree(joinBody);
     }
 
-    // ===== Position Fulfilment (Non-Sales offers / Sales hires) =====
-    // THREE sections (2026-09-07, Jerin). 'Others' is its own table using the SALES counting rule
-    // (no earlier-quarter subtraction) because that work is billed per joiner. Each recruiter sits in
-    // exactly ONE pod, so exactly one table — nothing is double-counted in any total or chart.
-    const salesGroups    = groups.filter(G => G.pod === 'Sales');
-    const othersGroups   = groups.filter(G => G.pod === 'Others');
-    const nonSalesGroups = groups.filter(G => G.pod !== 'Sales' && G.pod !== 'Others');
+    // ===== Position Fulfilment — FIVE tables, one per pod (#179a, Jerin 25 Sep 2026) =====
+    // The old three-way Sales / Non-Sales / Others split is gone; the rule each pod counts by now travels
+    // with the pod in FULFIL_TABLES instead of being inferred from which table it landed in. Each recruiter
+    // sits in exactly ONE pod, so exactly one table — nothing is double-counted in any total or chart.
 
-    // Funnel columns. Non-Sales (mode 'offer'): Assigned(HC|Score) · Target Score · Offered(HC|Score) ·
-    // Joining Pending(HC|Score) · Gap Score. Sales (mode 'hire') adds Hired(HC|Score) before Gap.
-    // Assigned/Offered/Hired HC+Score are LIVE from recruiters[].byJob × the score engine. Target = min(Capacity,
-    // Assigned Score) (Capacity per quarter from Metric Config; 0 until set). Gap = max(0, Target − Achieved),
-    // Achieved = Offered Score (Non-Sales) / Hired Score (Sales). Joining Pending is recruiter-level only (offer
-    // pass gives a count, not per-job) → HC at recruiter/pod rows, Score unattributable (—). Tree = Pod → Recruiter → Job.
+    // ⚠ The paragraph that stood here described the ORIGINAL v1 columns — Assigned, Target, Offered, a
+    // capped Target and a clamped Gap — none of which still exist. It also named a `mode` argument that
+    // #179 replaced with the per-pod table spec. Rewritten rather than patched, so it stops describing a
+    // table nobody can find. The columns as they actually are: Capacity · Capacity used · Goal · Joined ·
+    // Joining pending · Drop · Delta, Heads and Score in each of the last five. Tree = Pod → Recruiter → Job
+    // (→ Topic on SME roles).
     // ===== Fulfilment v2 (2026-08-22) =====
     // Goal replaces Assigned; Capacity is the RAW configured capacity (the old Target capped it at the
     // assigned work, which would make utilisation read 100% for everyone). Gap is measured against Goal,
     // and Capacity Utilisation is OUTPUT over capacity - what was delivered against what could have been.
     // ⚠ The colour sense is the opposite of a load metric: past 100% is over-delivery (good); under 70% is
     // under-use, which is the thing worth acting on.
-    function fulfilRows(gs, mode) {
+    function fulfilRows(gs, T) {
       const q = selQuarter();
-      const isSales = mode === 'hire';
+      // #179a: the counting rule is the TABLE'S, declared per pod in FULFIL_TABLES. 'hire' = Joined only,
+      // no earlier-quarter subtraction (Sales and Others); 'offer' = Joined + Joining pending, both less
+      // anyone on an earlier quarter's opening (SME-US, SME-India and Lateral). Splitting SME onto its own
+      // table WITHOUT carrying this across would have silently dropped the subtraction and brought 5 Q3
+      // joiners back.
+      const isSales = T.count === 'hire';
+      // #179c (Jerin, 25 Sep 2026): 🗣 "Needs to be revised to - Goal minus (started + still to join +
+      // drop). Also, delta can go surplus like for other places." LATERAL ONLY. It is what makes the
+      // table's heading honest: Goal (Offers) minus everyone who RECEIVED an offer, whatever became of
+      // them — joined, still in closing, or dropped out. ⚠ It moves the HEADS half only: a drop scores
+      // zero by rule (#165), so every Score on the table, Capacity used included, reads exactly as before.
+      const subDrop = !!T.drop;
       // #157: the topic index, on the SAME window this table uses - the selected quarter when the From/To
       // range covers it, the India-time days otherwise - so a job's topic rows close the job row (Rule 3).
       const tRg = selRange();
@@ -1354,7 +1391,7 @@ export function initRecruiterFilters(baseData) {
       // + Utilisation(1) = 17 on Non-Sales.   (#171: JP total gained its Score, so both counts rose by one.)
       // #39: the Sales/Others tables split Joined the way JP is split — Total(1) + A(2) + B(2) replaces the
       // old Joined(2) — so they carry 3 more columns. Keep this in step with the <thead> of those tables.
-      const ncol = 13;   // #177: both tables are now the same shape (was 17 Non-Sales / 20 Sales)
+      const ncol = FULFIL_NCOL;   // #177: every table is the same shape · #179: the count lives beside the header builder
 
       // 🚨 THE OUTCOME IS DATED FROM offerEvents, NOT FROM byJob (fixed 2026-08-22).
       // recruiters[].byJob carries {jobId,title,department,total,offer,hired} and NO date of any kind, so
@@ -1633,18 +1670,35 @@ export function initRecruiterFilters(baseData) {
         const capSc = narrowed() ? 0 : capacityFor(r.name, q);   // #129 (Jerin 1A): scaled by the days of the quarter inside From / To
         // Outcome column = Joined on BOTH tables.
         const xHC = isSales ? o.hc : jn.hc, xSc = isSales ? o.sc : jn.sc;
-        // What Gap and Capacity Utilisation are measured against (Jerin, 2026-08-24):
-        //   Sales     → Joined
-        //   Non-Sales → Joined + Joining Pending  (the work is delivered once the person is in closing)
-        const uHC = isSales ? xHC : xHC + jp.t.hc, uSc = isSales ? xSc : xSc + jp.t.sc;
+        // What Delta and Capacity Utilisation are measured against (Jerin, 2026-08-24; #179b/#179c 25 Sep 2026):
+        //   Sales, Others          → Joined                                    (people who have STARTED)
+        //   SME-US, SME-India      → Joined + Joining pending                  (delivered once they are in closing)
+        //   Lateral                → Joined + Joining pending + Drop           (#179c: everyone who got an offer)
+        // 🚨 Capacity used is deliberately on the SAME basis as Delta, so the two can never tell different
+        //    stories about one row. On Lateral that costs nothing today: drops score 0 (#165), so the
+        //    Score it divides by capacity is unchanged.
+        const uHC = (isSales ? xHC : xHC + jp.t.hc) + (subDrop ? dr.hc : 0);
+        const uSc = (isSales ? xSc : xSc + jp.t.sc) + (subDrop ? dr.sc : 0);
         // #108: the "+N sourced" counts, on the SAME basis as the figures they sit under — so the Delta line is sourced
         //   Goal minus sourced Achieved, exactly as Delta is Goal minus Achieved (Jerin: "Its the overall that matters -
         //   not opening to opening gap").
-        const aSo = g0.so || 0, xSo = (isSales ? o.so : jn.so) || 0, uSo = isSales ? xSo : xSo + (jp.t.so || 0);
+        const aSo = g0.so || 0, xSo = (isSales ? o.so : jn.so) || 0;
+        const uSo = (isSales ? xSo : xSo + (jp.t.so || 0)) + (subDrop ? (dr.so || 0) : 0);
+        // ===== #179 (Jerin, 25 Sep 2026): DELTA SHOWS THE SURPLUS — 🗣 "Should go surplus too." =====
+        // 🚨 The Math.max(0, …) clamp is GONE on purpose. Over-delivering now reads as a negative Delta
+        //    instead of a flat 0, exactly as it already did on the Hiring Manager and Overall Efficiency
+        //    tabs (their clamp went in Aug: "the Math.max(0, …) clamp is gone deliberately, do not put it
+        //    back"). This brings the Recruiter tab into line with them rather than away from them.
+        // 🚨 It also FIXES arithmetic that was quietly wrong: the clamp was applied at EVERY level
+        //    independently, so a recruiter's job rows did not add up to their own row — Mahima Agarwal's
+        //    Program Advisor row was −4 clamped to 0 and her Customer Success row 4, under a recruiter row
+        //    of 0, so the job rows summed to 4 against a parent of 0. Unclamped, they close (Rule 3).
+        // 🚨 Do NOT re-add the clamp. CLAUDE.md Rule 1 was written the other way round and was REVERSED
+        //    here by Jerin on 25 Sep 2026.
         return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
                  jx: isSales ? jxOf(r.name) : null,   // #39
-                 gHC: Math.max(0, aHC - uHC), gSc: Math.max(0, aSc - uSc),
-                 aSo, xSo, uSo, dSo: dr.so || 0, gSo: Math.max(0, aSo - uSo), aNoCx: g0.noCx || 0 };   // #165e
+                 gHC: aHC - uHC, gSc: aSc - uSc,
+                 aSo, xSo, uSo, dSo: dr.so || 0, gSo: aSo - uSo, aNoCx: g0.noCx || 0 };   // #165e
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
       // offers/hires is a hygiene problem, not a row to hide - it surfaces in Data Hygiene instead.
@@ -1671,7 +1725,9 @@ export function initRecruiterFilters(baseData) {
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
           // it once ended up showing lifetime scores under a quarter heading. It now reads this.
-          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc, sales: isSales };
+          // #179e: `table` is how each chart finds the recruiters ITS table rendered. `sales` is kept
+          // because it still says which counting rule produced these figures.
+          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc, sales: isSales, table: T.key };
           ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo', 'aNoCx'].forEach(k => podAgg[k] += (a[k] || 0));   // #165e
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
@@ -1682,7 +1738,7 @@ export function initRecruiterFilters(baseData) {
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${shown.length}</span></td>${cells(podAgg, true)}</tr>`;
         shown.forEach(({ r, a }, ri) => {
-          const rk = `${mode}${pi}-${ri}`;
+          const rk = `${T.key}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
           // #1: the per-job rows must include roles the recruiter OWNS openings on even where they never
@@ -1735,13 +1791,17 @@ export function initRecruiterFilters(baseData) {
               if (!seats && !jg.sc && !jg.so && !jo.hc && !jj.hc && !jd2.hc && !jjp.t.hc
                   && !jx0.sc && !jx0.so && !jd2.sc && !jd2.so && !jjp.t.sc && !jjp.t.so) return;
               const jxHC = isSales ? jo.hc : jj.hc, jxSc = isSales ? jo.sc : jj.sc;
-              const juHC = isSales ? jxHC : jxHC + jjp.t.hc, juSc = isSales ? jxSc : jxSc + jjp.t.sc;
-              const jaSo = jg.so || 0, jxSo = jx0.so || 0, juSo = isSales ? jxSo : jxSo + (jjp.t.so || 0);
+              // #179b/#179c: the SAME three rules as the recruiter row above, so the job rows still close it.
+              const juHC = (isSales ? jxHC : jxHC + jjp.t.hc) + (subDrop ? jd2.hc : 0);
+              const juSc = (isSales ? jxSc : jxSc + jjp.t.sc) + (subDrop ? jd2.sc : 0);
+              const jaSo = jg.so || 0, jxSo = jx0.so || 0;
+              const juSo = (isSales ? jxSo : jxSo + (jjp.t.so || 0)) + (subDrop ? (jd2.so || 0) : 0);
               const jv = { aHC: jg.hc, aSc: jg.sc, capSc: null, aNoCx: jg.noCx || 0, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
                            dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
-                           gHC: Math.max(0, jg.hc - juHC), gSc: Math.max(0, jg.sc - juSc),
-                           aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: Math.max(0, jaSo - juSo) };   // #108
+                           // #179: unclamped here too — this is the level where the clamp broke the sums.
+                           gHC: jg.hc - juHC, gSc: jg.sc - juSc,
+                           aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: jaSo - juSo };   // #108
               roleAch.push({ title: m.title || '(untitled)', achievedSc: juSc });   // unrounded: the chart shares out the row's rounded total (#120)
               // #157: only SME jobs open further, and only the Goal splits by topic - everything else on this
               // table counts PEOPLE or is per-recruiter config, so it dashes. 🚨 The topic Goal is summed from
@@ -1810,13 +1870,34 @@ export function initRecruiterFilters(baseData) {
       return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters in this group.</td></tr>`;
     }
 
-    const offerBody = document.getElementById('recFulfilOfferBody');
-    const hireBody = document.getElementById('recFulfilHireBody');
-    if (offerBody) { offerBody.innerHTML = fulfilRows(nonSalesGroups, 'offer'); wireVelTree(offerBody); }
-    if (hireBody) { hireBody.innerHTML = fulfilRows(salesGroups, 'hire'); wireVelTree(hireBody); }
-    // 'hire' mode = Sales counting: joiners regardless of which quarter raised the opening.
-    const othersBody = document.getElementById('recFulfilOthersBody');
-    if (othersBody) { othersBody.innerHTML = fulfilRows(othersGroups, 'hire'); wireVelTree(othersBody); }
+    // ===== #179a/#179d: one table per pod, and a pod that is filtered out takes its table off the page =====
+    // 🗣 "when one pod is filtered, other pods shouldnt show" · "Same for recruiter, when one recruiter is
+    // filtered, other tables shouldnt show on the page." ONE rule covers both: a table is on the page only
+    // while its pod still has recruiters after the filters. Filter to Sales and only Sales is left; filter
+    // to one person and only their pod's table is left — heading, chart and all, not an empty shell.
+    // ⚠ A pod that IS in view but whose people all have nothing this quarter keeps its table and its
+    //   "No recruiters in this group." line. That is not a filter hiding them, and quietly dropping the
+    //   table would hide a pod that delivered nothing — the very thing worth seeing.
+    FULFIL_TABLES.forEach(T => {
+      const gs = groups.filter(G => G.pod === T.pod);
+      const block = document.getElementById('fulfilBlock-' + T.key);
+      if (block) block.style.display = gs.length ? '' : 'none';
+      const body = document.getElementById('fulfilBody-' + T.key);
+      if (!body) return;
+      body.innerHTML = gs.length ? fulfilRows(gs, T) : '';
+      if (gs.length) wireVelTree(body);
+    });
+    // 🚨 NOTHING MAY VANISH SILENTLY. Five tables cover the five pods in POD_OPTIONS, and groupByPod can
+    // only produce those (Unassigned is dropped earlier, a sourcer-only person is put in Others). If a
+    // sixth pod is ever added to POD_OPTIONS without a table here, its recruiters would disappear from
+    // this panel with a clean console — so say so on screen instead.
+    const strayEl = document.getElementById('recFulfilStray');
+    if (strayEl) {
+      const covered = new Set(FULFIL_TABLES.map(t => t.pod));
+      const stray = groups.filter(G => G.pod && !covered.has(G.pod));
+      strayEl.style.display = stray.length ? '' : 'none';
+      if (stray.length) strayEl.textContent = `No Position Fulfilment table exists for ${stray.map(G => G.pod).join(', ')}, so ${stray.length === 1 ? 'that pod is' : 'those pods are'} missing from this panel. Add it to FULFIL_TABLES in js/pages/recruiter.js.`;
+    }
 
     // ===== #20 (2026-08-23): Joining Pending — Pod → Recruiter → Candidate =====
     // Same population and same columns as the Hiring Manager Joining Pending list, re-cut by who owns the candidate
@@ -3230,13 +3311,22 @@ export function initRecruiterFilters(baseData) {
   //   Cap line   = the finishing line: what they could carry
   // 🚨 Every figure comes from lastFulfil, which the TABLE fills in as it renders. The chart must never
   // recompute a target of its own — it did once, and showed lifetime scores under a quarter heading.
+  // ===== #179e (Jerin, 25 Sep 2026): 🗣 "Lastly, let each table have its own graphs" =====
+  // There used to be ONE canvas above all three tables. Now each table carries its own, drawn from the very
+  // rows that table rendered — `lastFulfil[name].table` says which one wrote them.
+  // 🚨 Rule 3 is unchanged and is the whole reason this stayed honest: THE TABLE COMPUTES, THE CHART READS.
+  // Every figure below still comes straight out of lastFulfil; nothing here is recomputed. The one time this
+  // chart worked anything out for itself it showed lifetime scores under a quarter heading.
   function buildFulfilChart() {
-    const ctx = document.getElementById('recFulfilChart'); if (!ctx) return;
-    if (recFulfilChart) recFulfilChart.destroy();
+    FULFIL_TABLES.forEach(T => buildOneFulfilChart(T));
+  }
+  function buildOneFulfilChart(T) {
+    const ctx = document.getElementById('fulfilChart-' + T.key); if (!ctx) return;
+    if (recFulfilCharts[T.key]) { recFulfilCharts[T.key].destroy(); recFulfilCharts[T.key] = null; }
     const q = selQuarter();
     const recs = lastRecs.map(r => {
       const f = lastFulfil[r.name];
-      if (!f) return null;
+      if (!f || f.table !== T.key) return null;
       const goal = Math.round(f.goalSc || 0), cap = Math.round(f.capSc || 0), achieved = Math.round(f.achievedSc || 0);
       // Short of goal = the table's Delta, rounded once (#120). It was round(goal) - round(achieved), which can differ by 1.
       const short = Math.round(Math.max(0, f.shortSc != null ? f.shortSc : (f.goalSc || 0) - (f.achievedSc || 0)));
@@ -3246,10 +3336,10 @@ export function initRecruiterFilters(baseData) {
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     if (!recs.length) {
-      if (recFulfilChart) { recFulfilChart.destroy(); recFulfilChart = null; }
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${q.replace('-', ' ')} — no goal, capacity or joiners on any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${T.pod} in ${q.replace('-', ' ')} — no goal, capacity or joiners on any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
+      if (wrap) wrap.style.height = '';
       return;
     }
     ctx.style.display = '';
@@ -3322,7 +3412,7 @@ export function initRecruiterFilters(baseData) {
       return { label: r.name, sum: { achieved: r.achieved, short: r.short },
                jobs: shareOut(r.achieved, parts).map(p => ({ title: p.title, v: { achieved: p.n } })) };
     });
-    recFulfilChart = new Chart(ctx, {
+    recFulfilCharts[T.key] = new Chart(ctx, {
       type: 'bar',
       data: { labels: recs.map(r => r.name), datasets: roleBandDatasets(fulRows, FUL_METRICS, { borderRadius: 2 }) },
       options: {
