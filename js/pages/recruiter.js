@@ -788,6 +788,16 @@ export function initRecruiterFilters(baseData) {
   const jobMeta = (bj) => { const j8 = (bj.jobId || '').slice(0, 8), j = jobById[j8], ix = (data.jobIndex || {})[j8];
     return { department: (j && j.department) || bj.department || (ix && ix.department), title: (j && j.title) || bj.title || (ix && ix.title), level: j && j.level, complexity: j && j.complexity }; };
   const jobMetaById = (j8) => { const j = jobById[j8]; return j ? { department: j.department, title: j.title, level: j.level, complexity: j.complexity } : null; };
+  // #172: a Joining Pending bucket key is `recruiter|JOB TITLE` — deliberate, it is how the job ROWS group —
+  // so by the time a row is built the job id is gone and only the NAME is left. Taking the first job of that
+  // name is wrong when two share one ("Manager, CRM" is L3 in Marketing and L4 in Business - India). The cases
+  // themselves still carry `jobId8`, so recover it from them. Either side of a 50/50 split can hold the credit,
+  // hence recruiter OR sourcer. Returns null when nothing resolves, and the caller keeps its title fallback.
+  const jobForJpTitle = (rec, title) => {
+    const c = (data.joiningPendingCases || []).find(x => x && (x.recruiter === rec || x.sourcer === rec)
+      && (x.job || x.jobTitle) === title && x.jobId8 && jobById[x.jobId8]);
+    return c ? jobById[c.jobId8] : null;
+  };
 
   // #1 opening-first reporting (2026-09-06): the Fulfilment GOAL now derives from the openings a recruiter
   // OWNS in Ashby — the opening's native-Roles "Recruiter" — emitted by the pipeline as
@@ -1666,7 +1676,8 @@ export function initRecruiterFilters(baseData) {
           Object.keys(JP.totalJ || {}).forEach(k => {
             if (!k.startsWith(pre)) return;
             const t = k.slice(pre.length); if (!t || titled.has(t)) return;
-            const jj = (data.jobs || []).find(x => x.title === t);
+            // #172: the id the cases carry beats a first-match-by-name.
+            const jj = jobForJpTitle(r.name, t) || (data.jobs || []).find(x => x.title === t);
             if (jj && !bjByJ8[jj.id]) { bjByJ8[jj.id] = { jobId: jj.id }; titled.add(t); }
           });
           const jobs = Object.values(bjByJ8).sort((x, y) => (y[isSales ? 'hired' : 'offer'] || 0) - (x[isSales ? 'hired' : 'offer'] || 0) || (y.total || 0) - (x.total || 0));
@@ -2029,8 +2040,16 @@ export function initRecruiterFilters(baseData) {
   function jpMaps(q, isSales) {
     const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
     const nextQ = qShift(q, 1);
-    const meta = {};
-    (data.jobs || []).forEach(j => { if (j.title && !meta[j.title]) meta[j.title] = j; });
+    // #172: TWO maps. `meta` (by title) is the fallback only; `metaById` is what the score actually uses.
+    // A title map takes the FIRST job of that name, and two jobs can share one — "Manager, CRM" is L3 in
+    // Marketing and L4 in Business - India, and L3/L4 straddle the grid's "L1 to L3" / "L4 to L6" boundary,
+    // so a title match could price a person in closing a whole band low (15pt instead of 20pt).
+    const meta = {}, metaById = {};
+    (data.jobs || []).forEach(j => {
+      if (j.title && !meta[j.title]) meta[j.title] = j;
+      const id8 = String(j.id || '').slice(0, 8);
+      if (id8 && !metaById[id8]) metaById[id8] = j;
+    });
     const bucketA = {}, bucketB = {};
     // Job-level too, keyed recruiter|job title. Job rows used to print a hard 0 in every JP column, which
     // reads as "nobody in closing on this role" when the real answer was "not worked out per job".
@@ -2041,10 +2060,13 @@ export function initRecruiterFilters(baseData) {
     // per-recruiter side of that call, which nothing reads.
     const bucketAO = {}, bucketBO = {}, scratch = {};
     // #11: the same addCredit used by Joined and Drop, so Joining Pending divides credit identically.
-    // ⚠ JP job keys are `name|JOB TITLE`, not `name|jobId8` — the cases carry no job id.
+    // ⚠ JP bucket keys are still `name|JOB TITLE` — that is deliberate, it is how the job ROWS group.
+    // 🚨 #172: the SCORE no longer resolves that way. The old comment here said "the cases carry no job id";
+    // that went stale — every case carries `jobId8` — and the stale comment is why this stood for weeks.
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
-      const j = meta[c.job || c.jobTitle || ''] || {};
+      // #172: the id first — exact. Title only when a case has no id, which none does today.
+      const j = (c.jobId8 && metaById[c.jobId8]) || meta[c.job || c.jobTitle || ''] || {};
       const sc = closureScore(c.openingId, { department: c.department, title: c.job || c.jobTitle, level: j.level, complexity: j.complexity }, q);   // #165
       const oq = c.openingQuarter || null, dq = qOf(c.doj || c.startDate);
       const jt = c.job || c.jobTitle || '';
