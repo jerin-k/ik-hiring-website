@@ -766,19 +766,19 @@ th.c-date, td.c-date { width: 6.5rem; min-width: 6.5rem; text-align: center; }
 td.c-date { text-align: left; }
 
 /* --- the text families: one width each, wherever the column appears --- */
-th.c-dept, td.c-dept { width: 10rem; min-width: 10rem; max-width: 10rem; }
-th.c-job,  td.c-job  { width: 17rem; min-width: 17rem; max-width: 17rem; }
+th.c-dept, td.c-dept { width: 8rem; min-width: 8rem; max-width: 8rem; }
+th.c-job,  td.c-job  { width: 12rem; min-width: 12rem; max-width: 12rem; }
 th.c-rec,  td.c-rec  { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-cand, td.c-cand { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-open, td.c-open { width: 9rem; min-width: 9rem; max-width: 9rem; }
-th.c-stage, td.c-stage { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; }
+th.c-stage, td.c-stage { width: 8rem; min-width: 8rem; max-width: 8rem; }
 /* #168 part 2: the topic a person was really for, or the reason it cannot be shown. Sized for a long
    topic name to wrap onto two lines rather than shove the columns beside it about. */
-th.c-topic, td.c-topic { width: 11rem; min-width: 11rem; max-width: 11rem; }
+th.c-topic, td.c-topic { width: 8.5rem; min-width: 8.5rem; max-width: 8.5rem; }
 /* #169: the opening's FULL NAME - "IK-403 - <recruiter> - <Role Type> - <topic>" - so it needs real room,
    and it wraps rather than pushing the row sideways. The id fallback is quieter than a name. */
-th.c-open-name, td.c-open-name { width: 13rem; min-width: 13rem; max-width: 13rem; }
-.pl-open-name { max-width: 13rem; }
+th.c-open-name, td.c-open-name { width: 10rem; min-width: 10rem; max-width: 10rem; }
+.pl-open-name { max-width: 10rem; }
 .pl-open-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: var(--muted); }
 /* #146: whether the JOB behind a Data Hygiene row is still Open, or Closed/Archived. One word, so it is the
    narrowest of the text families — sized for "Archived" and never wrapped, since a wrapped one-word column
@@ -1714,3 +1714,20 @@ td.nosplit { color: #c1c7cf; }
   white-space: nowrap;
 }
 .pl-pts-zero { color: var(--orange); }
+
+/* ===== #178 (Jerin, 25 Sep 2026): "Need to shrink the table to fit in the panel wihtout scrolling." =====
+   Two halves. The text families above were narrowed (c-job 17rem>12, c-open-name 13>10, c-topic 11>8.5,
+   c-dept 10>8, c-stage 9.5>8), which is what the people lists needed - Joining Pending was 173px over and
+   is now 0. THIS is the other half, for Time in Process.
+   🔑 Time in Process was held open by its OWN CAPTIONS, not by its column widths: every stage cell carries
+   "23 waiting" and "231 days" under the median and the cell was `white-space: nowrap`, so the longest caption
+   set a floor that no width could get under - pinning the columns moved the total by 7px out of 170. Letting
+   those two lines wrap closes the whole gap on its own, with no column pinned and no number touched.
+   🚨 BOTH tables are named here because only the RECRUITER one carries `vel-table`; the Overall Efficiency
+   twin has no class at all, so the class-based rule I tried first silently missed it and left it 51px over.
+   🚨 NEVER put a blanket width or min-width on `.vel-table` cells: MOMENTUM uses that same class with ~90 DAY
+   columns that are narrower than any sensible cap, so a min-width makes that table WIDER, not narrower
+   (measured: 3,613px over became 4,719px over). Momentum cannot be made to fit by sizing at all - 89 columns
+   of dates - and is deliberately left alone here. */
+#recTisBody td, #effTisBody td { white-space: normal; }
+.tis-wait { white-space: normal; display: block; }
