@@ -76,18 +76,21 @@ const DASH = '<span class="zero">—</span>';
 // cell: a wrong one here looks right and nobody will question it.
 //
 // 🚨 COLUMN ARITHMETIC - keep in step with cells() and with the <thead> of both tables.
-//   label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(ncol-15) + JP(6) + Drop(2) + Delta(1) + gap(1) = ncol
-//   #171 (25 Sep 2026): JP went from 5 cells to 6 - the TOTAL gained its Score - so ncol rose by one on both
-//   tables and the Joined slice is now ncol-15. Keep this in step with cells() and BOTH <thead>s.
-//   Joined is 2 cells on Non-Sales (ncol 17) and 5 on Sales/Others (ncol 20, the #39 Total+A+B split), and the
-//   Sales five-way split is a different question, so joinedHtml is only ever supplied for the 2-cell shape.
+//   label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(2) + Joining Pending(2) + Drop(2)
+//   + Delta(1) + gap(1) = 13 on EVERY table.
+//   #177 (Jerin, 25 Sep 2026): the quarter sub-columns are gone - "For Non-sales, remove ... JP current quarter,
+//   JP Upcoming quarter" and "For Sales, remove Joined Previous Q, Joined Current Q, Joining Pending Previous Q
+//   [and Current Q]" - so Non-Sales (was 17) and Sales/Others (was 20) are now the SAME 13-column shape, and
+//   Sales' Joined gained the Score it never had ("Add Score Column for Joined"). ncol is a constant again.
+//   🚨 Keep this in step with cells(), jpCells() and ALL THREE <thead>s - the header rows are written out by
+//      hand, so changing one without the others silently shifts every number a column sideways.
 const recTopicCells = (t, ncol, jpHtml, joinedHtml) => {
   const d = `<td class="nosplit">${DASH}</td>`;
   const num = (v) => `<td>${Math.round(v * 100) / 100}</td>`;
-  const nJoin = Math.max(0, ncol - 15);   // #171: JP is 6 cells now, not 5
+  const nJoin = 2;   // #177: Joined is ONE pair on both tables now
   return d + d + num(t.hc) + num(t.sc)      // Capacity, Capacity used, Goal heads + score
-    + (joinedHtml && nJoin === 2 ? joinedHtml : d.repeat(nJoin))   // Joined (#166)
-    + jpHtml                                // Joining Pending: total + Current Qtr + Upcoming/Prev Qtr
+    + (joinedHtml || d.repeat(nJoin))       // Joined (#166) - one pair on both tables since #177
+    + jpHtml                                // Joining Pending (#177: the total only)
     + d.repeat(4);                          // Drop(2), Delta(1), the Delta bar(1)
 };
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -522,8 +525,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Position Fulfilment — Non-Sales</h4>
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:15rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">JP total</th><th colspan="2" class="stage-hdr">JP — current qtr</th><th colspan="2" class="stage-hdr">JP — upcoming qtr</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
-          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:15rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOfferBody"></tbody>
       </table></div>
@@ -531,8 +534,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Sales (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr">Joined total</th><th colspan="2" class="stage-hdr">Joined — prev qtr openings</th><th colspan="2" class="stage-hdr">Joined — current qtr openings</th><th colspan="2" class="stage-hdr">JP total</th><th colspan="2" class="stage-hdr">JP — prev qtr openings</th><th colspan="2" class="stage-hdr">JP — current qtr openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
-          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilHireBody"></tbody>
       </table></div>
@@ -540,8 +543,8 @@ export function renderRecruiter(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.125rem 0 0.375rem">Position Fulfilment — Others (Hires)</h4>
       <div class="scroll-table"><table class="metrics wide-fulfil">
         <thead>
-          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th rowspan="2" class="stage-hdr">Joined total</th><th colspan="2" class="stage-hdr">Joined — prev qtr openings</th><th colspan="2" class="stage-hdr">Joined — current qtr openings</th><th colspan="2" class="stage-hdr">JP total</th><th colspan="2" class="stage-hdr">JP — prev qtr openings</th><th colspan="2" class="stage-hdr">JP — current qtr openings</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
-          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:12.5rem">Pod / Recruiter / Job</th><th rowspan="2" class="stage-hdr">Capacity</th><th rowspan="2" class="stage-hdr">Capacity used</th><th colspan="2" class="stage-hdr">Goal</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th><th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="recFulfilOthersBody"></tbody>
       </table></div>
@@ -1351,7 +1354,7 @@ export function initRecruiterFilters(baseData) {
       // + Utilisation(1) = 17 on Non-Sales.   (#171: JP total gained its Score, so both counts rose by one.)
       // #39: the Sales/Others tables split Joined the way JP is split — Total(1) + A(2) + B(2) replaces the
       // old Joined(2) — so they carry 3 more columns. Keep this in step with the <thead> of those tables.
-      const ncol = (mode === 'hire') ? 20 : 17;   // #171
+      const ncol = 13;   // #177: both tables are now the same shape (was 17 Non-Sales / 20 Sales)
 
       // 🚨 THE OUTCOME IS DATED FROM offerEvents, NOT FROM byJob (fixed 2026-08-22).
       // recruiters[].byJob carries {jobId,title,department,total,offer,hired} and NO date of any kind, so
@@ -1556,26 +1559,19 @@ export function initRecruiterFilters(baseData) {
       // #166: the topic row's Joined pair. Built HERE, inside the render, so it uses the very same srcSub as
       // every other row — the "+N sourced" line must read identically at all three grains or #108 has drifted.
       // Sales/Others split Joined five ways (#39), which is a different question, so they keep the dash.
+      // #177 (25 Sep 2026) — 🚨 CLAUDE.md Rule 11: the dash here existed because Sales split Joined FIVE ways
+      // (#39), "a different question". That split is gone and every table now shows one Joined pair, so the
+      // exclusion outlived its reason and was leaving 3 Sales/Others topic rows dashed beside an identical
+      // column that shows a number on Non-Sales. A missing `jx` still dashes — that part is still true.
       const joinTopicCells = (jx) => {
-        if (isSales || !jx) return null;
+        if (!jx) return null;
         const r2 = (v) => Math.round(v * 100) / 100;
         return `<td>${r2(jx.hc)}${srcSub(jx.so)}</td><td class="score">${r2(jx.sc)}</td>`;
       };
 
-      // #39: Joined, split the same way and rendered by the same shape as jpCells — Total, then the two buckets.
-      // #153 (Jerin, 19 Sep 2026): the "<N> unlinked" caption under bucket B is GONE. The joiners it counted —
-      // people with no opening on the offer and none found on the hire — are still listed in full on
-      // Data Hygiene ➡ Hired Missing Opening Link, which is where they can actually be fixed.
-      const joinedCells = (v) => {
-        const j = v.jx || { t: { hc: 0, sc: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 }, u: { hc: 0, sc: 0 } };
-        const pair = (x) => `<td>${x.hc || `<span class="zero">0</span>`}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
-        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>` + pair(j.a) + pair(j.b);
-      };
-
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
       const jpCells = (v) => {
-        const j = v.jp || { t: { hc: 0, sc: 0, ns: 0 }, a: { hc: 0, sc: 0 }, b: { hc: 0, sc: 0 } };
-        const pair = (x) => `<td>${x.hc || `<span class="zero">0</span>`}</td><td class="score">${x.sc ? Math.round(x.sc) : `<span class="zero">0</span>`}</td>`;
+        const j = v.jp || { t: { hc: 0, sc: 0, ns: 0 } };
         // #171 (Jerin, 25 Sep 2026): the JP TOTAL now carries its Score, like every other column family here.
         // 🗣 "do you remember why we didnt add a total column for JP scores?" -> "Wasnt deliberate." It was an
         // omission, not a decision: the score was already in the data (`j.t.sc`) and simply had no cell drawn,
@@ -1583,7 +1579,6 @@ export function initRecruiterFilters(baseData) {
         // the two sub-column Scores added - no new arithmetic, which is why it can never disagree with them.
         return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>`
           + `<td class="score" style="font-weight:600">${j.t.sc ? Math.round(j.t.sc) : `<span class="zero">0</span>`}${nsSub(j.t.ns)}</td>`   // #176c
-          + pair(j.a) + pair(j.b);
       };
       // Drop carries its rate as a caption: of everything that reached a conclusion or is about to, what
       // share fell out. Denominator includes Drop itself, per Jerin 2026-08-22.
@@ -1610,10 +1605,11 @@ export function initRecruiterFilters(baseData) {
         return (narrowed() ? `<td class="score" title="${NARROW_CAP_NOTE}">${DASH}</td>` : `<td class="score">${c(v.capSc)}</td>`)   // Capacity
           + utilCell(v)                                                           // Capacity used
           + `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}${cxSub(v.aNoCx)}</td>`      // Goal heads / score + #165e caption
-          + (isSales                                                          // #39: Sales/Others split Joined
-              ? joinedCells(v)                                                  //   total + prev-qtr + current-qtr
-              : `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`)   //   Non-Sales keeps one pair
-          + jpCells(v)                                                          // Joining Pending: total + 2 buckets
+          // #177 (Jerin, 25 Sep 2026): ONE Joined pair on BOTH tables. Sales used to show a heads-only
+          // "Joined total" with the Score living in the two #39 sub-columns; those are gone, so its Score comes
+          // from the same `v.xSc` that Achieved and Delta already use — the row cannot disagree with itself.
+          + `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`
+          + jpCells(v)                                                          // Joining Pending (#177: total only)
           + dropCells(v)                                                        // Drop HC / Score + % subtext
           + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v);                    // Delta heads / score + bar
       };
