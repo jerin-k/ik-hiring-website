@@ -19,6 +19,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
+import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -1048,13 +1049,20 @@ export function initRecruiterFilters(baseData) {
   function makeMultiSelect(container, label, options, onChange) {
     if (!container) return null;
     const selected = new Set();
-    const labelText = () => selected.size === 0 ? `${label}: All` : (selected.size === 1 ? `${label}: ${[...selected][0]}` : `${label}: ${selected.size} selected`);
+    // #172c (25 Sep 2026): an option is either a plain string (unchanged, what every other dropdown passes)
+    // or { v, t } — `v` is the VALUE kept in `selected`, `t` is what the user reads. The Job dropdowns pass a
+    // JOB ID as `v`, so two jobs sharing a name stay distinct; everything else still passes strings.
+    const norm = (options || []).map(o => (o && typeof o === 'object')
+      ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
+    const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
+    const labelText = () => selected.size === 0 ? `${label}: All`
+      : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
     const esc = s => String(s).replace(/"/g, '&quot;');
     container.classList.add('ms');
     container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-      + (options.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+      + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
       + `<div class="ms-list">`
-      + (options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"> ${o}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
+      + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}"> ${o.t}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
       + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
     const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
     const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -1092,11 +1100,14 @@ export function initRecruiterFilters(baseData) {
     return { getSelected: () => [...selected] };
   }
 
-  // #120a: the Job filter narrows every number (bindData / onJobChange). A title shared by two jobs selects both.
+  // #120a: the Job filter narrows every number (bindData / onJobChange).
+  // 🚨 #172c (25 Sep 2026): the selection is JOB IDS now, so this is EXACT. The old line matched on title and
+  // the comment here used to admit it — "a title shared by two jobs selects both" — which is the same defect
+  // that priced a person in closing a whole band low in #172.
   function selectedJobIds() {
     const jobSel = msJob ? msJob.getSelected() : [];
     return jobSel.length
-      ? new Set((baseData.jobs || []).filter(j => jobSel.includes(j.title)).map(j => j.id))
+      ? new Set((baseData.jobs || []).filter(j => matchesJob(jobSel, j.id)).map(j => j.id))
       : null;
   }
   // While the numbers are narrowed (Job filter or department restriction), a recruiter stays listed when they have ANY figure
@@ -3384,7 +3395,7 @@ export function initRecruiterFilters(baseData) {
     const keepJob = (bj) => {
       const j8 = String(bj.jobId || '').slice(0, 8);     // ⚠ byJob carries the FULL uuid; jobs[].id is 8 chars
       if (openIds && !openIds.has(j8)) return false;
-      if (jsel.length && !jsel.includes(bj.title)) return false;
+      if (!matchesJob(jsel, bj.jobId)) return false;   // #172c
       return true;
     };
     const add = (acc, p) => { visStages.forEach(k => { if (p[k]) acc[k] = (acc[k] || 0) + p[k]; }); return acc; };
@@ -3537,8 +3548,9 @@ export function initRecruiterFilters(baseData) {
   document.getElementById('recPipeHideEmpty')?.addEventListener('change', renderRecPipeline);
   msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_OPTIONS, renderAll);
   msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);
-  const jobNames = [...new Set((baseData.jobs || []).map(j => j.title || j.name || j.job).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobNames, onJobChange);
+  // #172c: ids, not names — labelled by job-filter.js (department shown only where a name repeats).
+  const jobOptions = jobFilterOptions(baseData, new Set((baseData.jobs || []).map(j => j.id).filter(Boolean)));
+  msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobOptions, onJobChange);   // #172c
   document.addEventListener('click', closeMsPanels);
   document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
 
