@@ -1349,8 +1349,12 @@ function loadDriveJson_(name) {
 // line will say - but the 6 AM run inherits this code, and a refresh that times out leaves the whole team on
 // stale numbers overnight. So the budget comes down now as insurance, and the diagnosis follows the evidence.
 // Cheaper per run simply means the backlog drains over more runs; nothing is lost either way.
-var NEW_ARCH_CAP_ = 40;
-var NEW_ARCH_MS_ = 45000;
+// 🚨 #167, measured 25 Sep 2026 by the probe: the sweep was hitting this cap every run with **22,822**
+// applications still uncollected, so a drop archived yesterday sat 1,316th and was ~11 DAYS from being seen.
+// Speed is 0.38 s each (40 took 15 s), so 500 costs ~190 s of a 12-16 min refresh: the newest archive is
+// reached on the NEXT run and the backlog clears in ~15 days instead of ~190. Ordering was never the problem.
+var NEW_ARCH_CAP_ = 500;
+var NEW_ARCH_MS_ = 240000;   // #167: 45 s would have stopped it at ~120 of the 500 - the cap and the clock move together
 // #167d (24 Sep 2026): was 8 minutes. MEASURED on the 24 Sep 6 AM run: the sweep was reached at 430 s, i.e. it cleared
 // the old guard by FIFTY SECONDS - a slightly slower app fetch and it would have skipped silently. The guard was written
 // as insurance when an UNCAPPED collector pushed a run to 29 min of a 30 min ceiling; capped at 40 calls / 45 s it can
@@ -1391,6 +1395,7 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
   //    next run, however long the historical tail is. `a` (archivedAt) is carried in for exactly this.
   // ⚠ Undated records sort LAST on purpose - a record with no archive date is never "today's drop".
   var t0 = Date.now(), seen = 0, fetched = 0, kept = 0, errs = 0, todo = [];
+  var elapsedAtStart = refreshStartedAt ? Math.round((Date.now() - refreshStartedAt) / 1000) : null;   // #167 headroom
   for (var i = 0; i < list.length; i++) {
     var a = list[i];
     if (!a || !a.id) continue;
@@ -1429,6 +1434,7 @@ function collectNewArchivedLateStage_(archivedApps, refreshStartedAt) {
       archivedSeen: seen, notYetCollected: undone, newestUncollectedArchive: newest,
       fetchedThisRun: fetched, wereLateStage: kept, errors: errs, leftForNextRun: Math.max(0, undone - fetched),
       tookS: Math.round((Date.now() - t0) / 1000),
+      refreshElapsedAtSweepStartS: elapsedAtStart, capNow: NEW_ARCH_CAP_, budgetS: Math.round(NEW_ARCH_MS_ / 1000),
       target: { id8: PROBE_167_APP_.substring(0, 8),
                 inArchivedList: !!pIn,
                 archivedAt: pIn ? (pIn.a || null) : null,
@@ -1942,4 +1948,28 @@ function assertDashboardComplete_(next, prev){
     throw new Error(msg);
   }
   Logger.log('publish guard OK: all core sections present, no drastic shrink');
+}
+
+
+// #175b (Jerin, 25 Sep 2026): "delete the 1pm auto trigger" - it risked colliding with the manual refresh he
+// ran for a meeting, and refreshDashboardData has NO lock, so two runs can overlap.
+// ScriptApp cannot read back a trigger's HOUR, so the only exact way to drop ONE of them is: delete every
+// refreshDashboardData clock trigger and recreate the two we are keeping.
+// 🚨 DELIBERATELY does NOT touch TRIGGER_PLAN_ or the TRIGGER_PLAN script property. ensureTriggerPlan_ only
+//    reinstalls when the plan STRING changes, so leaving the property at '6-13-18 IST' means this deletion
+//    STICKS under BOTH Head and the published V49. Bumping the constant instead would make a V49 manual
+//    refresh (old code, [6,13,18]) fight a Head run and put 1 PM back - ping-pong until Jerin publishes.
+// ⚠ So the SOURCE still says [6,13,18] while reality is [6,18]. That drift is intentional and temporary:
+//    the permanent fix is to set the array to [6,18], bump TRIGGER_PLAN_, and PUBLISH.
+function drop1pmTrigger() {
+  var killed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'refreshDashboardData' && t.getTriggerSource() === ScriptApp.TriggerSource.CLOCK) {
+      ScriptApp.deleteTrigger(t); killed++;
+    }
+  });
+  [6, 18].forEach(function (h) {
+    ScriptApp.newTrigger('refreshDashboardData').timeBased().atHour(h).everyDays(1).inTimezone('Asia/Kolkata').create();
+  });
+  Logger.log('#175b: removed ' + killed + ' refreshDashboardData clock triggers, reinstalled 6 AM + 6 PM IST only');
 }
