@@ -315,3 +315,40 @@ export function scopeToOpenings(data, quarterOk) {
 export function getLastUpdated() {
   return dashboardData?.lastUpdated || null;
 }
+
+// ===== #182f (Jerin, 27 Sep 2026): ONE Joining Pending rule, read by the Hiring Manager tab AND the Overview =====
+// 🗣 "use the HM logic for Overview. Thats what was always supposed to be done."
+// 🚨 WHY THIS EXISTS: `dashboard.json` carries TWO Joining Pending figures on purpose, and the pipeline says so
+//    itself — `joiningPendingCases[]` is every PERSON in Ref Check / Documentation / Offer, while
+//    `openingPendingByJobQ` is POSITIONS with a live linked offer. They are different UNITS (CLAUDE.md Rule 1),
+//    so they disagree three ways: a person whose offer names no opening cannot appear in the positions count at
+//    all; one position holding two people in closing counts ONCE; and a position can carry a live offer while
+//    nobody sits in those three stages. On 27 Sep that read 14 people against 12 positions.
+// 🚨 The Overview showed the POSITIONS number under the words "joining pending" for a few hours on 27 Sep
+//    (#182e). That was wrong — the label reads as people, and its Delta subtracts it exactly as the Hiring
+//    Manager tab does. Both tabs now come through here, so the two can never drift again.
+// 🔑 THE RULE ITSELF: every case counts, MINUS anyone whose opening belongs to an EARLIER quarter than the
+//    period being shown (Jerin, 22 Aug 2026) — their offer is last quarter's demand still in flight, and
+//    counting it again would inflate every quarter. A case with NO opening stays in: there is nothing to judge
+//    it by, and most cases have no opening.
+export function jpCaseInPeriod(c, fromQuarter) {
+  if (!c) return false;
+  if (!c.openingQuarter || !fromQuarter || fromQuarter === '—') return true;
+  return !(c.openingQuarter < fromQuarter);
+}
+
+// The people in closing for a period, counted once each and grouped by DEPARTMENT.
+// `fromQuarter` is the first quarter of the period on screen ('2026-Q3', or '2026-Q1' for a whole year).
+// ⚠ Department comes straight off the case, which is already the PARENT department — see CLAUDE.md
+//   "Read `job.department` directly"; dept-map.js is a no-op and must not be reintroduced here.
+export function joiningPendingByDept(data, fromQuarter) {
+  const byDept = {};
+  let total = 0;
+  ((data && data.joiningPendingCases) || []).forEach(c => {
+    if (!jpCaseInPeriod(c, fromQuarter)) return;
+    const dept = c.department || 'Unknown';
+    byDept[dept] = (byDept[dept] || 0) + 1;
+    total += 1;
+  });
+  return { total, byDept };
+}
