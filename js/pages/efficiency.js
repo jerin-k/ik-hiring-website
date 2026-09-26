@@ -80,7 +80,7 @@ const topicCells = (x) =>
   + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
   + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`
   + EFF_DASH + EFF_DASH
-  + `<td${x.missed ? ' style="color:var(--red)"' : ' class="zero"'}>${x.missed}</td><td class="score">${x.mS}</td>`;
+;   // #182d: the Missed pair is gone - Delta already says what was not filled, live
 
 function wireTreePath(tbody, expandAll) {
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
@@ -199,8 +199,8 @@ export function renderEfficiency(data) {
 
       <div class="scroll-table"><table class="metrics">
         <thead>
-          <tr><th rowspan="2" style="min-width:17.5rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th colspan="2" class="stage-hdr">Missed</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <tr><th rowspan="2" style="min-width:17.5rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
@@ -832,7 +832,7 @@ export function initEfficiencyFilters(data) {
         + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
         + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
         + gapCell(x) + `<td class="score">${x.gS}</td>`
-        + `<td style="color:var(--red)">${z(x.missed)}</td><td class="score">${z(x.mS)}</td>`;
+;   // #182d: Missed removed
     };
     const rows = fulfilRows(per);
     // #157: same window as the job rows above - whole quarters when the range covers them, India-time days
