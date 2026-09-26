@@ -1527,6 +1527,19 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .jn-who .jn-p b { display: block; font-weight: 600; color: var(--text-secondary); }
 .jn-who .jn-m { display: block; font-size: 0.625rem; color: var(--muted); }
 .jn-who .jn-d { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* ===== #182a3 (Jerin, 26 Sep 2026) — "Who has joined": quiet marks, and the date said ONCE ===== */
+/* 🚨 The marker is TEXT, not a pill. A boxed chip beside a name in a dense list out-shouted the names while
+   marking the rare case (8 of 157). An exception belongs at the BOTTOM of the visual hierarchy. */
+.jn-q { color: #9a5b1e; font-weight: 500; }
+.jn-q-miss { color: var(--muted); font-style: italic; }
+/* The date once, as a heading, with its people under it — in the SAME green the per-person date used, so the
+   colour keeps meaning "date" across both people columns (Jerin: "i like the green for date"). */
+.jn-grouped .jn-dh { display: block; font-size: 0.625rem; font-weight: 600; color: var(--green);
+  font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  margin-top: 0.5rem; padding-top: 0.3125rem; border-top: 1px solid var(--border-light); }
+.jn-grouped .jn-dh:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.jn-grouped .jn-pg { display: block; margin-top: 0.1875rem; line-height: 1.35; }
+.jn-grouped .jn-pg b { font-weight: 600; }
 /* #161: why someone in closing is not under a topic, and how many are - quiet, one step below the meta line */
 .jn-who .jn-r { display: block; font-size: 0.625rem; font-style: italic; color: var(--orange); }
 .jn-who .jn-under { display: block; margin-top: 0.25rem; font-size: 0.625rem; color: var(--muted); }
