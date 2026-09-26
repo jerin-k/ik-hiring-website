@@ -422,8 +422,13 @@ export function renderHmReport(data) {
          like "32", which left the two text columns 117px and pushed their contents into one another. Numbers are now
          4.75rem, and Who is joining / Remarks get real width. Widths live HERE because this block loads after
          style.css and wins at equal specificity. */
-      /* #182a: a third wide text column, so the table needs the room for it. */
-      .hm-report .hm-summary { width:100%; min-width:90rem; table-layout:fixed; }
+      /* ===== #182c (Jerin, 26 Sep 2026): "can we get the table to fit inside the panel" =====
+         MEASURED, not guessed: at a 1440 window the panel gives 83.9rem and the table wanted 90.5rem - over by
+         6.6. He named the four columns that could give ground: Dropped, Delta, Who has joined, Who is joining.
+         Trimming those four by 10.5rem lands the table at 80rem, which fits with ~4rem to spare so it still fits
+         a slightly narrower window. 🚨 #178's rule stands: these columns have FIXED widths, so padding is not a
+         lever - the width numbers themselves are the only thing that moves the table. */
+      .hm-report .hm-summary { width:100%; min-width:80rem; table-layout:fixed; }
       .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { width:14rem; }
       .hm-report .hm-summary td:first-child { text-align:left; }   /* the heading above it is centred like the rest (#151) */
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
@@ -442,8 +447,8 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:last-child { border-right:0; }
       /* the Delta bar and its caption centre under the heading like every other number */
       .hm-report .hm-summary .deltacell { justify-content:center; }
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; white-space:normal; }   /* Who has joined */
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:16rem; white-space:normal; }   /* Who is joining */
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:11rem; white-space:normal; }     /* Who has joined  #182c 14 ➔ 11 */
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; white-space:normal; }   /* Who is joining  #182c 16 ➔ 12.5 */
       .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:12.5rem; white-space:normal; }   /* Remarks */
 
       /* ===== #182b (Jerin, 26 Sep 2026) — THE TABLE HAS TWO HALVES, SO BOTH ARE PAINTED =====
@@ -500,8 +505,10 @@ export function renderHmReport(data) {
       .hm-report .hm-summary tbody tr:hover td:nth-child(8), .hm-report .hm-summary tbody tr:hover td:nth-child(9),
       .hm-report .hm-summary tbody tr:hover td:nth-child(10) { background:#e6f3f6; }
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
-      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:6.5rem; }   /* Dropped + % caption */
-      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:9.5rem; }   /* Delta: track + number + caption */
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:5rem; }   /* Dropped + % caption  #182c 6.5 ➔ 5 */
+      /* Delta #182c 9.5 ➔ 7rem. That is the tightest it goes without clipping: the bar is 4rem, the gap 0.5 and
+         the number 1.125, so 5.6rem of content plus the cell's own padding. Do not take it below 7. */
+      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:7rem; }
 
     </style>
 
