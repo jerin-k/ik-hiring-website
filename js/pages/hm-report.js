@@ -114,25 +114,48 @@ function jnWhoCell(o, opt = {}) {
   };
   const more = list.length > SHOW_FIRST
     ? `<button type="button" class="jn-more" data-jn-more="1">+${list.length - SHOW_FIRST} more</button>` : '';
+  // ===== #182a3 option C (Jerin, 26 Sep 2026: "go with C - but i like the green for date") =====
+  // The same date was stamped on EVERY person under it — "29 Jul" eleven times in one cell. Said once as a
+  // heading with its people beneath, it stops being clutter and starts saying "these people arrived together".
+  // A thin rule and a little air between groups is what makes a long list scannable; without it the names read
+  // as a wall. Where every date is unique this renders exactly as it did before, one heading per person.
+  // 🔑 The heading keeps the GREEN the per-person date already used (`.jn-who .jn-d`) — his call, and it means
+  //    the colour still says "date" wherever it appears rather than changing meaning between the two columns.
+  if (opt.groupByDate) {
+    let out = '', last = null, n = 0;
+    list.forEach((c) => {
+      const d = dayLabel(dateOf(c)) || 'date not set';
+      if (d !== last) { out += `<span class="jn-dh${n >= SHOW_FIRST ? ' jn-extra' : ''}">${esc(d)}</span>`; last = d; }
+      const tag = opt.tagOf ? opt.tagOf(c) : '';
+      out += `<span class="jn-p jn-pg${n >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
+        + (tag ? `<span class="jn-m">${tag}</span>` : '') + `</span>`;
+      n++;
+    });
+    return `<td class="jn-cell jn-who jn-grouped">${out}${more}${under}</td>`;
+  }
   return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}${under}</td>`;
 }
 // #182a2: which joiners are NOT behind the Joined number beside them, and WHY — two different answers, so two
-// different marks. Both reuse the chips and the WORDS `tdQuarter` already puts on the Joiners sub-tab
-// (js/people-cells.js), so the two views say the same thing about the same person.
-//   • an EARLIER quarter's opening ➔ the apricot quarter chip (they filled last quarter's demand)
-//   • NO opening at all           ➔ the dashed "Not linked" chip (nothing to count them against)
+// different marks, saying the same thing `tdQuarter` says on the Joiners sub-tab.
+//   • an EARLIER quarter's opening ➔ "Q2 opening" (they filled last quarter's demand)
+//   • NO opening at all           ➔ "not linked" (nothing to count them against)
+// 🚨 #182a3 (Jerin, 26 Sep 2026) — THESE WERE PILLS AND THE PILL SHOUTED: 🗣 "the chip shouts, and it shouldn't"
+//    (my words, his agreement: "this is the only think i felt off"). A `pl-chip` works on the Joiners sub-tab,
+//    where it sits alone in its own column with room around it. Dropped beside a name in a dense 14rem list it
+//    became the loudest thing in the column while marking the RARE case — 8 people of 157. **An exception must
+//    be the quietest mark on the row.** Now plain small text in a warm tone. Do not put a box back around it.
 // Anyone on a this-quarter opening gets nothing: they are the normal case, and a mark on them would be noise.
 // 🔑 The reference is the quarter the person STARTED in, exactly as tdQuarter uses their start date — not the
 //    filter. It means the mark says the same thing wherever the table is filtered, and cannot flip on a row
 //    just because someone changed the period selector.
 function joinTag(c) {
   if (!c.openingQuarter) {
-    return ` <span class="pl-chip pl-fix" title="No opening is attached to this offer, so this person is not counted against any position.">Not linked</span>`;
+    return ` <span class="jn-q jn-q-miss" title="No opening is attached to this offer, so this person is not counted against any position.">not linked</span>`;
   }
   const ref = qOfDay_(c.startDate);
   if (ref && c.openingQuarter < ref) {
     const q = c.openingQuarter;
-    return ` <span class="pl-chip pl-prev" title="Filled a position opened in ${q.slice(5)} ${q.slice(0, 4)}, before the quarter they started in — so they are not in the Joined figure beside this list.">${q.slice(5)} ${q.slice(0, 4)}</span>`;
+    return ` <span class="jn-q" title="Filled a position opened in ${q.slice(5)} ${q.slice(0, 4)}, before the quarter they started in — so they are not in the Joined figure beside this list.">${q.slice(5)} opening</span>`;
   }
   return '';
 }
@@ -830,7 +853,7 @@ export function initHmFilters(data) {
         const split = topics ? splitWho(o.jpWho, topics) : null;
         const who = split ? jnWhoCell({ jpWho: split.rest }, { note: whyUntied, under: o.jpWho.length - split.rest.length }) : jnWhoCell(o);
         // #182a: the same helper, pointed at the joiners and dated by their START date.
-        const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag });
+        const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true });
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${topics ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
           <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
         if (!topics) return;

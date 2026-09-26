@@ -1,4 +1,4 @@
 {
-  "build": "2026-09-26T18:01:11Z",
+  "build": "2026-09-26T18:17:24Z",
   "note": "#164. Stamped automatically by .git/hooks/pre-commit whenever CODE is committed here. Data-only commits from the pipeline never touch it, so a refresh does not look like a deploy. An open dashboard tab re-reads this file and offers a reload when the value changes."
 }
