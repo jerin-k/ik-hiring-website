@@ -97,6 +97,29 @@ export function noteOf(job8) {
   return p ? { text: p.text || '', by: p.by || null, at: p.at || null, unsaved: false } : null;
 }
 
+// ===== #180 (Jerin, 26 Sep 2026): the byline is a FIRST NAME, never an email address =====
+// 🗣 "the email (of person adding remark) being mentioned is unecessary clutter" ... "Lets do just the First name".
+// 🚨 WHY IT IS NOT JUST DECLUTTERING: `job_notes.json` is pushed to a PUBLIC repo (Rule 9). The editor already
+//    REFUSES a note containing an email address - guardProblem() blocks it - while the file itself published a
+//    staff email on every remark. We banned the thing we were doing. A first name keeps the accountability and
+//    publishes no address.
+// 🔑 A single-letter first piece means the name starts with an INITIAL (g.darshan, v.pooja), so take the NEXT
+//    piece - which gives Darshan and Pooja rather than G and V. Measured against all 24 people with access:
+//    those two, plus the three shared mailboxes below, were the only ones the naive rule got wrong.
+// 🔑 IDEMPOTENT ON PURPOSE: firstNameOf('Gopu') is 'Gopu'. That is what lets the same function render the OLD
+//    remarks, which still carry full emails (Jerin, 26 Sep: "Leave them; its ok"), and the new ones alike.
+// 🚨 THE APPS SCRIPT HAS ITS OWN COPY of this rule in Code.gs, because it is what WRITES the value. If you change
+//    the rule here, change it there in the same breath - and remember the web app needs a NEW VERSION published.
+export function firstNameOf(by) {
+  const local = String(by || '').split('@')[0].trim().toLowerCase();
+  if (!local) return '';
+  if (local === 'hr') return 'HR';
+  if (local === 'peopleops') return 'People Ops';
+  const bits = local.split(/[._-]+/).filter(Boolean);
+  const pick = (bits[0] && bits[0].length === 1 && bits[1]) ? bits[1] : (bits[0] || local);
+  return pick.charAt(0).toUpperCase() + pick.slice(1);
+}
+
 export function notesLoadedAt() { return loadedAt; }
 export function draftCount() { return Object.keys(drafts).length; }
 
@@ -121,9 +144,16 @@ export function guardProblem(text) {
 // unnoticed: the save already reads the note back, so compare the name that landed with the name we expect.
 // Returns a sentence to show the writer, or null when everything agrees.
 export function bylineWarning(by, me) {
-  const mine = String(me == null ? ((getStoredUser() || {}).email || '') : me).trim().toLowerCase();
-  const signed = String(by || '').trim().toLowerCase();
-  if (!mine) return null;   // localhost / DEV_MODE — nobody signed in, so there is nothing to compare against
+  // #180: both sides go through firstNameOf, so this keeps working whether the server wrote a full email (every
+  // remark before 26 Sep 2026) or a first name (every one after). Comparing raw would make it cry wolf on every
+  // single save the moment the backend changed.
+  // 🚨 IT IS SAFE TO COMPARE ON FIRST NAMES **ONLY BECAUSE NO TWO OF THE 24 PEOPLE WITH ACCESS SHARE ONE**
+  //    (checked 26 Sep 2026). If two ever do, this check goes quiet for exactly those two — so re-check the list
+  //    before adding anyone, and if it ever collides, compare on the whole local part instead.
+  const mineRaw = String(me == null ? ((getStoredUser() || {}).email || '') : me).trim();
+  if (!mineRaw) return null;   // localhost / DEV_MODE — nobody signed in, so there is nothing to compare against
+  const mine = firstNameOf(mineRaw);
+  const signed = firstNameOf(by);
   if (!signed) return 'Saved — but no name was recorded against it. The server could not tell who was saving.';
   if (signed !== mine) {
     return `Saved — but signed ${signed}, not you (${mine}). The save window uses whichever Google account this `

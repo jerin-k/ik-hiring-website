@@ -5,7 +5,7 @@ import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecru
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
-import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX } from '../job-notes.js';   // #150
+import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
@@ -111,10 +111,15 @@ function jnRemarkCell(o) {
     // this is, so the empty state is a quiet affordance (Jerin, 19 Sep).
     return `<td class="jn-cell jn-rem" data-job8="${esc(o.job8)}"><button type="button" class="jn-add" data-jn-edit="1" title="Add a remark">+ Add</button></td>`;
   }
-  const who = n.unsaved ? 'Unsaved — in this browser only' : `${esc(n.by || 'someone')} · ${esc(n.at ? dayLabel(n.at) : '')}`;
+  // ===== #180 (Jerin, 26 Sep 2026): the cell carries the REMARK ALONE =====
+  // 🗣 "the email ... being mentioned is unecessary clutter. Can it just be shown when someone tries editing the
+  //    cell; right above the Cancel/Save" and then 🗣 "Move the date as well to the editor."
+  // 🚨 ONE EXCEPTION, kept deliberately: an UNSAVED draft still says so. That is LIVE STATE, not a byline —
+  //    without it a remark sitting in this browser alone looks identical to one the whole team can see, which is
+  //    the single thing the writer has to be told. CLAUDE.md: above a table there is LIVE STATE ONLY.
   return `<td class="jn-cell jn-rem${n.unsaved ? ' jn-unsaved' : ''}" data-job8="${esc(o.job8)}">`
     + `<button type="button" class="jn-text" data-jn-edit="1" title="Edit this remark">${esc(n.text)}</button>`
-    + `<span class="jn-by">${who}</span></td>`;
+    + (n.unsaved ? `<span class="jn-by">Unsaved — in this browser only</span>` : '') + `</td>`;
 }
 // ONE delegated listener for the life of the table: expand a long list, open an editor, save or cancel it.
 // ⚠ renderSection1 runs on every filter change and again when the notes land, so this must not stack — two
@@ -159,6 +164,7 @@ function openEditor(cell) {
   cell.innerHTML = `<textarea class="jn-ta" maxlength="${NOTE_MAX + 200}" rows="3"
       placeholder="What should a hiring manager know about this role?">${esc(n.text)}</textarea>
     <p class="jn-guard">Visible to anyone with the link — no candidate names, salaries, phone numbers or email addresses.</p>
+    ${n.by ? `<p class="jn-byline">Last written by <strong>${esc(firstNameOf(n.by))}</strong>${n.at ? ' \u00b7 ' + esc(dayLabel(n.at)) : ''}</p>` : ''}
     <div class="jn-actions"><button type="button" class="jn-btn quiet" data-jn-cancel="1">Cancel</button>
       <button type="button" class="jn-btn" data-jn-save="1">Save</button></div>`;
   const ta = cell.querySelector('textarea'), guard = cell.querySelector('.jn-guard'), save = cell.querySelector('[data-jn-save]');
