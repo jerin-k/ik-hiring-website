@@ -54,8 +54,7 @@ const topicMetrics = (t, jp) =>
   `<td style="font-weight:600">${t.total}</td>`
   + `<td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
   + `<td style="color:var(--orange)">${jp || '<span class="zero">0</span>'}</td>`
-  + DASH + DASH
-  + `<td class="${t.missed ? '' : 'zero'}"${t.missed ? ' style="color:var(--red)"' : ''}>${t.missed}</td>`;
+  + DASH + DASH;
 
 // #161: the opening a person in closing is tied to (the pipeline's 8-char id, or a full id from a hire-link 'lock'),
 // the topic rows they fall under, and - for the ones who fall under none - why, in the words Jerin asked for.
@@ -422,95 +421,84 @@ export function renderHmReport(data) {
          like "32", which left the two text columns 117px and pushed their contents into one another. Numbers are now
          4.75rem, and Who is joining / Remarks get real width. Widths live HERE because this block loads after
          style.css and wins at equal specificity. */
-      /* ===== #182c (Jerin, 26 Sep 2026): "can we get the table to fit inside the panel" =====
-         MEASURED, not guessed: at a 1440 window the panel gives 83.9rem and the table wanted 90.5rem - over by
-         6.6. He named the four columns that could give ground: Dropped, Delta, Who has joined, Who is joining.
-         Trimming those four by 10.5rem lands the table at 80rem, which fits with ~4rem to spare so it still fits
-         a slightly narrower window. 🚨 #178's rule stands: these columns have FIXED widths, so padding is not a
-         lever - the width numbers themselves are the only thing that moves the table. */
-      .hm-report .hm-summary { width:100%; min-width:80rem; table-layout:fixed; }
+      /* ===== #182c/#182d (Jerin, 26 Sep 2026) — NINE COLUMNS, AND THE TABLE FITS ITS PANEL =====
+         🗣 "can we get the table to fit inside the panel. Width can be reduced for Dropped, Delta, Who has
+             joined, Who is joining." ... then 🗣 "Awesome - kill Missed column everywhere."
+         COLUMNS NOW: 1 Department · 2 Total openings · 3 Joined · 4 Joining pending · 5 Dropped · 6 Delta ·
+                      7 Who has joined · 8 Who is joining · 9 Remarks.
+         🚨 MISSED WAS COLUMN 7, SO EVERY RULE BELOW MOVED DOWN ONE. If a column is ever added or removed again,
+            re-derive this whole block rather than editing numbers in place - a half-shifted set silently puts a
+            column in BOTH groups, which is exactly what a first attempt at this did.
+         WIDTHS: 14 + 4.5x3 + 5 + 7 + 12.5 + 14 + 12.5 = 78.5rem against the 83.9rem the panel gives at 1440.
+         Killing Missed freed 4.5rem, and it went straight back into the two people columns he had squeezed.
+         🚨 #178's rule: these widths are FIXED, so padding is not a lever - only these numbers move the table. */
+      .hm-report .hm-summary { width:100%; min-width:78rem; table-layout:fixed; }
       .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { width:14rem; }
-      .hm-report .hm-summary td:first-child { text-align:left; }   /* the heading above it is centred like the rest (#151) */
+      .hm-report .hm-summary td:first-child { text-align:left; }
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
         width:4.5rem; font-variant-numeric:tabular-nums; }
-      .hm-report .hm-summary td:not(:first-child) { white-space:nowrap; }
-      /* #151 (Jerin, 19 Sep — mock-up v3, option G): single numbers CENTRED, wordy cells LEFT, and one heading row that
-         is centred both ways, in sentence case, on a pale band with thin dividers. A clipped heading is worse than a
-         two-line one, so headings wrap. */
-      .hm-report .hm-summary td:not(:first-child) { text-align:center; }
-      /* #182a: Who has joined is the NEW 8th column, so the two text columns that were 8 and 9 are now 9 and 10. */
-      .hm-report .hm-summary td:nth-child(8), .hm-report .hm-summary td:nth-child(9), .hm-report .hm-summary td:nth-child(10) { text-align:left; }
-      .hm-report .hm-summary th {
-        text-align:center; vertical-align:middle; text-transform:none; letter-spacing:0; white-space:normal;
-        line-height:1.25; height:2.9rem; color:var(--accent-deep); background:#eef2f8;
-        border-bottom:2px solid #b9c7e0; border-right:1px solid #dae1ee; }
-      .hm-report .hm-summary th:last-child { border-right:0; }
-      /* the Delta bar and its caption centre under the heading like every other number */
-      .hm-report .hm-summary .deltacell { justify-content:center; }
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:11rem; white-space:normal; }     /* Who has joined  #182c 14 ➔ 11 */
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; white-space:normal; }   /* Who is joining  #182c 16 ➔ 12.5 */
-      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:12.5rem; white-space:normal; }   /* Remarks */
-
-      /* ===== #182b (Jerin, 26 Sep 2026) — THE TABLE HAS TWO HALVES, SO BOTH ARE PAINTED =====
-         🗣 "can the numbers section & the section with (Joiners list, Joining Pending list & Remark) have a
-             different design appaoch or color or something" ... then, of six mocks: 🗣 "For the amt of content,
-             i'd take F".
-         🔑 HIS REASON IS THE DESIGN RULE: at this density, marking ONE half against a plain background does not
-            hold - the eye loses it the moment you scroll into the middle of a long table. Six variants proved it:
-            A/B/C were one faint tint at three strengths ("dont like any of it"), D and E painted one side only.
-            F paints BOTH, so the halves define each other. Counting columns 2-7 in the table's own blue-grey,
-            people-and-words columns 8-10 in the teal the joined dates already use.
-         🚨 THESE ARE CELL BACKGROUNDS, AND A CELL PAINTS OVER ITS ROW. Four row-level backgrounds would have been
-            flattened by a naive td-background rule: the dept-header band (inline on the <tr>), tr.lv-topic
-            (style.css 1589), .totals-row td (626) and the hover (686). So every row type gets its OWN pair of
-            tints - keep it that way, and if you add a row type, add its pair too.
-         🚨 They live in THIS block, not style.css, because this block loads later and wins. The same ordering
-            trap silently killed "Show fewer" in a mock earlier today. */
-      .hm-report .hm-summary th:nth-child(2), .hm-report .hm-summary th:nth-child(3),
-      .hm-report .hm-summary th:nth-child(4), .hm-report .hm-summary th:nth-child(5),
-      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary th:nth-child(7) {
-        background:#dfe7f4; color:#2d4470; }
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary th:nth-child(9),
-      .hm-report .hm-summary th:nth-child(10) { background:#d4e7ed; color:#14576b; }
-      /* 🚫 NO HARD RULE between the halves (Jerin, 26 Sep: "dont need this datk seperator"). Every earlier mock
-         carried a 2px divider because only ONE side was painted and it needed help. Once BOTH sides are painted
-         the colour change IS the separator, and the line on top of it just adds weight. Do not put it back. */
-
-      /* ordinary role rows */
-      .hm-report .hm-summary tr.leaf td:nth-child(2), .hm-report .hm-summary tr.leaf td:nth-child(3),
-      .hm-report .hm-summary tr.leaf td:nth-child(4), .hm-report .hm-summary tr.leaf td:nth-child(5),
-      .hm-report .hm-summary tr.leaf td:nth-child(6), .hm-report .hm-summary tr.leaf td:nth-child(7) { background:#f6f8fc; }
-      .hm-report .hm-summary tr.leaf td:nth-child(8), .hm-report .hm-summary tr.leaf td:nth-child(9),
-      .hm-report .hm-summary tr.leaf td:nth-child(10) { background:#f4fafb; }
-      /* department band - deeper, so the row still reads as a band AND the split still reads */
-      .hm-report .hm-summary tr.dept-header td:nth-child(2), .hm-report .hm-summary tr.dept-header td:nth-child(3),
-      .hm-report .hm-summary tr.dept-header td:nth-child(4), .hm-report .hm-summary tr.dept-header td:nth-child(5),
-      .hm-report .hm-summary tr.dept-header td:nth-child(6), .hm-report .hm-summary tr.dept-header td:nth-child(7) { background:#e5eaf4; }
-      .hm-report .hm-summary tr.dept-header td:nth-child(8), .hm-report .hm-summary tr.dept-header td:nth-child(9),
-      .hm-report .hm-summary tr.dept-header td:nth-child(10) { background:#e2eef1; }
-      /* topic rows - lighter than a role row, as they were */
-      .hm-report .hm-summary tr.lv-topic td:nth-child(2), .hm-report .hm-summary tr.lv-topic td:nth-child(3),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(4), .hm-report .hm-summary tr.lv-topic td:nth-child(5),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(6), .hm-report .hm-summary tr.lv-topic td:nth-child(7) { background:#f7f9fd; }
-      .hm-report .hm-summary tr.lv-topic td:nth-child(8), .hm-report .hm-summary tr.lv-topic td:nth-child(9),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(10) { background:#f5fbfc; }
-      /* 🚫 The TOTALS row deliberately stays ONE flat band, undivided. The .totals-row td rule in style.css forces its
-         background with !important, and the honest reading is that it should: the grand total sits UNDER both
-         halves rather than belonging to either, so a split there would be claiming something untrue. Rules that
-         tried to tint it were written, measured as dead, and deleted rather than left in looking effective. */
-      /* 🚨 HOVER LAST, and deeper than every pair above, or pointing at a row would stop doing anything visible. */
-      .hm-report .hm-summary tbody tr:hover td:nth-child(2), .hm-report .hm-summary tbody tr:hover td:nth-child(3),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(4), .hm-report .hm-summary tbody tr:hover td:nth-child(5),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(6), .hm-report .hm-summary tbody tr:hover td:nth-child(7) { background:#e9eff8; }
-      .hm-report .hm-summary tbody tr:hover td:nth-child(8), .hm-report .hm-summary tbody tr:hover td:nth-child(9),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(10) { background:#e6f3f6; }
-      /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
-      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:5rem; }   /* Dropped + % caption  #182c 6.5 ➔ 5 */
-      /* Delta #182c 9.5 ➔ 7rem. That is the tightest it goes without clipping: the bar is 4rem, the gap 0.5 and
-         the number 1.125, so 5.6rem of content plus the cell's own padding. Do not take it below 7. */
+      .hm-report .hm-summary td:not(:first-child) { white-space:nowrap; text-align:center; }
+      .hm-report .hm-summary td:nth-child(7),
+      .hm-report .hm-summary td:nth-child(8),
+      .hm-report .hm-summary td:nth-child(9) { text-align:left; white-space:normal; }
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:5rem; }      /* Dropped */
+      /* Delta floor is 7rem: bar 4 + gap 0.5 + number 1.125 = 5.6rem of content before the cell padding. */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:7rem; }
+      .hm-report .hm-summary th:nth-child(7), .hm-report .hm-summary td:nth-child(7) { width:12.5rem; }   /* Who has joined */
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; }     /* Who is joining */
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; }   /* Remarks */
 
-    </style>
+      /* ===== #182b — BOTH HALVES PAINTED (option F) =====
+         🗣 "For the amt of content, i'd take F" · 🚫 and no hard rule between them: "dont need this datk
+             seperator" - with both sides painted the colour change IS the separator.
+         🚨 A CELL PAINTS OVER ITS ROW, so every row type needs its OWN pair or four row-level backgrounds get
+            flattened: the dept-header band (inline on the tr), tr.lv-topic, .totals-row td, and the hover.
+            Add a row type, add its pair. 🚨 These live in THIS block because it loads after style.css and wins. */
+      .hm-report .hm-summary th:nth-child(2),
+      .hm-report .hm-summary th:nth-child(3),
+      .hm-report .hm-summary th:nth-child(4),
+      .hm-report .hm-summary th:nth-child(5),
+      .hm-report .hm-summary th:nth-child(6) { background:#dfe7f4; color:#2d4470; }
+      .hm-report .hm-summary th:nth-child(7),
+      .hm-report .hm-summary th:nth-child(8),
+      .hm-report .hm-summary th:nth-child(9) { background:#d4e7ed; color:#14576b; }
+      .hm-report .hm-summary tr.leaf td:nth-child(2),
+      .hm-report .hm-summary tr.leaf td:nth-child(3),
+      .hm-report .hm-summary tr.leaf td:nth-child(4),
+      .hm-report .hm-summary tr.leaf td:nth-child(5),
+      .hm-report .hm-summary tr.leaf td:nth-child(6) { background:#f6f8fc; }
+      .hm-report .hm-summary tr.leaf td:nth-child(7),
+      .hm-report .hm-summary tr.leaf td:nth-child(8),
+      .hm-report .hm-summary tr.leaf td:nth-child(9) { background:#f4fafb; }
+      .hm-report .hm-summary tr.dept-header td:nth-child(2),
+      .hm-report .hm-summary tr.dept-header td:nth-child(3),
+      .hm-report .hm-summary tr.dept-header td:nth-child(4),
+      .hm-report .hm-summary tr.dept-header td:nth-child(5),
+      .hm-report .hm-summary tr.dept-header td:nth-child(6) { background:#e5eaf4; }
+      .hm-report .hm-summary tr.dept-header td:nth-child(7),
+      .hm-report .hm-summary tr.dept-header td:nth-child(8),
+      .hm-report .hm-summary tr.dept-header td:nth-child(9) { background:#e2eef1; }
+      .hm-report .hm-summary tr.lv-topic td:nth-child(2),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(3),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(4),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(5),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(6) { background:#f7f9fd; }
+      .hm-report .hm-summary tr.lv-topic td:nth-child(7),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(8),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(9) { background:#f5fbfc; }
+      /* 🚫 The TOTALS row stays ONE flat band: .totals-row td forces its background with !important, and that is
+         the honest reading - the grand total sits UNDER both halves rather than belonging to either. */
+      /* 🚨 HOVER LAST, deeper than every pair above, or pointing at a row stops doing anything visible. */
+      .hm-report .hm-summary tbody tr:hover td:nth-child(2),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(3),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(4),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(5),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(6) { background:#e9eff8; }
+      .hm-report .hm-summary tbody tr:hover td:nth-child(7),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(8),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(9) { background:#e6f3f6; }
+
+</style>
 
     <div class="hm-report">
     <!-- ===== GLOBAL PAGE FILTERS ===== -->
@@ -544,7 +532,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th>Missed</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -864,7 +852,6 @@ export function initHmFilters(data) {
       <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div><div class="sub">opened in this period</div></div>
       <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.joined}</div><div class="sub">moved to Hired</div></div>
       <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div><div class="sub">still to fill</div></div>
-      <div class="card"><div class="label">Missed</div><div class="value" style="color:var(--red)">${totals.missed}</div><div class="sub">carried to next quarter</div></div>
       <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jpP}</div><div class="sub">in Ref Check, Documentation or Offer \u00b7 live</div></div>
       <div class="card"><div class="label">Dropped</div><div class="value" style="color:var(--red)">${totals.drop}</div><div class="sub">${(totals.joined + totals.jpP + totals.drop) > 0 ? Math.round((totals.drop / (totals.joined + totals.jpP + totals.drop)) * 100) + '% of outcomes' : 'no outcomes yet'}</div></div>
     `;
@@ -898,8 +885,7 @@ export function initHmFilters(data) {
         + `<td style="color:var(--orange)">${v.jpP || `<span class="zero">0</span>`}</td>`
         + `<td class="gapcell">${dropCell}</td>`
         + `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
-        + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span></td>`
-        + `<td style="color:var(--red)">${v.missed}</td>`;
+        + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span></td>`;
     };
     let html = '';
     deptArr.forEach((D, gi) => {
