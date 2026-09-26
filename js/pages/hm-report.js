@@ -1,4 +1,5 @@
 import { getData, jobsWithOpeningIn } from '../data.js';
+import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants (#182e: the bar-end total label)
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
@@ -13,7 +14,7 @@ import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuar
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
-         buildStageHeat } from '../chart-style.js';
+         buildStageHeat, FULFIL_COLORS } from '../chart-style.js';   // #182e: the shared Joined/Pending/Delta colours
 
 // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen (not a step before it) — candidates take one
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
@@ -933,13 +934,22 @@ export function initHmFilters(data) {
     wireTree(body);
     wireJobNotes(body);   // #150
 
-    // Chart: one bar per department, stacked Joined / Open / Missed — and each of those split again into
-    // the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29). Darkest band is
-    // the department's biggest role for that metric, palest the smallest; past ten roles the tail is pooled
-    // so nothing drops out of the bar.
-    // The number for Joined / Open / Missed is kept, drawn ONCE PER METRIC across its bands rather than on
-    // every band ("the data label for joined, open etc should be retained"). The role name is in the
-    // tooltip. Every figure comes from deptArr, the same rows the table above renders.
+    // Chart: one bar per department, stacked Joined / Joining Pending / Delta — and Joined and Joining Pending
+    // split again into the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29).
+    // Darkest band is the department's biggest role for that metric, palest the smallest; past ten roles the
+    // tail is pooled so nothing drops out of the bar. The role name is in the tooltip. Every figure comes from
+    // deptArr and groups, the same rows the table above renders — the TABLE COMPUTES, THE CHART READS (Rule 3).
+    // ===== #182e (Jerin, 26 Sep 2026): MISSED IS GONE FROM HERE, DELTA TOOK ITS PLACE =====
+    // 🗣 "Remove missed from the chart too - we can show delta instead no? Total will be Joined/Joining Pending/Delta."
+    // This is NOT a new design: Overall Efficiency has plotted these exact three bands since #120, and this chart
+    // now shares its colours and its axis options from chart-style.js so the two cannot drift.
+    // 🔑 Delta = Total − Joined − Joining Pending, the SAME expression metrics() uses for the table's Delta cell.
+    //    It is NOT split into roles: a −5 role and a +5 role cancel in the table, and splitting let both count
+    //    (SME - India once read 53 against the table's 48 on the Overall Efficiency chart).
+    // 🚨 Delta is SIGNED (Rule 1, never clamped) and a bar CANNOT draw a negative band. So the total at the end
+    //    of each bar is NOT the sum of the bands — stackTotals is off and the label prints the TABLE's total.
+    //    Without that, a department with more people in closing than positions opened would silently show
+    //    Joined + Joining Pending and call it the total.
     const cDepts = deptArr.map(t => t.dept).slice().reverse();
     if (hm1ChartInstance) hm1ChartInstance.destroy();
     const ctx1 = document.getElementById('hm1Chart');
@@ -949,20 +959,44 @@ export function initHmFilters(data) {
       if (wrap) wrap.style.height = h + 'px';
       ctx1.style.maxHeight = h + 'px';   // override .chart-wrap canvas { max-height:300px } so the canvas fills the wrap
       const METRICS = [
-        { key: 'joined', label: 'Joined', color: '#398AA2' },
-        { key: 'open', label: 'Open', color: '#4E6BA6' },
-        { key: 'missed', label: 'Missed', color: '#b45a72' }   // pastel --red, not the pre-2026-08-09 crimson
+        { key: 'joined', label: 'Joined', color: FULFIL_COLORS.joined },
+        { key: 'pending', label: 'Joining Pending', color: FULFIL_COLORS.pending },
+        { key: 'gap', label: 'Delta', color: FULFIL_COLORS.gap, split: false }
       ];
       const byDept = {}; deptArr.forEach(D => { byDept[D.dept] = D; });
+      // The one place Delta is derived for this chart, worded exactly as metrics() words it for the table.
+      const deltaOf = (v) => (v.total || 0) - (v.joined || 0) - (v.jpP || 0);
+      const chartTotals = [];   // the TABLE's total per bar, in cDepts order — the end label reads this, not the bands
       const chartRows = cDepts.map(d => {
         const D = byDept[d] || { jobs: [] };
-        const g = groups[d] || { joined: 0, open: 0, missed: 0 };
+        const g = groups[d] || { total: 0, joined: 0, jpP: 0 };
+        chartTotals.push(g.total || 0);
         return {
           label: d,
-          sum: { joined: g.joined, open: g.open, missed: g.missed },
-          jobs: (D.jobs || []).map(o => ({ title: o.title, v: { joined: o.joined, open: o.open, missed: o.missed } }))
+          sum: { joined: g.joined, pending: g.jpP, gap: deltaOf(g) },
+          jobs: (D.jobs || []).map(o => ({ title: o.title, v: { joined: o.joined, pending: o.jpP } }))
         };
       });
+      // Total at the end of each bar. The global stackTotals plugin adds the bands up, which is wrong here
+      // whenever Delta is negative, so it is switched off below and this draws the table's figure instead.
+      const hmTotalLabels = {
+        id: 'hm1Totals',
+        afterDatasetsDraw(chart) {
+          const c = chart.ctx; c.save();
+          c.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, sans-serif`;
+          c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = '#334155';
+          chartTotals.forEach((t, i) => {
+            let x = null, y = null;
+            chart.data.datasets.forEach((d, di) => {
+              if (!chart.isDatasetVisible(di) || !(d.data[i] > 0)) return;
+              const bar = chart.getDatasetMeta(di).data[i]; if (!bar) return;
+              x = x == null ? bar.x : Math.max(x, bar.x); y = bar.y;
+            });
+            if (x != null) c.fillText(String(t), x + uiPx(6), y);
+          });
+          c.restore();
+        }
+      };
       hm1ChartInstance = new Chart(ctx1, {
         type: 'bar',
         data: { labels: cDepts, datasets: roleBandDatasets(chartRows, METRICS) },
@@ -971,16 +1005,23 @@ export function initHmFilters(data) {
           layout: { padding: { top: 4, right: 40 } },
           plugins: {
             valueLabels: false,   // the per-metric label below replaces it; one number per band would be noise
+            stackTotals: false,   // #182e: the end label must be the TABLE's total, not the sum of the bands
             legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 18, font: { size: 12 } } }),
             // Hovering any part of a section lists every role behind that whole section (Jerin, 2026-08-30).
-            tooltip: roleSectionTooltip(METRICS, { totalLabel: 'Total positions' })
+            tooltip: roleSectionTooltip(METRICS, { totalLabel: 'Total positions',
+              total: (i) => chartTotals[i],
+              extra: (i) => {
+                const g = groups[cDepts[i]]; if (!g) return '';
+                const dl = deltaOf(g);
+                return dl < 0 ? `Delta ${dl}: ${-dl} more in closing than positions opened` : '';
+              } })
           },
           scales: {
             x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Positions', font: { size: 11 }, color: '#64748b' } },
             y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '500' }, padding: 6 } }
           }
         },
-        plugins: [roleBandOverlay(METRICS)]
+        plugins: [roleBandOverlay(METRICS), hmTotalLabels]
       });
     }
   }
