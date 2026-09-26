@@ -101,13 +101,42 @@ function jnWhoCell(o, opt = {}) {
     const d = dayLabel(dateOf(c)), st = c.subStage ? esc(c.subStage) : '';
     const meta = [d ? `<span class="jn-d">${esc(d)}</span>` : '', st].filter(Boolean).join(' · ');
     const why = opt.note ? opt.note(c) : '';
+    // #182a2 (Jerin, 26 Sep 2026): 🗣 "bring some distinguishment." — mark the joiners who are NOT behind the
+    // Joined number beside them, so the two figures stop looking like they disagree for no reason.
+    // 🚨 MEASURED FIRST, and it changed what to build: of 157 Q3 joiners, only **7** sit on an earlier quarter's
+    //    opening — the case Jerin named — while **40** have NO opening at all. Marking just the 7 would have left
+    //    the larger half unexplained, which is the half-fix he has rejected before.
+    // 🔑 Same chips and the same words the Joiners sub-tab already uses (`tdQuarter` in people-cells.js), so the
+    //    two views say the same thing about the same person rather than inventing a second vocabulary.
+    const tag = opt.tagOf ? opt.tagOf(c) : '';
     return `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
-      + (meta ? `<span class="jn-m">${meta}</span>` : '') + (why ? `<span class="jn-r">${esc(why)}</span>` : '') + '</span>';
+      + (meta || tag ? `<span class="jn-m">${meta}${tag}</span>` : '') + (why ? `<span class="jn-r">${esc(why)}</span>` : '') + '</span>';
   };
   const more = list.length > SHOW_FIRST
     ? `<button type="button" class="jn-more" data-jn-more="1">+${list.length - SHOW_FIRST} more</button>` : '';
   return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}${under}</td>`;
 }
+// #182a2: which joiners are NOT behind the Joined number beside them, and WHY — two different answers, so two
+// different marks. Both reuse the chips and the WORDS `tdQuarter` already puts on the Joiners sub-tab
+// (js/people-cells.js), so the two views say the same thing about the same person.
+//   • an EARLIER quarter's opening ➔ the apricot quarter chip (they filled last quarter's demand)
+//   • NO opening at all           ➔ the dashed "Not linked" chip (nothing to count them against)
+// Anyone on a this-quarter opening gets nothing: they are the normal case, and a mark on them would be noise.
+// 🔑 The reference is the quarter the person STARTED in, exactly as tdQuarter uses their start date — not the
+//    filter. It means the mark says the same thing wherever the table is filtered, and cannot flip on a row
+//    just because someone changed the period selector.
+function joinTag(c) {
+  if (!c.openingQuarter) {
+    return ` <span class="pl-chip pl-fix" title="No opening is attached to this offer, so this person is not counted against any position.">Not linked</span>`;
+  }
+  const ref = qOfDay_(c.startDate);
+  if (ref && c.openingQuarter < ref) {
+    const q = c.openingQuarter;
+    return ` <span class="pl-chip pl-prev" title="Filled a position opened in ${q.slice(5)} ${q.slice(0, 4)}, before the quarter they started in — so they are not in the Joined figure beside this list.">${q.slice(5)} ${q.slice(0, 4)}</span>`;
+  }
+  return '';
+}
+const qOfDay_ = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
 function jnRemarkCell(o) {
   const n = o.job8 ? noteOf(o.job8) : null;
   if (!o.job8) return '<td class="jn-cell"><span class="zero">—</span></td>';
@@ -801,7 +830,7 @@ export function initHmFilters(data) {
         const split = topics ? splitWho(o.jpWho, topics) : null;
         const who = split ? jnWhoCell({ jpWho: split.rest }, { note: whyUntied, under: o.jpWho.length - split.rest.length }) : jnWhoCell(o);
         // #182a: the same helper, pointed at the joiners and dated by their START date.
-        const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate });
+        const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag });
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${topics ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
           <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
         if (!topics) return;
