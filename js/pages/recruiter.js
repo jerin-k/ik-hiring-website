@@ -1727,7 +1727,13 @@ export function initRecruiterFilters(baseData) {
           // it once ended up showing lifetime scores under a quarter heading. It now reads this.
           // #179e: `table` is how each chart finds the recruiters ITS table rendered. `sales` is kept
           // because it still says which counting rule produced these figures.
-          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc, sales: isSales, table: T.key };
+          // #182g (Jerin, 27 Sep 2026): the HEADS twins go in beside the Score ones, because the charts are now
+          // drawn in POSITIONS. Rule 3 is untouched - the TABLE still computes every one of these and the chart
+          // still only reads them. capSc has NO heads twin anywhere (capacity is typed in as a score), which is
+          // exactly why Jerin chose to take the Capacity line OFF the chart rather than invent one.
+          lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc,
+                                 goalHC: a.aHC, achievedHC: a.uHC, shortHC: a.gHC,
+                                 sales: isSales, table: T.key };
           ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo', 'aNoCx'].forEach(k => podAgg[k] += (a[k] || 0));   // #165e
           // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
@@ -1802,7 +1808,9 @@ export function initRecruiterFilters(baseData) {
                            // #179: unclamped here too — this is the level where the clamp broke the sums.
                            gHC: jg.hc - juHC, gSc: jg.sc - juSc,
                            aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: jaSo - juSo };   // #108
-              roleAch.push({ title: m.title || '(untitled)', achievedSc: juSc });   // unrounded: the chart shares out the row's rounded total (#120)
+              // #182g: the heads go in beside the score so the chart can band POSITIONS by role. Both unrounded -
+              // the chart shares out the ROW's rounded total by largest remainder (#120).
+              roleAch.push({ title: m.title || '(untitled)', achievedSc: juSc, achievedHC: juHC });
               // #157: only SME jobs open further, and only the Goal splits by topic - everything else on this
               // table counts PEOPLE or is per-recruiter config, so it dashes. 🚨 The topic Goal is summed from
               // each opening's OWN 1/n share, which is exactly what goalOf() sums, so the rows close the job.
@@ -3308,7 +3316,9 @@ export function initRecruiterFilters(baseData) {
   //   bar        = Achieved (Joined for Sales, Joined + Joining Pending for Non-Sales)
   //   pink       = the shortfall to GOAL, when there is one
   //   Goal line  = the demand they are accountable for this quarter
-  //   Cap line   = the finishing line: what they could carry
+  // 🚫 Cap line = REMOVED by #182g (27 Sep 2026). Everything above is now counted in POSITIONS, and capacity
+  //   has no positions value: it is typed in by hand as a SCORE. Jerin chose removing the line over entering a
+  //   capacity in positions. Capacity and Capacity used remain on the TABLE, in points.
   // 🚨 Every figure comes from lastFulfil, which the TABLE fills in as it renders. The chart must never
   // recompute a target of its own — it did once, and showed lifetime scores under a quarter heading.
   // ===== #179e (Jerin, 25 Sep 2026): 🗣 "Lastly, let each table have its own graphs" =====
@@ -3327,18 +3337,34 @@ export function initRecruiterFilters(baseData) {
     const recs = lastRecs.map(r => {
       const f = lastFulfil[r.name];
       if (!f || f.table !== T.key) return null;
-      const goal = Math.round(f.goalSc || 0), cap = Math.round(f.capSc || 0), achieved = Math.round(f.achievedSc || 0);
-      // Short of goal = the table's Delta, rounded once (#120). It was round(goal) - round(achieved), which can differ by 1.
-      const short = Math.round(Math.max(0, f.shortSc != null ? f.shortSc : (f.goalSc || 0) - (f.achievedSc || 0)));
-      return { name: r.name, goal, cap, achieved, short, roles: f.roles || [] };
-    }).filter(r => r && (r.goal > 0 || r.cap > 0 || r.achieved > 0))
+      // ===== #182g (Jerin, 27 Sep 2026): THESE CHARTS ARE DRAWN IN POSITIONS, NOT SCORE =====
+      // 🗣 "revising Position fulfilment charts across HM, Recruiter & Overview - and use Heads to draw the
+      //     charts not points", then of the three ways round the Capacity problem: 🗣 "1".
+      // 🚨 THE CAPACITY LINE IS GONE FROM THE CHART, and that was the whole decision: capacity is typed in BY
+      //    HAND as a SCORE (Admin's column is headed "Capacity (score)"), so it has no positions value to draw.
+      //    It was NOT estimated from the score - dividing by an average complexity is the #176c estimate Jerin
+      //    killed. Capacity and Capacity used stay on the TABLE, in points, where they are labelled as such.
+      //    Precedent for a chart with no Cap line: narrowed() already removed it whenever the Job filter or a
+      //    department restriction was on.
+      // 🚨 THIS DOES NOT SOLVE #183 - Jerin, 27 Sep: "Dont; that needs to be solved eventually." The TABLE still
+      //    computes Goal and Capacity in Score, so the figure that judges Lateral still cannot see a drop. This
+      //    is the drawing; #183 is the metric. Do not record it as fixed.
+      const goal = Math.round(f.goalHC || 0), achieved = Math.round(f.achievedHC || 0);
+      // Short of goal = the table's Delta in heads, rounded ONCE (#120): round(goal) - round(achieved) can differ by 1.
+      // 🚨 Floored at 0 for the BAND only - a band cannot be negative. Delta itself is signed and never clamped
+      //    (Rule 1, #179), so a surplus is named in the tooltip instead of being silently dropped.
+      const shortRaw = (f.shortHC != null ? f.shortHC : (f.goalHC || 0) - (f.achievedHC || 0));
+      const short = Math.round(Math.max(0, shortRaw));
+      return { name: r.name, goal, achieved, short, roles: f.roles || [] };
+    }).filter(r => r && (r.goal > 0 || r.achieved > 0))
       .sort((a, b) => b.achieved - a.achieved);
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
     if (!recs.length) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
-      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${T.pod} in ${q.replace('-', ' ')} — no goal, capacity or joiners on any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
+      // #182g: capacity is no longer a reason to draw a bar - the chart is Achieved against Goal, both in positions.
+      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${T.pod} in ${q.replace('-', ' ')} — no positions owned and nobody delivered by any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
       if (wrap) wrap.style.height = '';
       return;
     }
@@ -3348,7 +3374,7 @@ export function initRecruiterFilters(baseData) {
     const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    const axisMax = Math.max(...recs.map(r => Math.max(r.achieved, r.goal, r.cap))) * 1.1;
+    const axisMax = Math.max(...recs.map(r => Math.max(r.achieved, r.goal))) * 1.1;   // #182g: no Cap line to leave room for
 
     const markers = {
       id: 'fulfilMarkers',
@@ -3371,15 +3397,10 @@ export function initRecruiterFilters(baseData) {
             c.fillStyle = '#41506B'; c.textAlign = 'center';
             c.fillText('Goal ' + r.goal, gx, y0 - uiPx(9));
           }
-          // CAPACITY — the finishing line. Dashed, so it never reads as another target.
-          if (r.cap > 0) {
-            const cx = x.getPixelForValue(r.cap);
-            c.strokeStyle = '#A15568'; c.lineWidth = 2; c.setLineDash([uiPx(3), uiPx(3)]);
-            c.beginPath(); c.moveTo(cx, y0 - uiPx(3)); c.lineTo(cx, y1 + uiPx(3)); c.stroke();
-            c.setLineDash([]);
-            c.fillStyle = '#A15568'; c.textAlign = 'center';
-            c.fillText('Cap ' + r.cap, cx, y1 + uiPx(10));
-          }
+          // 🚫 CAPACITY LINE REMOVED (#182g, Jerin chose this over entering a capacity in positions). It was a
+          //    dashed rose line labelled "Cap N". There is no positions capacity to draw, and estimating one from
+          //    the score is the #176c estimate he killed. Capacity and Capacity used are on the TABLE, in points.
+          //    If a positions capacity is ever entered in Admin, this is where its line goes back.
         });
         c.restore();
       }
@@ -3389,8 +3410,8 @@ export function initRecruiterFilters(baseData) {
     // from the role scores the TABLE recorded. Short-of-Goal is deliberately NOT split: it is a residual
     // against the goal, not something any single role owns — the same reason Delta stays whole elsewhere.
     const FUL_METRICS = [
-      { key: 'achieved', label: 'Achieved (Score)', color: C.green },
-      { key: 'short', label: 'Short of Goal (Score)', color: C.amber, split: false }
+      { key: 'achieved', label: 'Achieved (positions)', color: C.green },
+      { key: 'short', label: 'Short of Goal (positions)', color: C.amber, split: false }
     ];
     // 🚨 #120 (14 Sep 2026): the bar's length is the TABLE's Achieved. It used to be the role bands added up, each rounded
     // on its own, so credit with no job row went missing and half-points drifted. The row's rounded total is now shared
@@ -3405,9 +3426,10 @@ export function initRecruiterFilters(baseData) {
       return exact.filter(p => p.n > 0);
     };
     const fulRows = recs.map(r => {
-      const parts = (r.roles || []).filter(x => x.achievedSc > 0).map(x => ({ title: x.title, raw: x.achievedSc }));
+      // #182g: band by HEADS now, and compare against the heads total from the same row.
+      const parts = (r.roles || []).filter(x => x.achievedHC > 0).map(x => ({ title: x.title, raw: x.achievedHC }));
       const listed = parts.reduce((a, p) => a + p.raw, 0);
-      const rest = ((lastFulfil[r.name] || {}).achievedSc || 0) - listed;
+      const rest = ((lastFulfil[r.name] || {}).achievedHC || 0) - listed;
       if (rest > 0.01) parts.push({ title: 'credit not tied to a listed role', raw: rest });
       return { label: r.name, sum: { achieved: r.achieved, short: r.short },
                jobs: shareOut(r.achieved, parts).map(p => ({ title: p.title, v: { achieved: p.n } })) };
@@ -3420,16 +3442,26 @@ export function initRecruiterFilters(baseData) {
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: metricLegend(FUL_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal', total: (i) => recs[i].goal,   // #120: it added the bars, so past-goal rows showed Achieved as "Goal"
+          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal (positions)', total: (i) => recs[i].goal,   // #120: it added the bars, so past-goal rows showed Achieved as "Goal"
+            // #182g: everything here is POSITIONS. Capacity is not named at all - it is a score, it has no
+            // positions value, and printing a points number beside heads is how a chart starts lying quietly.
+            // A SURPLUS is named in words, because the band cannot draw one (Rule 1: Delta is signed).
             extra: (i) => {
               const r = recs[i];
-              const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
-              const vs = r.goal > 0 ? (r.achieved >= r.goal ? `${r.achieved - r.goal} past goal` : `${r.goal - r.achieved} short of goal`) : 'no goal this quarter';
-              return `Goal ${r.goal} \u00b7 Capacity ${r.cap} \u00b7 ${vs} \u00b7 ${util}`;
+              // \u26a0 NOT "this quarter": Goal counts positions OPENED inside From / To (#125/#129), so with a
+              // narrow window a recruiter can deliver people against positions opened EARLIER and read Goal 0.
+              // Saying "quarter" there puts a period label over a figure from a different period (Rule 4).
+              if (!(r.goal > 0)) return `No positions opened in this period${r.achieved > 0 ? ` \u00b7 ${r.achieved} delivered` : ''} \u00b7 Capacity is on the table, in points`;
+              // "0 past goal" is not English for hitting it exactly - say so, and keep a real surplus visible
+              // (#179: over-delivery is worth seeing, and the band cannot draw it).
+              const vs = r.achieved === r.goal ? 'exactly on goal'
+                : r.achieved > r.goal ? `${r.achieved - r.goal} past goal`
+                : `${r.goal - r.achieved} short of goal`;
+              return `Goal ${r.goal} position${r.goal === 1 ? '' : 's'} \u00b7 ${vs} \u00b7 Capacity is on the table, in points`;
             } })
         },
         scales: {
-          x: { ...gridY, stacked: true, suggestedMax: axisMax, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } },
+          x: { ...gridY, stacked: true, suggestedMax: axisMax, title: { display: true, text: 'Positions', font: { size: 11 }, color: '#64748b' } },   // #182g
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },
