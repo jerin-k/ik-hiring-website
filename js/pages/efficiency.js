@@ -21,7 +21,8 @@ import { openingScores, scoreOfOpening, jobScoreSpread, jobScoreCaption } from '
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { jobsWithOpeningIn } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
-         buildDumbbell, buildStageHeat, buildDayHeat } from '../chart-style.js';
+         buildDumbbell, buildStageHeat, buildDayHeat,
+         FULFIL_COLORS, fulfilStackOpts } from '../chart-style.js';   // #182e: moved to chart-style so HM shares them
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -1738,20 +1739,8 @@ export function initEfficiencyFilters(data) {
   // NOTE: the stack total at the end of each bar is now drawn by the GLOBAL stackTotalsPlugin
   // (chart-datalabels.js, registered in app.js), so every stacked chart in the app gets it, not just
   // these two. Opt a chart out with options.plugins.stackTotals = false.
-  const FULFIL_COLORS = { joined: '#398AA2', pending: '#4E6BA6', gap: '#D8B5BE' };   // palette: Blue Munsell / True Blue / Fairy Tale
-  const fulfilStackOpts = (xTitle) => ({
-    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-    layout: { padding: { right: 34 } },   // room for the total label
-    plugins: {
-      valueLabels: false,
-      legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 10 }, padding: 8 } },
-      tooltip: { callbacks: { footer: (items) => items.length ? `Total positions: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}` : '' } }
-    },
-    scales: {
-      x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, precision: 0 }, title: { display: true, text: xTitle, font: { size: 10 }, color: '#64748b' } },
-      y: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }
-    }
-  });
+  // #182e (27 Sep): FULFIL_COLORS and fulfilStackOpts moved to chart-style.js when the Hiring Manager chart
+  // needed the same three bands. One home, so the two tabs cannot drift apart (CLAUDE.md Rule 3).
 
   // One bar per department, stacked Joined / Joining Pending / Delta — and Joined and Joining Pending split
   // again into the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29: "don't

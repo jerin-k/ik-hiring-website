@@ -1377,7 +1377,11 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
    Joined and hires in a DEEP teal, Open in a PALE slate, so "done" and "still to do" separate by depth — the old teal
    and slate blue sat at the same depth and a department bar read as one blue block. Same colour families as the other
    tabs (Joined stays teal). Every number colour clears 4.5:1 on white. */
-:root { --ov-joined: #1E7590; --ov-open: #9fb3d6; --ov-missed: #c46f86; --ov-apps: #4E6BA6; --ov-track: #eef2f8; --ov-ink-bg: #e3f0f3; }
+/* #182e (27 Sep 2026): the Positions bar is Joined / Joining Pending / Delta. --ov-open and --ov-missed are GONE
+   with the Open and Missed bands. Joining Pending keeps the pale slate #135 chose for the Overview's contrast;
+   Delta takes #D8B5BE, the SAME Fairy Tale the two Chart.js Delta bands use (chart-style.js FULFIL_COLORS), so
+   the colour means one thing across all three tabs. */
+:root { --ov-joined: #1E7590; --ov-pending: #9fb3d6; --ov-delta: #D8B5BE; --ov-apps: #4E6BA6; --ov-track: #eef2f8; --ov-ink-bg: #e3f0f3; }
 .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media (max-width: 46.125rem) { .ov-grid { grid-template-columns: 1fr; } }
 .ov-card { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -1404,8 +1408,8 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 .ov-bar.thin { height: 0.375rem; }
 .ov-bar i { display: block; height: 100%; }
 .ov-bar i.j, .ov-bar i.h, .ov-legend i.j { background: var(--ov-joined); }
-.ov-bar i.o, .ov-legend i.o { background: var(--ov-open); }
-.ov-bar i.m, .ov-legend i.m { background: var(--ov-missed); }
+.ov-bar i.p, .ov-legend i.p { background: var(--ov-pending); }
+.ov-bar i.d, .ov-legend i.d { background: var(--ov-delta); }
 .ov-bar i.a { background: var(--ov-apps); }
 .ov-val { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ov-big { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }

@@ -89,16 +89,25 @@ export function initHomeFilters() {
     // Openings are counted per DISTINCT opening, bucketed by the quarter the opening
     // itself was opened: Total = Joined + Open + Missed (On Hold / Shelved are excluded
     // from Total entirely). Replaces the old "openedAt falls inside From-To" filter.
+    // 🚨 #182e (Jerin, 26 Sep 2026): that is still how the DATA adds up, but nothing on screen shows Open or
+    // Missed any more. 🗣 "Total will be Joined/Joining Pending/Delta." So the bar, its legend and both summary
+    // lines below read Joined / Joining Pending / Delta, where Delta = Total − Joined − Joining Pending — the
+    // same expression the Hiring Manager and Overall Efficiency tables use. Missed is dead as a figure
+    // everywhere (his reasoning: at quarter end Delta IS the unfilled positions; Q1 proves it, 191 − 184 = 7).
     const buckets = aggregateOpenings(data, val, isQuarter, year);
     const hasBuckets = buckets !== null;
 
-    let totalPositions, totalFilled, totalOpen, totalMissed, totalPending, deptArr, maxDeptTotal;
+    // #182e: totalMissed is GONE — nothing on screen shows Missed any more. totalDelta replaces it, and is the
+    // SAME expression the Hiring Manager and Overall Efficiency tables use: Total − Joined − Joining Pending.
+    // 🚨 It is SIGNED and never clamped (Rule 1): a negative Delta means more people are in closing than
+    // positions were opened, which is true today and is accepted on purpose.
+    let totalPositions, totalFilled, totalOpen, totalPending, totalDelta, deptArr, maxDeptTotal;
     if (hasBuckets) {
       totalPositions = buckets.tot.total;
       totalFilled = buckets.tot.joined;
       totalOpen = buckets.tot.open;
-      totalMissed = buckets.tot.missed;
       totalPending = buckets.tot.pending;
+      totalDelta = totalPositions - totalFilled - totalPending;
       deptArr = Object.entries(buckets.byDept)
         .filter(([, v]) => v.total > 0)
         .sort((a, b) => b[1].total - a[1].total);
@@ -108,8 +117,8 @@ export function initHomeFilters() {
       totalOpen = openingsArr.reduce((s, o) => s + o.open, 0);
       totalFilled = f.hired || 0;
       totalPositions = totalFilled + totalOpen;
-      totalMissed = 0;
       totalPending = 0;
+      totalDelta = totalPositions - totalFilled;
       const deptMap = {};
       openingsArr.forEach(o => {
         if (!deptMap[o.department]) deptMap[o.department] = { total: 0, joined: 0, open: 0 };
@@ -247,7 +256,7 @@ export function initHomeFilters() {
           <div class="card">
             <div class="label">Total Positions</div>
             <div class="value">${totalPositions}</div>
-            <div class="sub">${totalFilled} joined · ${totalOpen} open${totalMissed > 0 ? ` · ${totalMissed} missed` : ''}</div>
+            <div class="sub">${totalFilled} joined · ${totalPending} joining pending · ${totalDelta} delta</div>
           </div>
           <div class="card">
             <div class="label">Applications</div>
@@ -302,13 +311,17 @@ export function initHomeFilters() {
         <div class="ov-card">
           <div class="ov-head">
             <div class="ov-top"><h3 class="ov-title">Positions by Department</h3><span class="ov-chip">${ovEsc(periodLabel)}</span></div>
-            <div class="ov-sum">${deptArr.length ? `<b>${totalFilled}</b> of <b>${totalPositions}</b> positions joined · <b>${totalOpen}</b> still open` : 'No opening data for this period'}</div>
+            <div class="ov-sum">${deptArr.length ? `<b>${totalFilled}</b> of <b>${totalPositions}</b> positions joined · <b>${totalPending}</b> joining pending · <b>${totalDelta}</b> delta` : 'No opening data for this period'}</div>
           </div>
           <div class="ov-list">
             ${deptArr.slice(0, 6).map(([dept, v], i) => {
               const pc = v.total > 0 ? Math.round((v.joined / v.total) * 100) : 0;
-              const seg = (n, cls) => (n ? `<i class="${cls}" style="width:${Math.round((n / maxDeptTotal) * 100)}%"></i>` : '');
-              return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(dept)}</div><div class="ov-bar">${seg(v.joined, 'j')}${seg(v.open, 'o')}${seg(v.missed || 0, 'm')}</div></div>`
+              // 🚨 Delta is SIGNED and a bar cannot draw a negative width, so the SEGMENT is floored at 0 —
+              // exactly what roleBandDatasets does for the Delta band on the two Chart.js charts. The figures
+              // beside and below the bar stay signed, so a surplus is still visible as a number.
+              const seg = (n, cls) => (n > 0 ? `<i class="${cls}" style="width:${Math.round((n / maxDeptTotal) * 100)}%"></i>` : '');
+              const dDelta = (v.total || 0) - (v.joined || 0) - (v.pending || 0);
+              return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(dept)}</div><div class="ov-bar">${seg(v.joined, 'j')}${seg(v.pending, 'p')}${seg(dDelta, 'd')}</div></div>`
                 + `<div class="ov-val"><div class="ov-big"><span class="ov-ink">${v.joined}</span><span class="ov-of"> / ${v.total}</span></div><span class="ov-pct ${ovPct(pc)}">${pc}% joined</span></div></div>`;
             }).join('')}
             ${(() => {
@@ -320,7 +333,7 @@ export function initHomeFilters() {
               return `<div class="ov-row ov-rest"><span></span><span class="ov-small">+ ${rest.length} more department${rest.length > 1 ? 's' : ''}</span><span class="ov-small">${rj} / ${rt}</span></div>`;
             })()}
           </div>
-          <div class="ov-foot"><span class="ov-legend"><span><i class="j"></i>Joined</span><span><i class="o"></i>Open</span><span><i class="m"></i>Missed</span></span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
+          <div class="ov-foot"><span class="ov-legend"><span><i class="j"></i>Joined</span><span><i class="p"></i>Joining Pending</span><span><i class="d"></i>Delta</span></span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
         </div>
 
         <div class="ov-card">

@@ -714,3 +714,28 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
     if (tip && !e.relatedTarget?.closest?.('.heat-cell.has')) tip.style.display = 'none';
   };
 }
+
+// ===== #182e (Jerin, 26 Sep 2026) — THE POSITIONS STACK: Joined / Joining Pending / Delta =====
+// 🗣 "Remove missed from the chart too - we can show delta instead no? Total will be Joined/Joining Pending/Delta."
+// These two were LOCAL to efficiency.js until 27 Sep. They moved here the moment a SECOND chart needed them
+// (the Hiring Manager tab), because CLAUDE.md Rule 3's durable fix is structural: the same three bands must not
+// be able to drift into two different colours or two different axis titles on two tabs.
+// 🔑 Delta is NOT split into roles — a −5 role and a +5 role cancel in the table, and splitting let both count
+//    (SME - India once read 53 against the table's 48). Pass { split: false } on the gap metric.
+// 🚨 Delta is SIGNED (CLAUDE.md Rule 1) and a bar CANNOT draw a negative band. So any chart using these must set
+//    plugins.stackTotals = false and print the TABLE's total itself, or a department with more people in closing
+//    than positions opened silently reads Joined + Joining Pending and calls that the total.
+export const FULFIL_COLORS = { joined: '#398AA2', pending: '#4E6BA6', gap: '#D8B5BE' };   // Blue Munsell / True Blue / Fairy Tale
+export const fulfilStackOpts = (xTitle) => ({
+  indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+  layout: { padding: { right: 34 } },   // room for the total label
+  plugins: {
+    valueLabels: false,
+    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 9, boxHeight: 9, font: { size: 10 }, padding: 8 } },
+    tooltip: { callbacks: { footer: (items) => items.length ? `Total positions: ${items[0].chart.data.datasets.reduce((a, d) => a + (d.data[items[0].dataIndex] || 0), 0)}` : '' } }
+  },
+  scales: {
+    x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, precision: 0 }, title: { display: true, text: xTitle, font: { size: 10 }, color: '#64748b' } },
+    y: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }
+  }
+});
