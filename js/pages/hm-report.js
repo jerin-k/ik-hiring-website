@@ -445,6 +445,60 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; white-space:normal; }   /* Who has joined */
       .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:16rem; white-space:normal; }   /* Who is joining */
       .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:12.5rem; white-space:normal; }   /* Remarks */
+
+      /* ===== #182b (Jerin, 26 Sep 2026) — THE TABLE HAS TWO HALVES, SO BOTH ARE PAINTED =====
+         🗣 "can the numbers section & the section with (Joiners list, Joining Pending list & Remark) have a
+             different design appaoch or color or something" ... then, of six mocks: 🗣 "For the amt of content,
+             i'd take F".
+         🔑 HIS REASON IS THE DESIGN RULE: at this density, marking ONE half against a plain background does not
+            hold - the eye loses it the moment you scroll into the middle of a long table. Six variants proved it:
+            A/B/C were one faint tint at three strengths ("dont like any of it"), D and E painted one side only.
+            F paints BOTH, so the halves define each other. Counting columns 2-7 in the table's own blue-grey,
+            people-and-words columns 8-10 in the teal the joined dates already use.
+         🚨 THESE ARE CELL BACKGROUNDS, AND A CELL PAINTS OVER ITS ROW. Four row-level backgrounds would have been
+            flattened by a naive td-background rule: the dept-header band (inline on the <tr>), tr.lv-topic
+            (style.css 1589), .totals-row td (626) and the hover (686). So every row type gets its OWN pair of
+            tints - keep it that way, and if you add a row type, add its pair too.
+         🚨 They live in THIS block, not style.css, because this block loads later and wins. The same ordering
+            trap silently killed "Show fewer" in a mock earlier today. */
+      .hm-report .hm-summary th:nth-child(2), .hm-report .hm-summary th:nth-child(3),
+      .hm-report .hm-summary th:nth-child(4), .hm-report .hm-summary th:nth-child(5),
+      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary th:nth-child(7) {
+        background:#dfe7f4; color:#2d4470; }
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary th:nth-child(9),
+      .hm-report .hm-summary th:nth-child(10) { background:#d4e7ed; color:#14576b; }
+      /* 🚫 NO HARD RULE between the halves (Jerin, 26 Sep: "dont need this datk seperator"). Every earlier mock
+         carried a 2px divider because only ONE side was painted and it needed help. Once BOTH sides are painted
+         the colour change IS the separator, and the line on top of it just adds weight. Do not put it back. */
+
+      /* ordinary role rows */
+      .hm-report .hm-summary tr.leaf td:nth-child(2), .hm-report .hm-summary tr.leaf td:nth-child(3),
+      .hm-report .hm-summary tr.leaf td:nth-child(4), .hm-report .hm-summary tr.leaf td:nth-child(5),
+      .hm-report .hm-summary tr.leaf td:nth-child(6), .hm-report .hm-summary tr.leaf td:nth-child(7) { background:#f6f8fc; }
+      .hm-report .hm-summary tr.leaf td:nth-child(8), .hm-report .hm-summary tr.leaf td:nth-child(9),
+      .hm-report .hm-summary tr.leaf td:nth-child(10) { background:#f4fafb; }
+      /* department band - deeper, so the row still reads as a band AND the split still reads */
+      .hm-report .hm-summary tr.dept-header td:nth-child(2), .hm-report .hm-summary tr.dept-header td:nth-child(3),
+      .hm-report .hm-summary tr.dept-header td:nth-child(4), .hm-report .hm-summary tr.dept-header td:nth-child(5),
+      .hm-report .hm-summary tr.dept-header td:nth-child(6), .hm-report .hm-summary tr.dept-header td:nth-child(7) { background:#e5eaf4; }
+      .hm-report .hm-summary tr.dept-header td:nth-child(8), .hm-report .hm-summary tr.dept-header td:nth-child(9),
+      .hm-report .hm-summary tr.dept-header td:nth-child(10) { background:#e2eef1; }
+      /* topic rows - lighter than a role row, as they were */
+      .hm-report .hm-summary tr.lv-topic td:nth-child(2), .hm-report .hm-summary tr.lv-topic td:nth-child(3),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(4), .hm-report .hm-summary tr.lv-topic td:nth-child(5),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(6), .hm-report .hm-summary tr.lv-topic td:nth-child(7) { background:#f7f9fd; }
+      .hm-report .hm-summary tr.lv-topic td:nth-child(8), .hm-report .hm-summary tr.lv-topic td:nth-child(9),
+      .hm-report .hm-summary tr.lv-topic td:nth-child(10) { background:#f5fbfc; }
+      /* 🚫 The TOTALS row deliberately stays ONE flat band, undivided. The .totals-row td rule in style.css forces its
+         background with !important, and the honest reading is that it should: the grand total sits UNDER both
+         halves rather than belonging to either, so a split there would be claiming something untrue. Rules that
+         tried to tint it were written, measured as dead, and deleted rather than left in looking effective. */
+      /* 🚨 HOVER LAST, and deeper than every pair above, or pointing at a row would stop doing anything visible. */
+      .hm-report .hm-summary tbody tr:hover td:nth-child(2), .hm-report .hm-summary tbody tr:hover td:nth-child(3),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(4), .hm-report .hm-summary tbody tr:hover td:nth-child(5),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(6), .hm-report .hm-summary tbody tr:hover td:nth-child(7) { background:#e9eff8; }
+      .hm-report .hm-summary tbody tr:hover td:nth-child(8), .hm-report .hm-summary tbody tr:hover td:nth-child(9),
+      .hm-report .hm-summary tbody tr:hover td:nth-child(10) { background:#e6f3f6; }
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
       .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:6.5rem; }   /* Dropped + % caption */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:9.5rem; }   /* Delta: track + number + caption */
