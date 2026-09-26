@@ -83,8 +83,13 @@ function dayLabel(iso) {
   const d = +iso.slice(8, 10), m = parseInt(iso.slice(5, 7), 10);
   return `${d} ${MON[m - 1] || ''}`;
 }
+// #182a (Jerin, 26 Sep 2026): ONE helper draws BOTH people columns — *Who has joined* and *Who is joining*.
+// 🚨 It was tempting to copy this for the new column. A second copy is how two columns that are meant to look
+//    identical drift apart, so the list and its quiet meta line are ARGUMENTS instead:
+//    `opt.list` (default the Joining Pending cases) and `opt.dateOf` (default the joining date).
 function jnWhoCell(o, opt = {}) {
-  const list = [...(o.jpWho || [])].sort((a, b) => String(a.doj || '9999').localeCompare(String(b.doj || '9999'))
+  const dateOf = opt.dateOf || (c => c.doj);
+  const list = [...(opt.list || o.jpWho || [])].sort((a, b) => String(dateOf(a) || '9999').localeCompare(String(dateOf(b) || '9999'))
     || String(a.candidate || '').localeCompare(String(b.candidate || '')));
   // #161: on a job with topics, the people under its topics are named there; this line says how many, so the job row
   // still accounts for everyone behind its Joining pending figure.
@@ -93,7 +98,7 @@ function jnWhoCell(o, opt = {}) {
   // Name on its own line, then a quiet meta line. "date not set" repeated down the column was noise, so a missing
   // date simply leaves the stage to speak (Jerin, 19 Sep).
   const line = (c, i) => {
-    const d = dayLabel(c.doj), st = c.subStage ? esc(c.subStage) : '';
+    const d = dayLabel(dateOf(c)), st = c.subStage ? esc(c.subStage) : '';
     const meta = [d ? `<span class="jn-d">${esc(d)}</span>` : '', st].filter(Boolean).join(' · ');
     const why = opt.note ? opt.note(c) : '';
     return `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
@@ -361,7 +366,8 @@ export function renderHmReport(data) {
          like "32", which left the two text columns 117px and pushed their contents into one another. Numbers are now
          4.75rem, and Who is joining / Remarks get real width. Widths live HERE because this block loads after
          style.css and wins at equal specificity. */
-      .hm-report .hm-summary { width:100%; min-width:76.5rem; table-layout:fixed; }
+      /* #182a: a third wide text column, so the table needs the room for it. */
+      .hm-report .hm-summary { width:100%; min-width:90rem; table-layout:fixed; }
       .hm-report .hm-summary th:first-child, .hm-report .hm-summary td:first-child { width:14rem; }
       .hm-report .hm-summary td:first-child { text-align:left; }   /* the heading above it is centred like the rest (#151) */
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
@@ -371,7 +377,8 @@ export function renderHmReport(data) {
          is centred both ways, in sentence case, on a pale band with thin dividers. A clipped heading is worse than a
          two-line one, so headings wrap. */
       .hm-report .hm-summary td:not(:first-child) { text-align:center; }
-      .hm-report .hm-summary td:nth-child(8), .hm-report .hm-summary td:nth-child(9) { text-align:left; }
+      /* #182a: Who has joined is the NEW 8th column, so the two text columns that were 8 and 9 are now 9 and 10. */
+      .hm-report .hm-summary td:nth-child(8), .hm-report .hm-summary td:nth-child(9), .hm-report .hm-summary td:nth-child(10) { text-align:left; }
       .hm-report .hm-summary th {
         text-align:center; vertical-align:middle; text-transform:none; letter-spacing:0; white-space:normal;
         line-height:1.25; height:2.9rem; color:var(--accent-deep); background:#eef2f8;
@@ -379,8 +386,9 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:last-child { border-right:0; }
       /* the Delta bar and its caption centre under the heading like every other number */
       .hm-report .hm-summary .deltacell { justify-content:center; }
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:16rem; white-space:normal; }
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; white-space:normal; }
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; white-space:normal; }   /* Who has joined */
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:16rem; white-space:normal; }   /* Who is joining */
+      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:12.5rem; white-space:normal; }   /* Remarks */
       /* Delta is the 5th column and holds the progress bar, so it needs more room than a bare number. */
       .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:6.5rem; }   /* Dropped + % caption */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:9.5rem; }   /* Delta: track + number + caption */
@@ -419,7 +427,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary">
-        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th>Missed</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th>Missed</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -665,10 +673,12 @@ export function initHmFilters(data) {
     const inScope = (dept, title, job8) => !(deptG && dept !== deptG) && matchesJob(jobSel, job8);
     // #150: `who` is the Joining Pending case behind this +1. The names in the cell are collected in the SAME
     // loop as the number beside them, so the cell and the column can never disagree (Rule 3).
-    function bump(dept, title, field, who, job8) {
+    // #182a: the row lookup is its own function now, because TWO things need it — the counting bump below and
+    // the joiner list, which must land on the SAME row or a name would show against a different job than its
+    // number. Duplicating the lookup is exactly how #172c's by-name/by-id split happened.
+    function rowFor(dept, title, job8, who) {
       if (!groups[dept]) groups[dept] = { dept, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jobs: [] };
       const G = groups[dept];
-      G[field] += 1;
       // 🚨 #172c / 172b(a): find the row by JOB ID. The positions half of this table is built from
       // openingBuckets keyed by id, so matching people by NAME meant two same-named jobs in one department
       // would split their positions across two rows while every person piled onto the first. Title is the
@@ -676,10 +686,28 @@ export function initHmFilters(data) {
       const j8 = String(job8 || (who && who.jobId8) || '').slice(0, 8);
       let row = j8 ? G.jobs.find(j => j.job8 === j8) : null;
       if (!row) row = G.jobs.find(j => j.title === title && (!j8 || !j.job8));
-      if (!row) { row = { title, job8: j8, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [] }; G.jobs.push(row); }
+      if (!row) { row = { title, job8: j8, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [], joWho: [] }; G.jobs.push(row); }
       if (!row.job8 && j8) row.job8 = j8;
+      return { G, row };
+    }
+    function bump(dept, title, field, who, job8) {
+      const { G, row } = rowFor(dept, title, job8, who);
+      G[field] += 1;
       row[field] += 1;
       if (who) { (row.jpWho || (row.jpWho = [])).push(who); (G.jpWho || (G.jpWho = [])).push(who); }
+    }
+    // ===== #182a (Jerin, 26 Sep 2026): "Left to Who is joining, add a 'Who has joined?'." =====
+    // 🚨 IT COUNTS NOTHING. The Joined column beside it counts POSITIONS, from openingBuckets; this is a list of
+    //    PEOPLE. Incrementing anything here would corrupt that number — so this only ever pushes a name.
+    // 🚨 AND THAT IS WHY THE TWO CAN DIFFER: the same fact the Joiners sub-tab already carries in its own comment
+    //    — "People, not positions: it will not equal the Joined column, which counts positions filled (Rule 1)."
+    //    Said on screen in the definitions block, or the column reads as a fault.
+    // The test is the SAME one every people-based Joined on this site uses, and the same one renderJoiners() uses,
+    // so the names here and the names on the Joiners sub-tab are one population.
+    function addJoiner(dept, title, who, job8) {
+      const { G, row } = rowFor(dept, title, job8, who);
+      (row.joWho || (row.joWho = [])).push(who);
+      (G.joWho || (G.joWho = [])).push(who);
     }
     // ...MINUS anyone whose opening belongs to an EARLIER quarter (Jerin, 2026-08-22): their offer is last
     // quarter's demand still in flight, and counting it here would inflate the current quarter every time.
@@ -697,6 +725,17 @@ export function initHmFilters(data) {
       const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
       if (!inScope(dept, title, e.jobId8)) return;
       bump(dept, title, 'drop', null, e.jobId8);
+    });
+    // #182a: the people behind "Who has joined" — accepted offer AND moved to Hired, dated by their START date
+    // inside From / To. Identical to renderJoiners(), deliberately: one definition of "joiner" across the site.
+    // ⚠ NO earlier-quarter subtraction, exactly as the Joiners sub-tab takes none — it shows everyone who
+    //   actually started. That is the other reason this list can outnumber the Joined column beside it.
+    (data.offerEvents || []).forEach(e => {
+      if (!e.accepted || e.appStatus !== 'Hired') return;
+      if (!inRange(e.startDate, rg)) return;
+      const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
+      if (!inScope(dept, title, e.jobId8)) return;
+      addJoiner(dept, title, e, e.jobId8);
     });
 
     const deptArr = Object.values(groups).sort((a, b) => a.dept.localeCompare(b.dept));
@@ -751,6 +790,7 @@ export function initHmFilters(data) {
       const withNote = jobs2.filter(j => (noteOf(j.job8) || {}).text).length;
       html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
+        + `<td class="jn-cell jn-sum">${(D.joWho || []).length ? `${D.joWho.length} joined` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${withNote ? `${withNote} of ${jobs2.length} written` : '<span class="zero">—</span>'}</td></tr>`;
       jobs2.forEach(o => {
@@ -760,8 +800,10 @@ export function initHmFilters(data) {
         // #161 (option A): the job's people split by the topic of the opening they are tied to; the job row keeps the rest.
         const split = topics ? splitWho(o.jpWho, topics) : null;
         const who = split ? jnWhoCell({ jpWho: split.rest }, { note: whyUntied, under: o.jpWho.length - split.rest.length }) : jnWhoCell(o);
+        // #182a: the same helper, pointed at the joiners and dated by their START date.
+        const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate });
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${topics ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${who}${jnRemarkCell(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
         if (!topics) return;
         topics.forEach(t => {
           const tw = split.by[t.topic] || [];
@@ -770,11 +812,19 @@ export function initHmFilters(data) {
           // #157c: a topic row is the bottom of the tree - no caret, nothing to open under it.
           html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" style="display:none">`
             + `<td style="padding-left:3.25rem"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
-            + topicMetrics(t, tw.length) + jnWhoCell({ jpWho: tw }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+            // #182a: Who has joined DASHES at topic level for now — splitting joiners by topic is #166's job on the
+            // Recruiter tab and has its own "(not tied to a topic)" remainder rule; a half-done split here would
+            // silently under-count. A dash says "not worked out at this level", which is true. Never a number.
+            + topicMetrics(t, tw.length) + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
+            + jnWhoCell({ jpWho: tw }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
         });
       });
     });
-    html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="jn-cell"></td></tr>`;
+    // #182a: the totals row gained the Who-has-joined cell too, or every trailing cell shifts one left.
+    const joinedAll = Object.values(groups).reduce((a, G) => a + ((G.joWho || []).length), 0);
+    html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}`
+      + `<td class="jn-cell jn-sum">${joinedAll ? `${joinedAll} joined` : '<span class="zero">—</span>'}</td>`
+      + `<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
     wireTree(body);
