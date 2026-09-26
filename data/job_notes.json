@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-09-26T17:04:29.946Z",
+  "updatedAt": "2026-09-26T17:41:08.856Z",
   "notes": {
     "19982198": {
       "text": "HE - 6; R2 - 1; Final round - 1 (Hold)",
@@ -98,9 +98,9 @@
       "at": "2026-09-26T17:04:29.944Z"
     },
     "e15be8f5": {
-      "text": "HE - 5; R1 - 4 (2 feedback pending); Assignment - 1; Deepdive - 2; R4 - 1; R5 - Samuel",
-      "by": "gopu.nair@interviewkickstart.com",
-      "at": "2026-09-25T07:30:24.074Z"
+      "text": "HE - 5; R1 - 4 (2 feedback pending); \nAssignment - 1; \nDeepdive - 2; R4 - 1; R5 - Samuel",
+      "by": "Jerin",
+      "at": "2026-09-26T17:41:08.856Z"
     }
   }
 }
