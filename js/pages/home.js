@@ -1,4 +1,4 @@
-import { getData } from '../data.js';
+import { getData, joiningPendingByDept } from '../data.js';   // #182f: the Hiring Manager tab's Joining Pending rule, shared
 import { defsBlock } from '../definitions.js';
 import { canAccessPage } from '../access.js';
 import { reportingQuarters } from '../period.js';   // #141e
@@ -108,8 +108,13 @@ export function initHomeFilters() {
       totalOpen = buckets.tot.open;
       totalPending = buckets.tot.pending;
       totalDelta = totalPositions - totalFilled - totalPending;
+      // #182f: a department with people in closing but NO positions opened this period must still be listed,
+      // or its people sit inside the card's Joining Pending while its row is missing - and the definitions
+      // promise this list "always reconciles with the card above it". Sorting is still by total, so such a
+      // department lands at the bottom. It does not arise today; it will the first time somebody is in closing
+      // for a role whose position was never raised.
       deptArr = Object.entries(buckets.byDept)
-        .filter(([, v]) => v.total > 0)
+        .filter(([, v]) => v.total > 0 || v.pending > 0)
         .sort((a, b) => b[1].total - a[1].total);
       maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].total : 1;
     } else {
@@ -129,7 +134,8 @@ export function initHomeFilters() {
       deptArr = Object.entries(deptMap).sort((a, b) => b[1].total - a[1].total);
       maxDeptTotal = deptArr.length > 0 ? deptArr[0][1].total : 1;
     }
-    const openVacant = Math.max(totalOpen - totalPending, 0);
+    // #182f: openVacant was computed here and never used by anything - removed rather than left looking
+    // effective, and it would now be subtracting PEOPLE from POSITIONS.
 
     const fillRate = totalPositions > 0 ? ((totalFilled / totalPositions) * 100).toFixed(1) : '0.0';
     const convRate = f.applied > 0 ? ((f.hired / f.applied) * 100).toFixed(1) : '0.0';
@@ -399,23 +405,34 @@ export function initHomeFilters() {
 function aggregateOpenings(data, val, isQuarter, year) {
   const ob = data.openingBuckets;
   if (!ob || Object.keys(ob).length === 0) return null;
-  const pendingByJobQ = data.openingPendingByJobQ || {};
-  const tot = { total: 0, joined: 0, open: 0, missed: 0, pending: 0 };
+  // ===== #182f (Jerin, 27 Sep 2026): JOINING PENDING COMES FROM THE HIRING MANAGER RULE =====
+  // 🗣 "use the HM logic for Overview. Thats what was always supposed to be done."
+  // 🚨 It used to read `openingPendingByJobQ`, which counts POSITIONS with a live linked offer, not the
+  //    PEOPLE in Ref Check / Documentation / Offer. Different units (Rule 1), and they disagreed three ways -
+  //    14 people against 12 positions on 27 Sep. The rule now lives ONCE, in data.js, and both tabs read it.
+  // ⚠ It is counted by DEPARTMENT, not per job+quarter, because a person in closing need not have an opening
+  //    at all - which is exactly what the per-job count could not see.
+  const jp = joiningPendingByDept(data, isQuarter ? val : (year + '-Q1'));
+  const tot = { total: 0, joined: 0, open: 0, missed: 0, pending: jp.total };
   const byDept = {};
   Object.entries(ob).forEach(([job8, rec]) => {
     const dept = rec.department || 'Unknown';
     Object.entries(rec.quarters || {}).forEach(([q, b]) => {
       const inPeriod = isQuarter ? q === val : q.indexOf(year + '-') === 0;
       if (!inPeriod) return;
-      const pending = (pendingByJobQ[job8] && pendingByJobQ[job8][q]) || 0;
       if (!byDept[dept]) byDept[dept] = { total: 0, joined: 0, open: 0, missed: 0, pending: 0 };
       ['total', 'joined', 'open', 'missed'].forEach(k => {
         tot[k] += b[k] || 0;
         byDept[dept][k] += b[k] || 0;
       });
-      tot.pending += pending;
-      byDept[dept].pending += pending;
     });
+  });
+  // #182f: the people in closing are stamped on by DEPARTMENT after the buckets loop, because they are not a
+  // per-job-per-quarter figure. ⚠ A department with people in closing but NO positions opened this period would
+  // otherwise be missing from byDept entirely, so it is created here - its bar is then all Joining Pending.
+  Object.entries(jp.byDept).forEach(([dept, n]) => {
+    if (!byDept[dept]) byDept[dept] = { total: 0, joined: 0, open: 0, missed: 0, pending: 0 };
+    byDept[dept].pending = n;
   });
   return { tot, byDept };
 }

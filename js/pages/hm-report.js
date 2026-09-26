@@ -1,4 +1,4 @@
-import { getData, jobsWithOpeningIn } from '../data.js';
+import { getData, jobsWithOpeningIn, jpCaseInPeriod } from '../data.js';   // #182f: one Joining Pending rule
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants (#182e: the bar-end total label)
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
@@ -823,7 +823,8 @@ export function initHmFilters(data) {
     (data.joiningPendingCases || []).forEach(c => {
       const dept = deptOf(c.department || '') || 'Unknown', title = c.job || c.jobTitle || '(no job)';
       if (!inScope(dept, title, c.jobId8)) return;
-      if (c.openingQuarter && fromQ && fromQ !== '\u2014' && c.openingQuarter < fromQ) return;
+      // #182f: the ONE copy of this test now lives in data.js, so the Overview cannot drift from it.
+      if (!jpCaseInPeriod(c, fromQ)) return;
       bump(dept, title, 'jpP', c, c.jobId8);   // #150: the case itself, for the "Who is joining" cell
     });
     dropRows(data).forEach(e => {
