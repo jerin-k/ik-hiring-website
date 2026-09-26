@@ -190,7 +190,11 @@ function wireJobNotes(body) {
       ev.stopPropagation();
       const cell = moreBtn.closest('td');
       const open = cell.classList.toggle('jn-open');
-      moreBtn.textContent = open ? 'Show fewer' : `+${cell.querySelectorAll('.jn-extra').length} more`;
+      // 🚨 #182a3 BUG: this counted every `.jn-extra`, and since #182a3 the hidden DATE HEADINGS carry that class
+      // too — so a cell with 11 hidden people and 1 hidden heading read "+12 more". Count PEOPLE only.
+      // `.jn-p.jn-extra` is right in both shapes: ungrouped people are `.jn-p`, grouped ones `.jn-p.jn-pg`,
+      // and a heading is `.jn-dh` with no `.jn-p`.
+      moreBtn.textContent = open ? 'Show fewer' : `+${cell.querySelectorAll('.jn-p.jn-extra').length} more`;
       return;
     }
     const edit = ev.target.closest('[data-jn-edit]');

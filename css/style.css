@@ -1543,8 +1543,13 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 /* #161: why someone in closing is not under a topic, and how many are - quiet, one step below the meta line */
 .jn-who .jn-r { display: block; font-size: 0.625rem; font-style: italic; color: var(--orange); }
 .jn-who .jn-under { display: block; margin-top: 0.25rem; font-size: 0.625rem; color: var(--muted); }
-.jn-who .jn-extra { display: none; }
-.jn-who.jn-open .jn-extra { display: block; }
+/* 🚨 #182a3: the doubled class is DELIBERATE — it raises specificity so these cannot be beaten by an equal
+   rule added LATER in the file. That is not hypothetical: the #182a3 mock appended `.jn-grouped .jn-pg
+   { display:block }` to the end of this stylesheet, which tied on specificity, won on order, and made
+   "Show fewer" do nothing at all. The shipped rules happened to sit in the right place; that was luck, and
+   luck is not a design. Now the collapse holds wherever anyone adds rules. */
+.jn-who .jn-extra.jn-extra { display: none; }
+.jn-who.jn-open .jn-extra.jn-extra { display: block; }
 .jn-more, .jn-add, .jn-text {
   font: inherit; font-size: 0.6875rem; background: none; border: 0; padding: 0; cursor: pointer; text-align: left;
 }
