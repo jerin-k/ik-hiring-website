@@ -56,6 +56,17 @@ export function scoreOfOpening(openingId, meta, quarter, idx) {
   return scoreForRole({ department: meta.department, title: meta.title, level: meta.level, complexity: cx }, quarter);
 }
 
+// #183b (Jerin, 27 Sep 2026: 🗣 "A it is"): an OFFER DROP is priced from the opening its OWN offer names, like every
+// other position. The complexity comes from the dashboard's opening list; an opening older than that list (it starts at
+// Q3 2026 — Jana Gopi's was) carries its complexity on the drop itself, `openingComplexity`, added by the pipeline for #183.
+// No opening named ⇒ 0, exactly as #165 prices every other position.
+export function scoreOfDropOpening(e, meta, quarter, idx) {
+  if (!idx || !idx.ready || !meta || !e || !e.openingId) return 0;
+  const cx = idx.cxOf[k8(e.openingId)] || String(e.openingComplexity || '').trim();
+  if (!cx) return 0;
+  return scoreForRole({ department: meta.department, title: meta.title, level: meta.level, complexity: cx }, quarter);
+}
+
 // Rule 5: a job is worth the sum of its openings. A blank opening contributes its zero rather than vanishing.
 export function scoreOfJob(job8, meta, quarter, idx) {
   if (!idx || !idx.ready) return null;          // null = "cannot answer yet", so callers keep the old number
