@@ -388,55 +388,14 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; }     /* Who is joining */
       .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; }   /* Remarks */
 
-      /* ===== #182b — BOTH HALVES PAINTED (option F) =====
-         🗣 "For the amt of content, i'd take F" · 🚫 and no hard rule between them: "dont need this datk
-             seperator" - with both sides painted the colour change IS the separator.
-         🚨 A CELL PAINTS OVER ITS ROW, so every row type needs its OWN pair or four row-level backgrounds get
-            flattened: the dept-header band (inline on the tr), tr.lv-topic, .totals-row td, and the hover.
-            Add a row type, add its pair. 🚨 These live in THIS block because it loads after style.css and wins. */
-      .hm-report .hm-summary th:nth-child(2),
-      .hm-report .hm-summary th:nth-child(3),
-      .hm-report .hm-summary th:nth-child(4),
-      .hm-report .hm-summary th:nth-child(5),
-      .hm-report .hm-summary th:nth-child(6) { background:#dfe7f4; color:#2d4470; }
-      .hm-report .hm-summary th:nth-child(7),
-      .hm-report .hm-summary th:nth-child(8),
-      .hm-report .hm-summary th:nth-child(9) { background:#d4e7ed; color:#14576b; }
-      .hm-report .hm-summary tr.leaf td:nth-child(2),
-      .hm-report .hm-summary tr.leaf td:nth-child(3),
-      .hm-report .hm-summary tr.leaf td:nth-child(4),
-      .hm-report .hm-summary tr.leaf td:nth-child(5),
-      .hm-report .hm-summary tr.leaf td:nth-child(6) { background:#f6f8fc; }
-      .hm-report .hm-summary tr.leaf td:nth-child(7),
-      .hm-report .hm-summary tr.leaf td:nth-child(8),
-      .hm-report .hm-summary tr.leaf td:nth-child(9) { background:#f4fafb; }
-      .hm-report .hm-summary tr.dept-header td:nth-child(2),
-      .hm-report .hm-summary tr.dept-header td:nth-child(3),
-      .hm-report .hm-summary tr.dept-header td:nth-child(4),
-      .hm-report .hm-summary tr.dept-header td:nth-child(5),
-      .hm-report .hm-summary tr.dept-header td:nth-child(6) { background:#e5eaf4; }
-      .hm-report .hm-summary tr.dept-header td:nth-child(7),
-      .hm-report .hm-summary tr.dept-header td:nth-child(8),
-      .hm-report .hm-summary tr.dept-header td:nth-child(9) { background:#e2eef1; }
-      .hm-report .hm-summary tr.lv-topic td:nth-child(2),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(3),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(4),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(5),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(6) { background:#f7f9fd; }
-      .hm-report .hm-summary tr.lv-topic td:nth-child(7),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(8),
-      .hm-report .hm-summary tr.lv-topic td:nth-child(9) { background:#f5fbfc; }
-      /* 🚫 The TOTALS row stays ONE flat band: .totals-row td forces its background with !important, and that is
-         the honest reading - the grand total sits UNDER both halves rather than belonging to either. */
-      /* 🚨 HOVER LAST, deeper than every pair above, or pointing at a row stops doing anything visible. */
-      .hm-report .hm-summary tbody tr:hover td:nth-child(2),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(3),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(4),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(5),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(6) { background:#e9eff8; }
-      .hm-report .hm-summary tbody tr:hover td:nth-child(7),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(8),
-      .hm-report .hm-summary tbody tr:hover td:nth-child(9) { background:#e6f3f6; }
+      /* ===== #182b — BOTH HALVES PAINTED (option F), now class-based (#182c) =====
+         🗣 "For the amt of content, i'd take F" · 🚫 no hard rule between them: "dont need this datk seperator".
+         🚨 THE 40 HAND-NUMBERED SELECTORS THAT USED TO LIVE HERE ARE GONE. They were the ones a note wrongly
+            claimed were "generated from two lists" (#182e), and removing the Missed column had already shifted
+            every one of them by hand once. The split now comes from the CELL CLASS - '.jn-cell' is a people
+            column, everything after the first cell is a counting column - so there are no numbers to shift.
+         🔑 The rules live in style.css under '.painted-halves', shared with Recruiter and Overall Efficiency,
+            and a row type sets its own pair with two variables. See that block for the full reasoning. */
 
 </style>
 
@@ -471,7 +430,7 @@ export function renderHmReport(data) {
 
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
-      <div class="scroll-table"><table class="hm-summary">
+      <div class="scroll-table"><table class="hm-summary painted-halves">
         <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>

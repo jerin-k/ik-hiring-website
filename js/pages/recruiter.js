@@ -1,5 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
+import { jnWhoCell, wireMoreCells } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
@@ -40,18 +41,24 @@ const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 //    across would have stopped the earlier-quarter subtraction and made 5 Q3 joiners reappear. `count` is
 //    that rule, written down per pod instead of inferred from the table's position on the page.
 // 🚨 Jerin's order, not POD_OPTIONS' order: Sales · SME-US · SME-India · Lateral · Others.
+// 🚨 #182c: lblWidth is 12.5rem on EVERY table now. SME-US, SME-India and Lateral were 15rem, and that inline
+//    min-width beat the stylesheet (min-width wins over max-width), so those three ran 1.8-3.2rem past the panel
+//    once the people columns arrived - option A promised "nothing scrolls", and it has to be true on all five.
+//    The cost is real and was on the mock: a four-level tree (Pod > Recruiter > Job > Topic) now indents inside
+//    12.5rem, so long role and topic names wrap more on these three tables than they did.
 const FULFIL_TABLES = [
   { key: 'sales',    pod: 'Sales',     count: 'hire',  drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
-  { key: 'smeus',    pod: 'SME-US',    count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '15rem' },
-  { key: 'smeindia', pod: 'SME-India', count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '15rem' },
-  { key: 'lateral',  pod: 'Lateral',   count: 'offer', drop: true,  capUnit: 'Offers',  goalUnit: 'Offers',  lblWidth: '15rem' },
+  { key: 'smeus',    pod: 'SME-US',    count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'smeindia', pod: 'SME-India', count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'lateral',  pod: 'Lateral',   count: 'offer', drop: true,  capUnit: 'Offers',  goalUnit: 'Offers',  lblWidth: '12.5rem' },
   { key: 'others',   pod: 'Others',    count: 'hire',  drop: false, capUnit: 'NA',      goalUnit: 'Joiners', lblWidth: '12.5rem' },
 ];
 
 // 🚨 COLUMN ARITHMETIC, in one place now: label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(2)
-//    + Joining pending(2) + Drop(2) + Delta(1) + Delta bar(1) = 13 on EVERY table. cells() and jpCells()
+//    + Joining pending(2) + Drop(2) + Delta(1) + Delta bar(1) + Who has joined(1) + Who is joining(1)
+//    = 15 on EVERY table since #182c. cells() and jpCells()
 //    still have to match it, but the five header rows can no longer disagree with each other.
-const FULFIL_NCOL = 13;
+const FULFIL_NCOL = 15;   // #182c: +2 people columns
 const fulfilHeadHtml = (T) => `
   <tr><th rowspan="2" style="min-width:${T.lblWidth}">Pod / Recruiter / Job</th>
       <th rowspan="2" class="stage-hdr">Capacity (${T.capUnit})</th>
@@ -60,7 +67,9 @@ const fulfilHeadHtml = (T) => `
       <th colspan="2" class="stage-hdr">Joined</th>
       <th colspan="2" class="stage-hdr">Joining pending</th>
       <th colspan="2" class="stage-hdr">Drop</th>
-      <th colspan="2" class="stage-hdr">Delta</th></tr>
+      <th colspan="2" class="stage-hdr">Delta</th>
+      <th rowspan="2" class="stage-hdr jn-th">Who has joined</th>
+      <th rowspan="2" class="stage-hdr jn-th">Who is joining</th></tr>
   <tr>${'<th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th>'.repeat(5)}</tr>`;
 // #179e: the chart sits INSIDE its own block, under the table's heading — one chart per table, each reading
 // only the recruiters that table rendered. 🚨 Rule 3 still holds: THE TABLE COMPUTES, THE CHART READS.
@@ -68,7 +77,7 @@ const fulfilBlockHtml = (T, i) => `
   <div class="fulfil-block" id="fulfilBlock-${T.key}">
     <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:${i ? '1.75rem' : '0'} 0 0.5rem">Position Fulfilment — ${T.pod}</h4>
     <div class="chart-wrap" style="height:17.5rem"><canvas id="fulfilChart-${T.key}"></canvas></div>
-    <div class="scroll-table"><table class="metrics wide-fulfil">
+    <div class="scroll-table"><table class="metrics wide-fulfil painted-halves">
       <thead>${fulfilHeadHtml(T)}</thead>
       <tbody id="fulfilBody-${T.key}"></tbody>
     </table></div>
@@ -142,7 +151,11 @@ const recTopicCells = (t, ncol, jpHtml, joinedHtml) => {
   return d + d + num(t.hc) + num(t.sc)      // Capacity, Capacity used, Goal heads + score
     + (joinedHtml || d.repeat(nJoin))       // Joined (#166) - one pair on both tables since #177
     + jpHtml                                // Joining Pending (#177: the total only)
-    + d.repeat(4);                          // Drop(2), Delta(1), the Delta bar(1)
+    + d.repeat(4)                           // Drop(2), Delta(1), the Delta bar(1)
+    // #182c: a topic row does NOT name people. The topic level exists to split the Goal and the people in
+    // closing by specialisation; the joiners behind a topic are already named on the role row above it, and
+    // repeating them here would list the same person twice in one open tree.
+    + d + d;                                // Who has joined, Who is joining
 };
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1462,6 +1475,7 @@ export function initRecruiterFilters(baseData) {
       // Its two sub-columns (this-quarter vs later-quarter opening) split THIS number once offers carry an
       // opening; until then the total stands on its own rather than the column sitting empty.
       const joinByRec = {}, joinByRecJob = {}, joinByRecJobOpen = {};   // #166: the third grain, per opening
+      const joinWho = {}, joinWhoJob = {};   // #182c: the same joiners as PEOPLE, for the Who has joined column
       // NON-SALES ONLY: minus anyone linked to an EARLIER quarter's opening — the same subtraction the
       // Joining Pending column uses, so both columns describe THIS quarter's work.
       // ⚠ SALES deliberately takes NO subtraction: its goal is joiners regardless of when the opening was
@@ -1476,6 +1490,11 @@ export function initRecruiterFilters(baseData) {
         // grain and shows up in the "not tied to a topic" line, never silently on some topic that is not theirs.
         addCredit(joinByRec, joinByRecJob, e.jobId8, rec, e.sourcer, e.department, sc,   // #11
                   joinByRecJobOpen, String(e.openingId || '').slice(0, 8));
+        // #182c: pushed HERE, inside the same guards, so the names can never describe a different population
+        // than the number beside them - including the earlier-quarter subtraction two lines above.
+        (joinWho[rec] || (joinWho[rec] = [])).push(e);
+        const k82 = rec + '|' + String(e.jobId8 || '').slice(0, 8);
+        (joinWhoJob[k82] || (joinWhoJob[k82] = [])).push(e);
       });
       // Seats actually opened on a job in the SELECTED quarter, from openingBuckets — the only
       // quarter-scoped source of demand we have — SPLIT EQUALLY across the recruiters who work that job.
@@ -1648,7 +1667,30 @@ export function initRecruiterFilters(baseData) {
           + `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`
           + jpCells(v)                                                          // Joining Pending (#177: total only)
           + dropCells(v)                                                        // Drop HC / Score + % subtext
-          + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v);                    // Delta heads / score + bar
+          + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v)                     // Delta heads / score + bar
+          + peopleCells(v);                                                     // #182c: Who has joined · Who is joining
+      };
+
+      // ===== #182c (Jerin, 27 Sep 2026) — THE TWO PEOPLE COLUMNS =====
+      // 🗣 "Then add these columns to Recruiter Effi & Overall Effi" · "Recruiter to have just the people lists"
+      // · "Painted halves travel too" · and of three ways to fit them: "A" (narrow columns, nothing scrolls).
+      // 🔑 Drawn by `jnWhoCell` from people-list-cell.js — the SAME renderer the Hiring Manager tab uses. Never
+      //    copy it: a second copy is how two columns meant to look identical drift apart.
+      // 🚨 A POD or RECRUITER row does NOT list its people. The Sales pod has 73 joiners; naming them on one
+      //    row is unreadable and would repeat every name again under the recruiter beneath it. Those rows carry a
+      //    quiet count instead, which is what the Hiring Manager tab does on a department row.
+      // ⚠ No earlier-quarter mark here, unlike the Hiring Manager tab. There it flags a joiner who is NOT behind
+      //    the Joined figure beside them; on this tab non-Sales already subtracts those people and Sales counts
+      //    every joiner on purpose, so everyone listed IS behind the number and a mark would say nothing.
+      // ⚠ The recruiter row says "below" rather than counting roles: the job rows under it are built AFTER this
+      //    row is emitted, so any count here would be a guess. A wrong number is worse than no number.
+      const sumCell = (n, unit) => (n > 0
+        ? `<td class="jn-cell jn-sum">${n} across ${unit}</td>`
+        : '<td class="jn-cell"><span class="zero">&mdash;</span></td>');
+      const peopleCells = (v) => {
+        if (v.rollup) return sumCell(v.xHC, v.rollup) + sumCell(v.jp && v.jp.t ? v.jp.t.hc : 0, v.rollup);
+        return jnWhoCell(v, { list: v.joWho || [], dateOf: (x) => x.startDate, groupByDate: true })
+             + jnWhoCell(v);   // defaults to v.jpWho, dated by the joining date
       };
 
       const recFulfil = (r) => {
@@ -1698,6 +1740,11 @@ export function initRecruiterFilters(baseData) {
         return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
                  jx: isSales ? jxOf(r.name) : null,   // #39
                  gHC: aHC - uHC, gSc: aSc - uSc,
+                 // #182c: the people behind xHC and jp.t.hc on THIS row. Sales and non-Sales read different
+                 // joiner maps - the same split the numbers already make two lines above - so the names always
+                 // match the figure beside them.
+                 joWho: (isSales ? (OM.salesWho[r.name] || []) : (joinWho[r.name] || [])),
+                 jpWho: (JP.who[r.name] || []),
                  aSo, xSo, uSo, dSo: dr.so || 0, gSo: aSo - uSo, aNoCx: g0.noCx || 0 };   // #165e
       };
       // A recruiter with no capacity AND nothing attributed is noise; one with no capacity but real
@@ -1742,11 +1789,11 @@ export function initRecruiterFilters(baseData) {
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${shown.length}</span></td>${cells(podAgg, true)}</tr>`;
+          <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${shown.length}</span></td>${cells({ ...podAgg, rollup: `${shown.length} recruiter${shown.length === 1 ? '' : 's'}` }, true)}</tr>`;
         shown.forEach(({ r, a }, ri) => {
           const rk = `${T.key}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells(a, false)}</tr>`;
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells({ ...a, rollup: 'their roles below' }, false)}</tr>`;
           // #1: the per-job rows must include roles the recruiter OWNS openings on even where they never
           // tagged an application, or the job Goals would not sum to the recruiter row above. Merge byJob
           // with the owned-opening jobs for this quarter, then sort.
@@ -1807,6 +1854,11 @@ export function initRecruiterFilters(baseData) {
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
                            // #179: unclamped here too — this is the level where the clamp broke the sums.
                            gHC: jg.hc - juHC, gSc: jg.sc - juSc,
+                           // #182c: the people on THIS job for THIS recruiter. ⚠ Two different keys, each
+                           // mirroring the count it sits beside: joiners by job8, people in closing by job TITLE.
+                           joWho: (isSales ? (OM.salesWhoJob[r.name + '|' + String(bj.jobId || '').slice(0, 8)] || [])
+                                           : (joinWhoJob[r.name + '|' + String(bj.jobId || '').slice(0, 8)] || [])),
+                           jpWho: (JP.whoJ[r.name + '|' + (m.title || '')] || []),
                            aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: jaSo - juSo };   // #108
               // #182g: the heads go in beside the score so the chart can band POSITIONS by role. Both unrounded -
               // the chart shares out the ROW's rounded total by largest remainder (#120).
@@ -1893,7 +1945,7 @@ export function initRecruiterFilters(baseData) {
       const body = document.getElementById('fulfilBody-' + T.key);
       if (!body) return;
       body.innerHTML = gs.length ? fulfilRows(gs, T) : '';
-      if (gs.length) wireVelTree(body);
+      if (gs.length) { wireVelTree(body); wireMoreCells(body); }   // #182c: the "+N more" toggle on the people columns
     });
     // 🚨 NOTHING MAY VANISH SILENTLY. Five tables cover the five pods in POD_OPTIONS, and groupByPod can
     // only produce those (Unassigned is dropped earlier, a sourcer-only person is put in Others). If a
@@ -2181,6 +2233,9 @@ export function initRecruiterFilters(baseData) {
       if (id8 && !metaById[id8]) metaById[id8] = j;
     });
     const bucketA = {}, bucketB = {};
+    // #182c: the same people in closing, kept as records for the "Who is joining" column. `who` mirrors the
+    // recruiter-level total, `whoJ` the per-job one. Filled inside bump() below, so they follow the A/B rules.
+    const jpWho = {}, jpWhoJ = {};
     // Job-level too, keyed recruiter|job title. Job rows used to print a hard 0 in every JP column, which
     // reads as "nobody in closing on this role" when the real answer was "not worked out per job".
     const bucketAJ = {}, bucketBJ = {};
@@ -2203,7 +2258,13 @@ export function initRecruiterFilters(baseData) {
       // #161b: the 8-char opening id the pipeline puts on a case (a hire-link 'lock' writes a full one, so slice).
       const o8 = c.openingId ? String(c.openingId).slice(0, 8) : '';
       const bump = (mR, mJ, mO) => { addCredit(mR, mJ, jt, rec, c.sourcer, c.department, sc);
-        if (o8) addCredit(scratch, mO, jt + '|' + o8, rec, c.sourcer, c.department, sc); };
+        if (o8) addCredit(scratch, mO, jt + '|' + o8, rec, c.sourcer, c.department, sc);
+        // #182c: the case itself, for the "Who is joining" column. Pushed inside bump() so it follows the A/B
+        // branching exactly - Total is A + B, and a person who matches neither branch is not listed either.
+        // ⚠ Keyed by job TITLE, because that is what jpOfJob() looks up; the joiner maps use job8. Two
+        // different keys on purpose - each mirrors the count it sits beside.
+        (jpWho[rec] || (jpWho[rec] = [])).push(c);
+        (jpWhoJ[rec + '|' + jt] || (jpWhoJ[rec + '|' + jt] = [])).push(c); };
       // #27 (Jerin, 2026-08-24) — the settled definitions, one line each. Do not re-derive them.
       if (isSales) {
         // A: the opening was raised in an EARLIER quarter, whatever the joining date — the same test as Joined — Prev Qtr Openings.
@@ -2231,7 +2292,8 @@ export function initRecruiterFilters(baseData) {
       const t = out[k] || (out[k] = { hc: 0, sc: 0, so: 0, ns: 0 }); t.hc += v.hc; t.sc += v.sc; t.so += v.so || 0; t.ns += v.ns || 0; })); return out; };   // #176c
     return { total: sum(bucketA, bucketB), bucketA, bucketB,
              totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ,
-             totalO: sum(bucketAO, bucketBO), bucketAO, bucketBO };   // #161b
+             totalO: sum(bucketAO, bucketBO), bucketAO, bucketBO,   // #161b
+             who: jpWho, whoJ: jpWhoJ };   // #182c
   }
 
   // Offered -> Hired for ONE quarter, per recruiter and per (recruiter, job).
@@ -2348,6 +2410,12 @@ export function initRecruiterFilters(baseData) {
   // Ashby's bulk data-entry stamp and must never date a filtered figure — Non-Sales Joined comes from joinByRec in fulfilRows.
   function outcomeMaps(q, rg) {
     const sales = {}, salesJob = {};
+    // #182c: the same joiners, kept as PEOPLE so the "Who has joined" column can name them. Keyed exactly as
+    // `sales` / `salesJob` are (recruiter, and recruiter|job8), and filled in the SAME branch as the counts, so
+    // the list beside a number is always that number's people. 🚨 Only the RECRUITER gets the names: under #108
+    // the head stays with the recruiter and the sourcer's contribution shows as the "+N sourced" line, so
+    // listing a person under their sourcer too would double them on screen.
+    const salesWho = {}, salesWhoJob = {};
     // #39 (Jerin, 7 Sep 2026): split Joined by the OPENING's quarter, mirroring the JP block beside it.
     //   A = the opening was raised in an EARLIER quarter  -> "Joined — Prev Qtr Openings" (carried-over demand)
     //   B = everyone else                                 -> "Joined — Current Qtr Openings"
@@ -2364,6 +2432,8 @@ export function initRecruiterFilters(baseData) {
       // across Joined and its two opening-quarter buckets — they can never drift apart.
       if (e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg)) { // Joined = moved to Hired, not just an accepted offer · #129: inside From / To
         addCredit(sales, salesJob, e.jobId8, rec, e.sourcer, e.department, sc);
+        (salesWho[rec] || (salesWho[rec] = [])).push(e);
+        (salesWhoJob[rec + '|' + String(e.jobId8 || '').slice(0, 8)] || (salesWhoJob[rec + '|' + String(e.jobId8 || '').slice(0, 8)] = [])).push(e);
         // #39: bucket the same person by their opening's quarter. See the note above.
         const oq = e.openingQuarter || null, earlier = !!(oq && oq < q);
         addCredit(earlier ? salesA : salesB, earlier ? salesAJob : salesBJob, e.jobId8, rec, e.sourcer, e.department, sc);
@@ -2372,7 +2442,7 @@ export function initRecruiterFilters(baseData) {
         if (!oq) addCredit(salesU, salesUJob, e.jobId8, rec, e.sourcer, e.department, sc);
       }
     });
-    return { sales, salesJob, salesA, salesB, salesAJob, salesBJob, salesU, salesUJob };
+    return { sales, salesJob, salesA, salesB, salesAJob, salesBJob, salesU, salesUJob, salesWho, salesWhoJob };   // #182c
   }
 
   function tisPeriod() { return selQuarters(); }
