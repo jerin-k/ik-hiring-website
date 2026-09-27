@@ -850,8 +850,13 @@ export function initHmFilters(data) {
     // closing → −10). That is a true signal about missing opening links, and it corrects itself as they
     // are fixed. The old formula (Open − seats-with-an-offer-out) gave the right number but its arithmetic
     // was invisible on screen, which is what made three JP figures disagree all week.
+    // #189f: ONE definition of Delta on this tab. It was written out four times - here, on the two recruiter
+    // row types, and again inside the chart, which even carried a comment saying it was "worded exactly as
+    // metrics() words it". Four copies of one sum is how a chart and its table drift apart (Rule 3); Overall
+    // Efficiency already does it this way, computing `gap` once in fulfilRows and letting both read it.
+    const deltaOf = (v) => (v.total || 0) - (v.joined || 0) - (v.jpP || 0);
     const metrics = (v) => {
-      const delta = v.total - v.joined - v.jpP;
+      const delta = deltaOf(v);
       // #1 Option A (2026-08-22): the bar used to fill with COVERAGE while the bold number counted the GAP,
       // so a nearly-full-looking cell could sit beside a 7. Both now measure the same thing — the shortfall.
       const gapPct = v.total > 0 ? Math.max(0, Math.min(100, Math.round((delta / v.total) * 100))) : 0;
@@ -933,7 +938,7 @@ export function initHmFilters(data) {
         if (LV.rec) {
           merged.forEach(r => {
             const unsetR = r.recruiter === NO_RECRUITER;
-            const gapP = r.total - r.joined - r.pending;
+            const gapP = deltaOf({ total: r.total, joined: r.joined, jpP: r.pending });   // #189f
             html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.total ? '' : ' noseat'}" data-lvl="3" data-g="${gi}" data-nojob="1" style="display:none">`
               + `<td style="padding-left:1.875rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
               + (r.total ? '' : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
@@ -984,7 +989,7 @@ export function initHmFilters(data) {
           const rb = (o.recs || {})[r.recruiter] || { jpP: 0, drop: 0, jpWho: [], joWho: [] };
           if (hasRecs) {
             const unsetR = r.recruiter === NO_RECRUITER;
-            const gapP = r.total - r.joined - rb.jpP;
+            const gapP = deltaOf({ total: r.total, joined: r.joined, jpP: rb.jpP });   // #189f
             html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.noSeat ? ' noseat' : ''}" data-lvl="3" data-g="${gi}" data-job8="${esc(o.job8)}" data-rec="${esc(`${o.job8}|${r.recruiter}`)}" data-rexp="0" style="display:none">`
               + `<td style="padding-left:3.25rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
               + (r.total ? '' : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
@@ -1054,8 +1059,6 @@ export function initHmFilters(data) {
         { key: 'gap', label: 'Delta', color: FULFIL_COLORS.gap, split: false }
       ];
       const byDept = {}; deptArr.forEach(D => { byDept[D.dept] = D; });
-      // The one place Delta is derived for this chart, worded exactly as metrics() words it for the table.
-      const deltaOf = (v) => (v.total || 0) - (v.joined || 0) - (v.jpP || 0);
       const chartTotals = [];   // the TABLE's total per bar, in cDepts order — the end label reads this, not the bands
       const chartRows = cDepts.map(d => {
         const D = byDept[d] || { jobs: [] };
@@ -1469,14 +1472,18 @@ export function initHmFilters(data) {
       G.jobs.push(j);
     });
 
+    // #189f: thousands separators, as the same table already had on Recruiter Efficiency. One table printed
+    // 33742 here and 7,628 there - the figures differ for a good reason (see the definitions), the formatting
+    // did not.
     function pipeCells(total, stages) {
-      let s = `<td style="font-weight:600">${total}</td>`;
+      const n = (v) => v.toLocaleString();
+      let s = `<td style="font-weight:600">${n(total)}</td>`;
       visStages.forEach(k => {
         const v = stages[k] || 0; let style = '';
         if (k === 'hired' && v > 0) style = ' class="good"';
         else if (k === 'offer' && v > 0) style = ' style="color:var(--blue);font-weight:600"';
         else if (v === 0) style = ' class="zero"';
-        s += `<td${style}>${v}</td>`;
+        s += `<td${style}>${n(v)}</td>`;
       });
       return s;
     }

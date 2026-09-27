@@ -189,11 +189,17 @@ export function initInterviewer(data, opts = {}) {
   }
   const periodLabel = (quarters) => { const rg = rangeOf(); return rg ? rangeText(rg, quarters) : periodText(quarters); };
 
+  // #189f: ONE place decides how a panelist's interviews are counted inside a day range. The chart used to
+  // carry its own copy of this clipping, which is how a chart and its table drift apart even while they agree
+  // (Rule 3). The chart's month buckets now call this with the month's own edges, so a bar is the same
+  // arithmetic as the column beside it, narrowed - never a second reading of the data.
+  const countInRange = (rec, from, to) => sumDayCount(rec.byDay, { from, to });
+
   // Interview count for the selected period. By day inside a narrow range (#129); otherwise byMonth (finer), then byQuarter, then lifetime.
   function periodCount(rec, quarters, months) {
     if (!quarters) return rec.interviews || 0;
     const rgD = dayRange();
-    if (rgD) return sumDayCount(rec.byDay, rgD);
+    if (rgD) return countInRange(rec, rgD.from, rgD.to);
     if (rec.byMonth && months && months.length) return months.reduce((s, m) => s + (rec.byMonth[m] || 0), 0);
     if (rec.byQuarter) return quarters.reduce((s, q) => s + (rec.byQuarter[q] || 0), 0);
     return rec.interviews || 0;
@@ -366,8 +372,9 @@ export function initInterviewer(data, opts = {}) {
     // #129: inside a narrow From / To range a month's segment holds only that month's days inside the range, so each bar adds up to the
     // table's Interviews figure.
     const rgD = dayRange();
+    // #189f: the same counting function the table used, clipped to this month - not a second copy of it.
     const bucketOf = (p, k) => rgD && hasMonths
-      ? sumDayCount(p.byDay, { from: rgD.from > k + '-01' ? rgD.from : k + '-01', to: rgD.to < k + '-31' ? rgD.to : k + '-31' })
+      ? countInRange(p, rgD.from > k + '-01' ? rgD.from : k + '-01', rgD.to < k + '-31' ? rgD.to : k + '-31')
       : hasMonths ? ((p.byMonth && p.byMonth[k]) || 0) : ((p.byQuarter && p.byQuarter[k]) || 0);
     const bucketLabel = (k) => hasMonths ? monthLabel(k) : k;
     const byName = {};
