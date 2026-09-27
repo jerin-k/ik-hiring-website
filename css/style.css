@@ -1521,10 +1521,20 @@ td.tis .gs-wait .tis-wait { color:inherit; }
 .hm-summary td.gapcell { min-width: 0; }
 .hm-summary .sublab { white-space: normal; }
 /* #151: every heading on this table is centred (the cells below stay left) — see hm-report.js's own style block. */
-.hm-summary th.jn-th { white-space: normal; }
-.hm-summary td.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.4; white-space: normal;
+/* #182c (27 Sep 2026): UNSCOPED on purpose. These were `.hm-summary th.jn-th` / `.hm-summary td.jn-cell`, and
+   that tab-scoped selector is exactly why the people columns could not travel: the markup rendered on Recruiter
+   and Overall Efficiency but arrived centred, nowrap and vertically centred, which reads as a broken column
+   rather than a missing rule. Any table that appends a cell from people-list-cell.js now gets the right shape. */
+th.jn-th { white-space: normal; }
+/* 🚨 DOUBLED CLASS ON PURPOSE. Unscoping cost this rule its specificity: `.hm-summary td.jn-cell` was
+   (0,2,1), plain `td.jn-cell` is (0,1,1), and hm-report.js's own block carries `.hm-report table td { vertical-align:
+   middle }` at (0,1,2) - which then WON, so every people cell centred itself vertically instead of starting at the
+   top, and a tall list of names sat misaligned against the numbers. `td.jn-cell.jn-cell` is (0,2,1) again. Per-page
+   <style> blocks also load AFTER this file and win at equal specificity (CLAUDE.md Rule 12), so matching (0,1,2)
+   would not have been enough either. */
+td.jn-cell.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.4; white-space: normal;
   overflow-wrap: anywhere; vertical-align: top; }
-.hm-summary td.jn-sum { color: var(--muted); font-size: 0.6875rem; }
+td.jn-sum { color: var(--muted); font-size: 0.6875rem; }
 /* One person, two lines: the name, then a quiet meta line. Inline name + date + stage ran past the cell. */
 .jn-who .jn-p { display: block; margin-bottom: 0.25rem; }
 .jn-who .jn-p:last-of-type { margin-bottom: 0; }
