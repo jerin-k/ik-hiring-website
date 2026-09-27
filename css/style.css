@@ -1553,6 +1553,13 @@ th.jn-th { white-space: normal; }
    would not have been enough either. */
 td.jn-cell.jn-cell { text-align: left; font-size: 0.6875rem; line-height: 1.4; white-space: normal;
   overflow-wrap: anywhere; vertical-align: top; }
+/* 🚨 AND AGAIN, one level up, for the two grouped tables. Jerin, 27 Sep: "Left align the content in Joiners,
+   JP & Remark. Not sure how that got changes." It was never right on those two: `table.metrics td:not(:first-child)`
+   centres every cell and scores (0,2,2) - a class, a :not(:first-child) which counts as one, and two elements -
+   while `td.jn-cell.jn-cell` is only (0,2,1). The Hiring Manager table is `.hm-summary`, NOT `table.metrics`, so
+   it never met that rule and has always been left-aligned. This is (0,3,2) and wins.
+   ⚠ The HEADINGS stay centred: every heading on these tables is centred (#151a house style). Only the content moves. */
+table.metrics td.jn-cell.jn-cell { text-align: left; }
 td.jn-sum { color: var(--muted); font-size: 0.6875rem; }
 /* One person, two lines: the name, then a quiet meta line. Inline name + date + stage ran past the cell. */
 .jn-who .jn-p { display: block; margin-bottom: 0.25rem; }
