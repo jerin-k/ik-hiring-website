@@ -22,7 +22,7 @@ import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { recruiterIndex, recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187
-import { levelChooser, levelsOn, wireLevels, mergeByRecruiter } from '../tree-levels.js';   // #188
+import { levelChooser, levelsOn, wireLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
 import { jobsWithOpeningIn, offerDropRows } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
@@ -379,7 +379,10 @@ export function initEfficiencyFilters(data) {
   let activeTab = 'fulfilment';
   let msPod = null, msDept = null, msJob = null, msEffTpStage = null, msEffPipeStage = null;   // #145a
 
-  const expandAll = () => true;   // #188: a ticked level is drawn open — the chooser IS the expand control
+  // #188: on Position Fulfilment a ticked level is drawn open — the chooser IS the expand control there.
+  // #189d: every OTHER panel reads the "Expand all" tick again. #188 hard-coded this to true, which left eight
+  // trees on this tab permanently open with no way to close them, under a chooser that moved none of them.
+  const expandAll = () => activeTab === 'fulfilment' || expandAllOn('effLevels');
 
   // ONE quarter, for the job trees the activity panels hang their period data off.
   // 🚨 #120 (14 Sep 2026): this fell through to TODAY's quarter whenever EITHER dropdown read "All", so Year: All with
@@ -2132,6 +2135,9 @@ export function initEfficiencyFilters(data) {
     // the two flat people lists, where it would move nothing (Rule 13).
     toggleJpFilters('eff', document.getElementById('effPeriod'), name === 'joiningpending');
     showControl(document.getElementById('effExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
+    // #189d: only Position Fulfilment has the job/recruiter/topic levels, so only it gets the chooser. Every other
+    // tree gets the plain Expand all tick — the same rule the date boxes already follow two lines below.
+    showLevels('effLevels', name === 'fulfilment');
     // #145a: Pipeline counts are live, and its roles follow Year and Quarter, so From and To would move nothing
     // there — they hide, exactly as on the Hiring Manager tab (#141d, Rule 13).
     ['effVelFrom', 'effVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));

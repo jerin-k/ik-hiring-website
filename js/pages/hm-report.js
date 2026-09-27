@@ -10,7 +10,7 @@ import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
-import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter } from '../tree-levels.js';   // #188
+import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
 import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
@@ -306,8 +306,10 @@ function computeThroughput(p, total) {
 // — `(recruiter not set)` most of all. CSS.escape where it exists, a quoted fallback where it does not.
 const cssq = (v) => String(v).replace(/["\\]/g, '\\$&');
 
-function wireTree(tbody) {
-  const expandAll = true;   // #188: a level that is ticked is drawn open - the chooser IS the expand control
+// #189d: `expandAll` is a PARAMETER again, not a constant. On Position Fulfilment it is always true, because the
+// level chooser is the expand control there (#188). On the Interview Pipeline table it is the "Expand all" tick,
+// which #188 had hard-coded to true - leaving that tree permanently open under a chooser that could not move it.
+function wireTree(tbody, expandAll) {
   const setCaret = (row, sel, open) => { const c = row.querySelector(sel); if (c) c.textContent = open ? '▾' : '▸'; };
   const q = (sel) => tbody.querySelectorAll(sel);
 
@@ -1019,7 +1021,7 @@ export function initHmFilters(data) {
       + `<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
-    wireTree(body);
+    wireTree(body, true);   // #189d: the level chooser IS the expand control on this table (#188)
     wireJobNotes(body);   // #150
 
     // Chart: one bar per department, stacked Joined / Joining Pending / Delta — and Joined and Joining Pending
@@ -1288,7 +1290,8 @@ export function initHmFilters(data) {
       visStages.map(sk => TP_LABELS[sk]), {
         addedCols, hiredCol,
         total: toRow('Total', aggTP(allList)),
-        expandAll: true,
+        expandAll: expandAllOn('hmLevels'),   // #189d: was hard-coded true by #188
+
         overallLabel: A ? 'R1/OA → late' : 'R1 → Doc',
         labels: A ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
@@ -1313,7 +1316,7 @@ export function initHmFilters(data) {
           panelists: () => (msHmPanel ? msHmPanel.getSelected() : []),
           jobIds: () => openJobIds(),   // #125: only jobs with an opening opened in From–To
           range: () => ({ from: gFrom(), to: gTo() }),   // #120: Panelists follow From/To like every other panel here
-          expandAll: () => true
+          expandAll: () => expandAllOn('hmLevels')   // #189d: was hard-coded true by #188
         }
       }) || null;
     } else {
@@ -1491,7 +1494,7 @@ export function initHmFilters(data) {
     html += `<tr class="totals-row"><td>Total</td>${pipeCells(grandTotal, stageTotalsAll)}</tr>`;
     const hm3Body = document.getElementById('hm3Body');
     hm3Body.innerHTML = html;
-    wireTree(hm3Body);
+    wireTree(hm3Body, expandAllOn('hmLevels'));   // #189d: this tree has no recruiter or topic level, so it gets the tick
     shadePipeline(hm3Body);   // #137c
   }
 
@@ -1513,6 +1516,9 @@ export function initHmFilters(data) {
     // the two flat people lists, where it would move nothing (Rule 13).
     toggleJpFilters('hm', document.getElementById('hmPeriod'), name === 'joiningpending');
     showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
+    // #189d: only Position Fulfilment has the job/recruiter/topic levels, so only it gets the chooser. Throughput,
+    // Interview Pipeline and Panelists get the plain Expand all tick back - the rule the date boxes already follow.
+    showLevels('hmLevels', name === 'positions');
     // #141d (Jerin, 17 Sep): Pipeline counts are live (#129) and its roles follow Year and Quarter, so From and To would move
     // nothing there — they hide (Rule 13).
     ['hmDateFrom', 'hmDateTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
