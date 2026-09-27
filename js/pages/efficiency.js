@@ -976,7 +976,7 @@ export function initEfficiencyFilters(data) {
     rows.forEach(({ dept, jobs, sum }, di) => {
       const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${sum.unscored} unscored</span>` : '';
       const deptOpens = LV.job || LV.rec || (LV.top && jobs.some(({ j }) => hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8))));
-      html += `<tr data-path="${di}"${deptOpens ? ' data-haschild' : ''} data-exp="0" style="${deptOpens ? 'cursor:pointer;' : ''}background:var(--border-light)">
+      html += `<tr data-path="${di}" data-lvl="1"${deptOpens ? ' data-haschild' : ''} data-exp="0" style="${deptOpens ? 'cursor:pointer;' : ''}background:var(--border-light)">
         <td style="font-weight:600">${deptOpens ? CARET : ''}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells({ ...sum, rollup: `${jobs.length} role${jobs.length === 1 ? '' : 's'}`, joWho: jobs.flatMap(x => x.sp.joWho || []) }, true)}</tr>`;
       // ===== #188: Job switched OFF — the department opens to its recruiters, merged across every job so the
       // rows still close the department above them; or straight to its topics when Recruiter is off too. =====
@@ -987,15 +987,15 @@ export function initEfficiencyFilters(data) {
             r.gap = r.total - r.joined - r.pending; r.gS = r.tS - r.jS - r.pS;
             const unsetR = r.recruiter === NO_RECRUITER;
             const recOpens = LV.top && Object.keys(r.topics || {}).some(k => k !== '(topic not set)');   // #160a
-            html += `<tr data-path="${di}-${ri}"${recOpens ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+            html += `<tr data-path="${di}-${ri}" data-lvl="3"${recOpens ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
               + `<td style="padding-left:1.875rem">${recOpens ? CARET : ''}<span class="${unsetR ? 'rec-unset' : 'rec-name'}">${r.recruiter}</span>`
-              + (r.total ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${r.total} position${r.total === 1 ? '' : 's'}</span>`
+              + (r.total ? ''
                          : `<span class="noseat-tag">no position of their own</span>`)
               + `</td>${cells(r, false)}</tr>`;
             if (recOpens) Object.entries(r.topics || {}).sort((a, b2) => (a[0] === '(topic not set)') ? 1 : (b2[0] === '(topic not set)') ? -1 : b2[1].total - a[1].total).forEach(([tp, tv], ti) => {
-              html += `<tr data-path="${di}-${ri}-${ti}" style="display:none">`
+              html += `<tr data-path="${di}-${ri}-${ti}" data-lvl="4" style="display:none">`
                 + `<td style="padding-left:3.25rem"><span class="${tp === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${tp}</span>`
-                + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tv.total} opening${tv.total === 1 ? '' : 's'}</span></td>`
+                + `</td>`
                 + topicCells(tv, true) + `</tr>`;
             });
           });
@@ -1012,9 +1012,9 @@ export function initEfficiencyFilters(data) {
             });
           });
           Object.values(byTopic).sort((a, b) => b.total - a.total).forEach((t, ti) => {
-            html += `<tr data-path="${di}-${ti}" style="display:none">`
+            html += `<tr data-path="${di}-${ti}" data-lvl="4" style="display:none">`
               + `<td style="padding-left:1.875rem"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
-              + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${t.total} opening${t.total === 1 ? '' : 's'}</span></td>`
+              + `</td>`
               + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS: t.tS, jS: t.jS, mS: t.mS }, true) + `</tr>`;
           });
         }
@@ -1033,7 +1033,7 @@ export function initEfficiencyFilters(data) {
         // ("Department ➔ Job ➔ Recruiter ➔ Topic. Works.").
         const recs = LV.rec ? recSplits(j, dept, PM, per, rIdx, openingScores(data)) : [];   // #188
         const opensJob = recs.length > 0 || !!tops;
-        html += `<tr data-path="${di}-${ji}"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+        html += `<tr data-path="${di}-${ji}" data-lvl="2"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
           + `<td style="padding-left:1.875rem;color:var(--muted)">${opensJob ? CARET : ''}${j.title}${meta}`
           + `${recs.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${recs.length} recruiters</span>`
               : (tops && tops.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tops.length} topics</span>` : '')}</td>${cells(sp, false)}</tr>`;
@@ -1056,10 +1056,10 @@ export function initEfficiencyFilters(data) {
               .map(x => String(x.openingId).slice(0, 8)));
             const myTops = tops ? tops.filter(t => [...ids8(t)].some(id => mineIds.has(id))) : null;
             const unsetR = r.recruiter === NO_RECRUITER;
-            html += `<tr data-path="${path}"${myTops && myTops.length ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+            html += `<tr data-path="${path}" data-lvl="3"${myTops && myTops.length ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
               + `<td style="padding-left:3.25rem">${myTops && myTops.length ? CARET : ''}`
               + `<span class="${unsetR ? 'rec-unset' : 'rec-name'}">${r.recruiter}</span>`
-              + (r.total ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${r.total} position${r.total === 1 ? '' : 's'}</span>`
+              + (r.total ? ''
                          : `<span class="noseat-tag">no position of their own</span>`)
               + `</td>${cells(r, false)}</tr>`;
             if (!myTops || !myTops.length) return;
@@ -1076,9 +1076,9 @@ export function initEfficiencyFilters(data) {
             const pending = jobPeople.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8))).length;
             const pS = pending * pt(PM.atQ);
             // #157c (Jerin, 21 Sep): the topic is the bottom of the tree - no caret, no opening rows under it.
-            html += `<tr data-path="${path}-${ti}" style="display:none">`
+            html += `<tr data-path="${path}-${ti}" data-lvl="4" style="display:none">`
               + `<td style="padding-left:${recs.length ? '4.5rem' : '3.25rem'}"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
-              + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tot} opening${tot === 1 ? '' : 's'}</span></td>`
+              + `</td>`
               + topicCells({ total: tot, joined: jn, missed: ms, tS, jS, mS, pending, pS }) + `</tr>`;
           });
         });

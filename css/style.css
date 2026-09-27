@@ -1856,12 +1856,27 @@ td.nosplit { color: #c1c7cf; }
 /* #187: the Hiring Manager / Overall Efficiency recruiter row. Named `lv-rec` to sit beside `lv-topic` in the
    same tree; `lvl-rec` above is the RECRUITER TAB's own row type and is a different thing — do not merge them. */
 .painted-halves tr.lv-rec { --half-num: #eef2f9; --half-ppl: #ecf5f7; }
+/* ===== #191: ONE LEVEL LADDER for both Position tables (Jerin, 27 Sep 2026) =====
+   Overall Efficiency's rows are a data-path tree with no row classes, so it was drawing every level in the same
+   shade while Hiring Manager had four. Keying the ladder on `data-lvl` gives BOTH tabs one definition instead of
+   a second copy that drifts — the depth is already known at render time on each. The values are the ones
+   Hiring Manager was already using, so nothing on that tab moves. */
+.painted-halves tr[data-lvl="1"] { --half-num: #e5eaf4; --half-ppl: #e2eef1; }
+.painted-halves tr[data-lvl="2"] { --half-num: #f6f8fc; --half-ppl: #f4fafb; }
+.painted-halves tr[data-lvl="3"] { --half-num: #eef2f9; --half-ppl: #ecf5f7; }
+.painted-halves tr[data-lvl="4"] { --half-num: #f7f9fd; --half-ppl: #f5fbfc; }
 /* 🚫 NO amber wash on the two catch-all rows (Jerin, 27 Sep 2026: "the yellow row highlight isnt needed;
    uncessary"). They read as what they are from the wording alone — an italic unnamed recruiter, or a caption
    under the name. A row tint for something this ordinary was shouting. */
 .painted-halves tr.lv-topic, .painted-halves tr.lvl-stage { --half-num: #f7f9fd; --half-ppl: #f5fbfc; }
 .painted-halves tbody tr:hover { --half-num: #e9eff8; --half-ppl: #e6f3f6; }         /* last, and deeper than all of them */
 .painted-halves td:not(:first-child):not(.jn-cell) { background: var(--half-num); }
+/* #191 (Jerin, 27 Sep 2026): *"The color you see in the attachment, and use that to the first column too"* —
+   the name column now takes the SAME ground as the counting columns beside it, instead of sitting on the card.
+   🚨 It needs its own rule and a heavier selector: `table.metrics td:first-child` sets `background: inherit`
+   to keep the sticky column opaque while it scrolls, and that is specificity (0,2,2) — a plain
+   `.painted-halves td:not(.jn-cell)` at (0,2,1) loses to it silently. */
+.painted-halves td:first-child:not(.jn-cell) { background: var(--half-num); }
 .painted-halves td.jn-cell { background: var(--half-ppl); }
 .painted-halves th:not(:first-child):not(.jn-th) { background: var(--navy); color: #ffffff; }
 .painted-halves th.jn-th { background: #1d3a48; color: #ffffff; }

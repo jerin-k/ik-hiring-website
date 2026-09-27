@@ -899,8 +899,8 @@ export function initHmFilters(data) {
     // #188: one topic-row writer, used at whatever depth the chosen levels put the topics.
     const emitTopics = (list, gi, job8, pad) => (list || []).map(t => {
       const unset = t.topic === NO_TOPIC;
-      return `<tr class="lv-topic" data-g="${gi}"${job8 ? ` data-job8="${esc(job8)}"` : ' data-nojob="1"'} style="display:none">`
-        + `<td style="padding-left:${pad}"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
+      return `<tr class="lv-topic" data-lvl="4" data-g="${gi}"${job8 ? ` data-job8="${esc(job8)}"` : ' data-nojob="1"'} style="display:none">`
+        + `<td style="padding-left:${pad}"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span></td>`
         // 🚨 A DASH, NOT A ZERO. At this depth the people have not been split by topic (#182a's rule), and a 0
         // would read as "nobody", which is a different claim. Under a JOB the topic rows DO carry a real
         // Joining pipeline count, because splitWho() places those people — that path is untouched.
@@ -917,7 +917,7 @@ export function initHmFilters(data) {
       // Job and Recruiter both off, a department with no topic level has nothing under it — a caret there would
       // be a row pretending to expand, which is the thing #157 removed.
       const deptOpens = LV.job || LV.rec || (LV.top && deptHasTopics(D.dept));
-      html += `<tr class="dept-header"${deptOpens ? ' data-hold="1"' : ''} data-g="${gi}" data-exp="0" style="${deptOpens ? 'cursor:pointer;' : ''}background:var(--border-light)">
+      html += `<tr class="dept-header" data-lvl="1"${deptOpens ? ' data-hold="1"' : ''} data-g="${gi}" data-exp="0" style="${deptOpens ? 'cursor:pointer;' : ''}background:var(--border-light)">
         <td style="font-weight:600">${deptOpens ? CARET : ''}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
         + `<td class="jn-cell jn-sum">${(D.joWho || []).length ? `${D.joWho.length} joined` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
@@ -932,9 +932,9 @@ export function initHmFilters(data) {
           merged.forEach(r => {
             const unsetR = r.recruiter === NO_RECRUITER;
             const gapP = r.total - r.joined - r.pending;
-            html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.total ? '' : ' noseat'}" data-g="${gi}" data-nojob="1" style="display:none">`
+            html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.total ? '' : ' noseat'}" data-lvl="3" data-g="${gi}" data-nojob="1" style="display:none">`
               + `<td style="padding-left:1.875rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
-              + (r.total ? cnt(`${r.total} position${r.total === 1 ? '' : 's'}`) : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
+              + (r.total ? '' : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
               + recMetrics(r, { jpP: r.pending, drop: r.drop }, gapP)
               + jnWhoCell(r, { list: r.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
               + jnWhoCell({ jpWho: r.jpWho || [] })
@@ -973,7 +973,7 @@ export function initHmFilters(data) {
         // #182a: the same helper, pointed at the joiners and dated by their START date.
         const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true });
         const opens = hasRecs || topics;
-        html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${opens ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
+        html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-lvl="2" data-g="${gi}"${opens ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
           <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
         if (!opens) return;
         // With no recruiter level the topics hang off the job exactly as they did before #187.
@@ -983,9 +983,9 @@ export function initHmFilters(data) {
           if (hasRecs) {
             const unsetR = r.recruiter === NO_RECRUITER;
             const gapP = r.total - r.joined - rb.jpP;
-            html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.noSeat ? ' noseat' : ''}" data-g="${gi}" data-job8="${esc(o.job8)}" data-rec="${esc(`${o.job8}|${r.recruiter}`)}" data-rexp="0" style="display:none">`
+            html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.noSeat ? ' noseat' : ''}" data-lvl="3" data-g="${gi}" data-job8="${esc(o.job8)}" data-rec="${esc(`${o.job8}|${r.recruiter}`)}" data-rexp="0" style="display:none">`
               + `<td style="padding-left:3.25rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
-              + (r.total ? cnt(`${r.total} position${r.total === 1 ? '' : 's'}`) : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
+              + (r.total ? '' : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
               + recMetrics(r, rb, gapP)
               + jnWhoCell(rb, { list: rb.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
               + jnWhoCell({ jpWho: rb.jpWho || [] })
@@ -1001,8 +1001,8 @@ export function initHmFilters(data) {
             const tk = `${o.job8}|${r.recruiter || ''}|${t.topic}`;
             const unset = t.topic === NO_TOPIC;
             // #157c: a topic row is the bottom of the tree - no caret, nothing to open under it.
-            html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}"${hasRecs ? ` data-rec="${esc(`${o.job8}|${r.recruiter}`)}"` : ''} data-topic="${esc(tk)}" style="display:none">`
-              + `<td style="padding-left:${hasRecs ? '4.5rem' : '3.25rem'}"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
+            html += `<tr class="lv-topic" data-lvl="4" data-g="${gi}" data-job8="${esc(o.job8)}"${hasRecs ? ` data-rec="${esc(`${o.job8}|${r.recruiter}`)}"` : ''} data-topic="${esc(tk)}" style="display:none">`
+              + `<td style="padding-left:${hasRecs ? '4.5rem' : '3.25rem'}"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span></td>`
               // #182a: Who has joined DASHES at topic level for now — splitting joiners by topic is #166's job on the
               // Recruiter tab and has its own "(not tied to a topic)" remainder rule; a half-done split here would
               // silently under-count. A dash says "not worked out at this level", which is true. Never a number.
