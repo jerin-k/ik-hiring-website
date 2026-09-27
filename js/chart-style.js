@@ -90,7 +90,8 @@ export function darken(hex, f) {
 
 // rows:    [{ label, jobs: [{ title, v: {metricKey: number} }], sum: {metricKey: number} }]
 // metrics: [{ key, label, color, split }]   split defaults to true
-// Returns Chart.js datasets, each tagged _m (metric key) and _titles (role name per row) for the tooltip.
+// Returns Chart.js datasets: ONE per metric since #182h, tagged _m (metric key) and _roles (the per-row role
+// breakdown, for the tooltip). Merging them is what makes a bar a solid block instead of a run of segments.
 export function roleBandDatasets(rows, metrics, extra = {}) {
   const splitKeys = metrics.filter(m => m.split !== false).map(m => m.key);
   const size = (v) => splitKeys.reduce((s, k) => s + Math.max(0, v[k] || 0), 0);
@@ -113,25 +114,40 @@ export function roleBandDatasets(rows, metrics, extra = {}) {
   });
   const nSlots = Math.max(1, ...perRow.map(x => x.length));
 
+  // ===== #182h (Jerin, 27 Sep 2026) — ONE DATASET PER METRIC, so a bar is a SOLID block =====
+  // 🗣 "Can we change the inner bifurcation of the chart bar? No one is using it." · then, on the first
+  //    attempt: 🗣 "The line still exists."
+  // 🚨 THE FIRST FIX WAS WRONG BECAUSE I MISREAD THE CAUSE. I deleted the separator STROKES from
+  //    roleBandOverlay, but the lines he could see were never strokes: each role was its own DATASET, and every
+  //    dataset carries `borderRadius: 2`, so Chart.js rounded the corners of every segment and the rounding
+  //    between neighbours reads as a groove. Removing strokes could never fix that.
+  // 🔑 So the roles no longer become separate bars at all. A metric is ONE dataset, and its per-role
+  //    breakdown rides along on `_roles` for the tooltip — he asked to lose the lines, not the detail, and
+  //    hovering still lists every role behind the bar.
+  // ⚠ The pooling above still runs: it is what `_roles` is built from, so the tooltip keeps the same
+  //    "N smaller roles" tail it always had rather than listing forty roles.
   const datasets = [];
   metrics.forEach(M => {
     if (M.split === false) {
       const data = rows.map(r => Math.max(0, r.sum[M.key] || 0));
       if (data.some(v => v > 0)) datasets.push({
-        label: M.label, _m: M.key, _c: M.color, _titles: rows.map(() => 'across the whole row'),
+        label: M.label, _m: M.key, _c: M.color,
+        _roles: rows.map(() => [{ title: 'across the whole row', n: null }]),
         data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR, ...extra
       });
       return;
     }
-    for (let k = 0; k < nSlots; k++) {
-      const data = perRow.map(slots => slots[k] ? Math.max(0, slots[k].v[M.key] || 0) : 0);
-      if (!data.some(v => v > 0)) continue;
-      datasets.push({
-        label: M.label, _m: M.key, _slot: k, _c: M.color,
-        _titles: perRow.map(slots => slots[k] ? slots[k].title : ''),
-        data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR, ...extra
-      });
-    }
+    const data = rows.map((r, i) => perRow[i].reduce((a, sl) => a + Math.max(0, sl.v[M.key] || 0), 0));
+    if (!data.some(v => v > 0)) return;
+    datasets.push({
+      label: M.label, _m: M.key, _c: M.color,
+      // one entry per role that actually carries something for THIS metric, biggest first
+      _roles: perRow.map(slots => slots
+        .map(sl => ({ title: sl.title, n: Math.max(0, sl.v[M.key] || 0) }))
+        .filter(x => x.n > 0)
+        .sort((a, b) => b.n - a.n)),
+      data, backgroundColor: M.color, stack: 'p', borderWidth: 0, ...HBAR, ...extra
+    });
   });
   return datasets;
 }
@@ -153,16 +169,14 @@ export function roleBandOverlay(metrics) {
       const n = chart.data.labels.length;
       for (let i = 0; i < n; i++) {
         metrics.forEach(M => {
-          // #182h: `edges`, and the bar height `h`, were only ever used to draw the separators between roles.
-          // Both went with them rather than being left looking effective.
+          // #182h: a metric is ONE dataset now (roleBandDatasets merged them), so this reads a single bar
+          // rather than walking a run of role segments. The number it draws is unchanged.
           let lo = Infinity, hi = -Infinity, total = 0, y = 0;
-          chart.data.datasets.forEach((d, di) => {
-            if (d._m !== M.key || !chart.isDatasetVisible(di)) return;
+          const di = chart.data.datasets.findIndex(d => d._m === M.key);
+          if (di >= 0 && chart.isDatasetVisible(di)) {
             const bar = chart.getDatasetMeta(di).data[i];
-            if (!bar) return;
-            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y;
-            total += d.data[i] || 0;
-          });
+            if (bar) { lo = bar.base; hi = bar.x; y = bar.y; total = chart.data.datasets[di].data[i] || 0; }
+          }
           if (!total || hi <= lo) return;
 
           // ===== #182h (Jerin, 27 Sep 2026): 🗣 "Can we change the inner bifurcation of the chart bar? No one
@@ -205,17 +219,18 @@ export function roleSectionTooltip(metrics, opts = {}) {
       afterBody: (items) => {
         const chart = items[0].chart, i = items[0].dataIndex;
         const out = [];
+        // #182h: one dataset per metric now, with its role breakdown on `_roles` - the bars are solid, and this
+        // is where the detail lives instead. Same lines on screen as before the bars were merged.
         metrics.forEach(M => {
-          const bands = chart.data.datasets
-            .map((d, di) => ({ d, di }))
-            .filter(({ d, di }) => d._m === M.key && chart.isDatasetVisible(di) && (d.data[i] || 0) > 0);
-          const total = bands.reduce((a, { d }) => a + (d.data[i] || 0), 0);
+          const di = chart.data.datasets.findIndex(d => d._m === M.key);
+          if (di < 0 || !chart.isDatasetVisible(di)) return;
+          const d = chart.data.datasets[di];
+          const total = d.data[i] || 0;
           if (!total) return;
           out.push(`${M.label}: ${total}`);
-          bands
-            .map(({ d }) => ({ t: d._titles[i] || 'role not recorded', n: d.data[i] }))
-            .sort((a, b) => b.n - a.n)
-            .forEach(x => out.push(`   ${x.t} — ${x.n}`));
+          (d._roles && d._roles[i] || []).forEach(x => {
+            out.push(x.n == null ? `   ${x.t || x.title}` : `   ${x.title} — ${x.n}`);
+          });
         });
         const ex = typeof extra === 'function' ? extra(i, chart) : null;
         if (ex) out.push('', ex);
@@ -232,6 +247,9 @@ export function roleSectionTooltip(metrics, opts = {}) {
 }
 
 // Tooltip for a role-banded chart: only the bands that carry something, named by their role.
+// ⚠ UNUSED since #182h, and it would NOT work as written: it reads `_titles`, which roleBandDatasets stopped
+//   emitting when a metric became one dataset. Kept only because it shows the per-SEGMENT shape a divided bar
+//   would need. If you ever bring divided bars back, this and the pixel guard in roleBandOverlay go together.
 export function roleBandTooltip(rowTotalLabel = 'Total') {
   return {
     filter: (it) => (it.parsed.x || 0) > 0,
