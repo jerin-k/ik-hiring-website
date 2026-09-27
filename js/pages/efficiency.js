@@ -160,7 +160,7 @@ export function renderEfficiency(data) {
       .evel-table td:nth-child(1) { text-align:left; }   /* #151b: the heading above it centres like every other */
       .evel-table th:nth-child(2), .evel-table td:nth-child(2) { position:sticky; left:16.25rem; z-index:2; min-width:6rem; border-right:2px solid var(--border); }
       /* #151b: the heading band, not the page ground — these two are sticky, so they must be opaque (147a). */
-      .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:#eef2f8; }
+      .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:var(--navy); }
       .evel-table tbody td:nth-child(1), .evel-table tbody td:nth-child(2) { background:var(--card); }
 
       /* per-department chart cards */
@@ -935,7 +935,7 @@ export function initEfficiencyFilters(data) {
       });
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
-    html += `<tr class="totals-row" style="background:var(--accent-light);font-weight:700"><td>All departments</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
+    html += `<tr class="totals-row" style="font-weight:700"><td>All departments</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
     // ⚠ 14 = 1 name + 10 number columns + 3 people columns. It read 13 even before #182c - stale since #182e
     //   took the Missed pair off - so an empty table stretched its message across the wrong number of columns.
     body.innerHTML = html || `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
