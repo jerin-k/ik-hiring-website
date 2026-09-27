@@ -10,6 +10,7 @@ import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
+import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter } from '../tree-levels.js';   // #188
 import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
@@ -306,7 +307,7 @@ function computeThroughput(p, total) {
 const cssq = (v) => String(v).replace(/["\\]/g, '\\$&');
 
 function wireTree(tbody) {
-  const expandAll = document.getElementById('hmExpandAll')?.checked;
+  const expandAll = true;   // #188: a level that is ticked is drawn open - the chooser IS the expand control
   const setCaret = (row, sel, open) => { const c = row.querySelector(sel); if (c) c.textContent = open ? '▾' : '▸'; };
   const q = (sel) => tbody.querySelectorAll(sel);
 
@@ -327,6 +328,8 @@ function wireTree(tbody) {
       h.dataset.exp = on ? '1' : '0';
       setCaret(h, '.caret', on);
       q(`tr.leaf[data-g="${gi}"]`).forEach(r => { r.style.display = on ? '' : 'none'; });
+      // #188: with the Job level off, the department's children ARE the recruiter or topic rows
+      q(`tr[data-nojob="1"][data-g="${gi}"]`).forEach(r => { r.style.display = on ? '' : 'none'; });
       if (!on) {
         // collapsing the department closes everything under it, at every depth
         q(`tr.leaf[data-g="${gi}"]`).forEach(r => { if (r.dataset.job8) { r.dataset.texp = '0'; setCaret(r, '.caret-t', false); closeJob(r.dataset.job8); } });
@@ -485,7 +488,7 @@ export function renderHmReport(data) {
       <div class="fchip"><div class="ms" id="msHmJob"></div></div>
       
       
-      <label class="opt" id="hmExpandWrap" style="margin-left:auto;font-size:0.75rem;font-weight:500;display:flex;align-items:center;gap:0.3125rem;cursor:pointer;color:var(--accent)"><input type="checkbox" id="hmExpandAll" checked> Expand all</label>
+      <span id="hmExpandWrap" style="margin-left:auto">${levelChooser('hmLevels')}</span>
     <span class="period" id="hmPeriod"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span>${dojFilterHtml('hm', data.joiningPendingCases, 'margin-left:auto')}</div>
 
     <!-- ===== PANEL: POSITION FULFILMENT ===== -->
@@ -711,6 +714,7 @@ export function initHmFilters(data) {
     const tIdx = topicIndex(data, { wholeWin, winQs, dayOK, inDay: (d) => inRange(d, rg) });
     // #187: the recruiter level, from the SAME window, so its rows close the job row by construction.
     const rIdx = recruiterIndex(data, { wholeWin, winQs, dayOK, inDay: (d) => inRange(d, rg) });
+    const LV = levelsOn('hmLevels');   // #188: which branches this render is built from
 
     const groups = {};
     Object.entries(ob).forEach(([job8, rec]) => {
@@ -867,19 +871,91 @@ export function initHmFilters(data) {
         + `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
         + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span></td>`;
     };
+    // #188: attach the PEOPLE to the position-derived recruiter splits, so the merged rows carry both halves.
+    // A recruiter with people but no position of their own is added here too — the same rule as the job level.
+    const withPeople = (o, recs, dept) => {
+      const out = recs.map(r => Object.assign({}, r, { pending: 0, drop: 0, joWho: [], jpWho: [], topics: {} }));
+      const find = (k) => {
+        let t = out.find(x => x.recruiter === k);
+        if (!t) { t = { recruiter: k, total: 0, joined: 0, open: 0, missed: 0, jpTied: 0, openings: [],
+                        pending: 0, drop: 0, joWho: [], jpWho: [], topics: {} }; out.push(t); }
+        return t;
+      };
+      Object.entries(o.recs || {}).forEach(([k, rb]) => {
+        const t = find(k);
+        t.pending += rb.jpP || 0; t.drop += rb.drop || 0;
+        t.joWho = t.joWho.concat(rb.joWho || []);
+        t.jpWho = t.jpWho.concat(rb.jpWho || []);
+      });
+      out.forEach(r => {
+        const mine = new Set((r.openings || []).map(x => String(x.id).slice(0, 8)));
+        (hasTopicLevel(tIdx, dept, o.job8) ? tIdx[o.job8] : []).forEach(t => {
+          const ops = t.openings.filter(x => mine.has(String(x.id).slice(0, 8)));
+          if (ops.length) r.topics[t.topic] = { total: ops.length, joined: ops.filter(x => x.state === 'joined').length };
+        });
+      });
+      return out;
+    };
+    // #188: one topic-row writer, used at whatever depth the chosen levels put the topics.
+    const emitTopics = (list, gi, job8, pad) => (list || []).map(t => {
+      const unset = t.topic === NO_TOPIC;
+      return `<tr class="lv-topic" data-g="${gi}"${job8 ? ` data-job8="${esc(job8)}"` : ' data-nojob="1"'} style="display:none">`
+        + `<td style="padding-left:${pad}"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
+        // 🚨 A DASH, NOT A ZERO. At this depth the people have not been split by topic (#182a's rule), and a 0
+        // would read as "nobody", which is a different claim. Under a JOB the topic rows DO carry a real
+        // Joining pipeline count, because splitWho() places those people — that path is untouched.
+        + `<td style="font-weight:600">${t.total}</td><td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
+        + DASH + DASH + DASH + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
+        + jnWhoCell({ jpWho: [] }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+    }).join('');
+
     let html = '';
     deptArr.forEach((D, gi) => {
       const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
       const withNote = jobs2.filter(j => (noteOf(j.job8) || {}).text).length;
-      html += `<tr class="dept-header" data-hold="1" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
+      // #188 / #157: a department only LOOKS clickable when the chosen levels actually give it children. With
+      // Job and Recruiter both off, a department with no topic level has nothing under it — a caret there would
+      // be a row pretending to expand, which is the thing #157 removed.
+      const deptOpens = LV.job || LV.rec || (LV.top && deptHasTopics(D.dept));
+      html += `<tr class="dept-header"${deptOpens ? ' data-hold="1"' : ''} data-g="${gi}" data-exp="0" style="${deptOpens ? 'cursor:pointer;' : ''}background:var(--border-light)">
+        <td style="font-weight:600">${deptOpens ? CARET : ''}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
         + `<td class="jn-cell jn-sum">${(D.joWho || []).length ? `${D.joWho.length} joined` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${withNote ? `${withNote} of ${jobs2.length} written` : '<span class="zero">—</span>'}</td></tr>`;
+      // ===== #188: with Job switched OFF the department opens straight to its recruiters (or its topics),
+      // and the per-job splits are merged so those rows still add up to the department above them. =====
+      if (!LV.job) {
+        const merged = LV.rec
+          ? mergeByRecruiter(jobs2.map(o => withPeople(o, closeToJob(rIdx.byJob[o.job8] || [], o.total, o.joined), D.dept)), NO_RECRUITER)
+          : [];
+        if (LV.rec) {
+          merged.forEach(r => {
+            const unsetR = r.recruiter === NO_RECRUITER;
+            const gapP = r.total - r.joined - r.pending;
+            html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.total ? '' : ' noseat'}" data-g="${gi}" data-nojob="1" style="display:none">`
+              + `<td style="padding-left:1.875rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
+              + (r.total ? cnt(`${r.total} position${r.total === 1 ? '' : 's'}`) : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
+              + recMetrics(r, { jpP: r.pending, drop: r.drop }, gapP)
+              + jnWhoCell(r, { list: r.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
+              + jnWhoCell({ jpWho: r.jpWho || [] })
+              + `<td class="jn-cell"></td></tr>`;
+            if (LV.top && deptHasTopics(D.dept)) html += emitTopics(Object.entries(r.topics || {}).map(([t, v]) => Object.assign({ topic: t }, v)), gi, null, '3.25rem');
+          });
+        } else if (LV.top && deptHasTopics(D.dept)) {
+          // Department ➔ Topic: the same openings, grouped by topic across every job in the department
+          const byTopic = {};
+          jobs2.forEach(o => (tIdx[o.job8] || []).forEach(t => {
+            const x = byTopic[t.topic] || (byTopic[t.topic] = { topic: t.topic, total: 0, joined: 0 });
+            x.total += t.total; x.joined += t.joined;
+          }));
+          html += emitTopics(Object.values(byTopic).sort((a, b) => b.total - a.total), gi, null, '1.875rem');
+        }
+        return;
+      }
       jobs2.forEach(o => {
         // #157: only the two SME departments open past the job. Everything else is a plain leaf with no
         // caret and cursor:default - a row that does not pretend to expand.
-        const topics = hasTopicLevel(tIdx, D.dept, o.job8) ? tIdx[o.job8] : null;
+        const topics = (LV.top && hasTopicLevel(tIdx, D.dept, o.job8)) ? tIdx[o.job8] : null;   // #188
         // #187: the recruiter level sits BETWEEN the job and the topic, on every department. `closeToJob` tops up
         // the catch-all with anything openingRows could not see, so these rows always sum to the job row above.
         const recs = closeToJob(rIdx.byJob[o.job8] || [], o.total, o.joined);
@@ -890,7 +966,7 @@ export function initHmFilters(data) {
         });
         // #187: EVERY job opens to its recruiters, including a job owned by one person — naming the owner is
         // the point of the level, and the mock Jerin approved showed it that way.
-        const hasRecs = recs.length > 0;
+        const hasRecs = LV.rec && recs.length > 0;   // #188
         // #161 (option A): the job's people split by the topic of the opening they are tied to; the job row keeps the rest.
         const split = topics ? splitWho(o.jpWho, topics) : null;
         const who = split ? jnWhoCell({ jpWho: split.rest }, { note: whyUntied, under: o.jpWho.length - split.rest.length }) : jnWhoCell(o);
@@ -1212,7 +1288,7 @@ export function initHmFilters(data) {
       visStages.map(sk => TP_LABELS[sk]), {
         addedCols, hiredCol,
         total: toRow('Total', aggTP(allList)),
-        expandAll: !!document.getElementById('hmExpandAll')?.checked,
+        expandAll: true,
         overallLabel: A ? 'R1/OA → late' : 'R1 → Doc',
         labels: A ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
@@ -1237,7 +1313,7 @@ export function initHmFilters(data) {
           panelists: () => (msHmPanel ? msHmPanel.getSelected() : []),
           jobIds: () => openJobIds(),   // #125: only jobs with an opening opened in From–To
           range: () => ({ from: gFrom(), to: gTo() }),   // #120: Panelists follow From/To like every other panel here
-          expandAll: () => !!document.getElementById('hmExpandAll')?.checked
+          expandAll: () => true
         }
       }) || null;
     } else {
@@ -1452,7 +1528,7 @@ export function initHmFilters(data) {
   document.getElementById('hmDateTo')?.addEventListener('change', renderActive);
   document.getElementById('hmYear')?.addEventListener('change', () => { fillQuarterSelect(document.getElementById('hmQuarter'), document.getElementById('hmYear').value, true); applyYearQuarter(); renderActive(); });   // #127c: only the year's quarters on offer
   document.getElementById('hmQuarter')?.addEventListener('change', () => { applyYearQuarter(); renderActive(); });
-  document.getElementById('hmExpandAll')?.addEventListener('change', renderActive);
+  wireLevels('hmLevels', renderActive);   // #188
 
   // ONE Job multi-select in the main filter bar, wired to renderActive so it reaches every sub-tab.
   msHmJob = makeMultiSelect(document.getElementById('msHmJob'), 'Job', jobOptions, renderActive);   // #172c: ids, not names

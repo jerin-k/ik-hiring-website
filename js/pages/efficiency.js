@@ -22,6 +22,7 @@ import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { recruiterIndex, recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187
+import { levelChooser, levelsOn, wireLevels, mergeByRecruiter } from '../tree-levels.js';   // #188
 import { jobsWithOpeningIn, offerDropRows } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
@@ -78,11 +79,15 @@ const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td><td c
 // #182c: ONE dash cell. EFF_DASH above is a PAIR - it fills an HC/Score column - and the people columns are
 // single columns, so they need this instead.
 const EFF_ONE = '<td class="jn-cell nosplit"><span class="zero">\u2014</span></td>';
-const topicCells = (x) =>
+// #188: `noPending` dashes the Joining pipeline pair. Under a JOB the topic rows carry a real count, because
+// the people are placed by the opening their offer names; at DEPARTMENT level, with the job gone, they are not
+// split at all — and a 0 there would read as "nobody", which is a different claim (#182a's rule).
+const topicCells = (x, noPending) =>
   `<td style="font-weight:600">${x.total}</td><td class="score">${x.tS}</td>`
   + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td><td class="score">${x.jS}</td>`
-  + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
-  + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`
+  + (noPending ? EFF_DASH
+    : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
+      + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`)
   + EFF_DASH + EFF_DASH
   // #182c: a topic row names nobody. The joiners behind a topic are already listed on the role row above it,
   // and repeating them would show the same person twice in one open tree.
@@ -205,7 +210,7 @@ export function renderEfficiency(data) {
     <div class="eff-filters">
       <div class="fchip"><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
-      <div class="fchip" id="effExpandWrap"><label class="opt"><input type="checkbox" id="effExpandAll" checked> Expand all</label></div>
+      <div class="fchip" id="effExpandWrap">${levelChooser('effLevels')}</div>
       <span class="fdiv"></span>
       
       
@@ -374,7 +379,7 @@ export function initEfficiencyFilters(data) {
   let activeTab = 'fulfilment';
   let msPod = null, msDept = null, msJob = null, msEffTpStage = null, msEffPipeStage = null;   // #145a
 
-  const expandAll = () => !!document.getElementById('effExpandAll')?.checked;
+  const expandAll = () => true;   // #188: a ticked level is drawn open — the chooser IS the expand control
 
   // ONE quarter, for the job trees the activity panels hang their period data off.
   // 🚨 #120 (14 Sep 2026): this fell through to TODAY's quarter whenever EITHER dropdown read "All", so Year: All with
@@ -785,7 +790,7 @@ export function initEfficiencyFilters(data) {
                                     : (PM.dayOK && r.day && inRange(r.day, PM.rg));
     const bag = {};
     const get = (who) => bag[who] || (bag[who] = { recruiter: who, total: 0, joined: 0, missed: 0, pending: 0,
-      drop: 0, tS: 0, jS: 0, mS: 0, pS: 0, pNS: 0, dS: 0, joWho: [], jpWho: [],
+      drop: 0, tS: 0, jS: 0, mS: 0, pS: 0, pNS: 0, dS: 0, joWho: [], jpWho: [], topics: {},
       sc: j.score || 0, scoreable: j.scoreable, job8: j8 });
     ((data.openingRows) || []).forEach(r => {
       if (r.jobId8 !== j.jid || !inScope(r)) return;
@@ -794,6 +799,18 @@ export function initEfficiencyFilters(data) {
       b.total++; b.tS += s;
       if (r.state === 'joined') { b.joined++; b.jS += s; }
       else if (r.state === 'missed') { b.missed++; b.mS += s; }
+      // #188: the topic tally rides along so a recruiter can open to its topics when the Job level is off —
+      // Hiring Manager does exactly this, and a mirror tab that stops one level short is Rule 3 drift.
+      {
+        // 🚨 EVERY opening lands in a topic bucket, `(topic not set)` included — #157's rule: without the
+        // catch-all the topic rows stop adding up to the recruiter above them. Whether the level is DRAWN is a
+        // separate test (#160a: only beside a real topic), applied where the rows are emitted.
+        const key = r.topic || '(topic not set)';
+        const tk = b.topics[key] || (b.topics[key] = { total: 0, joined: 0, missed: 0, tS: 0, jS: 0, mS: 0 });
+        tk.total++; tk.tS += s;
+        if (r.state === 'joined') { tk.joined++; tk.jS += s; }
+        else if (r.state === 'missed') { tk.missed++; tk.mS += s; }
+      }
     });
     (PM.jpc[key] || []).forEach(c => {
       const b = get(recruiterOfPerson(rIdx, c));
@@ -954,11 +971,55 @@ export function initEfficiencyFilters(data) {
     const PM = peopleMaps(per);
     const tIdx = topicIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });
     const rIdx = recruiterIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });   // #187
+    const LV = levelsOn('effLevels');   // #188: which branches this render is built from
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
       const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${sum.unscored} unscored</span>` : '';
-      html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells({ ...sum, rollup: `${jobs.length} role${jobs.length === 1 ? '' : 's'}`, joWho: jobs.flatMap(x => x.sp.joWho || []) }, true)}</tr>`;
+      const deptOpens = LV.job || LV.rec || (LV.top && jobs.some(({ j }) => hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8))));
+      html += `<tr data-path="${di}"${deptOpens ? ' data-haschild' : ''} data-exp="0" style="${deptOpens ? 'cursor:pointer;' : ''}background:var(--border-light)">
+        <td style="font-weight:600">${deptOpens ? CARET : ''}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells({ ...sum, rollup: `${jobs.length} role${jobs.length === 1 ? '' : 's'}`, joWho: jobs.flatMap(x => x.sp.joWho || []) }, true)}</tr>`;
+      // ===== #188: Job switched OFF — the department opens to its recruiters, merged across every job so the
+      // rows still close the department above them; or straight to its topics when Recruiter is off too. =====
+      if (!LV.job) {
+        if (LV.rec) {
+          const merged = mergeByRecruiter(jobs.map(({ j }) => recSplits(j, dept, PM, per, rIdx, openingScores(data))), NO_RECRUITER);
+          merged.forEach((r, ri) => {
+            r.gap = r.total - r.joined - r.pending; r.gS = r.tS - r.jS - r.pS;
+            const unsetR = r.recruiter === NO_RECRUITER;
+            const recOpens = LV.top && Object.keys(r.topics || {}).some(k => k !== '(topic not set)');   // #160a
+            html += `<tr data-path="${di}-${ri}"${recOpens ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+              + `<td style="padding-left:1.875rem">${recOpens ? CARET : ''}<span class="${unsetR ? 'rec-unset' : 'rec-name'}">${r.recruiter}</span>`
+              + (r.total ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${r.total} position${r.total === 1 ? '' : 's'}</span>`
+                         : `<span class="noseat-tag">no position of their own</span>`)
+              + `</td>${cells(r, false)}</tr>`;
+            if (recOpens) Object.entries(r.topics || {}).sort((a, b2) => (a[0] === '(topic not set)') ? 1 : (b2[0] === '(topic not set)') ? -1 : b2[1].total - a[1].total).forEach(([tp, tv], ti) => {
+              html += `<tr data-path="${di}-${ri}-${ti}" style="display:none">`
+                + `<td style="padding-left:3.25rem"><span class="${tp === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${tp}</span>`
+                + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tv.total} opening${tv.total === 1 ? '' : 's'}</span></td>`
+                + topicCells(tv, true) + `</tr>`;
+            });
+          });
+        } else if (LV.top) {
+          const byTopic = {};
+          jobs.forEach(({ j }) => {
+            const j8 = (j.jid || '').slice(0, 8);
+            if (!hasTopicLevel(tIdx, dept, j8)) return;
+            const pt = scoreOf(j, PM.atQ, PM);
+            (tIdx[j8] || []).forEach(t => {
+              const x = byTopic[t.topic] || (byTopic[t.topic] = { topic: t.topic, total: 0, joined: 0, missed: 0, tS: 0, jS: 0, mS: 0 });
+              x.total += t.total; x.joined += t.joined; x.missed += t.missed || 0;
+              x.tS += t.total * pt; x.jS += t.joined * pt; x.mS += (t.missed || 0) * pt;
+            });
+          });
+          Object.values(byTopic).sort((a, b) => b.total - a.total).forEach((t, ti) => {
+            html += `<tr data-path="${di}-${ti}" style="display:none">`
+              + `<td style="padding-left:1.875rem"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
+              + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${t.total} opening${t.total === 1 ? '' : 's'}</span></td>`
+              + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS: t.tS, jS: t.jS, mS: t.mS }, true) + `</tr>`;
+          });
+        }
+        return;
+      }
       jobs.forEach(({ j, sp }, ji) => {
         const meta = sp.scoreable
           // #176a: the caption reads the OPENINGS, and shows a RANGE when they differ. Same helper as the
@@ -967,10 +1028,10 @@ export function initEfficiencyFilters(data) {
           : `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--orange)">unscored</span>`;
         // #157: only the two SME departments open past the job. A job with no topics stays a plain row with
         // no caret - it must not look clickable when there is nothing under it.
-        const tops = hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8)) ? tIdx[(j.jid || '').slice(0, 8)] : null;
+        const tops = (LV.top && hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8))) ? tIdx[(j.jid || '').slice(0, 8)] : null;   // #188
         // #187: the recruiter level, between the job and the topic — the order Jerin confirmed 27 Sep
         // ("Department ➔ Job ➔ Recruiter ➔ Topic. Works.").
-        const recs = recSplits(j, dept, PM, per, rIdx, openingScores(data));
+        const recs = LV.rec ? recSplits(j, dept, PM, per, rIdx, openingScores(data)) : [];   // #188
         const opensJob = recs.length > 0 || !!tops;
         html += `<tr data-path="${di}-${ji}"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
           + `<td style="padding-left:1.875rem;color:var(--muted)">${opensJob ? CARET : ''}${j.title}${meta}`
@@ -2091,7 +2152,7 @@ export function initEfficiencyFilters(data) {
   msDept = makeMultiSelect(document.getElementById('effMsDept'), 'Department', deptNames, renderAll);
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobOptions, renderAll);   // #172c
   document.addEventListener('click', closeMsPanels);
-  document.getElementById('effExpandAll')?.addEventListener('change', renderAll);
+  wireLevels('effLevels', renderAll);   // #188
   // #122: the Stages dropdown + Hide zero-pipeline above the Throughput squares.
   msEffTpStage = makeMultiSelect(document.getElementById('effMsTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('effTpHideEmpty')?.addEventListener('change', renderThroughput);

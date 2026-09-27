@@ -1879,6 +1879,12 @@ tr[data-hold] > td { background-color: var(--card); }
 .painted-halves tr[data-hold] > td.jn-cell { background-color: var(--half-ppl); }
 tr.dept-header[data-hold] > td { background-color: var(--border-light); }
 
+/* ===== #188: the "Show levels" chooser, where "Expand all" used to sit ===== */
+.lvl-pick { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 500; }
+.lvl-lbl { color: var(--muted); font-weight: 600; font-size: 0.6875rem; text-transform: none; }
+.lvl-opt { display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer; color: var(--accent); white-space: nowrap; }
+.lvl-opt input { margin: 0; }
+
 /* ===== #187: the recruiter level ===== */
 /* A recruiter's own name reads as a name, not as a heading — the same weight the topic row uses one level down. */
 .rec-name { color: var(--accent-deep); font-weight: 600; }
