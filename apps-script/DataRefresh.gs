@@ -1207,6 +1207,11 @@ function refreshDashboardData() {
     if (aid) { if (seenDrop[aid]) return; seenDrop[aid] = 1; }
     dropEvents.push({ jobId8: ev.jobId8, jobTitle: ev.jobTitle, department: ev.department,
       recruiter: ev.recruiter || null, sourcer: ev.sourcer || null, level: ev.level, complexity: ev.complexity,
+      // #183b (Jerin, 27 Sep 2026): the opening the OFFER names, and THAT opening's own Role Complexity - read from
+      //   openingById_, which holds every opening INCLUDING archived ones (Jana Gopi's IK-Opening--55 was archived on
+      //   3 Sep, so it is not in openingRows). Stage-history drops (no offer) carry neither; the site no longer counts them (#183c).
+      openingId: ev.openingId || null,
+      openingComplexity: (ev.openingId && openingById_[ev.openingId]) ? (openingCustomFieldByTitle_(openingById_[ev.openingId], /role complexity/i) || null) : null,
       quarter: ev.attrQuarter || null, source: 'offer',
       // #129: the DAY behind the date - the first Ref Check / Documentation / Offer arrival, else the archive date.
       day: ev.lateEntryAt || ev.archivedAt || null });
