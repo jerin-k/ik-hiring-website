@@ -488,7 +488,11 @@ function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
       }
 
       // per-offer event for split-scoring (recruiter+sourcer) + the HM joining-pending table (startDate)
-      events.push({ applicationId: o.applicationId, jobId8: (jobId || '').substring(0, 8), candidate: am.candidate || null,
+      // #184 (Jerin, 27 Sep 2026): the APPLICATION status travels with the event now. Without it the archived
+      // test below could not be written at all: e.appStatus was undefined there, so a guard on it would have
+      // been a silent no-op that skipped nothing. The public offerEvents array further down already carries
+      // this field; this is the same value, made available where the pending-opening set is built.
+      events.push({ applicationId: o.applicationId, appStatus: am.status || null, jobId8: (jobId || '').substring(0, 8), candidate: am.candidate || null,
         recruiter: rec || null, sourcer: src || null, decidedAt: (o.decidedAt || '').substring(0, 10),
         startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null, acceptanceStatus: o.acceptanceStatus || null,
         offerCreatedAt: firstCreated ? String(firstCreated).substring(0, 10) : null,
@@ -810,6 +814,16 @@ function refreshDashboardData() {
   offerResult.events.forEach(function (e) {
     if (!e.offerOpeningId) { if (!(e.offerStatus && /declin|reject|cancel/i.test(e.offerStatus))) offerMissingLink++; return; }
     if (e.offerStatus && /declin|reject|cancel/i.test(e.offerStatus)) return;
+    // ===== #184 (Jerin, 27 Sep 2026) - AN ARCHIVED CANDIDATE HAS NO LIVE OFFER =====
+    // He spotted it: I think thats an offer drop; candidate was archived. Hence showing under Drop in
+    // dashboard no? - and chose to fix the pipeline rather than the records: go with 2.
+    // 37 offers across the workspace still read WaitingOnCandidateResponse while the person is ARCHIVED
+    // (25 withdrew, 6 took another offer, 6 other reasons). The test above only catches declin/reject/cancel,
+    // so those offers kept their opening in pendingOpeningSet_ and jpTiedByOpening8_ - the position looked
+    // taken while the candidate was long gone. 12 openings were affected.
+    // PLACED HERE ON PURPOSE, after the offerMissingLink branch above: putting it earlier would stop counting
+    // missing opening links for archived people and move a Data Hygiene figure (413) nobody asked to change.
+    if (e.appStatus === "Archived") return;
     var o = openingById_[e.offerOpeningId];
     if (!o || o.closedAt) return;
     if (o.closeReasonId === CR_ONHOLD || o.closeReasonId === CR_SHELVED) return;
