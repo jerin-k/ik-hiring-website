@@ -703,6 +703,25 @@ table.metrics td.score { color: var(--muted); font-weight: 400; }
 table.metrics.wide-fulfil th:not(:first-child),
 table.metrics.wide-fulfil td:not(:first-child) { padding-left: 0.3125rem; padding-right: 0.3125rem; }
 table.metrics.wide-fulfil th.stage-hdr { white-space: normal; max-width: 5.25rem; line-height: 1.25; }
+/* #182c option A (Jerin: "A"): the two people columns at 10.5rem each. MEASURED, not chosen by eye - the
+   panel gives 84rem at a 1440 window, this table's numeric columns take 50.6rem and its name column floors
+   at 12.5rem, so 21rem is what is left and two columns split it. The Hiring Manager tab gives the same
+   columns 12.5-14rem; they are narrower here because there is no more room, which is the trade he picked.
+   ⚠ max-width overrides the stage-hdr cap above, or the heading would wrap inside 5.25rem. */
+/* 🚨 min-width AS WELL AS width, and the NAME column pinned too. This table is `table-layout: auto`, where
+   a declared width is only a suggestion: the name column had grown to 26.3rem on its longest role title, the
+   table was already at its 84rem ceiling, and the browser answered by squeezing these two columns down to
+   their 3.5rem minimum - the declared 10.5rem was simply ignored. Pinning the name column at its floor is what
+   frees the 21rem the two people columns need. Measured, not guessed: 12.5 + 50.6 + 10.5 + 10.5 = 84.1rem.
+   ⚠ The header cells are also stamped `c-num` by the column-family pass, and `td.c-num` carries
+     `min-width: 3.5rem`; these rules outrank it, but only because they set min-width too. */
+table.metrics.wide-fulfil th:first-child,
+table.metrics.wide-fulfil td:first-child { width: 12.5rem; max-width: 12.5rem; }
+/* 10rem, not the 10.5 the arithmetic allows: the LATERAL table is 0.3rem wider than the other four (its
+   Capacity and Goal headings read "(Offers)" rather than "(Joiners)"), and at 10.5 it alone ran 0.2rem past
+   the panel. A width that fits four tables out of five is not option A. */
+table.metrics.wide-fulfil th.jn-th,
+table.metrics.wide-fulfil td.jn-cell { width: 10rem; min-width: 10rem; max-width: 10rem; }
 table.metrics.wide-fulfil th.stage-sub { padding-top: 0.25rem; padding-bottom: 0.375rem; }
 /* Captions under a number ("12 not linked", "18% of outcomes") must not be what widens a column. */
 table.metrics.wide-fulfil td .sublab { white-space: nowrap; font-size: 0.5625rem; }
@@ -1769,3 +1788,25 @@ td.nosplit { color: #c1c7cf; }
    of dates - and is deliberately left alone here. */
 #recTisBody td, #effTisBody td { white-space: normal; }
 .tis-wait { white-space: normal; display: block; }
+
+/* ===== #182c (Jerin, 27 Sep 2026) — THE TWO PAINTED HALVES, on any table, driven by two variables ===== */
+/* 🗣 "Painted halves travel too." This replaces the 40 hand-numbered nth-child selectors #182b left in
+   hm-report.js — the ones a note claimed were "generated from two lists" when they never were (#182e).
+   🔑 IT IS BETTER THAN THE GENERATOR I PROMISED HIM, for a reason worth keeping: the people cells already
+      carry a CLASS (`.jn-cell`), so the split needs no column numbers at all. Nothing to half-shift when a
+      column is added or removed, and it works on the grouped Heads/Score tables where nth-child CANNOT —
+      their header rows hold 10 cells while their body rows hold 15, so a header nth-child does not line up
+      with the column beneath it. That is why Recruiter and Overall Efficiency could not just copy #182b.
+   🔑 ADDING A ROW TYPE IS ONE LINE: set --half-num and --half-ppl on it. A cell paints over its row, so every
+      row type still needs its own pair or its band gets flattened — that lesson from #182b is unchanged. */
+.painted-halves tr { --half-num: #f6f8fc; --half-ppl: #f4fafb; }                     /* ordinary leaf / job row */
+.painted-halves tr.dept-header, .painted-halves tr.lvl-pod { --half-num: #e5eaf4; --half-ppl: #e2eef1; }
+.painted-halves tr.lvl-rec { --half-num: #eef2f9; --half-ppl: #ecf5f7; }             /* between the band and a job row */
+.painted-halves tr.lv-topic, .painted-halves tr.lvl-stage { --half-num: #f7f9fd; --half-ppl: #f5fbfc; }
+.painted-halves tbody tr:hover { --half-num: #e9eff8; --half-ppl: #e6f3f6; }         /* last, and deeper than all of them */
+.painted-halves td:not(:first-child):not(.jn-cell) { background: var(--half-num); }
+.painted-halves td.jn-cell { background: var(--half-ppl); }
+.painted-halves th:not(:first-child):not(.jn-th) { background: #dfe7f4; color: #2d4470; }
+.painted-halves th.jn-th { background: #d4e7ed; color: #14576b; }
+/* 🚫 The totals row stays ONE flat band: it sits UNDER both halves rather than belonging to either.
+   `.totals-row td` forces its background with !important in this file, which is what makes that hold. */
