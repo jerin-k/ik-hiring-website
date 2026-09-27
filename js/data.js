@@ -136,6 +136,17 @@ export function offerDropRows(data) {
                  openingId: e.openingId || null, day: e.lateEntryAt || e.archivedAt || null }));
 }
 
+// ===== #189f (28 Sep 2026): ONE definition of Joining Conversion =====
+// (Joined + Joining pipeline) / Offered, as a whole percentage, or null when nobody reached an offer.
+// It was written out SIX times - the table and two chart callbacks on each of Recruiter Efficiency and
+// Overall Efficiency. Every copy agreed on the day the audit ran, which is exactly how this project has
+// been bitten before: nothing fails when one of them is edited and the others are not (Rule 3).
+// 🔑 Why it equals 1 - Offer drop / Offered: joinMaps define Offered as Joined + Joining pipeline + Offer
+// drop, so the two forms are the same arithmetic. The definitions blocks say so, and this is where it is true.
+export function joiningConversionPct(joined, pending, offered) {
+  return offered > 0 ? Math.round(((joined + pending) / offered) * 100) : null;
+}
+
 export function getData() {
   return dashboardData;
 }

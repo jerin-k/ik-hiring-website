@@ -23,7 +23,7 @@ import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobS
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { recruiterIndex, recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { levelChooser, levelsOn, wireLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
-import { jobsWithOpeningIn, offerDropRows } from '../data.js';   // #125
+import { jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.js';   // #125 · #189f: one conversion formula
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
          FULFIL_COLORS, fulfilStackOpts } from '../chart-style.js';   // #182e: moved to chart-style so HM shares them
@@ -1398,7 +1398,7 @@ export function initEfficiencyFilters(data) {
     const body = document.getElementById('effJoinBody'); if (!body) return;
     const convCell = (v) => {
       if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
-      const p = Math.round(((v.j + v.p) / v.o) * 100);
+      const p = joiningConversionPct(v.j, v.p, v.o);   // #189f
       const band = p >= 50 ? '' : (p >= 20 ? ' mid' : ' low');
       return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${p}%"></i></span>`
         + `<span class="dnum">${p}%</span></span></td>`;   // #153: the "N of N" caption is gone — Offered, Joined and Joining pending are columns on this same row
@@ -1464,7 +1464,7 @@ export function initEfficiencyFilters(data) {
           c.fillText(String(offered[i]), bar.x + uiPx(6), bar.y);
         });
         c.restore();
-        drawConvColumn(chart, offered.map((o, i) => o > 0 ? Math.round(((joined[i] + pending[i]) / o) * 100) : null), 'Joining conversion');
+        drawConvColumn(chart, offered.map((o, i) => joiningConversionPct(joined[i], pending[i], o)), 'Joining conversion');   // #189f
       }
     };
     effJoinChart = new Chart(ctx, {
@@ -1476,7 +1476,7 @@ export function initEfficiencyFilters(data) {
           valueLabels: false, stackTotals: false,
           legend: metricLegend(METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
           tooltip: roleSectionTooltip(METRICS, { totalLabel: 'Offered',
-            extra: (i) => { const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+            extra: (i) => { const conv = joiningConversionPct(joined[i], pending[i], offered[i]);   // #189f
               return conv == null ? '' : `Joining Conversion ${conv}%`; } })
         },
         scales: {
@@ -1532,11 +1532,15 @@ export function initEfficiencyFilters(data) {
     });
 
     // Hired stays green and Offer blue, exactly as on the Hiring Manager tab.
-    const cells = (total, stages) => `<td style="font-weight:600">${total}</td>` + visStages.map(k => {
+    // #189f: thousands separators, as the same table already had on Recruiter Efficiency. One table printed
+    // 33742 on two tabs and 7,628 on the third - the figures differ for a good reason (see the definitions),
+    // the formatting did not.
+    const n = (v) => v.toLocaleString();
+    const cells = (total, stages) => `<td style="font-weight:600">${n(total)}</td>` + visStages.map(k => {
       const v = stages[k] || 0;
-      if (k === 'hired' && v > 0) return `<td class="good">${v}</td>`;
-      if (k === 'offer' && v > 0) return `<td style="color:var(--blue);font-weight:600">${v}</td>`;
-      return `<td${v === 0 ? ' class="zero"' : ''}>${v}</td>`;
+      if (k === 'hired' && v > 0) return `<td class="good">${n(v)}</td>`;
+      if (k === 'offer' && v > 0) return `<td style="color:var(--blue);font-weight:600">${n(v)}</td>`;
+      return `<td${v === 0 ? ' class="zero"' : ''}>${n(v)}</td>`;
     }).join('');
 
     const totalsAll = {}; visStages.forEach(k => { totalsAll[k] = 0; });

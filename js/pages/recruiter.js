@@ -10,7 +10,7 @@ import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
-import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows } from '../data.js';   // #120a: the Job filter narrows every number · #125
+import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.js';   // #120a: the Job filter narrows every number · #125
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
 // so all three name the stages identically and in the same order. One owner, three readers.
 import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
@@ -1362,7 +1362,7 @@ export function initRecruiterFilters(baseData) {
       const cOf = (name) => CM.byRec[name] || { o: 0, j: 0, p: 0, dr: 0 };
       const convCell = (v) => {
         if (!v.o) return `<td class="gapcell"><span class="zero">—</span></td>`;
-        const pct = Math.round(((v.j + v.p) / v.o) * 100);
+        const pct = joiningConversionPct(v.j, v.p, v.o);   // #189f
         const band = pct >= 50 ? '' : (pct >= 20 ? ' mid' : ' low');
         return `<td class="gapcell"><span class="deltacell"><span class="track"><i class="conv${band}" style="width:${pct}%"></i></span>`
           + `<span class="dnum">${pct}%</span></span></td>`;   // #153: the "N of N" caption is gone — Offered, Joined and Joining pending are all columns on this same row
@@ -3404,7 +3404,7 @@ export function initRecruiterFilters(baseData) {
           c.fillText(String(offered[i]), bar.x + uiPx(6), bar.y);
         });
         c.restore();
-        drawConvColumn(chart, offered.map((o, i) => o > 0 ? Math.round(((joined[i] + pending[i]) / o) * 100) : null), 'Joining conversion');
+        drawConvColumn(chart, offered.map((o, i) => joiningConversionPct(joined[i], pending[i], o)), 'Joining conversion');   // #189f
       }
     };
     recJoinChart = new Chart(ctx, { type: 'bar',
@@ -3412,7 +3412,7 @@ export function initRecruiterFilters(baseData) {
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: CONV_PAD + 34, top: 20 } },
         plugins: { valueLabels: false, stackTotals: false,
           tooltip: roleSectionTooltip(JC_METRICS, { totalLabel: 'Offered',
-            extra: (i) => { const conv = offered[i] > 0 ? Math.round(((joined[i] + pending[i]) / offered[i]) * 100) : null;
+            extra: (i) => { const conv = joiningConversionPct(joined[i], pending[i], offered[i]);   // #189f
               return conv == null ? '' : `Joining Conversion ${conv}%`; } }),
           legend: metricLegend(JC_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }) },
         scales: { x: { ...gridY, stacked: true, title: { display: true, text: 'People', font: { size: 11 }, color: '#64748b' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } } } },
