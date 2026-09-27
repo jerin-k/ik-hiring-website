@@ -999,7 +999,7 @@ export function initEfficiencyFilters(data) {
               + `<td style="padding-left:3.25rem">${myTops && myTops.length ? CARET : ''}`
               + `<span class="${unsetR ? 'rec-unset' : 'rec-name'}">${r.recruiter}</span>`
               + (r.total ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${r.total} position${r.total === 1 ? '' : 's'}</span>`
-                         : `<span class="noseat-tag">no position of their own here</span>`)
+                         : `<span class="noseat-tag">no position of their own</span>`)
               + `</td>${cells(r, false)}</tr>`;
             if (!myTops || !myTops.length) return;
             mineTops = myTops;
