@@ -725,6 +725,25 @@ function inviteEmailHtml_(u) {
 // then confirms by READING data/job_notes.json back, so a save is never reported that the server cannot show.
 // 🚨 That file is pushed to a PUBLIC repo, so the guard the browser applies runs AGAIN here: a check that lives
 // only in the browser protects nobody who edits the URL.
+// ===== #180 (Jerin, 26 Sep 2026): a remark records a FIRST NAME, never an email address =====
+// 🚨 job_notes.json is pushed to a PUBLIC repo, and the guard above REFUSES a remark containing an email —
+//    so this file was publishing a staff address beside a rule forbidding one. TWO places leaked it: the
+//    stored `by`, and the GitHub COMMIT MESSAGE, which git keeps for ever and cannot be edited away later.
+// 🔑 A single-letter first piece means the name starts with an INITIAL (g.darshan, v.pooja), so take the NEXT
+//    piece — Darshan and Pooja, not G and V. Checked against all 24 people with access: those two plus the
+//    three shared mailboxes were the only ones a naive rule got wrong, and no two share a first name.
+// 🚨 THE BROWSER HAS THE SAME RULE, in js/job-notes.js (firstNameOf). Change one, change both — and remember
+//    /exec only picks this up after a NEW VERSION is published.
+function firstNameOf_(by) {
+  var local = String(by || '').split('@')[0].trim().toLowerCase();
+  if (!local) return '';
+  if (local === 'hr') return 'HR';
+  if (local === 'peopleops') return 'People Ops';
+  var bits = local.split(/[._-]+/).filter(function (b) { return b; });
+  var pick = (bits[0] && bits[0].length === 1 && bits[1]) ? bits[1] : (bits[0] || local);
+  return pick.charAt(0).toUpperCase() + pick.slice(1);
+}
+
 function publishNotePage_(e, userEmail) {
   var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
   var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Save remark'); };
@@ -740,11 +759,11 @@ function publishNotePage_(e, userEmail) {
     var doc = null;
     try { doc = loadDriveJson_('job_notes.json'); } catch (eR) { doc = null; }
     if (!doc || typeof doc !== 'object' || !doc.notes) doc = { schema: 1, updatedAt: null, notes: {} };
-    if (text) doc.notes[job8] = { text: text, by: userEmail, at: new Date().toISOString() };
+    if (text) doc.notes[job8] = { text: text, by: firstNameOf_(userEmail), at: new Date().toISOString() };   // #180: a first name, never an address
     else delete doc.notes[job8];
     doc.updatedAt = new Date().toISOString();
     saveDriveJson_('job_notes.json', doc);
-    pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Remark on job ' + job8 + ' by ' + userEmail);
+    pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Remark on job ' + job8 + ' by ' + firstNameOf_(userEmail));
     return page('<h2 style="color:#0f766e">Saved</h2><p>' + (text ? 'Remark saved' : 'Remark cleared') + ' by ' + userEmail + '. You can close this window.</p>');
   } catch (err) {
     return page('<h2 style="color:#be123c">Not saved</h2><p>' + String(err) + '</p>');
