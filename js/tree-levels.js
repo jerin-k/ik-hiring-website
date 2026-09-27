@@ -56,12 +56,21 @@ export function expandAllOn(id) {
   return s.xa !== false;
 }
 
-/** The control itself. Drop it where the "Expand all" label used to sit. */
-export function levelChooser(id) {
+/**
+ * The control itself. Drop it where the "Expand all" label used to sit.
+ *
+ * #189e: `keys` names the levels THIS tab's table actually has, so a tab offers only the ticks that move
+ * something. Hiring Manager and Overall Efficiency run Department ➔ Job ➔ Recruiter ➔ Topic and offer all
+ * three. Recruiter Efficiency runs Pod ➔ Recruiter ➔ Job ➔ Topic, where the recruiter IS the tab and the job
+ * cannot be taken away (its topic rows carry Goal, Joining pipeline and Joined only, so with the jobs merged
+ * away they would stop adding up to the recruiter) — it offers Topic alone. Left out, every level is offered.
+ */
+export function levelChooser(id, keys) {
   const on = levelsOn(id);
+  const lv = keys ? LEVELS.filter((l) => keys.includes(l.key)) : LEVELS;
   return `<span class="lvl-pick" id="${id}">`
     + `<span class="lvl-lbl" data-part="lvl">Show levels</span>`
-    + LEVELS.map(l => `<label class="lvl-opt" data-part="lvl"><input type="checkbox" data-lv="${l.key}"${on[l.key] ? ' checked' : ''}> ${l.label}</label>`).join('')
+    + lv.map(l => `<label class="lvl-opt" data-part="lvl"><input type="checkbox" data-lv="${l.key}"${on[l.key] ? ' checked' : ''}> ${l.label}</label>`).join('')
     + `<label class="lvl-opt" data-part="xa"><input type="checkbox" data-xa${expandAllOn(id) ? ' checked' : ''}> Expand all</label>`
     + `</span>`;
 }

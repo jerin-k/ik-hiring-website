@@ -165,6 +165,7 @@ export const DEFINITIONS = {
         heading: 'The two number types in every column',
         items: [
           ['Pod / Recruiter / Job / Topic', 'The four levels of the first column: pods, then the recruiters in them, then the roles each owns positions on, then &mdash; on the two SME departments only &mdash; the topic.'],
+          ['Show levels', 'Unticking <strong>Topic</strong> takes the topic level away, so a role stops opening any further. The pod, the recruiter and the role are what this tab is, so they cannot be taken away here; the other sub-tabs have an <em>Expand all</em> tick in the same place.'],
           ['Heads<span class=\"defs-tag\">HC</span>', 'A count of people, or of positions for Goal. It always counts on the <strong>recruiter&rsquo;s</strong> row; what they sourced for someone else shows as a small <strong>+N sourced</strong> line instead.'],
           ['Score', 'The same count weighted by how hard the role is: Family, Level and the <strong>Complexity set on that opening</strong> &mdash; not on the job, since two openings on one job can differ. <strong>No Complexity means no points.</strong> Where a candidate has a sourcer, Joined, Joining pipeline and Offer drop split half and half. Goal never splits.'],
         ]
