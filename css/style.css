@@ -579,8 +579,15 @@ table {
    their capitals because they are spelt that way.
    🔑 `white-space: normal` is deliberate: a clipped heading is worse than a two-line one (#151a), and it is
    also what lets a number column hold its 3.5rem width instead of being stretched by its own label. */
+/* #186a (Jerin, 27 Sep 2026, option B on the mock): a row that is HELD ON SCREEN looks different from a row
+   that scrolls. The heading and the Total row both go navy with white text — the SAME navy as the bar at the
+   top of the site, so this is the existing chrome colour rather than a new one, and the list now sits between
+   two navy edges. 🔑 Every distinction the pale bands carried is kept, re-expressed in navy: the grouped
+   Throughput header keeps its group row a shade DEEPER than the sub row (.stage-hdr vs .stage-sub below), and
+   #182b's two painted halves keep their split (the people half takes a navy with a teal cast). Change one of
+   those and you flatten a pairing someone chose on a mock-up. */
 th {
-  background: #eef2f8;
+  background: var(--navy);
   text-align: center;
   vertical-align: middle;
   padding: 0.625rem 0.75rem;
@@ -589,12 +596,12 @@ th {
   text-transform: none;
   letter-spacing: 0;
   line-height: 1.25;
-  color: var(--accent-deep);
+  color: #ffffff;
   position: sticky;
   top: 0;
   white-space: normal;
-  border-bottom: 2px solid #b9c7e0;
-  border-right: 1px solid #dae1ee;
+  border-bottom: 2px solid #16243a;
+  border-right: 1px solid var(--navy-line);
 }
 th:last-child { border-right: 0; }
 
@@ -607,9 +614,9 @@ thead tr:nth-child(2) th { top: var(--grp-h, 0px); z-index: 1; }
 
 th { cursor: pointer; user-select: none; }
 /* hover DEEPENS the band instead of replacing it — a heading that loses its ground on hover reads as a hole. */
-th:hover { background: #e4ebf6; }
-th[data-sort="asc"]::after { content: " \2191"; font-size: 0.625rem; color: var(--accent); }
-th[data-sort="desc"]::after { content: " \2193"; font-size: 0.625rem; color: var(--accent); }
+th:hover { background: #1a2a40; }
+th[data-sort="asc"]::after { content: " \2191"; font-size: 0.625rem; color: #9fc4e6; }
+th[data-sort="desc"]::after { content: " \2193"; font-size: 0.625rem; color: #9fc4e6; }
 
 td {
   padding: 0.5rem 0.75rem;
@@ -623,12 +630,49 @@ tr:hover td { background: #f8fafc; }
 .warn { color: var(--orange); font-weight: 600; }
 .bad { color: var(--red); font-weight: 600; }
 .zero { color: #c1c7cf; }
+/* #186 / #186a: the Total row is HELD on the bottom edge by holdTable() and painted like the heading, so the
+   list reads between two navy edges. It stays ONE flat band — it sits UNDER both of #182b's painted halves
+   rather than belonging to either, and the !important is what makes that hold.
+   🚨 position/z-index are load-bearing, not decoration: a held row has to paint OVER the rows it passes. It
+   sits under the heading (z-index 6) and over everything else. */
+.totals-row {
+  position: relative;
+  z-index: 5;
+}
 .totals-row td {
   font-weight: 600;
-  background: var(--bg) !important;
-  border-top: 1px solid var(--border);
-  color: var(--text);
+  background: var(--navy) !important;
+  border-top: 1px solid #16243a;
+  color: #ffffff;
 }
+/* The semantic colours are tuned for a pale ground and go muddy on navy. 🔑 THE TOKENS ARE REDEFINED FOR THE
+   ROW rather than each class being restated: every colour in a totals row — `.good`, `.warn`, `td.jn-sum`,
+   `td.score`, `.deltacell .dnum`, AND the inline `style="color:var(--orange)"` that three of these tables write
+   straight into the cell — resolves through one of these variables, so retinting them here catches all of them,
+   inline styles included, and keeps catching the next one somebody adds.
+   🚨 MEASURED 27 Sep: restating the classes alone left FIVE unreadable figures (Joining pipeline at 2.55:1, the
+   people counts at 2.68:1, Offer drop, the score columns, the Delta number) because those came from inline
+   styles and from classes not in the list. A contrast sweep found them; reading the CSS did not. */
+.totals-row {
+  --green: #8fd0dd;
+  --red: #f0aebe;
+  --orange: #f3d08a;
+  --accent: #cfe0f2;
+  --accent-deep: #cfe0f2;
+  /* --blue and --accent hold the SAME hex but are separate tokens, and one Recruiter cell writes
+     `color:var(--blue)` inline. Retinting only --accent left that figure at 2.38:1. Retint every token a
+     totals cell can reach, not the ones that happen to be in use today. */
+  --blue: #cfe0f2;
+  --green-light: #23414c;
+  --red-light: #3d2b33;
+  --orange-light: #3a3320;
+  --blue-light: #26364f;
+  --accent-light: #26364f;
+  --muted: #ccd8ea;
+  --text: #ffffff;
+  --text-secondary: #e6edf7;
+}
+.totals-row .zero { color: #8496b0; }   /* .zero is a literal, so it needs saying outright */
 
 /* ===== Throughput Stage Cells ===== */
 /* #148 option B (Jerin, 19 Sep 2026): the grouped header kept BOTH columns per measure and was restyled
@@ -638,14 +682,14 @@ tr:hover td { background: #f8fafc; }
    reads without a heavier border. ⚠ Jerin chose B knowing it stays 16 columns and still runs past the
    panel — that was on the mock-up. It fixes the reading, not the width. */
 table.metrics thead th { text-transform: none; letter-spacing: 0; white-space: normal; line-height: 1.25; }
-.stage-hdr { background: #e4ebf6 !important; text-align: center !important; vertical-align: middle;
-  border-left: 1px solid #b9c7e0; border-bottom: 1px solid #cdd8ea;
-  color: var(--accent-deep); font-weight: 600; }
+.stage-hdr { background: #1a2a40 !important; text-align: center !important; vertical-align: middle;
+  border-left: 1px solid #0f1c2e; border-bottom: 1px solid #33486a;
+  color: #ffffff; font-weight: 600; }
 .stage-sub { text-align: center !important; font-size: 0.625rem !important; font-weight: 500 !important;
-  color: var(--muted); background: #eef2f8 !important; border-left: 1px solid #dae1ee;
-  border-bottom: 2px solid #b9c7e0 !important; }
+  color: var(--navy-ink); background: var(--navy) !important; border-left: 1px solid var(--navy-line);
+  border-bottom: 2px solid #16243a !important; }
 /* the first sub-cell of each pair opens a group, so it carries the group's heavier rule */
-.stage-sub.grp-open { border-left: 1px solid #b9c7e0; }
+.stage-sub.grp-open { border-left: 1px solid #0f1c2e; }
 td.stage-cell { border-left: 1px solid var(--border-light); }
 td.stage-first { border-left: 1px solid var(--border); }
 
@@ -664,7 +708,7 @@ table.metrics th.stage-hdr,
 table.metrics th.stage-sub { text-align: center !important; }
 
 /* Group boundary: the rule belongs on the first column of each metric group. */
-table.metrics thead tr:first-child th { border-left: 1px solid var(--border); }
+table.metrics thead tr:first-child th { border-left: 1px solid var(--navy-line); }
 table.metrics thead tr:first-child th:first-child { border-left: 0; }
 
 /* Keep the name column visible while the metric columns scroll sideways.
@@ -678,10 +722,10 @@ table.metrics td:first-child {
    but not the FIRST one, so "Pod / Recruiter / Job" sat on the page ground in the old grey beside its restyled
    neighbours on all three Fulfilment tables. It is a heading, so it takes the heading band and is centred both
    ways like every other heading (#151a settled that over a left-aligned first column). */
-table.metrics thead th:first-child { z-index: 4; background: #eef2f8; text-align: center; }   /* #154: above both heading rows */
+table.metrics thead th:first-child { z-index: 4; background: var(--navy); text-align: center; }   /* #154: above both heading rows */
 /* A rowspan=2 group cell ends on the header's own bottom edge, so it carries the 2px rule, not .stage-hdr's
    light 1px divider — that 1px is there to sit ABOVE the Heads/Score row, and these cells have none below them. */
-table.metrics thead th[rowspan="2"] { border-bottom: 2px solid #b9c7e0; }
+table.metrics thead th[rowspan="2"] { border-bottom: 2px solid #16243a; }
 table.metrics tbody tr { background: var(--card); }
 table.metrics tbody tr:hover { background: #f8fafc; }
 /* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */
@@ -1813,8 +1857,8 @@ td.nosplit { color: #c1c7cf; }
 .painted-halves tbody tr:hover { --half-num: #e9eff8; --half-ppl: #e6f3f6; }         /* last, and deeper than all of them */
 .painted-halves td:not(:first-child):not(.jn-cell) { background: var(--half-num); }
 .painted-halves td.jn-cell { background: var(--half-ppl); }
-.painted-halves th:not(:first-child):not(.jn-th) { background: #dfe7f4; color: #2d4470; }
-.painted-halves th.jn-th { background: #d4e7ed; color: #14576b; }
+.painted-halves th:not(:first-child):not(.jn-th) { background: var(--navy); color: #ffffff; }
+.painted-halves th.jn-th { background: #1d3a48; color: #ffffff; }
 /* 🚫 The totals row stays ONE flat band: it sits UNDER both halves rather than belonging to either.
    `.totals-row td` forces its background with !important in this file, which is what makes that hold. */
 

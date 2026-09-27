@@ -130,8 +130,8 @@ export function renderAdmin(accessConfig, data) {
          edge until this rule was changed too. The COLUMN WIDTHS below stay exactly as #142 set them: Admin is a
          settings screen whose spacing Jerin chose panel by panel, not one of the reporting tables.
          NOTE no backticks in this comment: the whole block is inside a JS template literal. */
-      .ac-table th { text-align:center; vertical-align:middle; font-size:0.6875rem; text-transform:none; letter-spacing:0; color:var(--accent-deep); font-weight:600; padding:0.5rem 0.75rem;
-        background:#eef2f8; border-bottom:2px solid #b9c7e0; border-right:1px solid #dae1ee; white-space:normal; line-height:1.25; }
+      .ac-table th { text-align:center; vertical-align:middle; font-size:0.6875rem; text-transform:none; letter-spacing:0; color:#ffffff; font-weight:600; padding:0.5rem 0.75rem;
+        background:var(--navy); border-bottom:2px solid #16243a; border-right:1px solid var(--navy-line); white-space:normal; line-height:1.25; }
       .ac-table th:last-child { border-right:0; }
       .ac-table td { padding:0.5rem 0.75rem; border-top:1px solid var(--border-light); vertical-align:middle; font-size:0.78125rem; color:var(--text-secondary); }
       .ac-table tbody tr:first-child td { border-top:0; }
@@ -273,7 +273,7 @@ export function renderAdmin(accessConfig, data) {
       .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:0.875rem; padding:0.875rem; }
       .cfg-ref table { width:100%; font-size:0.75rem; }
       /* #151b: house heading style — this per-page rule was the third place CAPITALS were set (Rule 12). */
-      .cfg-ref th { text-align:center; color:var(--accent-deep); font-size:0.6875rem; text-transform:none; letter-spacing:0; }
+      .cfg-ref th { text-align:center; color:#ffffff; font-size:0.6875rem; text-transform:none; letter-spacing:0; }
       .cfg-scroll { overflow-x:auto; }
       @media (max-width:48.375rem) { .adm-split { grid-template-columns:1fr; } }
       /* .adm-subtabs is the recessed .subtab-band and .adm-subtab inherits .subtab-chip — see style.css */

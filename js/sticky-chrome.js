@@ -126,21 +126,49 @@ export function pinGroupHeadings(root) {
 // from the rect minus that offset. Cheaper and steadier than clearing every transform to re-measure.
 function baseTop(el) { return el.getBoundingClientRect().top - (el._holdY || 0); }
 
-function setHold(el, y) {
-  y = Math.max(0, Math.round(y));
+// #186: setShift is the same move without a floor. A heading is only ever held DOWN from the top of its table,
+// so setHold clamps at 0; a totals row is held UP to the bottom edge and needs a negative y. One implementation,
+// two doors — do not give the totals row its own transform code.
+function setShift(el, y) {
+  y = Math.round(y);
   if (el._holdY === y) return;
   el._holdY = y;
   el.style.transform = y ? 'translateY(' + y + 'px)' : '';
+}
+
+function setHold(el, y) {
+  setShift(el, Math.max(0, y));
 }
 
 function holdTable(table, top) {
   const head = table.tHead;
   const r = table.getBoundingClientRect();
   let headH = 0;
+  // #186 (Jerin, 27 Sep 2026): the Total row is held on the bottom edge while its own table is in view, so a
+  // long list always has its total beside the row being read. It is ALWAYS the last row of its table — every
+  // one of the five is appended after the loops — so its natural top is (table bottom - its own height).
+  const totals = table.querySelector('tr.totals-row');
+  const totH = totals ? totals.getBoundingClientRect().height : 0;
   if (head) {
     headH = head.getBoundingClientRect().height;
-    // never past the end of its own table, or a heading drifts over whatever comes next
-    setHold(head, Math.min(top - r.top, r.height - headH - 2));
+    // never past the end of its own table, or a heading drifts over whatever comes next — and never onto the
+    // held Total row, which now occupies the bottom of that same table
+    setHold(head, Math.min(top - r.top, r.height - headH - totH - 2));
+  }
+  if (totals) {
+    // The shift that puts its natural top on the viewport's bottom edge is simply (viewport height - table
+    // bottom): the row's own height appears on both sides and cancels. Never ABOVE the heading it belongs under.
+    // 🚨 THE GUARD IS NOT OPTIONAL — measured 27 Sep, and it is invisible to a clean console. Without
+    // `r.top < vh` a table still BELOW the fold has a hugely negative target, the floor catches it, and the
+    // Total row is parked under that table's heading — pinned to the TOP of a table nobody has scrolled to.
+    // Hold it only while its own table is actually on screen; otherwise it belongs at its natural place.
+    const vh = document.documentElement.clientHeight || window.innerHeight || 0;
+    let ty = 0;
+    if (vh && r.top < vh && r.bottom > 0) {
+      const floor = (r.top + (head ? (head._holdY || 0) : 0) + headH) - (r.bottom - totH);
+      ty = Math.max(Math.min(0, vh - r.bottom), floor);
+    }
+    setShift(totals, ty);
   }
   // #149's month headings sit under the heading row, and travel only as far as their own group's last row.
   const months = table.querySelectorAll('tbody > tr.pt-m');

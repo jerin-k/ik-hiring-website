@@ -460,7 +460,7 @@ export function renderRecruiter(data) {
       .vel-table td:nth-child(1) { text-align:left; }   /* #151b: the heading above it centres like every other */
       .vel-table th:nth-child(2), .vel-table td:nth-child(2) { position:sticky; left:15.625rem; z-index:2; min-width:6rem; border-right:2px solid var(--border); }
       /* #151b: the heading band, not the page ground — these two are sticky, so they must be opaque (147a). */
-      .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:#eef2f8; }
+      .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:var(--navy); }
       .vel-table tbody td:nth-child(1), .vel-table tbody td:nth-child(2) { background:var(--card); }
       .vel-table tbody tr.lvl-pod td:nth-child(1), .vel-table tbody tr.lvl-pod td:nth-child(2) { background:var(--border-light); }
 
@@ -490,7 +490,7 @@ export function renderRecruiter(data) {
       .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:1rem; }
       .cfg-ref table { width:100%; font-size:0.75rem; }
       /* #151b: house heading style, kept identical to admin.js's copy so the two cannot drift. */
-      .cfg-ref th { text-align:center; color:var(--accent-deep); font-size:0.6875rem; text-transform:none; letter-spacing:0; }
+      .cfg-ref th { text-align:center; color:#ffffff; font-size:0.6875rem; text-transform:none; letter-spacing:0; }
     </style>
 
     <div class="rec-subtabs subtab-band">
