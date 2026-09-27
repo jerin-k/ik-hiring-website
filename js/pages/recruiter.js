@@ -1,3 +1,4 @@
+import { levelChooser, levelsOn, wireLevels, syncLevels, expandAllOn, showLevels } from '../tree-levels.js';   // #189e: the same control as the other two tabs
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { jnWhoCell, wireMoreCells } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs
@@ -180,7 +181,7 @@ function wirePodTree(tbody) {
       tbody.querySelectorAll(`tr.leaf[data-g="${g}"]`).forEach(r => { r.style.display = exp ? 'none' : ''; });
     });
   });
-  if (document.getElementById('recExpandAll')?.checked) {
+  if (expandAllOn('recLevels')) {
     tbody.querySelectorAll('tr.pod-header').forEach(h => {
       h.dataset.exp = '1';
       const c = h.querySelector('.caret'); if (c) c.textContent = '▾';
@@ -241,7 +242,7 @@ function wireVelTree(tbody) {
         .forEach(r => { r.style.display = exp ? 'none' : ''; });
     });
   });
-  if (document.getElementById('recExpandAll')?.checked) {
+  if (expandAllOn('recLevels')) {
     tbody.querySelectorAll('tr.lvl-pod').forEach(h => { h.dataset.exp = '1'; const c = h.querySelector('.caret'); if (c) c.textContent = '▾'; });
     tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.style.display = ''; r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; });
     tbody.querySelectorAll('tr.lvl-stage').forEach(s => { s.style.display = ''; });
@@ -293,7 +294,7 @@ function wireTreePath(tbody) {
       });
     });
   });
-  if (document.getElementById('recExpandAll')?.checked) {
+  if (expandAllOn('recLevels')) {
     tbody.querySelectorAll('tr[data-path]').forEach(r => { r.style.display = ''; if (r.hasAttribute('data-haschild')) { r.dataset.exp = '1'; const c = r.querySelector('.caret'); if (c) c.textContent = '▾'; } });
   }
 }
@@ -530,7 +531,7 @@ export function renderRecruiter(data) {
       <div class="fchip"><div class="ms" id="msPod"></div></div>
       <div class="fchip"><div class="ms" id="msRec"></div></div>
       <div class="fchip"><div class="ms" id="msJob"></div></div>
-      <div class="fchip"><label class="opt"><input type="checkbox" id="recExpandAll" checked> Expand all</label></div>
+      <div class="fchip" id="recExpandWrap">${levelChooser('recLevels', ['top'])}</div>
       <span class="fdiv"></span>
       
       
@@ -1409,6 +1410,7 @@ export function initRecruiterFilters(baseData) {
     // under-use, which is the thing worth acting on.
     function fulfilRows(gs, T) {
       const q = selQuarter();
+      const LV = levelsOn('recLevels');   // #189e: which levels this render is built from
       // #179a: the counting rule is the TABLE'S, declared per pod in FULFIL_TABLES. 'hire' = Joined only,
       // no earlier-quarter subtraction (Sales and Others); 'offer' = Joined + Joining pending, both less
       // anyone on an earlier quarter's opening (SME-US, SME-India and Lateral). Splitting SME onto its own
@@ -1924,6 +1926,10 @@ export function initRecruiterFilters(baseData) {
               // #160a: the same rule on THIS recruiter's own openings - if none of theirs carries a real topic, the job
               // stays a plain row for them, even when a colleague's opening on the job has one.
               if (!hasRealTopic(tops)) tops = null;
+              // #189e: Topic unticked takes the level away altogether. Everything below already reads `tops`
+              // being null as "this job does not open", so the job row loses its caret and its topic rows,
+              // and the figures on the job row are untouched - they never came from the topic rows.
+              if (!LV.top) tops = null;
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
                 <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${jobScoreCaption(jobScoreSpread(j8t, m, q, openingScores(data)), m.level, `${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}`)}</span></td>${cells(jv, false)}</tr>`;
               (tops || []).forEach(t => {
@@ -3772,6 +3778,9 @@ export function initRecruiterFilters(baseData) {
     // stay: they decide which jobs are in scope (#125). A control shown over a panel must move its numbers.
     ['recVelFrom', 'recVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'hygiene' && name !== 'pipeline'));
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
+    // #189e: Position Fulfilment is the only table here with a level to take away, so it gets the chooser;
+    // every other sub-tab gets the plain Expand all tick. The same rule as the other two tabs (#189d).
+    showLevels('recLevels', name === 'fulfilment');
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
     renderActiveChart();
@@ -3823,7 +3832,7 @@ export function initRecruiterFilters(baseData) {
   const jobOptions = jobFilterOptions(baseData, new Set((baseData.jobs || []).map(j => j.id).filter(Boolean)));
   msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobOptions, onJobChange);   // #172c
   document.addEventListener('click', closeMsPanels);
-  document.getElementById('recExpandAll')?.addEventListener('change', renderAll);
+  wireLevels('recLevels', renderAll);   // #189e: one delegated listener for both ticks
 
   // Date filter — #129: narrows every panel (and sets Momentum's day columns), so a change re-renders the whole tab
   ['recVelFrom', 'recVelTo'].forEach(id =>
