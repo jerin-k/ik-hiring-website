@@ -49,7 +49,9 @@ const TCARET = '<span class="caret caret-t" style="display:inline-block;width:0.
 // rest. Total openings / Joined / Missed count POSITIONS and split by topic. #161 (Jerin, 22 Sep, option A): Joining
 // pending splits too, for the people whose OFFER names an opening (or who are locked on one) - they sit under that
 // opening's topic; everyone else stays on the job row with a small remark, so the topics plus the job row's list add
-// up to the job's Joining pending. Dropped and Delta stay dashed: a drop can never be tied to an opening (Rule 8).
+// up to the job's Joining pending. Dropped and Delta stay dashed: MOST drops carry no opening, so they cannot be
+// placed under a topic. 🚨 Rule 8 as CORRECTED 27 Sep 2026: "never" was FALSE - some drops DO carry one. The dash
+// stays because the split would be incomplete, not because it is unknowable.
 // Do NOT "helpfully" put a number in a dashed cell - a wrong number here looks right and nobody will question it.
 const DASH = '<td class="nosplit"><span class="zero">—</span></td>';
 const topicMetrics = (t, jp) =>
