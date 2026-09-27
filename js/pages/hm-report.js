@@ -909,7 +909,7 @@ export function initHmFilters(data) {
             const gapP = r.total - r.joined - rb.jpP;
             html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.noSeat ? ' noseat' : ''}" data-g="${gi}" data-job8="${esc(o.job8)}" data-rec="${esc(`${o.job8}|${r.recruiter}`)}" data-rexp="0" style="display:none">`
               + `<td style="padding-left:3.25rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
-              + (r.total ? cnt(`${r.total} position${r.total === 1 ? '' : 's'}`) : `<span class="noseat-tag">no position of their own here</span>`) + `</td>`
+              + (r.total ? cnt(`${r.total} position${r.total === 1 ? '' : 's'}`) : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
               + recMetrics(r, rb, gapP)
               + jnWhoCell(rb, { list: rb.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
               + jnWhoCell({ jpWho: rb.jpWho || [] })
