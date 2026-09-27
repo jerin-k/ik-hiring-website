@@ -1,4 +1,5 @@
 import { getData, jobsWithOpeningIn, jpCaseInPeriod } from '../data.js';   // #182f: one Joining Pending rule
+import { jnWhoCell, dayLabel, SHOW_FIRST, moreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer for all three tabs
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants (#182e: the bar-end total label)
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
@@ -76,65 +77,13 @@ const whyUntied = (c) => op8(c) ? 'opening not in this period'
 // so the two can never disagree. It is LIVE, like that column: From / To do not narrow it.
 // "Remarks" is free text the team writes against the JOB; it is saved by js/job-notes.js and survives until edited.
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const SHOW_FIRST = 3;   // names visible before "+N more"
+// SHOW_FIRST and dayLabel now live in people-list-cell.js (#182c) - imported above, so the three tabs agree.
 
-function dayLabel(iso) {
-  if (!iso || iso.length < 10) return '';
-  const d = +iso.slice(8, 10), m = parseInt(iso.slice(5, 7), 10);
-  return `${d} ${MON[m - 1] || ''}`;
-}
 // #182a (Jerin, 26 Sep 2026): ONE helper draws BOTH people columns — *Who has joined* and *Who is joining*.
 // 🚨 It was tempting to copy this for the new column. A second copy is how two columns that are meant to look
 //    identical drift apart, so the list and its quiet meta line are ARGUMENTS instead:
 //    `opt.list` (default the Joining Pending cases) and `opt.dateOf` (default the joining date).
-function jnWhoCell(o, opt = {}) {
-  const dateOf = opt.dateOf || (c => c.doj);
-  const list = [...(opt.list || o.jpWho || [])].sort((a, b) => String(dateOf(a) || '9999').localeCompare(String(dateOf(b) || '9999'))
-    || String(a.candidate || '').localeCompare(String(b.candidate || '')));
-  // #161: on a job with topics, the people under its topics are named there; this line says how many, so the job row
-  // still accounts for everyone behind its Joining pending figure.
-  const under = opt.under ? `<span class="jn-under">${opt.under} under ${opt.under === 1 ? 'its topic' : 'their topics'}</span>` : '';
-  if (!list.length) return under ? `<td class="jn-cell jn-who">${under}</td>` : '<td class="jn-cell"><span class="zero">—</span></td>';
-  // Name on its own line, then a quiet meta line. "date not set" repeated down the column was noise, so a missing
-  // date simply leaves the stage to speak (Jerin, 19 Sep).
-  const line = (c, i) => {
-    const d = dayLabel(dateOf(c)), st = c.subStage ? esc(c.subStage) : '';
-    const meta = [d ? `<span class="jn-d">${esc(d)}</span>` : '', st].filter(Boolean).join(' · ');
-    const why = opt.note ? opt.note(c) : '';
-    // #182a2 (Jerin, 26 Sep 2026): 🗣 "bring some distinguishment." — mark the joiners who are NOT behind the
-    // Joined number beside them, so the two figures stop looking like they disagree for no reason.
-    // 🚨 MEASURED FIRST, and it changed what to build: of 157 Q3 joiners, only **7** sit on an earlier quarter's
-    //    opening — the case Jerin named — while **40** have NO opening at all. Marking just the 7 would have left
-    //    the larger half unexplained, which is the half-fix he has rejected before.
-    // 🔑 Same chips and the same words the Joiners sub-tab already uses (`tdQuarter` in people-cells.js), so the
-    //    two views say the same thing about the same person rather than inventing a second vocabulary.
-    const tag = opt.tagOf ? opt.tagOf(c) : '';
-    return `<span class="jn-p${i >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
-      + (meta || tag ? `<span class="jn-m">${meta}${tag}</span>` : '') + (why ? `<span class="jn-r">${esc(why)}</span>` : '') + '</span>';
-  };
-  const more = list.length > SHOW_FIRST
-    ? `<button type="button" class="jn-more" data-jn-more="1">+${list.length - SHOW_FIRST} more</button>` : '';
-  // ===== #182a3 option C (Jerin, 26 Sep 2026: "go with C - but i like the green for date") =====
-  // The same date was stamped on EVERY person under it — "29 Jul" eleven times in one cell. Said once as a
-  // heading with its people beneath, it stops being clutter and starts saying "these people arrived together".
-  // A thin rule and a little air between groups is what makes a long list scannable; without it the names read
-  // as a wall. Where every date is unique this renders exactly as it did before, one heading per person.
-  // 🔑 The heading keeps the GREEN the per-person date already used (`.jn-who .jn-d`) — his call, and it means
-  //    the colour still says "date" wherever it appears rather than changing meaning between the two columns.
-  if (opt.groupByDate) {
-    let out = '', last = null, n = 0;
-    list.forEach((c) => {
-      const d = dayLabel(dateOf(c)) || 'date not set';
-      if (d !== last) { out += `<span class="jn-dh${n >= SHOW_FIRST ? ' jn-extra' : ''}">${esc(d)}</span>`; last = d; }
-      const tag = opt.tagOf ? opt.tagOf(c) : '';
-      out += `<span class="jn-p jn-pg${n >= SHOW_FIRST ? ' jn-extra' : ''}"><b>${esc(c.candidate || '(no name)')}</b>`
-        + (tag ? `<span class="jn-m">${tag}</span>` : '') + `</span>`;
-      n++;
-    });
-    return `<td class="jn-cell jn-who jn-grouped">${out}${more}${under}</td>`;
-  }
-  return `<td class="jn-cell jn-who">${list.map(line).join('')}${more}${under}</td>`;
-}
+// jnWhoCell moved to people-list-cell.js (#182c) - imported at the top. Do not re-add a local copy.
 // #182a2: which joiners are NOT behind the Joined number beside them, and WHY — two different answers, so two
 // different marks, saying the same thing `tdQuarter` says on the Joiners sub-tab.
 //   • an EARLIER quarter's opening ➔ "Q2 opening" (they filled last quarter's demand)
@@ -185,18 +134,8 @@ function wireJobNotes(body) {
   if (body.dataset.jnWired === '1') return;
   body.dataset.jnWired = '1';
   body.addEventListener('click', async (ev) => {
-    const moreBtn = ev.target.closest('[data-jn-more]');
-    if (moreBtn) {
-      ev.stopPropagation();
-      const cell = moreBtn.closest('td');
-      const open = cell.classList.toggle('jn-open');
-      // 🚨 #182a3 BUG: this counted every `.jn-extra`, and since #182a3 the hidden DATE HEADINGS carry that class
-      // too — so a cell with 11 hidden people and 1 hidden heading read "+12 more". Count PEOPLE only.
-      // `.jn-p.jn-extra` is right in both shapes: ungrouped people are `.jn-p`, grouped ones `.jn-p.jn-pg`,
-      // and a heading is `.jn-dh` with no `.jn-p`.
-      moreBtn.textContent = open ? 'Show fewer' : `+${cell.querySelectorAll('.jn-p.jn-extra').length} more`;
-      return;
-    }
+    // #182c: the toggle lives in people-list-cell.js now, so all three tabs share one copy (and one bug fix).
+    if (moreClick(ev)) return;
     const edit = ev.target.closest('[data-jn-edit]');
     if (edit) { ev.stopPropagation(); openEditor(edit.closest('td')); return; }
   });
