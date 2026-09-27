@@ -1810,3 +1810,14 @@ td.nosplit { color: #c1c7cf; }
 .painted-halves th.jn-th { background: #d4e7ed; color: #14576b; }
 /* 🚫 The totals row stays ONE flat band: it sits UNDER both halves rather than belonging to either.
    `.totals-row td` forces its background with !important in this file, which is what makes that hold. */
+
+/* #182c option A on Overall Efficiency: three people columns at 8rem. MEASURED - the panel gives 84rem, this
+   table's ten number columns take 42.5rem, and its name column is pinned at 17rem, leaving 24.5rem for three.
+   Same reasoning as the Recruiter table above; the numbers differ because the table does. */
+table.metrics.eff-fulfil th:first-child,
+table.metrics.eff-fulfil td:first-child { width: 17rem; max-width: 17rem; }
+table.metrics.eff-fulfil th.jn-th,
+table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8rem; }
+/* A remark shown read-only: the same quiet size as a name, wrapping rather than clipping. It is WRITTEN on the
+   Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
+.jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }

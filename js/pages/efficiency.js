@@ -1,5 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
+import { jnWhoCell, wireMoreCells } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter
+import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
 import { defsBlock } from '../definitions.js';
 import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdLinked, pointsCaption } from '../people-cells.js';   // #137 · #176b
@@ -75,12 +77,20 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 // Delta stay dashed: a drop can never be tied to an opening (Rule 8), and Delta would mix in the untied people.
 // 🚨 Never put a number in a dashed cell: a wrong one here looks right and nobody will question it.
 const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td><td class="score nosplit"><span class="zero">\u2014</span></td>';
+// #182c: ONE dash cell. EFF_DASH above is a PAIR - it fills an HC/Score column - and the people columns are
+// single columns, so they need this instead.
+const EFF_ONE = '<td class="jn-cell nosplit"><span class="zero">\u2014</span></td>';
 const topicCells = (x) =>
   `<td style="font-weight:600">${x.total}</td><td class="score">${x.tS}</td>`
   + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td><td class="score">${x.jS}</td>`
   + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
   + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`
   + EFF_DASH + EFF_DASH
+  // #182c: a topic row names nobody. The joiners behind a topic are already listed on the role row above it,
+  // and repeating them would show the same person twice in one open tree.
+  // 🚨 EFF_DASH is a PAIR of cells (an HC/Score column), not one. Using it three times here gave topic rows
+  //    17 cells against the header's 14 - caught by counting cells per row, not by looking at the page.
+  + EFF_ONE + EFF_ONE + EFF_ONE
 ;   // #182d: the Missed pair is gone - Delta already says what was not filled, live
 
 function wireTreePath(tbody, expandAll) {
@@ -198,9 +208,9 @@ export function renderEfficiency(data) {
       <h4 id="effFulfilCombinedHdr" style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Positions by department</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 1.125rem"><canvas id="effFulfilCombined"></canvas></div>
 
-      <div class="scroll-table"><table class="metrics">
+      <div class="scroll-table"><table class="metrics eff-fulfil painted-halves">
         <thead>
-          <tr><th rowspan="2" style="min-width:17.5rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th></tr>
+          <tr><th rowspan="2" style="min-width:17rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
@@ -637,9 +647,27 @@ export function initEfficiencyFilters(data) {
   const dkey = (d) => resolveDeptTeam(d || '').dept || d || 'Unknown';
   // #126: per = the period's quarters (null = every quarter on record). Joining Pending leaves out openings from before the period
   // STARTS — the Hiring Manager card's rule — and each drop keeps its quarter so its Score is priced at that quarter's points.
+  // #182c: Remarks are fetched once, then the panel is drawn again so the column fills. Read-only here.
+  let effNotesLoaded = false;
+  function ensureNotes(redraw) {
+    if (effNotesLoaded) return;
+    effNotesLoaded = true;
+    loadNotes().then(() => { try { redraw(); } catch (e) { /* the panel may have been left */ } });
+  }
   function peopleMaps(per) {
     const startQ = per ? per[0] : null;
-    const jp = {}, jpc = {}, drop = {};
+    const jp = {}, jpc = {}, drop = {}, jn = {};
+    // #182c: the people behind "Who has joined" - accepted offer AND moved to Hired, dated by their START date
+    // inside From / To. The SAME definition the Hiring Manager tab and the Joiners sub-tab use, deliberately:
+    // one meaning of "joiner" across the site.
+    // ⚠ NO earlier-quarter subtraction, exactly as those two take none. It is also why this list can outnumber
+    //   the Joined column beside it: that column counts POSITIONS, this one counts PEOPLE (Rule 1).
+    (data.offerEvents || []).forEach(e => {
+      if (!e.accepted || e.appStatus !== 'Hired') return;
+      if (!inRange(e.startDate, effRange())) return;
+      const k = dkey(e.department) + '|' + (e.jobTitle || '');
+      (jn[k] || (jn[k] = [])).push(e);
+    });
     (data.joiningPendingCases || []).forEach(c => {
       if (c.openingQuarter && startQ && c.openingQuarter < startQ) return;
       const k = dkey(c.department) + '|' + (c.job || c.jobTitle || '');
@@ -654,7 +682,7 @@ export function initEfficiencyFilters(data) {
       const k = dkey(e.department) + '|' + (e.jobTitle || '');
       (drop[k] || (drop[k] = [])).push(e.day ? quarterOfDay(e.day) : e.quarter);
     });
-    return { jp, jpc, drop, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };
+    return { jp, jpc, drop, jn, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };   // #182c: jn = the joiners, as people
   }
   // A role's points in one quarter. The job tree prices every role at PM.atQ; any other quarter of the period is priced here, once.
   function scoreOf(j, qq, PM) {
@@ -718,6 +746,9 @@ export function initEfficiencyFilters(data) {
       dS = 0;
     }
     return { total, joined, pending, drop, missed, gap, sc: j.score || 0, scoreable: j.scoreable,
+      // #182c: the people behind this job's figures, and its id for the remark. Keyed exactly as `pending` is
+      // keyed two lines up, so a list can never describe a different job from the number beside it.
+      joWho: (PM.jn[key] || []), jpWho: (PM.jpc[key] || []), job8: (j.jid || '').slice(0, 8),
       tS, jS, pS, pNS, dS, mS, gS: tS - jS - pS };   // #176c
   }
   const sumSplits = (arr) => arr.reduce((a, x) => ({
@@ -803,6 +834,7 @@ export function initEfficiencyFilters(data) {
 
   function fulfilTable(per) {
     const body = document.getElementById('effFulfilBody'); if (!body) return;
+    ensureNotes(() => fulfilTable(per));   // #182c: remarks arrive after the first paint, then this redraws once
     const z = (n) => n > 0 ? n : '<span class="zero">0</span>';
     // Gap cell borrowed wholesale from Recruiter → Fulfilment: a slim track that fills with the SHORTFALL,
     // the number beside it, so the bar and the number can never point in opposite directions.
@@ -833,7 +865,25 @@ export function initEfficiencyFilters(data) {
         + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
         + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
         + gapCell(x) + `<td class="score">${x.gS}</td>`
-;   // #182d: Missed removed
+ + peopleCells(x);   // #182c: Who has joined · Who is joining · Remarks
+    };
+    // ===== #182c (Jerin, 27 Sep 2026) — THE THREE PEOPLE COLUMNS =====
+    // 🗣 "overall to have all 3" · "Painted halves travel too" · and of three ways to fit them: "A".
+    // 🔑 Drawn by the SAME jnWhoCell the Hiring Manager and Recruiter tabs use (people-list-cell.js).
+    // 🚨 A DEPARTMENT row carries a count, not a list: US Business has 53 joiners and naming them on the
+    //    department row would repeat every name again on the job rows beneath it.
+    // 📝 Remarks is READ-ONLY here. A remark is stored once per job and both tabs read that one file, so
+    //    this is one note shown twice, not a second copy - it is written on the Hiring Manager tab.
+    const sumCell = (n, unit) => (n > 0
+      ? `<td class="jn-cell jn-sum">${n} across ${unit}</td>`
+      : '<td class="jn-cell"><span class="zero">&mdash;</span></td>');
+    const peopleCells = (x) => {
+      if (x.rollup) return sumCell((x.joWho || []).length, x.rollup) + sumCell(x.pending || 0, x.rollup)
+                          + '<td class="jn-cell"><span class="zero">&mdash;</span></td>';
+      const note = x.job8 ? (noteOf(x.job8) || {}).text : '';
+      return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true })
+           + jnWhoCell(x)
+           + `<td class="jn-cell">${note ? `<span class="jn-note-ro">${String(note).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))}</span>` : '<span class="zero">&mdash;</span>'}</td>`;
     };
     const rows = fulfilRows(per);
     // #157: same window as the job rows above - whole quarters when the range covers them, India-time days
@@ -844,7 +894,7 @@ export function initEfficiencyFilters(data) {
     rows.forEach(({ dept, jobs, sum }, di) => {
       const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${sum.unscored} unscored</span>` : '';
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
-        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells(sum, true)}</tr>`;
+        <td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${jobs.length}</span>${flag}</td>${cells({ ...sum, rollup: `${jobs.length} role${jobs.length === 1 ? '' : 's'}`, joWho: jobs.flatMap(x => x.sp.joWho || []) }, true)}</tr>`;
       jobs.forEach(({ j, sp }, ji) => {
         const meta = sp.scoreable
           // #176a: the caption reads the OPENINGS, and shows a RANGE when they differ. Same helper as the
@@ -880,9 +930,12 @@ export function initEfficiencyFilters(data) {
       });
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
-    html += `<tr style="background:var(--accent-light);font-weight:700"><td>All departments</td>${cells(g, true)}</tr>`;
-    body.innerHTML = html || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
+    html += `<tr class="totals-row" style="background:var(--accent-light);font-weight:700"><td>All departments</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
+    // ⚠ 14 = 1 name + 10 number columns + 3 people columns. It read 13 even before #182c - stale since #182e
+    //   took the Missed pair off - so an empty table stretched its message across the wrong number of columns.
+    body.innerHTML = html || `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
+    wireMoreCells(body);   // #182c: the "+N more" toggle
   }
 
   // Candidate-level joining-pending list, same source as the Hiring Manager tab (joiningPendingCases),
