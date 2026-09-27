@@ -18,7 +18,7 @@
 // #158 (Jerin, 22 Sep): the window's look is mock-up direction C in the dashboard's own colours — see the stylesheet.
 // Phase 3 (Claude creates the opening in Ashby) is NOT here; it has its own go.
 
-import { loadDashboardData } from './data.js';
+import { loadDashboardData, offerDropRows } from './data.js';
 import { loadMetricConfig } from './metric-config.js';
 import { familyForJob, classificationFor, gridForQuarter, scoreForRole, isSmeDept } from './score-model.js';
 
@@ -255,7 +255,7 @@ function evaluate(d, ctx) {
   // Adding a Sourcer - told: splits credit 50/50 (#108). 170b: sourcers are per opening now, so they are named together.
   const srcs = [];
   r.rows.forEach((x) => { if (x.sourcer && !srcs.includes(x.sourcer)) srcs.push(x.sourcer); });
-  if (srcs.length) check('info', `${srcs.join(', ')} ${srcs.length === 1 ? 'is sourcing' : 'are sourcing'} on this request: Joined, Joining pending and Drop split 50/50 with them. The Goal stays with the recruiter.`);
+  if (srcs.length) check('info', `${srcs.join(', ')} ${srcs.length === 1 ? 'is sourcing' : 'are sourcing'} on this request: Joined, Joining pipeline and Offer drop split 50/50 with them. The Goal stays with the recruiter.`);
 
   // Score: tier and points per opening, and what it adds to the recruiter's Goal
   const cls = classificationFor(fam, target, d.complexity, title);
@@ -285,9 +285,11 @@ function questionsFor(d, ctx, requests) {
   const nFree = rows.length + older;
   if (nFree > 0) qs.push({ key: 'free', rows, older, inClosing, nFree });
 
-  // Not re-opening a dropped position as new (#110)
+  // Not re-opening a dropped position as new (#110). #183c (27 Sep 2026): OFFER drops only, like every other panel. Only an
+  //   offer ties a person to a position, so only an offer drop frees one; someone who left at Ref Check never held a position,
+  //   and any position still open on the job is already listed by the 'free' question above. 🗣 Jerin: "How though?"
   const q = quarterOf(todayIST());
-  const drops = (data.dropEvents || []).filter(e => e.jobId8 === j8 && e.quarter === q).length;
+  const drops = offerDropRows(data).filter(e => e.jobId8 === j8 && e.quarter === q).length;
   if (drops > 0) qs.push({ key: 'drop', drops });
 
   // Same job already has a request in progress
@@ -598,7 +600,7 @@ export async function mountOpeningRequests(root, backend) {
     }
     if (a.key === 'drop') {
       return `<div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b></div>
-        <div class="or-bub">${a.drops} ${a.drops === 1 ? 'person' : 'people'} dropped on this job this quarter. If this request is to refill one of those positions, its opening is still there: reuse it rather than open a new one.
+        <div class="or-bub">${a.drops} ${a.drops === 1 ? 'person' : 'people'} dropped out after an offer on this job this quarter. If this request is to refill one of those positions, its opening is still there: reuse it rather than open a new one.
           <div class="or-btns"><button type="button" class="or-b p" data-ans="not-refill">Over &amp; above; proceed</button>
             <button type="button" class="or-b" data-ans="edit">Edit the draft</button></div></div></div></div>`;
     }

@@ -1,4 +1,4 @@
-import { getData, jobsWithOpeningIn, jpCaseInPeriod } from '../data.js';   // #182f: one Joining Pending rule
+import { getData, jobsWithOpeningIn, jpCaseInPeriod, offerDropRows } from '../data.js';   // #182f: one Joining Pending rule
 import { jnWhoCell, dayLabel, SHOW_FIRST, moreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer for all three tabs
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants (#182e: the bar-end total label)
 import { renderInterviewer, initInterviewer } from './interviewer.js';
@@ -406,10 +406,10 @@ export function renderHmReport(data) {
     <div class="hm-subtabs subtab-band">
       <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
       <button class="hm-subtab subtab-chip active" data-tab="positions">Position Fulfilment</button>
-      <button class="hm-subtab subtab-chip" data-tab="joiningpending">Joining Pending</button>
+      <button class="hm-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
-      <button class="hm-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
+      <button class="hm-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
     </div>
 
@@ -433,7 +433,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary painted-halves">
-        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pending</th><th>Dropped</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -508,12 +508,7 @@ export function renderHmReport(data) {
 // ⚠ Falls back to the old offer-only filter when `dropEvents` is absent, so the tab still works against a
 // data file written before this shipped. The fallback UNDERCOUNTS; it is a bridge, not an equivalent.
 function dropRows(data) {
-  if (data.dropEvents && data.dropEvents.length) return data.dropEvents;
-  return (data.offerEvents || [])
-    .filter(e => e.appStatus === 'Archived')
-    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
-                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
-                 day: e.lateEntryAt || e.archivedAt || null }));   // #129: the pipeline's rule for dropEvents.day
+  return offerDropRows(data);   // #183c: OFFER drops only — the one rule lives in data.js (offerDropRows)
 }
 // #129 (15 Sep 2026): is this drop inside the From / To range? A drop is dated by the day the candidate first reached Ref Check,
 // Documentation or Offer (dropEvents.day). A row from a data file older than 15 Sep has no day, so it can only answer for whole quarters.
@@ -754,8 +749,8 @@ export function initHmFilters(data) {
       <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div><div class="sub">opened in this period</div></div>
       <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.joined}</div><div class="sub">moved to Hired</div></div>
       <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div><div class="sub">still to fill</div></div>
-      <div class="card"><div class="label">Joining Pending</div><div class="value" style="color:var(--orange)">${totals.jpP}</div><div class="sub">in Ref Check, Documentation or Offer \u00b7 live</div></div>
-      <div class="card"><div class="label">Dropped</div><div class="value" style="color:var(--red)">${totals.drop}</div><div class="sub">${(totals.joined + totals.jpP + totals.drop) > 0 ? Math.round((totals.drop / (totals.joined + totals.jpP + totals.drop)) * 100) + '% of outcomes' : 'no outcomes yet'}</div></div>
+      <div class="card"><div class="label">Joining Pipeline</div><div class="value" style="color:var(--orange)">${totals.jpP}</div><div class="sub">in Ref Check, Documentation or Offer \u00b7 live</div></div>
+      <div class="card"><div class="label">Offer Drop</div><div class="value" style="color:var(--red)">${totals.drop}</div><div class="sub">${(totals.joined + totals.jpP + totals.drop) > 0 ? Math.round((totals.drop / (totals.joined + totals.jpP + totals.drop)) * 100) + '% of outcomes' : 'no outcomes yet'}</div></div>
     `;
 
     // #28 (Jerin, 2026-08-24): Delta = Total Openings − Joined − Joining Pending, and a NEGATIVE result
@@ -861,7 +856,7 @@ export function initHmFilters(data) {
       ctx1.style.maxHeight = h + 'px';   // override .chart-wrap canvas { max-height:300px } so the canvas fills the wrap
       const METRICS = [
         { key: 'joined', label: 'Joined', color: FULFIL_COLORS.joined },
-        { key: 'pending', label: 'Joining Pending', color: FULFIL_COLORS.pending },
+        { key: 'pending', label: 'Joining Pipeline', color: FULFIL_COLORS.pending },
         { key: 'gap', label: 'Delta', color: FULFIL_COLORS.gap, split: false }
       ];
       const byDept = {}; deptArr.forEach(D => { byDept[D.dept] = D; });

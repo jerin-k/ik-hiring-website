@@ -262,7 +262,7 @@ export function initHomeFilters() {
           <div class="card">
             <div class="label">Total Positions</div>
             <div class="value">${totalPositions}</div>
-            <div class="sub">${totalFilled} joined · ${totalPending} joining pending · ${totalDelta} delta</div>
+            <div class="sub">${totalFilled} joined · ${totalPending} joining pipeline · ${totalDelta} delta</div>
           </div>
           <div class="card">
             <div class="label">Applications</div>
@@ -301,7 +301,7 @@ export function initHomeFilters() {
       </div>
 
       <div class="pipeline-wrap">
-        <h3>Hiring Pipeline</h3>
+        <h3>Interview Pipeline</h3>
         <div class="pipeline-flow">
           ${pipelineStages.map(s => {
             const flex = Math.max((s.value / maxPipeline) * 100, s.value > 0 ? 8 : 2);
@@ -317,7 +317,7 @@ export function initHomeFilters() {
         <div class="ov-card">
           <div class="ov-head">
             <div class="ov-top"><h3 class="ov-title">Positions by Department</h3><span class="ov-chip">${ovEsc(periodLabel)}</span></div>
-            <div class="ov-sum">${deptArr.length ? `<b>${totalFilled}</b> of <b>${totalPositions}</b> positions joined · <b>${totalPending}</b> joining pending · <b>${totalDelta}</b> delta` : 'No opening data for this period'}</div>
+            <div class="ov-sum">${deptArr.length ? `<b>${totalFilled}</b> of <b>${totalPositions}</b> positions joined · <b>${totalPending}</b> joining pipeline · <b>${totalDelta}</b> delta` : 'No opening data for this period'}</div>
           </div>
           <div class="ov-list">
             ${deptArr.slice(0, 6).map(([dept, v], i) => {
@@ -339,7 +339,7 @@ export function initHomeFilters() {
               return `<div class="ov-row ov-rest"><span></span><span class="ov-small">+ ${rest.length} more department${rest.length > 1 ? 's' : ''}</span><span class="ov-small">${rj} / ${rt}</span></div>`;
             })()}
           </div>
-          <div class="ov-foot"><span class="ov-legend"><span><i class="j"></i>Joined</span><span><i class="p"></i>Joining Pending</span><span><i class="d"></i>Delta</span></span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
+          <div class="ov-foot"><span class="ov-legend"><span><i class="j"></i>Joined</span><span><i class="p"></i>Joining Pipeline</span><span><i class="d"></i>Delta</span></span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
         </div>
 
         <div class="ov-card">

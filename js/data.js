@@ -118,6 +118,24 @@ export function mergePanelists(rows) {
   });
 }
 
+// ===== #183c (Jerin, 27 Sep 2026): an OFFER DROP is someone who RECEIVED AN OFFER and then dropped out =====
+// 🗣 "Both head & points should carry the same drop logic; else its a gap that will stay forever" — then "A, it is ...
+//    everywhere". A position is recorded only on an OFFER, so only an offer drop can ever be priced; counting people who
+//    left at Ref Check / Documentation before any offer (dropEvents source 'stage') made heads and points count different
+//    people for good. So they are no longer drops ANYWHERE. This is the ONE home for the rule: the Hiring Manager, Recruiter
+//    and Overall Efficiency tabs all read it (their old dropRows copies now delegate here), so the tabs cannot drift.
+// The opening-request tool's "dropped out after an offer on this job" reminder (#110) reads it too. It briefly kept ALL late-stage
+//    drops on the claim that someone who left at Ref Check frees a position; 🗣 Jerin: "How though?" - they never held one.
+export function offerDropRows(data) {
+  if (data.dropEvents && data.dropEvents.length) return data.dropEvents.filter(e => e.source === 'offer');
+  // Fallback for a data file older than the unified dropEvents list: the archived offers ARE the offer drops.
+  return (data.offerEvents || [])
+    .filter(e => e.appStatus === 'Archived')
+    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
+                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
+                 openingId: e.openingId || null, day: e.lateEntryAt || e.archivedAt || null }));
+}
+
 export function getData() {
   return dashboardData;
 }

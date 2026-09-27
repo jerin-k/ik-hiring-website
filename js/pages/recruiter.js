@@ -6,10 +6,10 @@ import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar,
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
-import { openingScores, scoreOfOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
+import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
-import { scopeData, scopeToOpenings, jobsWithOpeningIn } from '../data.js';   // #120a: the Job filter narrows every number · #125
+import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows } from '../data.js';   // #120a: the Job filter narrows every number · #125
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
 // so all three name the stages identically and in the same order. One owner, three readers.
 import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
@@ -46,12 +46,16 @@ const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 //    once the people columns arrived - option A promised "nothing scrolls", and it has to be true on all five.
 //    The cost is real and was on the mock: a four-level tree (Pod > Recruiter > Job > Topic) now indents inside
 //    12.5rem, so long role and topic names wrap more on these three tables than they did.
+// #183 (Jerin, 27 Sep 2026): 🗣 "A it is" — a drop is PRICED from the opening its offer names — then 🗣 "almost all table
+//    except the below changes · Recruiter - SMEs · Recruiter - Sales". So `dropPts` is per table: Lateral and Others show a
+//    drop's points; Sales, SME-US and SME-India stay heads-only. ⚠ `drop` and `dropPts` are DIFFERENT rules: `drop` says
+//    whether Delta and Capacity used SUBTRACT the drop (Lateral only); `dropPts` says whether the Drop cell carries points.
 const FULFIL_TABLES = [
-  { key: 'sales',    pod: 'Sales',     count: 'hire',  drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
-  { key: 'smeus',    pod: 'SME-US',    count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
-  { key: 'smeindia', pod: 'SME-India', count: 'offer', drop: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
-  { key: 'lateral',  pod: 'Lateral',   count: 'offer', drop: true,  capUnit: 'Offers',  goalUnit: 'Offers',  lblWidth: '12.5rem' },
-  { key: 'others',   pod: 'Others',    count: 'hire',  drop: false, capUnit: 'NA',      goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'sales',    pod: 'Sales',     count: 'hire',  drop: false, dropPts: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'smeus',    pod: 'SME-US',    count: 'offer', drop: false, dropPts: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'smeindia', pod: 'SME-India', count: 'offer', drop: false, dropPts: false, capUnit: 'Joiners', goalUnit: 'Joiners', lblWidth: '12.5rem' },
+  { key: 'lateral',  pod: 'Lateral',   count: 'offer', drop: true,  dropPts: true,  capUnit: 'Offers',  goalUnit: 'Offers',  lblWidth: '12.5rem' },
+  { key: 'others',   pod: 'Others',    count: 'hire',  drop: false, dropPts: true,  capUnit: 'NA',      goalUnit: 'Joiners', lblWidth: '12.5rem' },
 ];
 
 // 🚨 COLUMN ARITHMETIC, in one place now: label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(2)
@@ -65,8 +69,8 @@ const fulfilHeadHtml = (T) => `
       <th rowspan="2" class="stage-hdr">Capacity used</th>
       <th colspan="2" class="stage-hdr">Goal (${T.goalUnit})</th>
       <th colspan="2" class="stage-hdr">Joined</th>
-      <th colspan="2" class="stage-hdr">Joining pending</th>
-      <th colspan="2" class="stage-hdr">Drop</th>
+      <th colspan="2" class="stage-hdr">Joining pipeline</th>
+      <th colspan="2" class="stage-hdr">Offer drop</th>
       <th colspan="2" class="stage-hdr">Delta</th>
       <th rowspan="2" class="stage-hdr jn-th">Who has joined</th>
       <th rowspan="2" class="stage-hdr jn-th">Who is joining</th></tr>
@@ -92,12 +96,7 @@ const fulfilBlockHtml = (T, i) => `
 // ⚠ Falls back to the old offer-only filter when `dropEvents` is absent, so the tab still works against a
 // data file written before this shipped. The fallback UNDERCOUNTS; it is a bridge, not an equivalent.
 function dropRows(data) {
-  if (data.dropEvents && data.dropEvents.length) return data.dropEvents;
-  return (data.offerEvents || [])
-    .filter(e => e.appStatus === 'Archived')
-    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
-                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
-                 day: e.lateEntryAt || e.archivedAt || null }));   // #129: the pipeline's rule for dropEvents.day
+  return offerDropRows(data);   // #183c: OFFER drops only — the one rule lives in data.js (offerDropRows)
 }
 // #129 (15 Sep 2026): is this drop inside the From / To range? A drop is dated by the day the candidate first reached Ref Check,
 // Documentation or Offer (dropEvents.day). A row from a data file older than 15 Sep has no day, so it can only answer for whole quarters.
@@ -497,11 +496,11 @@ export function renderRecruiter(data) {
     <div class="rec-subtabs subtab-band">
       <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
       <button class="rec-subtab subtab-chip active" data-tab="fulfilment">Position Fulfilment</button>
-      <button class="rec-subtab subtab-chip" data-tab="joiningpending">Joining Pending</button>
+      <button class="rec-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <button class="rec-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="rec-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="rec-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
-      <button class="rec-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
+      <button class="rec-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
       <button class="rec-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="rec-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
       <button class="rec-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
@@ -577,7 +576,7 @@ export function renderRecruiter(data) {
     <div class="rec-panel" data-panel="joining" style="display:none">
       <div class="chart-wrap" style="height:17.5rem"><canvas id="recJoinChart"></canvas></div>
       <div class="scroll-table"><table class="metrics join-table">
-        <thead><tr><th>Pod / Recruiter</th><th class="c-num">Offered</th><th class="c-num">Joined</th><th class="c-num">Joining pending</th><th class="c-cap">Dropped</th><th class="c-bar">Joining conversion</th></tr></thead>
+        <thead><tr><th>Pod / Recruiter</th><th class="c-num">Offered</th><th class="c-num">Joined</th><th class="c-num">Joining pipeline</th><th class="c-cap">Offer drop</th><th class="c-bar">Joining conversion</th></tr></thead>
         <tbody id="recJoinBody"></tbody>
       </table></div>
       ${defsBlock('rec-joining')}
@@ -703,14 +702,14 @@ export function renderRecruiter(data) {
 
           <div class="hyg-panel" data-h="nopod" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-rec">Recruiter</th><th class="c-num">Applications (all-time)</th><th class="c-num">Offers (all-time)</th><th class="c-num">Hired (all-time)</th><th class="c-num">Joining pending</th></tr></thead>
+              <thead><tr><th class="c-rec">Recruiter</th><th class="c-num">Applications (all-time)</th><th class="c-num">Offers (all-time)</th><th class="c-num">Hired (all-time)</th><th class="c-num">Joining pipeline</th></tr></thead>
               <tbody id="hygNoPodBody"></tbody>
             </table></div>
           </div>
 
           <div class="hyg-panel" data-h="nocap" style="display:none">
             <div class="scroll-table"><table>
-              <thead><tr><th class="c-rec">Recruiter</th><th>Pod</th><th class="c-num">Offers (all-time)</th><th class="c-num">Hired (all-time)</th><th class="c-num">Joining pending</th></tr></thead>
+              <thead><tr><th class="c-rec">Recruiter</th><th>Pod</th><th class="c-num">Offers (all-time)</th><th class="c-num">Hired (all-time)</th><th class="c-num">Joining pipeline</th></tr></thead>
               <tbody id="hygNoCapBody"></tbody>
             </table></div>
           </div>
@@ -1040,6 +1039,12 @@ export function initRecruiterFilters(baseData) {
   const closureScore = (openingId, meta, q) => {
     const idx = openingScores(data);
     return idx.ready ? scoreOfOpening(openingId, meta, q, idx) : scoreForRole(meta, q);
+  };
+  // #183b: an OFFER DROP priced from its own offer's opening — including one opened before the dashboard's opening list
+  //   begins (it carries `openingComplexity`). Same gate as closureScore above.
+  const dropScore = (e, meta, q) => {
+    const idx = openingScores(data);
+    return idx.ready ? scoreOfDropOpening(e, meta, q, idx) : scoreForRole(meta, q);
   };
 
   const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc, mOpen, open8) => {
@@ -1559,7 +1564,10 @@ export function initRecruiterFilters(baseData) {
         // 🚨 CORRECTED 27 Sep 2026: this used to say "a drop can NEVER be tied to an opening (settled with a
         //    control)". FALSE - 7 of 18 Q3 drops carry one (Rule 8). The null is OUR choice, not Ashby's
         //    limit; passing a drop's real opening here is #183, Jerin's call.
-        const sc = closureScore(null, { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
+        // #183: on a `dropPts` table the drop is priced from ITS OWN offer's opening (e.openingId, carried by the pipeline
+        //   since #183); no opening named ⇒ 0, exactly the #165 rule for every other position. Other tables keep null.
+        const dMeta = { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity };
+        const sc = T.dropPts ? dropScore(e, dMeta, q) : closureScore(null, dMeta, q);
         // #11: a sourcer carries their share of the bad news as well as the good ("split is everywhere").
         // ⚠ Drops found via stage history have their sourcer recovered from appMap in the pipeline, so a few
         // older archived rows can still be null — they then fall through as recruiter-only, which is correct.
@@ -2684,7 +2692,7 @@ export function initRecruiterFilters(baseData) {
       .filter(c => (!c.recruiter || c.recruiter === 'Unassigned')
         && !listedU.has((c.jobId8 || '') + '|' + String(c.candidate || '').trim().toLowerCase()))
       .map(c => ({ candidate: c.candidate, department: c.department, job8: c.jobId8, jobTitle: c.job || c.jobTitle,
-                   stage: c.subStage ? `${c.subStage} · Joining Pending` : 'Joining Pending', createdAt: '', lastActivity: '', applicationId: '' }))
+                   stage: c.subStage ? `${c.subStage} · Joining Pipeline` : 'Joining Pipeline', createdAt: '', lastActivity: '', applicationId: '' }))
       : [];
     const unassignedAll = floor ? (dq.unassigned || []).concat(jpNoRec) : [];
     const unassigned = unassignedAll.filter(u => keepJob(u.job8));
@@ -2930,14 +2938,14 @@ export function initRecruiterFilters(baseData) {
     // offer), dated by the offer's START DATE — the date Joined uses everywhere, so the Joined rows here are exactly Sourcing Mix's
     // "(source not recorded)" joiners for the quarter. A live or dropped offer with no start date falls back to the day it was created.
     const qOfNs = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const NS_ORDER = { 'Joined': 0, 'Joining pending': 1, 'Dropped after offer': 2 };
+    const NS_ORDER = { 'Joined': 0, 'Joining pipeline': 1, 'Offer drop': 2 };
     const nsBest = {};
     (data.offerEvents || []).forEach(e => {
       if (e.srcType) return;
       let outcome = null, when = null;
       if (e.appStatus === 'Hired' && e.accepted) { outcome = 'Joined'; when = qOfNs(e.startDate); }
-      else if (e.appStatus === 'Active' && e.offerStatus !== 'CandidateRejected') { outcome = 'Joining pending'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
-      else if (e.appStatus === 'Archived') { outcome = 'Dropped after offer'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
+      else if (e.appStatus === 'Active' && e.offerStatus !== 'CandidateRejected') { outcome = 'Joining pipeline'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
+      else if (e.appStatus === 'Archived') { outcome = 'Offer drop'; when = qOfNs(e.startDate) || qOfNs(e.offerCreatedAt); }
       if (!outcome || when !== q) return;
       const k = String(e.candidate || '').trim().toLowerCase() + '|' + (e.jobTitle || '');
       if (!nsBest[k] || NS_ORDER[outcome] < NS_ORDER[nsBest[k].outcome]) nsBest[k] = { e, outcome };
@@ -2947,7 +2955,7 @@ export function initRecruiterFilters(baseData) {
       || String(a.e.startDate || a.e.offerCreatedAt || '').localeCompare(String(b.e.startDate || b.e.offerCreatedAt || '')));
     const nsBody = document.getElementById('hygNoSrcBody');
     if (nsBody) {
-      const nsColour = { 'Joined': 'var(--green)', 'Joining pending': 'var(--orange)', 'Dropped after offer': 'var(--muted)' };
+      const nsColour = { 'Joined': 'var(--green)', 'Joining pipeline': 'var(--orange)', 'Offer drop': 'var(--muted)' };
       nsBody.innerHTML = noSrc.map(({ e, outcome }) => `<tr><td style="font-weight:500">${esc(String(e.candidate || '').trim())}</td><td>${esc(e.jobTitle)}</td>${jobStatusCell(e.jobId8)}<td>${esc(e.department)}</td><td><span style="font-size:0.6875rem;font-weight:600;color:${nsColour[outcome]}">${outcome}</span></td><td>${esc(e.startDate || '—')}</td><td>${esc(e.recruiter || '—')}</td></tr>`).join('')
         || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:1rem">Every selected candidate in ${esc(q)} has a source in Ashby. ✓</td></tr>`;
     }
@@ -2975,7 +2983,7 @@ export function initRecruiterFilters(baseData) {
     (data.offerEvents || []).forEach(e => { if (e.accepted && e.appStatus === 'Hired') addWork(e.recruiter, qOfD(e.startDate), 'joined', 1); });
     dropRows(data).forEach(e => addWork(e.recruiter, e.quarter, 'drops', 1));
     const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
-    const workTxt = (w) => [w.open ? (w.open % 1 ? 'a share of ' + plural(Math.ceil(w.open), 'opening') : plural(w.open, 'opening') + ' owned') : '', w.joined ? plural(w.joined, 'joiner') : '', w.drops ? plural(w.drops, 'drop') : ''].filter(Boolean).join(' · ');
+    const workTxt = (w) => [w.open ? (w.open % 1 ? 'a share of ' + plural(Math.ceil(w.open), 'opening') : plural(w.open, 'opening') + ' owned') : '', w.joined ? plural(w.joined, 'joiner') : '', w.drops ? plural(w.drops, 'offer drop') : ''].filter(Boolean).join(' · ');
     const datesMap = getRecruiterDates();
     const rosterRecs = allRecs.filter(r => r.name && r.name !== 'Unassigned' && !r.sourcerOnly);
     const datesOut = [];
@@ -3052,9 +3060,9 @@ export function initRecruiterFilters(baseData) {
         ...datesOut.map(({ r, qq, w, d }) => ['Work credited outside their dates', r.name, qq, workTxt(w), d.start || '', d.end || '']),
         ...datesNoEnd.map(r => ['Ashby account disabled, no Left on date', r.name, lastWorkQ(r.name), '', (datesMap[r.name] || {}).start || '', '']),
         ...datesNoStart.map(r => ['No Started on date', r.name, '', '', '', (datesMap[r.name] || {}).end || ''])],
-      nopod: () => [['Recruiter', 'Applications (all-time)', 'Offers (all-time)', 'Hired (all-time)', 'Joining pending'],
+      nopod: () => [['Recruiter', 'Applications (all-time)', 'Offers (all-time)', 'Hired (all-time)', 'Joining pipeline'],
         ...noPod.map(({ r, total, offers, hired, jp }) => [r.name, total, offers, hired, jp])],
-      nocap: () => [['Recruiter', 'Pod', 'Offers (all-time)', 'Hired (all-time)', 'Joining pending'],
+      nocap: () => [['Recruiter', 'Pod', 'Offers (all-time)', 'Hired (all-time)', 'Joining pipeline'],
         ...noCap.map(({ r, pod, offers, hired, jp }) => [r.name, pod, offers, hired, jp])],
       offergap: () => [['Candidate', 'Job', 'Job status', 'Department', 'Stage', 'Offer made', 'DOJ', 'Recruiter'],
         ...gapLive.map(g => [g.candidate || '', g.job || '', jobStatusOf(g.jobId8), g.department || '', g.subStage || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
@@ -3343,8 +3351,8 @@ export function initRecruiterFilters(baseData) {
     // every band; the role name is in the tooltip.
     const JC_METRICS = [
       { key: 'j', label: 'Joined', color: C.green },
-      { key: 'p', label: 'Joining Pending', color: '#C9A227' },
-      { key: 'dr', label: 'Dropped', color: '#b45a72' }
+      { key: 'p', label: 'Joining Pipeline', color: '#C9A227' },
+      { key: 'dr', label: 'Offer Drop', color: '#b45a72' }
     ];
     const jcRows = recs.map(r => {
       const per = CMc.byRecJob && CMc.byRecJob[r.name] ? CMc.byRecJob[r.name] : {};
@@ -3412,7 +3420,12 @@ export function initRecruiterFilters(baseData) {
     const recs = lastRecs.map(r => {
       const f = lastFulfil[r.name];
       if (!f || f.table !== T.key) return null;
-      // ===== #182g (Jerin, 27 Sep 2026): THESE CHARTS ARE DRAWN IN POSITIONS, NOT SCORE =====
+      // ===== #183e (Jerin, 27 Sep 2026): BACK TO POINTS, WITH THE CAPACITY LINE — this REVERSES #182g below =====
+      // 🗣 "all charts under recruiter to be based on Points & the old Capacity line should re-appear." 182g moved these
+      //    charts to positions only because a drop scored zero, so Lateral's points could not see drops. Offer drops are
+      //    priced now (#183b), so the chart judges on the SAME number as the table again. 🚨 182h's solid bars STAY.
+      //    Only the Recruiter charts: the Hiring Manager and Overview charts count positions and stay that way.
+      // (history) ===== #182g (Jerin, 27 Sep 2026): THESE CHARTS ARE DRAWN IN POSITIONS, NOT SCORE =====
       // 🗣 "revising Position fulfilment charts across HM, Recruiter & Overview - and use Heads to draw the
       //     charts not points", then of the three ways round the Capacity problem: 🗣 "1".
       // 🚨 THE CAPACITY LINE IS GONE FROM THE CHART, and that was the whole decision: capacity is typed in BY
@@ -3424,14 +3437,14 @@ export function initRecruiterFilters(baseData) {
       // 🚨 THIS DOES NOT SOLVE #183 - Jerin, 27 Sep: "Dont; that needs to be solved eventually." The TABLE still
       //    computes Goal and Capacity in Score, so the figure that judges Lateral still cannot see a drop. This
       //    is the drawing; #183 is the metric. Do not record it as fixed.
-      const goal = Math.round(f.goalHC || 0), achieved = Math.round(f.achievedHC || 0);
-      // Short of goal = the table's Delta in heads, rounded ONCE (#120): round(goal) - round(achieved) can differ by 1.
+      const goal = Math.round(f.goalSc || 0), cap = Math.round(f.capSc || 0), achieved = Math.round(f.achievedSc || 0);
+      // Short of goal = the table's Delta in points, rounded ONCE (#120): round(goal) - round(achieved) can differ by 1.
       // 🚨 Floored at 0 for the BAND only - a band cannot be negative. Delta itself is signed and never clamped
       //    (Rule 1, #179), so a surplus is named in the tooltip instead of being silently dropped.
-      const shortRaw = (f.shortHC != null ? f.shortHC : (f.goalHC || 0) - (f.achievedHC || 0));
+      const shortRaw = (f.shortSc != null ? f.shortSc : (f.goalSc || 0) - (f.achievedSc || 0));
       const short = Math.round(Math.max(0, shortRaw));
-      return { name: r.name, goal, achieved, short, roles: f.roles || [] };
-    }).filter(r => r && (r.goal > 0 || r.achieved > 0))
+      return { name: r.name, goal, cap, achieved, short, roles: f.roles || [] };
+    }).filter(r => r && (r.goal > 0 || r.cap > 0 || r.achieved > 0))
       .sort((a, b) => b.achieved - a.achieved);
     const wrap = ctx.parentElement;
     let emptyMsg = wrap && wrap.querySelector('.chart-empty');
@@ -3439,7 +3452,7 @@ export function initRecruiterFilters(baseData) {
       ctx.style.display = 'none';
       if (wrap && !emptyMsg) { emptyMsg = document.createElement('div'); emptyMsg.className = 'chart-empty'; emptyMsg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:7.5rem;color:var(--muted);font-size:0.8125rem;text-align:center;padding:1.25rem'; wrap.appendChild(emptyMsg); }
       // #182g: capacity is no longer a reason to draw a bar - the chart is Achieved against Goal, both in positions.
-      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${T.pod} in ${q.replace('-', ' ')} — no positions owned and nobody delivered by any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
+      if (emptyMsg) { emptyMsg.textContent = `Nothing to show for ${T.pod} in ${q.replace('-', ' ')} — no goal, capacity or delivery on any recruiter in this view.`; emptyMsg.style.display = 'flex'; }
       if (wrap) wrap.style.height = '';
       return;
     }
@@ -3449,7 +3462,7 @@ export function initRecruiterFilters(baseData) {
     const h = hbarHeight(recs.length);
     if (wrap) wrap.style.height = h + 'px';
     ctx.style.maxHeight = h + 'px';
-    const axisMax = Math.max(...recs.map(r => Math.max(r.achieved, r.goal))) * 1.1;   // #182g: no Cap line to leave room for
+    const axisMax = Math.max(...recs.map(r => Math.max(r.achieved, r.goal, r.cap))) * 1.1;   // #183e: room for the Cap line again
 
     const markers = {
       id: 'fulfilMarkers',
@@ -3472,10 +3485,21 @@ export function initRecruiterFilters(baseData) {
             c.fillStyle = '#41506B'; c.textAlign = 'center';
             c.fillText('Goal ' + r.goal, gx, y0 - uiPx(9));
           }
-          // 🚫 CAPACITY LINE REMOVED (#182g, Jerin chose this over entering a capacity in positions). It was a
-          //    dashed rose line labelled "Cap N". There is no positions capacity to draw, and estimating one from
-          //    the score is the #176c estimate he killed. Capacity and Capacity used are on the TABLE, in points.
-          //    If a positions capacity is ever entered in Admin, this is where its line goes back.
+          // #183e: the dashed Capacity line is BACK — capacity is set in points, so it belongs on a points chart.
+          //   (182g had removed it because there was no positions capacity to draw; the chart is in points again.)
+          if (r.cap > 0) {
+            const cx = x.getPixelForValue(r.cap);
+            c.strokeStyle = '#A15568'; c.lineWidth = 2; c.setLineDash([uiPx(3), uiPx(3)]);
+            c.beginPath(); c.moveTo(cx, y0 - uiPx(3)); c.lineTo(cx, y1 + uiPx(3)); c.stroke();
+            c.setLineDash([]);
+            // The Cap label sits in the gap BELOW this bar, which is where the next row's "Goal N" label sits too. When the
+            //   two would overlap ("Cap 180Goal 197" on Sales, 27 Sep) the Cap label gives way; the tooltip still says Capacity.
+            const capTxt = 'Cap ' + r.cap, capW = c.measureText(capTxt).width;
+            const nx = recs[i + 1], nb = meta.data[i + 1];
+            const clash = !!(nx && nx.goal > 0 && nb) &&
+              Math.abs(x.getPixelForValue(nx.goal) - cx) < (capW + c.measureText('Goal ' + nx.goal).width) / 2 + uiPx(4);
+            if (!clash) { c.fillStyle = '#A15568'; c.textAlign = 'center'; c.fillText(capTxt, cx, y1 + uiPx(10)); }
+          }
         });
         c.restore();
       }
@@ -3485,8 +3509,8 @@ export function initRecruiterFilters(baseData) {
     // from the role scores the TABLE recorded. Short-of-Goal is deliberately NOT split: it is a residual
     // against the goal, not something any single role owns — the same reason Delta stays whole elsewhere.
     const FUL_METRICS = [
-      { key: 'achieved', label: 'Achieved (positions)', color: C.green },
-      { key: 'short', label: 'Short of Goal (positions)', color: C.amber, split: false }
+      { key: 'achieved', label: 'Achieved (Score)', color: C.green },
+      { key: 'short', label: 'Short of Goal (Score)', color: C.amber, split: false }
     ];
     // 🚨 #120 (14 Sep 2026): the bar's length is the TABLE's Achieved. It used to be the role bands added up, each rounded
     // on its own, so credit with no job row went missing and half-points drifted. The row's rounded total is now shared
@@ -3502,9 +3526,9 @@ export function initRecruiterFilters(baseData) {
     };
     const fulRows = recs.map(r => {
       // #182g: band by HEADS now, and compare against the heads total from the same row.
-      const parts = (r.roles || []).filter(x => x.achievedHC > 0).map(x => ({ title: x.title, raw: x.achievedHC }));
+      const parts = (r.roles || []).filter(x => x.achievedSc > 0).map(x => ({ title: x.title, raw: x.achievedSc }));
       const listed = parts.reduce((a, p) => a + p.raw, 0);
-      const rest = ((lastFulfil[r.name] || {}).achievedHC || 0) - listed;
+      const rest = ((lastFulfil[r.name] || {}).achievedSc || 0) - listed;
       if (rest > 0.01) parts.push({ title: 'credit not tied to a listed role', raw: rest });
       return { label: r.name, sum: { achieved: r.achieved, short: r.short },
                jobs: shareOut(r.achieved, parts).map(p => ({ title: p.title, v: { achieved: p.n } })) };
@@ -3517,7 +3541,7 @@ export function initRecruiterFilters(baseData) {
         plugins: {
           valueLabels: false, stackTotals: false,
           legend: metricLegend(FUL_METRICS, { align: 'center', labels: { boxWidth: 11, boxHeight: 11, padding: 14, font: { size: 12 } } }),
-          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal (positions)', total: (i) => recs[i].goal,   // #120: it added the bars, so past-goal rows showed Achieved as "Goal"
+          tooltip: roleSectionTooltip(FUL_METRICS, { totalLabel: 'Goal', total: (i) => recs[i].goal,   // #120: it added the bars, so past-goal rows showed Achieved as "Goal"
             // #182g: everything here is POSITIONS. Capacity is not named at all - it is a score, it has no
             // positions value, and printing a points number beside heads is how a chart starts lying quietly.
             // A SURPLUS is named in words, because the band cannot draw one (Rule 1: Delta is signed).
@@ -3526,17 +3550,18 @@ export function initRecruiterFilters(baseData) {
               // \u26a0 NOT "this quarter": Goal counts positions OPENED inside From / To (#125/#129), so with a
               // narrow window a recruiter can deliver people against positions opened EARLIER and read Goal 0.
               // Saying "quarter" there puts a period label over a figure from a different period (Rule 4).
-              if (!(r.goal > 0)) return `No positions opened in this period${r.achieved > 0 ? ` \u00b7 ${r.achieved} delivered` : ''} \u00b7 Capacity is on the table, in points`;
+              const util = r.cap > 0 ? Math.round((r.achieved / r.cap) * 100) + '% of capacity' : 'no capacity set';
+              if (!(r.goal > 0)) return `No goal this quarter \u00b7 Capacity ${r.cap} \u00b7 ${util}`;
               // "0 past goal" is not English for hitting it exactly - say so, and keep a real surplus visible
               // (#179: over-delivery is worth seeing, and the band cannot draw it).
               const vs = r.achieved === r.goal ? 'exactly on goal'
                 : r.achieved > r.goal ? `${r.achieved - r.goal} past goal`
                 : `${r.goal - r.achieved} short of goal`;
-              return `Goal ${r.goal} position${r.goal === 1 ? '' : 's'} \u00b7 ${vs} \u00b7 Capacity is on the table, in points`;
+              return `Goal ${r.goal} \u00b7 Capacity ${r.cap} \u00b7 ${vs} \u00b7 ${util}`;
             } })
         },
         scales: {
-          x: { ...gridY, stacked: true, suggestedMax: axisMax, title: { display: true, text: 'Positions', font: { size: 11 }, color: '#64748b' } },   // #182g
+          x: { ...gridY, stacked: true, suggestedMax: axisMax, title: { display: true, text: 'Score', font: { size: 11 }, color: '#64748b' } },   // #183e: points again (182g drew positions)   // #182g
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
         }
       },

@@ -19,9 +19,9 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
-import { openingScores, scoreOfOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
+import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
-import { jobsWithOpeningIn } from '../data.js';   // #125
+import { jobsWithOpeningIn, offerDropRows } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
          FULFIL_COLORS, fulfilStackOpts } from '../chart-style.js';   // #182e: moved to chart-style so HM shares them
@@ -43,12 +43,7 @@ const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 // ⚠ Falls back to the old offer-only filter when `dropEvents` is absent, so the tab still works against a
 // data file written before this shipped. The fallback UNDERCOUNTS; it is a bridge, not an equivalent.
 function dropRows(data) {
-  if (data.dropEvents && data.dropEvents.length) return data.dropEvents;
-  return (data.offerEvents || [])
-    .filter(e => e.appStatus === 'Archived')
-    .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
-                 level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
-                 day: e.lateEntryAt || e.archivedAt || null }));   // #129: the pipeline's rule for dropEvents.day
+  return offerDropRows(data);   // #183c: OFFER drops only — the one rule lives in data.js (offerDropRows)
 }
 // #129 (15 Sep 2026): is this drop inside the From / To range? A drop is dated by the day the candidate first reached Ref Check,
 // Documentation or Offer (dropEvents.day). A row from a data file older than 15 Sep has no day, so it can only answer for whole quarters.
@@ -183,12 +178,12 @@ export function renderEfficiency(data) {
     <div class="eff-subtabs subtab-band">
       <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
       <button class="eff-subtab subtab-chip active" data-tab="fulfilment">Position Fulfilment</button>
-      <button class="eff-subtab subtab-chip" data-tab="joiningpending">Joining Pending</button>
+      <button class="eff-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <button class="eff-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
       <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
-      <button class="eff-subtab subtab-chip" data-tab="pipeline">Pipeline</button>
+      <button class="eff-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
@@ -212,7 +207,7 @@ export function renderEfficiency(data) {
 
       <div class="scroll-table"><table class="metrics eff-fulfil painted-halves">
         <thead>
-          <tr><th rowspan="2" style="min-width:17rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pending</th><th colspan="2" class="stage-hdr">Drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
+          <tr><th rowspan="2" style="min-width:17rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pipeline</th><th colspan="2" class="stage-hdr">Offer drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
@@ -319,8 +314,8 @@ export function renderEfficiency(data) {
           <th>Department / Job</th>
           <th class="c-num">Offered</th>
           <th class="c-num">Joined</th>
-          <th class="c-num">Joining pending</th>
-          <th class="c-cap">Dropped</th>
+          <th class="c-num">Joining pipeline</th>
+          <th class="c-cap">Offer drop</th>
           <th class="c-bar">Joining conversion</th>
         </tr></thead>
         <tbody id="effJoinBody"></tbody>
@@ -658,7 +653,7 @@ export function initEfficiencyFilters(data) {
   }
   function peopleMaps(per) {
     const startQ = per ? per[0] : null;
-    const jp = {}, jpc = {}, drop = {}, jn = {};
+    const jp = {}, jpc = {}, drop = {}, dropOp = {}, jn = {};
     // #182c: the people behind "Who has joined" - accepted offer AND moved to Hired, dated by their START date
     // inside From / To. The SAME definition the Hiring Manager tab and the Joiners sub-tab use, deliberately:
     // one meaning of "joiner" across the site.
@@ -683,8 +678,10 @@ export function initEfficiencyFilters(data) {
       if (e.day ? !inRange(e.day, rg) : (!e.quarter || (per && !per.includes(e.quarter)) || !whole)) return;
       const k = dkey(e.department) + '|' + (e.jobTitle || '');
       (drop[k] || (drop[k] = [])).push(e.day ? quarterOfDay(e.day) : e.quarter);
+      // #183: the same drop again, with the opening its offer names (null when it names none), so it can be priced.
+      (dropOp[k] || (dropOp[k] = [])).push({ q: e.day ? quarterOfDay(e.day) : e.quarter, e });
     });
-    return { jp, jpc, drop, jn, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };   // #182c: jn = the joiners, as people
+    return { jp, jpc, drop, dropOp, jn, atQ: scoreQOf(per), memo: {}, rg, whole, dayOK };   // #182c: jn = the joiners, as people
   }
   // A role's points in one quarter. The job tree prices every role at PM.atQ; any other quarter of the period is priced here, once.
   function scoreOf(j, qq, PM) {
@@ -748,7 +745,10 @@ export function initEfficiencyFilters(data) {
       // 🚨 CORRECTED 27 Sep 2026: this line used to give the REASON as "a drop can NEVER be tied to an
       //    opening". FALSE - 7 of 18 Q3 drops carry one (Rule 8). The RULE above is Jerin's and stands;
       //    whether to change it is #183.
-      dS = 0;
+      // #183 (Jerin, 27 Sep 2026: 🗣 "A it is"): the rule above CHANGED. A drop is now priced from the opening its own
+      //    offer names, like every other position (#165); one whose offer names no opening scores nothing. Heads never move.
+      //    ⚠ NOT the job-based `dS` computed further up - two openings on one job can differ (#165), so price each drop.
+      dS = (PM.dropOp[key] || []).reduce((sum, d) => sum + scoreOfDropOpening(d.e, oMeta, d.q, oIdx), 0);
     }
     return { total, joined, pending, drop, missed, gap, sc: j.score || 0, scoreable: j.scoreable,
       // #182c: the people behind this job's figures, and its id for the remark. Keyed exactly as `pending` is
@@ -1290,8 +1290,8 @@ export function initEfficiencyFilters(data) {
     // its colour (Jerin, 2026-08-29). The number for each metric is kept, drawn once across its bands.
     const METRICS = [
       { key: 'j', label: 'Joined', color: C.green },
-      { key: 'p', label: 'Joining Pending', color: '#C9A227' },
-      { key: 'dr', label: 'Dropped', color: '#A33253' }
+      { key: 'p', label: 'Joining Pipeline', color: '#C9A227' },
+      { key: 'dr', label: 'Offer Drop', color: '#A33253' }
     ];
     const chartRows = rows.map(r => ({
       label: r.dept,
@@ -1834,7 +1834,7 @@ export function initEfficiencyFilters(data) {
 
     const METRICS = [
       { key: 'joined', label: 'Joined', color: FULFIL_COLORS.joined },
-      { key: 'pending', label: 'Joining Pending', color: FULFIL_COLORS.pending },
+      { key: 'pending', label: 'Joining Pipeline', color: FULFIL_COLORS.pending },
       { key: 'gap', label: 'Delta', color: FULFIL_COLORS.gap, split: false }
     ];
     const chartRows = rows.map(r => ({
