@@ -64,7 +64,7 @@ const FULFIL_TABLES = [
 //    still have to match it, but the five header rows can no longer disagree with each other.
 const FULFIL_NCOL = 15;   // #182c: +2 people columns
 const fulfilHeadHtml = (T) => `
-  <tr><th rowspan="2" style="min-width:${T.lblWidth}">Pod / Recruiter / Job</th>
+  <tr><th rowspan="2" style="min-width:${T.lblWidth}">Pod / Recruiter / Job / Topic</th>
       <th rowspan="2" class="stage-hdr">Capacity (${T.capUnit})</th>
       <th rowspan="2" class="stage-hdr">Capacity used</th>
       <th colspan="2" class="stage-hdr">Goal (${T.goalUnit})</th>
@@ -167,6 +167,10 @@ function last7Dates() {
 
 // Collapse/expand a 2-level Pod -> recruiter tree.
 function wirePodTree(tbody) {
+  // #186b: the recruiter row only here too (Joining Conversion).
+  // #186b (Jerin, 27 Sep 2026): the RECRUITER row only — 🗣 *"only ... recruiter in Recruiter
+  // efficiency. Not further down."* The pod above it and the job rows below it do NOT hold: one row of held chrome.
+  tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.dataset.hold = '1'; });
   tbody.querySelectorAll('tr.pod-header').forEach(h => {
     h.addEventListener('click', () => {
       const g = h.dataset.g;
@@ -188,6 +192,13 @@ function wirePodTree(tbody) {
 // Collapse/expand a 3-level Pod -> Recruiter -> Job tree (Screening Efficiency, Time in Process).
 // Momentum used to use it too; it moved to the generic wireTreePath when it stopped having stage rows.
 function wireVelTree(tbody) {
+  // #186b (Jerin, 27 Sep 2026): the RECRUITER row holds — 🗣 *"All tables with Recruiter total row or a
+  // Department total row - help freeze thta"*, narrowed the same evening to *"only ... recruiter in Recruiter
+  // efficiency. Not further down."* The POD above it and the job/stage rows below it do NOT hold: one row of
+  // held chrome, not three.
+  // #186b (Jerin, 27 Sep 2026): the RECRUITER row only — 🗣 *"only ... recruiter in Recruiter
+  // efficiency. Not further down."* The pod above it and the job rows below it do NOT hold: one row of held chrome.
+  tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.dataset.hold = '1'; });
   tbody.querySelectorAll('tr.lvl-pod').forEach(h => {
     h.addEventListener('click', () => {
       const pi = h.dataset.pod;
@@ -259,6 +270,14 @@ function groupByPod(recs, quarter) {
 // Generic N-level collapsible tree. Each row: data-path ("0", "0-1", "0-1-2"…), data-haschild for
 // expandable rows. Clicking shows only direct children; collapsing hides + resets all descendants.
 function wireTreePath(tbody) {
+  // #186b (Jerin, 27 Sep 2026): every row that TOTALS its children freezes while you are inside it, so you
+  // always know whose numbers you are reading. `data-haschild` already means exactly "totals its children",
+  // and the path depth is the level, so marking them here covers every table this tree builds — one line
+  // instead of touching each render (Rule 3: the mirror tab cannot drift if it never had its own copy).
+  tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
+    const p = row.dataset.path || '';
+    if (p && p.split('-').length === 2) row.dataset.hold = '1';   // #186b: the recruiter level on this tab
+  });
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
     row.addEventListener('click', () => {
       const path = row.dataset.path, depth = path.split('-').length;

@@ -1853,12 +1853,46 @@ td.nosplit { color: #c1c7cf; }
 .painted-halves tr { --half-num: #f6f8fc; --half-ppl: #f4fafb; }                     /* ordinary leaf / job row */
 .painted-halves tr.dept-header, .painted-halves tr.lvl-pod { --half-num: #e5eaf4; --half-ppl: #e2eef1; }
 .painted-halves tr.lvl-rec { --half-num: #eef2f9; --half-ppl: #ecf5f7; }             /* between the band and a job row */
+/* #187: the Hiring Manager / Overall Efficiency recruiter row. Named `lv-rec` to sit beside `lv-topic` in the
+   same tree; `lvl-rec` above is the RECRUITER TAB's own row type and is a different thing — do not merge them. */
+.painted-halves tr.lv-rec { --half-num: #eef2f9; --half-ppl: #ecf5f7; }
+.painted-halves tr.lv-rec.norec, .painted-halves tr.lv-rec.noseat { --half-num: #fdf6ec; --half-ppl: #fdf6ec; }
 .painted-halves tr.lv-topic, .painted-halves tr.lvl-stage { --half-num: #f7f9fd; --half-ppl: #f5fbfc; }
 .painted-halves tbody tr:hover { --half-num: #e9eff8; --half-ppl: #e6f3f6; }         /* last, and deeper than all of them */
 .painted-halves td:not(:first-child):not(.jn-cell) { background: var(--half-num); }
 .painted-halves td.jn-cell { background: var(--half-ppl); }
 .painted-halves th:not(:first-child):not(.jn-th) { background: var(--navy); color: #ffffff; }
 .painted-halves th.jn-th { background: #1d3a48; color: #ffffff; }
+/* ===== #186b: a HELD group row has to paint over the rows it passes =====
+   The stack is heading (6) ➔ department ➔ job ➔ recruiter ➔ … and the held Total row (5) comes up from the
+   foot, so the group rows sit between the body and the Total row. Each level paints over the one below it.
+   🚨 A held row MUST be opaque. These rows take their ground from an inline `background` (dept) or from the
+   painted halves (job, recruiter), and a transparent cell would let the rows it passes show straight through. */
+tr[data-hold] { position: relative; }
+tr[data-hold="1"] { z-index: 4; }
+tr[data-hold="2"] { z-index: 3; }
+tr[data-hold="3"] { z-index: 2; }
+tr[data-hold] > td { background-color: var(--card); }
+.painted-halves tr[data-hold] > td:not(:first-child):not(.jn-cell) { background-color: var(--half-num); }
+.painted-halves tr[data-hold] > td.jn-cell { background-color: var(--half-ppl); }
+tr.dept-header[data-hold] > td { background-color: var(--border-light); }
+
+/* ===== #187: the recruiter level ===== */
+/* A recruiter's own name reads as a name, not as a heading — the same weight the topic row uses one level down. */
+.rec-name { color: var(--accent-deep); font-weight: 600; }
+/* The two catch-alls are DIFFERENT gaps and must not look identical to a reader:
+   `(recruiter not set)` is a POSITION with no recruiter; `no position of their own here` is a PERSON whose
+   recruiter owns no position on this job. Both are amber because both are something to fix in Ashby, but only
+   the first is italic and unnamed. Jerin chose to keep the second visible (option A, 27 Sep) rather than fold
+   those people into the job row, where 5 of 8 would have hidden behind "+N more". */
+.rec-unset { color: var(--muted); font-style: italic; font-weight: 500; }
+tr.lv-rec.norec td:first-child, tr.lv-rec.noseat td:first-child { box-shadow: inset 3px 0 0 #d9a441; }
+.noseat-tag {
+  font-size: 0.625rem; color: #8a5a12; background: #fdf1dd; border: 1px solid #edd6a8;
+  border-radius: 0.25rem; padding: 0 0.375rem; margin-left: 0.4375rem; white-space: nowrap;
+}
+.caret-r { color: var(--accent); margin-right: 0.3125rem; font-size: 0.625rem; }
+
 /* 🚫 The totals row stays ONE flat band: it sits UNDER both halves rather than belonging to either.
    `.totals-row td` forces its background with !important in this file, which is what makes that hold. */
 

@@ -31,9 +31,19 @@ export const DEFINITIONS = {
         ]
       },
       {
+        heading: 'Recruiter \u2014 who owns each position',
+        items: [
+          ['What the level shows', 'Open a role and its positions are split by the <strong>recruiter who owns each one</strong> \u2014 the Recruiter named on the position in Ashby. 17 of this quarter\u2019s 42 roles are shared between more than one recruiter, so the split shows work that the role row alone hides. The recruiter rows always add up to the role above them, in both the counts and the points.'],
+          ['Where a person is counted', 'A position belongs to whoever owns it. A <strong>person</strong> \u2014 someone in the joining pipeline, someone who joined, someone who dropped after an offer \u2014 belongs to the owner of the position their offer names, and where the offer names no position, to the recruiter who worked them. That places everybody, and it leans more on the position as more offers carry one.'],
+          ['(recruiter not set)', 'The positions on that role with no recruiter recorded in Ashby, kept in their own row so the rows still add up. It is a gap to fix in Ashby rather than an error here \u2014 most of these name their recruiter in the position\u2019s own title.'],
+          ['no position of their own here', 'A recruiter who worked somebody on this role but owns none of its positions. Their names are shown rather than folded into the role row, because that is usually the same recording gap seen from the other side.'],
+          ['Specialisation sits under the recruiter', 'On the two SME departments the topic level is now one step further in: role, then recruiter, then topic. A topic row adds up to the recruiter above it, not to the whole role.']
+        ]
+      },
+      {
         heading: 'Specialisation — SME - US and SME - India only',
         items: [
-          ['Why only these two', 'In these two departments one role can run several different topics at once, with a separate position opened for each. Everywhere else a role is one thing, so a job simply does not open any further — no arrow, nothing to click.'],
+          ['Why only these two', 'In these two departments one role can run several different topics at once, with a separate position opened for each. Everywhere else a role is one thing, so a job opens to its recruiters and stops there — no arrow, nothing to click.'],
           ['What the level shows', 'Open an SME role and its positions are split by the <strong>Specialization/Topic</strong> recorded against each one in Ashby. The topics always add up to the role above them — they are the same positions, grouped. A role opens only when <strong>at least one</strong> of its positions has a topic; one with none is a plain row with no arrow. <strong>Expand all</strong> opens every role down to its topics.'],
           ['(topic not set)', 'Shown only inside a role that has other positions with a topic: the positions on that role nobody has given a topic yet. It is <strong>not</strong> an error, and it is kept so the topics still add up to the role. The size of that row is simply how much is left to fill in.'],
           ['Why some columns show a dash', 'Only <strong>Total openings</strong> and <strong>Joined</strong> split by topic for everyone, because those count positions and a position carries its own topic. <strong>Joining pipeline</strong> splits for the people Ashby ties to a position before hire \u2014 their <strong>offer names an opening</strong> \u2014 who sit under that opening\u2019s topic; everyone else stays on the role row, so the topics plus the role row add up to its Joining pipeline. <strong>Offer drop</strong> and <strong>Delta</strong> show a dash: most people who dropped cannot be placed under a topic, so a per-topic figure would be incomplete, and a dash is shown rather than a number that would look right and be wrong. Those figures are correct on the role row above.'],
@@ -477,9 +487,19 @@ export const DEFINITIONS = {
         ]
       },
       {
+        heading: 'Recruiter \u2014 who owns each position',
+        items: [
+          ['What the level shows', 'Open a role and its positions are split by the <strong>recruiter who owns each one</strong> \u2014 the Recruiter named on the position in Ashby. 17 of this quarter\u2019s 42 roles are shared between more than one recruiter, so the split shows work that the role row alone hides. The recruiter rows always add up to the role above them, in both the counts and the points.'],
+          ['Where a person is counted', 'A position belongs to whoever owns it. A <strong>person</strong> \u2014 someone in the joining pipeline, someone who joined, someone who dropped after an offer \u2014 belongs to the owner of the position their offer names, and where the offer names no position, to the recruiter who worked them. That places everybody, and it leans more on the position as more offers carry one.'],
+          ['(recruiter not set)', 'The positions on that role with no recruiter recorded in Ashby, kept in their own row so the rows still add up. It is a gap to fix in Ashby rather than an error here \u2014 most of these name their recruiter in the position\u2019s own title.'],
+          ['no position of their own here', 'A recruiter who worked somebody on this role but owns none of its positions. Their names are shown rather than folded into the role row, because that is usually the same recording gap seen from the other side.'],
+          ['Specialisation sits under the recruiter', 'On the two SME departments the topic level is now one step further in: role, then recruiter, then topic. A topic row adds up to the recruiter above it, not to the whole role.']
+        ]
+      },
+      {
         heading: 'Specialisation \u2014 SME - US and SME - India only',
         items: [
-          ['Why only these two', 'In these two departments one role can run several different topics at once, with a separate position opened for each. Everywhere else a role is one thing, so a job simply does not open any further \u2014 no arrow, nothing to click.'],
+          ['Why only these two', 'In these two departments one role can run several different topics at once, with a separate position opened for each. Everywhere else a role is one thing, so a job opens to its recruiters and stops there \u2014 no arrow, nothing to click.'],
           ['What the level shows', 'Open a department, then an SME job under it, and its positions split by the <strong>Specialization/Topic</strong> recorded against each one in Ashby. The topics always add up to the job above them \u2014 they are the same positions, grouped. A job opens only when <strong>at least one</strong> of its positions has a topic. The topic is the bottom of the tree: nothing opens under it.'],
           ['(topic not set)', 'Shown only inside a job that has other positions with a topic: the positions on that job nobody has given a topic yet. It is <strong>not</strong> an error, and it is kept so the topics still add up to the job.'],
           ['Which columns split by topic', '<strong>Total Positions</strong> and <strong>Joined</strong> split for everyone, in HC and in Score, because those count positions and a position carries its own topic. <strong>Joining Pipeline</strong> splits for the people whose <strong>offer names an opening</strong> of that topic, so the topics can add up to less than the job row above and never to more \u2014 the rest stay on the job row. <strong>Offer drop</strong> and <strong>Delta</strong> show a dash: most people who dropped cannot be placed under a topic, and a Delta built on part of the people would mislead. Those two are correct on the job row above.'],
