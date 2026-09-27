@@ -9,6 +9,7 @@ import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
+import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
@@ -59,6 +60,32 @@ const topicMetrics = (t, jp) =>
   + `<td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
   + `<td style="color:var(--orange)">${jp || '<span class="zero">0</span>'}</td>`
   + DASH + DASH;
+
+// #187: the five counting cells for a RECRUITER row. Positions come from the opening's owner, people from
+// recruiterOfPerson(); Delta is the same formula every other row uses — Total − Joined − Joining pipeline —
+// and is NEVER clamped (Rule 1: a negative Delta means more people in closing than positions opened here, which
+// is true and worth seeing). A recruiter with no position of their own shows a dash rather than a 0, because
+// there is nothing to count, not nothing happening.
+const recMetrics = (r, rb, gap) =>
+  `<td style="font-weight:600">${r.total || '<span class="zero">&mdash;</span>'}</td>`
+  + `<td class="${r.joined ? 'good' : 'zero'}">${r.joined || '&mdash;'}</td>`
+  + `<td style="color:var(--orange)">${rb.jpP || '<span class="zero">&mdash;</span>'}</td>`
+  + `<td class="gapcell">${rb.drop ? `<span style="color:var(--red);font-weight:600">${rb.drop}</span>` : '<span class="zero">&mdash;</span>'}</td>`
+  + `<td class="gapcell"><span class="deltacell"><span class="dnum ${gap === 0 ? 'none' : ''}">${gap}</span></span></td>`;
+
+// #187: the topics belonging to ONE recruiter's openings. Same rows, narrowed and re-counted from that
+// recruiter's own openings, so a topic row under a recruiter closes THAT recruiter's row rather than the job's.
+function topicsFor(topics, mine) {
+  const out = [];
+  topics.forEach(t => {
+    const ops = t.openings.filter(o => mine.has(o.id));
+    if (!ops.length) return;
+    out.push({ topic: t.topic, openings: ops, total: ops.length,
+               joined: ops.filter(o => o.state === 'joined').length,
+               open: ops.filter(o => o.state === 'open').length, missed: ops.filter(o => o.state === 'missed').length });
+  });
+  return out;
+}
 
 // #161: the opening a person in closing is tied to (the pipeline's 8-char id, or a full id from a hire-link 'lock'),
 // the topic rows they fall under, and - for the ones who fall under none - why, in the words Jerin asked for.
@@ -274,13 +301,24 @@ function computeThroughput(p, total) {
 // rows under it too - not just the job rows. Hiding one level and leaving a deeper one on screen was
 // the obvious bug here; closing a parent therefore also RESETS its children's own open state, so reopening it
 // shows the job rows and nothing deeper.
+// #187: a recruiter's name goes into a CSS attribute selector, and real names carry brackets and apostrophes
+// — `(recruiter not set)` most of all. CSS.escape where it exists, a quoted fallback where it does not.
+const cssq = (v) => String(v).replace(/["\\]/g, '\\$&');
+
 function wireTree(tbody) {
   const expandAll = document.getElementById('hmExpandAll')?.checked;
   const setCaret = (row, sel, open) => { const c = row.querySelector(sel); if (c) c.textContent = open ? '▾' : '▸'; };
   const q = (sel) => tbody.querySelectorAll(sel);
 
+  // #187: closing a job now hides BOTH levels beneath it and resets the recruiter rows' own open state, so
+  // reopening a job shows its recruiters and nothing deeper. Hiding one level and leaving a deeper one on
+  // screen was the obvious bug when the tree was three deep; it is the same bug at four.
   const closeJob = (job8) => {
+    q(`tr.lv-rec[data-job8="${job8}"]`).forEach(r => { r.dataset.rexp = '0'; setCaret(r, '.caret-r', false); });
     q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = 'none'; });
+  };
+  const closeRec = (key) => {
+    q(`tr.lv-topic[data-rec="${cssq(key)}"]`).forEach(r => { r.style.display = 'none'; });
   };
 
   tbody.querySelectorAll('tr.dept-header').forEach(h => {
@@ -292,6 +330,7 @@ function wireTree(tbody) {
       if (!on) {
         // collapsing the department closes everything under it, at every depth
         q(`tr.leaf[data-g="${gi}"]`).forEach(r => { if (r.dataset.job8) { r.dataset.texp = '0'; setCaret(r, '.caret-t', false); closeJob(r.dataset.job8); } });
+        q(`tr.lv-rec[data-g="${gi}"]`).forEach(r => { r.style.display = 'none'; });
       }
     };
     if (expandAll) openDept(true);
@@ -306,8 +345,28 @@ function wireTree(tbody) {
       const on = j.dataset.texp !== '1';
       j.dataset.texp = on ? '1' : '0';
       setCaret(j, '.caret-t', on);
-      if (on) q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = ''; });
-      else closeJob(job8);
+      if (on) {
+        // #187: a job opens to its RECRUITERS when it has them, and straight to its topics when it does not.
+        const recs = q(`tr.lv-rec[data-job8="${job8}"]`);
+        if (recs.length) recs.forEach(r => { r.style.display = ''; });
+        else q(`tr.lv-topic[data-job8="${job8}"]`).forEach(r => { r.style.display = ''; });
+      } else closeJob(job8);
+    });
+  });
+
+  // #187: Recruiter ➔ its own topic rows. Only a recruiter that HAS topics carries a caret.
+  tbody.querySelectorAll('tr.lv-rec[data-rec]').forEach(rw => {
+    const key = rw.dataset.rec;
+    if (!tbody.querySelector(`tr.lv-topic[data-rec="${cssq(key)}"]`)) return;
+    rw.style.cursor = 'pointer';
+    const c = rw.querySelector('td'); if (c && !c.querySelector('.caret-r')) c.insertAdjacentHTML('afterbegin', '<span class="caret-r">\u25b8</span>');
+    rw.addEventListener('click', (e) => {
+      if (e.target.closest('.jn-cell')) return;
+      const on = rw.dataset.rexp !== '1';
+      rw.dataset.rexp = on ? '1' : '0';
+      setCaret(rw, '.caret-r', on);
+      if (on) q(`tr.lv-topic[data-rec="${cssq(key)}"]`).forEach(r => { r.style.display = ''; });
+      else closeRec(key);
     });
   });
 
@@ -317,7 +376,13 @@ function wireTree(tbody) {
     tbody.querySelectorAll('tr.leaf[data-job8]').forEach(j => {
       j.dataset.texp = '1';
       setCaret(j, '.caret-t', true);
+      q(`tr.lv-rec[data-job8="${j.dataset.job8}"]`).forEach(r => { r.style.display = ''; });
       q(`tr.lv-topic[data-job8="${j.dataset.job8}"]`).forEach(r => { r.style.display = ''; });
+    });
+    // #187: and the recruiter rows open too, or Expand all stops one level short of the topics again (#160b).
+    tbody.querySelectorAll('tr.lv-rec[data-rec]').forEach(rw => {
+      rw.dataset.rexp = '1';
+      setCaret(rw, '.caret-r', true);
     });
   }
 }
@@ -433,7 +498,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary painted-halves">
-        <thead><tr><th>Department</th><th>Total openings</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total openings</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -644,6 +709,8 @@ export function initHmFilters(data) {
     // #157: the topic level, built from the SAME window the job rows below use - whole quarters when the
     // window covers them, otherwise the India-time days - so topics close the job row by construction (Rule 3).
     const tIdx = topicIndex(data, { wholeWin, winQs, dayOK, inDay: (d) => inRange(d, rg) });
+    // #187: the recruiter level, from the SAME window, so its rows close the job row by construction.
+    const rIdx = recruiterIndex(data, { wholeWin, winQs, dayOK, inDay: (d) => inRange(d, rg) });
 
     const groups = {};
     Object.entries(ob).forEach(([job8, rec]) => {
@@ -687,15 +754,30 @@ export function initHmFilters(data) {
       const j8 = String(job8 || (who && who.jobId8) || '').slice(0, 8);
       let row = j8 ? G.jobs.find(j => j.job8 === j8) : null;
       if (!row) row = G.jobs.find(j => j.title === title && (!j8 || !j.job8));
-      if (!row) { row = { title, job8: j8, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [], joWho: [] }; G.jobs.push(row); }
+      // #187: `recs` is the per-recruiter split of the PEOPLE columns. It is created here, in the one place a
+      // row is made, for the same reason rowFor() exists at all — a second lookup is how a name lands on a
+      // different row than its number.
+      if (!row) { row = { title, job8: j8, total: 0, joined: 0, open: 0, missed: 0, jpP: 0, drop: 0, jpWho: [], joWho: [], recs: {} }; G.jobs.push(row); }
+      if (!row.recs) row.recs = {};
       if (!row.job8 && j8) row.job8 = j8;
       return { G, row };
     }
-    function bump(dept, title, field, who, job8) {
+    // #187: the ONE place a person is filed under a recruiter. Both the counting bump and the joiner list go
+    // through it, so a recruiter's names and its numbers can never describe different people (Rule 3).
+    function recBucket(row, who) {
+      const key = recruiterOfPerson(rIdx, who);
+      return row.recs[key] || (row.recs[key] = { recruiter: key, jpP: 0, drop: 0, jpWho: [], joWho: [] });
+    }
+    // 🚨 `attr` is SEPARATE from `who` on purpose. A Dropped bump passes who=null because that column lists no
+    // names — but the drop event still names a recruiter, and without a second argument all 12 offer drops filed
+    // themselves under `(recruiter not set)`. Measured on the page before the fix; it looked entirely plausible.
+    function bump(dept, title, field, who, job8, attr) {
       const { G, row } = rowFor(dept, title, job8, who);
       G[field] += 1;
       row[field] += 1;
-      if (who) { (row.jpWho || (row.jpWho = [])).push(who); (G.jpWho || (G.jpWho = [])).push(who); }
+      const rb = recBucket(row, attr || who);
+      rb[field] += 1;
+      if (who) { (row.jpWho || (row.jpWho = [])).push(who); (G.jpWho || (G.jpWho = [])).push(who); rb.jpWho.push(who); }
     }
     // ===== #182a (Jerin, 26 Sep 2026): "Left to Who is joining, add a 'Who has joined?'." =====
     // 🚨 IT COUNTS NOTHING. The Joined column beside it counts POSITIONS, from openingBuckets; this is a list of
@@ -709,6 +791,7 @@ export function initHmFilters(data) {
       const { G, row } = rowFor(dept, title, job8, who);
       (row.joWho || (row.joWho = [])).push(who);
       (G.joWho || (G.joWho = [])).push(who);
+      recBucket(row, who).joWho.push(who);   // #187: the same person, filed under the same recruiter
     }
     // ...MINUS anyone whose opening belongs to an EARLIER quarter (Jerin, 2026-08-22): their offer is last
     // quarter's demand still in flight, and counting it here would inflate the current quarter every time.
@@ -726,7 +809,7 @@ export function initHmFilters(data) {
       if (!dropIn(e, rg, winQs)) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
       const dept = deptOf(e.department || '') || 'Unknown', title = e.jobTitle || '(no job)';
       if (!inScope(dept, title, e.jobId8)) return;
-      bump(dept, title, 'drop', null, e.jobId8);
+      bump(dept, title, 'drop', null, e.jobId8, e);   // #187: the event carries the recruiter this drop belongs to
     });
     // #182a: the people behind "Who has joined" — accepted offer AND moved to Hired, dated by their START date
     // inside From / To. Identical to renderJoiners(), deliberately: one definition of "joiner" across the site.
@@ -788,7 +871,7 @@ export function initHmFilters(data) {
     deptArr.forEach((D, gi) => {
       const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
       const withNote = jobs2.filter(j => (noteOf(j.job8) || {}).text).length;
-      html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+      html += `<tr class="dept-header" data-hold="1" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
         + `<td class="jn-cell jn-sum">${(D.joWho || []).length ? `${D.joWho.length} joined` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
@@ -797,26 +880,59 @@ export function initHmFilters(data) {
         // #157: only the two SME departments open past the job. Everything else is a plain leaf with no
         // caret and cursor:default - a row that does not pretend to expand.
         const topics = hasTopicLevel(tIdx, D.dept, o.job8) ? tIdx[o.job8] : null;
+        // #187: the recruiter level sits BETWEEN the job and the topic, on every department. `closeToJob` tops up
+        // the catch-all with anything openingRows could not see, so these rows always sum to the job row above.
+        const recs = closeToJob(rIdx.byJob[o.job8] || [], o.total, o.joined);
+        // a recruiter who worked people here but owns no position here still gets a row (Jerin, 27 Sep: option A,
+        // "keep their own row"). Their names would otherwise hide behind the job row's "+N more" — measured: 5 of 8.
+        Object.keys(o.recs || {}).forEach(k => {
+          if (!recs.some(r => r.recruiter === k)) recs.push({ recruiter: k, total: 0, joined: 0, open: 0, missed: 0, jpTied: 0, openings: [], noSeat: true });
+        });
+        // #187: EVERY job opens to its recruiters, including a job owned by one person — naming the owner is
+        // the point of the level, and the mock Jerin approved showed it that way.
+        const hasRecs = recs.length > 0;
         // #161 (option A): the job's people split by the topic of the opening they are tied to; the job row keeps the rest.
         const split = topics ? splitWho(o.jpWho, topics) : null;
         const who = split ? jnWhoCell({ jpWho: split.rest }, { note: whyUntied, under: o.jpWho.length - split.rest.length }) : jnWhoCell(o);
         // #182a: the same helper, pointed at the joiners and dated by their START date.
         const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true });
-        html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${topics ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${topics ? TCARET : ''}${o.title}${topics && topics.length > 1 ? cnt(`${topics.length} topics`) : ''}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
-        if (!topics) return;
-        topics.forEach(t => {
-          const tw = split.by[t.topic] || [];
-          const tk = `${o.job8}|${t.topic}`;
-          const unset = t.topic === NO_TOPIC;
-          // #157c: a topic row is the bottom of the tree - no caret, nothing to open under it.
-          html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}" data-topic="${esc(tk)}" style="display:none">`
-            + `<td style="padding-left:3.25rem"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
-            // #182a: Who has joined DASHES at topic level for now — splitting joiners by topic is #166's job on the
-            // Recruiter tab and has its own "(not tied to a topic)" remainder rule; a half-done split here would
-            // silently under-count. A dash says "not worked out at this level", which is true. Never a number.
-            + topicMetrics(t, tw.length) + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
-            + jnWhoCell({ jpWho: tw }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+        const opens = hasRecs || topics;
+        html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-g="${gi}"${opens ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
+        if (!opens) return;
+        // With no recruiter level the topics hang off the job exactly as they did before #187.
+        const under = hasRecs ? recs : [{ recruiter: null, openings: null }];
+        under.forEach(r => {
+          const rb = (o.recs || {})[r.recruiter] || { jpP: 0, drop: 0, jpWho: [], joWho: [] };
+          if (hasRecs) {
+            const unsetR = r.recruiter === NO_RECRUITER;
+            const gapP = r.total - r.joined - rb.jpP;
+            html += `<tr class="lv-rec${unsetR ? ' norec' : ''}${r.noSeat ? ' noseat' : ''}" data-g="${gi}" data-job8="${esc(o.job8)}" data-rec="${esc(`${o.job8}|${r.recruiter}`)}" data-rexp="0" style="display:none">`
+              + `<td style="padding-left:3.25rem"><span class="${unsetR ? 'rec-unset' : 'rec-name'}">${esc(r.recruiter)}</span>`
+              + (r.total ? cnt(`${r.total} position${r.total === 1 ? '' : 's'}`) : `<span class="noseat-tag">no position of their own here</span>`) + `</td>`
+              + recMetrics(r, rb, gapP)
+              + jnWhoCell(rb, { list: rb.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
+              + jnWhoCell({ jpWho: rb.jpWho || [] })
+              + `<td class="jn-cell"></td></tr>`;
+          }
+          // the topic rows now hang off the RECRUITER when there is one, so the tree reads
+          // Department ➔ Job ➔ Recruiter ➔ Specialisation.
+          if (!topics) return;
+          const mine = r.openings ? new Set(r.openings.map(x => x.id)) : null;
+          const tops = mine ? topicsFor(topics, mine) : topics;
+          tops.forEach(t => {
+            const tw = (split.by[t.topic] || []).filter(c => !mine || !c.openingId || mine.has(c.openingId));
+            const tk = `${o.job8}|${r.recruiter || ''}|${t.topic}`;
+            const unset = t.topic === NO_TOPIC;
+            // #157c: a topic row is the bottom of the tree - no caret, nothing to open under it.
+            html += `<tr class="lv-topic" data-g="${gi}" data-job8="${esc(o.job8)}"${hasRecs ? ` data-rec="${esc(`${o.job8}|${r.recruiter}`)}"` : ''} data-topic="${esc(tk)}" style="display:none">`
+              + `<td style="padding-left:${hasRecs ? '4.5rem' : '3.25rem'}"><span class="${unset ? 'topic-unset' : 'topic-name'}">${esc(t.topic)}</span>${cnt(`${t.total} opening${t.total === 1 ? '' : 's'}`)}</td>`
+              // #182a: Who has joined DASHES at topic level for now — splitting joiners by topic is #166's job on the
+              // Recruiter tab and has its own "(not tied to a topic)" remainder rule; a half-done split here would
+              // silently under-count. A dash says "not worked out at this level", which is true. Never a number.
+              + topicMetrics(t, tw.length) + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
+              + jnWhoCell({ jpWho: tw }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+          });
         });
       });
     });
@@ -1257,7 +1373,7 @@ export function initHmFilters(data) {
       return true;
     }).sort(byDept);
 
-    let hdr = '<tr><th>Department</th><th class="c-num">Total</th>';   /* first column = the dept ➡ job tree, no family */
+    let hdr = '<tr><th>Department / Job</th><th class="c-num">Total</th>';   /* first column = the dept ➡ job tree, no family */
     visStages.forEach(s => { hdr += `<th class="c-num">${STAGE_LABELS[s]}</th>`; });
     hdr += '</tr>';
     document.getElementById('hm3Head').innerHTML = hdr;
@@ -1289,7 +1405,7 @@ export function initHmFilters(data) {
     let html = '';
     Object.keys(groups).sort().forEach((deptName, gi) => {
       const G = groups[deptName];
-      html += `<tr class="dept-header" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
+      html += `<tr class="dept-header" data-hold="1" data-g="${gi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
         <td style="font-weight:600">${CARET}${deptName}${cnt(G.jobs.length)}</td>${pipeCells(G.total, G.stages)}</tr>`;
       G.jobs.forEach(j => {
         html += `<tr class="leaf" data-g="${gi}" style="display:none">

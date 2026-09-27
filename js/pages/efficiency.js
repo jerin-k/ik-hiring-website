@@ -21,6 +21,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
 import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
+import { recruiterIndex, recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { jobsWithOpeningIn, offerDropRows } from '../data.js';   // #125
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
@@ -91,6 +92,17 @@ const topicCells = (x) =>
 ;   // #182d: the Missed pair is gone - Delta already says what was not filled, live
 
 function wireTreePath(tbody, expandAll) {
+  // #186b (Jerin, 27 Sep 2026): every row that TOTALS its children freezes while you are inside it, so you
+  // always know whose numbers you are reading. `data-haschild` already means exactly "totals its children",
+  // and the path depth is the level, so marking them here covers every table this tree builds — one line
+  // instead of touching each render (Rule 3: the mirror tab cannot drift if it never had its own copy).
+  // 🚨 THE DEPARTMENT ROW ONLY (Jerin, 27 Sep 2026: *"i need the freeze only for department in HM & Overall
+  // efficiency, and recruiter in Recruiter efficiency. Not further down."*). The first build froze every level
+  // that had children, which stacked three rows of chrome at the top. Depth 1 is the department on this tab.
+  tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
+    const p = row.dataset.path || '';
+    if (p && p.split('-').length === 1) row.dataset.hold = '1';
+  });
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
     row.addEventListener('click', () => {
       const path = row.dataset.path, depth = path.split('-').length;
@@ -207,7 +219,7 @@ export function renderEfficiency(data) {
 
       <div class="scroll-table"><table class="metrics eff-fulfil painted-halves">
         <thead>
-          <tr><th rowspan="2" style="min-width:17rem">Department / Job</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pipeline</th><th colspan="2" class="stage-hdr">Offer drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
+          <tr><th rowspan="2" style="min-width:17rem">Department / Job / Recruiter / Topic</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pipeline</th><th colspan="2" class="stage-hdr">Offer drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
@@ -756,6 +768,52 @@ export function initEfficiencyFilters(data) {
       joWho: (PM.jn[key] || []), jpWho: (PM.jpc[key] || []), job8: (j.jid || '').slice(0, 8),
       tS, jS, pS, pNS, dS, mS, gS: tS - jS - pS };   // #176c
   }
+  // ===== #187 (Jerin, 27 Sep 2026) — the same split, one level down, per RECRUITER =====
+  // 🗣 *"Both openings & people have to split recruiter-wise"* — so this narrows EVERY source jobSplit() uses,
+  // by recruiter, and returns objects of the SAME shape. They then go through the SAME `cells()` the job row
+  // uses, so a recruiter row cannot be worded or priced differently from its parent (Rule 3: the table
+  // computes, the row reads).
+  // 🔑 IT ADDS UP BY CONSTRUCTION: every opening has exactly one owner and every person exactly one recruiter,
+  // so the four sources are PARTITIONED, not filtered. Nothing can fall between two rows.
+  // ⚠ The positions are priced the way jobSplit prices them — per opening under #165 once the pipeline carries
+  // complexity, per job before that — so heads and score both close the job row.
+  function recSplits(j, dept, PM, per, rIdx, oIdx) {
+    const j8 = (j.jid || '').slice(0, 8);
+    const key = dept + '|' + (j.title || '');
+    const oMeta = { department: j.rawDept, title: j.rawTitle, level: j.level };
+    const inScope = (r) => PM.whole ? (!per || per.includes(r.quarter))
+                                    : (PM.dayOK && r.day && inRange(r.day, PM.rg));
+    const bag = {};
+    const get = (who) => bag[who] || (bag[who] = { recruiter: who, total: 0, joined: 0, missed: 0, pending: 0,
+      drop: 0, tS: 0, jS: 0, mS: 0, pS: 0, pNS: 0, dS: 0, joWho: [], jpWho: [],
+      sc: j.score || 0, scoreable: j.scoreable, job8: j8 });
+    ((data.openingRows) || []).forEach(r => {
+      if (r.jobId8 !== j.jid || !inScope(r)) return;
+      const b = get((r.owners && r.owners[0]) || NO_RECRUITER);
+      const s = oIdx.ready ? scoreOfOpening(r.openingId, oMeta, r.quarter, oIdx) : scoreOf(j, r.quarter, PM);
+      b.total++; b.tS += s;
+      if (r.state === 'joined') { b.joined++; b.jS += s; }
+      else if (r.state === 'missed') { b.missed++; b.mS += s; }
+    });
+    (PM.jpc[key] || []).forEach(c => {
+      const b = get(recruiterOfPerson(rIdx, c));
+      const s = oIdx.ready ? scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx) : scoreOf(j, PM.atQ, PM);
+      b.pending++; b.jpWho.push(c); b.pS += s;
+      if (oIdx.ready && !s) b.pNS++;   // #176c: counted from the SAME list that produced pS
+    });
+    (PM.dropOp[key] || []).forEach(d => {
+      const b = get(recruiterOfPerson(rIdx, d.e));
+      b.drop++;
+      // #183b: a drop is priced from the opening ITS OWN offer names, never from the job.
+      b.dS += oIdx.ready ? scoreOfDropOpening(d.e, oMeta, d.q, oIdx) : 0;
+    });
+    (PM.jn[key] || []).forEach(c => { get(recruiterOfPerson(rIdx, c)).joWho.push(c); });
+    const out = Object.values(bag);
+    out.forEach(b => { b.gap = b.total - b.joined - b.pending; b.gS = b.tS - b.jS - b.pS; });
+    return out.sort((a, b) => (a.recruiter === NO_RECRUITER) ? 1 : (b.recruiter === NO_RECRUITER) ? -1
+      : (b.total - a.total) || a.recruiter.localeCompare(b.recruiter));
+  }
+
   const sumSplits = (arr) => arr.reduce((a, x) => ({
     total: a.total + x.total, joined: a.joined + x.joined, pending: a.pending + x.pending,
     drop: a.drop + x.drop, missed: a.missed + x.missed, gap: a.gap + x.gap,
@@ -895,6 +953,7 @@ export function initEfficiencyFilters(data) {
     // otherwise - so the topic rows close the job row instead of being a second, drifting calculation.
     const PM = peopleMaps(per);
     const tIdx = topicIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });
+    const rIdx = recruiterIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });   // #187
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
       const flag = sum.unscored ? `<span style="color:var(--orange);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${sum.unscored} unscored</span>` : '';
@@ -909,28 +968,58 @@ export function initEfficiencyFilters(data) {
         // #157: only the two SME departments open past the job. A job with no topics stays a plain row with
         // no caret - it must not look clickable when there is nothing under it.
         const tops = hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8)) ? tIdx[(j.jid || '').slice(0, 8)] : null;
-        html += `<tr data-path="${di}-${ji}"${tops ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
-          + `<td style="padding-left:1.875rem;color:var(--muted)">${tops ? CARET : ''}${j.title}${meta}`
-          + `${tops && tops.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tops.length} topics</span>` : ''}</td>${cells(sp, false)}</tr>`;
-        if (!tops) return;
+        // #187: the recruiter level, between the job and the topic — the order Jerin confirmed 27 Sep
+        // ("Department ➔ Job ➔ Recruiter ➔ Topic. Works.").
+        const recs = recSplits(j, dept, PM, per, rIdx, openingScores(data));
+        const opensJob = recs.length > 0 || !!tops;
+        html += `<tr data-path="${di}-${ji}"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+          + `<td style="padding-left:1.875rem;color:var(--muted)">${opensJob ? CARET : ''}${j.title}${meta}`
+          + `${recs.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${recs.length} recruiters</span>`
+              : (tops && tops.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tops.length} topics</span>` : '')}</td>${cells(sp, false)}</tr>`;
+        if (!opensJob) return;
         // Each opening is priced at the points of ITS OWN quarter, exactly as jobSplit() prices the buckets -
         // so the topic rows close the job row in BOTH halves, heads and score (Rule 3).
         // #161: the job's people in closing, by the opening they are tied to - priced at the job's points, exactly as
         // jobSplit() prices the job's own Joining pending, so a topic's pS is a share of the job's pS.
         const ids8 = (t) => new Set(t.openings.map(o => String(o.id).slice(0, 8)));
         const jobPeople = PM.jpc[dept + '|' + (j.title || '')] || [];
-        tops.forEach((t, ti) => {
-          const pt = (qq) => scoreOf(j, qq, PM);
-          let tS = 0, jS = 0, mS = 0;
-          t.openings.forEach(o => { const s1 = pt(o.quarter || PM.atQ);
-            tS += s1; if (o.state === 'joined') jS += s1; if (o.state === 'missed') mS += s1; });
-          const mine = ids8(t), pending = jobPeople.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8))).length;
-          const pS = pending * pt(PM.atQ);
-          // #157c (Jerin, 21 Sep): the topic is the bottom of the tree - no caret, no opening rows under it.
-          html += `<tr data-path="${di}-${ji}-${ti}" style="display:none">`
-            + `<td style="padding-left:3.25rem"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
-            + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${t.total} opening${t.total === 1 ? '' : 's'}</span></td>`
-            + topicCells({ total: t.total, joined: t.joined, missed: t.missed, tS, jS, mS, pending, pS }) + `</tr>`;
+        // #187: with a recruiter level the topics hang off the RECRUITER, narrowed to that recruiter's own
+        // openings, so a topic row closes the recruiter row above it rather than the job two levels up.
+        const branches = recs.length ? recs.map((r, ri) => ({ r, ri })) : [{ r: null, ri: 0 }];
+        branches.forEach(({ r, ri }) => {
+          const path = recs.length ? `${di}-${ji}-${ri}` : `${di}-${ji}`;
+          let mineIds = null, mineTops = null;
+          if (r) {
+            mineIds = new Set(((data.openingRows) || [])
+              .filter(x => x.jobId8 === j.jid && ((x.owners && x.owners[0]) || NO_RECRUITER) === r.recruiter)
+              .map(x => String(x.openingId).slice(0, 8)));
+            const myTops = tops ? tops.filter(t => [...ids8(t)].some(id => mineIds.has(id))) : null;
+            const unsetR = r.recruiter === NO_RECRUITER;
+            html += `<tr data-path="${path}"${myTops && myTops.length ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
+              + `<td style="padding-left:3.25rem">${myTops && myTops.length ? CARET : ''}`
+              + `<span class="${unsetR ? 'rec-unset' : 'rec-name'}">${r.recruiter}</span>`
+              + (r.total ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${r.total} position${r.total === 1 ? '' : 's'}</span>`
+                         : `<span class="noseat-tag">no position of their own here</span>`)
+              + `</td>${cells(r, false)}</tr>`;
+            if (!myTops || !myTops.length) return;
+            mineTops = myTops;
+          }
+          (mineTops || tops || []).forEach((t, ti) => {
+            const pt = (qq) => scoreOf(j, qq, PM);
+            const ops = mineIds ? t.openings.filter(o => mineIds.has(String(o.id).slice(0, 8))) : t.openings;
+            if (!ops.length) return;
+            let tS = 0, jS = 0, mS = 0, tot = 0, jn = 0, ms = 0;
+            ops.forEach(o => { const s1 = pt(o.quarter || PM.atQ); tot++;
+              tS += s1; if (o.state === 'joined') { jn++; jS += s1; } if (o.state === 'missed') { ms++; mS += s1; } });
+            const mine = new Set(ops.map(o => String(o.id).slice(0, 8)));
+            const pending = jobPeople.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8))).length;
+            const pS = pending * pt(PM.atQ);
+            // #157c (Jerin, 21 Sep): the topic is the bottom of the tree - no caret, no opening rows under it.
+            html += `<tr data-path="${path}-${ti}" style="display:none">`
+              + `<td style="padding-left:${recs.length ? '4.5rem' : '3.25rem'}"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
+              + `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tot} opening${tot === 1 ? '' : 's'}</span></td>`
+              + topicCells({ total: tot, joined: jn, missed: ms, tS, jS, mS, pending, pS }) + `</tr>`;
+          });
         });
       });
     });

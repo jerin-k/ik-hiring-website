@@ -172,14 +172,69 @@ function holdTable(table, top) {
   }
   // #149's month headings sit under the heading row, and travel only as far as their own group's last row.
   const months = table.querySelectorAll('tbody > tr.pt-m');
-  if (!months.length) return;
-  const bases = [];
-  months.forEach((row) => bases.push(baseTop(row)));
-  months.forEach((row, i) => {
-    const next = i + 1 < bases.length ? bases[i + 1] : r.bottom;
-    const h = row.getBoundingClientRect().height;
-    setHold(row, Math.min(top + headH - bases[i], next - bases[i] - h));
+  if (months.length) {
+    const bases = [];
+    months.forEach((row) => bases.push(baseTop(row)));
+    months.forEach((row, i) => {
+      const next = i + 1 < bases.length ? bases[i + 1] : r.bottom;
+      const h = row.getBoundingClientRect().height;
+      setHold(row, Math.min(top + headH - bases[i], next - bases[i] - h));
+    });
+  }
+  holdGroups(table, top + headH, totals ? r.bottom - totH : r.bottom);
+}
+
+// ===== #186b (Jerin, 27 Sep 2026) — the GROUP rows stay on screen, not just the grand total =====
+//
+// 🗣 *"All tables with Recruiter total row or a Department total row - help freeze thta. Will help view data
+// better."* — the rows that TOTAL their children: Department, Job, Recruiter. While you are inside a group its
+// heading holds under the table heading, so you always know whose numbers you are reading. The first build of
+// #186 froze the grand Total row at the foot instead, which is a different thing and was not what was asked.
+//
+// A row opts in with `data-hold="<level>"`, 1 being the outermost. The level is what makes this generic: a
+// row's group ENDS at the next visible row of the same level or shallower, and its ceiling is the bottom of
+// whichever ancestor is currently held. So one function serves Department ➔ Job ➔ Recruiter here and
+// Pod ➔ Recruiter ➔ Job on the Recruiter tab, without either table naming the other's rows.
+//
+// 🔑 ONLY THE ACTIVE ROW AT EACH LEVEL IS HELD — the one whose span actually straddles the ceiling. Holding
+// every row at a level would stack the whole table at the top; holding none loses the heading you are under.
+// 🚨 `display` is read rather than offsetParent: the tree hides rows with `style.display = 'none'`, and this
+// runs on every scroll event, so it has to stay cheap.
+function holdGroups(table, ceilStart, floor) {
+  const rows = table.querySelectorAll('tbody > tr[data-hold]');
+  if (!rows.length) return;
+  const vis = [];
+  rows.forEach((row) => { if (row.style.display !== 'none') vis.push(row); });
+  if (!vis.length) return;
+
+  const lvOf = (row) => parseInt(row.dataset.hold, 10) || 1;
+  const bases = vis.map(baseTop);
+  const maxLv = vis.reduce((m, row) => Math.max(m, lvOf(row)), 1);
+
+  // where each row's own group ends: the next visible row at the same level or shallower, else the floor
+  // (the table's end, or the top of the held Total row, so a group heading never lands on top of it).
+  const ends = vis.map((row, i) => {
+    const lv = lvOf(row);
+    for (let k = i + 1; k < vis.length; k++) if (lvOf(vis[k]) <= lv) return bases[k];
+    return floor;
   });
+
+  let ceiling = ceilStart;
+  for (let lv = 1; lv <= maxLv; lv++) {
+    let active = -1;
+    for (let i = 0; i < vis.length; i++) {
+      if (lvOf(vis[i]) !== lv) continue;
+      setHold(vis[i], 0);
+      // the group that straddles the ceiling is the one whose heading belongs on screen
+      if (bases[i] <= ceiling && ends[i] > ceiling) active = i;
+    }
+    if (active < 0) continue;
+    const h = vis[active].getBoundingClientRect().height;
+    const y = Math.min(ceiling - bases[active], ends[active] - bases[active] - h);
+    setHold(vis[active], y);
+    const held = bases[active] + Math.max(0, y) + h;
+    if (held > ceiling) ceiling = held;
+  }
 }
 
 export function holdTableChrome() {
