@@ -7,7 +7,14 @@
 //   2. An opening with NO complexity scores NOTHING. A blank is not an answer and must never read as "Normal" —
 //      that silent default is the bug Jerin found (System Design + DSA read 12 instead of 15).
 //   3. NO OPENING AT ALL scores NOTHING. He was shown what this costs and confirmed it twice: every Drop scores
-//      zero points for good, because a drop can never be tied to an opening (settled with a control; do not re-test).
+//      zero points TODAY, because our own pipeline does not carry the opening onto a drop event (one field).
+//      🚨 CORRECTED 27 Sep 2026. This used to read "for good, because a drop can never be tied to an opening
+//      (settled with a control; do not re-test)". THAT WAS FALSE, and I used it to tell Jerin #183 was
+//      categorically unsolvable. MEASURED: 7 of the 18 Q3 2026 drops carry an opening AND a complexity, and
+//      every offer raised since Aug 2026 names its opening (0% Sep 25-Jun 26, 16% Jul, 100% Aug, 100% Sep).
+//      The original probe was sound but measured a PROCESS GAP - its own root cause said so - and the gap
+//      closed when the team changed the process. Rule 2 (a blank complexity scores nothing) is UNAFFECTED.
+//      Whether to score traceable drops is #183, parked, and Jerin's call - not a fact about Ashby.
 //   4. 🚨 HEADS ARE NEVER AFFECTED. Only points move. Σ headcount still equals the real number of people (Rule 1).
 //   5. A JOB's score is the SUM of its openings' scores — an opening scoring 0 still counts as a zero in that
 //      total, never skipped, or the total quietly stops agreeing with the opening count printed beside it.

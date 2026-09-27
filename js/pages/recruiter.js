@@ -1033,8 +1033,10 @@ export function initRecruiterFilters(baseData) {
   // 🚦 GATE: until the pipeline carries each opening's complexity, nothing can answer the question — keep the
   //    old job-based score rather than read every closure as zero.
   // Once it can: no opening, or an opening with no complexity, scores NOTHING. Jerin confirmed twice what that
-  //    costs — every Drop scores zero for good, because a drop can never be tied to an opening. Heads are
-  //    untouched throughout; only points move.
+  //    costs — every Drop scores zero TODAY, because our pipeline does not carry the opening onto a drop event.
+  //    🚨 CORRECTED 27 Sep 2026: this said "for good, because a drop can never be tied to an opening". FALSE —
+  //    see opening-score.js for the measurement. Whether to score traceable drops is #183, Jerin's call.
+  //    Heads are untouched throughout; only points move.
   const closureScore = (openingId, meta, q) => {
     const idx = openingScores(data);
     return idx.ready ? scoreOfOpening(openingId, meta, q, idx) : scoreForRole(meta, q);
@@ -1552,8 +1554,11 @@ export function initRecruiterFilters(baseData) {
       dropRows(data).forEach(e => {
         const rec = e.recruiter; if (!rec) return;
         if (!dropIn(e, rg, [q])) return;   // #129: by the day they first reached Ref Check / Documentation / Offer
-        // #165: a drop can NEVER be tied to an opening (settled with a control), so once the rule is live this
-        // is always 0 points. The heads stay. Said ONCE in the Drop definitions block, never as a per-cell caption.
+        // #165: a drop is scored with NO opening (the null below), so once the rule is live this is always
+        // 0 points. The heads stay. Said ONCE in the Drop definitions block, never as a per-cell caption.
+        // 🚨 CORRECTED 27 Sep 2026: this used to say "a drop can NEVER be tied to an opening (settled with a
+        //    control)". FALSE - 7 of 18 Q3 drops carry one (Rule 8). The null is OUR choice, not Ashby's
+        //    limit; passing a drop's real opening here is #183, Jerin's call.
         const sc = closureScore(null, { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);
         // #11: a sourcer carries their share of the bad news as well as the good ("split is everywhere").
         // ⚠ Drops found via stage history have their sourcer recovered from appMap in the pipeline, so a few

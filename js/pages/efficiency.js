@@ -74,7 +74,9 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 // B1 (Jerin, 20 Sep): a topic row fills only the columns that are TRUE per topic - Total positions, Joined and
 // Missed, in BOTH halves (heads and score). #161 (Jerin, 22 Sep): Joining pending splits too, for the people whose
 // OFFER names an opening under the topic (or who are locked on one) - the mirror of the Hiring Manager tab. Drop and
-// Delta stay dashed: a drop can never be tied to an opening (Rule 8), and Delta would mix in the untied people.
+// Delta stay dashed: MOST drops carry no opening, so they cannot be placed under a topic, and Delta would mix in
+// the untied people. 🚨 Rule 8 as CORRECTED 27 Sep 2026: "never" was FALSE - some drops DO carry an opening (7 of
+// 18 in Q3). The dash is still right because the split would be incomplete, NOT because it is unknowable.
 // 🚨 Never put a number in a dashed cell: a wrong one here looks right and nobody will question it.
 const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td><td class="score nosplit"><span class="zero">\u2014</span></td>';
 // #182c: ONE dash cell. EFF_DASH above is a PAIR - it fills an HC/Score column - and the people columns are
@@ -741,8 +743,11 @@ export function initEfficiencyFilters(data) {
       // 🚨 This tab reads HIGHER than the Recruiter tab (19 vs 4 on 25 Sep) and both are right: Overall Efficiency
       //    groups by job and so keeps the people who have no recruiter named, whom the Recruiter tab cannot place.
       pNS = (PM.jpc[key] || []).filter(c => !scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx)).length;
-      // A drop can NEVER be tied to an opening, so it scores nothing - heads only. Jerin, 24 Sep:
+      // A drop scores nothing - heads only. Jerin, 24 Sep:
       // "Drop can be based on heads, not score - that works!" This is the rule, not a gap.
+      // 🚨 CORRECTED 27 Sep 2026: this line used to give the REASON as "a drop can NEVER be tied to an
+      //    opening". FALSE - 7 of 18 Q3 drops carry one (Rule 8). The RULE above is Jerin's and stands;
+      //    whether to change it is #183.
       dS = 0;
     }
     return { total, joined, pending, drop, missed, gap, sc: j.score || 0, scoreable: j.scoreable,
