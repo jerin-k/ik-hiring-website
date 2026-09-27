@@ -153,32 +153,27 @@ export function roleBandOverlay(metrics) {
       const n = chart.data.labels.length;
       for (let i = 0; i < n; i++) {
         metrics.forEach(M => {
-          let lo = Infinity, hi = -Infinity, total = 0, y = 0, h = 0;
-          const edges = [];
+          // #182h: `edges`, and the bar height `h`, were only ever used to draw the separators between roles.
+          // Both went with them rather than being left looking effective.
+          let lo = Infinity, hi = -Infinity, total = 0, y = 0;
           chart.data.datasets.forEach((d, di) => {
             if (d._m !== M.key || !chart.isDatasetVisible(di)) return;
             const bar = chart.getDatasetMeta(di).data[i];
             if (!bar) return;
-            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y; h = bar.height || uiPx(18);
+            lo = Math.min(lo, bar.base); hi = Math.max(hi, bar.x); y = bar.y;
             total += d.data[i] || 0;
-            if ((d.data[i] || 0) > 0) edges.push(bar.x);
           });
           if (!total || hi <= lo) return;
-          const top = y - h / 2, bot = y + h / 2;
 
-          // ⚠ Guarded on PIXELS, not on the numbers. The 3% pooling above keeps a long bar's tail readable,
-          // but it is proportional — on a SHORT bar (Operations, 11 people against an axis of 100) five
-          // roles land 2px apart and the separators close up into hatching. A boundary is only drawn when
-          // there is real room since the last one; the roles are all still there, and the tooltip still
-          // names them. Found on the live chart, not in the mock-up.
-          let prev = lo;
-          c.lineWidth = 1.5;
-          c.strokeStyle = darken(M.color, SEP_DARKEN);
-          edges.sort((a, b) => a - b).slice(0, -1).forEach(x => {
-            if (x - prev < uiPx(SEP_MIN_PX)) return;
-            prev = x;
-            c.beginPath(); c.moveTo(x, top + 1); c.lineTo(x, bot - 1); c.stroke();
-          });
+          // ===== #182h (Jerin, 27 Sep 2026): 🗣 "Can we change the inner bifurcation of the chart bar? No one
+          //       is using it." — THE SEPARATORS ARE GONE. Each metric now reads as ONE solid block.
+          // 🔑 ONLY the lines went. The role BANDS are still there, so hovering a bar still lists the roles
+          //    behind it (roleSectionTooltip) — he asked for the lines, not the detail, and the hover costs
+          //    nothing to keep. The number below is unchanged: still drawn ONCE across all of a metric's bands.
+          // ⚠ The deleted code guarded itself on PIXELS rather than on the numbers, because on a SHORT bar five
+          //    roles landed 2px apart and the separators closed up into hatching. If a divided bar is ever wanted
+          //    again, that guard is the part worth bringing back, not just the strokes.
+          //    It used `edges`, `darken`, `SEP_DARKEN` and `SEP_MIN_PX`, which stay exported for that reason.
 
           if (hi - lo < uiPx(22)) return;
           c.font = `600 ${uiPx(11)}px -apple-system, BlinkMacSystemFont, sans-serif`;
