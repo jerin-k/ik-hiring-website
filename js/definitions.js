@@ -496,7 +496,7 @@ export const DEFINITIONS = {
           ['Department and Job', 'The role they are joining.'],
           ['Opening', 'The <strong>position</strong> they are tied to, by its full name. When it cannot be shown the cell says why: <em>no opening on the offer</em> or <em>not in this period</em>.'],
           ['Topic', 'On an <strong>SME</strong> role, the topic of the opening their offer names. Each reason it cannot be shown is a different job: <em>no opening on the offer</em> (link it), <em>opening has no topic</em> (set it &mdash; the list is in Data Hygiene), or <em>opening not in this period</em>. A plain dash means the role does not use topics.'],
-          ['Linked', 'The chip that says whether they are tied to a position at all: the one named on their offer or, failing that, the one Ashby&rsquo;s Openings screen shows them against. <em>Not linked</em> means they cannot be counted against a position on Position Fulfilment &mdash; those are the ones to fix first.'],
+          ['Opening quarter', 'The quarter of the opening they are tied to. A peach label marks one from an earlier quarter. <em>Not linked</em> means neither their offer nor Ashby&rsquo;s Openings screen names one, so they cannot be counted against a position on Position Fulfilment &mdash; those are the ones to fix first.'],
           ['DOJ Month, DOJ From and DOJ To', 'In the filter row on this sub-tab only. They narrow the list by <strong>date of joining</strong>; either end can be left empty. Anyone with <strong>no DOJ yet</strong> drops out while any is set.'],
         ]
       },
@@ -519,7 +519,7 @@ export const DEFINITIONS = {
           ['Department and Job', 'The role they joined.'],
           ['Opening', 'The <strong>position</strong> they are tied to, by its full name, or why it cannot be shown: <em>no opening on the offer</em> or <em>not in this period</em>.'],
           ['Topic', 'On an <strong>SME</strong> role, the topic of the opening their offer names, or why it cannot be shown. A plain dash means the role does not use topics.'],
-          ['Linked', 'The chip that says whether they were hired into a known opening: the one on their offer, or the one picked when they were moved to Hired. <em>Not linked</em> only when neither is known.'],
+          ['Opening quarter', 'The quarter of the opening they were <strong>hired into</strong>: the one on their offer, or the one picked when they were moved to Hired. A peach label marks one from before the quarter they started in. <em>Not linked</em> only when neither is known.'],
         ]
       },
     ],

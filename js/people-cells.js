@@ -103,9 +103,10 @@ export function tdRecruiter(name, refDay) {
   return `<td data-sv="${esc(name)}"><span class="pl-rec">${avatar(name, podOf(name, refQuarter(refDay)))}${esc(name)}</span></td>`;
 }
 
-export const tdLinked = (linked) => (linked
-  ? '<td data-sv="1"><span class="pl-chip pl-ok">Linked</span></td>'
-  : '<td data-sv="0"><span class="pl-chip pl-fix">Not linked</span></td>');
+// #195 (Jerin, 28 Sep 2026): `tdLinked` was DELETED here. Overall Efficiency was the only caller, and its
+// "Linked" column read the same word on all 157 joiners — a column that never varies carries no information.
+// It now uses `tdQuarter`, the same cell the Hiring Manager and Recruiter tabs already draw, which says
+// "Not linked" for the same rows AND names the quarter for the rest. Do not reintroduce a linked-only chip.
 
 export const countTag = (n) => `<span class="pl-count">${n}</span>`;
 
