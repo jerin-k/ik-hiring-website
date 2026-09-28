@@ -1,6 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick
+import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
 import { defsBlock } from '../definitions.js';
 import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
@@ -214,6 +215,9 @@ export function renderEfficiency(data) {
     <div class="eff-filters">
       <div class="fchip"><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
+      <!-- #196 (Jerin, 28 Sep 2026): the Recruiter filter. This strip had 262px spare, the roomiest of
+           the two Position Fulfilment strips, so nothing had to give way here. -->
+      <div class="fchip"><div class="ms" id="effMsRec"></div></div>
       <div class="fchip" id="effExpandWrap">${levelChooser('effLevels')}</div>
       <span class="fdiv"></span>
       
@@ -381,7 +385,7 @@ export function initEfficiencyFilters(data) {
   const tisSplit = hasWaitSplit(rollups);
   const arDwellJob = data.appReviewDwellByJob || null;       // {job8:{days:count}} — App Review dwell (still-parked candidates)
   let activeTab = 'fulfilment';
-  let msPod = null, msDept = null, msJob = null, msEffTpStage = null, msEffPipeStage = null;   // #145a
+  let msPod = null, msDept = null, msJob = null, msRec = null, msEffTpStage = null, msEffPipeStage = null;   // #145a · #196: msRec
 
   // #188: on Position Fulfilment a ticked level is drawn open — the chooser IS the expand control there.
   // #189d: every OTHER panel reads the "Expand all" tick again. #188 hard-coded this to true, which left eight
@@ -454,6 +458,8 @@ export function initEfficiencyFilters(data) {
     return tree;
   }
   const selDepts = () => (msDept ? msDept.getSelected() : []);
+  const selRecs = () => (msRec ? msRec.getSelected() : []);   // #196
+  const okRec = (r) => { const sel = selRecs(); return !sel.length || sel.includes(r); };   // ONE test, as on HM
   const selJobs = () => (msJob ? msJob.getSelected() : []);
   // Filtered [{dept, jobs:[...]}] for a pod (honours Department/Job multi-selects), sorted.
   function podDeptJobs(pod, q) {
@@ -570,59 +576,6 @@ export function initEfficiencyFilters(data) {
   // Styled multi-select checkbox dropdown. Returns { getSelected }; empty selection = "All".
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
   // Kept identical across the HM / Recruiter / Overall-Efficiency tabs on purpose.
-  function makeMultiSelect(container, label, options, onChange) {
-    if (!container) return null;
-    const selected = new Set();
-    // #172c (25 Sep 2026): an option is either a plain string (unchanged, what every other dropdown passes)
-    // or { v, t } — `v` is the VALUE kept in `selected`, `t` is what the user reads. The Job dropdowns pass a
-    // JOB ID as `v`, so two jobs sharing a name stay distinct; everything else still passes strings.
-    const norm = (options || []).map(o => (o && typeof o === 'object')
-      ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
-    const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
-    const labelText = () => selected.size === 0 ? `${label}: All`
-      : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
-    const esc = s => String(s).replace(/"/g, '&quot;');
-    container.classList.add('ms');
-    container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-      + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
-      + `<div class="ms-list">`
-      + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}"> ${o.t}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
-      + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
-    const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
-    const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
-    const opts = [...container.querySelectorAll('.ms-opt')];
-    const emptyMsg = container.querySelector('.ms-empty');
-    btn.textContent = labelText();
-    function applyFilter(q) {
-      const needle = q.trim().toLowerCase();
-      let shown = 0;
-      opts.forEach(o => {
-        const hit = !needle || o.textContent.toLowerCase().indexOf(needle) >= 0;
-        o.style.display = hit ? '' : 'none';
-        if (hit) shown++;
-      });
-      if (emptyMsg) emptyMsg.style.display = shown ? 'none' : 'block';
-    }
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = panel.style.display !== 'none';
-      document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
-      panel.style.display = open ? 'none' : 'block';
-      // Reopening always starts from the full list, so a stale filter can never hide options.
-      if (!open && search) { search.value = ''; applyFilter(''); search.focus(); }
-    });
-    panel.addEventListener('click', e => e.stopPropagation());
-    if (search) search.addEventListener('input', () => applyFilter(search.value));
-    if (clearBtn) clearBtn.addEventListener('click', () => {
-      if (selected.size === 0) return;
-      selected.clear();
-      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
-      btn.textContent = labelText();
-      onChange();
-    });
-    container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
-    return { getSelected: () => [...selected] };
-  }
 
   const PENDING = 'Department → Job — pending job→pod attribution (pipeline)';
 
@@ -801,6 +754,10 @@ export function initEfficiencyFilters(data) {
       sc: j.score || 0, scoreable: j.scoreable, job8: j8 });
     ((data.openingRows) || []).forEach(r => {
       if (r.jobId8 !== j.jid || !inScope(r)) return;
+      // #196: a recruiter filtered out takes their positions with them, so the recruiter rows that remain still
+      // add up to the job row this function returns - the job row IS their sum here (unlike HM, where it comes
+      // from openingBuckets and had to be rebuilt).
+      if (!okRec((r.owners && r.owners[0]) || NO_RECRUITER)) return;
       const b = get((r.owners && r.owners[0]) || NO_RECRUITER);
       const s = oIdx.ready ? scoreOfOpening(r.openingId, oMeta, r.quarter, oIdx) : scoreOf(j, r.quarter, PM);
       b.total++; b.tS += s;
@@ -820,18 +777,20 @@ export function initEfficiencyFilters(data) {
       }
     });
     (PM.jpc[key] || []).forEach(c => {
+      if (!okRec(recruiterOfPerson(c))) return;   // #196
       const b = get(recruiterOfPerson(c));
       const s = oIdx.ready ? scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx) : scoreOf(j, PM.atQ, PM);
       b.pending++; b.jpWho.push(c); b.pS += s;
       if (oIdx.ready && !s) b.pNS++;   // #176c: counted from the SAME list that produced pS
     });
     (PM.dropOp[key] || []).forEach(d => {
+      if (!okRec(recruiterOfPerson(d.e))) return;   // #196
       const b = get(recruiterOfPerson(d.e));
       b.drop++;
       // #183b: a drop is priced from the opening ITS OWN offer names, never from the job.
       b.dS += oIdx.ready ? scoreOfDropOpening(d.e, oMeta, d.q, oIdx) : 0;
     });
-    (PM.jn[key] || []).forEach(c => { get(recruiterOfPerson(c)).joWho.push(c); });
+    (PM.jn[key] || []).forEach(c => { if (okRec(recruiterOfPerson(c))) get(recruiterOfPerson(c)).joWho.push(c); });   // #196
     const out = Object.values(bag);
     out.forEach(b => { b.gap = b.total - b.joined - b.pending; b.gS = b.tS - b.jS - b.pS; });
     return out.sort((a, b) => (a.recruiter === NO_RECRUITER) ? 1 : (b.recruiter === NO_RECRUITER) ? -1
@@ -1144,6 +1103,7 @@ export function initEfficiencyFilters(data) {
     const rows = (data.joiningPendingCases || [])
       .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
       .filter(c => matchesJob(jsel, c.jobId8))   // #172c
+      .filter(c => okRec(c.recruiter))   // #196: the person's own recruiter (#192), never the position's owner
       .filter(c => inDojFilter(c.doj, dojF));
     // #149 option A: month ➡ date ➡ people, soonest first — the twin of Hiring Manager's list, and Rule 3
     // says the two move together.
@@ -1182,6 +1142,7 @@ export function initEfficiencyFilters(data) {
       .filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg))
       .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
       .filter(e => matchesJob(jsel, e.jobId8))   // #172c
+      .filter(e => okRec(e.recruiter))   // #196
       .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
     // #149 option A: newest month first here — this list looks back. No sub-stage: everyone is Hired.
     body.innerHTML = rows.length ? monthTreeRows(rows, {
@@ -2199,6 +2160,17 @@ export function initEfficiencyFilters(data) {
   // every pod for the sub-tabs not yet converted, so nothing else changes until they are.
   msPod = null;
   msDept = makeMultiSelect(document.getElementById('effMsDept'), 'Department', deptNames, renderAll);
+  // #196: the same roster rule as the Hiring Manager tab - the owners of the period's positions AND the
+  // recruiters of its people, so no name is offered with nothing behind it and no row lacks a way to reach it.
+  const recNames196 = (() => {
+    const set = new Set();
+    (data.openingRows || []).forEach(r => (r.owners || []).forEach(o => o && set.add(o)));
+    ['offerEvents', 'joiningPendingCases', 'dropEvents'].forEach(k => (data[k] || []).forEach(e => { if (e.recruiter) set.add(e.recruiter); }));
+    const out = [...set].sort((a, b) => a.localeCompare(b));
+    out.push(NO_RECRUITER);
+    return out;
+  })();
+  msRec = makeMultiSelect(document.getElementById('effMsRec'), 'Recruiter', recNames196, renderAll);
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobOptions, renderAll);   // #172c
   document.addEventListener('click', closeMsPanels);
   wireLevels('effLevels', renderAll);   // #188

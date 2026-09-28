@@ -896,7 +896,14 @@ td.c-txt { text-align: left; }
 /* multi-select checkbox dropdown (shared: Recruiter + HM tabs) */
 .ms { position: relative; display: inline-block; }
 .ms-btn { appearance: none; height: 2.125rem; padding: 0 0.6875rem; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 0.75rem; font-weight: 500;
-  background: var(--card); color: var(--text); cursor: pointer; min-width: 7.5rem; text-align: left; white-space: nowrap; }
+  background: var(--card); color: var(--text); cursor: pointer; min-width: 7.5rem; text-align: left; white-space: nowrap;
+  /* #196 option C (Jerin, 28 Sep 2026): a CAP, so no choice a user makes can widen the filter strip.
+     The label grows with the selection — "Recruiter: Kaashvika Kashyap" against "Recruiter: All" — and the
+     strip is `nowrap` inside a fixed 1210px content column, so one long name used to push the row into a
+     sideways scroll and hide the controls past the edge. It ellipsises instead; the full text is the button's
+     title, so hovering still reads it. 🚨 `min-width` already sits below this: the two together mean every
+     chip lives between 7.5rem and 11.5rem, whatever is in it, so the row's width is now knowable in advance. */
+  max-width: 11.5rem; overflow: hidden; text-overflow: ellipsis; }
 .ms-btn:hover { border-color: var(--muted); }
 .ms-panel { position: absolute; top: 2.375rem; left: 0; z-index: 20; background: var(--card); border: 1px solid var(--border); border-radius: 0.5rem;
   padding: 0.375rem; min-width: 13.75rem; max-height: 20rem; overflow: hidden; box-shadow: 0 0.375rem 1.25rem rgba(15,23,42,0.12);
