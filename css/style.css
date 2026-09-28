@@ -18,7 +18,7 @@ html { font-size: 90%; }
      be better to view." It was --border-light (#eaeef6), too faint to follow across a wide dense table;
      #d5dce8 was then too dark (his word), so it sits between the two. Kept SEPARATE from --border-light on purpose: the two jobs differ, and
      darkening every card edge to fix the tables would be the wrong trade. */
-  --row-line: #e0e6f0;
+  --row-line: #e6ebf3;
   --text: #0f172a;
   --text-secondary: #334155;
   --muted: #6b7391;
@@ -27,9 +27,14 @@ html { font-size: 90%; }
   --accent-deep: #33507f;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
   --navy: #22344f;          /* the frozen header block */
   /* #197 (Jerin, 28 Sep 2026): "Attached navy panel shouldnt be transparent. Instead, can the border be a
-     slightly mid/dark grey shade". It was #33486a - a lighter BLUE than the navy behind it, which is why the
-     dividers read as gaps showing through rather than as drawn lines. A neutral mid grey reads as a border. */
-  --navy-line: #5a6270;
+     slightly mid/dark grey shade". It was #33486a, a lighter BLUE than the navy behind it, so the dividers read as
+     gaps showing through. A mid grey (#5a6270) was tried and he still read it as white: ANY line lighter
+     than the panel looks like a gap at 1px, whatever its hue. So the line is now DARKER than the navy -
+     a groove, not a highlight - which cannot be mistaken for a gap. It is the same #16243a already used
+     for the header's own bottom rule, so the chrome has one dark line, not two competing ones.
+     🚨 Applies to HM, Recruiter and Overall Efficiency together - it is one token (Jerin: "we need to
+     change under HM, Recruiter & Overall okk"). */
+  --navy-line: #16243a;
   --navy-ink: #a8bcd8;      /* muted text on the navy bar */
   --navy-sub: #2d4a7c;      /* the active sub-tab chip. Lighter than --navy on purpose: the same ink sits
                                on a pale band here, so it reads heavier than it does on the header. Do NOT
@@ -1578,8 +1583,11 @@ table.pl-list td:not(:first-child) { text-align: left; }
 .gs-hc, .gs-pc { display:inline-grid; place-items:center; min-width:1.375rem; height:1.25rem; padding:0 0.3125rem; border-radius:0.25rem; font-weight:600;
   font-variant-numeric:tabular-nums; }
 th.gs-wkend, td.gs-wkend { background-image:linear-gradient(rgba(15,23,42,.04), rgba(15,23,42,.04)); }
-th.gs-wkedge, td.gs-wkedge { box-shadow:inset 1px 0 0 #c9d3e5; }
-table th.wknd.gs-wkedge { box-shadow:inset 1px 0 0 #c9d3e5, inset 0 -2px 0 rgba(163,50,83,0.38); }   /* keeps the page's weekend underline */
+/* #197c: the same split as the sticky column. #c9d3e5 is right on a white BODY cell and reads as a white
+   stripe on the navy HEADER, which is the fault Jerin kept seeing. */
+td.gs-wkedge { box-shadow:inset 1px 0 0 #c9d3e5; }
+th.gs-wkedge { box-shadow:inset 1px 0 0 var(--navy-line); }
+table th.wknd.gs-wkedge { box-shadow:inset 1px 0 0 var(--navy-line), inset 0 -2px 0 rgba(163,50,83,0.38); }   /* #197c · keeps the page's weekend underline */
 .gs-dow { display:block; margin-top:1px; font-size:0.59375rem; font-weight:500; line-height:1.1; letter-spacing:0; text-transform:none; color:#9aa3b8; }
 .gs-dow.is-today { color:#1E7590; font-weight:700; }
 .gs-bar { display:inline-block; height:0.3125rem; margin-left:0.375rem; border-radius:0.1875rem; background:#9fb3d6; vertical-align:middle; }
