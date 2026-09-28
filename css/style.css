@@ -28,13 +28,12 @@ html { font-size: 90%; }
   --navy: #22344f;          /* the frozen header block */
   /* #197 (Jerin, 28 Sep 2026): "Attached navy panel shouldnt be transparent. Instead, can the border be a
      slightly mid/dark grey shade". It was #33486a, a lighter BLUE than the navy behind it, so the dividers read as
-     gaps showing through. A mid grey (#5a6270) was tried and he still read it as white: ANY line lighter
-     than the panel looks like a gap at 1px, whatever its hue. So the line is now DARKER than the navy -
-     a groove, not a highlight - which cannot be mistaken for a gap. It is the same #16243a already used
-     for the header's own bottom rule, so the chrome has one dark line, not two competing ones.
+     gaps showing through. 🗣 "I like the grey border for it." The grey was never the problem: the
+     BORDER was DISAPPEARING when the header froze (see the th rule below), so what he saw was the page
+     showing through, not a colour.
      🚨 Applies to HM, Recruiter and Overall Efficiency together - it is one token (Jerin: "we need to
      change under HM, Recruiter & Overall okk"). */
-  --navy-line: #16243a;
+  --navy-line: #5a6270;
   --navy-ink: #a8bcd8;      /* muted text on the navy bar */
   --navy-sub: #2d4a7c;      /* the active sub-tab chip. Lighter than --navy on purpose: the same ink sits
                                on a pale band here, so it reads heavier than it does on the header. Do NOT
@@ -613,10 +612,18 @@ th {
   position: sticky;
   top: 0;
   white-space: normal;
-  border-bottom: 2px solid #16243a;
-  border-right: 1px solid var(--navy-line);
+  /* 🚨 #197d (Jerin, 28 Sep 2026): 🗣 "When it freeze, for gods sake - dont make the border transaparent.
+     Keep it opaque - need the grey border."
+     THE COLOUR WAS NEVER THE FAULT. Every `th` here is `position: sticky`, and under `border-collapse: collapse`
+     the collapsed borders belong to the TABLE, not the cell — so when the cell lifts off and sticks, its borders
+     are left behind and the page shows straight through the gap. That is the "transparent when frozen" he
+     reported three times, and it is why measuring the border colour kept saying "grey" while the screen said
+     white: the computed value was right and nothing was being painted.
+     🔑 A BOX-SHADOW BELONGS TO THE CELL, so it travels with it. Same line, same grey, drawn a way that survives
+     sticking. Do not put these back as borders. */
+  box-shadow: inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a;
 }
-th:last-child { border-right: 0; }
+th:last-child { box-shadow: inset 0 -2px 0 #16243a; }
 
 /* #154: a heading row BELOW another one starts where the one above it ends, never at the same place. `--grp-h`
    is measured per table by js/sticky-chrome.js; with it unset this is `top: 0`, which is today's behaviour for
@@ -696,14 +703,18 @@ tr:hover td { background: #f8fafc; }
    reads without a heavier border. ⚠ Jerin chose B knowing it stays 16 columns and still runs past the
    panel — that was on the mock-up. It fixes the reading, not the width. */
 table.metrics thead th { text-transform: none; letter-spacing: 0; white-space: normal; line-height: 1.25; }
+/* 🚨 #197d: these are HEADING cells and every heading cell is sticky, so their lines are INSET SHADOWS, not
+   borders — a collapsed border is left behind when the cell sticks and the page shows through (see the `th`
+   rule above). ⚠ box-shadow REPLACES rather than adds, so each of these restates the base cell's own divider
+   and bottom rule; changing one means restating the stack, which is the price of the cell keeping its lines. */
 .stage-hdr { background: #1a2a40 !important; text-align: center !important; vertical-align: middle;
-  border-left: 1px solid #0f1c2e; border-bottom: 1px solid #33486a;
+  box-shadow: inset 1px 0 0 #0f1c2e, inset -1px 0 0 var(--navy-line), inset 0 -1px 0 #33486a;
   color: #ffffff; font-weight: 600; }
 .stage-sub { text-align: center !important; font-size: 0.625rem !important; font-weight: 500 !important;
-  color: var(--navy-ink); background: var(--navy) !important; border-left: 1px solid var(--navy-line);
-  border-bottom: 2px solid #16243a !important; }
+  color: var(--navy-ink); background: var(--navy) !important;
+  box-shadow: inset 1px 0 0 var(--navy-line), inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }
 /* the first sub-cell of each pair opens a group, so it carries the group's heavier rule */
-.stage-sub.grp-open { border-left: 1px solid #0f1c2e; }
+.stage-sub.grp-open { box-shadow: inset 1px 0 0 #0f1c2e, inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }
 td.stage-cell { border-left: 1px solid var(--border-light); }
 td.stage-first { border-left: 1px solid var(--border); }
 
@@ -722,8 +733,9 @@ table.metrics th.stage-hdr,
 table.metrics th.stage-sub { text-align: center !important; }
 
 /* Group boundary: the rule belongs on the first column of each metric group. */
-table.metrics thead tr:first-child th { border-left: 1px solid var(--navy-line); }
-table.metrics thead tr:first-child th:first-child { border-left: 0; }
+/* #197d: this drew a SECOND line on the same edge as the base th's divider, and vanished when frozen for the
+   same reason. The inset shadow above covers every heading cell on every table, so it is gone rather than
+   converted — one declaration draws the group boundary now. */
 
 /* Keep the name column visible while the metric columns scroll sideways.
    background:inherit lets pod/total rows keep their own row colour underneath. */
@@ -739,7 +751,7 @@ table.metrics td:first-child {
 table.metrics thead th:first-child { z-index: 4; background: var(--navy); text-align: center; }   /* #154: above both heading rows */
 /* A rowspan=2 group cell ends on the header's own bottom edge, so it carries the 2px rule, not .stage-hdr's
    light 1px divider — that 1px is there to sit ABOVE the Heads/Score row, and these cells have none below them. */
-table.metrics thead th[rowspan="2"] { border-bottom: 2px solid #16243a; }
+table.metrics thead th[rowspan="2"] { box-shadow: inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }   /* #197d: a shadow, so it survives sticking */
 table.metrics tbody tr { background: var(--card); }
 table.metrics tbody tr:hover { background: #f8fafc; }
 /* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */
@@ -749,7 +761,7 @@ table.metrics tbody tr:hover { background: #f8fafc; }
    never showed it. 🔑 The same lesson as --row-line the hour before: when one declaration serves two
    backgrounds, split it rather than pick a colour that suits neither. */
 table.metrics td:first-child { box-shadow: 1px 0 0 var(--border); }
-table.metrics th:first-child { box-shadow: 1px 0 0 var(--navy-line); }
+table.metrics th:first-child { box-shadow: 1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }   /* #197d: its right edge AND the header rule, both as shadows */
 
 /* Score sits beside its HC as the secondary number - lighten it so headcount reads first. */
 table.metrics td.score { color: var(--muted); font-weight: 400; }
