@@ -15,10 +15,10 @@ html { font-size: 90%; }
   --border: #dbe1ec;
   --border-light: #eaeef6;
   /* #197: the line BETWEEN TABLE ROWS, given its own token. "The rows are barely visible; a lil darker would
-     be better to view." It was --border-light (#eaeef6), which is right for a card edge and too faint to
-     follow across a wide dense table. Kept SEPARATE from --border-light on purpose: the two jobs differ, and
+     be better to view." It was --border-light (#eaeef6), too faint to follow across a wide dense table;
+     #d5dce8 was then too dark (his word), so it sits between the two. Kept SEPARATE from --border-light on purpose: the two jobs differ, and
      darkening every card edge to fix the tables would be the wrong trade. */
-  --row-line: #d5dce8;
+  --row-line: #e0e6f0;
   --text: #0f172a;
   --text-secondary: #334155;
   --muted: #6b7391;
@@ -738,8 +738,13 @@ table.metrics thead th[rowspan="2"] { border-bottom: 2px solid #16243a; }
 table.metrics tbody tr { background: var(--card); }
 table.metrics tbody tr:hover { background: #f8fafc; }
 /* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */
-table.metrics th:first-child,
+/* 🚨 #197b (Jerin, 28 Sep 2026): "while freezing, border becomes white; ugly". ONE declaration was painting that
+   edge for both the navy HEADER cell and the white BODY cells. --border (#dbe1ec) is right on white and reads as
+   a white stripe against the navy — and only once the column STICKS, which is why a static look at the page
+   never showed it. 🔑 The same lesson as --row-line the hour before: when one declaration serves two
+   backgrounds, split it rather than pick a colour that suits neither. */
 table.metrics td:first-child { box-shadow: 1px 0 0 var(--border); }
+table.metrics th:first-child { box-shadow: 1px 0 0 var(--navy-line); }
 
 /* Score sits beside its HC as the secondary number - lighten it so headcount reads first. */
 table.metrics td.score { color: var(--muted); font-weight: 400; }
