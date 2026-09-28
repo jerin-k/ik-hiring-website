@@ -4,7 +4,7 @@ import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js'; 
 import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
 import { defsBlock } from '../definitions.js';
 import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
-import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdQuarter, pointsCaption } from '../people-cells.js';   // #137 · #176b · #195: tdQuarter replaces tdLinked
+import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdQuarter, tdSourcer, pointsCaption } from '../people-cells.js';   // #137 · #176b · #195: tdQuarter replaces tdLinked · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
@@ -240,7 +240,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="effJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiningpending')}
@@ -250,7 +250,7 @@ export function renderEfficiency(data) {
     <div class="eff-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="effJoinersBody"></tbody>
       </table></div>
       ${defsBlock('eff-joiners')}
@@ -1157,10 +1157,10 @@ export function initEfficiencyFilters(data) {
           { department: c.department, title: c.job || c.jobTitle, level: (effJob8[String(c.jobId8 || '').slice(0, 8)] || {}).level },
           selQuarter(), openingScores(data)),
         c.openingId ? 'no complexity' : 'no opening'),
-      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c.department)}${tdJob(c.job)}${tdOpening(c.openingId, topicLookup(data))}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdQuarter(c.openingQuarter)}`,   // #195
-      cols: 8, order: 'soonest', live: true,   // #168/#169: Opening + Topic
+      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdSourcer(c.sourcer)}${tdDept(c.department)}${tdJob(c.job)}${tdOpening(c.openingId, topicLookup(data))}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdQuarter(c.openingQuarter)}`,   // #195
+      cols: 9, order: 'soonest', live: true,   // #168/#169: Opening + Topic · #194: +Sourcer
       split: items => stageSplit(items, c => c.subStage),
-    }) : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">No offers in play under these filters.</td></tr>`;
+    }) : `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">No offers in play under these filters.</td></tr>`;
     pinMonthHeadings(body);
     // #130b: on its own sub-tab now, so it says it is live — the dates above it do not apply.
     const cap = document.getElementById('effJPCaption');
@@ -1191,9 +1191,9 @@ export function initEfficiencyFilters(data) {
       captionOf: e => pointsCaption(
         scoreOfOpening(e.openingId, { department: e.department, title: e.jobTitle, level: e.level }, selQuarter(), openingScores(data)),
         e.openingId ? 'no complexity' : 'no opening'),
-      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,   // #195
-      cols: 7, order: 'newest',   // #168/#169: Opening + Topic
-    }) : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdSourcer(e.sourcer)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,   // #195
+      cols: 8, order: 'newest',   // #168/#169: Opening + Topic · #194: +Sourcer
+    }) : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
     pinMonthHeadings(body);
     const cap = document.getElementById('effJoinersCaption');
     if (cap) {

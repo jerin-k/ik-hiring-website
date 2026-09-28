@@ -3,7 +3,7 @@ import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuart
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs · #193a: isMoreClick
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
-import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b
+import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdSourcer, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
@@ -627,7 +627,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
+          <th class="c-src">Sourcer</th><th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
       </table></div>
@@ -640,7 +640,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th>
+          <th class="c-src">Sourcer</th><th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
       </table></div>
@@ -2195,7 +2195,7 @@ export function initRecruiterFilters(baseData) {
       const nowRecs = sameQ ? recs : getFilteredRecs(qNow);
       const jp = peopleTree((data.joiningPendingCases || []).filter(c => inDojFilter(c.doj, dojF)), {
         q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
-        rest: 8,   // #168/#169: Opening + Topic joined the row
+        rest: 9,   // #168/#169: Opening + Topic joined the row · #194: +Sourcer
         isLinked: c => c.linked,
         // #176b: the person's points, from the OPENING they are tied to. Level comes from their job; the
         // opening supplies the complexity (#165), so no opening or a blank one scores 0 and says which.
@@ -2206,10 +2206,10 @@ export function initRecruiterFilters(baseData) {
           c.openingId ? 'no complexity' : 'no opening'),
         sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
         // #149 rule 6: only Opening Quarter moves, to the far right. Everything else stays as it was.
-        cells: c => `${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
+        cells: c => `${tdSourcer(c.sourcer)}${tdMonth(c.doj)}${tdDoj(c.doj, { live: true })}${tdDept(c.department)}`
           + `${tdJob(c.job || c.jobTitle)}${tdOpening(c.openingId, TOPIX)}${tdTopic(c.openingId, c.jobId8, TOPIX)}${tdStage(c.subStage)}${tdQuarter(c.openingQuarter)}`
       });
-      jpBody.innerHTML = jp.html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Nobody in closing under these filters.</td></tr>`;
+      jpBody.innerHTML = jp.html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:1rem">Nobody in closing under these filters.</td></tr>`;
       // ⚠ This table is a data-path tree, so it needs wireTreePath. It was wired with wireVelTree, which only
       // knows about .lvl-pod / .lvl-rec rows — so nothing here expanded at all and only the pod headers showed.
       wireTreePath(jpBody);
@@ -2229,7 +2229,7 @@ export function initRecruiterFilters(baseData) {
     if (joinersBody) {
       const rgJ = selRange();
       const jn = peopleTree((data.offerEvents || []).filter(e => e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rgJ)), {
-        rest: 7,   // #168/#169: Opening + Topic joined the row
+        rest: 8,   // #168/#169: Opening + Topic joined the row · #194: +Sourcer
         isLinked: e => !!e.openingId,
         // #176b: offerEvents carry their own level, so no job lookup is needed here.
         captionOf: (e) => pointsCaption(
@@ -2237,9 +2237,9 @@ export function initRecruiterFilters(baseData) {
           e.openingId ? 'no complexity' : 'no opening'),
         sortBy: (a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')),   // most recent first
         // #149 rule 6: only Opening Quarter moves, to the far right.
-        cells: e => `${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, TOPIX)}${tdTopic(e.openingId, e.jobId8, TOPIX)}${tdQuarter(e.openingQuarter, e.startDate)}`
+        cells: e => `${tdSourcer(e.sourcer)}${tdMonth(e.startDate)}${tdDoj(e.startDate)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, TOPIX)}${tdTopic(e.openingId, e.jobId8, TOPIX)}${tdQuarter(e.openingQuarter, e.startDate)}`
       });
-      joinersBody.innerHTML = jn.html || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
+      joinersBody.innerHTML = jn.html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
       wireTreePath(joinersBody);
       const capJ = document.getElementById('recJoinersCaption');
       if (capJ) capJ.innerHTML = jn.shown

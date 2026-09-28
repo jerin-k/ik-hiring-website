@@ -103,6 +103,20 @@ export function tdRecruiter(name, refDay) {
   return `<td data-sv="${esc(name)}"><span class="pl-rec">${avatar(name, podOf(name, refQuarter(refDay)))}${esc(name)}</span></td>`;
 }
 
+// ===== #194 (Jerin, 28 Sep 2026): who SOURCED each person, on both people lists of all three tabs =====
+// 🚨 A BLANK HERE IS THE NORMAL CASE, NOT A GAP. On today's data only 2 of 157 joiners and 1 of 14 in closing
+// carry a sourcer at all - almost every hire was sourced by the recruiter who worked it, and the field is only
+// filled when somebody ELSE did the sourcing. So this prints a quiet dash rather than the loud "No recruiter"
+// chip `tdRecruiter` uses: that chip marks a real fault to go and fix, and 155 of them would be a lie.
+// 🔑 Where the sourcer IS the recruiter the cell still names them - the tables say what Ashby holds, and
+// silently blanking a real value would make the column disagree with the record behind it.
+// ⚠ NO avatar. The initials badge is colour-coded by POD, and a sourcer can be an agency (Sangha) that has no
+// pod - `podOf` would file it under the default and invent a pod membership that does not exist.
+export function tdSourcer(name) {
+  if (!name) return `<td data-sv="">${DASH}</td>`;
+  return `<td data-sv="${esc(name)}"><span class="pl-src">${esc(name)}</span></td>`;
+}
+
 // #195 (Jerin, 28 Sep 2026): `tdLinked` was DELETED here. Overall Efficiency was the only caller, and its
 // "Linked" column read the same word on all 157 joiners — a column that never varies carries no information.
 // It now uses `tdQuarter`, the same cell the Hiring Manager and Recruiter tabs already draw, which says

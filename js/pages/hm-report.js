@@ -3,7 +3,7 @@ import { jnWhoCell, dayLabel, SHOW_FIRST, moreClick } from '../people-list-cell.
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants (#182e: the bar-end total label)
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
-import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter } from '../people-cells.js';   // #137
+import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter, tdSourcer } from '../people-cells.js';   // #137 · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
 import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
@@ -514,7 +514,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiningpending')}
@@ -524,7 +524,7 @@ export function renderHmReport(data) {
     <div class="hm-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJoinBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiners')}
@@ -1373,7 +1373,7 @@ export function initHmFilters(data) {
     }
 
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="9" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody is in Ref Check, Documentation or Offer for this filter.</td></tr>`;
       return;
     }
     // #149: the tree sorts itself — SOONEST first, because this list looks forward. Inside a date, by name.
@@ -1384,8 +1384,8 @@ export function initHmFilters(data) {
     body.innerHTML = monthTreeRows(list, {
       dayOf: c => c.doj,
       nameOf: c => c.candidate,
-      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdDept(c._dept)}${tdJob(c.job)}${tdOpening(c.openingId, topicLookup(data))}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdQuarter(c.openingQuarter)}`,
-      cols: 8, order: 'soonest', live: true,   // #169
+      cells: c => `${tdStage(c.subStage)}${tdRecruiter(c.recruiter)}${tdSourcer(c.sourcer)}${tdDept(c._dept)}${tdJob(c.job)}${tdOpening(c.openingId, topicLookup(data))}${tdTopic(c.openingId, c.jobId8, topicLookup(data))}${tdQuarter(c.openingQuarter)}`,
+      cols: 9, order: 'soonest', live: true,   // #169 · #194: +Sourcer
       split: items => stageSplit(items, c => c.subStage),
     });
     pinMonthHeadings(body);
@@ -1411,7 +1411,7 @@ export function initHmFilters(data) {
         : '';
     }
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="5" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
       return;
     }
     // #149: NEWEST month first here — this list looks back, where Joining Pending looks forward.
@@ -1420,8 +1420,8 @@ export function initHmFilters(data) {
     body.innerHTML = monthTreeRows(list, {
       dayOf: e => e.startDate,
       nameOf: e => e.candidate,
-      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdDept(e._dept)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,
-      cols: 7, order: 'newest',   // #169
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdSourcer(e.sourcer)}${tdDept(e._dept)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,
+      cols: 8, order: 'newest',   // #169 · #194: +Sourcer
     });
     pinMonthHeadings(body);
   }
