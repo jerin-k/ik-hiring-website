@@ -9,10 +9,14 @@
 // caller passes that filter in; this module never invents one. Measured 27 Sep: openingBuckets and openingRows
 // agree exactly for Q3 — 204 total, 154 joined, zero jobs disagreeing.
 //
-// 🚨 BOTH HALVES OF THE TABLE SPLIT (Jerin, 27 Sep: *"Both openings & people have to split recruiter-wise"*).
-// The counting half splits by the position's OWNER. The people half — who joined, who is joining, offer drops —
-// splits by `recruiterOfPerson()` below. They are different questions and the wrong answer to the second is how
-// a row ends up with names and numbers describing different people.
+// 🚨 BOTH HALVES OF THE TABLE SPLIT (Jerin, 27 Sep: *"Both openings & people have to split recruiter-wise"*),
+// AND THEY SPLIT ON DIFFERENT THINGS — settled by Jerin on 28 Sep 2026 (#192):
+//   the counting half — total, joined, open — splits by the POSITION's owner (this file's `recruiterIndex`);
+//   the people half   — who joined, who is joining, offer drops — splits by the CANDIDATE's own recruiter.
+// 🗣 *"While the Opening Count against a recruiter can be taken from Opening's Hiring team, the names under
+//     'Who joined' & 'Who is joining' should be calculated as per the Candidates 'Hiring Team'."*
+// They are different questions and the wrong answer to the second is how a row ends up with names and numbers
+// describing different people.
 //
 // 🚨 A `(recruiter not set)` row is NOT optional, and it is a CATCH-ALL, not merely "openings with no owner":
 // `closeToJob()` also pushes into it any position the job counted that this index could not see (an archived
@@ -35,8 +39,11 @@ export const NO_RECRUITER = '(recruiter not set)';
  * @returns {{byJob: object, ownerOf: object}}
  *   byJob   → { [job8]: Array<{recruiter,total,joined,open,missed,jpTied,openings}> }, biggest first,
  *             `(recruiter not set)` always last.
- *   ownerOf → { [openingId]: recruiter } for every opening IN PERIOD. This is the half topicIndex never
- *             needed: attributing a PERSON needs to look up the owner of the position their offer names.
+ *
+ * ⚠ #192 (28 Sep 2026) REMOVED the `ownerOf` half of this return. It existed for one caller — the old
+ *   `recruiterOfPerson`, which filed a PERSON under the owner of the position their offer named. That rule is
+ *   gone, so the map has no consumer. It is deleted rather than left unused, because leaving it invites the
+ *   exact re-wiring #192 undid.
  */
 export function recruiterIndex(data, sel) {
   const rows = (data && data.openingRows) || null;
@@ -49,7 +56,6 @@ export function recruiterIndex(data, sel) {
   };
 
   const byJob = {};
-  const ownerOf = {};
   rows.forEach((r) => {
     if (!take(r)) return;
     // An opening carries `owners` as a LIST. Measured 27 Sep: 198 of 204 name exactly one and 6 name none —
@@ -57,7 +63,6 @@ export function recruiterIndex(data, sel) {
     // where `share` divides an opening 1/n). Taking [0] is the whole rule; it is not a simplification that
     // loses anybody today, and a second owner would land in the first owner's row rather than vanish.
     const who = (r.owners && r.owners[0]) || NO_RECRUITER;
-    if (r.openingId) ownerOf[r.openingId] = who;
     const job = byJob[r.jobId8] || (byJob[r.jobId8] = {});
     const t = job[who] || (job[who] = { recruiter: who, total: 0, joined: 0, open: 0, missed: 0, jpTied: 0, openings: [] });
     t.total++;
@@ -71,7 +76,7 @@ export function recruiterIndex(data, sel) {
   Object.keys(byJob).forEach((job8) => {
     out[job8] = Object.values(byJob[job8]).sort(cmp);
   });
-  return { byJob: out, ownerOf };
+  return { byJob: out };
 }
 
 function cmp(a, b) {
@@ -85,18 +90,26 @@ function cmp(a, b) {
 /**
  * Which recruiter a PERSON belongs to — the rule for the people half of the table.
  *
- * 🔑 THE POSITION WINS WHERE THERE IS ONE. If the person's record names an opening this period counted, they
- * belong to whoever owns that position; otherwise they belong to whoever worked them. Measured 27 Sep: that
- * places EVERY person — 157 of 157 joiners, 14 of 14 in the joining pipeline, 12 of 12 offer drops — where the
- * position alone would have placed 9 of 14 and none of the drops, and the person alone would have disagreed
- * with the position on 1 of the 9 cases where both are known.
- * ⚠ The balance shifts toward the position on its own as more offers carry an opening: 0% of offers raised
- * before Jul 2026 named one, 100% of those raised since August do (Rule 8).
+ * 🔑 THE RECRUITER WHO WORKED THEM, ALWAYS. A person who joined, is joining, or dropped after an offer counts
+ * against the Recruiter on the CANDIDATE's own hiring team. The position their offer happens to name never
+ * decides who they belong to — that is the other half of the table, and it is a different question.
+ *
+ * 🚨 #192 (Jerin, 28 Sep 2026) REVERSED #187 HERE. #187 read "the position wins where there is one", so a
+ * person whose offer named someone else's position was both LISTED and COUNTED under that owner. Jerin caught
+ * it live: Digvijay Singh Shekhawat, worked by Praveetha A, sat in Leenita Joseph Albert's Joining pipeline
+ * because his offer names a position Leenita owns. 🗣 *"Digvijay who is mentioned a Joining pending is
+ * Pravee's candidate - but is reflecting againsdt Leenita."*
+ *
+ * ⚠ IT LOOKED LIKE ONE STRAY ROW AND WAS NOT. The rule was almost never REACHED, by accident: `openingRows`
+ * stores an 8-character opening id while `offerEvents` and `dropEvents` store the full 36-character uuid, so
+ * the lookup missed every joiner (0 of 117 that carry one) and every drop, and only the joining pipeline — whose
+ * ids the pipeline already truncates — ever matched. Measured 28 Sep: had those ids lined up, the old rule would
+ * have re-filed 110 of 157 joiners and 6 of 12 drops, moving 5 more people onto a recruiter who never worked
+ * them. A one-character "tidy-up" of that mismatch would have done it silently. The rule is gone, so the
+ * mismatch is now harmless.
  */
-export function recruiterOfPerson(idx, who) {
-  if (!who) return NO_RECRUITER;
-  const byPos = who.openingId && idx.ownerOf ? idx.ownerOf[who.openingId] : null;
-  return byPos || who.recruiter || NO_RECRUITER;
+export function recruiterOfPerson(who) {
+  return (who && who.recruiter) || NO_RECRUITER;
 }
 
 /**

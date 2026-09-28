@@ -18,7 +18,7 @@ export const DEFINITIONS = {
   'hm-positions': {
     summary: 'How these numbers are worked out',
     intro: 'Built from Ashby <strong>openings</strong> &mdash; the positions being filled &mdash; and <strong>offers</strong> &mdash; the people. Openings count positions and offers count people, and that difference explains most of the confusion here.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: a recruiter level on the table, and the first column takes the row&rsquo;s colour &middot; 27 Sep 2026. An offer drop needs an offer &middot; 27 Sep 2026. Show levels belongs to this table; the other sub-tabs keep an Expand all tick &middot; 28 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: a recruiter level on the table, and the first column takes the row&rsquo;s colour &middot; 27 Sep 2026. An offer drop needs an offer &middot; 27 Sep 2026. Show levels belongs to this table; the other sub-tabs keep an Expand all tick &middot; 28 Sep 2026. People count against the recruiter who worked them &middot; 28 Sep 2026.',
     groups: [
       {
         heading: 'The cards and the columns',
@@ -38,7 +38,7 @@ export const DEFINITIONS = {
         heading: 'The levels in the first column',
         items: [
           ['Show levels', 'Which levels the table is built from &mdash; <strong>Job</strong>, <strong>Recruiter</strong>, <strong>Topic</strong>, with Department always the top. It chooses which levels <strong>exist</strong>, not how deep it opens: switch one off and whatever sat under it hangs on the level above, so the rows still add up. The other sub-tabs have an <em>Expand all</em> tick instead.'],
-          ['Recruiter', 'A position belongs to <strong>whoever owns it</strong> in Ashby. A <strong>person</strong> &mdash; joining, joined, or dropped after an offer &mdash; belongs to the owner of the position their offer names, or, where it names none, to the recruiter who worked them. The recruiter rows always add up to the role above.'],
+          ['Recruiter', 'A position belongs to <strong>whoever owns it</strong> in Ashby. A <strong>person</strong> &mdash; joining, joined, or dropped after an offer &mdash; belongs to the <strong>recruiter who worked them</strong>, taken from the candidate&rsquo;s own hiring team &mdash; whatever position their offer happens to name. The recruiter rows always add up to the role above.'],
           ['(recruiter not set)', 'Positions with no recruiter recorded in Ashby, kept in their own row so the rows still add up. A gap to fix in Ashby &mdash; most of them name their recruiter in the position&rsquo;s own title.'],
           ['no position of their own here', 'A recruiter who worked somebody on this role but owns none of its positions &mdash; usually the same recording gap seen from the other side.'],
           ['Topic<span class=\"defs-tag\">SME - US and SME - India only</span>', 'In those two departments one role runs several topics at once, with a position for each. Everywhere else a role is one thing. A topic row adds up to the <strong>recruiter</strong> above it, not to the whole role. <strong>(topic not set)</strong> is the positions nobody has given a topic yet.'],
@@ -440,7 +440,7 @@ export const DEFINITIONS = {
   'eff-fulfilment': {
     summary: 'How these numbers are worked out',
     intro: 'The same picture as the Hiring Manager tab, cut <strong>Department &rarr; Job</strong> and with a <strong>Score</strong> beside every count. Everything follows Year and Quarter, narrowed to the day by <strong>From</strong> and <strong>To</strong>, except Joining pipeline, which is live. With Quarter on <em>All</em> the quarters of the selected year are added up, each quarter&rsquo;s positions scoring at that quarter&rsquo;s points.',
-    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: an offer drop needs an offer, and is priced from the position its offer names &middot; 27 Sep 2026. Show levels belongs to this table; the other sub-tabs keep an Expand all tick &middot; 28 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: an offer drop needs an offer, and is priced from the position its offer names &middot; 27 Sep 2026. Show levels belongs to this table; the other sub-tabs keep an Expand all tick &middot; 28 Sep 2026. People count against the recruiter who worked them &middot; 28 Sep 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -457,7 +457,7 @@ export const DEFINITIONS = {
         heading: 'The levels in the first column',
         items: [
           ['Show levels', 'Which levels the table is built from &mdash; <strong>Job</strong>, <strong>Recruiter</strong>, <strong>Topic</strong>, with Department always the top. It chooses which levels <strong>exist</strong>, not how deep it opens: switch one off and whatever sat under it hangs on the level above, so the rows still add up. The other sub-tabs have an <em>Expand all</em> tick instead.'],
-          ['Recruiter', 'A position belongs to <strong>whoever owns it</strong> in Ashby. A <strong>person</strong> &mdash; joining, joined, or dropped after an offer &mdash; belongs to the owner of the position their offer names, or, where it names none, to the recruiter who worked them. The recruiter rows always add up to the role above, in the counts and the points.'],
+          ['Recruiter', 'A position belongs to <strong>whoever owns it</strong> in Ashby. A <strong>person</strong> &mdash; joining, joined, or dropped after an offer &mdash; belongs to the <strong>recruiter who worked them</strong>, taken from the candidate&rsquo;s own hiring team &mdash; whatever position their offer happens to name. The recruiter rows always add up to the role above, in the counts and the points.'],
           ['(recruiter not set)', 'Positions with no recruiter recorded in Ashby, kept in their own row so the rows still add up. A gap to fix in Ashby &mdash; most of them name their recruiter in the position&rsquo;s own title.'],
           ['no position of their own here', 'A recruiter who worked somebody on this role but owns none of its positions &mdash; usually the same recording gap seen from the other side.'],
           ['Topic<span class=\"defs-tag\">SME - US and SME - India only</span>', 'In those two departments one role runs several topics at once, with a position for each. The topic sits under the <strong>recruiter</strong>, and a topic row adds up to that recruiter. <strong>(topic not set)</strong> is the positions nobody has given a topic yet, kept so the topics still add up.'],

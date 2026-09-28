@@ -62,8 +62,9 @@ const topicMetrics = (t, jp) =>
   + `<td style="color:var(--orange)">${jp || '<span class="zero">0</span>'}</td>`
   + DASH + DASH;
 
-// #187: the five counting cells for a RECRUITER row. Positions come from the opening's owner, people from
-// recruiterOfPerson(); Delta is the same formula every other row uses — Total − Joined − Joining pipeline —
+// #187: the five counting cells for a RECRUITER row. Positions come from the opening's owner, people from the
+// recruiter who WORKED them (#192, 28 Sep 2026 - the position never decides who a person belongs to);
+// Delta is the same formula every other row uses — Total − Joined − Joining pipeline —
 // and is NEVER clamped (Rule 1: a negative Delta means more people in closing than positions opened here, which
 // is true and worth seeing). A recruiter with no position of their own shows a dash rather than a 0, because
 // there is nothing to count, not nothing happening.
@@ -771,7 +772,7 @@ export function initHmFilters(data) {
     // #187: the ONE place a person is filed under a recruiter. Both the counting bump and the joiner list go
     // through it, so a recruiter's names and its numbers can never describe different people (Rule 3).
     function recBucket(row, who) {
-      const key = recruiterOfPerson(rIdx, who);
+      const key = recruiterOfPerson(who);
       return row.recs[key] || (row.recs[key] = { recruiter: key, jpP: 0, drop: 0, jpWho: [], joWho: [] });
     }
     // 🚨 `attr` is SEPARATE from `who` on purpose. A Dropped bump passes who=null because that column lists no
