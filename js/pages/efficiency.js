@@ -21,7 +21,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
 import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
-import { recruiterIndex, recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187
+import { recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187, rewritten by #192
 import { levelChooser, levelsOn, wireLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
 import { jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.js';   // #125 · #189f: one conversion formula
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -785,7 +785,7 @@ export function initEfficiencyFilters(data) {
   // so the four sources are PARTITIONED, not filtered. Nothing can fall between two rows.
   // ⚠ The positions are priced the way jobSplit prices them — per opening under #165 once the pipeline carries
   // complexity, per job before that — so heads and score both close the job row.
-  function recSplits(j, dept, PM, per, rIdx, oIdx) {
+  function recSplits(j, dept, PM, per, oIdx) {
     const j8 = (j.jid || '').slice(0, 8);
     const key = dept + '|' + (j.title || '');
     const oMeta = { department: j.rawDept, title: j.rawTitle, level: j.level };
@@ -816,18 +816,18 @@ export function initEfficiencyFilters(data) {
       }
     });
     (PM.jpc[key] || []).forEach(c => {
-      const b = get(recruiterOfPerson(rIdx, c));
+      const b = get(recruiterOfPerson(c));
       const s = oIdx.ready ? scoreOfOpening(c.openingId, oMeta, PM.atQ, oIdx) : scoreOf(j, PM.atQ, PM);
       b.pending++; b.jpWho.push(c); b.pS += s;
       if (oIdx.ready && !s) b.pNS++;   // #176c: counted from the SAME list that produced pS
     });
     (PM.dropOp[key] || []).forEach(d => {
-      const b = get(recruiterOfPerson(rIdx, d.e));
+      const b = get(recruiterOfPerson(d.e));
       b.drop++;
       // #183b: a drop is priced from the opening ITS OWN offer names, never from the job.
       b.dS += oIdx.ready ? scoreOfDropOpening(d.e, oMeta, d.q, oIdx) : 0;
     });
-    (PM.jn[key] || []).forEach(c => { get(recruiterOfPerson(rIdx, c)).joWho.push(c); });
+    (PM.jn[key] || []).forEach(c => { get(recruiterOfPerson(c)).joWho.push(c); });
     const out = Object.values(bag);
     out.forEach(b => { b.gap = b.total - b.joined - b.pending; b.gS = b.tS - b.jS - b.pS; });
     return out.sort((a, b) => (a.recruiter === NO_RECRUITER) ? 1 : (b.recruiter === NO_RECRUITER) ? -1
@@ -973,7 +973,6 @@ export function initEfficiencyFilters(data) {
     // otherwise - so the topic rows close the job row instead of being a second, drifting calculation.
     const PM = peopleMaps(per);
     const tIdx = topicIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });
-    const rIdx = recruiterIndex(data, { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) });   // #187
     const LV = levelsOn('effLevels');   // #188: which branches this render is built from
     let html = '';
     rows.forEach(({ dept, jobs, sum }, di) => {
@@ -985,7 +984,7 @@ export function initEfficiencyFilters(data) {
       // rows still close the department above them; or straight to its topics when Recruiter is off too. =====
       if (!LV.job) {
         if (LV.rec) {
-          const merged = mergeByRecruiter(jobs.map(({ j }) => recSplits(j, dept, PM, per, rIdx, openingScores(data))), NO_RECRUITER);
+          const merged = mergeByRecruiter(jobs.map(({ j }) => recSplits(j, dept, PM, per, openingScores(data))), NO_RECRUITER);
           merged.forEach((r, ri) => {
             r.gap = r.total - r.joined - r.pending; r.gS = r.tS - r.jS - r.pS;
             const unsetR = r.recruiter === NO_RECRUITER;
@@ -1034,7 +1033,7 @@ export function initEfficiencyFilters(data) {
         const tops = (LV.top && hasTopicLevel(tIdx, dept, (j.jid || '').slice(0, 8))) ? tIdx[(j.jid || '').slice(0, 8)] : null;   // #188
         // #187: the recruiter level, between the job and the topic — the order Jerin confirmed 27 Sep
         // ("Department ➔ Job ➔ Recruiter ➔ Topic. Works.").
-        const recs = LV.rec ? recSplits(j, dept, PM, per, rIdx, openingScores(data)) : [];   // #188
+        const recs = LV.rec ? recSplits(j, dept, PM, per, openingScores(data)) : [];   // #188
         const opensJob = recs.length > 0 || !!tops;
         html += `<tr data-path="${di}-${ji}" data-lvl="2"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
           + `<td style="padding-left:1.875rem;color:var(--muted)">${opensJob ? CARET : ''}${j.title}${meta}`
