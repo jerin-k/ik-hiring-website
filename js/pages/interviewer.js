@@ -47,6 +47,7 @@ function allMonthKeys(data) {
 }
 
 import { defsBlock } from '../definitions.js';
+import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { HBAR, hbarHeight } from '../chart-style.js';
 import { jobFilterOptions, matchesJobRow } from '../job-filter.js';   // #172c
 import { reportingQuarters, selectionQuarters, quarterSpan, periodText,
@@ -475,59 +476,6 @@ function wireIvTree(tbody, expand) {
 // Styled multi-select checkbox dropdown. Returns { getSelected }; empty selection = "All".
 // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
 // Kept identical across the HM / Recruiter / Overall-Efficiency / Interviewer tabs on purpose.
-function makeMultiSelect(container, label, options, onChange) {
-  if (!container) return null;
-  const selected = new Set();
-  // #172c (25 Sep 2026): an option is either a plain string (unchanged) or { v, t } — `v` is the VALUE kept
-  // in `selected`, `t` is what the user reads. The Job dropdown passes a JOB ID as `v` so two jobs sharing a
-  // name stay distinct. Same contract as the copies in hm-report / efficiency / recruiter.
-  const norm = (options || []).map(o => (o && typeof o === 'object')
-    ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
-  const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
-  const labelText = () => selected.size === 0 ? `${label}: All`
-    : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
-  const q = s => String(s).replace(/"/g, '&quot;');
-  container.classList.add('ms');
-  container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-    + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
-    + `<div class="ms-list">`
-    + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${q(o.v)}"> ${esc(o.t)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
-    + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
-  const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
-  const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
-  const opts = [...container.querySelectorAll('.ms-opt')];
-  const emptyMsg = container.querySelector('.ms-empty');
-  btn.textContent = labelText();
-  function applyFilter(needleRaw) {
-    const needle = needleRaw.trim().toLowerCase();
-    let shown = 0;
-    opts.forEach(o => {
-      const hit = !needle || o.textContent.toLowerCase().indexOf(needle) >= 0;
-      o.style.display = hit ? '' : 'none';
-      if (hit) shown++;
-    });
-    if (emptyMsg) emptyMsg.style.display = shown ? 'none' : 'block';
-  }
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = panel.style.display !== 'none';
-    document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
-    panel.style.display = open ? 'none' : 'block';
-    // Reopening always starts from the full list, so a stale filter can never hide options.
-    if (!open && search) { search.value = ''; applyFilter(''); search.focus(); }
-  });
-  panel.addEventListener('click', e => e.stopPropagation());
-  if (search) search.addEventListener('input', () => applyFilter(search.value));
-  if (clearBtn) clearBtn.addEventListener('click', () => {
-    if (selected.size === 0) return;
-    selected.clear();
-    container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
-    btn.textContent = labelText();
-    onChange();
-  });
-  container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
-  return { getSelected: () => [...selected] };
-}
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function cls(v) { return v >= 80 ? 'good' : v >= 50 ? 'pct' : v > 0 ? 'warn' : 'zero'; }

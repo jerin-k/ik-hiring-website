@@ -2,6 +2,7 @@ import { levelChooser, levelsOn, wireLevels, syncLevels, expandAllOn, showLevels
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs · #193a: isMoreClick
+import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdSourcer, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
@@ -1158,59 +1159,6 @@ export function initRecruiterFilters(baseData) {
   // Styled multi-select checkbox dropdown. Returns { getSelected } ; empty selection = "All".
   // Multi-select dropdown with type-to-filter and a Clear (= back to "All") reset.
   // Kept identical across the HM / Recruiter / Overall-Efficiency tabs on purpose.
-  function makeMultiSelect(container, label, options, onChange) {
-    if (!container) return null;
-    const selected = new Set();
-    // #172c (25 Sep 2026): an option is either a plain string (unchanged, what every other dropdown passes)
-    // or { v, t } — `v` is the VALUE kept in `selected`, `t` is what the user reads. The Job dropdowns pass a
-    // JOB ID as `v`, so two jobs sharing a name stay distinct; everything else still passes strings.
-    const norm = (options || []).map(o => (o && typeof o === 'object')
-      ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
-    const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
-    const labelText = () => selected.size === 0 ? `${label}: All`
-      : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
-    const esc = s => String(s).replace(/"/g, '&quot;');
-    container.classList.add('ms');
-    container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-      + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
-      + `<div class="ms-list">`
-      + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}"> ${o.t}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
-      + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
-    const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
-    const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
-    const opts = [...container.querySelectorAll('.ms-opt')];
-    const emptyMsg = container.querySelector('.ms-empty');
-    btn.textContent = labelText();
-    function applyFilter(q) {
-      const needle = q.trim().toLowerCase();
-      let shown = 0;
-      opts.forEach(o => {
-        const hit = !needle || o.textContent.toLowerCase().indexOf(needle) >= 0;
-        o.style.display = hit ? '' : 'none';
-        if (hit) shown++;
-      });
-      if (emptyMsg) emptyMsg.style.display = shown ? 'none' : 'block';
-    }
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = panel.style.display !== 'none';
-      document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
-      panel.style.display = open ? 'none' : 'block';
-      // Reopening always starts from the full list, so a stale filter can never hide options.
-      if (!open && search) { search.value = ''; applyFilter(''); search.focus(); }
-    });
-    panel.addEventListener('click', e => e.stopPropagation());
-    if (search) search.addEventListener('input', () => applyFilter(search.value));
-    if (clearBtn) clearBtn.addEventListener('click', () => {
-      if (selected.size === 0) return;
-      selected.clear();
-      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
-      btn.textContent = labelText();
-      onChange();
-    });
-    container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) selected.add(cb.value); else selected.delete(cb.value); btn.textContent = labelText(); onChange(); }));
-    return { getSelected: () => [...selected] };
-  }
 
   // #120a: the Job filter narrows every number (bindData / onJobChange).
   // 🚨 #172c (25 Sep 2026): the selection is JOB IDS now, so this is EXACT. The old line matched on title and
