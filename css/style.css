@@ -14,6 +14,11 @@ html { font-size: 90%; }
   --card: #ffffff;
   --border: #dbe1ec;
   --border-light: #eaeef6;
+  /* #197: the line BETWEEN TABLE ROWS, given its own token. "The rows are barely visible; a lil darker would
+     be better to view." It was --border-light (#eaeef6), which is right for a card edge and too faint to
+     follow across a wide dense table. Kept SEPARATE from --border-light on purpose: the two jobs differ, and
+     darkening every card edge to fix the tables would be the wrong trade. */
+  --row-line: #d5dce8;
   --text: #0f172a;
   --text-secondary: #334155;
   --muted: #6b7391;
@@ -21,7 +26,10 @@ html { font-size: 90%; }
   --accent-light: #eaeef6;
   --accent-deep: #33507f;   /* chip label on --accent-light; plain --accent reads 4.44:1 there, under the floor */
   --navy: #22344f;          /* the frozen header block */
-  --navy-line: #33486a;
+  /* #197 (Jerin, 28 Sep 2026): "Attached navy panel shouldnt be transparent. Instead, can the border be a
+     slightly mid/dark grey shade". It was #33486a - a lighter BLUE than the navy behind it, which is why the
+     dividers read as gaps showing through rather than as drawn lines. A neutral mid grey reads as a border. */
+  --navy-line: #5a6270;
   --navy-ink: #a8bcd8;      /* muted text on the navy bar */
   --navy-sub: #2d4a7c;      /* the active sub-tab chip. Lighter than --navy on purpose: the same ink sits
                                on a pale band here, so it reads heavier than it does on the header. Do NOT
@@ -620,7 +628,8 @@ th[data-sort="desc"]::after { content: " \2193"; font-size: 0.625rem; color: #9f
 
 td {
   padding: 0.5rem 0.75rem;
-  border-top: 1px solid var(--border-light);
+  /* #197: the row separator. See --row-line's note — a card edge and a row line are different jobs. */
+  border-top: 1px solid var(--row-line);
   color: var(--text-secondary);
 }
 tr:hover td { background: #f8fafc; }
