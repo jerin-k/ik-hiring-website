@@ -832,6 +832,9 @@ td.c-date { text-align: left; }
 th.c-dept, td.c-dept { width: 8rem; min-width: 8rem; max-width: 8rem; }
 th.c-job,  td.c-job  { width: 12rem; min-width: 12rem; max-width: 12rem; }
 th.c-rec,  td.c-rec  { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
+/* #194: Sourcer. Narrower than Recruiter because it carries no initials badge - see tdSourcer for why
+   (a sourcer can be an agency with no pod, and the badge is coloured BY pod). */
+th.c-src,  td.c-src  { width: 9rem; min-width: 9rem; max-width: 9rem; }
 th.c-cand, td.c-cand { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
 th.c-open, td.c-open { width: 9rem; min-width: 9rem; max-width: 9rem; }
 th.c-stage, td.c-stage { width: 8rem; min-width: 8rem; max-width: 8rem; }
@@ -847,10 +850,10 @@ th.c-open-name, td.c-open-name { width: 10rem; min-width: 10rem; max-width: 10re
    narrowest of the text families — sized for "Archived" and never wrapped, since a wrapped one-word column
    just looks broken. It appears on every hygiene list that names a job. */
 th.c-jstat, td.c-jstat { width: 6rem; min-width: 6rem; max-width: 6rem; text-align: left; }
-th.c-dept, th.c-job, th.c-rec, th.c-cand, th.c-open, th.c-stage, th.c-topic, th.c-open-name,
-td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic, td.c-open-name {
+th.c-dept, th.c-job, th.c-rec, th.c-src, th.c-cand, th.c-open, th.c-stage, th.c-topic, th.c-open-name,
+td.c-dept, td.c-job, td.c-rec, td.c-src, td.c-cand, td.c-open, td.c-stage, td.c-topic, td.c-open-name {
   white-space: normal; overflow-wrap: anywhere; }
-td.c-dept, td.c-job, td.c-rec, td.c-cand, td.c-open, td.c-stage, td.c-topic, td.c-open-name { text-align: left; }
+td.c-dept, td.c-job, td.c-rec, td.c-src, td.c-cand, td.c-open, td.c-stage, td.c-topic, td.c-open-name { text-align: left; }
 /* A closed or archived job is the signal "this row probably needs nobody" — quieter than a live one.
    ⚠ NOT scoped to `td.c-jstat`: js/table-cols.js stamps the family onto flat tables but leaves the Unassigned
    TREE's cells unclassed, so a scoped rule greyed seven lists out of eight and silently missed the tree. */
@@ -1530,6 +1533,9 @@ table.pl-list td:not(:first-child) { text-align: left; }
 .pl-chip.pl-unset { border-style: dashed; border-color: #c3cad8; color: var(--muted); font-weight: 500; }
 .pl-chip.pl-ok { color: #1E7590; border-color: #cfe4eb; background: #f3f9fb; }
 .pl-rec { display: inline-flex; align-items: center; gap: 0.4375rem; white-space: nowrap; vertical-align: middle; }
+/* #194: a sourcer's name. Plain text in the secondary tone - the sourcer is supporting information beside
+   the recruiter who owns the row, and on today's data it is filled on 3 rows of 171. */
+.pl-src { color: var(--text-secondary); }
 .pl-av { width: 1.375rem; height: 1.375rem; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
   font-size: 0.59375rem; font-weight: 700; letter-spacing: .02em; line-height: 1; }
 .pl-pod-sales { background: #e4eaf5; color: #33507f; }
