@@ -1,7 +1,7 @@
 import { levelChooser, levelsOn, wireLevels, syncLevels, expandAllOn, showLevels } from '../tree-levels.js';   // #189e: the same control as the other two tabs
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
-import { jnWhoCell, wireMoreCells } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs
+import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs · #193a: isMoreClick
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
@@ -144,7 +144,7 @@ const DASH = '<span class="zero">—</span>';
 //   Sales' Joined gained the Score it never had ("Add Score Column for Joined"). ncol is a constant again.
 //   🚨 Keep this in step with cells(), jpCells() and ALL THREE <thead>s - the header rows are written out by
 //      hand, so changing one without the others silently shifts every number a column sideways.
-const recTopicCells = (t, ncol, jpHtml, joinedHtml) => {
+const recTopicCells = (t, ncol, jpHtml, joinedHtml, peopleHtml) => {
   const d = `<td class="nosplit">${DASH}</td>`;
   const num = (v) => `<td>${Math.round(v * 100) / 100}</td>`;
   const nJoin = 2;   // #177: Joined is ONE pair on both tables now
@@ -152,10 +152,13 @@ const recTopicCells = (t, ncol, jpHtml, joinedHtml) => {
     + (joinedHtml || d.repeat(nJoin))       // Joined (#166) - one pair on both tables since #177
     + jpHtml                                // Joining Pending (#177: the total only)
     + d.repeat(4)                           // Drop(2), Delta(1), the Delta bar(1)
-    // #182c: a topic row does NOT name people. The topic level exists to split the Goal and the people in
-    // closing by specialisation; the joiners behind a topic are already named on the role row above it, and
-    // repeating them here would list the same person twice in one open tree.
-    + d + d;                                // Who has joined, Who is joining
+    // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE. It used to read: "a topic row does NOT name people...
+    // repeating them here would list the same person twice in one open tree." 🗣 *"Not seeing joiner & joining
+    // pipeline names against topics"*. The double-listing that worried #182c is answered by option (b), his
+    // call: the ROLE row above now says "N under their topics" instead of repeating them, exactly as the
+    // Hiring Manager tab has always done (#161). So a person is named once in an open tree, at the deepest
+    // row that can claim them.
+    + (peopleHtml || d + d);                // Who has joined, Who is joining
 };
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -173,7 +176,8 @@ function wirePodTree(tbody) {
   // efficiency. Not further down."* The pod above it and the job rows below it do NOT hold: one row of held chrome.
   tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.dataset.hold = '1'; });
   tbody.querySelectorAll('tr.pod-header').forEach(h => {
-    h.addEventListener('click', () => {
+    h.addEventListener('click', (ev) => {
+      if (isMoreClick(ev)) return;   // #193a: the people cell's own button, not a tree toggle
       const g = h.dataset.g;
       const exp = h.dataset.exp === '1';
       h.dataset.exp = exp ? '0' : '1';
@@ -201,7 +205,8 @@ function wireVelTree(tbody) {
   // efficiency. Not further down."* The pod above it and the job rows below it do NOT hold: one row of held chrome.
   tbody.querySelectorAll('tr.lvl-rec').forEach(r => { r.dataset.hold = '1'; });
   tbody.querySelectorAll('tr.lvl-pod').forEach(h => {
-    h.addEventListener('click', () => {
+    h.addEventListener('click', (ev) => {
+      if (isMoreClick(ev)) return;   // #193a
       const pi = h.dataset.pod;
       const exp = h.dataset.exp === '1';
       h.dataset.exp = exp ? '0' : '1';
@@ -219,7 +224,8 @@ function wireVelTree(tbody) {
     });
   });
   tbody.querySelectorAll('tr.lvl-rec').forEach(h => {
-    h.addEventListener('click', () => {
+    h.addEventListener('click', (ev) => {
+      if (isMoreClick(ev)) return;   // #193a
       const rk = h.dataset.rec;
       const exp = h.dataset.exp === '1';
       h.dataset.exp = exp ? '0' : '1';
@@ -233,6 +239,7 @@ function wireVelTree(tbody) {
   // #157: a job with topics toggles them. Only SME job rows carry data-job8, so every other row stays inert.
   tbody.querySelectorAll('tr.lvl-stage[data-job8]').forEach(j => {
     j.addEventListener('click', (e) => {
+      if (isMoreClick(e)) return;   // #193a: this is the row his "+7 more" sat on
       e.stopPropagation();
       const key = j.dataset.key;
       const exp = j.dataset.exp === '1';
@@ -280,7 +287,8 @@ function wireTreePath(tbody) {
     if (p && p.split('-').length === 2) row.dataset.hold = '1';   // #186b: the recruiter level on this tab
   });
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (ev) => {
+      if (isMoreClick(ev)) return;   // #193a
       const path = row.dataset.path, depth = path.split('-').length;
       const exp = row.dataset.exp === '1';
       row.dataset.exp = exp ? '0' : '1';
@@ -1081,6 +1089,33 @@ export function initRecruiterFilters(baseData) {
     put(srcr, sp.src, sp.hcTo === 'src', !!srcr && srcr !== rec);
   };
 
+  // ===== #193c (Jerin, 28 Sep 2026) — a sourced person is NAMED under the sourcer too =====
+  // 🗣 *"for sourced cases, while +1 being shown is good (attached Pooja's case) - adding the respective
+  //     candidate in the Joiner/Joining Pipeline against her row will be needed, but some mark on the guy to
+  //     understand that Pooja only sourced :)"*
+  // 🔑 THE NAMES FOLLOW addCredit, THEY DO NOT GET A SECOND RULE. addCredit already files a person under BOTH
+  // the recruiter and the sourcer — that is where the "+1 sourced" line comes from. The name lists only ever
+  // filed them under the recruiter, so a sourcer's row printed "+1 sourced" beside an EMPTY column. Same two
+  // names, same order, so a list can never describe a different population from the count beside it (Rule 3).
+  // 🚨 THE SOURCER GETS A COPY, never the shared record: one object sits in both lists, and a flag written on
+  // it would mark the recruiter's copy too — the person would read "sourced" on the row that did the hiring.
+  // 🚨 `srcOnly` carries the RECRUITER's name, not `true`, so the mark can say who kept the head.
+  // ⚠ On a sourcer's row the names then OUTNUMBER the heads — a head never leaves the recruiter (#108), so the
+  //   count reads 0 beside one name. That is the rule working, and the definitions block says so.
+  // #193b: the THIRD grain, per opening — the same one addCredit takes as `mOpen`, so a topic row can NAME the
+  // people whose count it already shows. One call fills all three, which is what stops a topic's names and its
+  // number describing different people.
+  const pushWho = (mRec, mJob, keySuffix, rec, srcr, person, mOpen, openSuffix) => {
+    const put = (name, p) => {
+      if (!name) return;
+      (mRec[name] || (mRec[name] = [])).push(p);
+      if (mJob) { const k = name + '|' + (keySuffix || ''); (mJob[k] || (mJob[k] = [])).push(p); }
+      if (mOpen && openSuffix) { const k = name + '|' + openSuffix; (mOpen[k] || (mOpen[k] = [])).push(p); }
+    };
+    put(rec, person);
+    if (srcr && srcr !== rec) put(srcr, { ...person, srcOnly: rec });
+  };
+
   // Screening reached/cleared per recruiter for HM/OA/R1 — real from stage-history rollups when present,
   // else the current-stage approximation (R1-cleared unknown → null).
   // The per-stage throughput helpers (screenTriple / screenTripleByJob / jobsForRecruiter /
@@ -1455,6 +1490,24 @@ export function initRecruiterFilters(baseData) {
       // owns the opening does not decide whose candidate it is. Anyone of theirs with no opening, or on a topic they own
       // nothing in, has no topic row to sit on and is counted on the job row only — so the topic rows are a SUBSET of the
       // job row above, never a replacement for it, exactly as on the Hiring Manager tab (#161, option A).
+      // ===== #193b (Jerin, 28 Sep 2026) — a topic row NAMES its people =====
+      // 🗣 *"Not seeing joiner & joining pipeline names against topics"*. #182c had left them off deliberately —
+      // *"the joiners behind a topic are already named on the role row above it, and repeating them here would
+      // list the same person twice in one open tree"* — and Jerin has now overruled that. His answer to the
+      // follow-up was option (b): the topic rows carry the names, and the ROLE row above says how many sit
+      // below it instead of repeating them. That is the convention the Hiring Manager tab already uses (#161).
+      // 🔑 These read the SAME per-opening maps their counts come from, so a topic's names and its number can
+      // never describe different people (Rule 3).
+      const whoOfTopic = (map, rec, suffix, openings) => {
+        const out = [];
+        (openings || []).forEach(o => {
+          const k = rec + '|' + (suffix || '') + '|' + String(o.id).slice(0, 8);
+          (map[k] || []).forEach(x => out.push(x));
+        });
+        return out;
+      };
+      const jpWhoOfTopic = (rec, title, openings) => whoOfTopic(JP.whoO || {}, rec, title || '', openings);
+      const joinWhoOfTopic = (rec, job8, openings) => whoOfTopic(joinWhoOpen, rec, job8 || '', openings);
       const jpOfTopic = (rec, title, openings) => {
         const acc = { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } };
         (openings || []).forEach(o => {
@@ -1503,7 +1556,7 @@ export function initRecruiterFilters(baseData) {
       // Its two sub-columns (this-quarter vs later-quarter opening) split THIS number once offers carry an
       // opening; until then the total stands on its own rather than the column sitting empty.
       const joinByRec = {}, joinByRecJob = {}, joinByRecJobOpen = {};   // #166: the third grain, per opening
-      const joinWho = {}, joinWhoJob = {};   // #182c: the same joiners as PEOPLE, for the Who has joined column
+      const joinWho = {}, joinWhoJob = {}, joinWhoOpen = {};   // #182c: the same joiners as PEOPLE · #193b: and per opening, so a topic can name them
       // NON-SALES ONLY: minus anyone linked to an EARLIER quarter's opening — the same subtraction the
       // Joining Pending column uses, so both columns describe THIS quarter's work.
       // ⚠ SALES deliberately takes NO subtraction: its goal is joiners regardless of when the opening was
@@ -1520,9 +1573,9 @@ export function initRecruiterFilters(baseData) {
                   joinByRecJobOpen, String(e.openingId || '').slice(0, 8));
         // #182c: pushed HERE, inside the same guards, so the names can never describe a different population
         // than the number beside them - including the earlier-quarter subtraction two lines above.
-        (joinWho[rec] || (joinWho[rec] = [])).push(e);
-        const k82 = rec + '|' + String(e.jobId8 || '').slice(0, 8);
-        (joinWhoJob[k82] || (joinWhoJob[k82] = [])).push(e);
+        // #193c: through pushWho, so the sourcer is named wherever addCredit gave them a "+1 sourced".
+        pushWho(joinWho, joinWhoJob, String(e.jobId8 || '').slice(0, 8), rec, e.sourcer, e,
+                joinWhoOpen, String(e.jobId8 || '').slice(0, 8) + '|' + String(e.openingId || '').slice(0, 8));   // #193b
       });
       // Seats actually opened on a job in the SELECTED quarter, from openingBuckets — the only
       // quarter-scoped source of demand we have — SPLIT EQUALLY across the recruiters who work that job.
@@ -1721,10 +1774,26 @@ export function initRecruiterFilters(baseData) {
       const sumCell = (n, unit) => (n > 0
         ? `<td class="jn-cell jn-sum">${n} across ${unit}</td>`
         : '<td class="jn-cell"><span class="zero">&mdash;</span></td>');
+      // #193c: the mark on a person who is only on this row because they SOURCED them. Quiet TEXT in the warm
+      // tone the column already uses for its exceptions — never a boxed pill. #182a3 settled that: a chip beside
+      // a name in a dense list out-shouts the names while marking the rare case, and 🗣 *"an EXCEPTION belongs at
+      // the BOTTOM of the hierarchy"* (Jerin, 27 Sep). `srcOnly` holds the recruiter who kept the head, so the
+      // tooltip can name them rather than leaving "sourced" to be read as "this row hired them".
+      // ⚠ escapes inline — the nearest `esc` lives in another function and would throw here at render time.
+      const attr = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      const srcTag = (c) => c.srcOnly
+        ? ` <span class="jn-q jn-src" title="Sourced by this recruiter. ${attr(c.srcOnly)} worked the role and keeps the head, so this person is not in the count beside this list.">sourced</span>`
+        : '';
+      // 🚨 #193c: a roll-up row counts the NAMES BELOW IT, not the heads. Once a sourced person is named under
+      // the sourcer, their head is still the recruiter's (#108) — so V Pooja's row said "8 across their roles
+      // below" over NINE names, and printed a dash over the one person in her closing list. A roll-up that
+      // disagrees with what opening the row shows is the same fault in miniature as a chart disagreeing with
+      // its table (Rule 3). `joN`/`jpN` are the list lengths, carried up from the same lists the rows draw.
       const peopleCells = (v) => {
-        if (v.rollup) return sumCell(v.xHC, v.rollup) + sumCell(v.jp && v.jp.t ? v.jp.t.hc : 0, v.rollup);
-        return jnWhoCell(v, { list: v.joWho || [], dateOf: (x) => x.startDate, groupByDate: true })
-             + jnWhoCell(v);   // defaults to v.jpWho, dated by the joining date
+        if (v.rollup) return sumCell(v.joN != null ? v.joN : v.xHC, v.rollup)
+                           + sumCell(v.jpN != null ? v.jpN : (v.jp && v.jp.t ? v.jp.t.hc : 0), v.rollup);
+        return jnWhoCell(v, { list: v.joWho || [], dateOf: (x) => x.startDate, tagOf: srcTag, groupByDate: true, under: v.joUnder })
+             + jnWhoCell(v, { tagOf: srcTag, under: v.jpUnder });   // defaults to v.jpWho, dated by the joining date
       };
 
       const recFulfil = (r) => {
@@ -1796,6 +1865,7 @@ export function initRecruiterFilters(baseData) {
       let html = '';
       gs.forEach((G, pi) => {
         const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0, aNoCx: 0,
+                         joN: 0, jpN: 0,   // #193c: how many people are NAMED below, heads or sourced
                          aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
                          jp: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } },
                          // #39: roll the Joined split up the same way as the JP one, or every pod row would
@@ -1820,6 +1890,7 @@ export function initRecruiterFilters(baseData) {
           // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
           ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; podAgg.jp[k].so += a.jp[k].so || 0; podAgg.jp[k].ns += a.jp[k].ns || 0; });   // #176c
           if (a.jx) ['t', 'a', 'b', 'u'].forEach(k => { podAgg.jx[k].hc += a.jx[k].hc; podAgg.jx[k].sc += a.jx[k].sc; podAgg.jx[k].so += a.jx[k].so || 0; });   // #39
+          podAgg.joN += (a.joWho || []).length; podAgg.jpN += (a.jpWho || []).length;   // #193c
           shown.push({ r, a }); });
         if (!shown.length) return;
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
@@ -1827,7 +1898,7 @@ export function initRecruiterFilters(baseData) {
         shown.forEach(({ r, a }, ri) => {
           const rk = `${T.key}${pi}-${ri}`;
           html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer">
-            <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells({ ...a, rollup: 'their roles below' }, false)}</tr>`;
+            <td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${cells({ ...a, joN: (a.joWho || []).length, jpN: (a.jpWho || []).length, rollup: 'their roles below' }, false)}</tr>`;
           // #1: the per-job rows must include roles the recruiter OWNS openings on even where they never
           // tagged an application, or the job Goals would not sum to the recruiter row above. Merge byJob
           // with the owned-opening jobs for this quarter, then sort.
@@ -1893,6 +1964,8 @@ export function initRecruiterFilters(baseData) {
                            joWho: (isSales ? (OM.salesWhoJob[r.name + '|' + String(bj.jobId || '').slice(0, 8)] || [])
                                            : (joinWhoJob[r.name + '|' + String(bj.jobId || '').slice(0, 8)] || [])),
                            jpWho: (JP.whoJ[r.name + '|' + (m.title || '')] || []),
+                           // #193b: narrowed below, once we know which of these the topic rows will name.
+                           // It has to happen AFTER `tops` is built, so the two are set on `jv` further down.
                            aSo: jaSo, xSo: jxSo, uSo: juSo, dSo: jd2.so || 0, gSo: jaSo - juSo };   // #108
               // #182g: the heads go in beside the score so the chart can band POSITIONS by role. Both unrounded -
               // the chart shares out the ROW's rounded total by largest remainder (#120).
@@ -1910,7 +1983,12 @@ export function initRecruiterFilters(baseData) {
                     // people tied to ANY opening of the topic - two different questions, see jpOfTopic.
                     return { topic: t.topic, hc: Math.round(hc * 10000) / 10000, sc: Math.round(hc * sc * 10000) / 10000, n: mine.length,
                              jp: jpOfTopic(r.name, m.title, t.openings),
-                             jx: isSales ? null : joinOfTopic(r.name, j8t, t.openings) };   // #166
+                             jx: isSales ? null : joinOfTopic(r.name, j8t, t.openings),   // #166
+                             // #193b: the same people the two figures above COUNT, so the row can name them.
+                             // Sales topic rows carry no Joined figure (jx is null there), so they name no
+                             // joiners either - a name beside a dash would be the mismatch this fix removes.
+                             jpWho: jpWhoOfTopic(r.name, m.title, t.openings),
+                             joWho: isSales ? [] : joinWhoOfTopic(r.name, j8t, t.openings) };
                   })
                     // #161b option B (Jerin, 22 Sep): a topic row appears where this recruiter OWNS an opening in it, OR where
                     // they hold credit on somebody in closing against one - as recruiter (hc) or as sourcer (so). Without the
@@ -1930,13 +2008,30 @@ export function initRecruiterFilters(baseData) {
               // being null as "this job does not open", so the job row loses its caret and its topic rows,
               // and the figures on the job row are untouched - they never came from the topic rows.
               if (!LV.top) tops = null;
+              // ===== #193b: the role row stops repeating anyone a row BELOW it names (Jerin's option b) =====
+              // Identity works here because pushWho pushes the SAME object into all three grains - and gives the
+              // sourcer its own copy, so a sourced person is moved off the row that sourced them and off the row
+              // that hired them independently, never both at once.
+              // 🚨 Joined and Joining pipeline are narrowed SEPARATELY. Joining pipeline's topic rows are a
+              //    SUBSET by design (#161: only people whose offer names an opening), so whoever the topics
+              //    cannot claim MUST stay named on the role row or they vanish from the tree entirely.
+              if (tops && tops.length) {
+                const belowJo = new Set(), belowJp = new Set();
+                tops.forEach(t => { (t.joWho || []).forEach(x => belowJo.add(x)); (t.jpWho || []).forEach(x => belowJp.add(x)); });
+                // The leftovers row below names whatever no topic claimed, so those come off the role row too.
+                jv.joLeft = (jv.joWho || []).filter(x => !belowJo.has(x));
+                if (!isSales && jv.joLeft.length) jv.joLeft.forEach(x => belowJo.add(x));
+                jv.joUnder = belowJo.size; jv.joWho = (jv.joWho || []).filter(x => !belowJo.has(x));
+                jv.jpUnder = belowJp.size; jv.jpWho = (jv.jpWho || []).filter(x => !belowJp.has(x));
+              }
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
                 <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${jobScoreCaption(jobScoreSpread(j8t, m, q, openingScores(data)), m.level, `${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}`)}</span></td>${cells(jv, false)}</tr>`;
               (tops || []).forEach(t => {
                 html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
                   + `<td style="padding-left:4.875rem"><span class="${t.topic === NO_TOPIC ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
                   + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${t.n ? `${t.n} opening${t.n === 1 ? '' : 's'}` : 'no openings of theirs'}</span></td>`
-                  + recTopicCells(t, ncol, jpCells({ jp: t.jp }), joinTopicCells(t.jx)) + `</tr>`;
+                  + recTopicCells(t, ncol, jpCells({ jp: t.jp }), joinTopicCells(t.jx),
+                                  peopleCells({ joWho: t.joWho || [], jpWho: t.jpWho || [] })) + `</tr>`;   // #193b
               });
               // #166 option A (Jerin, 23 Sep): the joiners this job HAS but no topic can claim — their offer names
               // no opening, or it names one on a topic this recruiter owns nothing in. They get a line of their own
@@ -1954,7 +2049,8 @@ export function initRecruiterFilters(baseData) {
                   html += `<tr class="lvl-topic" data-pod="${pi}" data-parent-rec="${rk}" data-key="${tKey}" style="display:none">`
                     + `<td style="padding-left:4.875rem"><span class="topic-unset">(not tied to a topic)</span>`
                     + `<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">joined, no opening on the offer</span></td>`
-                    + recTopicCells({ hc: 0, sc: 0 }, ncol, jpCells({ jp: null }), joinTopicCells(rest)) + `</tr>`;
+                    + recTopicCells({ hc: 0, sc: 0 }, ncol, jpCells({ jp: null }), joinTopicCells(rest),
+                                    peopleCells({ joWho: jv.joLeft || [], jpWho: [] })) + `</tr>`;   // #193b: these are exactly who the topics could not claim
                 }
               }
             });
@@ -2273,7 +2369,7 @@ export function initRecruiterFilters(baseData) {
     const bucketA = {}, bucketB = {};
     // #182c: the same people in closing, kept as records for the "Who is joining" column. `who` mirrors the
     // recruiter-level total, `whoJ` the per-job one. Filled inside bump() below, so they follow the A/B rules.
-    const jpWho = {}, jpWhoJ = {};
+    const jpWho = {}, jpWhoJ = {}, jpWhoO = {};   // #193b: and per opening, for the topic rows
     // Job-level too, keyed recruiter|job title. Job rows used to print a hard 0 in every JP column, which
     // reads as "nobody in closing on this role" when the real answer was "not worked out per job".
     const bucketAJ = {}, bucketBJ = {};
@@ -2301,8 +2397,7 @@ export function initRecruiterFilters(baseData) {
         // branching exactly - Total is A + B, and a person who matches neither branch is not listed either.
         // ⚠ Keyed by job TITLE, because that is what jpOfJob() looks up; the joiner maps use job8. Two
         // different keys on purpose - each mirrors the count it sits beside.
-        (jpWho[rec] || (jpWho[rec] = [])).push(c);
-        (jpWhoJ[rec + '|' + jt] || (jpWhoJ[rec + '|' + jt] = [])).push(c); };
+        pushWho(jpWho, jpWhoJ, jt, rec, c.sourcer, c, o8 ? jpWhoO : null, o8 ? jt + '|' + o8 : null); };   // #193c sourcer · #193b opening grain
       // #27 (Jerin, 2026-08-24) — the settled definitions, one line each. Do not re-derive them.
       if (isSales) {
         // A: the opening was raised in an EARLIER quarter, whatever the joining date — the same test as Joined — Prev Qtr Openings.
@@ -2331,7 +2426,7 @@ export function initRecruiterFilters(baseData) {
     return { total: sum(bucketA, bucketB), bucketA, bucketB,
              totalJ: sum(bucketAJ, bucketBJ), bucketAJ, bucketBJ,
              totalO: sum(bucketAO, bucketBO), bucketAO, bucketBO,   // #161b
-             who: jpWho, whoJ: jpWhoJ };   // #182c
+             who: jpWho, whoJ: jpWhoJ, whoO: jpWhoO };   // #182c · #193b: whoO = per opening, for the topic rows
   }
 
   // Offered -> Hired for ONE quarter, per recruiter and per (recruiter, job).
@@ -2470,8 +2565,7 @@ export function initRecruiterFilters(baseData) {
       // across Joined and its two opening-quarter buckets — they can never drift apart.
       if (e.accepted && e.appStatus === 'Hired' && inRange(e.startDate, rg)) { // Joined = moved to Hired, not just an accepted offer · #129: inside From / To
         addCredit(sales, salesJob, e.jobId8, rec, e.sourcer, e.department, sc);
-        (salesWho[rec] || (salesWho[rec] = [])).push(e);
-        (salesWhoJob[rec + '|' + String(e.jobId8 || '').slice(0, 8)] || (salesWhoJob[rec + '|' + String(e.jobId8 || '').slice(0, 8)] = [])).push(e);
+        pushWho(salesWho, salesWhoJob, String(e.jobId8 || '').slice(0, 8), rec, e.sourcer, e);   // #193c
         // #39: bucket the same person by their opening's quarter. See the note above.
         const oq = e.openingQuarter || null, earlier = !!(oq && oq < q);
         addCredit(earlier ? salesA : salesB, earlier ? salesAJob : salesBJob, e.jobId8, rec, e.sourcer, e.department, sc);

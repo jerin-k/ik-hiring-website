@@ -30,8 +30,18 @@ export function dayLabel(iso) {
 // 🚨 One copy of this logic, because it carries a bug that was fixed once: it must count `.jn-p.jn-extra`, the
 //    PEOPLE only. Counting every `.jn-extra` also counts hidden DATE HEADINGS, and a cell with 11 hidden people
 //    and one hidden heading reads "+12 more" (#182a3).
+// 🚨 #193a (Jerin, 28 Sep 2026): 🗣 *"clicking on it open the Topic rows than showing who are the 7 ppl hehe!"*
+// A tree row owns its OWN click listener, so it runs BEFORE this file's tbody listener and `stopPropagation()`
+// below is far too late to stop it — the row toggled and, on the Recruiter tab, the names never opened at all.
+// Every tree row handler must therefore ASK FIRST whether the click belongs to a people cell. The Hiring
+// Manager tab already did the equivalent (it calls `moreClick` first inside its one handler and returns),
+// which is why it was the only tab of the three that worked.
+// 🔑 ONE definition of "this click is the people cell's", so a new tree cannot guess at its own.
+const moreBtn = (ev) => { const t = ev && ev.target; return (t && t.closest) ? t.closest('[data-jn-more]') : null; };
+export function isMoreClick(ev) { return !!moreBtn(ev); }
+
 export function moreClick(ev) {
-  const btn = ev.target.closest('[data-jn-more]');
+  const btn = moreBtn(ev);
   if (!btn) return false;
   ev.stopPropagation();
   const cell = btn.closest('td');

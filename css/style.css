@@ -1616,6 +1616,9 @@ td.jn-sum { color: var(--muted); font-size: 0.6875rem; }
    marking the rare case (8 of 157). An exception belongs at the BOTTOM of the visual hierarchy. */
 .jn-q { color: #9a5b1e; font-weight: 500; }
 .jn-q-miss { color: var(--muted); font-style: italic; }
+/* #193c: the same quiet TEXT treatment for a person who is on this row only because they sourced them.
+   Muted, not warm: this is a normal, wanted state (someone did the sourcing), not a data gap to chase. */
+.jn-src { color: var(--muted); font-weight: 500; font-style: normal; }
 /* The date once, as a heading, with its people under it — in the SAME green the per-person date used, so the
    colour keeps meaning "date" across both people columns (Jerin: "i like the green for date"). */
 .jn-grouped .jn-dh { display: block; font-size: 0.625rem; font-weight: 600; color: var(--green);

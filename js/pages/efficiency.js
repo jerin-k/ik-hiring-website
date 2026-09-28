@@ -1,6 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
-import { jnWhoCell, wireMoreCells } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter
+import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick
 import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
 import { defsBlock } from '../definitions.js';
 import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
@@ -82,18 +82,21 @@ const EFF_ONE = '<td class="jn-cell nosplit"><span class="zero">\u2014</span></t
 // #188: `noPending` dashes the Joining pipeline pair. Under a JOB the topic rows carry a real count, because
 // the people are placed by the opening their offer names; at DEPARTMENT level, with the job gone, they are not
 // split at all — and a 0 there would read as "nobody", which is a different claim (#182a's rule).
-const topicCells = (x, noPending) =>
+const topicCells = (x, noPending, peopleHtml) =>
   `<td style="font-weight:600">${x.total}</td><td class="score">${x.tS}</td>`
   + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td><td class="score">${x.jS}</td>`
   + (noPending ? EFF_DASH
     : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
       + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`)
   + EFF_DASH + EFF_DASH
-  // #182c: a topic row names nobody. The joiners behind a topic are already listed on the role row above it,
-  // and repeating them would show the same person twice in one open tree.
+  // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE — it used to read "a topic row names nobody... repeating
+  // them would show the same person twice in one open tree." 🗣 *"Not seeing joiner & joining pipeline names
+  // against topics"*. Under his option (b) the ROLE row above now says "N under their topics" instead of
+  // repeating them, so nobody is listed twice and the deepest row that can claim a person names them.
   // 🚨 EFF_DASH is a PAIR of cells (an HC/Score column), not one. Using it three times here gave topic rows
   //    17 cells against the header's 14 - caught by counting cells per row, not by looking at the page.
-  + EFF_ONE + EFF_ONE + EFF_ONE
+  // ⚠ The THIRD cell is Remarks and stays a dash: a remark belongs to the role, never to a topic.
+  + (peopleHtml || EFF_ONE + EFF_ONE) + EFF_ONE
 ;   // #182d: the Missed pair is gone - Delta already says what was not filled, live
 
 function wireTreePath(tbody, expandAll) {
@@ -109,7 +112,8 @@ function wireTreePath(tbody, expandAll) {
     if (p && p.split('-').length === 1) row.dataset.hold = '1';
   });
   tbody.querySelectorAll('tr[data-haschild]').forEach(row => {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (ev) => {
+      if (isMoreClick(ev)) return;   // #193a
       const path = row.dataset.path, depth = path.split('-').length;
       const exp = row.dataset.exp === '1';
       row.dataset.exp = exp ? '0' : '1';
@@ -964,8 +968,8 @@ export function initEfficiencyFilters(data) {
       if (x.rollup) return sumCell((x.joWho || []).length, x.rollup) + sumCell(x.pending || 0, x.rollup)
                           + '<td class="jn-cell"><span class="zero">&mdash;</span></td>';
       const note = x.job8 ? (noteOf(x.job8) || {}).text : '';
-      return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true })
-           + jnWhoCell(x)
+      return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true, under: x.joUnder })
+           + jnWhoCell(x, { under: x.jpUnder })
            + `<td class="jn-cell">${note ? `<span class="jn-note-ro">${String(note).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))}</span>` : '<span class="zero">&mdash;</span>'}</td>`;
     };
     const rows = fulfilRows(per);
@@ -1035,6 +1039,27 @@ export function initEfficiencyFilters(data) {
         // ("Department ➔ Job ➔ Recruiter ➔ Topic. Works.").
         const recs = LV.rec ? recSplits(j, dept, PM, per, openingScores(data)) : [];   // #188
         const opensJob = recs.length > 0 || !!tops;
+        // ===== #193b: whoever a TOPIC row will name comes off the row directly above it (Jerin's option b) =====
+        // The row above is the RECRUITER row when that level is on, otherwise the JOB row — so this has to be
+        // worked out before either is drawn. It leaves the job ➔ recruiter repetition alone: that is how this
+        // table has always read and Jerin's answer was about the topic level.
+        const ids8 = (t) => new Set(t.openings.map(o => String(o.id).slice(0, 8)));
+        // Narrow a list to the people no topic below can claim, and say how many were taken.
+        const claimSplit = (list, topicList) => {
+          if (!topicList || !topicList.length) return { keep: list || [], under: 0 };
+          const ids = new Set(); topicList.forEach(t => ids8(t).forEach(x => ids.add(x)));
+          const keep = (list || []).filter(c => !(c.openingId && ids.has(String(c.openingId).slice(0, 8))));
+          return { keep, under: (list || []).length - keep.length };
+        };
+        // 🚨 The topic rows draw from THESE, the row's own people — never from the job's list filtered by the
+        //    recruiter's openings. That second route is #192's fault one level down: it would put a person on
+        //    the topic of whoever OWNS their opening rather than under whoever worked them, and it is exactly
+        //    why Aditya Singh's row said "10 under their topics" over 12 names.
+        const jobSrcJo = (sp.joWho || []).slice(), jobSrcJp = (sp.jpWho || []).slice();
+        if (!recs.length && tops && tops.length) {
+          const a = claimSplit(jobSrcJo, tops), b = claimSplit(jobSrcJp, tops);
+          sp.joWho = a.keep; sp.joUnder = a.under; sp.jpWho = b.keep; sp.jpUnder = b.under;
+        }
         html += `<tr data-path="${di}-${ji}" data-lvl="2"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
           + `<td style="padding-left:1.875rem;color:var(--muted)">${opensJob ? CARET : ''}${j.title}${meta}`
           + `${recs.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${recs.length} recruiters</span>`
@@ -1044,19 +1069,23 @@ export function initEfficiencyFilters(data) {
         // so the topic rows close the job row in BOTH halves, heads and score (Rule 3).
         // #161: the job's people in closing, by the opening they are tied to - priced at the job's points, exactly as
         // jobSplit() prices the job's own Joining pending, so a topic's pS is a share of the job's pS.
-        const ids8 = (t) => new Set(t.openings.map(o => String(o.id).slice(0, 8)));
-        const jobPeople = PM.jpc[dept + '|' + (j.title || '')] || [];
         // #187: with a recruiter level the topics hang off the RECRUITER, narrowed to that recruiter's own
         // openings, so a topic row closes the recruiter row above it rather than the job two levels up.
         const branches = recs.length ? recs.map((r, ri) => ({ r, ri })) : [{ r: null, ri: 0 }];
         branches.forEach(({ r, ri }) => {
           const path = recs.length ? `${di}-${ji}-${ri}` : `${di}-${ji}`;
-          let mineIds = null, mineTops = null;
+          let mineIds = null, mineTops = null, branchJo = jobSrcJo, branchJp = jobSrcJp;   // #193b
           if (r) {
             mineIds = new Set(((data.openingRows) || [])
               .filter(x => x.jobId8 === j.jid && ((x.owners && x.owners[0]) || NO_RECRUITER) === r.recruiter)
               .map(x => String(x.openingId).slice(0, 8)));
             const myTops = tops ? tops.filter(t => [...ids8(t)].some(id => mineIds.has(id))) : null;
+            // #193b: this recruiter's own topic rows take their people off this row (option b).
+            branchJo = (r.joWho || []).slice(); branchJp = (r.jpWho || []).slice();
+            if (myTops && myTops.length) {
+              const a = claimSplit(branchJo, myTops), b = claimSplit(branchJp, myTops);
+              r.joWho = a.keep; r.joUnder = a.under; r.jpWho = b.keep; r.jpUnder = b.under;
+            }
             const unsetR = r.recruiter === NO_RECRUITER;
             html += `<tr data-path="${path}" data-lvl="3"${myTops && myTops.length ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
               + `<td style="padding-left:3.25rem">${myTops && myTops.length ? CARET : ''}`
@@ -1075,13 +1104,24 @@ export function initEfficiencyFilters(data) {
             ops.forEach(o => { const s1 = pt(o.quarter || PM.atQ); tot++;
               tS += s1; if (o.state === 'joined') { jn++; jS += s1; } if (o.state === 'missed') { ms++; mS += s1; } });
             const mine = new Set(ops.map(o => String(o.id).slice(0, 8)));
-            const pending = jobPeople.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8))).length;
+            // #193b: the same filter, kept as PEOPLE rather than reduced to a count, so the names this row
+            // prints are exactly the ones its number counts. ⚠ Both sides slice to 8 characters — openingRows
+            // stores an 8-char id while an offer stores the full uuid, and comparing them raw matches nothing.
+            const tJp = branchJp.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8)));
+            const tJo = branchJo.filter(c => c.openingId && mine.has(String(c.openingId).slice(0, 8)));
+            const pending = tJp.length;
             const pS = pending * pt(PM.atQ);
             // #157c (Jerin, 21 Sep): the topic is the bottom of the tree - no caret, no opening rows under it.
             html += `<tr data-path="${path}-${ti}" data-lvl="4" style="display:none">`
               + `<td style="padding-left:${recs.length ? '4.5rem' : '3.25rem'}"><span class="${t.topic === '(topic not set)' ? 'topic-unset' : 'topic-name'}">${t.topic}</span>`
               + `</td>`
-              + topicCells({ total: tot, joined: jn, missed: ms, tS, jS, mS, pending, pS }) + `</tr>`;
+              // 🚨 TWO cells here, not three. `peopleCells` returns Joined · Joining · REMARKS, and topicCells
+              //    adds the Remarks dash itself — passing peopleCells gave topic rows 15 cells against the
+              //    header's 14. Caught by counting cells per row, never by looking at the page (#182c's lesson,
+              //    which the comment in topicCells had already written down).
+              + topicCells({ total: tot, joined: jn, missed: ms, tS, jS, mS, pending, pS }, false,
+                            jnWhoCell({ joWho: tJo }, { list: tJo, dateOf: (c) => c.startDate, groupByDate: true })
+                            + jnWhoCell({ jpWho: tJp })) + `</tr>`;   // #193b
           });
         });
       });
