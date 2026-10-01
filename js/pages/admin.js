@@ -82,7 +82,9 @@ function buildEffectiveConfig(data) {
   return { ...collectConfig(), schemaVersion: 1, pods, capacity, scoreGrid, deptFamily };
 }
 
-export function renderAdmin(accessConfig, data) {
+export function renderAdmin(accessConfig, data, viewer) {
+  // #198 (Jerin, 1 Oct 2026): a Full Access viewer gets Access Management ONLY, and only to read it.
+  const ro = !!(viewer && viewer.adminReadOnly);
   const deptNames = Object.keys(DEPT_TREE).sort();
   const teamCount = Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0);
   // #137b (Jerin, 15 Sep 2026 — option A of mock-up 2, with #138): four sub-tabs instead of two, and each opens on ONE slim strip — the
@@ -158,6 +160,20 @@ export function renderAdmin(accessConfig, data) {
         background:var(--border-light); color:var(--text-secondary); }
       .ac-chip.is-tab { background:#f3f6fb; box-shadow:inset 0 0 0 1px #b9c7df; color:var(--accent-deep); }
       .ac-chip.is-any { background:transparent; box-shadow:inset 0 0 0 1px var(--border); color:var(--muted); font-weight:500; }
+      /* #198 (Jerin, 1 Oct 2026, option B): what a read-only viewer sees where an admin gets a control.
+         The role keeps the EXACT colours of select.ac-role below, so the two views read as the same object;
+         tabs and depts reuse .ac-chip / .ac-chip.is-tab. No new device, which is the whole point of option B.
+         NOTE no backticks in this comment: the block is inside a JS template literal. */
+      .ac-rolechip { padding:0.1875rem 0.625rem; border-radius:62.4375rem; font-size:0.6875rem; font-weight:600; }
+      .ac-rolechip.r-admin { background:var(--navy); color:#fff; }
+      .ac-rolechip.r-full_access { background:#dcecf1; color:#17586c; }
+      .ac-rolechip.r-restricted { background:#e4eaf5; color:#33507f; }
+      .ac-rolechip.r-none { background:transparent; box-shadow:inset 0 0 0 1px #c3cad8; color:var(--muted); font-weight:500; }
+      .ac-rotext { font-size:0.78125rem; color:var(--text-secondary); padding-left:0.25rem; }
+      .ac-roscope { display:grid; grid-template-columns:auto 1fr; gap:0.1875rem 0.5rem; align-items:center; max-width:25rem; }
+      .ac-rochips { display:flex; flex-wrap:wrap; gap:0.25rem; }
+      /* the quiet variant of the strip pill: a viewer has no sync state to act on, so it must not read as teal "all good" */
+      .adm-sync.is-view { background:var(--border-light); color:var(--accent-deep); }
       .ac-actions { display:flex; align-items:center; justify-content:flex-end; gap:0.5rem; white-space:nowrap; }
       .ac-inv { font-size:0.6875rem; font-weight:500; color:var(--muted); }
       .ac-inv.is-sent { color:#1E7590; font-weight:600; }
@@ -281,9 +297,9 @@ export function renderAdmin(accessConfig, data) {
 
     <div class="adm-subtabs subtab-band">
       <button class="adm-subtab subtab-chip active" data-atab="access">Access Management</button>
-      <button class="adm-subtab subtab-chip" data-atab="pods">Pod &amp; Capacity</button>
+      ${ro ? '' : `<button class="adm-subtab subtab-chip" data-atab="pods">Pod &amp; Capacity</button>
       <button class="adm-subtab subtab-chip" data-atab="depts">Departments &amp; Teams</button>
-      <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>
+      <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>`}
     </div>
 
     <div class="adm-panel" data-apanel="access">
@@ -291,7 +307,7 @@ export function renderAdmin(accessConfig, data) {
         <span id="acStatus" class="adm-sync"></span>
         <span id="acProvenance" class="adm-prov"></span>
         <span class="adm-grow"></span>
-        <label class="adm-field"><span class="lbl">Default access</span>
+        ${ro ? '' : `<label class="adm-field"><span class="lbl">Default access</span>
           <select id="default-role">
             <option value="none">None (denied)</option>
             <option value="full_access">Full Access</option>
@@ -299,20 +315,20 @@ export function renderAdmin(accessConfig, data) {
           </select></label>
         <span class="adm-vr"></span>
         <button id="acPublishBtn" class="btn btn-primary">Publish access</button>
-        <button id="acDownloadBtn" class="btn btn-secondary" title="Download access.json — fallback if publish is unavailable">Download</button>
+        <button id="acDownloadBtn" class="btn btn-secondary" title="Download access.json — fallback if publish is unavailable">Download</button>`}
       </div>
 
       <div class="adm-card">
         <div class="adm-toolbar">
           <span class="adm-title">Users</span>
-          <input type="email" id="new-email" placeholder="name@interviewkickstart.com" aria-label="Email of the person to add">
+          ${ro ? '' : `<input type="email" id="new-email" placeholder="name@interviewkickstart.com" aria-label="Email of the person to add">
           <select id="new-role" aria-label="Role for the person to add">
             <option value="restricted">Restricted</option>
             <option value="full_access">Full Access</option>
             <option value="admin">Admin</option>
             <option value="none">None (denied)</option>
           </select>
-          <button class="btn btn-primary" id="add-user-btn">Add user</button>
+          <button class="btn btn-primary" id="add-user-btn">Add user</button>`}
           <span class="adm-grow"></span>
           <label class="adm-field"><span class="lbl">User type</span>
             <select id="acFilterType"><option value="">All</option><option>Hiring Manager</option><option>Recruitment Team</option><option>Admin</option><option>Others</option></select></label>
@@ -335,6 +351,8 @@ export function renderAdmin(accessConfig, data) {
       ${defsBlock('admin-access')}
     </div><!-- /access panel -->
 
+    ${ro ? '' : `<!-- #198: the other three panels are not DRAWN for a read-only viewer, not merely hidden —
+         their chips are gone, their config never initialises, and nothing of theirs sits in the DOM unwired. -->
     <div class="adm-strip" id="mcStrip" style="display:none">
       <span id="mcStatus" class="adm-sync"></span>
       <span id="mcProvenance" class="adm-prov"></span>
@@ -411,6 +429,7 @@ export function renderAdmin(accessConfig, data) {
         </div>
       </div>
     </div><!-- /scoring panel -->
+    `}
   `;
 }
 
@@ -465,7 +484,10 @@ const AC_TYPE_COL = { 'Hiring Manager': '#4E6BA6', 'Recruitment Team': '#1E7590'
 const admWhen = (iso) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 // app.js calls this alongside initAdminMetricConfig. accessConfig = the loaded data/access.json.
-export function initAdminAccess(accessConfig, data) {
+export function initAdminAccess(accessConfig, data, viewer) {
+  // #198: a Full Access viewer READS this panel. Nothing that writes is wired, and the two write calls
+  // (publishAccess, sendInvite) are gated on `ro` as well — a control that is merely absent is not a gate.
+  const ro = !!(viewer && viewer.adminReadOnly);
   const work = JSON.parse(JSON.stringify(accessConfig || { defaultRole: 'none', users: [] }));
   if (!Array.isArray(work.users)) work.users = [];
   if (data) AC_DEPTS = acDeptsFrom(data, work.users);
@@ -504,13 +526,16 @@ export function initAdminAccess(accessConfig, data) {
   function refreshUI() {
     const st = document.getElementById('acStatus'), pv = document.getElementById('acProvenance');
     const dirty = isDirtyAc();
-    say(st, dirty ? 'Unpublished access changes on this browser' : (droppedNote || 'In sync with the team'), (dirty || droppedNote) ? 'dirty' : '');
+    // #198: a viewer has nothing to publish, so "in sync / unpublished" is meaningless to them — the pill states
+    // the one thing they need to know. It reuses .adm-sync, the strip's existing device, in the quiet variant.
+    if (ro) say(st, 'View only — ask Jerin or Gopu to change anyone\u2019s access', 'view');
+    else say(st, dirty ? 'Unpublished access changes on this browser' : (droppedNote || 'In sync with the team'), (dirty || droppedNote) ? 'dirty' : '');
     if (pv) pv.innerHTML = (accessConfig && accessConfig.updatedAt)
       ? `Access published ${admWhen(accessConfig.updatedAt)}${accessConfig.updatedBy ? ' · by ' + acEsc(accessConfig.updatedBy) : ''}`
       : 'Live access config — publish to update the shared file.';
   }
 
-  const dr = document.getElementById('default-role');
+  const dr = ro ? null : document.getElementById('default-role');
   if (dr) { dr.value = work.defaultRole; dr.addEventListener('change', () => { work.defaultRole = dr.value; setDirtyAc(true); }); }
 
   // #118 (Jerin, 14 Sep 2026): Send invite asks the web app to write and SEND the email (after the admin confirms; never
@@ -550,17 +575,43 @@ export function initAdminAccess(accessConfig, data) {
     const shown = work.users.map((u, i) => [u, i]).filter(([u]) => passesFilters(u));
     if (cnt) cnt.textContent = `${shown.length} of ${work.users.length} people`;
     if (!shown.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:0.875rem">No users match these filters</td></tr>'; return; }
+    // #198 (option B, Jerin 1 Oct 2026): a read-only viewer sees the SAME devices this screen already draws —
+    // the role in its own colour, tabs and departments as chips — with no control to click. Nothing new was invented.
+    // The labels come from the same AC_ROLE_OPTS / AC_TABS lists the selects use, so the two can never drift apart.
+    const labelOf = (opts, v) => { const hit = (opts || []).find(o => (Array.isArray(o) ? o[0] : o) === v); return hit ? (Array.isArray(hit) ? hit[1] : hit) : v; };
+    const roChips = (vals, opts, isTab) => (vals && vals.length)
+      ? vals.map(v => `<span class="ac-chip${isTab ? ' is-tab' : ''}">${acEsc(labelOf(opts, v))}</span>`).join('')
+      : `<span class="ac-chip is-any">any</span>`;
+
     const rowHtml = (u, i) => {
       const restricted = u.role === 'restricted', type = acUserType(u);
-      return `<tr>
-        <td>${acWho(u.email)}</td>
-        <td><select class="ac-role r-${u.role}" data-i="${i}" aria-label="Role for ${acEsc(u.email)}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
-        <td><span class="ac-type-wrap"><i style="background:${AC_TYPE_COL[type] || '#9aa3b8'}"></i><select class="ac-type adm-quiet" data-i="${i}" aria-label="User type for ${acEsc(u.email)}">${AC_USER_TYPES.map(t => `<option${type === t ? ' selected' : ''}>${t}</option>`).join('')}</select></span></td>
-        <td>${restricted ? `<div style="display:flex;flex-direction:column;gap:0.1875rem;max-width:25rem">
+      const roleCell = ro
+        ? `<span class="ac-chip ac-rolechip r-${u.role}">${acEsc(labelOf(AC_ROLE_OPTS, u.role))}</span>`
+        : `<select class="ac-role r-${u.role}" data-i="${i}" aria-label="Role for ${acEsc(u.email)}">${AC_ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+      const typeCell = ro
+        ? `<span class="ac-type-wrap"><i style="background:${AC_TYPE_COL[type] || '#9aa3b8'}"></i><span class="ac-rotext">${acEsc(type)}</span></span>`
+        : `<span class="ac-type-wrap"><i style="background:${AC_TYPE_COL[type] || '#9aa3b8'}"></i><select class="ac-type adm-quiet" data-i="${i}" aria-label="User type for ${acEsc(u.email)}">${AC_USER_TYPES.map(t => `<option${type === t ? ' selected' : ''}>${t}</option>`).join('')}</select></span>`;
+      const scopeCell = !restricted
+        ? `<span class="adm-count">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`
+        : ro
+          ? `<div class="ac-roscope">
+              <span class="ac-ms-word">Tabs</span><span class="ac-rochips">${roChips(u.tabs, AC_TABS, true)}</span>
+              <span class="ac-ms-word">Depts</span><span class="ac-rochips">${roChips(u.departments, AC_DEPTS, false)}</span>
+            </div>`
+          : `<div style="display:flex;flex-direction:column;gap:0.1875rem;max-width:25rem">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
-            </div>` : `<span class="adm-count">${u.role === 'none' ? 'No access' : u.role === 'admin' ? 'All tabs + Admin' : 'All tabs'}</span>`}</td>
-        <td><div class="ac-actions">${inviteState(u)}${inviteCell(u, i)}<button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></div></td>
+            </div>`;
+      // "Invited" stays for a viewer — it is information. The buttons that act on it do not.
+      const actionCell = ro
+        ? `<div class="ac-actions">${inviteState(u)}</div>`
+        : `<div class="ac-actions">${inviteState(u)}${inviteCell(u, i)}<button class="btn btn-danger btn-sm ac-del" data-i="${i}">Remove</button></div>`;
+      return `<tr>
+        <td>${acWho(u.email)}</td>
+        <td>${roleCell}</td>
+        <td>${typeCell}</td>
+        <td>${scopeCell}</td>
+        <td>${actionCell}</td>
       </tr>`;
     };
     // #142 (Jerin, 17 Sep — option C): grouped under a heading per user type. Rows still edit by their place in work.users (data-i) and
@@ -573,6 +624,7 @@ export function initAdminAccess(accessConfig, data) {
         + `<span class="adm-grp-n">${rows.length} ${rows.length === 1 ? 'person' : 'people'} · ${sent} invited</span></span></td></tr>`
         + rows.map(([u, i]) => rowHtml(u, i)).join('');
     }).join('');
+    if (ro) return;   // #198: nothing below this line writes for a viewer, because none of it is attached
     body.querySelectorAll('.ac-role').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].role = s.value; setDirtyAc(true); renderRows(); }));
     body.querySelectorAll('.ac-type').forEach(s => s.addEventListener('change', () => { work.users[+s.dataset.i].userType = s.value; setDirtyAc(true); renderRows(); }));
     const wireMs = (cls, key, word, opts) => body.querySelectorAll('.' + cls).forEach(cb => cb.addEventListener('change', () => {
@@ -604,7 +656,7 @@ export function initAdminAccess(accessConfig, data) {
   fetchInvites().then(m => { invites = m || {}; renderRows(); });   // #118
   ['acFilterType', 'acFilterInvite'].forEach(id => document.getElementById(id)?.addEventListener('change', renderRows));   // #118 filters
 
-  const addBtn = document.getElementById('add-user-btn');
+  const addBtn = ro ? null : document.getElementById('add-user-btn');
   if (addBtn) addBtn.addEventListener('click', () => {
     const emailEl = document.getElementById('new-email'), roleEl = document.getElementById('new-role');
     const email = (emailEl.value || '').trim().toLowerCase(), role = roleEl.value;
@@ -615,18 +667,24 @@ export function initAdminAccess(accessConfig, data) {
     work.users.push(u); emailEl.value = ''; emailEl.style.borderColor = ''; setDirtyAc(true); renderRows();
   });
 
-  const pubBtn = document.getElementById('acPublishBtn');
+  const pubBtn = ro ? null : document.getElementById('acPublishBtn');
   if (pubBtn) pubBtn.addEventListener('click', async () => {
     const st = document.getElementById('acStatus');
     pubBtn.disabled = true; const lbl = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
     say(st, 'A sign-in popup will open — approve it, then this verifies automatically…', 'busy');
     const payload = { schemaVersion: 1, defaultRole: work.defaultRole, users: work.users };
+    // #198: a TRIPWIRE, not the real boundary — be honest about which is which. It cannot fire today, because
+    // pubBtn is null for a viewer and this handler is never attached; it exists so that re-adding the button
+    // without re-thinking the role does not quietly re-open publishing. THE REAL GATE IS SERVER-SIDE: the
+    // publish goes through an authenticated popup to the Apps Script web app, which checks the caller is an
+    // admin (#124) and refuses anyone else. Removing controls from this page is a UI decision, not a security one.
+    if (ro) { pubBtn.textContent = lbl; pubBtn.disabled = false; say(st, 'View only — you cannot publish access', 'error'); return; }
     let res; try { res = await publishAccess(payload); } catch (e) { res = { ok: false, reason: e.message }; }
     pubBtn.textContent = lbl; pubBtn.disabled = false;
     if (res.ok) { setDirtyAc(false); say(st, 'Published — access is live for the whole team', ''); }
     else say(st, res.reason, 'error');
   });
-  const dlBtn = document.getElementById('acDownloadBtn');
+  const dlBtn = ro ? null : document.getElementById('acDownloadBtn');
   if (dlBtn) dlBtn.addEventListener('click', () => {
     const user = getCurrentUser();
     const blob = new Blob([accessFileText({ schemaVersion: 1, defaultRole: work.defaultRole, users: work.users }, user && user.email)], { type: 'application/json' });

@@ -856,7 +856,7 @@ export const DEFINITIONS = {
         heading: 'Reading it',
         items: [
           ['Default access', 'What anyone signed in with an @interviewkickstart.com account gets when their email is not in the list below.'],
-          ['Role', '<strong>Admin</strong>: every tab plus Admin. <strong>Full Access</strong>: every tab except Admin. <strong>Restricted</strong>: Overview plus the tabs you grant. <strong>None</strong>: access denied.'],
+          ['Role', '<strong>Admin</strong>: every tab, plus Admin, and the only role that can change anything here. <strong>Full Access</strong>: every tab, and this one screen to <strong>read</strong> &mdash; they can see who has what access but cannot change it, add anyone, invite anyone or publish. The other Admin screens stay with Admins. <strong>Restricted</strong>: Overview plus the tabs you grant. <strong>None</strong>: access denied.'],
           ['Tabs', 'Restricted users only: Hiring Manager, Recruiter Efficiency and Overall Efficiency. Overview is always on; Admin can never be granted this way.'],
           ['Depts', 'Restricted users only; empty means all. <strong>Every figure</strong> on the three tabs, Panelists included, narrows to the jobs in those departments. <strong>Overview is never narrowed</strong> &mdash; it is for everyone. &#9888; Treat it as a convenience, not a privacy boundary: the data file behind the dashboard is public, so this changes what the page shows, not what can be read.'],
           ['User type', '<strong>Hiring Manager</strong>, <strong>Recruitment Team</strong>, <strong>Admin</strong> or <strong>Others</strong> &mdash; a label for grouping and filtering. It changes nothing about what they can see: Role, Tabs and Depts decide that.'],
@@ -866,6 +866,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['Everyone on Full Access can read this page', 'They see every person in the list, each one&rsquo;s role, and the departments a Restricted person is scoped to. They cannot change any of it. If something here should not be visible to the wider team, it does not belong in this list.'],
       ['Nothing changes for anyone until you publish', '<strong>Publish access</strong> writes the shared file everyone reads. Until then your edits are kept in <strong>this browser</strong> only: they survive a reload, nobody else sees them, and if somebody else publishes access meanwhile they are dropped rather than published over that change. <strong>Download</strong> saves access.json as a fallback.'],
     ]
   },
