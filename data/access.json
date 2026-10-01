@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-25T08:46:14.772Z",
+  "updatedAt": "2026-10-01T09:39:23.697Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -167,6 +167,11 @@
         "Talent Acquisition"
       ],
       "userType": "Hiring Manager"
+    },
+    {
+      "email": "aashish.kumar@interviewkickstart.com",
+      "role": "full_access",
+      "userType": "Others"
     }
   ]
 }
