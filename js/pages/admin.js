@@ -7,50 +7,16 @@ import { publishAccess, accessFileText, sendInvite, fetchInvites } from '../acce
 import { getCurrentUser } from '../auth.js';
 import { avatar, podClass, countTag } from '../people-cells.js';   // #137b: the same initials, pod colours and count tags as the people lists
 
-// ===== Metric Configuration model (moved here from Recruiter Efficiency 2026-08-09) =====
-// See memory project_recruiter-score-model. A role's Score = Family + Level + Complexity → grid → points.
-const SCORE_TIERS = [['Vanilla', 6], ['Regular', 12], ['Semi-Niche', 15], ['Niche', 20], ['Super Niche', 40], ['Leadership', 60], ['Senior Leadership', 120]];
-const CLASSIFICATIONS = [
-  ['India SME', 'India SME - Normal', 'Vanilla'], ['India SME', 'India SME - Complex', 'Regular'], ['India SME', 'India SME - Uber Complex', 'Semi-Niche'],
-  ['US SME', 'US SME - Normal', 'Regular'], ['US SME', 'US SME - Complex', 'Semi-Niche'], ['US SME', 'US SME - Uber Complex', 'Niche'],
-  ['PA', 'India PA Junior', 'Vanilla'], ['PA', 'India PA', 'Regular'], ['PA', 'US PA Junior', 'Vanilla'], ['PA', 'US PA', 'Semi-Niche'],
-  ['NonTech', 'NonTech - Intern - Normal', 'Vanilla'], ['NonTech', 'NonTech - Intern - Complex', 'Regular'], ['NonTech', 'NonTech L1 to L3 - Normal', 'Semi-Niche'], ['NonTech', 'NonTech L1 to L3 - Complex', 'Niche'], ['NonTech', 'NonTech L4 to L6 - Normal', 'Niche'], ['NonTech', 'NonTech L4 to L6 - Complex', 'Super Niche'],
-  ['Tech', 'Tech - Intern - Normal', 'Regular'], ['Tech', 'Tech - Intern - Complex', 'Semi-Niche'], ['Tech', 'Tech L1 to L3 - Normal', 'Niche'], ['Tech', 'Tech L1 to L3 - Complex', 'Super Niche'], ['Tech', 'Tech L4 to L6 - Normal', 'Super Niche'], ['Tech', 'Tech L4 to L6 - Complex', 'Leadership'],
-  ['Leadership', 'L7 - L8', 'Leadership'], ['Leadership', 'L9 & above', 'Senior Leadership'],
-];
-const FAMILY_OPTIONS = ['India SME', 'US SME', 'India PA', 'US PA', 'NonTech', 'Tech', 'Leadership', 'Exclude'];
-const DEPT_FAMILY_DEFAULT = [
-  ['SME - India', 'India SME', ''], ['SME - US', 'US SME', ''], ['Engineering', 'Tech', 'Tech = Engineering only'],
-  ['IT', 'NonTech', ''], ['Curriculum', 'NonTech', ''],
-  ['Business - India', 'India PA', 'PA if title = Program Advisor, else NonTech'], ['US Business', 'US PA', 'PA if title = Program Advisor, else NonTech'],
-  ['Marketing', 'NonTech', ''], ['Operations', 'NonTech', ''], ['Finance', 'NonTech', ''], ['Human Resource', 'NonTech', ''],
-  ['Talent Acquisition', 'NonTech', ''], ['New Programs', 'NonTech', ''], ["Founder's Office", 'NonTech', ''], ['B2B', 'NonTech', ''], ['Test', 'Exclude', ''],
-];
-const LEVEL_BANDS = [['Intern', 'L0'], ['Junior (PA/Sales only)', 'L1'], ['L1–L3', 'L1, L2, L3'], ['L4–L6', 'L4, L5, L6'], ['L7–L8', 'L7, L8'], ['L9 & above', 'L9–L12']];
-
-const GRID_LS = 'ik_score_grid_q';   // { "2026-Q3": { tierPoints:{}, rowTier:{} } } — per quarter, copy-forward
-const DEPT_FAM_LS = 'ik_dept_family';
-function defaultGrid() {
-  const tierPoints = {}; SCORE_TIERS.forEach(([n, p]) => { tierPoints[n] = p; });
-  const rowTier = {}; CLASSIFICATIONS.forEach(([, cls, tier]) => { rowTier[cls] = tier; });
-  return { tierPoints, rowTier };
-}
-function loadGridStore() { try { return JSON.parse(localStorage.getItem(GRID_LS) || '{}'); } catch (e) { return {}; } }
-function saveGridStore(o) { localStorage.setItem(GRID_LS, JSON.stringify(o)); }
-function gridQRank(k) { const m = /^(\d{4})-Q([1-4])$/.exec(k || ''); return m ? parseInt(m[1], 10) * 10 + parseInt(m[2], 10) : 0; }
-function gridForQuarter(quarter) {
-  const store = loadGridStore();
-  if (store[quarter]) return store[quarter];
-  const target = gridQRank(quarter); let best = null, br = -1;
-  for (const k of Object.keys(store)) { const r = gridQRank(k); if (r <= target && r > br) { br = r; best = store[k]; } }
-  return best ? JSON.parse(JSON.stringify(best)) : defaultGrid();
-}
-function materialiseGrid(quarter) { const s = loadGridStore(); if (!s[quarter]) { s[quarter] = gridForQuarter(quarter); saveGridStore(s); } return s; }
-function setGridTier(quarter, cls, tier) { const s = materialiseGrid(quarter); s[quarter].rowTier[cls] = tier; saveGridStore(s); }
-function setGridPoints(quarter, tier, pts) { const s = materialiseGrid(quarter); s[quarter].tierPoints[tier] = pts; saveGridStore(s); }
-function loadDeptFamily() { try { return JSON.parse(localStorage.getItem(DEPT_FAM_LS) || '{}'); } catch (e) { return {}; } }
-function saveDeptFamily(o) { localStorage.setItem(DEPT_FAM_LS, JSON.stringify(o)); }
-function familyOf(dept) { const o = loadDeptFamily(); const d = DEPT_FAMILY_DEFAULT.find(x => x[0] === dept); return o[dept] || (d ? d[1] : ''); }
+// ===== Metric Configuration model =====
+// #199 (Jerin, 1 Oct 2026): this file used to keep its OWN copy of SCORE_TIERS, CLASSIFICATIONS, LEVEL_BANDS,
+// DEPT_FAMILY_DEFAULT and every grid helper, while score-model.js kept another. They shared only the localStorage
+// keys, so the EDITOR and the ENGINE could show different grids and nothing would fail. Folded to ONE home here,
+// the #196 discipline. 🚨 Never re-declare any of these locally — import them.
+import {
+  SCORE_TIERS, CLASSIFICATIONS, LEVEL_BANDS, FAMILY_OPTIONS, DEPT_FAMILY_DEFAULT,
+  defaultGrid, loadGridStore, saveGridStore, gridForQuarter, materialiseGrid,
+  setGridTier, setGridPoints, loadDeptFamily, saveDeptFamily, familyOf,
+} from '../score-model.js';
 
 // Auto-capture the effective BASELINE for Publish. collectConfig() only snapshots explicit localStorage edits, so
 // the very first publish (fresh browser, no edits) would send an empty config. This resolves what the readers
@@ -285,22 +251,30 @@ export function renderAdmin(accessConfig, data, viewer) {
       .cfg-grid th:first-child, .cfg-grid td:first-child { min-width:13.125rem; white-space:normal; }
       .cfg-grid td:first-child { text-align:left; }   /* #151b: the heading above it centres like every other */
       .cfg-grid th .tier-name { display:block; margin-bottom:0.3125rem; }
+      /* #199: the band id is the heading now - the old tier names are retired, so the column reads S1..S9 exactly
+         as Jerin's card does, with the points under it. Amber on the navy, the one accent the header already allows.
+         NOTE no backticks in this comment: the block is inside a JS template literal. */
+      .cfg-grid th .tier-code { display:block; margin-bottom:0.3125rem; font-size:0.6875rem; font-weight:700; color:#f0a868; letter-spacing:.03em; }
       .cfg-grid tbody tr.fam-sep td { background:var(--border-light); font-weight:700; font-size:0.6875rem; text-transform:uppercase; letter-spacing:.04em; color:var(--navy); text-align:left; padding:0.375rem 0.75rem; }
       .adm-card .cfg-grid input.tier-pts { width:3.375rem; height:1.5rem; padding:0 0.25rem; text-align:center; font-size:0.6875rem; font-weight:700; }
       .grid-cell { position:relative; display:inline-grid; place-items:center; min-width:2.875rem; height:1.625rem; cursor:pointer; }
       .grid-cell input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
       .grid-pick { width:0.8125rem; height:0.8125rem; border-radius:50%; border:1.5px solid #c3cad8; background:#fff; font-size:0; box-sizing:border-box; }
       .grid-cell:hover .grid-pick { border-color:var(--accent); }
-      .grid-cell input:checked + .grid-pick { width:auto; min-width:2.625rem; height:1.375rem; padding:0 0.5rem; border:0; border-radius:0.375rem; display:inline-grid; place-items:center;
+      .grid-cell input:checked + .grid-pick, .grid-cell.is-ro .grid-pick { width:auto; min-width:2.625rem; height:1.375rem; padding:0 0.5rem; border:0; border-radius:0.375rem; display:inline-grid; place-items:center;
         font-size:0.6875rem; font-weight:700; font-variant-numeric:tabular-nums; }
       .grid-cell input:focus-visible + .grid-pick { outline:2px solid var(--accent); outline-offset:2px; }
-      .grid-cell input:checked + .gt-1 { background:#eef1f7; color:#4a5578; }
-      .grid-cell input:checked + .gt-2 { background:#e4eaf5; color:#33507f; }
-      .grid-cell input:checked + .gt-3 { background:#ddebf0; color:#2a5f7a; }
-      .grid-cell input:checked + .gt-4 { background:#cfe4eb; color:#17586c; }
-      .grid-cell input:checked + .gt-5 { background:#a9d0da; color:#0f4c5e; }
-      .grid-cell input:checked + .gt-6 { background:#3f8aa0; color:#fff; }
-      .grid-cell input:checked + .gt-7 { background:#1E7590; color:#fff; }
+      /* #199: nine bands instead of seven. Every original colour is KEPT and two intermediates added (gt-5, gt-7),
+         so the ramp still runs pale to deep teal and nothing had to be re-picked. */
+      .grid-cell input:checked + .gt-1, .grid-cell.is-ro .gt-1 { background:#eef1f7; color:#4a5578; }
+      .grid-cell input:checked + .gt-2, .grid-cell.is-ro .gt-2 { background:#e4eaf5; color:#33507f; }
+      .grid-cell input:checked + .gt-3, .grid-cell.is-ro .gt-3 { background:#ddebf0; color:#2a5f7a; }
+      .grid-cell input:checked + .gt-4, .grid-cell.is-ro .gt-4 { background:#cfe4eb; color:#17586c; }
+      .grid-cell input:checked + .gt-5, .grid-cell.is-ro .gt-5 { background:#bcdbe4; color:#13526a; }
+      .grid-cell input:checked + .gt-6, .grid-cell.is-ro .gt-6 { background:#a9d0da; color:#0f4c5e; }
+      .grid-cell input:checked + .gt-7, .grid-cell.is-ro .gt-7 { background:#6aa9bb; color:#fff; }
+      .grid-cell input:checked + .gt-8, .grid-cell.is-ro .gt-8 { background:#3f8aa0; color:#fff; }
+      .grid-cell input:checked + .gt-9, .grid-cell.is-ro .gt-9 { background:#1E7590; color:#fff; }
       .adm-card select.cfg-fam.is-exclude { color:var(--muted); border-style:dashed; }
       .cfg-ref { display:grid; grid-template-columns:repeat(auto-fit,minmax(13.75rem,1fr)); gap:0.875rem; padding:0.875rem; }
       .cfg-ref table { width:100%; font-size:0.75rem; }
@@ -414,7 +388,7 @@ export function renderAdmin(accessConfig, data, viewer) {
     <div class="adm-panel" data-apanel="scoring" style="display:none">
       <div class="adm-split">
         <div class="adm-rail" role="tablist" aria-label="Scoring">
-          <button type="button" class="adm-row" role="tab" data-ssec="grid" aria-selected="true"><b>Role Score Grid</b><em>${CLASSIFICATIONS.length}</em><small>roles across ${SCORE_TIERS.length} tiers</small></button>
+          <button type="button" class="adm-row" role="tab" data-ssec="grid" aria-selected="true"><b>Role Score Grid</b><em>${CLASSIFICATIONS.length}</em><small>roles across ${SCORE_TIERS.length} bands</small></button>
           <button type="button" class="adm-row" role="tab" data-ssec="family" aria-selected="false"><b>Department → Family</b><em>${DEPT_FAMILY_DEFAULT.length}</em><small>departments mapped</small></button>
           <button type="button" class="adm-row" role="tab" data-ssec="levels" aria-selected="false"><b>Levels &amp; overrides</b><small>Level bands · complexity · leadership</small></button>
         </div>
@@ -849,7 +823,7 @@ export function initAdminMetricConfig(data, viewer) {
     const head = document.getElementById('cfgGridHead'); if (!head) return;
     const q = cfgQ();
     const grid = gridForQuarter(q);
-    head.innerHTML = `<tr><th>Role classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-name">${n}</span>${ro
+    head.innerHTML = `<tr><th>Role classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-code">${n}</span>${ro
       ? `<span class="cfg-roval cfg-ropts">${grid.tierPoints[n]}</span>`
       : `<input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}" aria-label="Points for ${n}">`}</th>`).join('')}</tr>`;
     let html = '', lastFam = null;
@@ -888,7 +862,7 @@ export function initAdminMetricConfig(data, viewer) {
     el.innerHTML = `<div class="cfg-ref">
       <table><thead><tr><th>Level band</th><th>Ashby L-scale</th></tr></thead><tbody>${LEVEL_BANDS.map(([b, l]) => `<tr><td>${b}</td><td style="color:var(--muted)">${l}</td></tr>`).join('')}</tbody></table>
       <table><thead><tr><th>Complexity (Ashby)</th></tr></thead><tbody><tr><td>Normal</td></tr><tr><td>Complex</td></tr><tr><td>Uber Complex</td></tr></tbody></table>
-      <table><thead><tr><th>Leadership override</th></tr></thead><tbody><tr><td>L7–L8 → Leadership (60)</td></tr><tr><td>L9 &amp; above → Senior Leadership (120)</td></tr><tr><td style="color:var(--muted);font-size:0.6875rem">Any family; overrides Family/Complexity by level.</td></tr></tbody></table>
+      <table><thead><tr><th>Leadership override</th></tr></thead><tbody><tr><td>L7–L8 Normal → S7 (60)</td></tr><tr><td>L7–L8 Complex → S8 (90)</td></tr><tr><td>L9 &amp; above → S9 (120)</td></tr><tr><td style="color:var(--muted);font-size:0.6875rem">Any family; overrides Family/Complexity by level.</td></tr></tbody></table>
     </div>`;
   }
 

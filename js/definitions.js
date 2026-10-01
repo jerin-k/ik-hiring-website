@@ -842,7 +842,7 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Level → Band · Complexity · Leadership override', 'Reference only. L7–L8 score as Leadership and L9 and above as Senior Leadership, in any family. <strong>Complexity is read from the opening</strong>, and an opening with none scores nothing \u2014 it no longer counts as Normal. Tech and NonTech roles with no Level score zero; SME roles score on Complexity alone.'],
+          ['Level → Band · Complexity · Leadership override', 'Reference only. L7–L8 scores <strong>S7</strong> when Normal and <strong>S8</strong> when Complex, and L9 and above scores <strong>S9</strong>, in any family. <strong>NonTech and Tech band levels differently</strong>: NonTech splits L1–L2, L3–L4 and L5–L6, while Tech stays L1–L3 and L4–L6. A role whose title says Pre Sales at L0, L1 or L2 scores on its own row. <strong>Complexity is read from the opening</strong>, and an opening with none scores nothing \u2014 it no longer counts as Normal. Tech and NonTech roles with no Level score zero; SME roles score on Complexity alone.'],
         ]
       },
     ],
