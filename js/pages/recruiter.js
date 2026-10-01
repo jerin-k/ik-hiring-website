@@ -2306,8 +2306,9 @@ export function initRecruiterFilters(baseData) {
     const nextQ = qShift(q, 1);
     // #172: TWO maps. `meta` (by title) is the fallback only; `metaById` is what the score actually uses.
     // A title map takes the FIRST job of that name, and two jobs can share one — "Manager, CRM" is L3 in
-    // Marketing and L4 in Business - India, and L3/L4 straddle the grid's "L1 to L3" / "L4 to L6" boundary,
-    // so a title match could price a person in closing a whole band low (15pt instead of 20pt).
+    // Marketing and L4 in Business - India. #199 made this sharper, not milder: NonTech now bands L1-L2 / L3-L4 /
+    // L5-L6 while Tech keeps L1-L3 / L4-L6, so one level out is more likely to land in a different band than before,
+    // and a title match could price a person in closing a whole band low (30pt instead of 15pt, or the reverse).
     const meta = {}, metaById = {};
     (data.jobs || []).forEach(j => {
       if (j.title && !meta[j.title]) meta[j.title] = j;
