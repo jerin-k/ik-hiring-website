@@ -69,9 +69,11 @@ const str = (v) => String(v == null ? '' : v).trim();
 // 🚨 A summary of the whole set hides the very thing that changed: moving one opening to another recruiter leaves the
 //    count and the Role-Type tally identical, so a summarised line read "X ➔ X" - it announced a change and showed
 //    nothing. Reported per line instead, in step with the server's orRowEdits_, which is what actually records it.
-const ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['sourcer', 'sourcer'], ['replacementOf', 'replaces']];
+// 112l (Jerin, 1 Oct 2026): TOPIC IS PER OPENING. It always belonged there — the topic sits on the opening in Ashby
+// (#157) and already formed part of each opening's own name (#159); one shared value was the odd part.
+const ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['sourcer', 'sourcer'], ['topic', 'topic'], ['replacementOf', 'replaces']];
 const rowLine = (r) => `${r.roleType || '(no Role Type)'} — ${r.recruiter || '(no recruiter)'}`
-  + (r.sourcer ? `, sourced by ${r.sourcer}` : '') + (r.replacementOf ? `, replacing ${r.replacementOf}` : '');
+  + (r.topic ? `, ${r.topic}` : '') + (r.sourcer ? `, sourced by ${r.sourcer}` : '') + (r.replacementOf ? `, replacing ${r.replacementOf}` : '');
 const rowEdits = (a, b) => {
   const out = [];
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
@@ -102,12 +104,14 @@ const mixOrder = (m) => ROLE_TYPES.concat(Object.keys(m || {}).filter(t => !ROLE
 // request. At module scope because both the form and editsOf() above need it.
 function rowsOf(x) {
   if (Array.isArray(x.rows) && x.rows.length) return x.rows.slice(0, 25).map(r => ({ roleType: String(r.roleType || ''),
-    recruiter: String(r.recruiter || ''), sourcer: String(r.sourcer || ''), replacementOf: String(r.replacementOf || '') }));
+    recruiter: String(r.recruiter || ''), sourcer: String(r.sourcer || ''), topic: String(r.topic || x.topic || ''),
+    replacementOf: String(r.replacementOf || '') }));
   const out = [], mix = mixOf(x), types = Object.keys(mix);
   const names = String(x.replacementOf || '').split(';').map(v => v.trim()).filter(Boolean);
   let ri = 0;
+  // an older request carried ONE topic for the whole thing — give every row that same value so nothing reads blank
   const add = (t) => out.push({ roleType: t, recruiter: String(x.recruiter || ''), sourcer: String(x.sourcer || ''),
-    replacementOf: t === 'Replacement' ? (names[ri++] || '') : '' });
+    topic: String(x.topic || ''), replacementOf: t === 'Replacement' ? (names[ri++] || '') : '' });
   if (types.length) types.forEach(t => { for (let i = 0; i < mix[t]; i++) add(t); });
   else { const n = parseInt(x.count, 10) || 1; for (let j = 0; j < n && j < 25; j++) add(String(x.roleType || '')); }
   return out;
@@ -133,7 +137,7 @@ function evaluate(d, ctx) {
   // openings box renders empty and the counter reads 0 until a job is picked, which looks broken. Only the
   // As-per-AOP fold needs the job, and that happens further down once the department is known.
   r.rows = (d.rows || []).slice(0, 25).map((x) => ({ roleType: String(x.roleType || ''), recruiter: String(x.recruiter || ''),
-    sourcer: String(x.sourcer || ''), replacementOf: String(x.replacementOf || '').trim() }));
+    sourcer: String(x.sourcer || ''), topic: String(x.topic || '').trim(), replacementOf: String(x.replacementOf || '').trim() }));
   r.total = r.rows.length;
 
   const job = ctx.jobById[d.jobId];
@@ -226,18 +230,25 @@ function evaluate(d, ctx) {
   // Role Complexity picked explicitly
   if (!d.complexity) block('Pick the Role Complexity. A blank would score as Normal.');
 
-  // Topic, and the name it builds
-  const topic = String(d.topic || '').trim();
-  if (!topic) block('Type the topic (specialisation). It goes into the opening name.');
-  else if (topic.length < 3 || VAGUE.test(topic)) {
-    r.notes.topic = { kind: 'bad', text: `"${topic}" is too broad to tell two openings on this job apart. Something like "Agentic AI" or "System Design" works.` };
-    check('q', `Topic "${topic}" looks too broad. Worth making it specific.`);
-  } else r.notes.topic = { kind: 'plain', text: 'Specific enough ✓' };
+  // Topic, and the name it builds — 112l: ONE PER OPENING, checked line by line.
+  const topics = r.rows.map((x) => String(x.topic || '').trim());
+  r.rows.forEach((x, i) => { x.topic = topics[i]; });
+  const noTopic = [], vague = [];
+  topics.forEach((t, i) => { if (!t) noTopic.push(i + 1); else if (t.length < 3 || VAGUE.test(t)) vague.push(`${i + 1} ("${t}")`); });
+  if (noTopic.length) block(`Type the topic on opening ${noTopic.join(', ')}. It goes into that opening's name.`);
+  if (vague.length) check('q', `The topic on opening ${vague.join(', ')} looks too broad. Something like "Agentic AI" or "System Design" tells two openings on one job apart.`);
+  // The derived request-level value: what every reader that has always read ONE topic now gets. Same shape as the
+  // recruiter summary, so a mixed request reads "Agentic AI, System Design +1 more" instead of an arbitrary first row.
+  const uniq = [...new Set(topics.filter(Boolean))];
+  r.topic = uniq.length <= 1 ? (uniq[0] || '')
+    : uniq.slice(0, 2).join(', ') + (uniq.length > 2 ? ` +${uniq.length - 2} more` : '');
+  r.notes.topic = noTopic.length ? null
+    : { kind: uniq.length > 1 ? 'auto' : 'plain', text: uniq.length > 1 ? `${uniq.length} different topics — each opening is named from its own` : 'Specific enough ✓' };
   // #159 (Jerin, 22 Sep): IK-<n> - <recruiter> - <Role Type> - <topic>, the pattern every Q3 opening was renamed to. The number
   // is given when the opening is created. Role Type comes from r.mix, so SME India, SME US and PA read As per AOP; a request with
   // several Role Types (112g) makes one opening per Role Type, and the name shows each of them.
   // 170b: the recruiter is per opening, so each opening carries its OWN name and the request no longer has one name.
-  r.rows.forEach((x) => { x.name = `IK-### - ${x.recruiter || '<recruiter>'} - ${x.roleType || '<Role Type>'} - ${topic || '<topic>'}`; });
+  r.rows.forEach((x) => { x.name = `IK-### - ${x.recruiter || '<recruiter>'} - ${x.roleType || '<Role Type>'} - ${x.topic || '<topic>'}`; });
   r.names = r.rows.map((x) => x.name);
   const distinct = [];
   r.names.forEach((nm) => { if (!distinct.includes(nm)) distinct.push(nm); });
@@ -520,7 +531,9 @@ export async function mountOpeningRequests(root, backend) {
           : `<select class="or-in" data-row="${i}" data-rf="roleType" aria-label="Opening ${n} Role Type"${dis}>${opt(roleTypes, x.roleType, 'Role Type…')}</select>`;
         const head = `<div class="or-op-row"><span class="or-op-n">${n}</span>${rt}
           <select class="or-in" data-row="${i}" data-rf="recruiter" aria-label="Opening ${n} recruiter"${dis}>${opt(S.recruiters.map(u => u.name), x.recruiter, 'Recruiter…')}</select>
-          <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select></div>`;
+          <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select>
+          <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
+            value="${esc(x.topic)}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}></div>`;
         if (x.roleType !== 'Replacement') return head;
         return head + `<div class="or-op-sub"><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
@@ -533,10 +546,10 @@ export async function mountOpeningRequests(root, backend) {
           type="button" data-n="1" aria-label="One more opening"${locked || rws.length >= 25 ? ' disabled' : ''}>+</button></span>
         <span class="or-note">Each line below is one real opening in Ashby.</span></div>
       <div class="or-f wide"><span>The openings</span><div class="or-mix">
-        <div class="or-op-head"><span>#</span><span>Role Type</span><span>Recruiter</span><span>Sourcer</span></div>
+        <div class="or-op-head"><span>#</span><span>Role Type</span><span>Recruiter</span><span>Sourcer</span><span>Topic</span></div>
         ${rws.map(line).join('')}
         <div class="or-mix-total"><b>${rws.length} opening${rws.length === 1 ? '' : 's'}</b><span>${parts || 'Pick a Role Type on each line'}</span></div>
-      </div>${note(ev.notes.roleType)}</div>`;
+      </div>${note(ev.notes.roleType)}${note(ev.notes.topic)}</div>`;
     })();
     const state = nBlock ? `${nBlock} thing${nBlock === 1 ? '' : 's'} still needed`
       : (edit ? (changes.length ? `${changes.length} change${changes.length === 1 ? '' : 's'}` : 'No changes yet') : 'Ready to submit');
@@ -555,7 +568,6 @@ export async function mountOpeningRequests(root, backend) {
         <label class="or-f"><span>Job Level (in Ashby)</span>${levelField}${note(ev.notes.level)}</label>
         <label class="or-f"><span>Role Complexity</span><select class="or-in" data-f="complexity"${dis}>${opt(complexities, d.complexity, 'Pick one…')}</select>
           <span class="or-note${job && d.complexity && d.complexity === job.complexity ? ' auto' : ''}">${job && d.complexity && d.complexity === job.complexity ? 'As set on the job in Ashby. Change it if this opening differs.' : 'Pick one; a blank would score as Normal'}</span></label>
-        <label class="or-f"><span>Topic</span><input class="or-in" type="text" maxlength="60" data-f="topic" value="${esc(d.topic)}" placeholder="e.g. Agentic AI"${dis}>${note(ev.notes.topic)}</label>
         <label class="or-f"><span>Open date</span><input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}</label>
         <label class="or-f wide"><span>Description (optional)</span><input class="or-in" type="text" maxlength="120" data-f="description" value="${esc(d.description)}" placeholder="Shown on the opening in Ashby"${dis}></label>
         ${edit ? '' : `<label class="or-f wide"><span>Note to approvers</span><textarea class="or-in" rows="2" maxlength="600" data-f="note" placeholder="Why now, cohort dates, anything they should know"${dis}>${esc(d.note)}</textarea></label>`}
@@ -830,6 +842,15 @@ export async function mountOpeningRequests(root, backend) {
       if (el.dataset.rf === 'roleType' && el.value !== 'Replacement') rows[i].replacementOf = '';
       S.draft.rows = rows; render(); revealNext();   // #112i
     }));
+    // 112l: the topic is TEXT, so it takes the same treatment as the replacement name — commit on every keystroke and
+    // put the caret back after the re-render. On the shared [data-row] change handler it would only commit on blur AND
+    // lose the caret, because that handler re-renders.
+    root.querySelectorAll('[data-rtop]').forEach(el => el.addEventListener('input', () => {
+      const i = Number(el.dataset.rtop), pos = el.selectionStart, rows = (S.draft.rows || []).slice();
+      if (!rows[i]) return;
+      rows[i] = Object.assign({}, rows[i], { topic: el.value });
+      S.draft.rows = rows; render(); keep(`[data-rtop="${i}"]`, pos);
+    }));
     root.querySelectorAll('[data-rrep]').forEach(el => el.addEventListener('input', () => {
       const i = Number(el.dataset.rrep), pos = el.selectionStart, rows = (S.draft.rows || []).slice();
       if (!rows[i]) return;
@@ -962,11 +983,13 @@ export async function mountOpeningRequests(root, backend) {
       jobId: d.jobId, jobTitle: job.title, department: job.department,
       team: d.team, location: d.location, description: String(d.description || '').trim(),
       employmentType: ev.employmentType, levelNow: ev.levelNow, levelSet: ev.levelSet,
-      complexity: d.complexity, topic: String(d.topic).trim(), openDate: d.openDate,
+      // 112l: `topic` is now DERIVED from the rows, the way recruiter/roleType already are — the server still
+      // requires one, older readers still find one, and a mixed request reads "Agentic AI, System Design +1 more".
+      complexity: d.complexity, topic: ev.topic, openDate: d.openDate,
       // 170b: `rows` IS the request - one entry per opening. count, roleType, recruiter, sourcer and replacementOf are
       // sent as well, but ONLY so an older reader still finds them; the server derives them again from the rows
       // (orNormalize_), so a stale value here can never become the record.
-      rows: ev.rows.map(x => ({ roleType: x.roleType, recruiter: x.recruiter, sourcer: x.sourcer, replacementOf: x.replacementOf })),
+      rows: ev.rows.map(x => ({ roleType: x.roleType, recruiter: x.recruiter, sourcer: x.sourcer, topic: x.topic, replacementOf: x.replacementOf })),
       count: ev.total, recruiter: (Object.keys(ev.goal || {})[0] || ''), roleType: ev.roleType,
       replacementOf: ev.replacementOf, mix: Object.fromEntries(Object.entries(ev.mix).filter(([, n]) => n > 0)),
       sourcer: ev.rows.map(x => x.sourcer).filter(Boolean).join('; '),
