@@ -45,13 +45,21 @@ function buildAccess(user) {
       return {
         role: 'admin',
         pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'admin'],
+        adminReadOnly: false,
         filters: null,
       };
 
+    // #198 (Jerin, 1 Oct 2026): Full Access may now OPEN Admin, but only to READ Access Management.
+    // The page grant alone is not the rule — `adminReadOnly` is, and app.js + admin.js both honour it:
+    // it draws Access Management ONLY (Pod & Capacity, Departments & Teams and Scoring stay admin-only),
+    // it draws values instead of controls, and it never wires a thing that writes.
+    // 🚨 Hiding a control is not read-only. `publishAccess()` is gated on this flag too, because this
+    // screen edits a working copy and publishes access.json to the whole team.
     case 'full_access':
       return {
         role: 'full_access',
-        pages: ['home', 'hm-report', 'recruiter', 'efficiency'],
+        pages: ['home', 'hm-report', 'recruiter', 'efficiency', 'admin'],
+        adminReadOnly: true,
         filters: null,
       };
 
@@ -68,11 +76,11 @@ function buildAccess(user) {
       const filters = {};
       if (user.departments && user.departments.length > 0) filters.departments = user.departments;
 
-      return { role: 'restricted', pages, filters };
+      return { role: 'restricted', pages, adminReadOnly: false, filters };
     }
 
     default:
-      return { role: 'none', pages: [] };
+      return { role: 'none', pages: [], adminReadOnly: false };
   }
 }
 

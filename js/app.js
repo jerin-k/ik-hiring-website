@@ -294,9 +294,11 @@ function navigateTo(page, sub) {
       content.innerHTML = '';   // the window sits beside #page-content, kept between visits (showReqBot)
       break;
     case 'admin':
-      content.innerHTML = renderAdmin(accessConfig, data);
-      initAdminMetricConfig(data);
-      initAdminAccess(accessConfig, data);   // #120b: the department choices come from the data
+      // #198: the VIEWER is passed in, not just the access file — a Full Access viewer gets Access Management
+      // read-only, so the Pod & Capacity / Scoring panels are never drawn and their config never initialises.
+      content.innerHTML = renderAdmin(accessConfig, data, currentAccess);
+      if (!currentAccess.adminReadOnly) initAdminMetricConfig(data);
+      initAdminAccess(accessConfig, data, currentAccess);   // #120b: the department choices come from the data
       break;
   }
 
