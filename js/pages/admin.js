@@ -164,6 +164,22 @@ export function renderAdmin(accessConfig, data, viewer) {
          The role keeps the EXACT colours of select.ac-role below, so the two views read as the same object;
          tabs and depts reuse .ac-chip / .ac-chip.is-tab. No new device, which is the whole point of option B.
          NOTE no backticks in this comment: the block is inside a JS template literal. */
+      /* #198b: the read-only face of the three config panels. Same idea as the role chip above - the value the
+         control was showing, in the control's own colour, with nothing to click.
+         NOTE no backticks in this comment: the block is inside a JS template literal. */
+      .cfg-podchip { padding:0.1875rem 0.625rem; border-radius:62.4375rem; font-size:0.6875rem; font-weight:600; }
+      .cfg-podchip.pod-sales { background:#e4eaf5; color:#33507f; }
+      .cfg-podchip.pod-smeus { background:#d6eaf0; color:#17586c; }
+      .cfg-podchip.pod-smein { background:#dcefeb; color:#2b6b62; }
+      .cfg-podchip.pod-lateral { background:#fbefe3; color:#9a5b1e; }
+      .cfg-podchip.pod-others { background:#eceef3; color:#4a5578; }
+      .cfg-podchip.pod-none { background:var(--orange-light); color:var(--orange); box-shadow:inset 0 0 0 1px #d9b36a; }
+      .cfg-roval { display:inline-block; min-width:3.75rem; text-align:right; font-weight:600; font-variant-numeric:tabular-nums;
+        font-size:0.78125rem; color:var(--text-secondary); }
+      .cfg-ropts { min-width:0; text-align:center; font-size:0.6875rem; font-weight:700; color:#fff; }
+      .ac-rotext.is-agency { color:var(--orange); font-weight:600; }
+      .ac-rotext.is-exclude { color:var(--muted); font-style:italic; }
+      .grid-cell.is-ro { display:flex; align-items:center; justify-content:center; min-height:1.5rem; }
       .ac-rolechip { padding:0.1875rem 0.625rem; border-radius:62.4375rem; font-size:0.6875rem; font-weight:600; }
       .ac-rolechip.r-admin { background:var(--navy); color:#fff; }
       .ac-rolechip.r-full_access { background:#dcecf1; color:#17586c; }
@@ -297,9 +313,9 @@ export function renderAdmin(accessConfig, data, viewer) {
 
     <div class="adm-subtabs subtab-band">
       <button class="adm-subtab subtab-chip active" data-atab="access">Access Management</button>
-      ${ro ? '' : `<button class="adm-subtab subtab-chip" data-atab="pods">Pod &amp; Capacity</button>
+      <button class="adm-subtab subtab-chip" data-atab="pods">Pod &amp; Capacity</button>
       <button class="adm-subtab subtab-chip" data-atab="depts">Departments &amp; Teams</button>
-      <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>`}
+      <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>
     </div>
 
     <div class="adm-panel" data-apanel="access">
@@ -351,15 +367,16 @@ export function renderAdmin(accessConfig, data, viewer) {
       ${defsBlock('admin-access')}
     </div><!-- /access panel -->
 
-    ${ro ? '' : `<!-- #198: the other three panels are not DRAWN for a read-only viewer, not merely hidden —
-         their chips are gone, their config never initialises, and nothing of theirs sits in the DOM unwired. -->
+    <!-- #198b (Jerin, 1 Oct 2026): "Need to give them access to all tabs under Admin (as read-only)."
+         So all four panels are drawn for everyone and #198's omission of these three is reversed. What makes them
+         safe is the same thing as on Access Management: values instead of controls, and nothing that writes wired. -->
     <div class="adm-strip" id="mcStrip" style="display:none">
       <span id="mcStatus" class="adm-sync"></span>
       <span id="mcProvenance" class="adm-prov"></span>
       <span class="adm-grow"></span>
       <span id="cfgQuarterField" class="adm-field"><label class="adm-field"><span class="lbl">Quarter</span><select id="cfgQuarter"></select></label><span class="adm-vr"></span></span>
-      <button id="mcPublishBtn" class="btn btn-primary" title="Publishes Pod &amp; Capacity and Scoring together — they are one team config">Publish to team</button>
-      <button id="mcDownloadBtn" class="btn btn-secondary" title="Download metric_config.json — fallback if publish is unavailable">Download</button>
+      ${ro ? '' : `<button id="mcPublishBtn" class="btn btn-primary" title="Publishes Pod &amp; Capacity and Scoring together — they are one team config">Publish to team</button>
+      <button id="mcDownloadBtn" class="btn btn-secondary" title="Download metric_config.json — fallback if publish is unavailable">Download</button>`}
     </div>
 
     <div class="adm-panel" data-apanel="pods" style="display:none">
@@ -429,7 +446,6 @@ export function renderAdmin(accessConfig, data, viewer) {
         </div>
       </div>
     </div><!-- /scoring panel -->
-    `}
   `;
 }
 
@@ -695,7 +711,10 @@ export function initAdminAccess(accessConfig, data, viewer) {
 }
 
 // ===== Metric Configuration interactivity (called by app.js after renderAdmin) =====
-export function initAdminMetricConfig(data) {
+export function initAdminMetricConfig(data, viewer) {
+  // #198b: the same contract as Access Management — a viewer reads Pod & Capacity, Departments & Teams and
+  // Scoring, and every control becomes the value it was showing. Nothing that writes is wired.
+  const ro = !!(viewer && viewer.adminReadOnly);
   // #11b: agencies, freelancers and other sourcer-only people must be configurable here too — that is where
   // their pod and capacity get set. Same shared helper the Recruiter tab uses, so the two rosters agree.
   const recs = ((data && data.recruiters) || []).concat(
@@ -779,13 +798,19 @@ export function initAdminMetricConfig(data) {
     const rowHtml = (r) => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false;
       const pod = podOf(name, q), cap = capacityOf(name, q), ut = userTypeOf(name, ext); return `<tr data-pod="${pod}">
       <td><span class="adm-who">${avatar(name, pod)}<b>${name}</b></span></td>
-      <td><select class="cfg-pod pod-${podClass(pod)}" data-name="${name}" aria-label="Pod for ${name}">${podOpts.map(p => `<option value="${p}"${p === pod ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
-      <td><span class="adm-cap"><input type="number" min="0" class="cfg-cap" data-name="${name}" value="${cap}" aria-label="Capacity for ${name}"><span class="adm-capbar"><span style="width:${capPct(cap)}%"></span></span></span></td>
-      <td><select class="cfg-utype adm-quiet${ut === 'Agency' ? ' is-agency' : ''}" data-name="${name}" title="${ext.has(name)
+      <td>${ro
+        ? `<span class="ac-chip cfg-podchip pod-${podClass(pod)}">${pod}</span>`
+        : `<select class="cfg-pod pod-${podClass(pod)}" data-name="${name}" aria-label="Pod for ${name}">${podOpts.map(p => `<option value="${p}"${p === pod ? ' selected' : ''}>${p}</option>`).join('')}</select>`}</td>
+      <td><span class="adm-cap">${ro
+        ? `<span class="cfg-roval">${fmtCap(cap)}</span>`
+        : `<input type="number" min="0" class="cfg-cap" data-name="${name}" value="${cap}" aria-label="Capacity for ${name}">`}<span class="adm-capbar"><span style="width:${capPct(cap)}%"></span></span></span></td>
+      <td>${ro
+        ? `<span class="ac-rotext${ut === 'Agency' ? ' is-agency' : ''}">${ut}</span>`
+        : `<select class="cfg-utype adm-quiet${ut === 'Agency' ? ' is-agency' : ''}" data-name="${name}" title="${ext.has(name)
         ? 'Ashby marks this account as an External Recruiter.'
-        : 'Ashby does not mark this account as an External Recruiter.'}">${USER_TYPES.map(t => `<option value="${t}"${t === ut ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
-      <td>${dateBox(name, 'start', 'Started on')}</td>
-      <td>${dateBox(name, 'end', 'Left on')}</td>
+        : 'Ashby does not mark this account as an External Recruiter.'}">${USER_TYPES.map(t => `<option value="${t}"${t === ut ? ' selected' : ''}>${t}</option>`).join('')}</select>`}</td>
+      <td>${ro ? `<span class="ac-rotext">${fmtDay((dates[name] || {}).start) || '—'}</span>` : dateBox(name, 'start', 'Started on')}</td>
+      <td>${ro ? `<span class="ac-rotext">${fmtDay((dates[name] || {}).end) || '—'}</span>` : dateBox(name, 'end', 'Left on')}</td>
       <td>${(() => { const s = here(r); const q0 = String(q).replace(/^(\d{4})-(Q\d)$/, '$2 $1');
         const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
         const cls = !s.in ? ' is-out' : (/left/.test(s.note) ? ' is-left' : (/joined/.test(s.note) ? ' is-joined' : ''));
@@ -798,6 +823,9 @@ export function initAdminMetricConfig(data) {
       + `<span class="adm-grp-n">${rs.length} ${rs.length === 1 ? 'recruiter' : 'recruiters'} · capacity <b class="grp-cap">${fmtCap(rs.reduce((t, r) => t + (+capacityOf(r.name, q) || 0), 0))}</b></span></span></td></tr>`
       + rs.map(rowHtml).join('')).join('')
       || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1rem">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
+    // #198b: a viewer attaches NOTHING. The guard sits above every listener block, not after some of them, so
+    // "a viewer wires nothing" is readable at a glance instead of depending on which selectors happen to miss.
+    if (ro) { updatePodSummary(); return; }
     // #142: redraw on a pod change so the recruiter moves into that pod's group and both headings' totals follow.
     body.querySelectorAll('.cfg-pod').forEach(sel => sel.addEventListener('change', () => { setPod(sel.dataset.name, sel.value, cfgQ()); touched(); renderPodCapacity(); }));
     body.querySelectorAll('.cfg-cap').forEach(inp => inp.addEventListener('input', () => {
@@ -821,20 +849,26 @@ export function initAdminMetricConfig(data) {
     const head = document.getElementById('cfgGridHead'); if (!head) return;
     const q = cfgQ();
     const grid = gridForQuarter(q);
-    head.innerHTML = `<tr><th>Role classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-name">${n}</span><input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}" aria-label="Points for ${n}"></th>`).join('')}</tr>`;
+    head.innerHTML = `<tr><th>Role classification</th>${SCORE_TIERS.map(([n]) => `<th><span class="tier-name">${n}</span>${ro
+      ? `<span class="cfg-roval cfg-ropts">${grid.tierPoints[n]}</span>`
+      : `<input type="number" class="tier-pts" data-tier="${n}" value="${grid.tierPoints[n]}" aria-label="Points for ${n}">`}</th>`).join('')}</tr>`;
     let html = '', lastFam = null;
     CLASSIFICATIONS.forEach(([fam, cls]) => {
       if (fam !== lastFam) { html += `<tr class="fam-sep"><td colspan="${SCORE_TIERS.length + 1}">${fam}</td></tr>`; lastFam = fam; }
       const rname = 'grid_' + cls.replace(/[^a-z0-9]/gi, '_');
       // #137b: the chosen tier fills in with its points (deeper = more points); the radio underneath is still what saves.
-      html += `<tr><td>${cls}</td>${SCORE_TIERS.map(([n], k) => `<td><label class="grid-cell" title="${cls} → ${n}"><input type="radio" name="${rname}" class="grid-radio" data-cls="${cls}" data-tier="${n}"${n === grid.rowTier[cls] ? ' checked' : ''}><span class="grid-pick gt-${k + 1}" data-tier="${n}">${grid.tierPoints[n]}</span></label></td>`).join('')}</tr>`;
+      html += `<tr><td>${cls}</td>${SCORE_TIERS.map(([n], k) => `<td>${ro
+        ? `<span class="grid-cell is-ro" title="${cls} → ${n}">${n === grid.rowTier[cls] ? `<span class="grid-pick gt-${k + 1}" data-tier="${n}">${grid.tierPoints[n]}</span>` : ''}</span>`
+        : `<label class="grid-cell" title="${cls} → ${n}"><input type="radio" name="${rname}" class="grid-radio" data-cls="${cls}" data-tier="${n}"${n === grid.rowTier[cls] ? ' checked' : ''}><span class="grid-pick gt-${k + 1}" data-tier="${n}">${grid.tierPoints[n]}</span></label>`}</td>`).join('')}</tr>`;
     });
     document.getElementById('cfgGridBody').innerHTML = html;
+    if (!ro) {
     document.querySelectorAll('#cfgGridBody .grid-radio').forEach(r => r.addEventListener('change', () => { if (r.checked) { setGridTier(cfgQ(), r.dataset.cls, r.dataset.tier); touched(); } }));
     document.querySelectorAll('#cfgGridHead .tier-pts').forEach(inp => inp.addEventListener('input', () => {
       setGridPoints(cfgQ(), inp.dataset.tier, parseInt(inp.value, 10) || 0); touched();
       document.querySelectorAll('#cfgGridBody .grid-pick').forEach(x => { if (x.dataset.tier === inp.dataset.tier) x.textContent = parseInt(inp.value, 10) || 0; });
     }));
+    }   // #198b: /if (!ro) — a viewer gets the grid drawn, and not one listener on it
     const note = document.getElementById('cfgGridNote');
     if (note) note.textContent = loadGridStore()[q] ? 'Edited for ' + q.replace('-', ' ') : 'Inherited from an earlier quarter (copy-forward)';
   }
@@ -842,8 +876,11 @@ export function initAdminMetricConfig(data) {
     const body = document.getElementById('cfgDeptBody'); if (!body) return;
     body.innerHTML = DEPT_FAMILY_DEFAULT.map(([dept, , note]) => `<tr>
       <td><b style="font-weight:600;color:var(--text)">${dept}</b></td>
-      <td><select class="cfg-fam${familyOf(dept) === 'Exclude' ? ' is-exclude' : ''}" data-dept="${dept}" aria-label="Family for ${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select></td>
+      <td>${ro
+        ? `<span class="ac-rotext${familyOf(dept) === 'Exclude' ? ' is-exclude' : ''}">${familyOf(dept)}</span>`
+        : `<select class="cfg-fam${familyOf(dept) === 'Exclude' ? ' is-exclude' : ''}" data-dept="${dept}" aria-label="Family for ${dept}">${FAMILY_OPTIONS.map(f => `<option value="${f}"${f === familyOf(dept) ? ' selected' : ''}>${f}</option>`).join('')}</select>`}</td>
       <td class="adm-count" style="font-size:0.71875rem">${note || ''}</td></tr>`).join('');
+    if (ro) return;   // #198b
     body.querySelectorAll('.cfg-fam').forEach(s => s.addEventListener('change', () => { const o = loadDeptFamily(); o[s.dataset.dept] = s.value; saveDeptFamily(o); touched(); s.classList.toggle('is-exclude', s.value === 'Exclude'); }));
   }
   function renderRefBlock() {
@@ -861,13 +898,16 @@ export function initAdminMetricConfig(data) {
     const status = document.getElementById('mcStatus'), prov = document.getElementById('mcProvenance');
     if (!status) return;
     const dirty = isDirty(), meta = getMeta();
-    status.textContent = dirty ? 'Unpublished changes on this browser' : 'In sync with the team';
-    status.className = 'adm-sync' + (dirty ? ' is-dirty' : '');   // #137b: a pill, like Access Management's
+    // #198b: a viewer has nothing to publish, so the sync state means nothing to them — same pill, same words
+    // as Access Management, so the four panels read as one screen rather than three states.
+    status.textContent = ro ? 'View only — ask Jerin or Gopu to change the team config'
+      : (dirty ? 'Unpublished changes on this browser' : 'In sync with the team');
+    status.className = 'adm-sync' + (ro ? ' is-view' : (dirty ? ' is-dirty' : ''));   // #137b: a pill, like Access Management's
     prov.innerHTML = (meta && meta.updatedAt)
       ? `Team config published ${admWhen(meta.updatedAt)}${meta.updatedBy ? ' · by ' + meta.updatedBy : ''}`
       : 'No team config published yet — Publish to set the shared baseline.';
   }
-  const pubBtn = document.getElementById('mcPublishBtn');
+  const pubBtn = ro ? null : document.getElementById('mcPublishBtn');
   if (pubBtn) pubBtn.addEventListener('click', async () => {
     const status = document.getElementById('mcStatus');
     pubBtn.disabled = true; const label = pubBtn.textContent; pubBtn.textContent = 'Publishing…';
@@ -877,7 +917,7 @@ export function initAdminMetricConfig(data) {
     if (res.ok) { status.textContent = 'Published — the whole team now sees this config'; status.className = 'adm-sync'; refreshPublishUI(); }
     else { status.textContent = res.reason; status.className = 'adm-sync is-error'; }
   });
-  const dlBtn = document.getElementById('mcDownloadBtn');
+  const dlBtn = ro ? null : document.getElementById('mcDownloadBtn');
   if (dlBtn) dlBtn.addEventListener('click', () => {
     const user = getCurrentUser();
     const blob = new Blob([configFileText(user && user.email)], { type: 'application/json' });

@@ -297,7 +297,9 @@ function navigateTo(page, sub) {
       // #198: the VIEWER is passed in, not just the access file — a Full Access viewer gets Access Management
       // read-only, so the Pod & Capacity / Scoring panels are never drawn and their config never initialises.
       content.innerHTML = renderAdmin(accessConfig, data, currentAccess);
-      if (!currentAccess.adminReadOnly) initAdminMetricConfig(data);
+      // #198b (Jerin, 1 Oct 2026): a Full Access viewer now reads ALL FOUR admin panels, so the metric config is
+      // initialised for them too - in read-only mode, which is why the viewer goes in rather than being withheld.
+      initAdminMetricConfig(data, currentAccess);
       initAdminAccess(accessConfig, data, currentAccess);   // #120b: the department choices come from the data
       break;
   }
