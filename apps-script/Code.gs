@@ -917,13 +917,14 @@ function orBoot() {
 //    from the old shape - count + mix + the single recruiter/sourcer + the semicolon-separated replacement names.
 //    Without that rebuild the requests already on the Sheet would read as zero openings and vanish from the queue.
 function orRows_(rq) {
-  if (rq && Array.isArray(rq.rows) && rq.rows.length) return rq.rows.slice(0, 25).map(orRow_);
+  var fbTopic = String((rq && rq.topic) || '');   // 112l: an older payload's single topic, used only where a row has none
+  if (rq && Array.isArray(rq.rows) && rq.rows.length) return rq.rows.slice(0, 25).map(function (r) { return orRow_(r, fbTopic); });
   var out = [], mix = orMix_(rq && rq.mix), types = Object.keys(mix);
   var names = String((rq && rq.replacementOf) || '').split(';').map(function (x) { return x.trim(); }).filter(String);
   var rec = String((rq && rq.recruiter) || ''), src = String((rq && rq.sourcer) || ''), ri = 0;
   var add = function (t) {
     out.push(orRow_({ roleType: t, recruiter: rec, sourcer: src,
-      replacementOf: t === 'Replacement' ? (names[ri++] || '') : '' }));
+      replacementOf: t === 'Replacement' ? (names[ri++] || '') : '' }, fbTopic));
   };
   if (types.length) types.forEach(function (t) { for (var i = 0; i < mix[t]; i++) add(t); });
   else { var n = parseInt((rq && rq.count), 10) || 1; for (var j = 0; j < n && j < 25; j++) add(String((rq && rq.roleType) || '')); }
@@ -931,10 +932,13 @@ function orRows_(rq) {
 }
 
 // One requested opening, as the server keeps it.
-function orRow_(r) {
+function orRow_(r, fb) {
   r = r || {};
+  // 112l (Jerin, 1 Oct 2026): the TOPIC is per opening. `fb` is the one request-level topic an older window still
+  // sends, so a payload written before this change still fills every row and nothing ever reads blank.
   return { roleType: String(r.roleType || '').trim().slice(0, 40), recruiter: String(r.recruiter || '').trim().slice(0, 80),
-           sourcer: String(r.sourcer || '').trim().slice(0, 80), replacementOf: String(r.replacementOf || '').trim().slice(0, 80) };
+           sourcer: String(r.sourcer || '').trim().slice(0, 80), topic: String(r.topic || fb || '').trim().slice(0, 60),
+           replacementOf: String(r.replacementOf || '').trim().slice(0, 80) };
 }
 
 // What the old single-value columns are worth once the rows decide. Several different values read "A, B +2 more" so a
@@ -960,6 +964,7 @@ var OR_ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['so
 
 function orRowLine_(r) {
   return (r.roleType || '(no Role Type)') + ' — ' + (r.recruiter || '(no recruiter)')
+    + (r.topic ? ', ' + r.topic : '')   // 112l
     + (r.sourcer ? ', sourced by ' + r.sourcer : '') + (r.replacementOf ? ', replacing ' + r.replacementOf : '');
 }
 
@@ -999,7 +1004,7 @@ function orValidate_(p) {
   if (!(rows.length >= 1 && rows.length <= 25)) miss.push('how many openings (1 to 25)');
   var byName = {};
   orAshbyUsers_().forEach(function (u) { byName[u.name] = 1; });
-  var noType = [], noRec = [], badRec = [], badSrc = [], noName = [];
+  var noType = [], noRec = [], badRec = [], badSrc = [], noName = [], noTopic = [];
   rows.forEach(function (r, i) {
     var n = i + 1;
     if (!r.roleType) noType.push(n);
@@ -1007,7 +1012,9 @@ function orValidate_(p) {
     else if (!byName[r.recruiter]) badRec.push(n + ' (' + r.recruiter + ')');
     if (r.sourcer && !byName[r.sourcer]) badSrc.push(n + ' (' + r.sourcer + ')');
     if (r.roleType === 'Replacement' && !r.replacementOf) noName.push(n);
+    if (!String(r.topic || '').trim()) noTopic.push(n);   // 112l: every opening carries its own
   });
+  if (noTopic.length) miss.push('the topic on opening ' + noTopic.join(', '));
   if (noType.length) miss.push('the Role Type on opening ' + noType.join(', '));
   if (noRec.length) miss.push('the recruiter on opening ' + noRec.join(', '));
   if (noName.length) miss.push('who is being replaced on opening ' + noName.join(', '));
@@ -1469,6 +1476,7 @@ function orSlackCard_(rq) {
     li('Location', orSlackVal_(rq.location)), li('Open date', date), li('Description', orSlackVal_(line(rq.description), 600)),
     '', '*The openings*'].concat(rows170.map(function (r, i) {
       return '• *' + (i + 1) + '.* ' + orSlackEsc_(r.roleType || '(no Role Type)') + ' — ' + orSlackEsc_(r.recruiter || '(no recruiter)')
+        + (r.topic ? ', ' + orSlackEsc_(r.topic) : '')   // 112l
         + (r.sourcer ? ', sourced by ' + orSlackEsc_(r.sourcer) : '')
         + (r.replacementOf ? ', replacing ' + orSlackEsc_(r.replacementOf) : '');
     }), [
