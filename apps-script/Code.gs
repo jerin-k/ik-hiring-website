@@ -881,6 +881,31 @@ function requestsPage_(e) {
 function orBoot() {
   var me = orUser_();
   if (!me.allowed) return { ok: false, message: 'This window is for the Recruitment Team, Jerin and Gopu.' };
+  // 201e (Jerin, 6 Oct 2026: the page is still slow). orBoot used to fetch the Ashby USER list, the DEPARTMENT,
+  // LOCATION and JOB lists and the CUSTOM FIELD options as well - five Ashby calls, cached only when the result
+  // fits CacheService's 100 KB limit, which orMeta_ (every Open job with its locations) cannot be relied on to do.
+  // NONE of it is needed to draw the list. It moved to orFormData() below, which the window calls in the
+  // background once the list is up; this call is now a Drive read and a Sheet read.
+  // 201d: anyone reaching here is already allowed by orUser_()/access.json, so every request is visible.
+  var visible = orReadAll_();
+  visible.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  return {
+    ok: true,
+    // the display name lives in Ashby, so it arrives with orFormData; the window shows the email until then,
+    // and inside the dashboard tab this bar is hidden anyway (112f).
+    me: { email: me.email, name: me.email, userType: me.userType, isApprover: me.isApprover },
+    requests: visible,
+    slackOn: !!PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN')
+  };
+}
+
+// 201e: everything the DRAFT FORM needs and the list does not. Fetched in the background, so none of it blocks
+// the first paint. 170a: who may be NAMED on an opening is not who may sign in - an Elevated Access or External
+// Recruiter seat in Ashby IS the person who ends up owning an opening, which is how Sangha and G Darshan stay
+// pickable. A disabled Ashby account is dropped by orAshbyUsers_, so retiring a test account removes it here too.
+function orFormData() {
+  var me = orUser_();
+  if (!me.allowed) return { ok: false, message: 'Not allowed.' };
   var users = orAshbyUsers_();
   var access = null;
   try { access = loadDriveJson_('access.json'); } catch (e) { access = null; }
@@ -890,25 +915,12 @@ function orBoot() {
   });
   var mine = null;
   users.forEach(function (u) { if (u.email === me.email) mine = u; });
-  var all = orReadAll_();
-  var visible = me.isApprover ? all : all.filter(function (r) { return r.requesterEmail === me.email; });
-  visible.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
   return {
     ok: true,
-    me: { email: me.email, name: mine ? mine.name : me.email, userType: me.userType, isApprover: me.isApprover },
-    // 170a (Jerin, 24 Sep 2026: "any Ashby elevated user & any Ashby External user ... They are the ones who wil own
-    // an opening"): who may be NAMED on an opening is NOT the same question as who may SIGN IN, and the sign-in list was
-    // answering both. It is @interviewkickstart.com only, so Sangha - an agency recruiter who owns 7 Q3 openings - could
-    // never be picked, and G Darshan, typed "Others", could not either. Ashby already knows who recruits: an Elevated
-    // Access or External Recruiter seat IS the person who ends up owning an opening.
-    // 🔑 A disabled Ashby account is already dropped by orAshbyUsers_, so retiring a test account in Ashby takes it out
-    //    of this list too - no rule about names, nothing to maintain here.
+    meName: mine ? mine.name : '',
     recruiters: users.filter(function (u) { return team[u.email] || OR_RECRUITER_SEATS[u.role]; }),
-    people: users,                 // a sourcer can be any active Ashby user
-    meta: orMeta_(),               // Ashby's teams and locations, and each Open job's own team and locations
-    requests: visible,
-    options: orOptions_(),
-    slackOn: !!PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN')
+    meta: orMeta_(),
+    options: orOptions_()
   };
 }
 
@@ -1354,7 +1366,11 @@ function orMarkCreated(id, openings, note) {
     Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
     SpreadsheetApp.flush();
     var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
-    if (rq.slackTs) orSlackPost_(orSlackCreated_(rq, all, want, done, note), rq.slackTs);
+    // 200 (Jerin, 6 Oct 2026): ONE created message, once every opening is made. It used to post a FRESH reply on
+    // each partial run - Created 1 of 25, then 4 of 25, then 8 of 25 - each repeating the whole headline and the
+    // growing list of openings, which is what made the thread unreadable. Progress still goes to the request's own
+    // thread in the window; Slack now hears about it once, when it is finished.
+    if (rq.slackTs && done) orSlackPost_(orSlackCreated_(rq, all, want, done, note), rq.slackTs);
     return { ok: true, request: rq, done: done, recorded: all.length, wanted: want };
   } finally {
     lock.releaseLock();
@@ -1490,7 +1506,10 @@ function orSlackCard_(rq) {
     '', '*Ashby fields*', li('Employment Type', orSlackVal_(rq.employmentType)), li('Role Complexity', orSlackVal_(rq.complexity)),
     li('Specialization/Topic', orSlackVal_(rq.topic)), li('Job Level', level),
     '', '*Score*', '• ' + score,
-    '', '*Worth knowing*']).concat(worth.map(function (w) { return '• ' + w; }), [li('Note', orSlackVal_(line(rq.note), 600))]).join('\n');
+    // 200 (Jerin, 6 Oct 2026): "the 'Worth Knowing' seems to be adding no value - can be removed". It carried the
+    // auto-set notes and the answers to Claude's questions, and on a 25-line request its topic line ran to a
+    // paragraph of ("NA") repeated 25 times. Gone. The Note the requester wrote stays.
+    '']).concat([li('Note', orSlackVal_(line(rq.note), 600))]).join('\n');
 }
 // Approved · Sent back (the note quoted) · Edited and approved (each change old ➔ new, the old struck through).
 function orSlackDecision_(rq, decision, who, edits, note) {
