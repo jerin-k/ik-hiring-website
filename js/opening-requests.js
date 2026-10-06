@@ -513,12 +513,13 @@ export async function mountOpeningRequests(root, backend) {
           <div class="ms-empty"${vis.length ? ' style="display:none"' : ''}>No matches</div>
         </div></div>`;
     };
-    // The strip is shaped like the dashboard's: each control in a .fchip, a .fdiv before the trailing one.
-    const filterBar = all.length ? `<div class="or-filters">
+    // The dashboard's shape: a tinted BAND hanging off the tab strip, holding a row of .fchip controls with a
+    // .fdiv before the trailing one.
+    const filterBar = all.length ? `<div class="or-band"><div class="or-filters">
         <div class="fchip">${chip('dept', 'Department', depts, f.dept)}</div>
         <div class="fchip">${chip('job', 'Job', jobTitles, f.job)}</div>
         ${on ? `<span class="fdiv"></span><button type="button" class="or-clearf" data-act="clearf">Clear all</button>` : ''}
-      </div>` : '';
+      </div></div>` : '';
     const waiting = S.me.isApprover ? shown.filter(x => x.status === 'For approval') : [];
     const rest = shown.filter(x => !waiting.includes(x));
     // The approver is whoever decided it. While a request still waits there is no approver yet, and a dash is the
@@ -543,13 +544,15 @@ export async function mountOpeningRequests(root, backend) {
     const countLine = on
       ? `<b>${shown.length}</b> of ${all.length} request${all.length === 1 ? '' : 's'}`
       : `${all.length} request${all.length === 1 ? '' : 's'}`;
+    // The band is the FIRST thing in the page and the page drops its top padding when one is present, so the band
+    // hangs off the tab strip above exactly as the dashboard's does — that is what "right below the tab" means.
     return `<main class="or-page">
+      ${filterBar}
       <div class="or-ph">
         <div><h1>Opening requests</h1>
           <p>${countLine}${waiting.length ? ` · <b>${waiting.length} waiting for your approval</b>` : ''}</p></div>
         <button type="button" class="or-new" data-act="new">${ico('plus')}Create Opening</button>
       </div>
-      ${filterBar}
       <div class="or-tbox"><table class="or-table">
         <thead><tr>
           <th scope="col" class="or-c-or">Request</th><th scope="col">Job name</th><th scope="col" class="or-c-n">Positions</th>
