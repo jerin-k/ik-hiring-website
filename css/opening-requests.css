@@ -87,8 +87,23 @@ body { margin: 0; background: var(--or-bg); color: var(--or-text);
    load style.css. 🚨 Keep the two in step: a change to the chip's look on the dashboard belongs here too.
    The strip WRAPS rather than scrolling sideways, so a panel cannot be clipped by its row — which is why this window
    needs none of js/filter-dropdowns.js, the helper that re-pins the dashboard's panels. */
-.or-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-.or-clearf { height: 2.125rem; padding: 0 0.6875rem; border-radius: 0.5rem; border: 1px solid var(--or-border);
+/* The STRIP, shaped like the dashboard's filter rows (Jerin, 6 Oct 2026: "meant the same panel like in other tabs").
+   🔑 The blue edge on the controls is applied by REDEFINING the border token ON THE ROW, exactly as style.css does —
+   one declaration reaches the chip button, its panel, the search box and Clear all, so no control is restyled by hand.
+   🚨 The dashboard's row is `nowrap` + `overflow-x: auto`, and that is precisely what clipped its panels (17 Sep) and
+   needed js/filter-dropdowns.js to re-pin them. This strip holds two controls and never needs to scroll, so it WRAPS
+   instead: same look, and the bug cannot come back. Do not add overflow-x here without pinning the panels. */
+.or-filters { --or-border: #9db2d6;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.625rem clamp(0.5rem, 0.9vw, 0.875rem);
+  padding: 0.375rem 0; }
+.or-filters .fchip { display: flex; align-items: center; gap: 0.4375rem; flex: 0 1 auto; min-width: 5.5rem; }
+.or-filters .fchip > span.lbl { font-size: 0.71875rem; font-weight: 500; color: var(--or-muted); }
+.or-filters .fdiv { width: 1px; align-self: stretch; background: #cdddf7; margin: 2px; }
+.or-filters .ms { min-width: 5.5rem; max-width: 100%; }
+/* the same 1.75rem control height the dashboard's strip uses, so the row reads as one piece of chrome */
+.or-filters .ms-btn, .or-filters .or-clearf { height: 1.75rem; padding-top: 0; padding-bottom: 0; line-height: 1.625rem; }
+.or-filters .ms-btn { min-width: 5.5rem; width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.or-clearf { padding: 0 0.6875rem; border-radius: 0.5rem; border: 1px solid var(--or-border);
   background: var(--or-card); color: var(--or-muted); font-weight: 600; font-size: 0.6875rem; cursor: pointer; white-space: nowrap; }
 .or-clearf:hover { color: var(--or-text); border-color: var(--or-muted); }
 .or-clearf:focus-visible, .or-linkb:focus-visible { outline: 2px solid var(--or-accent); outline-offset: 2px; }

@@ -513,10 +513,11 @@ export async function mountOpeningRequests(root, backend) {
           <div class="ms-empty"${vis.length ? ' style="display:none"' : ''}>No matches</div>
         </div></div>`;
     };
+    // The strip is shaped like the dashboard's: each control in a .fchip, a .fdiv before the trailing one.
     const filterBar = all.length ? `<div class="or-filters">
-        ${chip('dept', 'Department', depts, f.dept)}
-        ${chip('job', 'Job', jobTitles, f.job)}
-        ${on ? `<button type="button" class="or-clearf" data-act="clearf">Clear all</button>` : ''}
+        <div class="fchip">${chip('dept', 'Department', depts, f.dept)}</div>
+        <div class="fchip">${chip('job', 'Job', jobTitles, f.job)}</div>
+        ${on ? `<span class="fdiv"></span><button type="button" class="or-clearf" data-act="clearf">Clear all</button>` : ''}
       </div>` : '';
     const waiting = S.me.isApprover ? shown.filter(x => x.status === 'For approval') : [];
     const rest = shown.filter(x => !waiting.includes(x));
