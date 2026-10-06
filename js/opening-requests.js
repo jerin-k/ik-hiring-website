@@ -503,7 +503,7 @@ export async function mountOpeningRequests(root, backend) {
   // (?id=OR-005), so it is the key, not decoration.
   // 🚨 A NEW COLUMN IS THREE NUMBERS: the header, the group row's colspan and the empty-state colspan. OR_COLS is all
   // three, so they cannot drift apart.
-  const OR_COLS = 7;
+  const OR_COLS = 8;                 // 201f added Raised
   function listPageHtml() {
     // 201c (Jerin, 6 Oct 2026: "can we have filters, for Department & JOb?").
     // 🚨 Rule 13 — a filter that moves no number is a bug. EVERYTHING above the rows follows the filter too: the
@@ -555,12 +555,15 @@ export async function mountOpeningRequests(root, backend) {
     // honest answer — never a guess at who it will land on.
     const row = (x) => `<tr>
         <td class="or-c-or"><button type="button" class="or-rowopen" data-open="${esc(x.id)}">${esc(x.id)}</button></td>
+        <td class="or-c-when">${esc(niceStamp(x.createdAt)) || '<span class="or-dash">—</span>'}</td>
         <td class="or-c-job">${esc(x.jobTitle || '—')}</td>
         <td class="or-c-n">${rowsOf(x).length}</td>
         <td>${esc(x.department || '—')}</td>
         <td>${esc(x.requesterName || '—')}</td>
-        <td><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span></td>
-        <td>${x.decidedBy ? esc(x.decidedBy) : '<span class="or-dash">—</span>'}</td></tr>`;
+        <td><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span>${
+          x.fulfilledAt ? `<span class="or-sub">${esc(niceStamp(x.fulfilledAt))}</span>` : ''}</td>
+        <td>${x.decidedBy ? esc(x.decidedBy) : '<span class="or-dash">—</span>'}${
+          x.decidedAt ? `<span class="or-sub">${esc(niceStamp(x.decidedAt))}</span>` : ''}</td></tr>`;
     const grp = (label, n, warn) => `<tr class="or-grp${warn ? ' warn' : ''}"><td colspan="${OR_COLS}">${esc(label)} · ${n}</td></tr>`;
     const emptyRow = (msg) => `<tr><td class="or-empty-row" colspan="${OR_COLS}">${msg}</td></tr>`;
     const body = !all.length
@@ -585,7 +588,8 @@ export async function mountOpeningRequests(root, backend) {
       ${filterBar}
       <div class="or-tbox"><table class="or-table">
         <thead><tr>
-          <th scope="col" class="or-c-or">Request</th><th scope="col">Job name</th><th scope="col" class="or-c-n">Positions</th>
+          <th scope="col" class="or-c-or">Request</th><th scope="col" class="or-c-when">Raised</th>
+          <th scope="col">Job name</th><th scope="col" class="or-c-n">Positions</th>
           <th scope="col">Department</th><th scope="col">Requester</th><th scope="col">Status</th><th scope="col">Approver</th>
         </tr></thead>
         <tbody>${body}</tbody>

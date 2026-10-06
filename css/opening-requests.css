@@ -355,3 +355,8 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
 /* 201e: while the 2.3 MB dashboard file is still on its way, the list is fully usable and only the draft form waits */
 .or-wait-note { color: var(--or-muted); font-style: italic; }
 .or-warn { color: var(--or-amber); font-weight: 600; }
+
+/* 201f: when each request was raised, approved and created. The two decided dates sit as a quieter second line
+   under the value they belong to; the raised date is its own column, next to the request number. */
+.or-table .or-c-when { white-space: nowrap; width: 9.5rem; }
+.or-sub { display: block; margin-top: 0.125rem; font-size: 0.6875rem; color: var(--or-faint); white-space: nowrap; }
