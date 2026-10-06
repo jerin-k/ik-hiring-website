@@ -351,3 +351,7 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
 @media (max-width: 34rem) {
   .or-opens li { grid-template-columns: 1fr; gap: 0.125rem; }
 }
+
+/* 201e: while the 2.3 MB dashboard file is still on its way, the list is fully usable and only the draft form waits */
+.or-wait-note { color: var(--or-muted); font-style: italic; }
+.or-warn { color: var(--or-amber); font-weight: 600; }

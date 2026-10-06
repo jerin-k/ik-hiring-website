@@ -317,7 +317,10 @@ export async function mountOpeningRequests(root, backend) {
               // 201c: the list's filters — which departments and jobs are ticked, which chip is open, and what is
               // typed in its search box. ALL of it is kept here, not in a control's closure, because render()
               // rebuilds the whole screen: a control holding its own state would lose it on the next redraw.
-              filter: { dept: [], job: [], open: '', q: '' } };
+              filter: { dept: [], job: [], open: '', q: '' },
+              // 201e: the list paints on orBoot alone; the 2.3 MB dashboard file arrives afterwards and only the
+              // draft form needs it, so anything that OPENS a draft waits on this flag.
+              dataReady: false, dataError: '' };
   root.classList.add('or-app');
   // 112f (Jerin, 22 Sep: "This title panel is pointless. can remove"): inside the dashboard's Req Bot tab the window's own navy bar
   // only repeats the dashboard's header, so it goes there. The window asks whoever shows it; only the dashboard answers
@@ -333,15 +336,19 @@ export async function mountOpeningRequests(root, backend) {
     if (e.target && e.target.closest && e.target.closest('.ms')) return;
     S.filter.open = ''; S.filter.q = ''; render();
   });
-  root.innerHTML = '<div class="or-loading">Loading your requests and the latest dashboard data…</div>';
+  root.innerHTML = '<div class="or-loading">Loading your requests…</div>';
 
+  // ===== 201e (Jerin, 6 Oct 2026: "The page takes too long to load") =====
+  // It used to wait for ALL THREE of these before painting anything, and `dashboard.json` is 2.3 MB — a long
+  // download and then a parse of 2.3 MB of JSON — so the window sat blank for 20 seconds or more.
+  // 🔑 THE LIST NEEDS NONE OF IT. `listPageHtml()` reads only S.requests and S.me; a saved request's page reads
+  //    the request itself. The dashboard data is reached ONLY through ctx(), and every ctx() call sits behind
+  //    S.draft — the create form, an approver's edit, and revise. So the page paints on `orBoot` alone and the
+  //    big file loads behind it; the three things that open the draft wait for it (see S.dataReady).
+  // ⚠ Do not move loadDashboardData back into this await to "simplify" — that is the whole bug.
   let boot;
   try {
-    [boot] = await Promise.all([
-      backend.call('orBoot'),
-      loadDashboardData().then(d => { S.data = d; }),
-      loadMetricConfig().catch(() => null),   // the team's score grid; without it the built-in defaults apply
-    ]);
+    boot = await backend.call('orBoot');
   } catch (e) {
     root.innerHTML = `<div class="or-loading or-err">Could not load: ${esc(e && e.message || e)}. Reload the window to try again.</div>`;
     return;
@@ -360,14 +367,21 @@ export async function mountOpeningRequests(root, backend) {
   // Access / External Recruiter seat, so the agencies and external sourcers are in it — Sangha included. One list,
   // one answer to "who can be named on an opening". `boot.people` still arrives from the backend and is now unused;
   // leaving it there costs nothing and avoids a web-app publish.
-  S.jobs = (S.data.jobs || []).filter(j => j.status === 'Open' && familyForJob(j.department, j.title) !== 'Exclude')
-    .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
-  (S.data.jobs || []).forEach(j => { S.jobById[j.id] = j; });
   const ctx = () => ({ jobById: S.jobById, recruiters: S.recruiters, data: S.data, meta: S.meta });
-  let teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams
-    : [...new Set((S.data.jobs || []).map(j => j.team).filter(Boolean))].sort();
+  // 201e: the job list and the team fallback are built from the big file, so they are filled in when it lands
+  // rather than at mount. Until then S.jobs is [] and S.jobById is {} — nothing reads them before S.dataReady.
+  let teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams : [];
   // 🗑 24 Sep 2026: the temporary 'Test' team is GONE, along with the test-job switch — #112 testing is finished.
   const locationList = S.meta.locations || [];
+  function onDataReady(d) {
+    S.data = d;
+    S.jobs = (d.jobs || []).filter(j => j.status === 'Open' && familyForJob(j.department, j.title) !== 'Exclude')
+      .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
+    (d.jobs || []).forEach(j => { S.jobById[j.id] = j; });
+    if (!teamList.length) teamList = [...new Set((d.jobs || []).map(j => j.team).filter(Boolean))].sort();
+    S.dataReady = true;
+    render();                      // the Create button and the two draft actions come alive
+  }
 
   const roleTypes = (S.options.roleType && S.options.roleType.length) ? S.options.roleType : ROLE_TYPES;
   const empTypes = (S.options.employmentType && S.options.employmentType.length) ? S.options.employmentType : ['FTE', 'PTE', 'PTC - Direct'];
@@ -546,8 +560,11 @@ export async function mountOpeningRequests(root, backend) {
     return `<main class="or-page">
       <div class="or-ph">
         <div><h1>Opening requests</h1>
-          <p>${countLine}${waiting.length ? ` · <b>${waiting.length} waiting for your approval</b>` : ''}</p></div>
-        <button type="button" class="or-new" data-act="new">${ico('plus')}Create Opening</button>
+          <p>${countLine}${waiting.length ? ` · <b>${waiting.length} waiting for your approval</b>` : ''}${
+            S.dataReady ? '' : (S.dataError ? ' · <span class="or-warn">the job list could not be loaded — reload to raise a request</span>'
+                                            : ' · <span class="or-wait-note">getting the job list…</span>')}</p></div>
+        <button type="button" class="or-new" data-act="new"${S.dataReady ? '' : ' disabled'}
+          title="${S.dataReady ? 'Raise a new opening request' : 'The job list is still loading'}">${ico('plus')}Create Opening</button>
       </div>
       ${filterBar}
       <div class="or-tbox"><table class="or-table">
@@ -840,7 +857,7 @@ export async function mountOpeningRequests(root, backend) {
       return `<div class="or-divider">Your decision</div>${err}
         <div class="or-decide">
           <div class="or-btns"><button type="button" class="or-b g" data-act="approve">${ico('check')}Approve</button>
-            <button type="button" class="or-b" data-act="edit">${ico('pen')}Edit &amp; approve</button>
+            <button type="button" class="or-b" data-act="edit"${S.dataReady ? '' : ' disabled'} title="${S.dataReady ? '' : 'The job list is still loading'}">${ico('pen')}Edit &amp; approve</button>
             <button type="button" class="or-b x" data-act="sendback">${ico('back')}Send back with note</button></div>
           ${S.sendingBack ? `<div class="or-why"><textarea class="or-in" rows="2" maxlength="600" id="orNote" placeholder="What should ${esc(x.requesterName)} change?"></textarea>
             <button type="button" class="or-b x" data-act="sendback-go">${ico('back')}Send back</button></div>` : ''}
@@ -848,7 +865,7 @@ export async function mountOpeningRequests(root, backend) {
     }
     if (x.status === 'For approval') return `<div class="or-divider">Waiting for Jerin or Gopu</div>`;
     if (x.status === 'Sent back' && x.requesterEmail === S.me.email) {
-      return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise">${ico('pen')}Revise and resubmit</button></div>`;
+      return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise"${S.dataReady ? '' : ' disabled'} title="${S.dataReady ? '' : 'The job list is still loading'}">${ico('pen')}Revise and resubmit</button></div>`;
     }
     // Approved and waiting for Claude to make it in Ashby. 🗑 24 Sep 2026: the test-job switch that used to sit here is
     // gone — an approved request is now always created against the job it names.
@@ -939,6 +956,7 @@ export async function mountOpeningRequests(root, backend) {
       S.active = null; S.draft = null; S.asking = null; S.editing = null; S.sendingBack = false; S.error = ''; render();
     }));
     root.querySelectorAll('[data-act="new"]').forEach(b => b.addEventListener('click', () => {
+      if (!S.dataReady) return;            // 201e: the draft form needs the job list, which is still on its way
       if (S.active === 'draft' && !S.submitted && S.draft && S.draft.jobId && !confirm('Start again? The current draft has not been submitted.')) return;
       if (!leaveEdit()) return;
       S.submitted = false; S.editing = null; startNew();
@@ -1003,8 +1021,9 @@ export async function mountOpeningRequests(root, backend) {
     act('approve', () => decide('approve', ''));
     act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) { n.focus({ preventScroll: true }); bringIntoView(n); } });
     act('sendback-go', () => { const n = String((root.querySelector('#orNote') || {}).value || '').trim(); if (n) decide('sendback', n); });
-    act('revise', () => revise(S.requests.find(r => r.id === S.active)));
+    act('revise', () => { if (!S.dataReady) return; revise(S.requests.find(r => r.id === S.active)); });
     act('edit', () => {
+      if (!S.dataReady) return;            // 201e: an approver's edit opens the same form, so it waits too
       const x = S.requests.find(r => r.id === S.active);
       S.editing = x.id; S.draft = draftFrom(x); S.editNote = ''; S.sendingBack = false; S.error = ''; render();
     });
@@ -1203,6 +1222,13 @@ export async function mountOpeningRequests(root, backend) {
   if (backend.openId && S.requests.some(x => x.id === backend.openId)) S.active = backend.openId;
   render();
   signalReady();
+  // 201e: the list is on screen now. The 2.3 MB dashboard file and the score grid load behind it; when they land,
+  // onDataReady() fills in the job list and redraws so the draft form can be opened.
+  loadMetricConfig().catch(() => null);          // without it the built-in score grid applies
+  loadDashboardData().then(onDataReady).catch((e) => {
+    S.dataError = (e && e.message) || String(e);
+    render();
+  });
 }
 
 // 112d: when the window is shown inside https://hiring.interviewkickstart.com/requests (requests.html), tell that page it has drawn,
