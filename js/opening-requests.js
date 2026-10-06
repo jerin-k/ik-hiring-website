@@ -358,34 +358,50 @@ export async function mountOpeningRequests(root, backend) {
     signalReady();
     return;
   }
-  S.me = boot.me; S.requests = boot.requests || []; S.recruiters = boot.recruiters || [];
-  S.options = boot.options || {}; S.slackOn = !!boot.slackOn;
-  S.meta = boot.meta || { teams: [], locations: [], jobs: {} };
+  S.me = boot.me; S.requests = boot.requests || []; S.slackOn = !!boot.slackOn;
+  // 201e: the recruiters, the Ashby field options and the teams/locations arrive from orFormData in the BACKGROUND.
+  // They cost five Ashby API calls on the server and the list needs none of them, so they no longer block the first
+  // paint. Until they land these stay empty and only the draft form is held back.
+  S.recruiters = []; S.options = {}; S.meta = { teams: [], locations: [], jobs: {} };
   // 170c (Jerin, 24 Sep 2026: "same folks listed under recruiter are the ones to list under sourcer"). The Sourcer
   // dropdown used to offer EVERY active Ashby user, on the reasoning that a sourcer need not be on the Recruitment
   // Team. Nothing is lost by dropping that: 170a already widened the recruiter list to Admins and every Elevated
   // Access / External Recruiter seat, so the agencies and external sourcers are in it — Sangha included. One list,
-  // one answer to "who can be named on an opening". `boot.people` still arrives from the backend and is now unused;
-  // leaving it there costs nothing and avoids a web-app publish.
+  // one answer to "who can be named on an opening".
   const ctx = () => ({ jobById: S.jobById, recruiters: S.recruiters, data: S.data, meta: S.meta });
-  // 201e: the job list and the team fallback are built from the big file, so they are filled in when it lands
-  // rather than at mount. Until then S.jobs is [] and S.jobById is {} — nothing reads them before S.dataReady.
-  let teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams : [];
+  // 201e: every one of these is built from a background load, so they start at their safe defaults and are filled
+  // in by onFormData / onDataReady. Nothing reads them before S.dataReady.
   // 🗑 24 Sep 2026: the temporary 'Test' team is GONE, along with the test-job switch — #112 testing is finished.
-  const locationList = S.meta.locations || [];
+  let teamList = [], locationList = [], roleTypes = ROLE_TYPES,
+      empTypes = ['FTE', 'PTE', 'PTC - Direct'], complexities = COMPLEXITIES;
+
+  // The draft form needs BOTH background loads — the job list comes from dashboard.json, and the recruiters, field
+  // options, teams and locations come from orFormData — so it waits for the pair, not for whichever lands first.
+  let gotForm = false, gotDash = false;
+  const settle = () => { S.dataReady = gotForm && gotDash; render(); };
+
+  function onFormData(f) {
+    if (!f || !f.ok) { S.dataError = (f && f.message) || 'the job fields could not be loaded'; render(); return; }
+    S.recruiters = f.recruiters || [];
+    S.options = f.options || {};
+    S.meta = f.meta || { teams: [], locations: [], jobs: {} };
+    if (f.meName) S.me.name = f.meName;          // the display name lives in Ashby, so it arrives here
+    teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams
+      : (S.data ? [...new Set((S.data.jobs || []).map(j => j.team).filter(Boolean))].sort() : []);
+    locationList = S.meta.locations || [];
+    roleTypes = (S.options.roleType && S.options.roleType.length) ? S.options.roleType : ROLE_TYPES;
+    empTypes = (S.options.employmentType && S.options.employmentType.length) ? S.options.employmentType : ['FTE', 'PTE', 'PTC - Direct'];
+    complexities = (S.options.complexity && S.options.complexity.length) ? S.options.complexity : COMPLEXITIES;
+    gotForm = true; settle();
+  }
   function onDataReady(d) {
     S.data = d;
     S.jobs = (d.jobs || []).filter(j => j.status === 'Open' && familyForJob(j.department, j.title) !== 'Exclude')
       .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
     (d.jobs || []).forEach(j => { S.jobById[j.id] = j; });
     if (!teamList.length) teamList = [...new Set((d.jobs || []).map(j => j.team).filter(Boolean))].sort();
-    S.dataReady = true;
-    render();                      // the Create button and the two draft actions come alive
+    gotDash = true; settle();
   }
-
-  const roleTypes = (S.options.roleType && S.options.roleType.length) ? S.options.roleType : ROLE_TYPES;
-  const empTypes = (S.options.employmentType && S.options.employmentType.length) ? S.options.employmentType : ['FTE', 'PTE', 'PTC - Direct'];
-  const complexities = (S.options.complexity && S.options.complexity.length) ? S.options.complexity : COMPLEXITIES;
 
   // 170b (Jerin, 23 Sep 2026: "A row per opening actually. Count is pointless; nix count."): a request is a LIST of
   // openings, each with its own Role Type, Recruiter and Sourcer, because five openings are routinely five people's work.
@@ -1225,9 +1241,11 @@ export async function mountOpeningRequests(root, backend) {
   // 201e: the list is on screen now. The 2.3 MB dashboard file and the score grid load behind it; when they land,
   // onDataReady() fills in the job list and redraws so the draft form can be opened.
   loadMetricConfig().catch(() => null);          // without it the built-in score grid applies
+  backend.call('orFormData').then(onFormData).catch((e) => {
+    S.dataError = (e && e.message) || String(e); render();
+  });
   loadDashboardData().then(onDataReady).catch((e) => {
-    S.dataError = (e && e.message) || String(e);
-    render();
+    S.dataError = (e && e.message) || String(e); render();
   });
 }
 
