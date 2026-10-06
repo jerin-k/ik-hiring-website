@@ -1290,7 +1290,14 @@ function orQueue() {
         // 170b: `rows` is what to create - one entry per opening, each with its own Role Type, recruiter and sourcer.
         // The flat count/recruiter/sourcer/roleType stay for anything still reading them, but they are a SUMMARY:
         // 🚨 build from `rows`, never from `recruiter`, which reads "Ritika Bhasin, Aditya Singh +2 more" on a mixed request.
-        out.push({ id: rq.id, name: rq.name, rows: orRows_(rq),
+        var made = rq.openings || [], rws = orRows_(rq);
+        // 5 Oct 2026: a part-finished request used to come back here looking like a fresh one, with no sign of the
+        // openings already made - so the next run re-created the lot (OR-010 was 18 of 20 and still reported 20).
+        // There is no read-back either (orCreated with an empty array is refused), and two requests can share a job,
+        // open date and role type, so the remainder cannot be worked out by looking at Ashby. These three fields are
+        // what let a run resume a half-finished request instead of duplicating it.
+        out.push({ id: rq.id, name: rq.name, rows: rws,
+          created: made, createdCount: made.length, remaining: Math.max(0, rws.length - made.length),
           count: rq.count, mix: rq.mix, recruiter: rq.recruiter, sourcer: rq.sourcer,
           roleType: rq.roleType, employmentType: rq.employmentType, complexity: rq.complexity, topic: rq.topic,
           levelSet: rq.levelSet, openDate: rq.openDate, replacementOf: rq.replacementOf, description: rq.description,
