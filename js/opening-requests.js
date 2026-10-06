@@ -396,18 +396,23 @@ export async function mountOpeningRequests(root, backend) {
   function render() {
     const sc = scroller(), keepY = sc.scrollTop;
     const switched = S.active !== seenActive;
+    // 201b: the draft now lives in a dialog, so the DIALOG has its own scroller. #174's rule applies to it exactly as
+    // it does to the page — a redraw on every keystroke would otherwise throw the form back to its top mid-word.
+    const db0 = root.querySelector('.or-db');
+    const keepDb = db0 ? db0.scrollTop : 0;
+    const onRequest = !!S.active && S.active !== 'draft';
     root.innerHTML = `
       <header class="or-bar">${IK_MARK}<b>Opening Requests</b>
         <span class="or-user"><span>${esc(S.me.name || S.me.email)} · ${esc(S.me.userType || '')}</span><i aria-hidden="true">${esc(initials(S.me.name || S.me.email))}</i></span></header>
-      <div class="or-split">
-        <nav class="or-rail" aria-label="Requests">${railHtml()}</nav>
-        <section class="or-thread" aria-live="polite">${threadHtml()}</section>
-      </div>`;
+      ${onRequest ? requestPageHtml() : listPageHtml()}
+      ${S.active === 'draft' ? draftDialogHtml() : ''}`;
     wire();
     const rows = root.querySelectorAll('.or-thread .or-row').length;
     // #174: the redraw itself moves nothing. Opening a DIFFERENT request is not a redraw of the same screen, so it
     // starts at the top instead of keeping an offset that meant something in another conversation.
     sc.scrollTop = switched ? 0 : keepY;
+    const db1 = root.querySelector('.or-db');
+    if (db1 && !switched) db1.scrollTop = keepDb;
     const grew = !switched && rows > seenRows;
     seenRows = rows; seenActive = S.active;
     if (grew) revealMsg();                // #174b: whatever just appeared brings itself into view
@@ -450,40 +455,88 @@ export async function mountOpeningRequests(root, backend) {
     });
   }
 
-  function railHtml() {
+  // 201a (Jerin, 6 Oct 2026, option B: "love B"). The list used to be a 21rem rail beside the conversation. Six columns
+  // cannot sit side by side in 302px — there is room for about three words across — so the list IS the page now and a
+  // request opens on top of it. The columns are the ones he named: Job name · how many positions · Department ·
+  // Requester · Status · Approver. The OR number stays as the first column because every Slack link points at it
+  // (?id=OR-005), so it is the key, not decoration.
+  // 🚨 A NEW COLUMN IS THREE NUMBERS: the header, the group row's colspan and the empty-state colspan. OR_COLS is all
+  // three, so they cannot drift apart.
+  const OR_COLS = 7;
+  function listPageHtml() {
     const waiting = S.me.isApprover ? S.requests.filter(x => x.status === 'For approval') : [];
-    const mine = S.requests.filter(x => x.requesterEmail === S.me.email && !waiting.includes(x));
-    const others = S.requests.filter(x => x.requesterEmail !== S.me.email && !waiting.includes(x));
-    const item = (x) => `<button type="button" class="or-req${S.active === x.id ? ' on' : ''}" data-open="${esc(x.id)}">
-        <b>${esc(x.id)} · ${esc(x.topic || x.jobTitle)} × ${esc(x.count)}</b><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span>
-        <small>${esc(x.jobTitle)}${x.requesterEmail !== S.me.email ? ' · ' + esc(x.requesterName) : ''} · ${esc(niceStamp(x.createdAt))}</small></button>`;
-    const draft = S.active === 'draft' ? `<button type="button" class="or-req on" data-open="draft">
-        <b>New request${S.draft && S.draft.topic ? ' · ' + esc(S.draft.topic) : ''}</b><span class="or-st s-draft">Draft</span>
-        <small>${esc((S.jobById[S.draft.jobId] || {}).title || 'not submitted yet')}</small></button>` : '';
-    return `<button type="button" class="or-new" data-act="new">${ico('plus')}Create Opening</button>
-      ${waiting.length ? `<div class="or-rail-h or-wait-h"><span>Waiting for your approval</span><span>${waiting.length}</span></div>${waiting.map(item).join('')}` : ''}
-      <div class="or-rail-h${waiting.length ? ' or-gap' : ''}"><span>Your requests</span><span>${mine.length}</span></div>
-      ${draft}${mine.map(item).join('') || (draft ? '' : '<p class="or-empty">None yet. Start one with Create Opening.</p>')}
-      ${S.me.isApprover && others.length ? `<div class="or-rail-h or-gap"><span>Everyone else's</span><span>${others.length}</span></div>${others.map(item).join('')}` : ''}`;
+    const rest = S.requests.filter(x => !waiting.includes(x));
+    // The approver is whoever decided it. While a request still waits there is no approver yet, and a dash is the
+    // honest answer — never a guess at who it will land on.
+    const row = (x) => `<tr>
+        <td class="or-c-or"><button type="button" class="or-rowopen" data-open="${esc(x.id)}">${esc(x.id)}</button></td>
+        <td class="or-c-job">${esc(x.jobTitle || '—')}</td>
+        <td class="or-c-n">${rowsOf(x).length}</td>
+        <td>${esc(x.department || '—')}</td>
+        <td>${esc(x.requesterName || '—')}</td>
+        <td><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span></td>
+        <td>${x.decidedBy ? esc(x.decidedBy) : '<span class="or-dash">—</span>'}</td></tr>`;
+    const grp = (label, n, warn) => `<tr class="or-grp${warn ? ' warn' : ''}"><td colspan="${OR_COLS}">${esc(label)} · ${n}</td></tr>`;
+    const body = S.requests.length
+      ? (waiting.length ? grp('Waiting for your approval', waiting.length, true) + waiting.map(row).join('') : '')
+        + (rest.length ? (waiting.length ? grp('Everything else', rest.length, false) : '') + rest.map(row).join('') : '')
+      : `<tr><td class="or-empty-row" colspan="${OR_COLS}">No requests yet. Start one with <b>+ Create Opening</b>.</td></tr>`;
+    return `<main class="or-page">
+      <div class="or-ph">
+        <div><h1>Opening requests</h1>
+          <p>${S.requests.length} request${S.requests.length === 1 ? '' : 's'}${waiting.length ? ` · <b>${waiting.length} waiting for your approval</b>` : ''}</p></div>
+        <button type="button" class="or-new" data-act="new">${ico('plus')}Create Opening</button>
+      </div>
+      <div class="or-tbox"><table class="or-table">
+        <thead><tr>
+          <th scope="col" class="or-c-or">Request</th><th scope="col">Job name</th><th scope="col" class="or-c-n">Positions</th>
+          <th scope="col">Department</th><th scope="col">Requester</th><th scope="col">Status</th><th scope="col">Approver</th>
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+      <p class="or-foot">Click a row to open that request. ${S.slackOn ? 'Each one gets a Slack thread in #ta-core-team.' : 'Slack messages are switched off for now: approvers see requests here.'}</p>
+    </main>`;
   }
 
-  function threadHtml() {
-    if (!S.active) {
-      return `<div class="or-hello"><h2>Ask for a new opening</h2>
-        <p>Click <b>+ Create Opening</b>. A draft opens here, filled in with what the dashboard already knows. It sets or flags each entry
-        against the rules we work to, and before it goes to Jerin or Gopu it checks whether an opening already on the job could be used instead.</p>
-        <p class="or-muted">${S.slackOn ? 'Each request gets one Slack thread in #ta-core-team.' : 'Slack messages are switched off for now: approvers see requests here.'}</p></div>`;
-    }
-    if (S.active !== 'draft') return savedThreadHtml(S.requests.find(x => x.id === S.active));
+  // One saved request, full width, with the way back to the list.
+  function requestPageHtml() {
+    return `<main class="or-page">
+      <button type="button" class="or-back" data-act="back">${ico('back')}All requests</button>
+      <section class="or-thread" aria-live="polite">${savedThreadHtml(S.requests.find(x => x.id === S.active))}</section>
+    </main>`;
+  }
+
+  // 201b (Jerin, 6 Oct 2026, option C). With the list taking the full width there is no side pane left for the draft,
+  // so it opens as a dialog over the list. Claude's questions and replies sit at the TOP of the dialog, where they
+  // cannot be scrolled past — the old layout put them under a long form and they were missed.
+  function draftDialogHtml() {
     const ev = evaluate(S.draft, ctx());
-    const job = S.jobById[S.draft.jobId];
-    return `<div class="or-th-h"><b>${S.draft.revises ? `Revising ${esc(S.draft.revises)}` : 'New request'}</b><span class="or-st s-draft">Draft</span>
-        <span class="or-m">${esc(job ? job.title : 'pick a job')}</span></div>
-      ${S.thread.map(m => msgHtml(m, ev)).join('')}
-      ${S.asking ? askHtml(S.asking) : ''}
-      ${S.busy ? '<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-typing">Saving…</div></div>' : ''}
-      ${S.error ? `<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-bad">${esc(S.error)}
-          <div class="or-btns"><button type="button" class="or-b p" data-act="retry">Try again</button></div></div></div>` : ''}`;
+    const locked = !!S.asking || S.busy || S.submitted;
+    const nBlock = ev.blockers.length;
+    const state = nBlock ? `${nBlock} thing${nBlock === 1 ? '' : 's'} still needed` : 'Ready to submit';
+    // the opening message only repeats the dialog's own title, so it stays out; everything said afterwards is kept
+    const said = S.thread.filter(m => !m.form).map(m => msgHtml(m, ev)).join('');
+    const talk = said || S.asking || S.busy || S.error
+      ? `<div class="or-thread or-talk">${said}
+          ${S.asking ? askHtml(S.asking) : ''}
+          ${S.busy ? '<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-typing">Saving…</div></div>' : ''}
+          ${S.error ? `<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-bad">${esc(S.error)}
+              <div class="or-btns"><button type="button" class="or-b p" data-act="retry">Try again</button></div></div></div>` : ''}</div>`
+      : '';
+    return `<div class="or-scrim">
+      <div class="or-dlg" role="dialog" aria-modal="true" aria-labelledby="orDlgT">
+        <div class="or-dh">
+          <h2 id="orDlgT">${S.draft.revises ? `Revising ${esc(S.draft.revises)}` : 'Ask for a new opening'}</h2>
+          <span class="or-dstate${nBlock ? '' : ' ok'}">${esc(state)}</span>
+          <button type="button" class="or-x" data-act="discard" aria-label="Close without saving">&#x2715;</button>
+        </div>
+        <div class="or-db">${talk}${formHtml(ev)}</div>
+        <div class="or-df">
+          <span class="or-dsum">${ev.pts ? `<b>${ev.total || 1} position${(ev.total || 1) === 1 ? '' : 's'}</b> · ${ev.pts} pts each` : 'Pick a job to begin'}</span>
+          ${locked ? '' : `<button type="button" class="or-b" data-act="discard">Discard</button>
+            <button type="button" class="or-b p" data-act="submit"${nBlock ? ' disabled' : ''}>Submit</button>`}
+        </div>
+      </div></div>`;
   }
 
   function msgHtml(m, ev) {
@@ -516,7 +569,6 @@ export async function mountOpeningRequests(root, backend) {
     // 170b: one "+N to X" per recruiter, because the openings no longer belong to one person.
     const goalNames = Object.keys(ev.goal || {});
     const goalLine = goalNames.map(k => `<b>+${ev.goal[k]}</b> ${esc(k)}`).join(' · ');
-    const pts = ev.pts ? `<b>${ev.pts} pts</b> each${ev.total > 1 ? ` · <b>${ev.total} openings</b>` : ''} · ${esc(qLabel(ev.quarter || ''))} Goal: ${goalLine || '<b>+0</b>'}` : '<span class="or-muted">score shows once the job and complexity are set</span>';
     const changes = edit && job ? editsOf(edit, fieldsOf(d, ev)) : [];
     // 170b (Jerin, 23 Sep: "A row per opening actually. Count is pointless; nix count." · layout A, 24 Sep): ONE LINE
     // PER OPENING - its own Role Type, Recruiter and Sourcer - with "Replacing whom?" opening under the lines that need
@@ -553,38 +605,60 @@ export async function mountOpeningRequests(root, backend) {
     })();
     const state = nBlock ? `${nBlock} thing${nBlock === 1 ? '' : 's'} still needed`
       : (edit ? (changes.length ? `${changes.length} change${changes.length === 1 ? '' : 's'}` : 'No changes yet') : 'Ready to submit');
+    // 201b, option C: what the request will actually BECOME, shown while it is being typed rather than only at the
+    // bottom once everything is filled in. The names, the score and the checks are the three things an approver reads
+    // first, so they are the three things the person raising it should see first too.
+    const nameList = ((ev.names && ev.names.length) ? ev.names : [ev.name]).filter(Boolean);
+    const namesBlock = nameList.length
+      ? `<ul class="or-names">${nameList.map(nm => `<li><code>${esc(nm)}</code></li>`).join('')}</ul>`
+      : '<p class="or-snone">The names appear once the job, role type and topic are set.</p>';
+    const scoreBlock = ev.pts
+      ? `<div class="or-score"><div class="or-sbig">${ev.pts * (ev.total || 1)} points</div>
+          <div class="or-ssm">${ev.pts} each${(ev.total || 1) > 1 ? ` · ${ev.total} positions` : ''}${ev.tier ? ' · ' + esc(ev.tier) : ''}</div>
+          <div class="or-ssm">${esc(qLabel(ev.quarter || ''))} goal: ${goalLine || '<b>+0</b>'}</div></div>`
+      : '<p class="or-snone">The score appears once the job and complexity are set.</p>';
+    const sideBlock = `<aside class="or-side">
+        <div><p class="or-sh">What will be created</p>${namesBlock}</div>
+        <div><p class="or-sh">Score</p>${scoreBlock}</div>
+        <div><p class="or-sh">Before you submit</p>
+          <ul class="or-chk">${ev.checks.map(c => `<li class="or-c"><i class="${c.kind}">${{ ok: '✓', fix: '✓', q: '?', stop: '!', info: 'i' }[c.kind]}</i><span>${esc(c.text)}</span></li>`).join('')}</ul></div>
+      </aside>`;
     return `<div class="or-form">
-      <div class="or-form-h"><span>${edit ? `Editing ${esc(edit.id)}` : 'Opening draft'}</span><span>${state}</span></div>
-      <div class="or-fgrid">
-        <label class="or-f wide"><span>Job</span><div class="or-pick"><input class="or-in" type="search" data-q="job" autocomplete="off"
-            placeholder="Search open jobs by title or department…" value="${esc(job ? job.title : '')}"${dis}><div class="or-pick-list" hidden></div></div>
-          ${job ? `<span class="or-note">${esc(job.department)} · ${esc(job.status)} in Ashby · Level ${esc(job.level || 'NA')}${job.complexity ? ' · ' + esc(job.complexity) : ''}</span>` : ''}</label>
-        <label class="or-f"><span>Team</span><select class="or-in${ev.notes.team ? ' auto' : ''}" data-f="team"${dis}>${opt(teamList.includes(d.team) || !d.team ? teamList : [d.team].concat(teamList), d.team, 'Pick the team…')}</select>${note(ev.notes.team)}</label>
-        <label class="or-f"><span>Location</span>${locationList.length
-          ? `<select class="or-in${ev.notes.location ? ' auto' : ''}" data-f="location"${dis}>${opt(locationList, d.location, 'Pick the location…')}</select>`
-          : `<input class="or-in" type="text" maxlength="80" data-f="location" value="${esc(d.location)}" placeholder="Location"${dis}>`}${note(ev.notes.location)}</label>
-        ${rowsBlock}
-        <label class="or-f"><span>Employment Type</span>${auto('employmentType') ? `<span class="or-in ro auto">${esc(ev.employmentType)}</span>` : `<select class="or-in" data-f="employmentType"${dis}>${opt(empTypes, d.employmentType, 'Pick…')}</select>`}${note(ev.notes.employmentType)}</label>
-        <label class="or-f"><span>Job Level (in Ashby)</span>${levelField}${note(ev.notes.level)}</label>
-        <label class="or-f"><span>Role Complexity</span><select class="or-in" data-f="complexity"${dis}>${opt(complexities, d.complexity, 'Pick one…')}</select>
-          <span class="or-note${job && d.complexity && d.complexity === job.complexity ? ' auto' : ''}">${job && d.complexity && d.complexity === job.complexity ? 'As set on the job in Ashby. Change it if this opening differs.' : 'Pick one; a blank would score as Normal'}</span></label>
-        <label class="or-f"><span>Open date</span><input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}</label>
-        <label class="or-f wide"><span>Description (optional)</span><input class="or-in" type="text" maxlength="120" data-f="description" value="${esc(d.description)}" placeholder="Shown on the opening in Ashby"${dis}></label>
-        ${edit ? '' : `<label class="or-f wide"><span>Note to approvers</span><textarea class="or-in" rows="2" maxlength="600" data-f="note" placeholder="Why now, cohort dates, anything they should know"${dis}>${esc(d.note)}</textarea></label>`}
+      ${edit ? `<div class="or-form-h"><span>Editing ${esc(edit.id)}</span><span>${state}</span></div>` : ''}
+      <div class="or-formgrid">
+        <div class="or-fmain">
+          <div class="or-grpf"><p class="or-gt"><span class="or-gn">1</span>Which job</p>
+            <div class="or-fgrid">
+              <label class="or-f wide"><span>Job</span><div class="or-pick"><input class="or-in" type="search" data-q="job" autocomplete="off"
+                  placeholder="Search open jobs by title or department…" value="${esc(job ? job.title : '')}"${dis}><div class="or-pick-list" hidden></div></div>
+                ${job ? `<span class="or-note">${esc(job.department)} · ${esc(job.status)} in Ashby · Level ${esc(job.level || 'NA')}${job.complexity ? ' · ' + esc(job.complexity) : ''}</span>` : ''}</label>
+              <label class="or-f"><span>Team</span><select class="or-in${ev.notes.team ? ' auto' : ''}" data-f="team"${dis}>${opt(teamList.includes(d.team) || !d.team ? teamList : [d.team].concat(teamList), d.team, 'Pick the team…')}</select>${note(ev.notes.team)}</label>
+              <label class="or-f"><span>Location</span>${locationList.length
+                ? `<select class="or-in${ev.notes.location ? ' auto' : ''}" data-f="location"${dis}>${opt(locationList, d.location, 'Pick the location…')}</select>`
+                : `<input class="or-in" type="text" maxlength="80" data-f="location" value="${esc(d.location)}" placeholder="Location"${dis}>`}${note(ev.notes.location)}</label>
+            </div></div>
+          <div class="or-grpf"><p class="or-gt"><span class="or-gn">2</span>The positions</p>
+            <div class="or-fgrid">${rowsBlock}</div></div>
+          <div class="or-grpf"><p class="or-gt"><span class="or-gn">3</span>The details</p>
+            <div class="or-fgrid">
+              <label class="or-f"><span>Employment Type</span>${auto('employmentType') ? `<span class="or-in ro auto">${esc(ev.employmentType)}</span>` : `<select class="or-in" data-f="employmentType"${dis}>${opt(empTypes, d.employmentType, 'Pick…')}</select>`}${note(ev.notes.employmentType)}</label>
+              <label class="or-f"><span>Job Level (in Ashby)</span>${levelField}${note(ev.notes.level)}</label>
+              <label class="or-f"><span>Role Complexity</span><select class="or-in" data-f="complexity"${dis}>${opt(complexities, d.complexity, 'Pick one…')}</select>
+                <span class="or-note${job && d.complexity && d.complexity === job.complexity ? ' auto' : ''}">${job && d.complexity && d.complexity === job.complexity ? 'As set on the job in Ashby. Change it if this opening differs.' : 'Pick one; a blank would score as Normal'}</span></label>
+              <label class="or-f"><span>Open date</span><input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}</label>
+              <label class="or-f wide"><span>Description (optional)</span><input class="or-in" type="text" maxlength="120" data-f="description" value="${esc(d.description)}" placeholder="Shown on the opening in Ashby"${dis}></label>
+              ${edit ? '' : `<label class="or-f wide"><span>Note to approvers</span><textarea class="or-in" rows="2" maxlength="600" data-f="note" placeholder="Why now, cohort dates, anything they should know"${dis}>${esc(d.note)}</textarea></label>`}
+            </div></div>
+        </div>
+        ${sideBlock}
       </div>
-      <div class="or-namebar">${(ev.names || []).length > 1 && new Set(ev.names).size > 1
-        ? `Each opening is named from its own line:<ul class="or-names">${ev.names.map(nm => `<li><code>${esc(nm)}</code></li>`).join('')}</ul>`
-        : `Name: <code>${esc((ev.names || [])[0] || ev.name)}</code>`}${ev.tier ? ' · ' + esc(ev.tier) : ''} · ${pts}</div>
-      <ul class="or-chk">${ev.checks.map(c => `<li class="or-c"><i class="${c.kind}">${{ ok: '✓', fix: '✓', q: '?', stop: '!', info: 'i' }[c.kind]}</i><span>${esc(c.text)}</span></li>`).join('')}</ul>
       ${edit ? `<div class="or-edit-sum">${changes.length
           ? `<b>${changes.length} change${changes.length === 1 ? '' : 's'}</b> will be recorded in the thread when you approve:<ul class="or-edits">${changes.map(editLi).join('')}</ul>`
           : 'Nothing changed yet. Saving now approves the request as it stands.'}</div>
         <label class="or-f wide"><span>Note with your approval (optional)</span><textarea class="or-in" rows="2" maxlength="600" data-edit-note
           placeholder="Goes into the thread with the changes"${dis}>${esc(S.editNote)}</textarea></label>
         <div class="or-btns"><button type="button" class="or-b g" data-act="edit-save"${nBlock ? ' disabled' : ''}>${ico('check')}Save &amp; approve</button>
-          <button type="button" class="or-b" data-act="edit-cancel">Cancel</button></div>`
-      : (locked ? '' : `<div class="or-btns"><button type="button" class="or-b p" data-act="submit"${nBlock ? ' disabled' : ''}>Submit</button>
-        <button type="button" class="or-b" data-act="discard">Discard draft</button></div>`)}
+          <button type="button" class="or-b" data-act="edit-cancel">Cancel</button></div>` : ''}
     </div>`;
   }
 
@@ -795,6 +869,11 @@ export async function mountOpeningRequests(root, backend) {
       if (!leaveEdit()) return;
       if (id !== 'draft') { S.active = id; S.draft = null; S.asking = null; S.submitted = false; S.sendingBack = false; S.editing = null; S.error = ''; }
       render();
+    }));
+    // 201a: the way back from one request to the list. The list is the page now, so "no request open" IS the list.
+    root.querySelectorAll('[data-act="back"]').forEach(b => b.addEventListener('click', () => {
+      if (!leaveEdit()) return;
+      S.active = null; S.draft = null; S.asking = null; S.editing = null; S.sendingBack = false; S.error = ''; render();
     }));
     root.querySelectorAll('[data-act="new"]').forEach(b => b.addEventListener('click', () => {
       if (S.active === 'draft' && !S.submitted && S.draft && S.draft.jobId && !confirm('Start again? The current draft has not been submitted.')) return;
