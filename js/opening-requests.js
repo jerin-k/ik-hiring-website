@@ -313,7 +313,10 @@ function questionsFor(d, ctx, requests) {
 export async function mountOpeningRequests(root, backend) {
   const S = { me: null, requests: [], recruiters: [], options: {}, slackOn: false, data: null, jobs: [], jobById: {},
               active: null, draft: null, thread: [], asking: null, answers: {}, busy: false, error: '',
-              editing: null, editNote: '' };   // 112a: the request an approver is editing, and the note going with it
+              editing: null, editNote: '',   // 112a: the request an approver is editing, and the note going with it
+              // 201c: the list's filters. Kept in state, not in a control's closure, because render() rebuilds the
+              // whole screen — a control holding its own selection would lose it on the next redraw.
+              filter: { dept: '', job: '' } };
   root.classList.add('or-app');
   // 112f (Jerin, 22 Sep: "This title panel is pointless. can remove"): inside the dashboard's Req Bot tab the window's own navy bar
   // only repeats the dashboard's header, so it goes there. The window asks whoever shows it; only the dashboard answers
@@ -464,8 +467,30 @@ export async function mountOpeningRequests(root, backend) {
   // three, so they cannot drift apart.
   const OR_COLS = 7;
   function listPageHtml() {
-    const waiting = S.me.isApprover ? S.requests.filter(x => x.status === 'For approval') : [];
-    const rest = S.requests.filter(x => !waiting.includes(x));
+    // 201c (Jerin, 6 Oct 2026: "can we have filters, for Department & JOb?").
+    // 🚨 Rule 13 — a filter that moves no number is a bug. EVERYTHING above the rows follows the filter too: the
+    // request count, the waiting count and both group bands. The count reads "6 of 22" while a filter is on, so the
+    // narrowing is visible rather than silent.
+    const f = S.filter || { dept: '', job: '' };
+    const all = S.requests;
+    const depts = [...new Set(all.map(x => x.department).filter(Boolean))].sort();
+    // the Job list narrows to the chosen department: offering a job that cannot match is offering an empty table
+    const jobPool = f.dept ? all.filter(x => x.department === f.dept) : all;
+    const jobTitles = [...new Set(jobPool.map(x => x.jobTitle).filter(Boolean))].sort();
+    const match = (x) => (!f.dept || x.department === f.dept) && (!f.job || x.jobTitle === f.job);
+    const shown = all.filter(match);
+    const on = !!(f.dept || f.job);
+    const opt = (list, cur, allLabel) => `<option value=""${cur ? '' : ' selected'}>${esc(allLabel)}</option>`
+      + list.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    const filterBar = all.length ? `<div class="or-filters">
+        <label class="or-fl"><span>Department</span>
+          <select class="or-in" data-filter="dept">${opt(depts, f.dept, 'All departments')}</select></label>
+        <label class="or-fl"><span>Job</span>
+          <select class="or-in" data-filter="job">${opt(jobTitles, f.job, 'All jobs')}</select></label>
+        ${on ? '<button type="button" class="or-clearf" data-act="clearf">Clear filters</button>' : ''}
+      </div>` : '';
+    const waiting = S.me.isApprover ? shown.filter(x => x.status === 'For approval') : [];
+    const rest = shown.filter(x => !waiting.includes(x));
     // The approver is whoever decided it. While a request still waits there is no approver yet, and a dash is the
     // honest answer — never a guess at who it will land on.
     const row = (x) => `<tr>
@@ -477,16 +502,24 @@ export async function mountOpeningRequests(root, backend) {
         <td><span class="or-st ${STATUS_CLASS[x.status] || 's-wait'}">${esc(x.status)}</span></td>
         <td>${x.decidedBy ? esc(x.decidedBy) : '<span class="or-dash">—</span>'}</td></tr>`;
     const grp = (label, n, warn) => `<tr class="or-grp${warn ? ' warn' : ''}"><td colspan="${OR_COLS}">${esc(label)} · ${n}</td></tr>`;
-    const body = S.requests.length
-      ? (waiting.length ? grp('Waiting for your approval', waiting.length, true) + waiting.map(row).join('') : '')
-        + (rest.length ? (waiting.length ? grp('Everything else', rest.length, false) : '') + rest.map(row).join('') : '')
-      : `<tr><td class="or-empty-row" colspan="${OR_COLS}">No requests yet. Start one with <b>+ Create Opening</b>.</td></tr>`;
+    const emptyRow = (msg) => `<tr><td class="or-empty-row" colspan="${OR_COLS}">${msg}</td></tr>`;
+    const body = !all.length
+      ? emptyRow('No requests yet. Start one with <b>+ Create Opening</b>.')
+      : (!shown.length
+        ? emptyRow('No requests match these filters. <button type="button" class="or-linkb" data-act="clearf">Clear them</button>')
+        : (waiting.length ? grp('Waiting for your approval', waiting.length, true) + waiting.map(row).join('') : '')
+          + (rest.length ? (waiting.length ? grp('Everything else', rest.length, false) : '') + rest.map(row).join('') : ''));
+    // "6 of 22" rather than a bare 6: the filter has to be visible in the number, not only in the rows
+    const countLine = on
+      ? `<b>${shown.length}</b> of ${all.length} request${all.length === 1 ? '' : 's'}`
+      : `${all.length} request${all.length === 1 ? '' : 's'}`;
     return `<main class="or-page">
       <div class="or-ph">
         <div><h1>Opening requests</h1>
-          <p>${S.requests.length} request${S.requests.length === 1 ? '' : 's'}${waiting.length ? ` · <b>${waiting.length} waiting for your approval</b>` : ''}</p></div>
+          <p>${countLine}${waiting.length ? ` · <b>${waiting.length} waiting for your approval</b>` : ''}</p></div>
         <button type="button" class="or-new" data-act="new">${ico('plus')}Create Opening</button>
       </div>
+      ${filterBar}
       <div class="or-tbox"><table class="or-table">
         <thead><tr>
           <th scope="col" class="or-c-or">Request</th><th scope="col">Job name</th><th scope="col" class="or-c-n">Positions</th>
@@ -959,6 +992,19 @@ export async function mountOpeningRequests(root, backend) {
       S.answers.free = `${S.draft.count === 1 ? 'A new position' : `All ${S.draft.count} new`}: ${t}`; S.why = null; nextQuestion();
     });
     root.querySelectorAll('[data-ans]').forEach(b => b.addEventListener('click', () => answer(b.dataset.ans, b.textContent.trim())));
+    // 201c: the list's filters. They live in S, so the redraw rebuilds them already selected.
+    root.querySelectorAll('[data-filter]').forEach(el => el.addEventListener('change', () => {
+      const k = el.dataset.filter;
+      S.filter = Object.assign({ dept: '', job: '' }, S.filter, { [k]: el.value });
+      // Narrowing the department can strand the chosen job on a department it does not belong to, which would show
+      // an empty table with both filters looking valid. Drop the job rather than leave that.
+      if (k === 'dept' && S.filter.job
+        && !S.requests.some(x => x.jobTitle === S.filter.job && (!S.filter.dept || x.department === S.filter.dept))) {
+        S.filter.job = '';
+      }
+      render();
+    }));
+    act('clearf', () => { S.filter = { dept: '', job: '' }; render(); });
     wireJobSearch();
   }
 
