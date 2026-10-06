@@ -314,9 +314,10 @@ export async function mountOpeningRequests(root, backend) {
   const S = { me: null, requests: [], recruiters: [], options: {}, slackOn: false, data: null, jobs: [], jobById: {},
               active: null, draft: null, thread: [], asking: null, answers: {}, busy: false, error: '',
               editing: null, editNote: '',   // 112a: the request an approver is editing, and the note going with it
-              // 201c: the list's filters. Kept in state, not in a control's closure, because render() rebuilds the
-              // whole screen — a control holding its own selection would lose it on the next redraw.
-              filter: { dept: '', job: '' } };
+              // 201c: the list's filters — which departments and jobs are ticked, which chip is open, and what is
+              // typed in its search box. ALL of it is kept here, not in a control's closure, because render()
+              // rebuilds the whole screen: a control holding its own state would lose it on the next redraw.
+              filter: { dept: [], job: [], open: '', q: '' } };
   root.classList.add('or-app');
   // 112f (Jerin, 22 Sep: "This title panel is pointless. can remove"): inside the dashboard's Req Bot tab the window's own navy bar
   // only repeats the dashboard's header, so it goes there. The window asks whoever shows it; only the dashboard answers
@@ -325,6 +326,13 @@ export async function mountOpeningRequests(root, backend) {
     if (SITE_ORIGINS.includes(e.origin) && e.data && e.data.orHost === 'dashboard') root.classList.add('or-embedded');
   });
   try { SITE_ORIGINS.forEach(o => window.top.postMessage({ orHello: true }, o)); } catch (e) { /* not framed */ }
+  // 201c: a click anywhere else closes an open filter chip. Added ONCE, here — wire() runs on every redraw, so the
+  // same listener added there would stack up one copy per render. The early return also makes it inert before boot.
+  document.addEventListener('click', (e) => {
+    if (!S.filter.open) return;
+    if (e.target && e.target.closest && e.target.closest('.ms')) return;
+    S.filter.open = ''; S.filter.q = ''; render();
+  });
   root.innerHTML = '<div class="or-loading">Loading your requests and the latest dashboard data…</div>';
 
   let boot;
@@ -471,23 +479,44 @@ export async function mountOpeningRequests(root, backend) {
     // 🚨 Rule 13 — a filter that moves no number is a bug. EVERYTHING above the rows follows the filter too: the
     // request count, the waiting count and both group bands. The count reads "6 of 22" while a filter is on, so the
     // narrowing is visible rather than silent.
-    const f = S.filter || { dept: '', job: '' };
+    const f = S.filter || { dept: [], job: [], open: '', q: '' };
     const all = S.requests;
     const depts = [...new Set(all.map(x => x.department).filter(Boolean))].sort();
-    // the Job list narrows to the chosen department: offering a job that cannot match is offering an empty table
-    const jobPool = f.dept ? all.filter(x => x.department === f.dept) : all;
+    // the Job list narrows to the chosen departments: offering a job that cannot match is offering an empty table
+    const jobPool = f.dept.length ? all.filter(x => f.dept.includes(x.department)) : all;
     const jobTitles = [...new Set(jobPool.map(x => x.jobTitle).filter(Boolean))].sort();
-    const match = (x) => (!f.dept || x.department === f.dept) && (!f.job || x.jobTitle === f.job);
+    const match = (x) => (!f.dept.length || f.dept.includes(x.department))
+      && (!f.job.length || f.job.includes(x.jobTitle));
     const shown = all.filter(match);
-    const on = !!(f.dept || f.job);
-    const opt = (list, cur, allLabel) => `<option value=""${cur ? '' : ' selected'}>${esc(allLabel)}</option>`
-      + list.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    const on = !!(f.dept.length || f.job.length);
+    // 201c, second pass (Jerin, 6 Oct 2026: "can filters be given the same treatment as filters on other tabs?").
+    // The dashboard's chip, rebuilt here as markup driven by S rather than by `makeMultiSelect`.
+    // 🚨 WHY NOT THE SHARED CONTROL: `makeMultiSelect` keeps its selection — and its open panel — in a CLOSURE, and
+    //    this window's render() replaces root.innerHTML on every change, so both would be destroyed on each redraw.
+    //    Everything here lives in S.filter instead, so a redraw rebuilds the chip already selected, still open, with
+    //    its search text intact. Same classes and same look as style.css, so the two read identically on screen.
+    //    ⚠ Do not "fold" this into makeMultiSelect without first making that control state-driven.
+    const chip = (key, label, options, sel) => {
+      const isOpen = f.open === key;
+      const txt = !sel.length ? `${label}: All`
+        : (sel.length === 1 ? `${label}: ${sel[0]}` : `${label}: ${sel.length} selected`);
+      const needle = isOpen ? String(f.q || '').trim().toLowerCase() : '';
+      const vis = options.filter(o => !needle || o.toLowerCase().indexOf(needle) >= 0);
+      return `<div class="ms">
+        <button type="button" class="ms-btn" data-ms="${key}" title="${esc(txt)}">${esc(txt)}</button>
+        <div class="ms-panel"${isOpen ? '' : ' style="display:none"'}>
+          <div class="ms-tools">
+            <input type="text" class="ms-search" data-msq="${key}" placeholder="Type to filter..." value="${esc(isOpen ? (f.q || '') : '')}">
+            <button type="button" class="ms-clear" data-msclear="${key}">Clear</button>
+          </div>
+          <div class="ms-list">${vis.map(o => `<label class="ms-opt"><input type="checkbox" data-msopt="${key}" value="${esc(o)}"${sel.includes(o) ? ' checked' : ''}> ${esc(o)}</label>`).join('')}</div>
+          <div class="ms-empty"${vis.length ? ' style="display:none"' : ''}>No matches</div>
+        </div></div>`;
+    };
     const filterBar = all.length ? `<div class="or-filters">
-        <label class="or-fl"><span>Department</span>
-          <select class="or-in" data-filter="dept">${opt(depts, f.dept, 'All departments')}</select></label>
-        <label class="or-fl"><span>Job</span>
-          <select class="or-in" data-filter="job">${opt(jobTitles, f.job, 'All jobs')}</select></label>
-        ${on ? '<button type="button" class="or-clearf" data-act="clearf">Clear filters</button>' : ''}
+        ${chip('dept', 'Department', depts, f.dept)}
+        ${chip('job', 'Job', jobTitles, f.job)}
+        ${on ? `<button type="button" class="or-clearf" data-act="clearf">Clear all</button>` : ''}
       </div>` : '';
     const waiting = S.me.isApprover ? shown.filter(x => x.status === 'For approval') : [];
     const rest = shown.filter(x => !waiting.includes(x));
@@ -992,19 +1021,44 @@ export async function mountOpeningRequests(root, backend) {
       S.answers.free = `${S.draft.count === 1 ? 'A new position' : `All ${S.draft.count} new`}: ${t}`; S.why = null; nextQuestion();
     });
     root.querySelectorAll('[data-ans]').forEach(b => b.addEventListener('click', () => answer(b.dataset.ans, b.textContent.trim())));
-    // 201c: the list's filters. They live in S, so the redraw rebuilds them already selected.
-    root.querySelectorAll('[data-filter]').forEach(el => el.addEventListener('change', () => {
-      const k = el.dataset.filter;
-      S.filter = Object.assign({ dept: '', job: '' }, S.filter, { [k]: el.value });
-      // Narrowing the department can strand the chosen job on a department it does not belong to, which would show
-      // an empty table with both filters looking valid. Drop the job rather than leave that.
-      if (k === 'dept' && S.filter.job
-        && !S.requests.some(x => x.jobTitle === S.filter.job && (!S.filter.dept || x.department === S.filter.dept))) {
-        S.filter.job = '';
-      }
+    // 201c: the list's filters. Everything is in S.filter, so a redraw rebuilds the chip already selected and open.
+    // Narrowing the departments can strand a chosen job on a department it no longer belongs to, which would leave an
+    // empty table with both chips looking valid. Any job that can no longer match is dropped.
+    const pruneJobs = () => {
+      if (!S.filter.dept.length || !S.filter.job.length) return;
+      const live = new Set(S.requests.filter(x => S.filter.dept.includes(x.department)).map(x => x.jobTitle));
+      S.filter.job = S.filter.job.filter(j => live.has(j));
+    };
+    root.querySelectorAll('[data-ms]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const k = b.dataset.ms;
+      S.filter.open = S.filter.open === k ? '' : k;
+      S.filter.q = '';                       // reopening always starts from the full list
+      render();
+      const s = root.querySelector(`[data-msq="${k}"]`);
+      if (s) s.focus({ preventScroll: true });
+    }));
+    root.querySelectorAll('[data-msopt]').forEach(cb => cb.addEventListener('change', () => {
+      const k = cb.dataset.msopt, v = cb.value, cur = S.filter[k] || [];
+      S.filter[k] = cb.checked ? [...cur, v] : cur.filter(x => x !== v);
+      if (k === 'dept') pruneJobs();
       render();
     }));
-    act('clearf', () => { S.filter = { dept: '', job: '' }; render(); });
+    root.querySelectorAll('[data-msq]').forEach(el => el.addEventListener('input', () => {
+      const k = el.dataset.msq, pos = el.selectionStart;
+      S.filter.q = el.value;
+      render();
+      keep(`[data-msq="${k}"]`, pos);       // the panel redraws on every keystroke, so the caret goes back
+    }));
+    root.querySelectorAll('[data-msclear]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const k = b.dataset.msclear;
+      if (!(S.filter[k] || []).length) return;
+      S.filter[k] = [];
+      if (k === 'dept') pruneJobs();
+      render();
+    }));
+    act('clearf', () => { S.filter = { dept: [], job: [], open: '', q: '' }; render(); });
     wireJobSearch();
   }
 
