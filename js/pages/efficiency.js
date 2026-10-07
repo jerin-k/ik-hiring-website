@@ -13,6 +13,7 @@ import { renderInterviewer, initInterviewer } from './interviewer.js';
 // #145a (Jerin, 19 Sep 2026): the Pipeline panel moves here as it stands on the Hiring Manager tab, so it reads
 // that tab's stage list — one list for both tables.
 import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
+import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
@@ -210,6 +211,7 @@ export function renderEfficiency(data) {
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
+      <button class="eff-subtab subtab-chip" data-tab="traction">Interview Traction</button>
       <button class="eff-subtab subtab-chip" data-tab="panelists">Panelists</button>
     </div>
 
@@ -360,6 +362,11 @@ export function renderEfficiency(data) {
         <tbody id="effSourceBody"></tbody>
       </table></div>
       ${defsBlock('eff-sourcing')}
+    </div>
+
+    <!-- ===== PANEL: INTERVIEW TRACTION (#206) ===== -->
+    <div class="eff-panel" data-panel="traction" style="display:none">
+      <div id="effTractionHost"></div>
     </div>
 
     <div class="eff-panel" data-panel="panelists" style="display:none">
@@ -2092,6 +2099,7 @@ export function initEfficiencyFilters(data) {
     });
   }
 
+  let renderTraction = null;   // #206: set once the page is in the DOM
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'joiningpending') renderFulfilJP();   // #130b
@@ -2103,6 +2111,7 @@ export function initEfficiencyFilters(data) {
     else if (activeTab === 'timeinprocess') renderTimeInProcess();
     else if (activeTab === 'joining') renderJoining();   // its chart is built inside renderJoining
     else if (activeTab === 'sourcing') renderSourcing();
+    else if (activeTab === 'traction') { if (renderTraction) renderTraction(); }   // #206
     else if (activeTab === 'panelists') renderPanelists();
   }
 
@@ -2175,6 +2184,22 @@ export function initEfficiencyFilters(data) {
   })();
   msRec = makeMultiSelect(document.getElementById('effMsRec'), 'Recruiter', recNames196, renderAll);
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobOptions, renderAll);   // #172c
+
+  // #206 Interview Traction - the SAME module the Hiring Manager tab mounts, with this page's own scope.
+  renderTraction = mountInterviewTraction(document.getElementById('effTractionHost'), data, () => {
+    const rg = effRange();
+    const jsel = msJob ? msJob.getSelected() : [];
+    const dsel = msDept ? msDept.getSelected() : [];
+    const ji = data.jobIndex || {};
+    return {
+      from: rg.from, to: rg.to,
+      jobOk: (j8) => {
+        if (jsel.length && !jsel.some(id => String(id).slice(0, 8) === j8)) return false;
+        if (dsel.length) { const meta = ji[j8]; if (!meta || dsel.indexOf(meta.department) < 0) return false; }
+        return true;
+      }
+    };
+  });
   document.addEventListener('click', closeMsPanels);
   wireLevels('effLevels', renderAll);   // #188
   // #122: the Stages dropdown + Hide zero-pipeline above the Throughput squares.

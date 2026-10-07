@@ -135,6 +135,38 @@ export const DEFINITIONS = {
     ]
   },
 
+  // #206 (Jerin, 7 Oct 2026). ONE entry for BOTH tabs - the panel is one module, so its words are one block.
+  'interview-traction': {
+    summary: 'How Interview Traction is counted',
+    intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted into one of four outcomes. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026.',
+    groups: [
+      {
+        heading: 'The four outcomes',
+        items: [
+          ['Select', 'The candidate reached a <strong>later stage</strong> after that interview.'],
+          ['Reject', 'The candidate was <strong>archived</strong> without going further.'],
+          ['Rescheduled / Cancelled', 'The booking was cancelled, or moved to another day. A <strong>no-show is recorded the same way</strong>, so it is counted here.'],
+          ['Awaiting outcome', 'The interview happened and nothing has been decided yet. These change colour as decisions are made.'],
+        ]
+      },
+      {
+        heading: 'Reading the charts',
+        items: [
+          ['Where the outcome comes from', 'What <strong>actually happened next</strong>, never the interviewer&rsquo;s feedback form. Feedback is often never submitted, so scoring on it would leave silent holes.'],
+          ['A zero bar', 'A day or week with no interviews keeps its place and shows a <strong>0</strong>, so a quiet spell reads as quiet rather than disappearing. In day view weekends are shaded.'],
+          ['Week view and Day view', 'Week view covers the whole period. <strong>Day view shows the last 30 days</strong> of it.'],
+          ['Rounds and Hide rounds with no interviews', 'The <strong>Rounds</strong> chip chooses which charts appear; Online Assessment and R1 to R5 are on to begin with. The tick-box drops any round with nothing in the period.'],
+          ['Each chart has its own scale', 'A round with two bookings is not drawn at the same height as a round with seventy a week. Compare a round against <strong>itself over time</strong>, not against the round above it.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Rescheduled only counts from 7 October 2026', 'When an interview is moved, Ashby <strong>overwrites the original time</strong> and keeps no record of the old one, so moves made before this panel existed cannot be recovered. Cancellations are complete back to 1 July.'],
+      ['The most recent days look heavy on Awaiting outcome', 'Nothing is wrong &mdash; those decisions have not been made yet.'],
+      ['Do not add the rounds together', 'One candidate doing R1, R2 and R3 appears in all three charts. The rounds are separate questions, not parts of a total.'],
+    ]
+  },
   'hm-pipeline': {
     summary: 'How these numbers are worked out',
     intro: 'A <strong>live snapshot</strong>: where candidates stand right now. The one table on this page the period does not change, so From and To are hidden here. A deeper teal behind a number means more people, compared within that stage&rsquo;s column; zeros stay grey.',

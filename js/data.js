@@ -4,6 +4,8 @@ const LIVE_ROLLUPS_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-we
 const LOCAL_ROLLUPS_URL = '/data/stage_rollups.json';
 const LIVE_HIRE_LINKS_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/hire_links.json';   // #131
 const LOCAL_HIRE_LINKS_URL = '/data/hire_links.json';
+const LIVE_TRACTION_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/interview_traction.json';   // #206
+const LOCAL_TRACTION_URL = '/data/interview_traction.json';
 
 let dashboardData = null;
 
@@ -28,12 +30,22 @@ export async function loadDashboardData() {
   // Stage-history rollups (true daily velocity + reached/cleared throughput). Best-effort — the UI
   // degrades gracefully to the snapshot approximation if this file isn't present yet.
   dashboardData.stageRollups = await loadStageRollups_();
+  // #206 Interview Traction. Its own small file, written by the stage-history job rather than the main
+  // refresh, which is already at the 30-minute ceiling (#204). Optional, like the two above: the panel
+  // says so plainly if it is missing rather than drawing an empty chart.
+  dashboardData.interviewTraction = await loadInterviewTraction_();
   return dashboardData;
 }
 
 async function loadStageRollups_() {
   try { const r = await fetch(LIVE_ROLLUPS_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   try { const r = await fetch(LOCAL_ROLLUPS_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
+  return null;
+}
+
+async function loadInterviewTraction_() {
+  try { const r = await fetch(LIVE_TRACTION_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
+  try { const r = await fetch(LOCAL_TRACTION_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   return null;
 }
 
