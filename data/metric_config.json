@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-07T09:53:14.399Z",
+  "updatedAt": "2026-10-07T09:59:54.244Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -91,7 +91,7 @@
       "Unassigned": 220,
       "V Pooja": 210,
       "Praveetha A": 100,
-      "Leenita Joseph Albert": 0,
+      "Leenita Joseph Albert": 100,
       "Sangha": 0
     },
     "2026-Q1": {
@@ -120,7 +120,7 @@
       "Mahima Agarwal": 180,
       "Chhavi Rana": 220,
       "Tina Anisha Bibeiro": 180,
-      "Leenita Joseph Albert": 0,
+      "Leenita Joseph Albert": 100,
       "M Navya": 220,
       "Gopu Nair V": 0,
       "Mashika De Almeida": 220,
@@ -242,5 +242,18 @@
     "Test": "Exclude"
   },
   "userType": {},
-  "recruiterDates": {}
+  "recruiterDates": {
+    "Kaashvika Kashyap": {
+      "end": "2026-07-31"
+    },
+    "Leenita Joseph Albert": {
+      "end": "2026-09-25"
+    },
+    "Ankita Kabra": {
+      "end": "2026-07-07"
+    },
+    "Sanghamitra Moulik": {
+      "start": "2026-08-01"
+    }
+  }
 }
