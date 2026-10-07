@@ -336,17 +336,19 @@ export function mountInterviewTraction(host, data, getScope, opts) {
     let html = '', hidden = 0, grand = 0;
     const blocks = picked.map(r => {
       const slots = slotsFor(daysForRound(tr, r, scope), state.view, scope);
-      let tot = 0, s0 = 0, r0 = 0;
-      slots.forEach(s => { tot += s.v[0] + s.v[1] + s.v[2] + s.v[3]; s0 += s.v[0]; r0 += s.v[1]; });
+      let tot = 0;
+      slots.forEach(s => { tot += s.v[0] + s.v[1] + s.v[2] + s.v[3]; });
       grand += tot;
-      return { r, slots, tot, s0, r0 };
+      return { r, slots, tot };
     });
     blocks.forEach(b => {
       if (b.tot === 0 && state.hide) { hidden++; return; }
       html += `<div class="it-round"><h4>${esc(b.r)}</h4>`;
       if (b.tot === 0) { html += '<p class="it-empty">No interviews booked in this period.</p></div>'; return; }
-      const dec = b.s0 + b.r0;
-      html += `<p class="it-meta">${b.tot} booked${dec ? ` &middot; ${Math.round(b.s0 / dec * 100)}% of decided interviews were a select` : ''}</p>`
+      // The select rate came off on 8 Oct with the trend line (#210). The same figure reads 38% here and
+      // 22% on the Throughput tab, and a number two panels disagree about should not be stated as fact on
+      // either of them. The bars still show the split; nothing is hidden, it is just not asserted as a rate.
+      html += `<p class="it-meta">${b.tot} booked</p>`
             + `<div class="it-scroller">${chartSvg(b.slots)}</div></div>`;
     });
     if (hidden) html += `<p class="it-empty">${hidden} round${hidden === 1 ? '' : 's'} with no interviews in this period ${hidden === 1 ? 'is' : 'are'} hidden.</p>`;
