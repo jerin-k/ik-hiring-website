@@ -98,8 +98,33 @@ const PUBLISH_CHUNK = 1500;   // chars of base64url per GET (URL stays well unde
 // payloadOverride (optional): a full config object to publish instead of the raw localStorage snapshot — used by
 // admin.js buildEffectiveConfig(data) so the FIRST publish captures the effective baseline (roster pods + grid +
 // dept-family defaults) rather than an empty object, even before the admin has made any explicit edits.
+// 🚨 #205c (7 Oct 2026): REFUSE BEFORE SENDING ANYTHING when this page is stale.
+// The server already guards this — it compares `mcbase` against the DRIVE copy and answers "Config changed
+// meanwhile" — but only AFTER the whole config has been uploaded chunk by chunk through the popup, and only when
+// `base` is non-empty. A page left open since before someone else published looks like it is publishing normally
+// right up to the last step.
+// Measured 7 Oct 2026: two admins both on pages loaded at 15:33 IST while the live config had moved to 16:26; one
+// of them was holding a local edit, so publishing from the other would have silently wiped a setting.
+// 🔑 STRICTLY NEWER ONLY. `raw.githubusercontent.com` frequently serves a copy OLDER than what this page already
+// loaded (measured the same afternoon: the browser got 10:03 while curl got 10:55 on the same URL). A CDN that is
+// behind is not a conflict, and refusing on it would block legitimate publishes.
+async function serverMovedSinceLoad() {
+  let live = null;
+  try { const r = await fetch(LIVE_URL + '?cb=' + Date.now(), { cache: 'no-store' }); if (r.ok) live = await r.json(); }
+  catch (e) { return { checked: false }; }                       // offline — fall back to the server's own guard
+  if (!validCfg(live) || !live.updatedAt) return { checked: true, moved: false };   // nothing published yet: a first publish is fine
+  const loaded = (getMeta() || {}).updatedAt || '';
+  return { checked: true, moved: !loaded || live.updatedAt > loaded, live: live.updatedAt, loaded, by: live.updatedBy || '' };
+}
+
 export async function publishConfig(payloadOverride) {
   const payload = payloadOverride || collectConfig();
+  const stale = await serverMovedSinceLoad();
+  if (stale.checked && stale.moved) {
+    return { ok: false, reason: stale.loaded
+      ? `Someone published since this page loaded${stale.by ? ' (' + stale.by + ')' : ''}. Reload the dashboard before publishing — otherwise this would overwrite their changes.`
+      : 'This page has not loaded the team config, so publishing would overwrite it. Reload the dashboard first.' };
+  }
   const base = (getMeta() || {}).updatedAt || '';
   let cParam;
   try { cParam = await gzipB64url(JSON.stringify(payload)); }
