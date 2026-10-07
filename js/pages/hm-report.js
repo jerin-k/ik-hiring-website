@@ -16,6 +16,7 @@ import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   //
 import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
+import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat, FULFIL_COLORS } from '../chart-style.js';   // #182e: the shared Joined/Pending/Delta colours
@@ -482,6 +483,7 @@ export function renderHmReport(data) {
       <button class="hm-subtab subtab-chip" data-tab="joiners">Joiners</button>
       <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
       <button class="hm-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
+      <button class="hm-subtab subtab-chip" data-tab="traction">Interview Traction</button>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
     </div>
 
@@ -567,6 +569,11 @@ export function renderHmReport(data) {
       ${defsBlock('hm-pipeline')}
     </div>
 
+    <!-- ===== PANEL: INTERVIEW TRACTION (#206) ===== -->
+    <div class="hm-panel" data-panel="traction" style="display:none">
+      <div id="hmTractionHost"></div>
+    </div>
+
     <!-- ===== PANEL: PANELISTS ===== -->
     <div class="hm-panel" data-panel="panelists" style="display:none">
       <div class="filter-bar"><div class="ms" id="msHmPanel"></div></div>
@@ -594,6 +601,7 @@ function dropIn(e, rg, qs) {
   return e.day ? inRange(e.day, rg) : (coversQuarters(rg, qs) && qs.includes(e.quarter));
 }
 
+let renderTraction = null;   // #206: set once the page is in the DOM
 let hm1ChartInstance = null;
 // One shared function, so revisiting the tab does not stack another document listener each time (#120, 14 Sep 2026).
 const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
@@ -1506,6 +1514,7 @@ export function initHmFilters(data) {
     else if (activeTab === 'joiners') renderJoiners();                 // #130c
     else if (activeTab === 'throughput') renderThroughput();
     else if (activeTab === 'pipeline') renderPipeline();
+    else if (activeTab === 'traction') { if (renderTraction) renderTraction(); }   // #206
     else if (activeTab === 'panelists') renderPanelist();
   }
   function showTab(name) {
@@ -1513,7 +1522,7 @@ export function initHmFilters(data) {
     // #133: Joining Pending is live, so the period boxes give way to the DOJ boxes there. Expand all opens department trees, so it hides over
     // the two flat people lists, where it would move nothing (Rule 13).
     toggleJpFilters('hm', document.getElementById('hmPeriod'), name === 'joiningpending');
-    showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
+    showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners' && name !== 'traction');   // #206: no tree here
     // #189d: only Position Fulfilment has the job/recruiter/topic levels, so only it gets the chooser. Throughput,
     // Interview Pipeline and Panelists get the plain Expand all tick back - the rule the date boxes already follow.
     showLevels('hmLevels', name === 'positions');
@@ -1558,6 +1567,23 @@ export function initHmFilters(data) {
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msHmPanel = makeMultiSelect(document.getElementById('msHmPanel'), 'Panelist', panelistNames, renderPanelist);
+
+  // #206 Interview Traction. The page owns the filters, the module owns the metric - so the SAME render
+  // runs here and on Overall Efficiency and the two can never drift (Rule 3).
+  renderTraction = mountInterviewTraction(document.getElementById('hmTractionHost'), data, () => {
+    const rg = hmRange();
+    const jsel = msHmJob ? msHmJob.getSelected() : [];
+    const dsel = msHmDept ? msHmDept.getSelected() : [];
+    const ji = data.jobIndex || {};
+    return {
+      from: rg.from, to: rg.to,
+      jobOk: (j8) => {
+        if (jsel.length && !jsel.some(id => String(id).slice(0, 8) === j8)) return false;
+        if (dsel.length) { const meta = ji[j8]; if (!meta || dsel.indexOf(meta.department) < 0) return false; }
+        return true;
+      }
+    };
+  });
   document.addEventListener('click', closeMsPanels);
   // #133: the DOJ boxes in the filter row (shown on the Joining Pending sub-tab only)
   ['hmDojMonth', 'hmDojFrom', 'hmDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderJoiningPending));

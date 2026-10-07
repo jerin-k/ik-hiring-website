@@ -1985,3 +1985,39 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 /* A remark shown read-only: the same quiet size as a name, wrapping rather than clipping. It is WRITTEN on the
    Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
 .jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }
+
+
+/* ===== Interview Traction (#206, 7 Oct 2026) — Hiring Manager + Overall Efficiency =====
+   Four outcome colours, taken from the existing chart palette rather than invented: Blue Munsell for
+   Select, the muted rose already used for a shortfall, the tan from the shared palette, and the pale
+   slate the Overview uses for "still pending". --it-zero is the flat marker a quiet slot keeps so a
+   gap reads as a gap (Jerin, 7 Oct: "for the Zero days, give me a Zero bar"). */
+:root {
+  --it-sel: #398AA2; --it-rej: #b45a72; --it-can: #C08457; --it-pen: #9fb3d6;
+  --it-zero: #c8d0de; --it-quiet: #f7f9fc;
+}
+.it-controls { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;
+  margin-bottom: 0.9rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-light); }
+.it-seg { display: inline-flex; border: 1px solid #9db2d6; border-radius: 0.3rem; overflow: hidden; }
+.it-seg button { border: 0; background: var(--card); color: var(--text-secondary); font-size: 0.75rem;
+  padding: 0.32rem 0.75rem; cursor: pointer; font-family: inherit; }
+.it-seg button + button { border-left: 1px solid #cfdbec; }
+.it-seg button.active { background: var(--navy-sub); color: #fff; font-weight: 600; }
+.it-chk { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem;
+  color: var(--text-secondary); cursor: pointer; }
+.it-legend { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-left: auto;
+  font-size: 0.6875rem; color: var(--text-secondary); }
+.it-legend i { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px;
+  margin-right: 0.3rem; vertical-align: -1px; }
+.it-round { margin-bottom: 1.4rem; }
+.it-round h4 { margin: 0 0 0.08rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--text-secondary); }
+.it-meta { font-size: 0.6875rem; color: var(--muted); margin: 0 0 0.35rem;
+  font-variant-numeric: tabular-nums; }
+/* The PAGE scrolls, not the panel (#155) - but a 1120-unit chart still needs its own sideways scroll on a
+   narrow screen, which is the one exception that rule allows for a chart. */
+.it-scroller { overflow-x: auto; }
+.it-scroller svg { display: block; min-width: 48rem; width: 100%; height: auto; }
+.it-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; margin: 0.45rem 0; }
+.it-state { margin-bottom: 0.9rem; }
+@media (max-width: 46rem) { .it-legend { margin-left: 0; } }
