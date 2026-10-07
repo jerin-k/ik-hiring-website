@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-07T09:59:54.244Z",
+  "updatedAt": "2026-10-07T10:03:43.056Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -33,31 +33,31 @@
       "G Darshan": "Others"
     },
     "2026-Q4": {
+      "Alokita Dhumne": "Lateral",
+      "Mahima Agarwal": "Lateral",
+      "Praveetha A": "Lateral",
+      "Rijo John": "Lateral",
+      "Tina Anisha Bibeiro": "Lateral",
+      "Sanghamitra Moulik": "Lateral",
+      "G Darshan": "Lateral",
       "Satinder Kaur": "Lateral",
       "Neha Vivekanand Pattar": "Lateral",
       "Deepti Leslie": "Lateral",
       "Oshin Verma": "SME-India",
       "V Pooja": "Lateral",
       "Aditya Singh": "SME-US",
-      "Rijo John": "Sales",
       "Smriti Das": "Sales",
       "Kaashvika Kashyap": "Sales",
       "Ritika Bhasin": "SME-US",
-      "Alokita Dhumne": "Sales",
-      "Praveetha A": "Sales",
       "Ankita Kabra": "Lateral",
-      "Mahima Agarwal": "Sales",
       "Chhavi Rana": "Sales",
-      "Tina Anisha Bibeiro": "Sales",
       "Leenita Joseph Albert": "Sales",
       "M Navya": "Sales",
       "Gopu Nair V": "Others",
       "Mashika De Almeida": "Lateral",
       "Astha Thakur": "Lateral",
-      "Sanghamitra Moulik": "Lateral",
       "Tabitha Anceline E": "Sales",
       "Sangha": "Others",
-      "G Darshan": "Others",
       "Siva Sruthi V S": "Sales"
     }
   },
@@ -104,22 +104,23 @@
       "Ritika Bhasin": 225
     },
     "2026-Q4": {
+      "Alokita Dhumne": 210,
+      "Mahima Agarwal": 210,
+      "Praveetha A": 210,
+      "Rijo John": 225,
+      "Tina Anisha Bibeiro": 225,
+      "G Darshan": 210,
       "Satinder Kaur": 218,
       "Neha Vivekanand Pattar": 220,
       "Deepti Leslie": 225,
       "Oshin Verma": 225,
       "V Pooja": 210,
       "Aditya Singh": 225,
-      "Rijo John": 180,
       "Smriti Das": 220,
       "Kaashvika Kashyap": 220,
       "Ritika Bhasin": 225,
-      "Alokita Dhumne": 180,
-      "Praveetha A": 100,
       "Ankita Kabra": 220,
-      "Mahima Agarwal": 180,
       "Chhavi Rana": 220,
-      "Tina Anisha Bibeiro": 180,
       "Leenita Joseph Albert": 100,
       "M Navya": 220,
       "Gopu Nair V": 0,
@@ -128,7 +129,6 @@
       "Sanghamitra Moulik": 220,
       "Tabitha Anceline E": 220,
       "Sangha": 0,
-      "G Darshan": 0,
       "Siva Sruthi V S": 220,
       "Prathima Pai": 218
     }
@@ -251,9 +251,6 @@
     },
     "Ankita Kabra": {
       "end": "2026-07-07"
-    },
-    "Sanghamitra Moulik": {
-      "start": "2026-08-01"
     }
   }
 }
