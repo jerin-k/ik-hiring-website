@@ -19,6 +19,7 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData,
+         joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
@@ -1511,8 +1512,13 @@ export function initRecruiterFilters(baseData) {
       // raised (Jerin, 2026-08-26). Same word, two rules, on purpose — do not "fix" it.
       if (!isSales) (data.offerEvents || []).forEach(e => {
         const rec = e.recruiter; if (!rec || !e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
-        if (!inRange(e.startDate, rg)) return;   // #129: started inside the From / To range (which sits inside the quarter)
-        if (e.openingQuarter && e.openingQuarter < q) return;
+        // #203 (7 Oct 2026): this used to be `started inside From / To` AND `not tied to an earlier quarter's
+        // opening`. A joiner who starts just after their quarter turns over failed the FIRST test in the opening's
+        // quarter (not started yet) and the SECOND in their start quarter, so they were counted in NEITHER — 13
+        // people, 7 of them in Q3 2026. They now count in the quarter of the OPENING they filled. #129's From / To
+        // still moves the number: joinerIn() uses their start day inside that quarter, else the whole-quarter test.
+        if (joinerQuarter(e) !== q) return;
+        if (!joinerIn(e, rg, q)) return;
         const sc = closureScore(e.openingId, { department: e.department, title: e.jobTitle, level: e.level, complexity: e.complexity }, q);   // #165
         // #166: the LAST two arguments are the only new thing — the same joiner, also filed under the opening
         // their offer names, so an SME topic row can show them. A joiner with no opening simply misses this
@@ -2467,8 +2473,8 @@ export function initRecruiterFilters(baseData) {
     // Joined - people, by start date, minus last quarter's carry-over.
     (data.offerEvents || []).forEach(e => {
       const rec = e.recruiter; if (!rec) return;
-      if (!e.accepted || e.appStatus !== 'Hired' || !inRange(e.startDate, rg)) return; // Joined = moved to Hired, not just an accepted offer · #129: started inside From / To
-      if (e.openingQuarter && e.openingQuarter < q) return;
+      if (!e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
+      if (joinerQuarter(e) !== q || !joinerIn(e, rg, q)) return;   // #203: the opening's quarter when it is earlier · #129: From / To
       bump(headTo(rec, e.sourcer, e.department), 'j', e.jobTitle);   // #43
     });
     // Joining Pending - identical rule to the HM Positions card, and LIVE.
