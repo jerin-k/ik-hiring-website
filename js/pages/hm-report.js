@@ -13,7 +13,7 @@ import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-t
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
 import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
-import { reportingYears, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
+import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
@@ -602,6 +602,10 @@ function dropIn(e, rg, qs) {
 }
 
 let renderTraction = null;   // #206: set once the page is in the DOM
+// #207: the quarters ticked on the Interview Traction panel's OWN Quarter chip. Empty until it mounts,
+// and read ONLY by that panel's scope - no other panel on this tab sees it.
+let tractionQs = [];
+let tractionBounds = false;   // #207: are the date boxes currently on the panel's span?
 let hm1ChartInstance = null;
 // One shared function, so revisiting the tab does not stack another document listener each time (#120, 14 Sep 2026).
 const closeMsPanels = () => document.querySelectorAll('.ms-panel').forEach(p => p.style.display = 'none');
@@ -1523,6 +1527,22 @@ export function initHmFilters(data) {
     // the two flat people lists, where it would move nothing (Rule 13).
     toggleJpFilters('hm', document.getElementById('hmPeriod'), name === 'joiningpending');
     showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners' && name !== 'traction');   // #206: no tree here
+    // #207: Interview Traction carries its own Quarter chip, which ticks several. The page's single-pick
+    // Quarter box would be a second, contradictory control, so it steps aside on that sub-tab only.
+    showControl(document.getElementById('hmQuarter')?.closest('.fchip'), name !== 'traction');
+    // #207: the page re-bounds From / To from its OWN single Quarter after this panel mounts, which would
+    // leave the dates stuck inside one quarter again. So the panel's span is applied when its sub-tab is
+    // ENTERED, once, and the page's own bounds are put back the moment you leave - otherwise every other
+    // panel on this tab would inherit a widened period, which is exactly what must not happen.
+    if (name === 'traction') {
+      if (tractionQs.length && !tractionBounds) {
+        setDateBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'), tractionQs, true);
+        tractionBounds = true;
+      }
+    } else if (tractionBounds) {
+      tractionBounds = false;
+      applyYearQuarter();
+    }
     // #189d: only Position Fulfilment has the job/recruiter/topic levels, so only it gets the chooser. Throughput,
     // Interview Pipeline and Panelists get the plain Expand all tick back - the rule the date boxes already follow.
     showLevels('hmLevels', name === 'positions');
@@ -1571,7 +1591,10 @@ export function initHmFilters(data) {
   // #206 Interview Traction. The page owns the filters, the module owns the metric - so the SAME render
   // runs here and on Overall Efficiency and the two can never drift (Rule 3).
   renderTraction = mountInterviewTraction(document.getElementById('hmTractionHost'), data, () => {
-    const rg = hmRange();
+    // #207: this panel's period comes from ITS OWN Quarter chip, falling back to the page's single
+    // Quarter box only before the chip has mounted.
+    const rg = rangeOf(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'),
+                       tractionQs.length ? tractionQs : hmQuarters());
     const jsel = msHmJob ? msHmJob.getSelected() : [];
     const dsel = msHmDept ? msHmDept.getSelected() : [];
     const ji = data.jobIndex || {};
@@ -1583,6 +1606,15 @@ export function initHmFilters(data) {
         return true;
       }
     };
+  }, {
+    // #207: every quarter on offer, newest last. The panel ticks the last two by default and hands them
+    // back here, so the page can re-bound its From / To inputs - which is what frees the dates from being
+    // stuck inside one quarter.
+    quarters: reportingQuarters(),
+    onQuarters: (qs) => {
+      tractionQs = qs;
+      setDateBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'), qs, true);
+    }
   });
   document.addEventListener('click', closeMsPanels);
   // #133: the DOJ boxes in the filter row (shown on the Joining Pending sub-tab only)

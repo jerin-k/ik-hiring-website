@@ -20,7 +20,8 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
-         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl,
+         reportingQuarters } from '../period.js';   // #127 · #129 · #133 · #207
 import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
@@ -2100,6 +2101,9 @@ export function initEfficiencyFilters(data) {
   }
 
   let renderTraction = null;   // #206: set once the page is in the DOM
+  // #207: the quarters ticked on Interview Traction's OWN Quarter chip - read by that panel alone.
+  let tractionQs = [];
+  let tractionBounds = false;   // #207
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'joiningpending') renderFulfilJP();   // #130b
@@ -2157,6 +2161,19 @@ export function initEfficiencyFilters(data) {
     // #145a: Pipeline counts are live, and its roles follow Year and Quarter, so From and To would move nothing
     // there — they hide, exactly as on the Hiring Manager tab (#141d, Rule 13).
     ['effVelFrom', 'effVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
+    // #207: Interview Traction brings its own multi-tick Quarter chip, so the page's single-pick one hides there.
+    showControl(document.getElementById('effQuarter')?.closest('.fchip'), name !== 'traction');
+    // #207: same as the Hiring Manager tab - apply the panel's span on entering, put the page's own bounds
+    // back on leaving, so no other panel here inherits a widened period.
+    if (name === 'traction') {
+      if (tractionQs.length && !tractionBounds) {
+        setDateBounds(document.getElementById('effVelFrom'), document.getElementById('effVelTo'), tractionQs, true);
+        tractionBounds = true;
+      }
+    } else if (tractionBounds) {
+      tractionBounds = false;
+      applyVelYearQuarter();
+    }
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.eff-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.eff-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -2187,7 +2204,9 @@ export function initEfficiencyFilters(data) {
 
   // #206 Interview Traction - the SAME module the Hiring Manager tab mounts, with this page's own scope.
   renderTraction = mountInterviewTraction(document.getElementById('effTractionHost'), data, () => {
-    const rg = effRange();
+    // #207: this panel's period comes from ITS OWN Quarter chip (see hm-report.js for the same wiring).
+    const rg = rangeOf(document.getElementById('effVelFrom'), document.getElementById('effVelTo'),
+                       tractionQs.length ? tractionQs : tisPeriod());
     const jsel = msJob ? msJob.getSelected() : [];
     const dsel = msDept ? msDept.getSelected() : [];
     const ji = data.jobIndex || {};
@@ -2199,6 +2218,15 @@ export function initEfficiencyFilters(data) {
         return true;
       }
     };
+  }, {
+    // #207: every quarter on offer, newest last. The panel ticks the last two by default and hands them
+    // back here, so the page can re-bound its From / To inputs - which is what frees the dates from being
+    // stuck inside one quarter.
+    quarters: reportingQuarters(),
+    onQuarters: (qs) => {
+      tractionQs = qs;
+      setDateBounds(document.getElementById('effVelFrom'), document.getElementById('effVelTo'), qs, true);
+    }
   });
   document.addEventListener('click', closeMsPanels);
   wireLevels('effLevels', renderAll);   // #188
