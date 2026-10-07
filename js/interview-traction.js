@@ -127,7 +127,7 @@ function slotsFor(dayMap, view, scope) {
 }
 
 function chartSvg(slots) {
-  const W = 1120, H = 186, padL = 34, padR = 34, padT = 18, padB = 32;   // #208: padR holds the % scale
+  const W = 1120, H = 186, padL = 34, padR = 8, padT = 18, padB = 32;
   const n = slots.length || 1, iw = (W - padL - padR) / n;
   let max = 0;
   slots.forEach(s => { max = Math.max(max, s.v[0] + s.v[1] + s.v[2] + s.v[3]); });
@@ -183,28 +183,6 @@ function chartSvg(slots) {
   // ---- trend line over the slot TOTALS (Jerin, 8 Oct: "Add a trendline if it makes sense") ----
   // A straight least-squares fit, so it answers one question: is the volume rising or falling across the
   // period shown. It is drawn from the totals ALREADY computed above - the chart reads, it never recomputes.
-  // #208 (Jerin: "Also add a trendline for throughput"). A SECOND trend, on the pass rate: of the
-  // interviews that got a verdict in that slot, the share that were a Select. Read on the right-hand
-  // scale, because a percentage and a headcount cannot honestly share an axis.
-  // A slot where nothing was decided is skipped rather than plotted as 0% - a quiet week is not a bad week.
-  const rate = [];
-  slots.forEach((sl, i) => { const dec = sl.v[0] + sl.v[1]; if (dec > 0) rate.push([i, (sl.v[0] / dec) * 100]); });
-  if (rate.length >= 3) {
-    const n3 = rate.length;
-    let rx = 0, ry = 0, rxx = 0, rxy = 0;
-    rate.forEach(p => { rx += p[0]; ry += p[1]; rxx += p[0] * p[0]; rxy += p[0] * p[1]; });
-    const rden = n3 * rxx - rx * rx;
-    if (rden !== 0) {
-      const rs = (n3 * rxy - rx * ry) / rden, ri = (ry - rs * rx) / n3;
-      const cxr = i => padL + i * iw + iw / 2;
-      const cyr = p => base - (Math.max(0, Math.min(100, p)) / 100) * plotH;
-      s += `<line x1="${cxr(rate[0][0])}" y1="${cyr(ri)}" x2="${cxr(rate[n3 - 1][0])}" y2="${cyr(ri + rs * (n3 - 1))}" `
-         + `stroke="var(--it-sel)" stroke-width="1.8" stroke-dasharray="2 3" stroke-linecap="round"/>`;
-      [0, 50, 100].forEach(p => {
-        s += `<text x="${W - padR + 5}" y="${cyr(p) + 3.5}" text-anchor="start" font-size="8.5" fill="var(--it-sel)">${p}%</text>`;
-      });
-    }
-  }
   const tots = slots.map(sl => sl.v[0] + sl.v[1] + sl.v[2] + sl.v[3]);
   if (tots.length >= 3) {
     const n2 = tots.length;
@@ -256,7 +234,7 @@ export function mountInterviewTraction(host, data, getScope, opts) {
       <div class="ms it-rounds"></div>
       <label class="it-chk"><input type="checkbox" class="it-hide" checked> Hide rounds with no interviews</label>
       <div class="it-legend">${SERIES.map(s =>
-        `<span><i style="background:${s.col}"></i>${s.key}</span>`).join('')}<span class="it-trendkey">Volume trend</span><span class="it-ratekey">Pass-rate trend</span></div>
+        `<span><i style="background:${s.col}"></i>${s.key}</span>`).join('')}<span class="it-trendkey">Trend</span></div>
     </div>
     <p class="sub-note it-state"></p>
     <div class="it-charts"></div>
