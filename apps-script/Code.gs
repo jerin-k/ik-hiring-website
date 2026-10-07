@@ -525,7 +525,7 @@ function publishConfigPage_(e, userEmail) {
     var cfg = JSON.parse(json);
     var base = p.mcbase || '';
     if (base) { var cur = loadDriveJson_('metric_config.json'); if (cur && cur.updatedAt && cur.updatedAt !== base) return page('<h2 style="color:#a16207">Config changed meanwhile</h2><p>Someone published since you loaded' + (cur.updatedBy ? ' (' + cur.updatedBy + ')' : '') + '. Close this, reload the dashboard, and re-apply your edits.</p>'); }
-    var doc = { schemaVersion: 1, updatedAt: new Date().toISOString(), updatedBy: userEmail, pods: cfg.pods || {}, capacity: cfg.capacity || {}, scoreGrid: cfg.scoreGrid || {}, deptFamily: cfg.deptFamily || {}, userType: cfg.userType || {}, recruiterDates: cfg.recruiterDates || {} };   // #11b: Agency|Freelancer per user
+    var doc = { schemaVersion: 1, updatedAt: new Date().toISOString(), updatedBy: userEmail, pods: cfg.pods || {}, capacity: cfg.capacity || {}, scoreGrid: cfg.scoreGrid || {}, deptFamily: cfg.deptFamily || {}, userType: cfg.userType || {}, recruiterDates: cfg.recruiterDates || {}, podDefs: cfg.podDefs || {} };   // #11b: Agency|Freelancer per user
     saveDriveJson_('metric_config.json', doc);
     pushFileToGitHub_('data/metric_config.json', JSON.stringify(doc, null, 2), 'Update metric config by ' + userEmail);
     for (var k3 = 0; k3 < n; k3++) cache.remove('mc_' + sid + '_' + k3);
@@ -1429,14 +1429,21 @@ function orOptions_() {
 }
 
 // Ashby's teams and locations (both required on an opening), and each Open job's own team and locations so the form can
-// start from them. Cached for six hours.
+// start from them, plus each one's title, top-level department and two scoring fields (202).
+// Cached TEN MINUTES - short enough that a job created minutes ago can be requested. The key is VERSIONED: bump it
+// whenever this shape changes, or a cached payload of the OLD shape keeps being served for the whole TTL.
 function orMeta_() {
-  var c = CacheService.getScriptCache(), k = 'or_meta_v1', hit = c.get(k);
+  var c = CacheService.getScriptCache(), k = 'or_meta_v2', hit = c.get(k);
   if (hit) return JSON.parse(hit);
   var out = { teams: [], locations: [], jobs: {} };
   try {
-    var dept = {}, locs = {};
-    ashbyListAll_('/department.list').forEach(function (d) { if (!d.isArchived && d.name) dept[d.id] = d.name; });
+    var dept = {}, locs = {}, dtree = {};
+    ashbyListAll_('/department.list').forEach(function (d) {
+      dtree[d.id] = { name: d.name || '', parentId: d.parentId || null };
+      if (!d.isArchived && d.name) dept[d.id] = d.name;
+    });
+    // the leaf department is the TEAM; family and score want the PARENT - the same walk as DataRefresh.gs topDept()
+    var topDept = function (id) { var d = dtree[id], g = 0; while (d && d.parentId && dtree[d.parentId] && g++ < 8) d = dtree[d.parentId]; return d ? d.name : ''; };
     ashbyListAll_('/location.list').forEach(function (l) { if (!l.isArchived && l.name) locs[l.id] = l.name; });
     var uniq = function (xs) { var s = {}; return xs.filter(function (x) { return x && !s[x] && (s[x] = 1); }); };
     out.teams = uniq(Object.keys(dept).map(function (id) { return dept[id]; })).sort();
@@ -1444,11 +1451,19 @@ function orMeta_() {
     ashbyListAll_('/job.list').forEach(function (j) {
       if (j.status !== 'Open') return;
       var ids = [].concat(j.locationId || [], j.locationIds || [], j.secondaryLocationIds || []);
-      out.jobs[String(j.id).slice(0, 8)] = { team: dept[j.departmentId] || '',
-        locations: uniq(ids.map(function (id) { return locs[id]; })) };
+      var leaf = dept[j.departmentId] || '';
+      // 202 (7 Oct 2026): title / department / level / complexity are here because dashboard.json DROPS any job with
+      // no applications yet, which made a brand-new job impossible to pick in the request form - the one moment it is
+      // most needed. This is the ONLY live source for those jobs.
+      out.jobs[String(j.id).slice(0, 8)] = { team: leaf,
+        locations: uniq(ids.map(function (id) { return locs[id]; })),
+        title: j.title || '', department: topDept(j.departmentId) || leaf,
+        level: jobCustomField_(j, LEVEL_CF_ID) || '', complexity: jobCustomField_(j, COMPLEXITY_CF_ID) || '' };
     });
   } catch (e) { Logger.log('#112 orMeta_: ' + e.message); }
-  try { c.put(k, JSON.stringify(out), 21600); } catch (e) { /* ignore */ }
+  // a CacheService item caps at 100KB; past that put() throws and is swallowed, leaving EVERY page load paying the
+  // five Ashby calls. Measure and say so rather than fail quietly.
+  try { var blob = JSON.stringify(out); if (blob.length < 95000) c.put(k, blob, 600); else Logger.log('#202 orMeta_ payload too big to cache: ' + blob.length + ' bytes, ' + Object.keys(out.jobs).length + ' jobs'); } catch (e) { /* ignore */ }
   return out;
 }
 
@@ -1569,7 +1584,7 @@ function orSlackNew_(rq) {
   try {
     var ts = orSlackPost_(orSlackTop_(rq), '');
     if (!ts) return '';
-    orSlackPost_(orSlackCard_(rq), ts);   // the free-opening answer is in its Worth knowing, no longer a reply of its own
+    orSlackPost_(orSlackCard_(rq), ts);   // #200 (6 Oct): the card carries the request itself - the free-opening answer is no longer a reply of its own
     return ts;
   } catch (e) { Logger.log('#112 Slack failed: ' + e.message); return ''; }
 }
