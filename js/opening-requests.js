@@ -385,6 +385,7 @@ export async function mountOpeningRequests(root, backend) {
     S.recruiters = f.recruiters || [];
     S.options = f.options || {};
     S.meta = f.meta || { teams: [], locations: [], jobs: {} };
+    rebuildJobs();                               // 202: the live OPEN jobs land here, not with the dashboard file
     if (f.meName) S.me.name = f.meName;          // the display name lives in Ashby, so it arrives here
     teamList = (S.meta.teams && S.meta.teams.length) ? S.meta.teams
       : (S.data ? [...new Set((S.data.jobs || []).map(j => j.team).filter(Boolean))].sort() : []);
@@ -394,11 +395,34 @@ export async function mountOpeningRequests(root, backend) {
     complexities = (S.options.complexity && S.options.complexity.length) ? S.options.complexity : COMPLEXITIES;
     gotForm = true; settle();
   }
+  // 202 (7 Oct 2026, Jerin: a Pre Sales job he had just created was missing from the list). The dashboard file
+  // DROPS every job with no applications yet - DataRefresh.gs: `if (j2.applied === 0) continue` - so a job
+  // created this morning cannot be picked, which is precisely when a request gets raised. Measured that day:
+  // jobIndex 334 jobs, jobs[] 125 (every one with at least one applicant), only 50 of those Open - a picker of
+  // ~50 out of 334. orFormData already fetches every OPEN job live from Ashby, so those fill the gaps.
+  // 🚨 ADDITIVE ONLY, deliberately: a job the dashboard already knows keeps its richer record, and an
+  // orFormData that failed or came back short can never empty the picker. The cost is that a job CLOSED since
+  // the last refresh stays pickable until the next one - which is exactly today's behaviour, so nothing regresses.
+  function rebuildJobs() {
+    const byId = {};
+    ((S.data && S.data.jobs) || []).forEach(j => { S.jobById[j.id] = j; if (j.status === 'Open') byId[j.id] = j; });
+    const live = (S.meta && S.meta.jobs) || {};
+    Object.keys(live).forEach(id => {
+      const m = live[id];
+      // no title means a backend older than 202 - it sent only team + locations, which cannot feed a picker
+      if (byId[id] || !m || !m.title) return;
+      const j = { id, title: m.title, department: m.department || '', team: m.team || '',
+                  level: m.level || '', complexity: m.complexity || '', status: 'Open',
+                  applied: 0, total: 0, recruiters: [] };
+      byId[id] = j; S.jobById[id] = j;
+    });
+    S.jobs = Object.keys(byId).map(id => byId[id])
+      .filter(j => familyForJob(j.department, j.title) !== 'Exclude')
+      .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
+  }
   function onDataReady(d) {
     S.data = d;
-    S.jobs = (d.jobs || []).filter(j => j.status === 'Open' && familyForJob(j.department, j.title) !== 'Exclude')
-      .sort((a, b) => (a.department || '').localeCompare(b.department || '') || (a.title || '').localeCompare(b.title || ''));
-    (d.jobs || []).forEach(j => { S.jobById[j.id] = j; });
+    rebuildJobs();
     if (!teamList.length) teamList = [...new Set((d.jobs || []).map(j => j.team).filter(Boolean))].sort();
     gotDash = true; settle();
   }
