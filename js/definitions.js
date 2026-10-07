@@ -773,6 +773,30 @@ export const DEFINITIONS = {
     ]
   },
 
+  'admin-poddefs': {
+    summary: 'How this page works',
+    intro: 'What each pod is <strong>measured on</strong> in the selected quarter, and the quarter that rule took effect. It drives the five <strong>Position Fulfilment</strong> tables on Recruiter Efficiency.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026 (#205).',
+    groups: [
+      {
+        heading: 'Reading it',
+        items: [
+          ['Measured on', '<strong>Joiners</strong> counts people who started. <strong>Offers</strong> counts everyone who received one &mdash; whether they started, are still in closing, or dropped.'],
+          ['Joiners counted in', 'Not a separate setting &mdash; it follows from <em>Measured on</em>. A pod measured on <strong>Offers</strong> counts a joiner in the quarter their <strong>position was opened</strong>; a pod measured on <strong>Joiners</strong> counts them in the quarter they <strong>started</strong>.'],
+          ['Delta subtracts drops &middot; Drops carry points', 'Whether an offer drop reduces that pod&rsquo;s Delta, and whether it is priced in score as well as counted as a head.'],
+          ['Capacity unit &middot; Goal unit', 'What the numbers on Pod &amp; Capacity <em>mean</em> for this pod. &#9888; The figure does not change when the unit does &mdash; a capacity of 180 set as joiners reads as 180 offers under an Offers definition.'],
+          ['Effective from', 'The quarter whose setting is in force. Definitions <strong>copy forward</strong> like pods and capacity, so one set in Q4 holds for Q1 unless something replaces it. <em>Built-in default</em> means nothing has been configured and the original rule applies.'],
+        ],
+      },
+      {
+        heading: 'Worth knowing',
+        items: [
+          ['It is read-only here', 'Definitions are set in the team config. Ask for a change and it is applied there, then published with the rest of the config.'],
+          ['Why this page exists', 'A pod used to say two things at once &mdash; <strong>who</strong> someone is and <strong>how</strong> they are measured. Changing the measurement meant moving people into another pod, which lost the only record of which team they were on. The measurement now lives here instead.'],
+        ],
+      },
+    ],
+  },
   'admin-pods': {
     summary: 'How this page works',
     intro: 'Which pod each recruiter sits in, what they are expected to carry, and who counts in each quarter &mdash; used by <strong>Recruiter Efficiency</strong> and <strong>Overall Efficiency</strong>. Pod and Capacity are stored <strong>per quarter</strong> and copy forward until someone changes them.',

@@ -93,6 +93,51 @@ export function setPod(name, pod, quarter) {
 
 export function isSalesPod(pod) { return pod === 'Sales'; }
 
+// ===== #205 (7 Oct 2026): POD DEFINITIONS — what a pod MEASURES, set per quarter and copied forward =====
+// 🗣 Jerin: Sales moved to chasing Offers from Q4. His first instinct was to move all 12 Sales recruiters into the
+// Lateral pod, which works but destroys the only thing that said who was Sales and who was Lateral.
+// 🔑 THE FAULT IT FIXES: "pod" was doing TWO jobs — WHO someone is, and HOW they are measured. The measurement was
+// hard-coded in FULFIL_TABLES, invisible anywhere on screen. Now a pod KEEPS its people and its identity, and the
+// measurement is a definition you set for a quarter.
+// 🚨 THE DEFAULTS BELOW ARE EXACTLY TODAY'S HARD-CODED VALUES. With no definition configured, every number is
+// unchanged — this ships as a no-op until a definition is actually set.
+export const POD_DEF_DEFAULTS = {
+  'Sales':     { measuredOn: 'hire',  dropInDelta: false, dropPts: false, capUnit: 'Joiners', goalUnit: 'Joiners' },
+  'SME-US':    { measuredOn: 'offer', dropInDelta: false, dropPts: false, capUnit: 'Joiners', goalUnit: 'Joiners' },
+  'SME-India': { measuredOn: 'offer', dropInDelta: false, dropPts: false, capUnit: 'Joiners', goalUnit: 'Joiners' },
+  'Lateral':   { measuredOn: 'offer', dropInDelta: true,  dropPts: true,  capUnit: 'Offers',  goalUnit: 'Offers'  },
+  'Others':    { measuredOn: 'hire',  dropInDelta: false, dropPts: true,  capUnit: 'NA',      goalUnit: 'Joiners' },
+};
+export const POD_DEF_FIELDS = ['measuredOn', 'dropInDelta', 'dropPts', 'capUnit', 'goalUnit'];
+const PODDEF_LS = 'ik_pod_defs_q';   // { "2026-Q4": { Sales: {measuredOn:'offer', ...} } }
+
+// The definition in force for a pod in a quarter: the quarter's own entry, else the newest EARLIER quarter that set
+// one, else the built-in default — the same copy-forward ladder pods and capacity already use.
+// ⚠ Merged FIELD BY FIELD over the default, so a definition that sets only `measuredOn` keeps sane values for the rest.
+export function podDefOf(pod, quarter = currentQuarter()) {
+  const base = POD_DEF_DEFAULTS[pod] || POD_DEF_DEFAULTS['Others'];
+  const store = loadJSON(PODDEF_LS);
+  const v = inheritedValue(store, pod, quarter);
+  return v && typeof v === 'object' ? { ...base, ...v } : { ...base };
+}
+// The quarter whose entry is actually in force — for the Admin tab's "effective from" column. null = the built-in default.
+export function podDefSetAt(pod, quarter = currentQuarter()) {
+  const store = loadJSON(PODDEF_LS); const target = qRank(quarter);
+  let best = null, bestRank = -1;
+  for (const qk of Object.keys(store)) {
+    const r = qRank(qk);
+    if (r <= target && r > bestRank && store[qk] && store[qk][pod] != null) { bestRank = r; best = qk; }
+  }
+  return best;
+}
+export function setPodDef(pod, def, quarter) {
+  const store = loadJSON(PODDEF_LS);
+  if (!store[quarter]) store[quarter] = {};
+  if (!def) delete store[quarter][pod]; else store[quarter][pod] = def;
+  saveJSON(PODDEF_LS, store);
+}
+export function podDefsStore() { return loadJSON(PODDEF_LS); }
+
 // ===== capacity (Score) =====
 export function capacityOf(name, quarter = currentQuarter()) {
   const v = inheritedValue(loadJSON(CAP_LS), name, quarter);
