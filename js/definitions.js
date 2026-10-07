@@ -177,7 +177,7 @@ export const DEFINITIONS = {
         items: [
           ['Joiners or Offers', 'Sales, SME-US, SME-India and Others are measured on <strong>Joiners</strong>. Lateral is measured on <strong>Offers</strong> &mdash; everyone who received one, whether they started, are in closing, or dropped. That is why Lateral is the only table whose Delta also subtracts Offer drop.'],
           ['What counts as achieved', '<strong>Joined</strong> on Sales and Others &middot; <strong>Joined + Joining pipeline</strong> on SME-US and SME-India &middot; <strong>Joined + Joining pipeline + Offer drop</strong> on Lateral.'],
-          ['Earlier quarters', 'SME-US, SME-India and Lateral leave out anyone tied to an <strong>earlier quarter&rsquo;s opening</strong>. Sales and Others count them, deliberately: their goal is joiners whenever the opening was raised.'],
+          ['Earlier quarters', 'On SME-US, SME-India and Lateral a joiner counts in the quarter their <strong>position was opened</strong>, not the quarter they started. So someone opened for in July who starts in October counts in the July quarter, where the work was done. Sales and Others count everyone in the quarter they started, deliberately: their goal is joiners whenever the position was opened.'],
           ['Capacity (NA) on Others', 'Agencies are given no capacity. Only the heading says NA; the cells are a dash.'],
         ]
       },
@@ -714,7 +714,7 @@ export const DEFINITIONS = {
     warnings: [
       ['This measures drop-out, not joining', 'Joined and Joining pipeline sit on <em>both</em> sides of the fraction, so they cancel: it is arithmetically <strong>1 &minus; Offer drop &divide; Offered</strong>. That is the intended question &mdash; <em>who have we lost?</em>'],
       ['Joining pipeline is live; its neighbours are quarterly', 'It shows who is in closing <strong>today</strong>, so the same people sit inside every quarter&rsquo;s Offered &mdash; kept that way so the column matches the Hiring Manager card.'],
-      ['How this compares with the Recruiter tab', 'Its <em>Position Fulfilment</em> tables take no earlier-quarter subtraction on Joined for the Sales and Others pods. Pods do not exist on this tab, so here it is applied to every department &mdash; the same as the Recruiter tab&rsquo;s own Joining Conversion.'],
+      ['How this compares with the Recruiter tab', 'Joined here counts a person in the quarter their <strong>position was opened</strong> when that is earlier than their start date &mdash; the same rule as the Recruiter tab&rsquo;s own Joining Conversion, so the two agree. Its <em>Position Fulfilment</em> tables differ by pod: Sales and Others count everyone in the quarter they started.'],
     ]
   },
 

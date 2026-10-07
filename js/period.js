@@ -125,6 +125,25 @@ export function rangeTouchesQuarter(q, r) {
 }
 
 // Does the range cover every day of these quarters? Then the day sums equal the quarter figures (#129 control 1).
+// ===== #203 (7 Oct 2026): WHICH QUARTER A JOINER IS COUNTED IN =====
+// Normally the quarter they STARTED in. But a joiner filling an opening raised in an EARLIER quarter used to be
+// subtracted from their start quarter (so a quarter only counted its own work) and was then picked up in NO quarter
+// at all, because the earlier quarter filters on START DATE and they had not started yet. Measured 7 Oct 2026:
+// 13 joiners lost outright, 7 of them in 2026-Q3 — nearly all starting in the first days of a quarter against the
+// previous quarter's opening, so it recurs at every quarter boundary.
+// ➡ They are counted in the quarter of the OPENING they filled, which is the quarter the work was actually done.
+// ⚠ EARLIER only, deliberately. An opening raised AFTER someone started (1 case today) keeps the start quarter, so
+//   nobody who is counted correctly now moves.
+export const joinerQuarter = (e) => {
+  const sq = quarterOfDay(e && e.startDate);
+  return (e && e.openingQuarter && sq && e.openingQuarter < sq) ? e.openingQuarter : sq;
+};
+// The From / To test, mirroring dropIn(): their own start day when it falls inside the quarter they count in; a
+// carried-over joiner has NO day inside that quarter, so they count only while the range covers the whole of it —
+// narrow the dates and they drop out, like every other row (Rule 13).
+export const joinerIn = (e, r, q) =>
+  (quarterOfDay(e && e.startDate) === q ? inRange(e && e.startDate, r) : coversQuarters(r, [q]));
+
 export function coversQuarters(r, qs) {
   if (!r) return true;
   const s = quarterSpan(qs);

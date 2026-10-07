@@ -18,6 +18,7 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
+         joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
 import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
@@ -1341,15 +1342,17 @@ export function initEfficiencyFilters(data) {
     const rg = effRange();   // #129: Joined and Dropped follow From / To, so the cache is keyed by the range as well as the period
     const cacheKey = (period ? period.join(',') : '*') + '|' + rg.from + '|' + rg.to;
     if (_jcKey === cacheKey && _jc) return _jc;
-    const qOf = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-    const startQ = period ? period[0] : null;
+    const startQ = period ? period[0] : null;   // #203: the local qOf() went with the Joined rule it served
     const inPeriod = (qq) => !!qq && (!period || period.includes(qq));
     const earlier = (oq) => !!(oq && startQ && oq < startQ);
     const byKey = {};
     const bump = (key, field) => { const a = byKey[key] || (byKey[key] = { o: 0, j: 0, p: 0, dr: 0 }); a[field] += 1; };
     (data.offerEvents || []).forEach(e => {
-      if (!e.accepted || e.appStatus !== 'Hired' || !inPeriod(qOf(e.startDate)) || !inRange(e.startDate, rg)) return; // Joined = moved to Hired, not just an accepted offer · #129: inside From / To
-      if (earlier(e.openingQuarter)) return;
+      // #203: the quarter of the OPENING they filled when that is earlier than their start — they used to be
+      // dropped from both quarters. Kept in step with the Recruiter tab's own Joining Conversion (Rule 3).
+      if (!e.accepted || e.appStatus !== 'Hired') return; // Joined = moved to Hired, not just an accepted offer
+      const jq = joinerQuarter(e);
+      if (!inPeriod(jq) || !joinerIn(e, rg, jq)) return;   // #129: inside From / To
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'j');
     });
     (data.joiningPendingCases || []).forEach(c => {
