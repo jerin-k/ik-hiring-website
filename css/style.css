@@ -1995,6 +1995,9 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 :root {
   --it-sel: #398AA2; --it-rej: #b45a72; --it-can: #C08457; --it-pen: #9fb3d6;
   --it-zero: #c8d0de; --it-quiet: #f7f9fc;
+  /* #206c: the trend line. A GREY, deliberately - it is not a fifth outcome, and giving it a hue would
+     put a colour on the chart that means nothing in the legend above it. */
+  --it-trend: #8b94a7;
 }
 .it-controls { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;
   margin-bottom: 0.9rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-light); }
@@ -2020,4 +2023,7 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .it-scroller svg { display: block; min-width: 48rem; width: 100%; height: auto; }
 .it-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; margin: 0.45rem 0; }
 .it-state { margin-bottom: 0.9rem; }
+.it-trendkey { display: inline-flex; align-items: center; }
+.it-trendkey::before { content: ''; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.3rem;
+  border-top: 1.5px dashed var(--it-trend); vertical-align: middle; }
 @media (max-width: 46rem) { .it-legend { margin-left: 0; } }
