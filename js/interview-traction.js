@@ -51,6 +51,10 @@ function daysForRound(tr, round, scope) {
   const out = {};
   const byJob = tr.byJobRoundDay || {};
   for (const j8 in byJob) {
+    // #206b: belt and braces. The pipeline no longer emits a '(no job)' bucket, but a cached older file
+    // might still carry one — and 55 of the 74 bookings in it were the SANDBOX job, which the pipeline
+    // drops by design (#37). Test interviews must never reach a business number.
+    if (!j8 || j8 === '(no job)') continue;
     if (scope.jobOk && !scope.jobOk(j8)) continue;
     const days = byJob[j8][round];
     if (!days) continue;
