@@ -1,5 +1,5 @@
 import { levelChooser, levelsOn, wireLevels, syncLevels, expandAllOn, showLevels } from '../tree-levels.js';   // #189e: the same control as the other two tabs
-import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey } from '../recruiter-pods.js';
+import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey, podDefOf } from '../recruiter-pods.js';   // #205: what a pod measures, per quarter
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs · #193a: isMoreClick
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
@@ -65,12 +65,19 @@ const FULFIL_TABLES = [
 //    + Joining pending(2) + Drop(2) + Delta(1) + Delta bar(1) + Who has joined(1) + Who is joining(1)
 //    = 15 on EVERY table since #182c. cells() and jpCells()
 //    still have to match it, but the five header rows can no longer disagree with each other.
+// #205 (7 Oct 2026): a table's counting rule is no longer fixed in this file — it is the POD DEFINITION in force
+// for the selected quarter. With nothing configured `podDefOf` returns the built-in defaults, which ARE the values
+// in FULFIL_TABLES above, so this is a no-op until a definition is set. 🚨 Everything downstream must use the
+// RESOLVED table, never the constant, or a quarter's rule and its columns disagree.
+const tableFor = (T, q) => { const d = podDefOf(T.pod, q);
+  return { ...T, count: d.measuredOn, drop: d.dropInDelta, dropPts: d.dropPts, capUnit: d.capUnit, goalUnit: d.goalUnit }; };
+
 const FULFIL_NCOL = 15;   // #182c: +2 people columns
 const fulfilHeadHtml = (T) => `
   <tr><th rowspan="2" style="min-width:${T.lblWidth}">Pod / Recruiter / Job / Topic</th>
-      <th rowspan="2" class="stage-hdr">Capacity (${T.capUnit})</th>
+      <th rowspan="2" class="stage-hdr" data-unit="cap-${T.key}">Capacity (${T.capUnit})</th>
       <th rowspan="2" class="stage-hdr">Capacity used</th>
-      <th colspan="2" class="stage-hdr">Goal (${T.goalUnit})</th>
+      <th colspan="2" class="stage-hdr" data-unit="goal-${T.key}">Goal (${T.goalUnit})</th>
       <th colspan="2" class="stage-hdr">Joined</th>
       <th colspan="2" class="stage-hdr">Joining pipeline</th>
       <th colspan="2" class="stage-hdr">Offer drop</th>
@@ -2026,10 +2033,18 @@ export function initRecruiterFilters(baseData) {
     // ⚠ A pod that IS in view but whose people all have nothing this quarter keeps its table and its
     //   "No recruiters in this group." line. That is not a filter hiding them, and quietly dropping the
     //   table would hide a pod that delivered nothing — the very thing worth seeing.
-    FULFIL_TABLES.forEach(T => {
+    FULFIL_TABLES.forEach(T0 => {
+      const T = tableFor(T0, selQuarter());   // #205: the definition in force for the selected quarter
       const gs = groups.filter(G => G.pod === T.pod);
       const block = document.getElementById('fulfilBlock-' + T.key);
       if (block) block.style.display = gs.length ? '' : 'none';
+      // #205: the header is built once at page load, so the units have to be repainted when the quarter changes -
+      // a Capacity column headed "Joiners" over a figure counted in Offers is exactly the confusion this task exists
+      // to end.
+      const capTh = document.querySelector(`[data-unit="cap-${T.key}"]`);
+      if (capTh) capTh.textContent = `Capacity (${T.capUnit})`;
+      const goalTh = document.querySelector(`[data-unit="goal-${T.key}"]`);
+      if (goalTh) goalTh.textContent = `Goal (${T.goalUnit})`;
       const body = document.getElementById('fulfilBody-' + T.key);
       if (!body) return;
       body.innerHTML = gs.length ? fulfilRows(gs, T) : '';
@@ -3485,7 +3500,7 @@ export function initRecruiterFilters(baseData) {
   // Every figure below still comes straight out of lastFulfil; nothing here is recomputed. The one time this
   // chart worked anything out for itself it showed lifetime scores under a quarter heading.
   function buildFulfilChart() {
-    FULFIL_TABLES.forEach(T => buildOneFulfilChart(T));
+    FULFIL_TABLES.forEach(T => buildOneFulfilChart(tableFor(T, selQuarter())));   // #205
   }
   function buildOneFulfilChart(T) {
     const ctx = document.getElementById('fulfilChart-' + T.key); if (!ctx) return;

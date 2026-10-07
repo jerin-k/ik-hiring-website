@@ -24,12 +24,12 @@ const PENDING_LS = 'ik_metric_config_pending';   // #111b: the payload Publish l
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
 // #11b: userType is the Agency|Freelancer toggle set beside the pod selector. It is NOT per-quarter — a user
 // either is an agency or is not — so it is a flat { name: 'Agency' | 'Freelancer' } map, unlike pods/capacity.
-const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates' };   // #111: start/leaving dates, flat per person
+const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates', podDefs: 'ik_pod_defs_q' };   // #111: start/leaving dates, flat per person · #205: what each pod measures, per quarter
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
 function readLS(key, dflt) { try { const v = localStorage.getItem(key); return v == null ? dflt : JSON.parse(v); } catch (e) { return dflt; } }
-function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType || c.recruiterDates); }
+function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType || c.recruiterDates || c.podDefs); }   // #205
 
 // Fetch server config (with degradation ladder) and hydrate the runtime keys. Call once, before rendering.
 export async function loadMetricConfig() {
@@ -68,6 +68,7 @@ function hydrate(cfg) {
   if (cfg.deptFamily) localStorage.setItem(KEYS.deptFamily, JSON.stringify(cfg.deptFamily));
   if (cfg.userType) localStorage.setItem(KEYS.userType, JSON.stringify(cfg.userType));   // #11b
   if (cfg.recruiterDates) localStorage.setItem(KEYS.recruiterDates, JSON.stringify(cfg.recruiterDates));   // #111
+  if (cfg.podDefs) localStorage.setItem(KEYS.podDefs, JSON.stringify(cfg.podDefs));   // #205: what each pod measures
 }
 
 export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); localStorage.removeItem(PENDING_LS); }   // an edit after Publish makes the sent payload stale
@@ -76,12 +77,12 @@ export function getMeta() { return readLS(META_LS, null); }
 
 // Snapshot the runtime config into a publishable object.
 export function collectConfig() {
-  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}) };
+  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}), podDefs: readLS(KEYS.podDefs, {}) };   // #205
 }
 
 // Deep-equal of the meaningful config fields (for confirm-by-read).
 function sameConfig(a, b) {
-  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates'];
+  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates', 'podDefs'];   // #205: a podDefs-only publish must confirm too
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 

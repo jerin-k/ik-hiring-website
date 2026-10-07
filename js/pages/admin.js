@@ -1,6 +1,6 @@
 import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
-import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey } from '../recruiter-pods.js';
+import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey, podDefOf, podDefSetAt } from '../recruiter-pods.js';   // #205: podDefOf / podDefSetAt
 import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter } from '../metric-config.js';   // #11b · #111
 import { markDirty, isDirty, getMeta, publishConfig, configFileText, collectConfig } from '../metric-config.js';
 import { publishAccess, accessFileText, sendInvite, fetchInvites } from '../access-config.js';
@@ -288,6 +288,7 @@ export function renderAdmin(accessConfig, data, viewer) {
     <div class="adm-subtabs subtab-band">
       <button class="adm-subtab subtab-chip active" data-atab="access">Access Management</button>
       <button class="adm-subtab subtab-chip" data-atab="pods">Pod &amp; Capacity</button>
+      <button class="adm-subtab subtab-chip" data-atab="poddefs">Pod Definitions</button>
       <button class="adm-subtab subtab-chip" data-atab="depts">Departments &amp; Teams</button>
       <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>
     </div>
@@ -367,6 +368,23 @@ export function renderAdmin(accessConfig, data, viewer) {
         </table></div>
       </div>
       ${defsBlock('admin-pods')}
+    </div>
+
+    <div class="adm-panel" data-apanel="poddefs" style="display:none">
+      <div class="adm-card">
+        <div class="adm-toolbar">
+          <span class="adm-title">Pod &rarr; what it measures</span>
+          <span class="adm-count">Read-only. Set in the team config; ask Claude to change one.</span>
+        </div>
+        <div class="cfg-scroll"><table class="ac-table adm-roomy">
+          <thead><tr><th style="min-width:9.375rem">Pod</th><th style="width:10.625rem">Measured on</th>
+            <th style="width:13.75rem">Joiners counted in</th><th style="width:11.25rem">Delta subtracts drops</th>
+            <th style="width:9.375rem">Drops carry points</th><th style="width:9.375rem">Capacity unit</th>
+            <th style="width:9.375rem">Goal unit</th><th style="width:11.25rem">Effective from</th></tr></thead>
+          <tbody id="cfgPodDefBody"></tbody>
+        </table></div>
+      </div>
+      ${defsBlock('admin-poddefs')}
     </div>
 
     <div class="adm-panel" data-apanel="depts" style="display:none">
@@ -701,7 +719,7 @@ export function initAdminMetricConfig(data, viewer) {
     const tab = document.querySelector('.adm-subtab.active')?.dataset.atab;
     const sec = document.querySelector('.adm-row[aria-selected="true"]')?.dataset.ssec;
     const strip = document.getElementById('mcStrip'); if (strip) strip.style.display = (tab === 'pods' || tab === 'scoring') ? '' : 'none';
-    const qf = document.getElementById('cfgQuarterField'); if (qf) qf.style.display = (tab === 'pods' || (tab === 'scoring' && sec === 'grid')) ? '' : 'none';
+    const qf = document.getElementById('cfgQuarterField'); if (qf) qf.style.display = (tab === 'pods' || tab === 'poddefs' || (tab === 'scoring' && sec === 'grid')) ? '' : 'none';   // #205: the definitions are per quarter, so the control belongs here (Rule 13)
   };
   document.querySelectorAll('.adm-subtab').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.adm-subtab').forEach(b => b.classList.toggle('active', b === btn));
@@ -730,6 +748,30 @@ export function initAdminMetricConfig(data, viewer) {
       .map(([p, c]) => `<span class="adm-podchip pl-pod-${podClass(p)}">${p} ${c}</span>`).join('')
       + (hidden ? `<span class="adm-count">${hidden} not here this quarter, hidden</span>` : '');
   }
+  // #205: read-only. It states what each pod MEASURES in the selected quarter, and the quarter the rule took
+  // effect — so a team can change what it chases without being moved into another pod, and so the rule is
+  // readable instead of living only in the code.
+  // 🔑 "Joiners counted in" is DERIVED, not stored: measuring on Offers also switches on the earlier-quarter rule
+  // (`isSales = count === 'hire'` in recruiter.js). That coupling was invisible and is exactly what cost #203 two
+  // months, so it is shown rather than left to be discovered.
+  const escPD = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function renderPodDefs() {
+    const body = document.getElementById('cfgPodDefBody'); if (!body) return;
+    const q = cfgQ();
+    const yn = (v) => v ? 'Yes' : 'No';
+    body.innerHTML = POD_OPTIONS.map(pod => {
+      const d = podDefOf(pod, q);
+      const setAt = podDefSetAt(pod, q);
+      const offers = d.measuredOn === 'offer';
+      return `<tr><td><span class="adm-podchip pl-pod-${podClass(pod)}">${pod}</span></td>
+        <td>${offers ? 'Offers' : 'Joiners'}</td>
+        <td>${offers ? 'the quarter their position was opened' : 'the quarter they started'}</td>
+        <td>${yn(d.dropInDelta)}</td><td>${yn(d.dropPts)}</td>
+        <td>${escPD(d.capUnit)}</td><td>${escPD(d.goalUnit)}</td>
+        <td>${setAt ? escPD(setAt) : '<span class="adm-count">built-in default</span>'}</td></tr>`;
+    }).join('');
+  }
+
   function renderPodCapacity() {
     const body = document.getElementById('cfgPodBody'); if (!body) return;
     const q = cfgQ();
@@ -904,10 +946,10 @@ export function initAdminMetricConfig(data, viewer) {
     for (let y = Math.max(cy, 2026); y >= 2026; y--) for (let q = 4; q >= 1; q--) qs.push(qKey(y, q));
     qSel.innerHTML = qs.map(q => `<option value="${q}">${q.replace('-', ' ')}</option>`).join('');
     qSel.value = currentQuarter();
-    qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); });
+    qSel.addEventListener('change', () => { renderPodCapacity(); renderScoreGrid(); renderPodDefs(); });   // #205
     document.getElementById('cfgShowPast')?.addEventListener('change', renderPodCapacity);
   }
-  renderPodCapacity(); renderScoreGrid(); renderDeptFamily(); renderRefBlock(); refreshPublishUI(); showMetricStrip();
+  renderPodCapacity(); renderScoreGrid(); renderPodDefs(); renderDeptFamily(); renderRefBlock(); refreshPublishUI(); showMetricStrip();   // #205
   // #137b: an old link or a remembered route to the retired Metric Configuration tab lands on Pod & Capacity.
   if (/^#\/?admin\/metric$/.test(location.hash)) location.hash = 'admin/pods';
 }
