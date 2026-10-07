@@ -41,6 +41,14 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 // The day window is the last 30 days INSIDE the range (Jerin, 7 Oct: "the last 30 days in the range"), so a
 // range shorter than 30 days gives a shorter window - and the caption has to say the window it actually drew,
 // never "the last 30 days" over seven of them.
+// Which month an ISO week belongs to is decided by its THURSDAY - that is the ISO rule, and it stops a week
+// straddling a month boundary being labelled by whichever day happened to carry data.
+function isoWeekThursday(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dn = jan4.getUTCDay() || 7;
+  const mon1 = new Date(jan4.getTime() - (dn - 1) * 86400000);
+  return new Date(mon1.getTime() + ((week - 1) * 7 + 3) * 86400000);
+}
 function dayStart(scope) {
   const first = addDays(scope.to, -(DAY_WINDOW - 1));
   return first < scope.from ? scope.from : first;
@@ -80,6 +88,25 @@ function slotsFor(dayMap, view, scope) {
     }
     return slots;
   }
+  if (view === 'month') {
+    const byMon = {};
+    for (const d in dayMap) {
+      const k = d.slice(0, 7), c = byMon[k] || (byMon[k] = [0, 0, 0, 0]);
+      const v = dayMap[d];
+      c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; c[3] += v[3];
+    }
+    // Every month across the range, so a silent month is a visible gap rather than a missing column.
+    let cur = scope.from.slice(0, 7);
+    const last = scope.to.slice(0, 7);
+    while (cur <= last) {
+      slots.push({ lab: MON[Number(cur.slice(5, 7)) - 1], sub: cur.slice(0, 4),
+                   v: byMon[cur] || [0, 0, 0, 0], quiet: false });
+      let yy = Number(cur.slice(0, 4)), mm = Number(cur.slice(5, 7)) + 1;
+      if (mm > 12) { mm = 1; yy++; }
+      cur = yy + '-' + pad2(mm);
+    }
+    return slots;
+  }
   const byWeek = {};
   for (const d in dayMap) {
     const k = isoWeek(d), c = byWeek[k] || (byWeek[k] = [0, 0, 0, 0]);
@@ -88,9 +115,13 @@ function slotsFor(dayMap, view, scope) {
   }
   const ks = Object.keys(byWeek).map(Number);
   if (!ks.length) return [];
+  const yr = Number(scope.from.slice(0, 4));
   // Fill the gap weeks too, so a silent fortnight reads as silence rather than as two adjacent bars.
+  // Jerin, 8 Oct: the MONTH sits under the week number now. The total used to, and it already sits above
+  // the bar - printing it twice told you nothing and cost the one line that could carry the calendar.
   for (let w = Math.min(...ks); w <= Math.max(...ks); w++) {
-    slots.push({ lab: 'W' + w, sub: '', v: byWeek[w] || [0, 0, 0, 0], quiet: false });
+    slots.push({ lab: 'W' + w, sub: MON[isoWeekThursday(yr, w).getUTCMonth()],
+                 v: byWeek[w] || [0, 0, 0, 0], quiet: false });
   }
   return slots;
 }
@@ -119,13 +150,28 @@ function chartSvg(slots) {
       s += `<rect x="${bx}" y="${base - 2}" width="${bw}" height="2" fill="var(--it-zero)"/>`
          + `<text x="${bx + bw / 2}" y="${base - 6}" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-weight="600">0</text>`;
     } else {
-      let acc = 0;
+      let acc = 0; const outside = [];
       for (let i = 0; i < 4; i++) {
         const v = sl.v[i]; if (v <= 0) continue;
         const hh = (v / max) * plotH, yy = y(acc + v);
         s += `<rect x="${bx}" y="${yy}" width="${bw}" height="${hh}" fill="${SERIES[i].col}"><title>${SERIES[i].key}: ${v}</title></rect>`;
         if (hh >= 11) s += `<text x="${bx + bw / 2}" y="${yy + hh / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#fff" font-weight="600">${v}</text>`;
+        else outside.push({ y: yy + hh / 2, v, col: SERIES[i].col });
         acc += v;
+      }
+      // Jerin, 8 Oct: "Even if its a small bar, i still want the data label, may be outside somehow."
+      // A slice too thin to hold a number puts it BESIDE the bar, in that slice's own colour so you can
+      // tell which one it belongs to, nudged apart so two thin slices never print on top of each other.
+      if (outside.length) {
+        outside.sort((a, b) => a.y - b.y);
+        for (let k = 1; k < outside.length; k++) {
+          if (outside[k].y - outside[k - 1].y < 8.5) outside[k].y = outside[k - 1].y + 8.5;
+        }
+        const right = bx + bw + 14 < W - padR;
+        outside.forEach(o => {
+          s += `<text x="${right ? bx + bw + 2 : bx - 2}" y="${Math.min(base - 1, o.y + 2.5)}" `
+             + `text-anchor="${right ? 'start' : 'end'}" font-size="7.5" fill="${o.col}" font-weight="700">${o.v}</text>`;
+        });
       }
       s += `<text x="${bx + bw / 2}" y="${y(tot) - 4}" text-anchor="middle" font-size="9" fill="var(--text-secondary)" font-weight="600">${tot}</text>`;
     }
@@ -134,6 +180,23 @@ function chartSvg(slots) {
       ? `<text x="${x0 + iw / 2}" y="${H - 8.5}" text-anchor="middle" font-size="7.5" fill="var(--muted)">${sl.sub}</text>`
       : `<text x="${x0 + iw / 2}" y="${H - 8.5}" text-anchor="middle" font-size="8" fill="var(--muted)">(${tot})</text>`;
   });
+  // ---- trend line over the slot TOTALS (Jerin, 8 Oct: "Add a trendline if it makes sense") ----
+  // A straight least-squares fit, so it answers one question: is the volume rising or falling across the
+  // period shown. It is drawn from the totals ALREADY computed above - the chart reads, it never recomputes.
+  const tots = slots.map(sl => sl.v[0] + sl.v[1] + sl.v[2] + sl.v[3]);
+  if (tots.length >= 3) {
+    const n2 = tots.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    tots.forEach((t, i) => { sx += i; sy += t; sxx += i * i; sxy += i * t; });
+    const den = n2 * sxx - sx * sx;
+    if (den !== 0) {
+      const slope = (n2 * sxy - sx * sy) / den, inter = (sy - slope * sx) / n2;
+      const cx = i => padL + i * iw + iw / 2;
+      const cl = val => y(Math.max(0, Math.min(max, val)));
+      s += `<line x1="${cx(0)}" y1="${cl(inter)}" x2="${cx(n2 - 1)}" y2="${cl(inter + slope * (n2 - 1))}" `
+         + `stroke="var(--it-trend)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" opacity="0.9"/>`;
+    }
+  }
   s += `<line x1="${padL}" y1="${base}" x2="${W - padR}" y2="${base}" stroke="var(--border)" stroke-width="1"/></svg>`;
   return s;
 }
@@ -156,12 +219,13 @@ export function mountInterviewTraction(host, data, getScope) {
     <div class="it-controls">
       <div class="it-seg" role="group" aria-label="Group interviews by">
         <button type="button" class="active" data-view="week">Week view</button>
+        <button type="button" data-view="month">Month view</button>
         <button type="button" data-view="day">Day view</button>
       </div>
       <div class="ms it-rounds"></div>
       <label class="it-chk"><input type="checkbox" class="it-hide" checked> Hide rounds with no interviews</label>
       <div class="it-legend">${SERIES.map(s =>
-        `<span><i style="background:${s.col}"></i>${s.key}</span>`).join('')}</div>
+        `<span><i style="background:${s.col}"></i>${s.key}</span>`).join('')}<span class="it-trendkey">Trend</span></div>
     </div>
     <p class="sub-note it-state"></p>
     <div class="it-charts"></div>
@@ -241,8 +305,8 @@ export function mountInterviewTraction(host, data, getScope) {
     });
     if (hidden) html += `<p class="it-empty">${hidden} round${hidden === 1 ? '' : 's'} with no interviews in this period ${hidden === 1 ? 'is' : 'are'} hidden.</p>`;
     const winFrom = state.view === 'day' ? dayStart(scope) : scope.from;
-    stateEl.textContent = `Showing ${winFrom} to ${scope.to}`
-      + (state.view === 'day' ? ', day by day' : '')
+    const grain = state.view === 'day' ? ', day by day' : (state.view === 'month' ? ', month by month' : '');
+    stateEl.textContent = `Showing ${winFrom} to ${scope.to}` + grain
       + ` · ${grand.toLocaleString()} interviews booked across ${picked.length} round${picked.length === 1 ? '' : 's'}`;
     chartsEl.innerHTML = html;
   }

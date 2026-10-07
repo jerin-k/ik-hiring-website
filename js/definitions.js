@@ -155,7 +155,9 @@ export const DEFINITIONS = {
         items: [
           ['Where the outcome comes from', 'What <strong>actually happened next</strong>, never the interviewer&rsquo;s feedback form. Feedback is often never submitted, so scoring on it would leave silent holes.'],
           ['A zero bar', 'A day or week with no interviews keeps its place and shows a <strong>0</strong>, so a quiet spell reads as quiet rather than disappearing. In day view weekends are shaded.'],
-          ['Week view and Day view', 'Week view covers the whole period. <strong>Day view shows the last 30 days</strong> of it.'],
+          ['Week view, Month view and Day view', 'Week and month view cover the whole period. <strong>Day view shows the last 30 days</strong> of it. Under each week sits the month it falls in &mdash; by its Thursday, which is the standard rule for a week that straddles two months.'],
+          ['The dashed trend line', 'A straight line fitted through the <strong>totals</strong> of the bars shown, so it answers one question: is the volume rising or falling across this period. It follows the bars you are looking at, so changing the rounds, the dates or the view redraws it. It is grey because it is not a fifth outcome.'],
+          ['Numbers beside a bar', 'A slice too thin to print a number inside it puts the number <strong>next to the bar</strong>, in that slice&rsquo;s own colour.'],
           ['Rounds and Hide rounds with no interviews', 'The <strong>Rounds</strong> chip chooses which charts appear; Online Assessment and R1 to R5 are on to begin with. The tick-box drops any round with nothing in the period.'],
           ['Each chart has its own scale', 'A round with two bookings is not drawn at the same height as a round with seventy a week. Compare a round against <strong>itself over time</strong>, not against the round above it.'],
         ]
