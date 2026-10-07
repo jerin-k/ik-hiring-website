@@ -2026,7 +2026,4 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .it-trendkey { display: inline-flex; align-items: center; }
 .it-trendkey::before { content: ''; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.3rem;
   border-top: 1.5px dashed var(--it-trend); vertical-align: middle; }
-.it-ratekey { display: inline-flex; align-items: center; }
-.it-ratekey::before { content: ''; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.3rem;
-  border-top: 1.5px dotted var(--it-sel); vertical-align: middle; }
 @media (max-width: 46rem) { .it-legend { margin-left: 0; } }
