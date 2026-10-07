@@ -203,7 +203,12 @@ function chartSvg(slots) {
 
 // Builds the panel inside `host` once and returns the render function the page calls whenever a filter moves.
 // `getScope()` must return { from, to, jobOk(job8) } — the page owns the filters, this owns the metric.
-export function mountInterviewTraction(host, data, getScope) {
+// #207 (Jerin, 8 Oct): THIS PANEL gets its own Quarter box, ticking more than one, opening on the two most
+// recent. The page-wide Quarter dropdown only ever holds ONE, which is what locked From/To inside a single
+// quarter - the thing that sent him looking. `opts.quarters` is every quarter on offer, newest last;
+// `opts.onQuarters(qs)` lets the page re-bound its date inputs to whatever is ticked here. Nothing else on
+// the tab is touched: the page hides its own Quarter chip while this sub-tab is open.
+export function mountInterviewTraction(host, data, getScope, opts) {
   if (!host) return () => {};
   const tr = data && data.interviewTraction;
   if (!tr || !tr.byJobRoundDay) {
@@ -213,6 +218,9 @@ export function mountInterviewTraction(host, data, getScope) {
   }
   const rounds = tr.rounds || [];
   const sel = new Set(DEFAULT_ROUNDS.filter(r => rounds.includes(r)));
+  const allQ = (opts && opts.quarters) || [];
+  const onQuarters = (opts && opts.onQuarters) || (() => {});
+  const qSel = new Set(allQ.slice(-2));            // the two most recent, ticked to begin with
   const state = { view: 'week', hide: true };
 
   host.innerHTML = `
@@ -222,6 +230,7 @@ export function mountInterviewTraction(host, data, getScope) {
         <button type="button" data-view="month">Month view</button>
         <button type="button" data-view="day">Day view</button>
       </div>
+      <div class="ms it-quarters"></div>
       <div class="ms it-rounds"></div>
       <label class="it-chk"><input type="checkbox" class="it-hide" checked> Hide rounds with no interviews</label>
       <div class="it-legend">${SERIES.map(s =>
@@ -235,6 +244,40 @@ export function mountInterviewTraction(host, data, getScope) {
   const chartsEl = host.querySelector('.it-charts');
   const stateEl = host.querySelector('.it-state');
   const hideEl = host.querySelector('.it-hide');
+
+  // The Quarter chip. Same shape as Rounds. Ticking one re-bounds the page's From/To through onQuarters,
+  // THEN redraws - in that order, because the redraw reads the range the page has just been re-bounded to.
+  const qHost = host.querySelector('.it-quarters');
+  const pickedQ = () => allQ.filter(q => qSel.has(q));
+  const paintQ = () => {
+    const p = pickedQ();
+    const b = qHost.querySelector('.ms-btn');
+    b.textContent = p.length === 0 ? 'Quarter: none' : 'Quarter: ' + p.map(q => q.slice(5)).join(', ');
+    b.title = p.join(', ');
+  };
+  if (allQ.length) {
+    qHost.innerHTML = `<button type="button" class="ms-btn"></button>
+      <div class="ms-panel" style="display:none"><div class="ms-list">${allQ.slice().reverse().map(q =>
+        `<label class="ms-opt"><input type="checkbox" value="${esc(q)}"${qSel.has(q) ? ' checked' : ''}> ${esc(q)}</label>`
+      ).join('')}</div></div>`;
+    const qBtn = qHost.querySelector('.ms-btn'), qPanel = qHost.querySelector('.ms-panel');
+    qBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = qPanel.style.display !== 'none';
+      document.querySelectorAll('.ms-panel').forEach(x => { x.style.display = 'none'; });
+      qPanel.style.display = open ? 'none' : 'block';
+    });
+    qPanel.addEventListener('click', e => e.stopPropagation());
+    qHost.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => {
+      if (cb.checked) qSel.add(cb.value); else qSel.delete(cb.value);
+      paintQ();
+      onQuarters(pickedQ());
+      render();
+    }));
+    paintQ();
+  } else {
+    qHost.style.display = 'none';
+  }
 
   // The Rounds chip. makeMultiSelect treats an empty selection as "All" and cannot be preset, so the six
   // defaults are ticked by hand after it is built, with rendering held off until the last one lands.
@@ -262,6 +305,9 @@ export function mountInterviewTraction(host, data, getScope) {
   }));
   paintRounds();
   booting = false;
+  // Open on the two most recent quarters, not the current one. This runs BEFORE the page's first render()
+  // call, so the date inputs are already re-bounded by the time anything is drawn.
+  if (allQ.length) onQuarters(pickedQ());
 
   seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     state.view = b.dataset.view;

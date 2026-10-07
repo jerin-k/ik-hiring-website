@@ -159,6 +159,7 @@ export const DEFINITIONS = {
           ['The dashed trend line', 'A straight line fitted through the <strong>totals</strong> of the bars shown, so it answers one question: is the volume rising or falling across this period. It follows the bars you are looking at, so changing the rounds, the dates or the view redraws it. It is grey because it is not a fifth outcome.'],
           ['Numbers beside a bar', 'A slice too thin to print a number inside it puts the number <strong>next to the bar</strong>, in that slice&rsquo;s own colour.'],
           ['Rounds and Hide rounds with no interviews', 'The <strong>Rounds</strong> chip chooses which charts appear; Online Assessment and R1 to R5 are on to begin with. The tick-box drops any round with nothing in the period.'],
+          ['Quarter', 'This panel has its <strong>own</strong> Quarter box and you can tick more than one. It opens on the <strong>two most recent quarters</strong>. The page&rsquo;s own Quarter dropdown steps aside while you are here, because it only ever holds one &mdash; and it is what used to stop From and To reaching back past the current quarter.'],
           ['Each chart has its own scale', 'A round with two bookings is not drawn at the same height as a round with seventy a week. Compare a round against <strong>itself over time</strong>, not against the round above it.'],
         ]
       },
