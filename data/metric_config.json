@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-07T10:03:43.056Z",
+  "updatedAt": "2026-10-07T10:55:05.080Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -251,6 +251,17 @@
     },
     "Ankita Kabra": {
       "end": "2026-07-07"
+    }
+  },
+  "podDefs": {
+    "2026-Q4": {
+      "Sales": {
+        "measuredOn": "offer",
+        "dropInDelta": true,
+        "dropPts": true,
+        "capUnit": "Offers",
+        "goalUnit": "Offers"
+      }
     }
   }
 }
