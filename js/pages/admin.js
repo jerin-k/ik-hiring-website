@@ -718,7 +718,11 @@ export function initAdminMetricConfig(data, viewer) {
   const showMetricStrip = () => {
     const tab = document.querySelector('.adm-subtab.active')?.dataset.atab;
     const sec = document.querySelector('.adm-row[aria-selected="true"]')?.dataset.ssec;
-    const strip = document.getElementById('mcStrip'); if (strip) strip.style.display = (tab === 'pods' || tab === 'scoring') ? '' : 'none';
+    // #205a: Pod Definitions belongs to this strip too — it is part of the SAME metric_config.json, so Publish sends
+    // it with the rest, and the Quarter control is useless while its parent strip is hidden.
+    // 🚨 THE MISS WORTH REMEMBERING: #205 set the Quarter FIELD's own display and left the STRIP hidden, so the
+    // control was "visible" to a style check and invisible on screen. Assert offsetParent, never style alone.
+    const strip = document.getElementById('mcStrip'); if (strip) strip.style.display = (tab === 'pods' || tab === 'scoring' || tab === 'poddefs') ? '' : 'none';
     const qf = document.getElementById('cfgQuarterField'); if (qf) qf.style.display = (tab === 'pods' || tab === 'poddefs' || (tab === 'scoring' && sec === 'grid')) ? '' : 'none';   // #205: the definitions are per quarter, so the control belongs here (Rule 13)
   };
   document.querySelectorAll('.adm-subtab').forEach(btn => btn.addEventListener('click', () => {
