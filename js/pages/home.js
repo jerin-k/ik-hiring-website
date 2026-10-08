@@ -137,8 +137,24 @@ export function initHomeFilters() {
     // #182f: openVacant was computed here and never used by anything - removed rather than left looking
     // effective, and it would now be subtracting PEOPLE from POSITIONS.
 
-    const fillRate = totalPositions > 0 ? ((totalFilled / totalPositions) * 100).toFixed(1) : '0.0';
-    const convRate = f.applied > 0 ? ((f.hired / f.applied) * 100).toFixed(1) : '0.0';
+    // ===== #215 (Jerin, 8 Oct 2026): the tiles become TIME-BASED; the funnel stays a cohort and says so =====
+    // 🚨 THE FAULT THIS FIXES: `quarterly[q].funnel` buckets an application by the quarter it was CREATED in
+    // (DataRefresh.gs line ~2375, getQuarter_(app.createdAt)), so "Applications Hired" meant "people who applied
+    // this quarter and have already been hired" — 0 for the first weeks of EVERY quarter, while 11 people had
+    // actually joined. 🗣 "I think it is looking at the hires made from applications from this Quarter. Thats not
+    // what we need dude." He was right, and the tiles were simply never revisited when the rest of the site moved
+    // to the opening-first model.
+    // 🔑 Joined = PEOPLE who STARTED in the period — the same definition as HM, Recruiter and Overall Efficiency
+    // ([[project_metric-definitions]]), read off offerEvents, so no pipeline change was needed.
+    const joinedInPeriod = (() => {
+      const inPeriod = (sd) => {
+        if (!sd) return false;
+        if (isQuarter) return (sd.slice(0, 4) + '-Q' + (Math.floor((+sd.slice(5, 7) - 1) / 3) + 1)) === val;
+        return sd.slice(0, 4) === year;                 // Year view: every quarter of it
+      };
+      return (data.offerEvents || []).filter(e => e.accepted && e.appStatus === 'Hired' && inPeriod(e.startDate));
+    })();
+    const joinedCount = joinedInPeriod.length;
     const displayJobs = topJobs.slice(0, 5);
     // 🚨 quarterly[q].topJobs is the ten jobs with the most APPLICATIONS that quarter (the pipeline sorts by
     // applied, then slices 10). Ranking THAT by hires answers "of the ten busiest roles, which hired most" —
@@ -147,11 +163,27 @@ export function initHomeFilters() {
     // jobs with ZERO hires in a top-five-by-hired list. The pipeline now also emits topJobsByHired off the
     // same jobCounts; until a refresh has run, drop the zero-hire rows rather than show a ranking we can't
     // compute — the definitions block says the quarter view is limited to the busiest roles.
-    const qHired = isQuarter ? ((data.quarterly && data.quarterly[val] || {}).topJobsByHired || null) : null;
-    const allJobs = qHired ? qHired
-      : isQuarter ? topJobs.filter(j => j.hired > 0)
-      : (data.jobs || []).filter(j => j.hired > 0);
-    const hiredJobs = [...allJobs].sort((a, b) => b.hired - a.hired).slice(0, 5);
+    // 🚨 #215 (Jerin, 8 Oct 2026): this used the SAME application-cohort count as the old tile, which is why it
+    // read "the top 5 jobs made 0 hires between them" eight days into a quarter. It now ranks by the people who
+    // JOINED in the period — the same joinedInPeriod the Hired tile uses, so the two can never disagree again.
+    const hiredJobs = (() => {
+      const byJob = new Map();
+      joinedInPeriod.forEach(e => {
+        const key = String(e.jobId8 || e.jobTitle || '').slice(0, 8) || e.jobTitle;
+        if (!key) return;
+        const row = byJob.get(key) || { title: e.jobTitle || '(job not named)', department: e.department || '', hired: 0, applied: 0 };
+        row.hired++;
+        byJob.set(key, row);
+      });
+      // the application count beside each one stays the period's own, where the pipeline supplies it
+      const appsOf = {};
+      (topJobs || []).forEach(j => { if (j && j.title) appsOf[j.title] = j.applied || 0; });
+      // 🚨 appsOf only covers the quarter's TOP TEN by applications, so a job that hired well on few applicants
+      // has no figure here. Record that as UNKNOWN (null), never as 0 — "0 apps" reads as a measurement and is
+      // the same class of lie as the zero this whole task exists to fix.
+      const rows = [...byJob.values()].map(r => ({ ...r, applied: (r.title in appsOf) ? appsOf[r.title] : null }));
+      return rows.sort((a, b) => b.hired - a.hired).slice(0, 5);
+    })();
 
     // Interviews are period-aware when the pipeline supplies interviewsByQuarter;
     // otherwise fall back to the all-time total rather than showing nothing.
@@ -202,9 +234,10 @@ export function initHomeFilters() {
       .sort((a, b) => b.interviews - a.interviews);
     const anyByQuarter = (data.interviewers || []).some(p => p.byQuarter);
 
+    // #215: Screened is gone on his call — it meant "past App Review" across ELEVEN stages and said almost
+    // nothing. Four bars that genuinely nest: of this quarter's applicants, how far have they got.
     const pipelineStages = [
       { label: 'Applied', value: f.applied || 0, color: '#938FB8' },
-      { label: 'Screened', value: f.screened || 0, color: '#6E86B0' },
       { label: 'Interviewed', value: f.interviewed || 0, color: '#4E6BA6' },
       { label: 'Offered', value: f.offered || 0, color: '#398AA2' },
       { label: 'Hired', value: f.hired || 0, color: '#1E7590' },
@@ -258,7 +291,7 @@ export function initHomeFilters() {
           <h3 class="subsection-title" style="margin:0;">Key Metrics — ${periodLabel}</h3>
           <span id="home-period-slot" style="flex-shrink:0"></span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;">
           <div class="card">
             <div class="label">Total Positions</div>
             <div class="value">${totalPositions}</div>
@@ -288,20 +321,21 @@ export function initHomeFilters() {
               : `${(anyByQuarter ? panelistsInPeriod.length : (data.interviewers || []).length)} panelists${hasIq ? '' : ' · all time'}`}</div>
           </div>
           <div class="card">
-            <div class="label">Applications Hired</div>
-            <div class="value" style="color:var(--green)">${(f.hired || 0).toLocaleString()}</div>
-            <div class="sub">${convRate}% of applications</div>
-          </div>
-          <div class="card">
-            <div class="label">Fill Rate</div>
-            <div class="value" style="color:var(--green)">${fillRate}%</div>
-            <div class="sub">${totalFilled} of ${totalPositions} joined</div>
+            <div class="label">Hired</div>
+            <div class="value" style="color:var(--green)">${joinedCount.toLocaleString()}</div>
+            <div class="sub">joined in ${periodLabel}</div>
           </div>
         </div>
       </div>
 
       <div class="pipeline-wrap">
-        <h3>Interview Pipeline</h3>
+        <!-- #215: it was called "Interview Pipeline", which is a funnel wearing the name of a DIFFERENT panel —
+             the live HM / Overall Efficiency sub-tab that shows where candidates stand right now. Two things,
+             one name. It is a cohort, so it now says so. -->
+        <h3>Cohort Funnel &mdash; ${periodLabel}</h3>
+        <p class="sub-note" style="margin:-0.25rem 0 0.75rem">These four follow the people who <strong>applied</strong>
+          in ${periodLabel}, wherever they got to since &mdash; so they will not add up to the tiles above, which count
+          what <strong>happened</strong> in ${periodLabel}. Both are right; they answer different questions.</p>
         <div class="pipeline-flow">
           ${pipelineStages.map(s => {
             const flex = Math.max((s.value / maxPipeline) * 100, s.value > 0 ? 8 : 2);
@@ -351,7 +385,7 @@ export function initHomeFilters() {
             ${hiredJobs.map((j, i) => {
               const w = hiredJobs[0].hired > 0 ? Math.max(Math.round((j.hired / hiredJobs[0].hired) * 100), 3) : 0;
               return `<div class="ov-row">${ovMedal(i)}<div class="ov-main"><div class="ov-name">${ovEsc(j.title)}</div>${ovDeptTag(j.department)}<div class="ov-bar thin"><i class="h" style="width:${w}%"></i></div></div>`
-                + `<div class="ov-val"><div class="ov-big ov-ink">${j.hired}</div><div class="ov-small">${(j.applied || 0).toLocaleString()} apps</div></div></div>`;
+                + `<div class="ov-val"><div class="ov-big ov-ink">${j.hired}</div><div class="ov-small">${j.applied == null ? '' : j.applied.toLocaleString() + ' apps'}</div></div></div>`;
             }).join('')}
           </div>
           <div class="ov-foot"><span>Hires in the period</span>${ovLink('hm-report/positions', 'Hiring Manager')}</div>
