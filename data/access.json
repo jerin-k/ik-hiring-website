@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-08T14:43:48.379Z",
+  "updatedAt": "2026-10-08T14:46:25.784Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -92,7 +92,7 @@
     {
       "email": "ryan@interviewkickstart.com",
       "role": "admin",
-      "userType": "Others"
+      "userType": "Admin"
     },
     {
       "email": "soham@interviewkickstart.com",
