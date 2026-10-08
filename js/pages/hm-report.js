@@ -250,7 +250,7 @@ function monthOf(dateStr) {
 }
 
 // Administrative stages: candidates ADDED, not assessed (Jerin, 2026-08-31).
-const TP_ADDED = { rc: 1, ds: 1, offer: 1 };   // keyed like TP_KEYS — as refCheck/docSub they never matched, so the Ref Check and Doc Sub hovers said "assessed" (fixed in #122, 15 Sep 2026)
+const TP_ADDED = { app: 1, hm: 1, rc: 1, ds: 1, offer: 1 };   // #210a (8 Oct 2026): App Review and HM Review joined these - nobody is interviewed there, so they count candidates ADDED. Keyed like TP_KEYS — as refCheck/docSub they never matched, so the Ref Check and Doc Sub hovers said "assessed" (fixed in #122, 15 Sep 2026)
 
 function pctClass(val) {
   const n = parseFloat(val);
@@ -550,6 +550,7 @@ export function renderHmReport(data) {
       <div class="sheat-wrap">
         <div class="sheat-head"><h3 class="subsection-title">Throughput — by stage</h3><span class="sheat-hint" id="hm2Hint"></span></div>
         <div id="hm2Heat" class="sheat"></div><div id="hm2HeatTip" class="sheat-tip"></div>
+        <p class="sub-note" id="hm2Waiting"></p>
       </div>
       ${defsBlock('hm-throughput')}
     </div>
@@ -1154,8 +1155,8 @@ export function initHmFilters(data) {
     // throughput and must read empty. It fell through to the LIFETIME snapshot at the bottom, the bug #5 removed for
     // the older data shape, so Q4 2026 showed full all-time figures.
     if (periodSet && !quarters.length) {
-      const out = {}; TP_KEYS.forEach(k => { out[k] = { i: 0, o: 0 }; });
-      out.span = { i: 0, o: 0 }; out.overall = null;
+      const out = {}; TP_KEYS.forEach(k => { out[k] = { i: 0, o: 0, w: 0 }; });
+      out.span = { i: 0, o: 0 }; out.overall = null; out.waiting = 0;
       return out;
     }
     // #129: a window narrower than the quarters it touches adds up the DAY twins instead — assessed / progressed on the day of the
@@ -1164,7 +1165,8 @@ export function initHmFilters(data) {
       const sr = data.stageRollups || {}, rg = hmRange();
       const asD = sr.assessedByJobD || null, spD = sr.assessedSpanByJobD || null;
       const out = {};
-      TP_KEYS.forEach(k => { const s = asD ? sumDayFields((asD[j.id] || {})[TP_TO_STAGE[k]], rg) : {}; out[k] = { i: s.a || 0, o: s.b || 0 }; });
+      TP_KEYS.forEach(k => { const s = asD ? sumDayFields((asD[j.id] || {})[TP_TO_STAGE[k]], rg) : {}; out[k] = { i: s.a || 0, o: s.b || 0, w: s.w || 0 }; });
+      out.waiting = TP_KEYS.reduce((t, k) => t + out[k].w, 0);   // #210b
       const sp = spD ? sumDayFields(spD[j.id], rg) : {};
       out.span = { i: sp.a || 0, o: sp.b || 0 };
       out.overall = out.span.i > 0 ? out.span.o / out.span.i : null;
@@ -1176,10 +1178,11 @@ export function initHmFilters(data) {
       const out = {};
       TP_KEYS.forEach(k => {
         const st = st0[TP_TO_STAGE[k]] || {};
-        let i = 0, o = 0;
-        quarters.forEach(q => { const v = st[q]; if (v) { i += v.a || 0; o += v.b || 0; } });
-        out[k] = { i: i, o: o };
+        let i = 0, o = 0, w = 0;
+        quarters.forEach(q => { const v = st[q]; if (v) { i += v.a || 0; o += v.b || 0; w += v.w || 0; } });
+        out[k] = { i: i, o: o, w: w };
       });
+      out.waiting = TP_KEYS.reduce((t, k) => t + out[k].w, 0);   // #210b: assessed, no decision yet
       // The headline span is its own per-candidate figure — assessed at R1 or OA, whichever came first,
       // through to Ref Check / Documentation / Offer, whichever they reached first. Never a ratio of two
       // stage counts: one person sits in several stages, so dividing one column by another double-counts.
@@ -1244,10 +1247,11 @@ export function initHmFilters(data) {
     });
 
     function aggTP(list) {
-      const acc = {}; TP_KEYS.forEach(k => acc[k] = { i: 0, o: 0 });
-      acc.span = { i: 0, o: 0 };
+      const acc = {}; TP_KEYS.forEach(k => acc[k] = { i: 0, o: 0, w: 0 });
+      acc.span = { i: 0, o: 0 }; acc.waiting = 0;
       list.forEach(({ t }) => {
-        TP_KEYS.forEach(k => { acc[k].i += t[k].i; acc[k].o += t[k].o; });
+        TP_KEYS.forEach(k => { acc[k].i += t[k].i; acc[k].o += t[k].o; acc[k].w += (t[k].w || 0); });
+        acc.waiting += (t.waiting || 0);
         if (t.span) { acc.span.i += t.span.i; acc.span.o += t.span.o; }
       });
       // 🚨 The overall figure is its OWN per-candidate span, summed across roles — never r1.i ÷ ds.i.
@@ -1303,6 +1307,16 @@ export function initHmFilters(data) {
         labels: A ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
       });
+    // #210b (Jerin, 8 Oct 2026): people assessed in this period whose next step has not happened yet. They are
+    // counted as assessed and NOT as progressed, so they pull every rate down. He chose to DISCLOSE them rather
+    // than take them out of the sum - so this line states the number and the maths is untouched.
+    const wEl = document.getElementById('hm2Waiting');
+    if (wEl) {
+      const nW = aggTP(allList).waiting || 0;
+      wEl.textContent = nW
+        ? `${nW.toLocaleString()} ${nW === 1 ? 'person' : 'people'} assessed in this period ${nW === 1 ? 'has' : 'have'} no decision yet. They count as assessed but not as moved on, so the rates above read slightly low.`
+        : '';
+    }
   }
 
   // ===== Panelists — the full Interviewer Efficiency panel, driven by THIS tab's filters =====
