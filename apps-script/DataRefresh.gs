@@ -1628,6 +1628,12 @@ function refreshStageHistory() {
   saveDriveJson_('stage_rollups.json', rollups);
   pushFileToGitHub_('data/stage_rollups.json', JSON.stringify(rollups), 'Update stage rollups');
   saveDriveJson_('stage_history_state.json', { cursor: 0, scopedCount: scoped.length });   // reset -> re-pull next cycle
+  // #206 Interview Traction. Hangs off THIS job, not refreshDashboardData, which is already at the
+  // 30-minute ceiling (#204). It needs stage_events.json, which the lines above have just rewritten,
+  // so it has to run after them. Wrapped like the ToFU and ASSESSED passes: a bad Ashby day costs this
+  // one file, never the rollups that were already written above.
+  try { refreshInterviewTraction(); }
+  catch (eIT) { Logger.log('INTERVIEW TRACTION pass FAILED (rollups still written): ' + eIT.message); }
   Logger.log('=== stage-history done: ' + Object.keys(events).length + ' apps, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
   return rollups;
 }
@@ -1991,4 +1997,707 @@ function drop1pmTrigger() {
     ScriptApp.newTrigger('refreshDashboardData').timeBased().atHour(h).everyDays(1).inTimezone('Asia/Kolkata').create();
   });
   Logger.log('#175b: removed ' + killed + ' refreshDashboardData clock triggers, reinstalled 6 AM + 6 PM IST only');
+}
+
+// ===================================================================================================
+// #204a — A STORED COPY OF THE YEAR'S APPLICATIONS, PLUS A READ-ONLY-WHAT-CHANGED SYNC
+// ---------------------------------------------------------------------------------------------------
+// WHY. refreshDashboardData re-reads the WHOLE current-year slice on every run: 67,142 applications,
+// 672 pages at Ashby's hard 100/page cap, ~19 minutes of fetching alone. On 7 Oct 2026 the 1 PM run
+// hit the 30-minute TIME-BASED TRIGGER CEILING and was killed at 1802 s, so the team sat on morning
+// figures all afternoon. It worsens every week and resets each January. Jerin chose option 2 on
+// 7 Oct: read only what has CHANGED since last time. #10 (Cloud Run) stays the permanent fix.
+//
+// MEASURED BEFORE BUILDING (probe204, 8 Oct 2026 02:47 IST — all with controls):
+//   · application.list DOES support syncToken. A garbage token returns 'sync_token_invalid'
+//     ("The syncToken could not be decoded"), while an INVENTED parameter returns a plain 200 — so the
+//     rejection is specific to syncToken, not a generic complaint. Ashby's own guide documents the
+//     mechanism only for candidate.list / job.list and says support is per-endpoint, so this was the
+//     load-bearing unknown.
+//   · A real token IS issued at the end of a createdAfter-filtered walk, and replaying it seconds
+//     later returned 0 of the 487 applications in that slice and a FRESH token. That is a delta.
+//   · There is NO updatedAfter and no modifiedAfter — both are silently ignored, exactly like the
+//     invented control parameter. So syncToken is the only incremental read available.
+//   · A trimmed record is 362 bytes, so the year is ~23.2 MB (89.9 MB untrimmed). THAT IS WHY THE
+//     STORE IS SHARDED — one 23 MB JSON is not something to parse in Apps Script every run.
+//
+// 🔒 PII. These shards hold candidate NAMES and EMAILS. They live on DRIVE ONLY and must NEVER be
+//    pushed to GitHub — dashboard.json goes to a PUBLIC repo (Rule 9). Nothing here calls
+//    pushFileToGitHub_, and nothing ever should. Same boundary as offer_contacts.json.
+//
+// ⚠ NOTHING IN THIS BLOCK IS CALLED BY THE LIVE REFRESH. It is additive and inert until #204c wires
+//   it in. That is deliberate: the scheduled triggers run HEAD, so anything reachable would go live
+//   the moment it is saved.
+// ===================================================================================================
+
+var STORE_SHARDS_ = 16;                       // by the first hex character of the application id
+var STORE_STATE_ = 'apps_store_state.json';
+var STORE_FLUSH_AT_ = 20000;                  // records buffered before a shard flush (~7.2 MB)
+// ⚠ Each flush reads AND rewrites every shard an id landed in, and ids are random hex, so a flush is
+//   ~32 Drive operations. 8,000 meant nine flushes (~288 ops) on top of 19 minutes of fetching, which
+//   is how the FIRST build would blow its own 30-minute budget. 20,000 makes it four. Holding more in
+//   memory is the trade; the build is resumable, so running out of budget costs a second run, not data.
+var STORE_SCHEMA_ = 1;
+
+function storeShardName_(h) { return 'apps_store_' + h + '.json'; }
+function storeShardOf_(id) { var c = String(id || '0').charAt(0).toLowerCase(); return /[0-9a-f]/.test(c) ? c : '0'; }
+function storeShardKeys_() { return '0123456789abcdef'.split(''); }
+
+function storeState_() {
+  var s = loadDriveJson_(STORE_STATE_);
+  if (!s || s.schema !== STORE_SCHEMA_) {
+    s = { schema: STORE_SCHEMA_, syncToken: null, fullCursor: null, complete: false,
+          builtAt: null, lastDeltaAt: null, count: 0, scopeFromMs: SCOPE_FROM_MS, fullPages: 0 };
+  }
+  return s;
+}
+function storeSaveState_(s) { saveDriveJson_(STORE_STATE_, s); }
+
+// ---------------------------------------------------------------------------------------------------
+// TRIM / REHYDRATE — the only new surface, and the one thing that could change a number.
+// 🔑 The accumulator must never know where an application came from. So the store holds a TRIMMED
+//    record and rehydrate gives back the exact shape application.list returns for the fields that are
+//    read. Round-trip fidelity is what #204b proves, by accumulating a live page twice: once raw, once
+//    trimmed-then-rehydrated, and comparing every field of the two results.
+// ⚠ If anything in fetchAndProcessApps_ ever starts reading a NEW field off an application, it must be
+//    added HERE TOO or the stored path will silently read undefined. That is the one maintenance cost
+//    of this design, and the parity run is what catches it.
+// ---------------------------------------------------------------------------------------------------
+function storeTrim_(a) {
+  var ht = [], src = a.hiringTeam || [];
+  for (var i = 0; i < src.length; i++) {
+    var m = src[i];
+    if (m.role === 'Recruiter' || m.role === 'Sourcer') ht.push({ r: m.role === 'Recruiter' ? 1 : 2, n: memberName_(m), u: m.userId || null });
+  }
+  var st = a.source && a.source.sourceType ? (a.source.sourceType.title || a.source.sourceType) : null;
+  if (typeof st === 'object') st = null;
+  var cand = a.candidate || {};
+  return {
+    i: a.id,
+    c: a.createdAt || null,
+    u: a.updatedAt || null,
+    s: a.status || null,
+    av: a.archivedAt || null,
+    ar: (a.archiveReason && a.archiveReason.text) || null,
+    rt: (a.archiveReason && a.archiveReason.reasonType) || null,
+    j: (a.job && a.job.id) || null,
+    sg: (a.currentInterviewStage && a.currentInterviewStage.title) || null,
+    cn: (cand.name || ((cand.firstName || '') + ' ' + (cand.lastName || '')).trim()) || null,
+    ce: (cand.primaryEmailAddress && cand.primaryEmailAddress.value) || null,
+    sT: st,
+    sN: (a.source && typeof a.source.title === 'string' && a.source.title) ? a.source.title : null,
+    ht: ht
+  };
+}
+
+function storeRehydrate_(r) {
+  var ht = [];
+  for (var i = 0; i < (r.ht || []).length; i++) {
+    var m = r.ht[i];
+    ht.push({ role: m.r === 1 ? 'Recruiter' : 'Sourcer', name: m.n, userId: m.u || null });
+  }
+  return {
+    id: r.i,
+    createdAt: r.c || null,
+    updatedAt: r.u || null,
+    status: r.s || null,
+    archivedAt: r.av || null,
+    archiveReason: (r.ar || r.rt) ? { text: r.ar || null, reasonType: r.rt || null } : null,
+    job: r.j ? { id: r.j } : null,
+    currentInterviewStage: r.sg ? { title: r.sg } : null,
+    candidate: { name: r.cn || null, primaryEmailAddress: r.ce ? { value: r.ce } : null },
+    source: (r.sT || r.sN) ? { sourceType: r.sT ? { title: r.sT } : null, title: r.sN || null } : null,
+    hiringTeam: ht
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// THE FULL BUILD — resumable, because 672 pages do not fit a 6-minute editor run and should not have
+// to fit one 30-minute trigger either. Each call does as much as its budget allows, saves its cursor
+// and returns; call it again until complete is true. The SAME path is the mandatory fallback whenever
+// a token expires (14 days), cannot be decoded, or the delta exceeds Ashby's 100-page incremental cap.
+// ---------------------------------------------------------------------------------------------------
+function appStoreBuildFull_(startTime, budgetMs) {
+  budgetMs = budgetMs || 1200000;                    // 20 min by default; the caller owns the clock
+  var st = storeState_();
+  var fresh = (st.scopeFromMs !== SCOPE_FROM_MS);    // 🚨 January rollover: a new year is a new scope
+  if (fresh) {
+    Logger.log('#204 store: scope changed (' + st.scopeFromMs + ' -> ' + SCOPE_FROM_MS + ') - starting a CLEAN build');
+    storeClear_();
+    st = storeState_(); st.scopeFromMs = SCOPE_FROM_MS;
+  }
+  var cursor = st.fullCursor || null;
+  var buf = {}, buffered = 0, pages = st.fullPages || 0, got = 0, token = null, done = false;
+
+  while (true) {
+    if (Date.now() - startTime > budgetMs) { Logger.log('#204 store build: BUDGET reached at page ' + pages); break; }
+    var body = { limit: 100, createdAfter: SCOPE_FROM_MS };
+    if (cursor) body.cursor = cursor;
+    var resp = ashbyPost_('/application.list', body);
+    var batch = resp.results || [];
+    pages++;
+    for (var i = 0; i < batch.length; i++) {
+      var a = batch[i];
+      if (!a.id) continue;
+      var cms = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      if (cms < SCOPE_FROM_MS) continue;             // defensive, as in fetchAndProcessApps_
+      buf[a.id] = storeTrim_(a); buffered++; got++;
+    }
+    if (resp.syncToken) token = resp.syncToken;      // only meaningful on the LAST page
+    // 🚨 Work out the NEXT cursor before saving it. Saving the one we just used made a resume re-fetch the
+    //    page it had already stored - harmless (the merge is by id) but a wasted page on every resume.
+    var nextCur = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
+    if (buffered >= STORE_FLUSH_AT_) {
+      var fl = storeFlush_(buf); buf = {}; buffered = 0;
+      st.fullPages = pages; st.fullCursor = nextCur; storeSaveState_(st);
+      Logger.log('#204 store build: flushed ' + fl.written + ' (' + fl.added + ' new) at page ' + pages);
+    }
+    if (!nextCur) { done = true; break; }
+    cursor = nextCur;
+    if (pages % 50 === 0) Logger.log('#204 store build: ' + pages + ' pages, ' + got + ' kept, ' + Math.round((Date.now() - startTime) / 1000) + 's');
+    Utilities.sleep(30);
+  }
+
+  if (buffered) storeFlush_(buf);
+  st.fullPages = done ? 0 : pages;
+  st.fullCursor = done ? null : cursor;
+  st.complete = done;
+  if (done) {
+    st.syncToken = token || null;
+    st.builtAt = new Date().toISOString();
+    st.count = storeCount_();
+    Logger.log('#204 store build COMPLETE: ' + st.count + ' applications, ' + pages + ' pages, '
+      + Math.round((Date.now() - startTime) / 1000) + 's, token=' + (token ? 'yes' : '🚨 NONE - the delta cannot start'));
+  }
+  storeSaveState_(st);
+  return { complete: done, pages: pages, kept: got, hasToken: !!st.syncToken };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// THE DELTA — the whole point. Ashby's incremental sync returns resources MODIFIED since the token was
+// issued, not merely created, so a candidate who applied in January and moved stage today DOES come
+// back and the stored population cannot go stale. Verbatim from Ashby's guide: "Incremental sync allows
+// you to fetch only the resources that have been modified since your last sync request."
+// ⚠ Every failure mode collapses to the same recovery: a full rebuild. So this never throws on them —
+//   it reports needFull and lets the caller decide, which keeps the live refresh in control of its clock.
+// ⚠ A HARD DELETE in Ashby is not represented in a delta, so a deleted application would linger in the
+//   store. The 14-day token expiry forces a full rebuild well inside any reporting period, which is the
+//   backstop; #204b records how many records a rebuild changes, so this stops being a guess.
+// ---------------------------------------------------------------------------------------------------
+function appStoreDelta_(startTime, budgetMs) {
+  budgetMs = budgetMs || 600000;
+  var st = storeState_();
+  if (st.scopeFromMs !== SCOPE_FROM_MS) return { needFull: true, reason: 'scope-year-changed' };
+  if (!st.complete) return { needFull: true, reason: 'store-incomplete' };
+  if (!st.syncToken) return { needFull: true, reason: 'no-sync-token' };
+
+  var cursor = null, pages = 0, changed = 0, token = null, buf = {};
+  while (true) {
+    if (Date.now() - startTime > budgetMs) return { needFull: true, reason: 'delta-budget-exceeded' };
+    var body = { limit: 100, syncToken: st.syncToken };
+    if (cursor) body.cursor = cursor;
+    var raw = ashbyPostRaw204_('/application.list', body);
+    if (!raw.ok) {
+      var code = raw.code || '';
+      if (code === 'sync_token_expired' || code === 'sync_token_invalid' || code === 'incremental_sync_too_large'
+          || code === 'next_cursor_expired' || code === 'cursor_invalid' || code === 'invalid_next_cursor') {
+        Logger.log('#204 delta: Ashby says ' + code + ' -> full rebuild (this is the documented recovery, not a bug)');
+        return { needFull: true, reason: code };
+      }
+      throw new Error('#204 delta failed: ' + code + ' ' + (raw.body || '').substring(0, 200));
+    }
+    var resp = raw.json || {};
+    var batch = resp.results || [];
+    pages++;
+    for (var i = 0; i < batch.length; i++) {
+      var a = batch[i];
+      if (!a.id) continue;
+      var cms = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      if (cms < SCOPE_FROM_MS) continue;   // 🚨 the token came from a createdAfter-filtered sync; guard anyway
+      buf[a.id] = storeTrim_(a); changed++;
+    }
+    if (resp.syncToken) token = resp.syncToken;
+    if (!resp.moreDataAvailable || !resp.nextCursor) break;
+    cursor = resp.nextCursor;
+    Utilities.sleep(30);
+  }
+
+  var fl = changed ? storeFlush_(buf) : { written: 0, added: 0 };
+  st.syncToken = token || st.syncToken;
+  st.lastDeltaAt = new Date().toISOString();
+  st.count = (st.count || 0) + fl.added;   // running, not recounted: storeCount_ would re-read all 23 MB
+  storeSaveState_(st);
+  Logger.log('#204 delta: ' + changed + ' applications changed across ' + pages + ' page(s) ('
+    + fl.added + ' new, ' + (fl.written - fl.added) + ' updated), '
+    + Math.round((Date.now() - startTime) / 1000) + 's, store now ' + st.count);
+  return { needFull: false, changed: changed, added: fl.added, pages: pages, count: st.count };
+}
+
+// A raw POST that hands back Ashby's error CODE instead of throwing, because the delta's whole control
+// flow turns on which error came back. ashbyPost_ throws a bare 'Ashby API 200' shape that loses it.
+function ashbyPostRaw204_(endpoint, body) {
+  var options = { method: 'post', contentType: 'application/json',
+    headers: { 'Authorization': 'Basic ' + Utilities.base64Encode(getAshbyApiKey_() + ':') },
+    payload: JSON.stringify(body), muteHttpExceptions: true };
+  for (var attempt = 1; attempt <= 5; attempt++) {
+    var r, txt, j = null;
+    try {
+      r = UrlFetchApp.fetch(ASHBY_API_BASE + endpoint, options);
+      if (r.getResponseCode() === 429) { Utilities.sleep(5000); continue; }
+      if (r.getResponseCode() >= 500 && attempt < 5) { Utilities.sleep(attempt * 5000); continue; }
+      txt = r.getContentText();
+      try { j = JSON.parse(txt); } catch (e) {}
+      if (j && j.success) return { ok: true, json: j };
+      return { ok: false, code: (j && j.errorInfo && j.errorInfo.code) || (j && j.errors && j.errors[0]) || ('http-' + r.getResponseCode()), body: txt };
+    } catch (e) {
+      if (attempt >= 5) return { ok: false, code: 'fetch-failed', body: String(e && e.message) };
+      Utilities.sleep(attempt * 5000);
+    }
+  }
+  return { ok: false, code: 'retries-exhausted', body: '' };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// SHARD PLUMBING
+// ---------------------------------------------------------------------------------------------------
+// Returns {written, added}. 'added' is what the caller needs to keep a running count without re-reading
+// all 23 MB of shards just to call Object.keys on them - storeCount_ is for the build and for status only.
+function storeFlush_(buf) {
+  var byShard = {};
+  for (var id in buf) { var h = storeShardOf_(id); (byShard[h] || (byShard[h] = {}))[id] = buf[id]; }
+  var written = 0, added = 0;
+  for (var h2 in byShard) {
+    var cur = loadDriveJson_(storeShardName_(h2)) || {};
+    var add = byShard[h2];
+    for (var k in add) { if (cur[k] === undefined) added++; cur[k] = add[k]; written++; }
+    saveDriveJson_(storeShardName_(h2), cur);
+  }
+  return { written: written, added: added };
+}
+function storeCount_() {
+  var t = 0, ks = storeShardKeys_();
+  for (var i = 0; i < ks.length; i++) { var s = loadDriveJson_(storeShardName_(ks[i])); if (s) t += Object.keys(s).length; }
+  return t;
+}
+function storeClear_() {
+  var folder = DriveApp.getFolderById(DASHBOARD_FOLDER_ID), ks = storeShardKeys_(), gone = 0;
+  for (var i = 0; i < ks.length; i++) {
+    var f = folder.getFilesByName(storeShardName_(ks[i]));
+    while (f.hasNext()) { f.next().setTrashed(true); gone++; }
+  }
+  var fs = folder.getFilesByName(STORE_STATE_);
+  while (fs.hasNext()) { fs.next().setTrashed(true); }
+  Logger.log('#204 store cleared: ' + gone + ' shard file(s) trashed');
+  return gone;
+}
+
+// ===================================================================================================
+// #204a — THE ACCUMULATOR, LIFTED OUT OF fetchAndProcessApps_ SO IT CAN BE FED FROM EITHER SIDE
+// ---------------------------------------------------------------------------------------------------
+// 🔑 THE WHOLE POINT. fetchAndProcessApps_ computes every total by WALKING THE POPULATION — funnel,
+// recruiterCounts, sourceCounts, qData, appMap, archivedApps, the App Review dwell histograms and the
+// hygiene lists are all accumulators incremented page by page. A delta of ~300 changed applications
+// cannot rebuild funnel.applied = 67,142. So the delta is only half the job: the aggregation has to
+// walk the MERGED STORE instead of live API pages.
+//
+// 🔑 The safe way to do that is to change the INPUT and nothing else. appsAccumOne_ below is the loop
+// body of fetchAndProcessApps_, moved verbatim onto a context object. Two callers feed it: the live
+// pages (unchanged behaviour) and the stored shards. Because the arithmetic is the SAME CODE, the two
+// paths cannot drift — which is the only thing that can protect these numbers.
+//
+// ⚠ UNTIL #204c, THIS IS A SECOND COPY of that loop body and a second copy is exactly the Rule 3
+//   hazard. Two things contain it: #204b compares every field of both results before anything is
+//   switched over, and #204c then DELETES the original body and has fetchAndProcessApps_ call this,
+//   leaving one copy. Do not leave the tree in the two-copy state.
+// ===================================================================================================
+
+function appsAccumInit_() {
+  var ctx = {
+    total: 0, scoped: 0,
+    funnel: { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 },
+    recruiterCounts: {}, sourceCounts: {}, weekCounts: {}, qData: {}, appMap: {},
+    histApps: [], archivedApps: [], recruiterUserId: {},
+    anomalies: { multiRecruiter: [], multiSourcer: [] },
+    unmappedStages: {}, unassignedCases: [],
+    arDwellJob: {}, arDwellRec: {}, arDwellRecJob: {}
+  };
+  return ctx;
+}
+
+function appsAccumEnsureRec_(ctx, name) {
+  if (!ctx.recruiterCounts[name]) {
+    var r = { name: name, total: 0, byJob: {}, sources: {}, srcNested: {}, srcByJob: {}, srcQ: {}, srcByJobQ: {} };
+    RECRUITER_STAGES.forEach(function (s) { r[s] = 0; });
+    ctx.recruiterCounts[name] = r;
+  }
+  return ctx.recruiterCounts[name];
+}
+function appsAccumEnsureQ_(ctx, qk) {
+  if (!ctx.qData[qk]) ctx.qData[qk] = { funnel: { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 }, jobCounts: {}, sourceCounts: {} };
+  return ctx.qData[qk];
+}
+
+// One application. Returns true if it was counted, false if it was skipped (out of scope / sandbox job).
+function appsAccumOne_(ctx, app, jobLookup, excludedJobIds_) {
+  var createdMs = app.createdAt ? new Date(app.createdAt).getTime() : 0;
+  if (createdMs < SCOPE_FROM_MS) return false;   // defensive (createdAfter already scopes)
+  var jobId = app.job && app.job.id;
+  // #37: sandbox department - skip BEFORE any counter.
+  if (jobId && excludedJobIds_[jobId]) return false;
+  ctx.scoped++;
+  var htr = getHiringTeamRoles_(app);
+  var recruiter = htr.recruiters.length ? htr.recruiters[0].name : null;
+  var sourcer = htr.sourcers.length ? htr.sourcers[0].name : null;
+  var recName = recruiter || 'Unassigned';
+  if (recruiter && htr.recruiters[0].userId && !ctx.recruiterUserId[recruiter]) ctx.recruiterUserId[recruiter] = htr.recruiters[0].userId;
+  var candName = (app.candidate && (app.candidate.name || ((app.candidate.firstName || '') + ' ' + (app.candidate.lastName || '')).trim())) || null;
+  var candEmail = (app.candidate && app.candidate.primaryEmailAddress && app.candidate.primaryEmailAddress.value) || null;
+  if (app.id) ctx.appMap[app.id] = { jobId: jobId, recruiter: recruiter, sourcer: sourcer, candidate: candName, email: candEmail };
+  var jd = jobLookup[jobId];
+  var stageName = app.currentInterviewStage ? app.currentInterviewStage.title : null;
+  var stageKey = stageName ? (STAGE_KEY_MAP[stageName] || null) : null;
+  if (stageName && !stageKey) ctx.unmappedStages[stageName] = (ctx.unmappedStages[stageName] || 0) + 1;
+  var isHired = (app.status === 'Hired');
+  if (app.id && ctx.appMap[app.id]) {
+    ctx.appMap[app.id].stage = stageName;
+    ctx.appMap[app.id].status = app.status || null;
+    ctx.appMap[app.id].archivedAt = app.archivedAt || null;
+    ctx.appMap[app.id].archiveReason = (app.archiveReason && app.archiveReason.text) || null;
+    ctx.appMap[app.id].archiveReasonType = (app.archiveReason && app.archiveReason.reasonType) || null;
+  }
+  var updatedMs = app.updatedAt ? new Date(app.updatedAt).getTime() : createdMs;
+  var hygMaybe = createdMs >= HYGIENE_FLOOR_MS || updatedMs >= HYGIENE_FLOOR_MS;
+  if (hygMaybe && htr.recruiters.length > 1) { var hygMr = hygRow_(app.id, jobId, jd, candName, app.createdAt); hygMr.names = htr.recruiters.map(function (r) { return r.name; }); ctx.anomalies.multiRecruiter.push(hygMr); }
+  if (hygMaybe && htr.sourcers.length > 1) { var hygMs = hygRow_(app.id, jobId, jd, candName, app.createdAt); hygMs.names = htr.sourcers.map(function (r) { return r.name; }); ctx.anomalies.multiSourcer.push(hygMs); }
+
+  var reachedScreening = ((stageKey && stageKey !== 'appReview') || isHired);
+  if (app.id && reachedScreening) ctx.histApps.push({ id: app.id, r: recruiter, j: jobId, s: app.status || null });
+  if (app.id && app.status === 'Archived') ctx.archivedApps.push({ id: app.id, r: recruiter, j: jobId, a: app.archivedAt || null });
+  if (!recruiter && reachedScreening && hygMaybe) ctx.unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
+
+  if (stageKey === 'appReview' && createdMs) {
+    var arDays = Math.floor((Date.now() - createdMs) / 86400000); if (arDays < 0) arDays = 0; if (arDays > 365) arDays = 365;
+    var arj8 = (jobId || '').substring(0, 8);
+    if (arj8) { var ahj = ctx.arDwellJob[arj8] || (ctx.arDwellJob[arj8] = {}); ahj[arDays] = (ahj[arDays] || 0) + 1; }
+    var ahr = ctx.arDwellRec[recName] || (ctx.arDwellRec[recName] = {}); ahr[arDays] = (ahr[arDays] || 0) + 1;
+    if (arj8) { var arrj = ctx.arDwellRecJob[recName] || (ctx.arDwellRecJob[recName] = {}); var ahrj = arrj[arj8] || (arrj[arj8] = {}); ahrj[arDays] = (ahrj[arDays] || 0) + 1; }
+  }
+
+  ctx.funnel.applied++;
+  if (SCREENED_STAGES[stageName] || isHired) ctx.funnel.screened++;
+  if (INTERVIEWED_STAGES[stageName] || isHired) ctx.funnel.interviewed++;
+  if (stageName === 'Offer' || isHired) ctx.funnel.offered++;
+  if (isHired) ctx.funnel.hired++;
+
+  if (jd) {
+    jd.applied++;
+    if (isHired) { jd.pipeline.hired++; jd.hired++; }
+    else if (stageKey && jd.pipeline.hasOwnProperty(stageKey)) jd.pipeline[stageKey]++;
+    if (stageName === 'TA Screen' || stageName === 'Hello Christy') jd.screen++;
+    if (stageName === 'R1') jd.interview++;
+    if (stageName === 'Offer' || isHired) jd.offer++;
+    if (recruiter && jd.recruiterSet.indexOf(recruiter) < 0) jd.recruiterSet.push(recruiter);
+  }
+  {
+    var rc = appsAccumEnsureRec_(ctx, recName); rc.total++;
+    var recKey = isHired ? 'hired' : (stageKey && STAGEKEY_TO_RECKEY[stageKey]);
+    if (recKey) rc[recKey]++;
+    if (isHired) rc.offer++;
+    if (jobId) {
+      var bj = rc.byJob[jobId] || (rc.byJob[jobId] = { jobId: jobId, title: jd ? jd.title : '', department: jd ? jd.department : '', total: 0, offer: 0, hired: 0, pipeline: {} });
+      bj.total++; if (stageName === 'Offer' || isHired) bj.offer++; if (isHired) bj.hired++;
+      var bpk = isHired ? 'hired' : stageKey;
+      if (bpk && PIPELINE_KEYS.indexOf(bpk) > -1) bj.pipeline[bpk] = (bj.pipeline[bpk] || 0) + 1;
+    }
+  }
+  var srcType = app.source && app.source.sourceType ? (app.source.sourceType.title || app.source.sourceType) : null;
+  if (typeof srcType === 'object') srcType = null;
+  if (srcType) {
+    if (!ctx.sourceCounts[srcType]) ctx.sourceCounts[srcType] = { name: srcType, type: srcType, candidates: 0, hires: 0 };
+    ctx.sourceCounts[srcType].candidates++; if (isHired) ctx.sourceCounts[srcType].hires++;
+    { var rs = ctx.recruiterCounts[recName].sources; rs[srcType] = (rs[srcType] || 0) + 1; }
+    var srcName = (app.source && typeof app.source.title === 'string' && app.source.title) ? app.source.title : '(unspecified)';
+    var nst = ctx.recruiterCounts[recName].srcNested; var nt = nst[srcType] || (nst[srcType] = {}); nt[srcName] = (nt[srcName] || 0) + 1;
+    if (app.id && ctx.appMap[app.id]) { ctx.appMap[app.id].srcType = srcType; ctx.appMap[app.id].srcName = srcName; }
+    if (jobId) { var sbj = ctx.recruiterCounts[recName].srcByJob; var j8 = jobId.slice(0, 8); var sjb = sbj[j8] || (sbj[j8] = {}); var stb = sjb[srcType] || (sjb[srcType] = {}); stb[srcName] = (stb[srcName] || 0) + 1; }
+    var _sq = app.createdAt ? getQuarter_(app.createdAt) : null;
+    if (_sq) {
+      var _rq = ctx.recruiterCounts[recName].srcQ || (ctx.recruiterCounts[recName].srcQ = {});
+      var _rqq = _rq[_sq] || (_rq[_sq] = {}); var _rqt = _rqq[srcType] || (_rqq[srcType] = {});
+      _rqt[srcName] = (_rqt[srcName] || 0) + 1;
+      if (jobId) {
+        var _bq = ctx.recruiterCounts[recName].srcByJobQ || (ctx.recruiterCounts[recName].srcByJobQ = {});
+        var _j8q = jobId.slice(0, 8); var _bj = _bq[_j8q] || (_bq[_j8q] = {});
+        var _bjq = _bj[_sq] || (_bj[_sq] = {}); var _bjt = _bjq[srcType] || (_bjq[srcType] = {});
+        _bjt[srcName] = (_bjt[srcName] || 0) + 1;
+      }
+    }
+  }
+  if (app.createdAt) { var wk = getWeekLabel_(app.createdAt); ctx.weekCounts[wk] = (ctx.weekCounts[wk] || 0) + 1; }
+  if (app.createdAt) {
+    var q = appsAccumEnsureQ_(ctx, getQuarter_(app.createdAt));
+    q.funnel.applied++;
+    if (SCREENED_STAGES[stageName] || isHired) q.funnel.screened++;
+    if (INTERVIEWED_STAGES[stageName] || isHired) q.funnel.interviewed++;
+    if (stageName === 'Offer' || isHired) q.funnel.offered++;
+    if (isHired) q.funnel.hired++;
+    if (jd) { var jt = jd.title; if (!q.jobCounts[jt]) q.jobCounts[jt] = { title: jt, department: jd.department, applied: 0, hired: 0 }; q.jobCounts[jt].applied++; if (isHired) q.jobCounts[jt].hired++; }
+    if (srcType) { if (!q.sourceCounts[srcType]) q.sourceCounts[srcType] = { name: srcType, candidates: 0, hires: 0 }; q.sourceCounts[srcType].candidates++; if (isHired) q.sourceCounts[srcType].hires++; }
+  }
+  return true;
+}
+
+// The exact return shape fetchAndProcessApps_ hands back, so the call site does not change.
+function appsAccumFinish_(ctx) {
+  return { total: ctx.total, scoped: ctx.scoped, funnel: ctx.funnel, recruiterCounts: ctx.recruiterCounts,
+    sourceCounts: ctx.sourceCounts, weekCounts: ctx.weekCounts, qData: ctx.qData, appMap: ctx.appMap,
+    histApps: ctx.histApps, archivedApps: ctx.archivedApps, recruiterUserId: ctx.recruiterUserId,
+    anomalies: ctx.anomalies, unassignedCases: ctx.unassignedCases, unmappedStages: ctx.unmappedStages,
+    appReviewDwellByJob: ctx.arDwellJob, appReviewDwellByRecruiter: ctx.arDwellRec,
+    appReviewDwellByRecruiterJob: ctx.arDwellRecJob };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// THE STORED-COPY REPLACEMENT for fetchAndProcessApps_. Same arguments, same return shape, no Ashby
+// calls at all — the shards have already been brought up to date by appStoreDelta_.
+// ⚠ Order matters for the two LISTS it builds. histApps and archivedApps are consumed as lists, and
+//   collectNewArchivedLateStage_ orders archivedApps by its own 'a' field, so list ORDER is not relied
+//   on — but #204b checks the SETS match, not just the counts, because "same length" is not "same rows".
+// ---------------------------------------------------------------------------------------------------
+function fetchAndProcessAppsFromStore_(startTime, jobLookup, excludedJobIds_) {
+  excludedJobIds_ = excludedJobIds_ || {};
+  var ctx = appsAccumInit_();
+  var ks = storeShardKeys_(), loadedMs = 0, shardsSeen = 0;
+  for (var si = 0; si < ks.length; si++) {
+    var t0 = Date.now();
+    var shard = loadDriveJson_(storeShardName_(ks[si]));
+    loadedMs += (Date.now() - t0);
+    if (!shard) continue;
+    shardsSeen++;
+    for (var id in shard) {
+      ctx.total++;
+      appsAccumOne_(ctx, storeRehydrate_(shard[id]), jobLookup, excludedJobIds_);
+    }
+  }
+  Logger.log('#204 store read: ' + ctx.total + ' applications from ' + shardsSeen + ' shard(s), '
+    + Math.round(loadedMs / 1000) + 's of Drive reads, ' + ctx.scoped + ' scoped, '
+    + Math.round((Date.now() - startTime) / 1000) + 's total');
+  return appsAccumFinish_(ctx);
+}
+
+// ===================================================================================================
+// #204b — PROVE THE NUMBERS COME OUT IDENTICAL
+// ---------------------------------------------------------------------------------------------------
+// Nothing switches over until this passes. Three separate checks, because they fail for different
+// reasons and a single pass/fail would not say which:
+//
+//   A  ROUND TRIP (parity204A, seconds).  Accumulate the SAME live pages twice: once from the raw
+//      Ashby objects, once trimmed-then-rehydrated. Any difference is a storeTrim_/storeRehydrate_
+//      bug and nothing else. This is the check that catches a field the trim forgot.
+//   B  FULL PARITY (parity204B_live then parity204B_store).  The untouched live path against the
+//      stored path over the whole year. Split in two because the live walk alone is ~19 minutes and
+//      both results together are too much to hold at once: B_live writes a DIGEST to Drive, B_store
+//      reads it back and compares.
+//   C  SUMS (inside the digest).  Every quarter's funnel added up against the overall funnel.
+//      🚨 Rule 10, 7 Oct: a per-quarter check CANNOT see a row that is in NO quarter - inside each
+//      quarter the arithmetic is perfect. So the digest carries both and the compare asserts them.
+//
+// 🚨 A DIGEST HASHES SORTED CONTENT, NEVER JUST LENGTHS. "Same number of rows" is not "same rows" -
+//    that is how #203 hid 21 joiners for two months. Every list below is sorted and hashed whole.
+// ⚠ Read-only. Writes one file, parity204_live.json, and touches nothing the dashboard reads.
+// ===================================================================================================
+
+function h204_(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; } return h; }
+
+// A canonical string for any plain value: object keys sorted, so two runs hash identically.
+function canon204_(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v !== 'object') return typeof v === 'number' ? String(v) : JSON.stringify(v);
+  if (Array.isArray(v)) { var a = []; for (var i = 0; i < v.length; i++) a.push(canon204_(v[i])); return '[' + a.join(',') + ']'; }
+  var ks = Object.keys(v).sort(), p = [];
+  for (var k = 0; k < ks.length; k++) p.push(JSON.stringify(ks[k]) + ':' + canon204_(v[ks[k]]));
+  return '{' + p.join(',') + '}';
+}
+// A list of objects, order-independent: canonicalise each row, sort the strings, hash the lot.
+function canonList204_(arr) {
+  var rows = [];
+  for (var i = 0; i < (arr || []).length; i++) rows.push(canon204_(arr[i]));
+  rows.sort();
+  return { n: rows.length, h: h204_(rows.join('|')) };
+}
+
+function parityDigest204_(res, jobLookup) {
+  var qSum = { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 };
+  var qks = Object.keys(res.qData).sort();
+  for (var i = 0; i < qks.length; i++) {
+    var f = res.qData[qks[i]].funnel;
+    qSum.applied += f.applied; qSum.screened += f.screened; qSum.interviewed += f.interviewed;
+    qSum.offered += f.offered; qSum.hired += f.hired;
+  }
+  // appMap is the biggest single thing and feeds offers, interviews and offer_contacts - hash it whole.
+  var amKeys = Object.keys(res.appMap).sort(), amRows = [];
+  for (var a = 0; a < amKeys.length; a++) amRows.push(amKeys[a] + '=' + canon204_(res.appMap[amKeys[a]]));
+  // the jobLookup mutations (applied/screen/interview/offer/hired/pipeline/recruiterSet) are OUTPUTS too
+  var jlKeys = Object.keys(jobLookup).sort(), jlRows = [];
+  for (var j = 0; j < jlKeys.length; j++) {
+    var jd = jobLookup[jlKeys[j]];
+    jlRows.push(jlKeys[j] + '=' + canon204_({ ap: jd.applied, sc: jd.screen, iv: jd.interview, of: jd.offer, hi: jd.hired,
+      pl: jd.pipeline, rs: (jd.recruiterSet || []).slice().sort() }));
+  }
+  return {
+    scoped: res.scoped,
+    funnel: res.funnel,
+    quarterSum: qSum,
+    quarterSumMatchesFunnel: (qSum.applied === res.funnel.applied && qSum.screened === res.funnel.screened
+      && qSum.interviewed === res.funnel.interviewed && qSum.offered === res.funnel.offered && qSum.hired === res.funnel.hired),
+    recruiters: { n: Object.keys(res.recruiterCounts).length, h: h204_(canon204_(res.recruiterCounts)) },
+    sources:    { n: Object.keys(res.sourceCounts).length,    h: h204_(canon204_(res.sourceCounts)) },
+    weeks:      { n: Object.keys(res.weekCounts).length,      h: h204_(canon204_(res.weekCounts)) },
+    qData:      { n: qks.length,                              h: h204_(canon204_(res.qData)) },
+    appMap:     { n: amKeys.length,                           h: h204_(amRows.join('|')) },
+    jobLookup:  { n: jlKeys.length,                           h: h204_(jlRows.join('|')) },
+    histApps:        canonList204_(res.histApps),
+    archivedApps:    canonList204_(res.archivedApps),
+    multiRecruiter:  canonList204_(res.anomalies.multiRecruiter),
+    multiSourcer:    canonList204_(res.anomalies.multiSourcer),
+    unassignedCases: canonList204_(res.unassignedCases),
+    unmappedStages:  { n: Object.keys(res.unmappedStages).length, h: h204_(canon204_(res.unmappedStages)) },
+    recruiterUserId: { n: Object.keys(res.recruiterUserId).length, h: h204_(canon204_(res.recruiterUserId)) },
+    dwellJob:    { n: Object.keys(res.appReviewDwellByJob).length,        h: h204_(canon204_(res.appReviewDwellByJob)) },
+    dwellRec:    { n: Object.keys(res.appReviewDwellByRecruiter).length,  h: h204_(canon204_(res.appReviewDwellByRecruiter)) },
+    dwellRecJob: { n: Object.keys(res.appReviewDwellByRecruiterJob).length, h: h204_(canon204_(res.appReviewDwellByRecruiterJob)) }
+  };
+}
+
+// Rebuilds the two inputs fetchAndProcessApps_ takes. A FRESH jobLookup every call, because the
+// accumulator MUTATES it (jd.applied++) - handing the same object to both paths would double every
+// job figure and make the comparison meaningless.
+function parityInputs204_() {
+  var deptMap = fetchDepartmentMap_();
+  function topDept(depId) { var d = deptMap[depId], g = 0; while (d && d.parentId && deptMap[d.parentId] && g++ < 8) d = deptMap[d.parentId]; return d ? d.name : ''; }
+  var allJobs = fetchJobs_();
+  var EXCLUDED_DEPTS = { 'Test': 1 };
+  var excludedJobIds = {};
+  allJobs = allJobs.filter(function (j) {
+    var lf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
+    if (EXCLUDED_DEPTS[topDept(j.departmentId) || lf] || EXCLUDED_DEPTS[lf]) { excludedJobIds[j.id] = 1; return false; }
+    return true;
+  });
+  function mk() {
+    var lk = {};
+    allJobs.forEach(function (j) {
+      var leaf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
+      lk[j.id] = { id: j.id, title: j.title, department: topDept(j.departmentId) || leaf, team: leaf, status: j.status,
+        level: jobCustomField_(j, LEVEL_CF_ID), complexity: jobCustomField_(j, COMPLEXITY_CF_ID),
+        employmentType: jobCustomFieldByTitle_(j, /employ/i),
+        applied: 0, screen: 0, interview: 0, offer: 0, hired: 0, pipeline: emptyPipeline_(), recruiterSet: [] };
+    });
+    return lk;
+  }
+  return { mk: mk, excludedJobIds: excludedJobIds, jobs: allJobs.length };
+}
+
+// --- A: trim/rehydrate round trip over real pages. Cheap, and the only check that isolates the trim.
+function parity204A(pagesWanted) {
+  pagesWanted = pagesWanted || 3;
+  var t = Date.now(), inp = parityInputs204_();
+  var lkRaw = inp.mk(), lkRound = inp.mk();
+  var cRaw = appsAccumInit_(), cRound = appsAccumInit_();
+  var cursor = null, pages = 0, seen = 0;
+  while (pages < pagesWanted) {
+    var body = { limit: 100, createdAfter: SCOPE_FROM_MS };
+    if (cursor) body.cursor = cursor;
+    var resp = ashbyPost_('/application.list', body);
+    var batch = resp.results || [];
+    pages++;
+    for (var i = 0; i < batch.length; i++) {
+      seen++;
+      cRaw.total++;   cRound.total++;
+      appsAccumOne_(cRaw,   batch[i], lkRaw,   inp.excludedJobIds);
+      appsAccumOne_(cRound, storeRehydrate_(storeTrim_(batch[i])), lkRound, inp.excludedJobIds);
+    }
+    if (!resp.moreDataAvailable || !resp.nextCursor) break;
+    cursor = resp.nextCursor; Utilities.sleep(30);
+  }
+  var dRaw = parityDigest204_(appsAccumFinish_(cRaw), lkRaw);
+  var dRound = parityDigest204_(appsAccumFinish_(cRound), lkRound);
+  var diffs = parityCompare204_(dRaw, dRound);
+  Logger.log('===== #204b TEST A - trim/rehydrate round trip =====');
+  Logger.log('pages=' + pages + ' applications=' + seen + ' scoped=' + dRaw.scoped + ' in ' + Math.round((Date.now() - t) / 1000) + 's');
+  Logger.log(diffs.length ? ('🚨 A FAILED - ' + diffs.length + ' section(s) differ:\n  ' + diffs.join('\n  '))
+                          : '✅ A PASSED - every section identical, so the trimmed record loses nothing the accumulator reads');
+  return diffs.length;
+}
+
+// --- B1: the LIVE path over the whole year. ~19 min, so run it from trigger204Parity().
+function parity204B_live() {
+  var t = Date.now(), inp = parityInputs204_(), lk = inp.mk();
+  var res = fetchAndProcessApps_(t, lk, inp.excludedJobIds);
+  var dig = parityDigest204_(res, lk);
+  dig._meta = { side: 'live', at: new Date().toISOString(), secs: Math.round((Date.now() - t) / 1000), jobs: inp.jobs, fetched: res.total };
+  saveDriveJson_('parity204_live.json', dig);
+  Logger.log('===== #204b TEST B1 (live) =====');
+  Logger.log('fetched=' + res.total + ' scoped=' + dig.scoped + ' applied=' + dig.funnel.applied
+    + ' in ' + dig._meta.secs + 's. Digest written to parity204_live.json.');
+  Logger.log('quarters add up to the overall funnel: ' + dig.quarterSumMatchesFunnel);
+  return dig.scoped;
+}
+
+// --- B2: the STORED path, compared against B1's digest.
+function parity204B_store() {
+  var prev = loadDriveJson_('parity204_live.json');
+  if (!prev) { Logger.log('🚨 run parity204B_live first - parity204_live.json is not there'); return -1; }
+  var t = Date.now(), inp = parityInputs204_(), lk = inp.mk();
+  var res = fetchAndProcessAppsFromStore_(t, lk, inp.excludedJobIds);
+  var dig = parityDigest204_(res, lk);
+  var secs = Math.round((Date.now() - t) / 1000);
+  var diffs = parityCompare204_(prev, dig);
+  Logger.log('===== #204b TEST B2 (stored) vs B1 (live) =====');
+  Logger.log('live side: ' + prev._meta.fetched + ' fetched, ' + prev._meta.scoped + ' scoped, ' + prev._meta.secs + 's   ('
+    + prev._meta.at + ')');
+  Logger.log('store side: ' + res.total + ' read, ' + dig.scoped + ' scoped, ' + secs + 's');
+  Logger.log('⏱ THE NUMBER THAT MATTERS: the application pass went from ' + prev._meta.secs + 's to ' + secs + 's');
+  Logger.log('quarters add up to the overall funnel - live ' + prev.quarterSumMatchesFunnel + ', store ' + dig.quarterSumMatchesFunnel);
+  Logger.log(diffs.length ? ('🚨 B FAILED - ' + diffs.length + ' section(s) differ:\n  ' + diffs.join('\n  '))
+                          : '✅ B PASSED - every section identical. The stored copy reproduces the live walk exactly.');
+  return diffs.length;
+}
+
+function parityCompare204_(a, b) {
+  var out = [], keys = Object.keys(a).filter(function (k) { return k.charAt(0) !== '_'; });
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i], x = a[k], y = b[k];
+    if (canon204_(x) === canon204_(y)) continue;
+    if (x && typeof x === 'object' && typeof x.n === 'number') {
+      out.push(k + ': live n=' + x.n + ' h=' + x.h + '  |  store n=' + y.n + ' h=' + y.h
+        + (x.n === y.n ? '   (SAME COUNT, DIFFERENT CONTENT - this is the dangerous kind)' : ''));
+    } else {
+      out.push(k + ': live ' + canon204_(x).substring(0, 120) + '  |  store ' + canon204_(y).substring(0, 120));
+    }
+  }
+  return out;
+}
+
+// ===================================================================================================
+// RUNNERS. A full build and the live parity leg are both longer than the editor's 6-minute limit, so
+// they go on a ONE-OFF time-based trigger (30 min), the same device triggerRefreshNow() uses.
+// ⚠ These create a trigger for a NAMED function. None of them is refreshDashboardData, so the live
+//   refresh is not touched.
+// ===================================================================================================
+function trigger204_(fnName) {
+  ScriptApp.getProjectTriggers().forEach(function (tr) { if (tr.getHandlerFunction() === fnName) ScriptApp.deleteTrigger(tr); });
+  ScriptApp.newTrigger(fnName).timeBased().after(15000).create();
+  Logger.log('#204: one-off trigger created for ' + fnName + ' - it fires in ~15s and gets the 30-minute ceiling. Watch Executions.');
+  return fnName;
+}
+function build204Step()      { var t = Date.now(); var r = appStoreBuildFull_(t, 1500000); Logger.log('#204 build step: ' + JSON.stringify(r)); return r.complete ? 1 : 0; }
+function trigger204Build()   { return trigger204_('build204Step'); }
+function trigger204Live()    { return trigger204_('parity204B_live'); }
+function delta204Step()      { var t = Date.now(); var r = appStoreDelta_(t, 600000); Logger.log('#204 delta step: ' + JSON.stringify(r)); return r.needFull ? 0 : 1; }
+function store204Status() {
+  var s = storeState_();
+  Logger.log('#204 store state: complete=' + s.complete + ' count=' + s.count + ' token=' + (s.syncToken ? 'yes' : 'NO')
+    + ' builtAt=' + s.builtAt + ' lastDelta=' + s.lastDeltaAt + ' resumeCursor=' + (s.fullCursor ? 'yes (page ' + s.fullPages + ')' : 'no')
+    + ' scopeFromMs=' + s.scopeFromMs + (s.scopeFromMs === SCOPE_FROM_MS ? ' (current)' : ' 🚨 STALE YEAR'));
+  return s.count;
 }
