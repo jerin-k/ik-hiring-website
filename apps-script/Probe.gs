@@ -2,6 +2,23 @@
 // The editor function picker cannot be driven from a background tab (its dropdown needs a real click) and it
 // DEFAULTS TO THE FIRST FUNCTION IN THE OPEN FILE. So #204 is driven from here: point this at the step you
 // want and press Run. Same reason the note below says testTofu was "first in the file on purpose".
+// ===== #210 LAUNCHER - KEEP FIRST IN THE FILE (the Run picker defaults to the first function) =====
+// Runs probe210 on a ONE-OFF TRIGGER so it gets 30 minutes instead of the editor's 6. probe210 writes nothing.
+// Point this at the function you want to run on a trigger. 'probe210' = the dry-run comparison;
+// 'rebuildStageRollupsNow' = recompute and PUBLISH the stored rollups.
+var RUN210_FN = 'rebuildStageRollupsNow';
+function run210() {
+  var before = 0, after = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === RUN210_FN) ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger(RUN210_FN).timeBased().after(15000).create();
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') after++; });
+  Logger.log('#210: one-off ' + RUN210_FN + ' trigger created, fires in ~15s. Read its output in Executions.');
+  Logger.log('#210: refreshDashboardData clock triggers before=' + before + ' after=' + after
+    + (before === after ? ' (UNTOUCHED, correct)' : ' CHANGED - THE SCHEDULE IS DAMAGED, reinstall it'));
+  return after;
+}
+
 function run204() {
   // #204 housekeeping. Deletes ONLY the spent one-off triggers this task created, and ASSERTS that the three
   // scheduled refreshDashboardData clock triggers are untouched - deleting those by accident is the single
