@@ -5,14 +5,14 @@ import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants 
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 import { defsBlock } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecruiter, tdSourcer } from '../people-cells.js';   // #137 · #194: tdSourcer
-import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
-import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
+import { tdTopic, tdOpening, topicLookup, realTopic } from '../people-cells.js';   // #168/#169: the opening and the topic · #213: realTopic
+import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
-import { jobFilterOptions, matchesJob, jobLookup } from '../job-filter.js';   // #172c
+import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
@@ -497,6 +497,7 @@ export function renderHmReport(data) {
       <div class="fchip"><div class="ms" id="msHmDept"></div></div>
       <span class="fdiv"></span>
       <div class="fchip"><div class="ms" id="msHmJob"></div></div>
+      <div class="fchip"><div class="ms" id="msHmTopic"></div></div>
       <div class="fchip"><div class="ms" id="msHmRec"></div></div>
       
       
@@ -532,9 +533,9 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: JOINERS (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage ===== -->
     <div class="hm-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="hmJoinCaption" style="margin-bottom:0.5rem"></p>
-      <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
-        <tbody id="hmJoinBody"></tbody>
+      <div class="scroll-table"><table class="pl-list jt">
+        <thead><tr><th class="c-jname">Department / date / role / person</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th><th class="c-open-name">Opening</th></tr></thead>
+        <tbody id="hmJoinBody" class="pt3 pt3c"></tbody>
       </table></div>
       ${defsBlock('hm-joiners')}
     </div>
@@ -626,6 +627,33 @@ export function initHmFilters(data) {
   // its own table. Now a single control in the main filter bar drives every panel and every chart on the tab.
   let msHmJob = null, msHmDept = null, msHmRec = null, msHmPanel = null, msHmTpStage = null, msHmPipeStage = null;   // #196
   const selJobs = () => (msHmJob ? msHmJob.getSelected() : []);
+
+  // ===== #213 (Jerin, 8 Oct 2026): a TAB-WIDE Topic filter, sitting next to Job =====
+  // 🗣 "give me an topic filter, after the job" — and he chose TAB-WIDE over Joiners-only, so it has to move
+  // every panel's numbers, not just the list it was asked for (Rule 13).
+  // 🔑 Topic lives on the OPENING (#157), so a topic selection is really a SET OF JOBS. That is why it folds
+  // into matchesJob below instead of being threaded through a dozen panels one at a time — one chokepoint, so
+  // no panel can quietly ignore the filter. Same reason openJobIds() is gated.
+  let msHmTopic = null;
+  const selTopics = () => (msHmTopic ? msHmTopic.getSelected() : []);
+  const topicJobs = (() => {
+    const m = new Map();
+    ((data && data.openingRows) || []).forEach(r => {
+      const t = realTopic(r.topic); if (!t || !r.jobId8) return;
+      if (!m.has(t)) m.set(t, new Set());
+      m.get(t).add(String(r.jobId8).slice(0, 8));
+    });
+    return m;
+  })();
+  const topicOptions = [...topicJobs.keys()].sort((a, b) => a.localeCompare(b));
+  const topicOk = (job8) => {
+    const sel = selTopics();
+    if (!sel.length) return true;                     // nothing picked = All, exactly like Job
+    const k = String(job8 || '').slice(0, 8);
+    return sel.some(t => { const set = topicJobs.get(t); return !!set && set.has(k); });
+  };
+  // 🚨 EVERY existing matchesJob call picks the topic gate up from here. Do not call matchesJobBase directly.
+  const matchesJob = (sel, job8) => matchesJobBase(sel, job8) && topicOk(job8);
   // #172c: the SAME sources as before — openings, jobs, people in closing — but gathered as JOB IDS, so two
   // jobs sharing a name stay two entries. Labels come from job-filter.js (department only where it repeats).
   const jobFilterIds = new Set([...openings.map(o => o.jobId), ...jobs.map(j => j.id),
@@ -666,7 +694,13 @@ export function initHmFilters(data) {
   // #125 (Jerin, 15 Sep 2026): "we dont work on any job with an opening open date in the previous quarter". Throughput and Panelists list
   // only jobs with an opening OPENED in a quarter the window touches — Pipeline has done the same since #8. No dates ⇒ null ⇒ every job.
   function openJobIds() {
-    return (gFrom() || gTo()) ? jobsWithOpeningIn(data, quarterInRange) : null;
+    const base = (gFrom() || gTo()) ? jobsWithOpeningIn(data, quarterInRange) : null;
+    if (!selTopics().length) return base;             // #213: no topic picked, nothing to narrow
+    // A topic IS a job scope, so it narrows this set too — otherwise the panels that lean on openJobIds
+    // rather than matchesJob would ignore the filter, which is the bug Rule 13 exists to stop.
+    const allowed = new Set();
+    selTopics().forEach(t => (topicJobs.get(t) || new Set()).forEach(j => allowed.add(j)));
+    return base ? new Set([...base].filter(j => allowed.has(j))) : allowed;
   }
 
   // ===== Section 1: Positions (Department -> Job tree) =====
@@ -1428,17 +1462,22 @@ export function initHmFilters(data) {
         : '';
     }
     if (!list.length) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody joined between these dates for this filter.</td></tr>`;
       return;
     }
     // #149: NEWEST month first here — this list looks back, where Joining Pending looks forward.
     list.sort((a, b) => String(a.candidate || '').localeCompare(String(b.candidate || '')));
     // #149 option A. No sub-stage split: everyone on this list is Hired, which is one stage.
-    body.innerHTML = monthTreeRows(list, {
+    // #213 (Jerin, 8 Oct 2026): Department > exact day > Role > the people. Department and Job are headings
+    // now, so they come off the person rows — eight columns become six, the same trade #149 made.
+    body.innerHTML = deptTreeRows(list, {
+      deptOf: e => e._dept,
       dayOf: e => e.startDate,
+      roleOf: e => e.jobTitle,
+      dropLoneRole: true,   // #213 option B: a day with one role shows it on the date line instead of its own row
       nameOf: e => e.candidate,
-      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdSourcer(e.sourcer)}${tdDept(e._dept)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,
-      cols: 8, order: 'newest',   // #169 · #194: +Sourcer
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdSourcer(e.sourcer)}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}${tdOpening(e.openingId, topicLookup(data))}`,
+      cols: 6, order: 'newest',   // #169 · #194: +Sourcer
     });
     pinMonthHeadings(body);
   }
@@ -1579,6 +1618,8 @@ export function initHmFilters(data) {
 
   // ONE Job multi-select in the main filter bar, wired to renderActive so it reaches every sub-tab.
   msHmJob = makeMultiSelect(document.getElementById('msHmJob'), 'Job', jobOptions, renderActive);   // #172c: ids, not names
+  // #213: Topic, right after Job and wired to the same renderActive, so it reaches every sub-tab.
+  msHmTopic = makeMultiSelect(document.getElementById('msHmTopic'), 'Topic', topicOptions, renderActive);
   // #196 option B: Department is the same kind of chip now, so it costs 96px instead of 220.
   // ⚠ `allDepts` in renderHmReport is a DIFFERENT function's local. Built here the same way rather than
   //   reached for - a wider scope would be the sort of quiet coupling that breaks when either moves.

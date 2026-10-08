@@ -23,6 +23,7 @@ export const DEFINITIONS = {
       {
         heading: 'The cards and the columns',
         items: [
+          ['Topic', 'The <strong>Topic</strong> filter sits next to Job and narrows <strong>every panel on this tab</strong>, not just this one. A topic belongs to an <strong>opening</strong>, so picking one keeps the roles whose openings carry it. Only SME roles use topics, so most roles are unaffected.'],
           ['Total openings', 'Positions opened on a day between <strong>From</strong> and <strong>To</strong>. Each counts once, in the quarter it opened, so a role opened in Q2 keeps counting toward Q2 while it stays open. Left out: positions marked <em>On Hold</em> or <em>Shelved</em>, and any with no opening date in Ashby.'],
           ['Joined', 'Positions someone has been <strong>moved to Hired</strong> into &mdash; Ashby then marks the opening <em>Filled</em>.'],
           ['Open', 'Positions from that set still to fill.'],
@@ -94,7 +95,8 @@ export const DEFINITIONS = {
       {
         heading: 'The columns',
         items: [
-          ['Joining date / person', 'A tree: <strong>joining month</strong>, then <strong>joining date</strong>, then the people, each heading carrying its own count. Anyone with no date is kept in a final <strong>Date not set</strong> group, so the names always add up to the number.'],
+          ['Department / date / role / person', 'A tree: <strong>department</strong>, then the <strong>exact joining day</strong>, then the <strong>role</strong>, then the people &mdash; each heading carrying its own count. Department and role are headings now, so they are no longer repeated as columns. Anyone with no date is kept in a <strong>Date not set</strong> group inside their department, so the names always add up to the number.'],
+          ['Opening', 'Deliberately narrow and last: <strong>hover it for the full name</strong>. Topic is given the room instead, because it is the one you read.'],
           ['Opening', 'The <strong>position</strong> they are tied to, by its full name. When it cannot be shown the cell says <em>no opening on the offer</em> or <em>not in this period</em>.'],
           ['Sourcer', 'Who <strong>sourced</strong> the candidate, when that was somebody other than the recruiter working the role. &#128681; <strong>A dash is the normal case, not a gap</strong> &mdash; almost every hire is sourced by the recruiter who worked it, and Ashby only holds this field when someone else did it. Today it is filled on <strong>3 rows across both lists</strong>. The head always stays with the recruiter (#108), so a name here never changes a count.'],
           ['Topic', 'On an <strong>SME</strong> role, the topic of the opening their offer names. Where it cannot be shown the cell says why: <em>no opening on the offer</em>, <em>opening has no topic</em>, or <em>opening not in this period</em>. A plain dash means the role does not use topics.'],
@@ -487,6 +489,7 @@ export const DEFINITIONS = {
       {
         heading: 'The columns',
         items: [
+          ['Topic', 'The <strong>Topic</strong> filter sits next to Job and narrows <strong>every panel on this tab</strong>, not just this one. A topic belongs to an <strong>opening</strong>, so picking one keeps the roles whose openings carry it. Only SME roles use topics, so most roles are unaffected.'],
           ['HC and Score', '<strong>HC</strong> is the count. <strong>Score</strong> weights it by how hard the role is &mdash; Family, Level and Complexity, from <strong>Admin &rarr; Scoring</strong>. A role that scores zero, usually one with no Level, is marked <em>unscored</em>: it counts in HC but adds nothing to Score.'],
           ['Total positions', 'Distinct openings raised in the period, on a day between <strong>From</strong> and <strong>To</strong>, counted once each in the quarter they were opened.'],
           ['Joined', 'Those positions someone has been <strong>moved to Hired</strong> into &mdash; Ashby marks the opening <em>Filled</em>.'],
@@ -558,7 +561,8 @@ export const DEFINITIONS = {
       {
         heading: 'The columns',
         items: [
-          ['Joining date / person', 'A tree: <strong>joining month</strong>, then <strong>joining date</strong>, then the people, each heading carrying its own count. Anyone with no date is kept in a final <strong>Date not set</strong> group, so the names always add up to the number.'],
+          ['Department / date / role / person', 'A tree: <strong>department</strong>, then the <strong>exact joining day</strong>, then the <strong>role</strong>, then the people &mdash; each heading carrying its own count. Department and role are headings now, so they are no longer repeated as columns. Anyone with no date is kept in a <strong>Date not set</strong> group inside their department, so the names always add up to the number.'],
+          ['Opening', 'Deliberately narrow and last: <strong>hover it for the full name</strong>. Topic is given the room instead, because it is the one you read.'],
           ['Recruiter', 'The Recruiter on their hiring team in Ashby, initials in their pod&rsquo;s colour.'],
           ['Sourcer', 'Who <strong>sourced</strong> the candidate, when that was somebody other than the recruiter working the role. &#128681; <strong>A dash is the normal case, not a gap</strong> &mdash; almost every hire is sourced by the recruiter who worked it, and Ashby only holds this field when someone else did it. Today it is filled on <strong>3 rows across both lists</strong>. The head always stays with the recruiter (#108), so a name here never changes a count.'],
           ['Department and Job', 'The role they joined.'],

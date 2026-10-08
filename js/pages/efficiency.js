@@ -4,10 +4,10 @@ import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js'; 
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
 import { defsBlock } from '../definitions.js';
-import { jobFilterOptions, matchesJob, matchesJobRow } from '../job-filter.js';   // #172c
+import { jobFilterOptions, matchesJob as matchesJobBase, matchesJobRow as matchesJobRowBase } from '../job-filter.js';   // #172c
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdQuarter, tdSourcer, pointsCaption } from '../people-cells.js';   // #137 · #176b · #195: tdQuarter replaces tdLinked · #194: tdSourcer
-import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
-import { monthTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
+import { tdTopic, tdOpening, topicLookup, realTopic } from '../people-cells.js';   // #168/#169: the opening and the topic · #213: realTopic
+import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 // #145a (Jerin, 19 Sep 2026): the Pipeline panel moves here as it stands on the Hiring Manager tab, so it reads
@@ -219,6 +219,7 @@ export function renderEfficiency(data) {
     <div class="eff-filters">
       <div class="fchip"><div class="ms" id="effMsDept"></div></div>
       <div class="fchip"><div class="ms" id="effMsJob"></div></div>
+      <div class="fchip"><div class="ms" id="effMsTopic"></div></div>
       <!-- #196 (Jerin, 28 Sep 2026): the Recruiter filter. This strip had 262px spare, the roomiest of
            the two Position Fulfilment strips, so nothing had to give way here. -->
       <div class="fchip"><div class="ms" id="effMsRec"></div></div>
@@ -257,9 +258,9 @@ export function renderEfficiency(data) {
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-stage: Hired is one stage -->
     <div class="eff-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="effJoinersCaption" style="margin-bottom:0.5rem"></p>
-      <div class="scroll-table"><table class="pl-list">
-        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
-        <tbody id="effJoinersBody"></tbody>
+      <div class="scroll-table"><table class="pl-list jt">
+        <thead><tr><th class="c-jname">Department / date / role / person</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th><th class="c-open-name">Opening</th></tr></thead>
+        <tbody id="effJoinersBody" class="pt3 pt3c"></tbody>
       </table></div>
       ${defsBlock('eff-joiners')}
     </div>
@@ -471,6 +472,32 @@ export function initEfficiencyFilters(data) {
   const selRecs = () => (msRec ? msRec.getSelected() : []);   // #196
   const okRec = (r) => { const sel = selRecs(); return !sel.length || sel.includes(r); };   // ONE test, as on HM
   const selJobs = () => (msJob ? msJob.getSelected() : []);
+
+  // ===== #213 (Jerin, 8 Oct 2026): the TAB-WIDE Topic filter, mirroring the Hiring Manager tab =====
+  // 🔑 Topic lives on the OPENING (#157), so a topic selection is a SET OF JOBS — which is why it folds into
+  // matchesJob / matchesJobRow here instead of being threaded through a dozen panels. One chokepoint, so no
+  // panel can quietly ignore the filter (Rule 13).
+  let msTopic = null;
+  const selTopics = () => (msTopic ? msTopic.getSelected() : []);
+  const topicJobs = (() => {
+    const m = new Map();
+    ((data && data.openingRows) || []).forEach(r => {
+      const t = realTopic(r.topic); if (!t || !r.jobId8) return;
+      if (!m.has(t)) m.set(t, new Set());
+      m.get(t).add(String(r.jobId8).slice(0, 8));
+    });
+    return m;
+  })();
+  const topicOptions = [...topicJobs.keys()].sort((a, b) => a.localeCompare(b));
+  const topicOk = (job8) => {
+    const sel = selTopics();
+    if (!sel.length) return true;
+    const k = String(job8 || '').slice(0, 8);
+    return sel.some(t => { const set = topicJobs.get(t); return !!set && set.has(k); });
+  };
+  // 🚨 EVERY existing call picks the topic gate up from here. Do not call the Base versions directly.
+  const matchesJob = (sel, job8) => matchesJobBase(sel, job8) && topicOk(job8);
+  const matchesJobRow = (sel, d, jid, dept, title) => matchesJobRowBase(sel, d, jid, dept, title) && topicOk(jid);
   // Filtered [{dept, jobs:[...]}] for a pod (honours Department/Job multi-selects), sorted.
   function podDeptJobs(pod, q) {
     const P = getTree(q)[pod]; if (!P) return [];
@@ -1155,16 +1182,21 @@ export function initEfficiencyFilters(data) {
       .filter(e => okRec(e.recruiter))   // #196
       .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)) || String(a.candidate || '').localeCompare(String(b.candidate || '')));
     // #149 option A: newest month first here — this list looks back. No sub-stage: everyone is Hired.
-    body.innerHTML = rows.length ? monthTreeRows(rows, {
+    // #213 (Jerin, 8 Oct 2026): Department > exact day > Role > the people, and Department/Job come off the
+    // person rows because they are headings now — the same trade #149 made with Month and DOJ.
+    body.innerHTML = rows.length ? deptTreeRows(rows, {
+      deptOf: e => resolveDeptTeam(e.department || '').dept || e.department || '(no department)',
       dayOf: e => e.startDate,
+      roleOf: e => e.jobTitle,
+      dropLoneRole: true,   // #213 option B: a day with one role shows it on the date line instead of its own row
       nameOf: e => e.candidate,
       // #176b: offerEvents carry their own level, so no job lookup is needed here.
       captionOf: e => pointsCaption(
         scoreOfOpening(e.openingId, { department: e.department, title: e.jobTitle, level: e.level }, selQuarter(), openingScores(data)),
         e.openingId ? 'no complexity' : 'no opening'),
-      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdSourcer(e.sourcer)}${tdDept(e.department)}${tdJob(e.jobTitle)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}`,   // #195
-      cols: 8, order: 'newest',   // #168/#169: Opening + Topic · #194: +Sourcer
-    }) : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
+      cells: e => `${tdRecruiter(e.recruiter, e.startDate)}${tdSourcer(e.sourcer)}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter, e.startDate)}${tdOpening(e.openingId, topicLookup(data))}`,   // #195
+      cols: 6, order: 'newest',   // #168/#169: Opening + Topic · #194: +Sourcer
+    }) : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Nobody joined between these dates under these filters.</td></tr>`;
     pinMonthHeadings(body);
     const cap = document.getElementById('effJoinersCaption');
     if (cap) {
@@ -2215,6 +2247,8 @@ export function initEfficiencyFilters(data) {
   })();
   msRec = makeMultiSelect(document.getElementById('effMsRec'), 'Recruiter', recNames196, renderAll);
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobOptions, renderAll);   // #172c
+  // #213: Topic, right after Job, wired to the same renderAll so it reaches every sub-tab.
+  msTopic = makeMultiSelect(document.getElementById('effMsTopic'), 'Topic', topicOptions, renderAll);
 
   // #206 Interview Traction - the SAME module the Hiring Manager tab mounts, with this page's own scope.
   renderTraction = mountInterviewTraction(document.getElementById('effTractionHost'), data, () => {
