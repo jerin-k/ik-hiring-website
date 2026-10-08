@@ -164,9 +164,19 @@ function chartSvg(slots) {
       // tell which one it belongs to, nudged apart so two thin slices never print on top of each other.
       if (outside.length) {
         outside.sort((a, b) => a.y - b.y);
-        for (let k = 1; k < outside.length; k++) {
-          if (outside[k].y - outside[k - 1].y < 8.5) outside[k].y = outside[k - 1].y + 8.5;
-        }
+        const GAP = 8.5, loY = padT + 3, hiY = base - 1;
+        const spread = () => { for (let k = 1; k < outside.length; k++) {
+          if (outside[k].y - outside[k - 1].y < GAP) outside[k].y = outside[k - 1].y + GAP; } };
+        spread();
+        // 🚨 Jerin, 8 Oct 2026, pointing at R1/W41: the stack must then be pulled back INSIDE the plot.
+        // The spread above only ever pushes labels DOWN, and the draw step used to clamp each one to the
+        // baseline independently - so on a SHORT bar (W41 is 14 against a 106 scale, so every slice sits near
+        // the bottom) several labels all clamped to the same y and printed ON TOP of each other. Measured on
+        // the live page: 5 colliding pairs out of 46 labels, one of them at a gap of exactly 0.
+        // Shifting the whole stack up by the overflow keeps the spacing AND keeps it off the axis.
+        const over = (outside[outside.length - 1].y + 2.5) - hiY;
+        if (over > 0) outside.forEach(o => { o.y -= over; });
+        if (outside[0].y + 2.5 < loY) { outside[0].y = loY - 2.5; spread(); }
         const right = bx + bw + 14 < W - padR;
         // Jerin, 8 Oct 2026: "these data labels suck.. connect the label to the block using a line."
         // A number parked beside the bar does not say WHICH slice it belongs to, and two thin slices in a row
