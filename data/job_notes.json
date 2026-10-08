@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-05T15:23:58.303Z",
+  "updatedAt": "2026-10-08T11:00:29.429Z",
   "notes": {
     "19982198": {
       "text": "HE - 6; R2 - 1",
@@ -101,6 +101,11 @@
       "text": "HE - 5; R1 - 4 (2 feedback pending); \nAssignment - 1; \nDeepdive - 2; R4 - 1; R5 - Samuel",
       "by": "Jerin",
       "at": "2026-09-26T17:41:08.856Z"
+    },
+    "378e5361": {
+      "text": "HE - 3\nR1 - 4 (TBS)\nR2 -  1\nR3 (Dipen) - 1 (TBS)\nFinal round (Madhav)- 1",
+      "by": "Alokita",
+      "at": "2026-10-08T11:00:29.428Z"
     }
   }
 }
