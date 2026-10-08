@@ -32,6 +32,15 @@ var ASSESS_SPAN_START = { r1: 1, oa: 1 };
 // progressed. Same shape as every other cell, honest wording (Jerin, 2026-08-31).
 var ASSESS_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
 
+// #210 (Jerin, 8 Oct 2026) - LIVE since 8 Oct. Measured first, then published on his word.
+// (d) The rounds are an UNORDERED POOL: "R2 might happen before R1." A move to any OTHER round is progress.
+//     A move back into a screening stage is NOT - he asked about round order, not about returning to screening.
+var ASSESS_ROUND_POOL = { oa: 1, r1: 1, r2: 1, r3: 1, r4: 1, r5: 1 };
+// (a) App Review and HM Review are REVIEWS, not interviews: an unmatched feedback form saw only 41 and 19
+//     people in a quarter. Count everyone ADDED instead, as Ref Check / Doc / Offer do. TA Screen is NOT
+//     included - real screening calls happen there and are already picked up.
+var ASSESS_ADDED_210 = { refCheck: 1, docSub: 1, offer: 1, appReview: 1, hmReview: 1 };
+
 function assessQ_(day) {
   if (!day || day.length < 7) return null;
   return day.substring(0, 4) + '-Q' + (Math.floor((parseInt(day.substring(5, 7), 10) - 1) / 3) + 1);
@@ -148,11 +157,16 @@ function assessStageAt_(win, day) {
   return best;
 }
 
-function computeAssessedRollups_(events) {
+function computeAssessedRollups_(events, opts) {
+  opts = opts || {};
+  // #210 is LIVE. opts.legacy restores the pre-8-Oct rules so probe210 can still show before vs after.
+  var USE_POOL = !opts.legacy;                                          // #210d
+  var ADDED_SET = opts.legacy ? ASSESS_ADDED : ASSESS_ADDED_210;        // #210a
   var t0 = Date.now();
-  var iv = assessInterviews_();
-  var asg = assessAssignments_();
-  var fb = assessFeedback_(iv.ends);
+  // #210: a comparison run passes the signals in, so both rules see IDENTICAL input and Ashby is called once.
+  var iv = (opts.pre && opts.pre.iv) || assessInterviews_();
+  var asg = (opts.pre && opts.pre.asg) || assessAssignments_();
+  var fb = (opts.pre && opts.pre.fb) || assessFeedback_(iv.ends);
 
   // Stage windows + who owns the application. Live apps come from the stage-history store; archived ones
   // from the v4 sweep, without which any review-stage feedback on somebody since rejected is unplaceable.
@@ -182,7 +196,7 @@ function computeAssessedRollups_(events) {
   for (var appAdd in win) {
     var wAdd = win[appAdd] || [];
     for (var iAdd = 0; iAdd < wAdd.length; iAdd++) {
-      if (ASSESS_ADDED[wAdd[iAdd].k] && wAdd[iAdd].e) mark(appAdd, wAdd[iAdd].k, wAdd[iAdd].e);
+      if (ADDED_SET[wAdd[iAdd].k] && wAdd[iAdd].e) mark(appAdd, wAdd[iAdd].k, wAdd[iAdd].e);
     }
   }
   var placed = 0, unplaceable = 0;
@@ -197,9 +211,12 @@ function computeAssessedRollups_(events) {
   function progressed(app, stage, day) {
     var w = win[app]; if (!w) return false;
     var idx = ASSESS_IDX[stage]; if (idx == null) return false;
+    var inPool = USE_POOL && ASSESS_ROUND_POOL[stage];
     for (var i = 0; i < w.length; i++) {
-      var j = ASSESS_IDX[w[i].k];
-      if (j != null && j > idx && w[i].e && w[i].e >= day) return true;
+      var k2 = w[i].k, j = ASSESS_IDX[k2];
+      if (j == null || !w[i].e || w[i].e < day) continue;
+      if (j > idx) return true;
+      if (inPool && ASSESS_ROUND_POOL[k2] && k2 !== stage) return true;   // #210d rounds are unordered
     }
     // Offer is the last rung of the ladder, so "a later stage" cannot answer it, and 'Hired' is
     // deliberately NOT in STAGE_KEY_MAP so it never appears in a stage window. The application's own
@@ -208,7 +225,9 @@ function computeAssessedRollups_(events) {
     return false;
   }
 
-  var byJobQ = {}, spanByJobQ = {}, nA = 0, nB = 0;
+  // #210b: assessed but no decision yet. DISCLOSE ONLY - w is NEVER subtracted from a (Jerin chose to leave
+  // the maths alone). An application still in the LIVE store is undecided; archive-only means rejected.
+  var byJobQ = {}, spanByJobQ = {}, nA = 0, nB = 0, nW = 0;
   // #129: day twins - the same a / b keyed by the assessment DAY (the string assessQ_ cuts the quarter from), from
   // reportFloorDay_() on, so Throughput can follow the From / To boxes. A quarter's days add up to that quarter.
   var byJobD = {}, spanByJobD = {}, floorD = reportFloorDay_();
@@ -225,10 +244,11 @@ function computeAssessedRollups_(events) {
       cell.a++; nA++;
       var prog = progressed(app, st, day);
       if (prog) { cell.b++; nB++; }
+      else if (events[app]) { cell.w = (cell.w || 0) + 1; nW++; }   // #210b no decision yet
       if (day >= floorD) {
         var jmD = byJobD[j8] || (byJobD[j8] = {}), smD = jmD[st] || (jmD[st] = {});
         var cD = smD[day] || (smD[day] = { a: 0, b: 0 });
-        cD.a++; if (prog) cD.b++;
+        cD.a++; if (prog) cD.b++; else if (events[app]) cD.w = (cD.w || 0) + 1;   // #210b day twin
       }
     }
     // The headline span: assessed at R1 or OA, whichever came first, through to Ref Check / Documentation /
@@ -255,8 +275,9 @@ function computeAssessedRollups_(events) {
     }
   }
   Logger.log('=== assessed pass: ' + nA + ' application-stage-quarters assessed, ' + nB + ' progressed ('
-    + Math.round(100 * nB / (nA || 1)) + '%), ' + Object.keys(byJobQ).length + ' jobs, '
-    + Math.round((Date.now() - t0) / 1000) + 's ===');
+    + Math.round(100 * nB / (nA || 1)) + '%), ' + nW + ' awaiting, ' + Object.keys(byJobQ).length + ' jobs, '
+    + Math.round((Date.now() - t0) / 1000) + 's [#210 pool=' + (USE_POOL ? 'ON' : 'off')
+    + ' added=' + (ADDED_SET === ASSESS_ADDED_210 ? 'ON' : 'off') + '] ===');
   return {
     assessedByJobQ: byJobQ,
     assessedSpanByJobQ: spanByJobQ,
@@ -271,4 +292,46 @@ function computeAssessedRollups_(events) {
       assessedRows: nA, progressedRows: nB
     }
   };
+}
+
+
+// ===== #210 DRY RUN - measures both rule changes and WRITES NOTHING =====
+function probe210() {
+  var t0 = Date.now();
+  var events = loadDriveJson_('stage_events.json') || {};
+  if (!Object.keys(events).length) { Logger.log('probe210 REFUSED: stage_events.json is empty'); return; }
+  var iv = assessInterviews_(), asg = assessAssignments_(), fb = assessFeedback_(iv.ends);
+  var pre = { iv: iv, asg: asg, fb: fb };
+  Logger.log('probe210: signals fetched in ' + Math.round((Date.now() - t0) / 1000) + 's');
+  var A = computeAssessedRollups_(events, { pre: pre, legacy: true });   // the pre-8-Oct rules
+  var B = computeAssessedRollups_(events, { pre: pre });                 // live
+  function tot(res, q) {
+    var by = res.assessedByJobQ || {}, out = {};
+    for (var job in by) for (var st in by[job]) {
+      var v = by[job][st][q]; if (!v) continue;
+      var c = out[st] || (out[st] = { a: 0, b: 0, w: 0 });
+      c.a += v.a || 0; c.b += v.b || 0; c.w += v.w || 0;
+    }
+    return out;
+  }
+  function pc(c) { return c.a ? Math.round(100 * c.b / c.a) : 0; }
+  function pad(v, n) { v = String(v); while (v.length < n) v += ' '; return v; }
+  ['2026-Q3', '2026-Q4'].forEach(function (q) {
+    var ta = tot(A, q), tb = tot(B, q);
+    Logger.log('');
+    Logger.log('===== #210 BEFORE vs AFTER - ' + q + ' =====');
+    Logger.log(pad('stage', 17) + '|  ' + pad('NOW', 22) + '|  ' + pad('#210', 22) + '|  waiting');
+    ASSESS_ORDER.forEach(function (st) {
+      var x = ta[st] || { a: 0, b: 0, w: 0 }, y = tb[st] || { a: 0, b: 0, w: 0 };
+      if (!x.a && !y.a) return;
+      Logger.log(pad(st, 17) + '|  ' + pad(x.a + ' -> ' + x.b + ' (' + pc(x) + '%)', 22)
+        + '|  ' + pad(y.a + ' -> ' + y.b + ' (' + pc(y) + '%)', 22)
+        + '|  ' + y.w + ((y.a !== x.a || y.b !== x.b) ? '   <== CHANGED' : ''));
+    });
+    function span(res) { var sp = res.assessedSpanByJobQ || {}, a = 0, b = 0;
+      for (var j in sp) { var v = sp[j][q]; if (v) { a += v.a || 0; b += v.b || 0; } } return a + ' -> ' + b; }
+    Logger.log(pad('SPAN', 17) + '|  ' + pad(span(A), 22) + '|  ' + pad(span(B), 22) + '|');
+  });
+  Logger.log('');
+  Logger.log('probe210 done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
 }
