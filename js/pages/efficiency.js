@@ -304,6 +304,7 @@ export function renderEfficiency(data) {
       <div class="sheat-wrap">
         <div class="sheat-head"><h3 class="subsection-title">Throughput — by stage</h3><span class="sheat-hint" id="effTpHint"></span></div>
         <div id="effTpHeat" class="sheat"></div><div id="effTpHeatTip" class="sheat-tip"></div>
+        <p class="sub-note" id="effTpWaiting"></p>
       </div>
       ${defsBlock('eff-throughput')}
     </div>
@@ -1239,7 +1240,10 @@ export function initEfficiencyFilters(data) {
     // file from before 15 Sep has none, so a narrow range then reads empty rather than the quarter.
     const rg = effRange(), dayTp = !coversQuarters(rg, per);
     const asD2 = (rollups && rollups.assessedByJobD) || {}, spanD = (rollups && rollups.assessedSpanByJobD) || {};
-    const abOf = (byQ, byD) => { if (!dayTp) return sumInPeriod(byQ, per); const s = sumDayFields(byD, rg); return { a: s.a || 0, b: s.b || 0 }; };
+    const abOf = (byQ, byD) => { if (!dayTp) return sumInPeriod(byQ, per); const s = sumDayFields(byD, rg); return { a: s.a || 0, b: s.b || 0, w: s.w || 0 }; };
+    // #210b: assessed in this period with no decision yet - disclosed under the table, never taken out of the sum.
+    const waitingOf = (jids) => jids.reduce((t, jid) => t + stageCols.reduce((u, k) =>
+      u + (abOf((asJ2 ? (asJ2[jid] || {}) : {})[TP_TO_SK[k]], (asD2[jid] || {})[TP_TO_SK[k]]).w || 0), 0), 0);
     const cellOf = (jids, k) => jids.reduce((a, jid) => {
       if (asJ2) {
         const c = abOf((asJ2[jid] || {})[TP_TO_SK[k]], (asD2[jid] || {})[TP_TO_SK[k]]);
@@ -1299,6 +1303,15 @@ export function initEfficiencyFilters(data) {
         labels: asJ2 ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
       });
+    // #210b (Jerin, 8 Oct 2026): assessed in this period with no decision yet. Counted as assessed and NOT as
+    // progressed, so they pull every rate down. He chose to DISCLOSE rather than remove - the maths is untouched.
+    const wEl = document.getElementById('effTpWaiting');
+    if (wEl) {
+      const nW = asJ2 ? waitingOf(allJids) : 0;
+      wEl.textContent = nW
+        ? `${nW.toLocaleString()} ${nW === 1 ? 'person' : 'people'} assessed in this period ${nW === 1 ? 'has' : 'have'} no decision yet. They count as assessed but not as moved on, so the rates above read slightly low.`
+        : '';
+    }
   }
 
   function buildScreenChartEff() {
@@ -1500,7 +1513,7 @@ export function initEfficiencyFilters(data) {
   }
 
   // Administrative stages: candidates ADDED, not assessed (Jerin, 2026-08-31).
-  const TP_ADDED = { rc: 1, ds: 1, offer: 1 };   // keyed like TP_KEYS — as refCheck/docSub they never matched, so the Ref Check and Doc Sub hovers said "assessed" (fixed in #122, 15 Sep 2026)
+  const TP_ADDED = { app: 1, hm: 1, rc: 1, ds: 1, offer: 1 };   // #210a (8 Oct 2026): App Review and HM Review joined these - nobody is interviewed there, so they count candidates ADDED. Keyed like TP_KEYS — as refCheck/docSub they never matched, so the Ref Check and Doc Sub hovers said "assessed" (fixed in #122, 15 Sep 2026)
 
   function renderThroughput() {
     // #122 (15 Sep 2026): a Stages dropdown (nothing picked = every stage) replaced the row of stage tick-boxes, and the
@@ -1578,7 +1591,8 @@ export function initEfficiencyFilters(data) {
   // Adds up {quarter: {a, b}} over a period (an array of quarter keys; null = every quarter present).
   function sumInPeriod(byQ, per) {
     const src = byQ || {};
-    return (per || Object.keys(src)).reduce((acc, qq) => { const v = src[qq]; return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0) } : acc; }, { a: 0, b: 0 });
+    return (per || Object.keys(src)).reduce((acc, qq) => { const v = src[qq];
+      return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0), w: acc.w + (v.w || 0) } : acc; }, { a: 0, b: 0, w: 0 });
   }
   function tisPeriod() {
     return periodQuarters(document.getElementById('effYear')?.value || '', document.getElementById('effQuarter')?.value || '');   // #127c: never before Q3 2026

@@ -112,12 +112,14 @@ export const DEFINITIONS = {
   'hm-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'Of the people <strong>assessed</strong> at a stage, how many <strong>progressed</strong> to a later one. Built from real events in Ashby &mdash; interviews held, assignments triggered, feedback submitted &mdash; not from a snapshot of where people sit today.',
-    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: only jobs with an opening opened in the period, and From / To to the day &middot; 15 Sep 2026.',
+    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: App Review and HM Review count everyone added, and rounds out of order count as progress &middot; 8 Oct 2026.',
     groups: [
       {
         heading: 'Reading the squares',
         items: [
-          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at that stage in the period &mdash; an interview held there, an assignment triggered there, or a feedback form where no interview exists. <strong>Progressed</strong> means they then reached a <em>later</em> stage. <strong>Ref Check, Documentation and Offer are different</strong>: nobody is assessed at an administrative stage, so those three count the candidates <strong>added</strong> to the stage. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at that stage in the period &mdash; an interview held there, an assignment triggered there, or a feedback form where no interview exists. <strong>Progressed</strong> means they then moved on. <strong>Five stages are counted differently</strong>: nobody is interviewed at <strong>App Review, HM Review, Ref Check, Documentation or Offer</strong>, so those count every candidate <strong>added</strong> to the stage. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['Moving on does not mean moving down the list', 'The interview rounds are <strong>not run in a fixed order here</strong> &mdash; R2 sometimes happens before R1. So a move to <strong>any other round</strong> counts as progress. Going back to a screening stage does not.'],
+          ['People with no decision yet', 'Someone assessed whose next step has not happened yet counts as <strong>assessed but not progressed</strong>, so they pull a rate down. The line under the table says how many there are. They are <strong>not</strong> taken out of the sum.'],
           ['R1/OA &rarr; late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. Counted per person, never one column divided by another.'],
           ['What the colour means', 'The shade is <strong>how many people that square lost</strong> &mdash; assessed there, then never reached a later stage &mdash; on five steps from palest to darkest. <strong>Department</strong> and <strong>Total</strong> squares are blue on a darker band; <strong>job</strong> squares use the same steps in a lighter apricot. Colour ranks what to fix; the number is the rate.'],
           ['A dot', '<strong>Nobody was assessed</strong> at that stage in the period. It is not a zero rate, and it is not missing data.'],
@@ -128,7 +130,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
+      ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Rejections do not count as progress', 'Someone rejected or withdrawn at a stage counts as assessed there and not progressed.'],
       ['A role with no movement reads empty, not its history', 'A role with no activity in the period shows dots rather than its all-time numbers.'],
       ['Not the same as Interview Pipeline', 'This counts movement <em>during</em> a period; that counts people <em>sitting</em> somewhere today. The two are not meant to tie out.'],
@@ -627,12 +629,14 @@ export const DEFINITIONS = {
   'eff-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'The full funnel, stage by stage, <strong>Department &rarr; Job</strong>. Of the people <strong>assessed</strong> at each stage, how many <strong>progressed</strong> to a later one.',
-    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: only jobs with an opening opened in the period, and From / To to the day &middot; 15 Sep 2026.',
+    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: App Review and HM Review count everyone added, and rounds out of order count as progress &middot; 8 Oct 2026.',
     groups: [
       {
         heading: 'Reading the squares',
         items: [
-          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at the stage in the period &mdash; an interview held there, an assignment triggered there, or a feedback form where no interview exists. Sitting in the queue does not count. <strong>Progressed</strong> means they then reached a <em>later</em> stage; being rejected or withdrawing does not. <strong>Ref Check, Documentation and Offer are different</strong>: nobody is assessed at an administrative stage, so those three count the candidates <strong>added</strong>. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at the stage in the period &mdash; an interview held there, an assignment triggered there, or a feedback form where no interview exists. Sitting in the queue does not count. <strong>Progressed</strong> means they then moved on; being rejected or withdrawing does not. <strong>Five stages are counted differently</strong>: nobody is interviewed at <strong>App Review, HM Review, Ref Check, Documentation or Offer</strong>, so those count every candidate <strong>added</strong>. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['Moving on does not mean moving down the list', 'The interview rounds are <strong>not run in a fixed order here</strong> &mdash; R2 sometimes happens before R1. So a move to <strong>any other round</strong> counts as progress. Going back to a screening stage does not.'],
+          ['People with no decision yet', 'Someone assessed whose next step has not happened yet counts as <strong>assessed but not progressed</strong>, so they pull a rate down. The line under the table says how many there are. They are <strong>not</strong> taken out of the sum.'],
           ['%', 'Progressed &divide; Assessed. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
           ['R1/OA &rarr; late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. Counted per person, never one column divided by another.'],
           ['What the colour means', 'The shade is <strong>how many people that square lost</strong> &mdash; assessed there, then never reached a later stage &mdash; on five steps from palest to darkest. <strong>Department</strong> and <strong>Total</strong> squares are blue on a darker band; <strong>job</strong> squares use the same steps in a lighter apricot. Colour ranks what to fix; the number is the rate.'],
@@ -645,7 +649,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
+      ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. That is also why <strong>R1/OA &rarr; late</strong> is a single per-candidate span rather than a sum.'],
       ['A role with no movement reads empty, not its history', 'A role with no activity in the period shows dots rather than its all-time numbers.'],
       ['Online Assessment carries small numbers', 'Used, but thinly next to App Review and R1. Treat a single role&rsquo;s OA conversion as indicative, not solid.'],
