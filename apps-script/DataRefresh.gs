@@ -200,186 +200,113 @@ function hygAct_(map, appId, day) { if (appId && day && (!map[appId] || day > ma
 
 // ===== APP PASS — createdAfter=SCOPE_FROM_MS returns only current-year apps =====
 
+// #204c (8 Oct 2026) — THE FULL YEAR WALK. Now the FALLBACK, and the only thing that RE-ARMS the store.
+// 🔑 The arithmetic moved OUT of here in #204a and the copy that used to be here is DELETED, so appsAccumOne_
+//    is the single place an application is counted, shared with fetchAndProcessAppsFromStore_. Two copies was
+//    the Rule 3 hazard; there is now one. Do not reintroduce a second.
+// 🔑 WHY THIS STILL EXISTS AT ALL: a syncToken can only be minted at the END of a full walk and it EXPIRES
+//    AFTER 14 DAYS. Without a walk that re-arms the store, the pipeline would quietly fall back to the slow
+//    path for ever on day 15 and the 30-minute problem would come back with nobody looking. So the walk fills
+//    the store from the SAME pages it counts: one walk serves both.
+// 🚨 ONE CONSEQUENCE, AND IT MATTERS FOR ANY FUTURE PARITY RUN: from this change on, this function WRITES to the
+//    store. So parity204B_live no longer leaves the store alone, and running B1 then B2 after this point proves
+//    nothing about independence - B1 would have just rewritten the very shards B2 reads. The authoritative
+//    parity result is the one taken BEFORE this change (8 Oct 2026, 09:04-09:16 IST: 24 of 24 sections identical
+//    with the dwell clock pinned; and a control that moved only the clock moved only the three dwell sections).
+//    To re-verify the WALK later, compare its digest against parity204_live_original.json - a walk-vs-walk
+//    comparison is still honest. Do not quote a post-change B1-vs-B2 run as evidence the store is correct.
 function fetchAndProcessApps_(startTime, jobLookup, excludedJobIds_) {
-  excludedJobIds_ = excludedJobIds_ || {};   // #37: sandbox job ids to skip (see EXCLUDED_DEPTS)
-  var cursor = null, pageNum = 0, totalApps = 0, scopedApps = 0;
-  var funnel = { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 };
-  var recruiterCounts = {}, sourceCounts = {}, weekCounts = {}, qData = {}, appMap = {}, histApps = [];
-  // Every ARCHIVED application, for the drop backfill. An archived candidate's current stage reads
-  // 'Archived', so the stage map cannot tell us whether they ever reached a late stage - only their
-  // history can, and that needs one call each. Collecting the ids here costs nothing: this pass already
-  // walks every application. The backfill job consumes this list on its own trigger.
-  var archivedApps = [];
-  var recruiterUserId = {};   // recruiter name -> userId (for user.list isEnabled -> Active/Inactive)
-  var anomalies = { multiRecruiter: [], multiSourcer: [] };
-  // Stage titles Ashby returned that STAGE_KEY_MAP has no entry for. An unmapped stage is dropped
-  // from every count, which is exactly how 'Online Assessment' went unnoticed - so surface it.
-  var unmappedStages = {};
-  var unassignedCases = [];   // reached-screening+ apps with NO recruiter (dashboard compliance list); #13: only apps touched since HYGIENE_FLOOR
-  // Time-in-App-Review dwell histograms {days:count} for candidates CURRENTLY parked in App Review (now - createdAt).
-  // The stage-history accumulator can't see these (they never reached screening), so we capture them here — full coverage.
-  var arDwellJob = {}, arDwellRec = {};
-  // #120a/#120b: the same dwell per RECRUITER x JOB, so a Job filter or a department scope can narrow the recruiter
-  // rows. Summed over jobs it equals appReviewDwellByRecruiter for every parked candidate that has a job.
-  var arDwellRecJob = {};
-
-  function ensureRec(name) {
-    if (!recruiterCounts[name]) { var r = { name: name, total: 0, byJob: {}, sources: {}, srcNested: {}, srcByJob: {}, srcQ: {}, srcByJobQ: {} }; RECRUITER_STAGES.forEach(function(s) { r[s] = 0; }); recruiterCounts[name] = r; }
-    return recruiterCounts[name];
-  }
-  function ensureQ(qk) { if (!qData[qk]) qData[qk] = { funnel: { applied:0,screened:0,interviewed:0,offered:0,hired:0 }, jobCounts: {}, sourceCounts: {} }; return qData[qk]; }
+  excludedJobIds_ = excludedJobIds_ || {};
+  var ctx = appsAccumInit_();
+  var cursor = null, pageNum = 0;
+  var buf = {}, buffered = 0, wrote = 0, token = null, reachedEnd = false;
 
   do {
-    if (Date.now() - startTime > TIMEOUT_MS) { Logger.log('TIME CUTOFF at ' + totalApps + ' apps, ' + pageNum + ' pages'); break; }
-    var body = { limit: 100, createdAfter: SCOPE_FROM_MS };   // <-- year slice directly (Unix ms)
+    if (Date.now() - startTime > TIMEOUT_MS) { Logger.log('TIME CUTOFF at ' + ctx.total + ' apps, ' + pageNum + ' pages'); break; }
+    var body = { limit: 100, createdAfter: SCOPE_FROM_MS };
     if (cursor) body.cursor = cursor;
     var resp = ashbyPost_('/application.list', body);
     var batch = resp.results || [];
-    totalApps += batch.length; pageNum++;
+    ctx.total += batch.length; pageNum++;
 
     for (var i = 0; i < batch.length; i++) {
       var app = batch[i];
-      var createdMs = app.createdAt ? new Date(app.createdAt).getTime() : 0;
-      if (createdMs < SCOPE_FROM_MS) continue;   // defensive (createdAfter already scopes)
-      var jobId = app.job && app.job.id;
-      // #37: sandbox department - skip BEFORE any counter. funnel / sourceCounts / recruiterCounts / appMap
-      // below all increment whether or not the job resolves, so filtering the job list alone leaves these in.
-      if (jobId && excludedJobIds_[jobId]) continue;
-      scopedApps++;
-      var htr = getHiringTeamRoles_(app);
-      var recruiter = htr.recruiters.length ? htr.recruiters[0].name : null;
-      var sourcer = htr.sourcers.length ? htr.sourcers[0].name : null;
-      var recName = recruiter || 'Unassigned';   // attribute null-recruiter apps to a visible "Unassigned" bucket
-      if (recruiter && htr.recruiters[0].userId && !recruiterUserId[recruiter]) recruiterUserId[recruiter] = htr.recruiters[0].userId;
-      var candName = (app.candidate && (app.candidate.name || ((app.candidate.firstName || '') + ' ' + (app.candidate.lastName || '')).trim())) || null;
-      // primaryEmailAddress is already in the application.list payload (confirmed against the reference
-      // 2026-08-22). It is the ONLY reliable join key to the Hiring Tracker - names disagree constantly.
-      // 🚨 It must never reach dashboard.json; see the offer_contacts.json comment below.
-      var candEmail = (app.candidate && app.candidate.primaryEmailAddress && app.candidate.primaryEmailAddress.value) || null;
-      if (app.id) appMap[app.id] = { jobId: jobId, recruiter: recruiter, sourcer: sourcer, candidate: candName, email: candEmail };
-      var jd = jobLookup[jobId];
-      var stageName = app.currentInterviewStage ? app.currentInterviewStage.title : null;
-      var stageKey = stageName ? (STAGE_KEY_MAP[stageName] || null) : null;
-      if (stageName && !stageKey) unmappedStages[stageName] = (unmappedStages[stageName] || 0) + 1;
-      var isHired = (app.status === 'Hired');
-      if (app.id && appMap[app.id]) { appMap[app.id].stage = stageName; appMap[app.id].status = app.status || null; appMap[app.id].archivedAt = app.archivedAt || null; appMap[app.id].archiveReason = (app.archiveReason && app.archiveReason.text) || null; appMap[app.id].archiveReasonType = (app.archiveReason && app.archiveReason.reasonType) || null; }
-      var updatedMs = app.updatedAt ? new Date(app.updatedAt).getTime() : createdMs;
-      // #13: an interview or an assessment on or after HYGIENE_FLOOR also moves updatedAt, so this is a cheap SUPERSET of the
-      // floor. The exact test (added, interviewed or assessed since the floor) runs after the interview pass.
-      var hygMaybe = createdMs >= HYGIENE_FLOOR_MS || updatedMs >= HYGIENE_FLOOR_MS;
-      if (hygMaybe && htr.recruiters.length > 1) { var hygMr = hygRow_(app.id, jobId, jd, candName, app.createdAt); hygMr.names = htr.recruiters.map(function (r) { return r.name; }); anomalies.multiRecruiter.push(hygMr); }
-      if (hygMaybe && htr.sourcers.length > 1) { var hygMs = hygRow_(app.id, jobId, jd, candName, app.createdAt); hygMs.names = htr.sourcers.map(function (r) { return r.name; }); anomalies.multiSourcer.push(hygMs); }
-
-      // Tag apps that reached screening+ (or hired) — the stage-history accumulator pulls listHistory for these.
-      var reachedScreening = ((stageKey && stageKey !== 'appReview') || isHired);
-      // s = application status ('Active' | 'Archived' | 'Hired'). The stage-history pass needs it because
-      // application.listHistory records an 'Archived' TRANSITION for almost nobody — 30 of 2,134 apps in the
-      // 2026-08-22 run — so a drop cannot be detected from the history feed alone. History supplies "did they
-      // reach a late stage", status supplies "did they end archived"; a drop needs both.
-      if (app.id && reachedScreening) histApps.push({ id: app.id, r: recruiter, j: jobId, s: app.status || null });
-      // #167d (24 Sep 2026): carry `a` = archivedAt. It was there all along - application.list returns it, ISO 8601,
-      // null unless archived, and this pipeline already reads it further down - but archivedApps threw it away, which
-      // left the sweep below with nothing to order by. See collectNewArchivedLateStage_.
-      if (app.id && app.status === 'Archived') archivedApps.push({ id: app.id, r: recruiter, j: jobId, a: app.archivedAt || null });
-      if (!recruiter && reachedScreening && hygMaybe) unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
-
-      // App Review dwell: candidates sitting in App Review right now → days = today - createdAt (capped 0..365).
-      if (stageKey === 'appReview' && createdMs) {
-        var arDays = Math.floor((Date.now() - createdMs) / 86400000); if (arDays < 0) arDays = 0; if (arDays > 365) arDays = 365;
-        var arj8 = (jobId || '').substring(0, 8);
-        if (arj8) { var ahj = arDwellJob[arj8] || (arDwellJob[arj8] = {}); ahj[arDays] = (ahj[arDays] || 0) + 1; }
-        var ahr = arDwellRec[recName] || (arDwellRec[recName] = {}); ahr[arDays] = (ahr[arDays] || 0) + 1;
-        if (arj8) { var arrj = arDwellRecJob[recName] || (arDwellRecJob[recName] = {}); var ahrj = arrj[arj8] || (arrj[arj8] = {}); ahrj[arDays] = (ahrj[arDays] || 0) + 1; }
-      }
-
-      funnel.applied++;
-      if (SCREENED_STAGES[stageName] || isHired) funnel.screened++;
-      if (INTERVIEWED_STAGES[stageName] || isHired) funnel.interviewed++;
-      if (stageName === 'Offer' || isHired) funnel.offered++;
-      if (isHired) funnel.hired++;
-
-      if (jd) {
-        jd.applied++;
-        if (isHired) { jd.pipeline.hired++; jd.hired++; }
-        else if (stageKey && jd.pipeline.hasOwnProperty(stageKey)) jd.pipeline[stageKey]++;
-        if (stageName === 'TA Screen' || stageName === 'Hello Christy') jd.screen++;
-        if (stageName === 'R1') jd.interview++;
-        if (stageName === 'Offer' || isHired) jd.offer++;
-        if (recruiter && jd.recruiterSet.indexOf(recruiter) < 0) jd.recruiterSet.push(recruiter);
-      }
-      {
-        var rc = ensureRec(recName); rc.total++;
-        var recKey = isHired ? 'hired' : (stageKey && STAGEKEY_TO_RECKEY[stageKey]);
-        if (recKey) rc[recKey]++;
-        if (isHired) rc.offer++;
-        if (jobId) { var bj = rc.byJob[jobId] || (rc.byJob[jobId] = { jobId: jobId, title: jd ? jd.title : '', department: jd ? jd.department : '', total: 0, offer: 0, hired: 0, pipeline: {} }); bj.total++; if (stageName === 'Offer' || isHired) bj.offer++; if (isHired) bj.hired++;
-        // #145b (2026-09-19): the recruiter's OWN live pipeline, per job, for the Recruiter Efficiency
-        // Pipeline sub-tab. Built from the same isHired / stageKey pair that fills jd.pipeline a few lines
-        // above, in the same iteration over the same application - so the recruiter rows sum to the job row
-        // exactly, by construction rather than by anyone remembering to keep the two in step (Rule 3).
-        // jobs[].pipeline CANNOT be split by a job's recruiter list instead: 48 of 100 live jobs have more
-        // than one recruiter and 39% of everyone in a pipeline sits on a shared job, so that split would
-        // either double-count them or lose them. Recruiter attribution is per CANDIDATE, not per job, which
-        // is why the tally belongs here. Only non-zero stages are written: about 1% of dashboard.json.
-        var bpk = isHired ? 'hired' : stageKey;
-        if (bpk && PIPELINE_KEYS.indexOf(bpk) > -1) bj.pipeline[bpk] = (bj.pipeline[bpk] || 0) + 1; }
-      }
-      var srcType = app.source && app.source.sourceType ? (app.source.sourceType.title || app.source.sourceType) : null;
-      if (typeof srcType === 'object') srcType = null;
-      if (srcType) {
-        if (!sourceCounts[srcType]) sourceCounts[srcType] = { name: srcType, type: srcType, candidates: 0, hires: 0 };
-        sourceCounts[srcType].candidates++; if (isHired) sourceCounts[srcType].hires++;
-        { var rs = recruiterCounts[recName].sources; rs[srcType] = (rs[srcType] || 0) + 1; }
-        // finer source NAME (e.g. "Indeed Listing", "LinkedIn"), nested under the source_type, per recruiter
-        var srcName = (app.source && typeof app.source.title === 'string' && app.source.title) ? app.source.title : '(unspecified)';
-        var nst = recruiterCounts[recName].srcNested; var nt = nst[srcType] || (nst[srcType] = {}); nt[srcName] = (nt[srcName] || 0) + 1;
-        // Carry the source on appMap so an OFFER can say where that candidate came from. Sourcing Mix
-        // counts applications by source; Jerin asked (2026-08-29) for the same cut restricted to people
-        // who actually joined, and an offer record had no source on it until now.
-        if (app.id && appMap[app.id]) { appMap[app.id].srcType = srcType; appMap[app.id].srcName = srcName; }
-        // same source, bucketed per JOB as well: srcByJob {job8:{type:{name:count}}}. Sources were only ever
-        // stored per recruiter, which left Overall Efficiency > Sourcing Mix unable to honour its Department
-        // and Job filters. Keying by (recruiter x job) fixes that: pod attribution follows the recruiter,
-        // the dept/job scope follows the job. job8 matches the 8-char job ids used everywhere else.
-        if (jobId) { var sbj = recruiterCounts[recName].srcByJob; var j8 = jobId.slice(0, 8); var sjb = sbj[j8] || (sbj[j8] = {}); var stb = sjb[srcType] || (sjb[srcType] = {}); stb[srcName] = (stb[srcName] || 0) + 1; }
-        // Same counts again, split by the QUARTER THE CANDIDATE APPLIED (2026-08-25). Sourcing Mix carried no
-        // date at all, so its Year/Quarter selector regrouped pods and changed nothing else - a quarter
-        // heading over lifetime numbers, the same shape as the bugs found on 2026-08-21. srcQ drives the
-        // Recruiter tab, srcByJobQ the Overall Efficiency tab (which needs the job to honour dept/job filters).
-        // Emitted ALONGSIDE the undated fields so a frontend running against older data still works.
-        var _sq = app.createdAt ? getQuarter_(app.createdAt) : null;
-        if (_sq) {
-          var _rq = recruiterCounts[recName].srcQ || (recruiterCounts[recName].srcQ = {});
-          var _rqq = _rq[_sq] || (_rq[_sq] = {}); var _rqt = _rqq[srcType] || (_rqq[srcType] = {});
-          _rqt[srcName] = (_rqt[srcName] || 0) + 1;
-          if (jobId) {
-            var _bq = recruiterCounts[recName].srcByJobQ || (recruiterCounts[recName].srcByJobQ = {});
-            var _j8q = jobId.slice(0, 8); var _bj = _bq[_j8q] || (_bq[_j8q] = {});
-            var _bjq = _bj[_sq] || (_bj[_sq] = {}); var _bjt = _bjq[srcType] || (_bjq[srcType] = {});
-            _bjt[srcName] = (_bjt[srcName] || 0) + 1;
-          }
-        }
-      }
-      if (app.createdAt) { var wk = getWeekLabel_(app.createdAt); weekCounts[wk] = (weekCounts[wk] || 0) + 1; }
-      if (app.createdAt) {
-        var q = ensureQ(getQuarter_(app.createdAt));
-        q.funnel.applied++;
-        if (SCREENED_STAGES[stageName] || isHired) q.funnel.screened++;
-        if (INTERVIEWED_STAGES[stageName] || isHired) q.funnel.interviewed++;
-        if (stageName === 'Offer' || isHired) q.funnel.offered++;
-        if (isHired) q.funnel.hired++;
-        if (jd) { var jt = jd.title; if (!q.jobCounts[jt]) q.jobCounts[jt] = { title: jt, department: jd.department, applied: 0, hired: 0 }; q.jobCounts[jt].applied++; if (isHired) q.jobCounts[jt].hired++; }
-        if (srcType) { if (!q.sourceCounts[srcType]) q.sourceCounts[srcType] = { name: srcType, candidates: 0, hires: 0 }; q.sourceCounts[srcType].candidates++; if (isHired) q.sourceCounts[srcType].hires++; }
+      appsAccumOne_(ctx, app, jobLookup, excludedJobIds_);
+      if (app.id) {
+        var cms = app.createdAt ? new Date(app.createdAt).getTime() : 0;
+        if (cms >= SCOPE_FROM_MS) { buf[app.id] = storeTrim_(app); buffered++; }
       }
     }
+    if (resp.syncToken) token = resp.syncToken;          // only present on the LAST page
+    if (buffered >= STORE_FLUSH_AT_) { wrote += storeFlush_(buf).written; buf = {}; buffered = 0; }
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
-    if (pageNum % 50 === 0 || !cursor) Logger.log('/application.list(createdAfter): ' + totalApps + ' fetched, ' + scopedApps + ' scoped, ' + pageNum + ' pages, ' + Math.round((Date.now() - startTime) / 1000) + 's' + (cursor ? ' (more)' : ' DONE'));
+    if (!cursor) reachedEnd = true;
+    if (pageNum % 50 === 0 || !cursor) Logger.log('/application.list(createdAfter): ' + ctx.total + ' fetched, ' + ctx.scoped + ' scoped, ' + pageNum + ' pages, ' + Math.round((Date.now() - startTime) / 1000) + 's' + (cursor ? ' (more)' : ' DONE'));
   } while (cursor);
 
-  return { total: totalApps, scoped: scopedApps, funnel: funnel, recruiterCounts: recruiterCounts, sourceCounts: sourceCounts, weekCounts: weekCounts, qData: qData, appMap: appMap, histApps: histApps, archivedApps: archivedApps,
-    recruiterUserId: recruiterUserId, anomalies: anomalies, unassignedCases: unassignedCases, unmappedStages: unmappedStages, appReviewDwellByJob: arDwellJob, appReviewDwellByRecruiter: arDwellRec, appReviewDwellByRecruiterJob: arDwellRecJob };
+  // 🚨 RE-ARM ONLY ON A COMPLETE WALK. A walk cut short by TIMEOUT_MS has stored SOME pages; leaving a token
+  //    behind would mean every later delta built on top of a store with a hole in it, and nothing would say so.
+  //    So a short walk marks the store INCOMPLETE, which forces the next run down this same path.
+  // ⚠ Wrapped: the dashboard must never fail because the STORE bookkeeping failed. ctx is already complete.
+  try {
+    if (buffered) wrote += storeFlush_(buf).written;
+    var st = storeState_();
+    if (reachedEnd && token) {
+      st.scopeFromMs = SCOPE_FROM_MS; st.complete = true; st.fullCursor = null; st.fullPages = 0;
+      st.syncToken = token; st.builtAt = new Date().toISOString(); st.count = wrote;
+      storeSaveState_(st);
+      Logger.log('#204c: the full walk re-armed the store - ' + wrote + ' applications written, fresh token');
+    } else {
+      st.complete = false; st.syncToken = null; storeSaveState_(st);
+      Logger.log('🚨 #204c: walk did not reach the end (reachedEnd=' + reachedEnd + ' token=' + (!!token)
+        + ') - store marked INCOMPLETE so the next run walks again instead of trusting a delta');
+    }
+  } catch (e) { Logger.log('#204c store re-arm FAILED (the dashboard itself is unaffected): ' + e.message); }
+
+  return appsAccumFinish_(ctx);
 }
 
+// #204c — WHICH application pass this run takes. The delta plus the stored copy is the fast path; the full
+// walk above is the fallback. Kept as its own function so the choice is one line in the log rather than a
+// branch buried in refreshDashboardData.
+function appsFetchOrStore_(startTime, jobLookup, excludedJobIds, prevApplied) {
+  var d;
+  try { d = appStoreDelta_(startTime, 420000); }
+  catch (e) { Logger.log('#204: delta threw, so full walk this run: ' + e.message); d = { needFull: true, reason: 'threw' }; }
+
+  if (d.needFull) {
+    Logger.log('#204: FULL WALK this run (' + d.reason + ') - this is the documented recovery, not a fault');
+    return fetchAndProcessApps_(startTime, jobLookup, excludedJobIds);
+  }
+
+  var res = fetchAndProcessAppsFromStore_(startTime, jobLookup, excludedJobIds);
+
+  // 🚨 A REAL GUARD, NOT A FORMALITY. assertDashboardComplete_ runs on the FINISHED payload and only catches a
+  //    50% shrink in jobs / recruiters / offerEvents / openingBuckets. A store that handed back 70% of the
+  //    APPLICATIONS would sail straight through it while every per-recruiter and per-job figure came out quietly
+  //    wrong - the exact failure this whole task must not introduce. So the POPULATION is checked here, against
+  //    the last published run, before anything is built on top of it.
+  if (prevApplied > 0 && res.funnel.applied < prevApplied * 0.9) {
+    Logger.log('🚨 #204: the stored path returned ' + res.funnel.applied + ' applications against ' + prevApplied
+      + ' last run - too few to trust. Discarding it and walking the year instead.');
+    // 🚨🚨 RESET THE JOB LOOKUP FIRST. appsAccumOne_ MUTATES jobLookup (jd.applied++, jd.pipeline, recruiterSet),
+    //    so the stored pass has already written into it. Walking again on the same object would DOUBLE every
+    //    per-job figure - a silent doubling on the one path that only runs when something is already wrong.
+    appsResetJobLookup_(jobLookup);
+    return fetchAndProcessApps_(startTime, jobLookup, excludedJobIds);
+  }
+  return res;
+}
+
+// Zeroes exactly the fields appsAccumOne_ writes onto a job, so a second pass starts clean. Kept next to its
+// only caller: if appsAccumOne_ ever starts writing another field onto jd, it must be added here too.
+function appsResetJobLookup_(jobLookup) {
+  for (var k in jobLookup) {
+    var jd = jobLookup[k];
+    jd.applied = 0; jd.screen = 0; jd.interview = 0; jd.offer = 0; jd.hired = 0;
+    jd.pipeline = emptyPipeline_(); jd.recruiterSet = [];
+  }
+}
 // ===== OFFER PASS =====
 
 function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
@@ -786,7 +713,8 @@ function refreshDashboardData() {
     });
   });
 
-  var appResult = fetchAndProcessApps_(startTime, jobLookup, excludedJobIds);
+  // #204c: prefer the delta + stored copy; fall back to the full walk. prevApplied is the sanity floor.
+  var appResult = appsFetchOrStore_(startTime, jobLookup, excludedJobIds, (existing.funnel && existing.funnel.applied) || 0);
   Logger.log('Apps: ' + appResult.total + ' fetched, ' + appResult.scoped + ' scoped, ' + Math.round((Date.now() - startTime) / 1000) + 's');
   // Hand the reached-screening+ apps to the stage-history accumulator (runs as its own trigger).
   saveDriveJson_('scoped_apps.json', { generatedAt: new Date().toISOString(), apps: appResult.histApps });
@@ -2311,8 +2239,17 @@ function storeClear_() {
 //   leaving one copy. Do not leave the tree in the two-copy state.
 // ===================================================================================================
 
+// #204b TEST SEAM (8 Oct 2026). Production NEVER sets this - it stays null and the dwell uses the real clock.
+// It exists because the App Review dwell is "days waiting AS OF NOW", which made three sections of the parity
+// run differ purely because the two passes ran four minutes apart. Pinning the instant lets the comparison be
+// made at ONE moment, which is the difference between explaining a discrepancy and proving it.
+var APPS_NOW_MS_ = null;
 function appsAccumInit_() {
   var ctx = {
+    // Pinned ONCE per run, deliberately. The old code called Date.now() per application, so a 19-minute walk
+    // measured its first page against a different "now" than its last - the histogram was already slightly
+    // inconsistent with itself. One instant per run fixes that as well.
+    nowMs: APPS_NOW_MS_ || Date.now(),
     total: 0, scoped: 0,
     funnel: { applied: 0, screened: 0, interviewed: 0, offered: 0, hired: 0 },
     recruiterCounts: {}, sourceCounts: {}, weekCounts: {}, qData: {}, appMap: {},
@@ -2376,7 +2313,7 @@ function appsAccumOne_(ctx, app, jobLookup, excludedJobIds_) {
   if (!recruiter && reachedScreening && hygMaybe) ctx.unassignedCases.push({ applicationId: app.id, job8: (jobId || '').substring(0, 8), jobTitle: jd ? jd.title : '', department: jd ? jd.department : '', candidate: candName, stage: stageName || (isHired ? 'Hired' : ''), createdAt: (app.createdAt || '').substring(0, 10) });
 
   if (stageKey === 'appReview' && createdMs) {
-    var arDays = Math.floor((Date.now() - createdMs) / 86400000); if (arDays < 0) arDays = 0; if (arDays > 365) arDays = 365;
+    var arDays = Math.floor((ctx.nowMs - createdMs) / 86400000); if (arDays < 0) arDays = 0; if (arDays > 365) arDays = 365;
     var arj8 = (jobId || '').substring(0, 8);
     if (arj8) { var ahj = ctx.arDwellJob[arj8] || (ctx.arDwellJob[arj8] = {}); ahj[arDays] = (ahj[arDays] || 0) + 1; }
     var ahr = ctx.arDwellRec[recName] || (ctx.arDwellRec[recName] = {}); ahr[arDays] = (ahr[arDays] || 0) + 1;
@@ -2631,10 +2568,12 @@ function parity204A(pagesWanted) {
 
 // --- B1: the LIVE path over the whole year. ~19 min, so run it from trigger204Parity().
 function parity204B_live() {
+  APPS_NOW_MS_ = Date.now();   // pin the dwell clock and record it, so the store leg can use the SAME instant
   var t = Date.now(), inp = parityInputs204_(), lk = inp.mk();
   var res = fetchAndProcessApps_(t, lk, inp.excludedJobIds);
   var dig = parityDigest204_(res, lk);
-  dig._meta = { side: 'live', at: new Date().toISOString(), secs: Math.round((Date.now() - t) / 1000), jobs: inp.jobs, fetched: res.total };
+  dig._meta = { side: 'live', at: new Date().toISOString(), secs: Math.round((Date.now() - t) / 1000), jobs: inp.jobs, fetched: res.total, nowMs: APPS_NOW_MS_ };
+  APPS_NOW_MS_ = null;
   saveDriveJson_('parity204_live.json', dig);
   Logger.log('===== #204b TEST B1 (live) =====');
   Logger.log('fetched=' + res.total + ' scoped=' + dig.scoped + ' applied=' + dig.funnel.applied
@@ -2647,6 +2586,9 @@ function parity204B_live() {
 function parity204B_store() {
   var prev = loadDriveJson_('parity204_live.json');
   if (!prev) { Logger.log('🚨 run parity204B_live first - parity204_live.json is not there'); return -1; }
+  // Use the LIVE leg's pinned instant, so the dwell histograms are computed at the same moment on both sides.
+  APPS_NOW_MS_ = (prev._meta && prev._meta.nowMs) || null;
+  Logger.log('dwell clock pinned to the live leg: ' + (APPS_NOW_MS_ ? new Date(APPS_NOW_MS_).toISOString() : 'NOT PINNED (old digest - the three dwell sections will differ on the clock alone)'));
   var t = Date.now(), inp = parityInputs204_(), lk = inp.mk();
   var res = fetchAndProcessAppsFromStore_(t, lk, inp.excludedJobIds);
   var dig = parityDigest204_(res, lk);
