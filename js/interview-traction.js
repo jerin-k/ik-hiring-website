@@ -258,13 +258,11 @@ export function mountInterviewTraction(host, data, getScope, opts) {
       <div class="it-legend">${SERIES.map(s =>
         `<span><i style="background:${s.col}"></i>${s.key}</span>`).join('')}<span class="it-trendkey">Trend</span></div>
     </div>
-    <p class="sub-note it-state"></p>
     <div class="it-charts"></div>
     ${defsBlock('interview-traction')}`;
 
   const seg = host.querySelector('.it-seg');
   const chartsEl = host.querySelector('.it-charts');
-  const stateEl = host.querySelector('.it-state');
   const hideEl = host.querySelector('.it-hide');
 
   // The Quarter chip. Same shape as Rounds. Ticking one re-bounds the page's From/To through onQuarters,
@@ -348,19 +346,17 @@ export function mountInterviewTraction(host, data, getScope, opts) {
     const now = new Date();
     const today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
     const scope = { from: raw.from, to: raw.to > today ? today : raw.to, jobOk: raw.jobOk };
-    if (scope.from > scope.to) { chartsEl.innerHTML = ''; stateEl.textContent = ''; return; }
+    if (scope.from > scope.to) { chartsEl.innerHTML = ''; return; }
     const picked = rounds.filter(r => sel.has(r));
     if (!picked.length) {
-      stateEl.textContent = '';
       chartsEl.innerHTML = '<p class="it-empty">No rounds selected &mdash; pick at least one from Rounds.</p>';
       return;
     }
-    let html = '', hidden = 0, grand = 0;
+    let html = '', hidden = 0;
     const blocks = picked.map(r => {
       const slots = slotsFor(daysForRound(tr, r, scope), state.view, scope);
       let tot = 0;
       slots.forEach(s => { tot += s.v[0] + s.v[1] + s.v[2] + s.v[3]; });
-      grand += tot;
       return { r, slots, tot };
     });
     blocks.forEach(b => {
@@ -374,10 +370,6 @@ export function mountInterviewTraction(host, data, getScope, opts) {
             + `<div class="it-scroller">${chartSvg(b.slots)}</div></div>`;
     });
     if (hidden) html += `<p class="it-empty">${hidden} round${hidden === 1 ? '' : 's'} with no interviews in this period ${hidden === 1 ? 'is' : 'are'} hidden.</p>`;
-    const winFrom = state.view === 'day' ? dayStart(scope) : scope.from;
-    const grain = state.view === 'day' ? ', day by day' : (state.view === 'month' ? ', month by month' : '');
-    stateEl.textContent = `Showing ${winFrom} to ${scope.to}` + grain
-      + ` · ${grand.toLocaleString()} interviews booked across ${picked.length} round${picked.length === 1 ? '' : 's'}`;
     chartsEl.innerHTML = html;
   }
   return render;
