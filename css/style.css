@@ -373,6 +373,72 @@ tr.pt-d > td {
    nothing is this codebase's favourite bug (Rule 12). The late state moves onto the heading itself. */
 .pt-dname.pt-late { color: var(--red); }
 tr.pt-p > td.pt-name { padding-left: 2.5rem; font-weight: 500; color: var(--text); }
+/* #213 (8 Oct 2026): the Joiners list gains a THIRD level — Department > day > Role > people. The role sits a
+   step in from the date and is deliberately quieter than both: it is the last signpost before the names, not a
+   heading in its own right. Scoped to .pt3 so the two-level Joining Pipeline tree keeps its own indents. */
+tbody.pt3 tr.pt-r > td {
+  background: var(--card); color: var(--muted); font-weight: 600; font-size: 0.65rem;
+  padding: 0.1875rem 0.75rem 0.1875rem 2.25rem; border-bottom: 1px solid var(--border-light);
+}
+tbody.pt3 tr.pt-p > td.pt-name { padding-left: 3.25rem; }
+/* #213: the role folded onto the date line when a day holds only one. Quieter than the date it follows, so the
+   date still reads as the heading and the role as what it qualifies. */
+.pt-donly { color: var(--muted); font-weight: 500; font-size: 0.625rem; margin-left: 0.5rem; }
+
+/* #213C (Jerin, 8 Oct 2026): the compact person row, on the JOINERS TREE ONLY (tbody.pt3.pt3c).
+   🗣 "place the point value beside the name - that will save space, if we also put Opening name in a same line."
+   🚨 This REVERSES #176b, which was his own call on 25 Sep — "i just need point mentioned as a caption = below
+   the name dude :)". Every other people list keeps that caption; only this tree changes.
+   🔑 His reasoning is the right one: the points moving up saves nothing on its own, because the row's height is
+   set by the OPENING cell wrapping to three lines. Both halves are needed, which is why they are one option. */
+tbody.pt3.pt3c .pl-pts { display: inline; margin-top: 0; margin-left: 0.5rem; }
+/* ===== #213 (Jerin, 8 Oct 2026): the Joiners table's own column widths =====
+   🗣 "i need to see the full opening name. The first column has empty space - so take space from it."
+   📏 MEASURED at the real 1,210px content column, 163 Q3 joiners, widest content needed per column:
+      person 238 · recruiter 161 · sourcer 103 (median 32 — nearly all are a dash) · OPENING 559 ·
+      topic 367 · quarter 80. Everything at once needs 1,508px and there are 1,210, so the space has to be
+      spent where it is worth most. **At 39rem the Opening column fits ALL 163 names in full** (at 33rem only
+      150 of 163 do), paid for out of the person column's slack, the near-empty Sourcer, and Topic — which
+      keeps its full text on hover.
+   ⚠ Scoped to `table.jt`, the two Joiners tables only. Every other people list keeps the shared c-* widths. */
+/* 🚨 table-layout:fixed is what makes the widths BINDING. Under the default `auto`, max-width on a cell is
+   only advisory: the Recruiter and Opening-quarter headers refused to go below their own text and the table
+   ran 57px past the 1,210px column — a sideways scroll, which this site does not do (#155). With `fixed` +
+   width:100% the numbers below act as proportions and the table fills the column exactly. */
+table.jt { table-layout: fixed; width: 100%; }
+table.jt th.c-jname { width: 13rem; min-width: 13rem; max-width: 13rem; }
+table.jt th.c-rec   { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }   /* 161px is the widest recruiter name - this holds it */
+table.jt th.c-src   { width: 5rem; min-width: 5rem; max-width: 5rem; }   /* 4rem broke the word "Sourcer" across two lines */
+table.jt th.c-open-name { width: 9rem; min-width: 9rem; max-width: 9rem; }   /* LAST column now, deliberately small - full name on hover */
+table.jt th.c-topic { width: 26rem; min-width: 26rem; max-width: 26rem; }   /* 367px is the longest topic - this shows every one in full */
+table.jt th.c-open  { width: 6rem; min-width: 6rem; max-width: 6rem; }
+/* the body cells have to agree, or table-layout:auto widens the column back to its content */
+table.jt tbody.pt3c td.pt-name      { max-width: 13rem; }
+table.jt tbody.pt3c td.c-rec        { max-width: 11.5rem; }
+table.jt tbody.pt3c td:nth-child(3) { max-width: 5rem; }
+table.jt tbody.pt3c td.pl-open-name { max-width: 9rem; }
+table.jt tbody.pt3c td.pl-topic     { max-width: 26rem; }
+/* the person's name is the one cell that must never be cut — it is the row's subject. */
+table.jt tbody.pt3c tr.pt-p > td.pt-name { white-space: normal; overflow-wrap: anywhere; }
+table.jt tbody.pt3c td.c-rec,
+table.jt tbody.pt3c td:nth-child(3) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 🚨 nowrap on the CELL is not enough: the recruiter badge is an inline-flex span with its own
+   white-space:normal, so the name wrapped to two lines INSIDE a nowrap cell and put the row height back. */
+table.jt tbody.pt3c td.c-rec .pl-rec { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* 🚨 The cell carries pl-open-name, NOT c-open-name — c-* is the width family stamped on flat tables by
+   js/table-cols.js and it never reaches these tree rows. Targeting c-open-name styled NOTHING and cost a
+   measuring round (Rule 12). Both names are listed so it works either way. */
+tbody.pt3.pt3c td.pl-open-name,
+tbody.pt3.pt3c td.c-open-name,
+tbody.pt3.pt3c td.pl-topic { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* #213, Jerin 8 Oct: "move Opening to the end, and give it a small width; full to be shown upon hovering.
+   But topic to get full width." Topic is what you READ; the opening name is a reference you can hover for. */
+/* ⚠ No max-width here on purpose — the per-column widths above own that now. A 10rem cap left here would
+   fight them and silently win on one of the two, which is how the Opening stayed truncated once already. */
+/* 🚨 MEASURED, 8 Oct: truncating the Opening ALONE moved the table by 109px out of 14,950 — because the row's
+   height was then set by TOPIC, which wraps to five lines on a long one. A row is only as short as its TALLEST
+   cell, so every long-text cell in the row has to be dealt with or none of them is worth doing. */
 .pt-count {
   display: inline-block; min-width: 1.125rem; text-align: center; margin-left: 0.4375rem;
   font-size: 0.625rem; font-weight: 600; color: var(--muted);

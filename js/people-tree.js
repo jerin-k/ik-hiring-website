@@ -145,6 +145,76 @@ export function monthTreeRows(items, { dayOf, nameOf, cells, cols, order = 'soon
   return html;
 }
 
+// #213 (Jerin, 8 Oct 2026). The JOINERS list only — Department ➡ joining DAY ➡ Role ➡ the people.
+// 🗣 *"The Joiner list in HM & Overall Efficiency should be - Department-wise > Date-wise > Role-wise, & then
+// columns"*, and when asked, **"Exact Day"** rather than the month.
+//
+// 🚨 Department and Job come OFF the person rows and become headings, exactly as Month and DOJ did in #149 —
+// that is the whole point of a tree here, and leaving them as columns as well would rebuild the repetition
+// #149 removed. Eight columns become six.
+// ⚠ The Recruiter tab's identical Joiners list is deliberately NOT changed (Jerin, asked directly: "No"), so
+// this is the one place in the codebase where the mirror tabs are MEANT to differ. Do not "fix" it.
+// ⚠ No month level: he asked for the exact day, so the days sit straight under the department.
+// `dropLoneRole`: when a DAY holds only one role, the role heading is a row that points at one group, so it is
+// folded onto the date line instead ("29 Jul 2026 · Program Advisor - India"). 🚨 It must go SOMEWHERE — Job is
+// no longer a column, so simply deleting the heading would lose the role for that person entirely.
+export function deptTreeRows(items, { deptOf, dayOf, roleOf, nameOf, cells, cols, order = 'newest', captionOf = null, dropLoneRole = false }) {
+  const dir = order === 'newest' ? -1 : 1;
+  const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const NO_DATE = '\u0000nodate';   // sorts last whichever direction, and can never collide with a real day
+
+  // dept -> day -> role -> [people]
+  const tree = new Map();
+  items.forEach((i) => {
+    const d = deptOf(i) || '(no department)';
+    const raw = dayOf(i);
+    const day = isDay(raw) ? String(raw).slice(0, 10) : NO_DATE;
+    const role = roleOf(i) || '(no role)';
+    if (!tree.has(d)) tree.set(d, new Map());
+    const days = tree.get(d);
+    if (!days.has(day)) days.set(day, new Map());
+    const roles = days.get(day);
+    if (!roles.has(role)) roles.set(role, []);
+    roles.get(role).push(i);
+  });
+
+  const countOf = (roles) => [...roles.values()].reduce((n, a) => n + a.length, 0);
+  const personRow = (i) => `<tr class="pt-p"><td class="pt-name">${esc(nameOf(i) || '(no name)')}${captionOf ? (captionOf(i) || '') : ''}</td>${cells(i)}</tr>`;
+
+  let html = '';
+  [...tree.keys()].sort(cmp).forEach((dept) => {
+    const days = tree.get(dept);
+    const deptTotal = [...days.values()].reduce((n, roles) => n + countOf(roles), 0);
+    html += `<tr class="pt-m"><td colspan="${cols}">`
+      + `<span class="pt-mname">${esc(dept)}</span>${countTag(deptTotal)}</td></tr>`;
+
+    const dayKeys = [...days.keys()].filter((d) => d !== NO_DATE).sort((a, b) => cmp(a, b) * dir);
+    if (days.has(NO_DATE)) dayKeys.push(NO_DATE);
+
+    dayKeys.forEach((day) => {
+      const roles = days.get(day);
+      const label = day === NO_DATE
+        ? { shown: 'Date not set', cls: '', title: 'No joining date recorded' }
+        : dateBits(day, false);
+      const lone = dropLoneRole && roles.size === 1 ? [...roles.keys()][0] : null;
+      html += `<tr class="pt-d"><td colspan="${cols}">`
+        + `<span class="pt-dname${label.cls}" title="${esc(label.title)}">${label.shown}</span>`
+        + (lone ? `<span class="pt-donly">${esc(lone)}</span>` : '')
+        + countTag(countOf(roles)) + '</td></tr>';
+
+      [...roles.keys()].sort(cmp).forEach((role) => {
+        const people = roles.get(role).sort((a, b) => cmp(String(nameOf(a) || ''), String(nameOf(b) || '')));
+        if (!lone) {
+          html += `<tr class="pt-r"><td colspan="${cols}">`
+            + `<span class="pt-rname">${esc(role)}</span>${countTag(people.length)}</td></tr>`;
+        }
+        html += people.map(personRow).join('');
+      });
+    });
+  });
+  return html;
+}
+
 // 🚨 The sticky month heading needs a `top`, and it must be the column header's MEASURED height — a written-in
 // number breaks the moment a heading wraps, which is exactly what went wrong with the old `top:53px` on the
 // page chrome (31 Aug). Call this after writing the rows.

@@ -100,7 +100,7 @@ export function avatar(name, pod) {
 // `refDay` as for tdQuarter: the pod is the recruiter's pod in the quarter of the start date, else today's.
 export function tdRecruiter(name, refDay) {
   if (!name || name === 'Unassigned') return '<td data-sv=""><span class="pl-chip pl-fix">No recruiter</span></td>';
-  return `<td data-sv="${esc(name)}"><span class="pl-rec">${avatar(name, podOf(name, refQuarter(refDay)))}${esc(name)}</span></td>`;
+  return `<td data-sv="${esc(name)}" title="${esc(name)}"><span class="pl-rec">${avatar(name, podOf(name, refQuarter(refDay)))}${esc(name)}</span></td>`;   // #213: the title is what makes it safe to truncate on the Joiners tree
 }
 
 // ===== #194 (Jerin, 28 Sep 2026): who SOURCED each person, on both people lists of all three tabs =====
@@ -171,7 +171,7 @@ export function tdTopic(openingId, job8, idx) {
   // saying it again here would be noise. This column answers exactly one question: which TOPIC.
   if (!key || !(key in known.byOpening)) return `<td class="pl-topic" data-sv="">${DASH}</td>`;
   const t = known.byOpening[key];
-  return t ? `<td class="pl-topic" data-sv="${esc(t)}">${esc(t)}</td>` : why('opening has no topic');
+  return t ? `<td class="pl-topic" data-sv="${esc(t)}" title="${esc(t)}">${esc(t)}</td>` : why('opening has no topic');   // #213C: the title is what makes it safe to truncate
 }
 
 // ===== #169 (Jerin, 23 Sep 2026): "Opening & Topic to be 2 columns; makes life cleaner/clearer for all" =====
@@ -187,7 +187,7 @@ export function tdOpening(openingId, idx) {
   if (!key) return why('no opening on the offer');
   if (!(key in known.byOpening)) return why('not in this period');
   const nm = (known.nameOf || {})[key];
-  if (nm) return `<td class="pl-open-name" data-sv="${esc(nm)}">${esc(nm)}</td>`;
+  if (nm) return `<td class="pl-open-name" data-sv="${esc(nm)}" title="${esc(nm)}">${esc(nm)}</td>`;   // #213C: the title is what makes it safe to truncate
   return `<td class="pl-open-name" data-sv="${esc(key)}" title="The opening's name arrives with the next data refresh.">`
     + `<span class="pl-open-id">${esc(key)}</span></td>`;
 }
