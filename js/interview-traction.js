@@ -156,7 +156,7 @@ function chartSvg(slots) {
         const hh = (v / max) * plotH, yy = y(acc + v);
         s += `<rect x="${bx}" y="${yy}" width="${bw}" height="${hh}" fill="${SERIES[i].col}"><title>${SERIES[i].key}: ${v}</title></rect>`;
         if (hh >= 11) s += `<text x="${bx + bw / 2}" y="${yy + hh / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#fff" font-weight="600">${v}</text>`;
-        else outside.push({ y: yy + hh / 2, v, col: SERIES[i].col });
+        else outside.push({ y: yy + hh / 2, y0: yy + hh / 2, v, col: SERIES[i].col });
         acc += v;
       }
       // Jerin, 8 Oct: "Even if its a small bar, i still want the data label, may be outside somehow."
@@ -168,9 +168,21 @@ function chartSvg(slots) {
           if (outside[k].y - outside[k - 1].y < 8.5) outside[k].y = outside[k - 1].y + 8.5;
         }
         const right = bx + bw + 14 < W - padR;
+        // Jerin, 8 Oct 2026: "these data labels suck.. connect the label to the block using a line."
+        // A number parked beside the bar does not say WHICH slice it belongs to, and two thin slices in a row
+        // make it worse. Each outside number now carries a leader in its own slice's colour, from the slice
+        // edge to the digit. 46 of the 171 slices need one on today's data.
+        // ⚠ The alternative he preferred - a chart tall enough that a block of 1 holds its own label - was
+        //   measured and CANNOT work: it needs 11px per unit, and R1's busiest week is 106, so R1 alone would
+        //   need a 1,166px chart. At 4x height 13 R1 slices still would not fit. Height is a readability
+        //   choice; the leader is what removes the ambiguity. Do not swap one for the other.
         outside.forEach(o => {
-          s += `<text x="${right ? bx + bw + 2 : bx - 2}" y="${Math.min(base - 1, o.y + 2.5)}" `
-             + `text-anchor="${right ? 'start' : 'end'}" font-size="7.5" fill="${o.col}" font-weight="700">${o.v}</text>`;
+          const ly = Math.min(base - 1, o.y + 2.5);
+          const tx = right ? bx + bw + 6 : bx - 6;
+          const ex = right ? bx + bw : bx;
+          const mx = right ? bx + bw + 3.5 : bx - 3.5;
+          s += `<path d="M ${ex} ${o.y0} L ${mx} ${o.y0} L ${right ? tx - 1.2 : tx + 1.2} ${ly - 2.5}" fill="none" stroke="${o.col}" stroke-width="0.7" opacity="0.8"/>`;
+          s += `<text x="${tx}" y="${ly}" text-anchor="${right ? 'start' : 'end'}" font-size="7.5" fill="${o.col}" font-weight="700">${o.v}</text>`;
         });
       }
       s += `<text x="${bx + bw / 2}" y="${y(tot) - 4}" text-anchor="middle" font-size="9" fill="var(--text-secondary)" font-weight="600">${tot}</text>`;
