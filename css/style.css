@@ -1999,8 +1999,15 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
      put a colour on the chart that means nothing in the legend above it. */
   --it-trend: #8b94a7;
 }
+/* #212: the controls row FREEZES under the frozen filter block instead of scrolling away. The charts are
+   tall, so without this you lose Week/Month/Day, Quarter and Rounds the moment you scroll into them.
+   `--sc-frozen` is published by js/sticky-chrome.js as "where everything below the block starts" and is
+   MEASURED there - never hard-coded, and never converted to rem (#140 exempts a measured value).
+   z-index 39 sits one BELOW .sc-stick-filters (40) so this row slides underneath it, not over it. */
 .it-controls { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;
-  margin-bottom: 0.9rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-light); }
+  position: sticky; top: var(--sc-frozen, 0px); z-index: 39; background: var(--bg);
+  margin-bottom: 0; padding-top: 0.5rem; padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border-light); }
 .it-seg { display: inline-flex; border: 1px solid #9db2d6; border-radius: 0.3rem; overflow: hidden; }
 .it-seg button { border: 0; background: var(--card); color: var(--text-secondary); font-size: 0.75rem;
   padding: 0.32rem 0.75rem; cursor: pointer; font-family: inherit; }
@@ -2028,7 +2035,6 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .it-scroller { overflow-x: auto; }
 .it-scroller svg { display: block; min-width: 48rem; width: 100%; height: auto; }
 .it-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; margin: 0.45rem 0; }
-.it-state { margin-bottom: 0.9rem; }
 .it-trendkey { display: inline-flex; align-items: center; }
 .it-trendkey::before { content: ''; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.3rem;
   border-top: 1.5px dashed var(--it-trend); vertical-align: middle; }

@@ -139,7 +139,7 @@ export const DEFINITIONS = {
   'interview-traction': {
     summary: 'How Interview Traction is counted',
     intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted into one of four outcomes. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
-    confirmed: 'Settled with Jerin &middot; 7 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: the period always ends at today &middot; 8 Oct 2026.',
     groups: [
       {
         heading: 'The four outcomes',
@@ -155,6 +155,7 @@ export const DEFINITIONS = {
         items: [
           ['Where the outcome comes from', 'What <strong>actually happened next</strong>, never the interviewer&rsquo;s feedback form. Feedback is often never submitted, so scoring on it would leave silent holes.'],
           ['A zero bar', 'A day or week with no interviews keeps its place and shows a <strong>0</strong>, so a quiet spell reads as quiet rather than disappearing. In day view weekends are shaded.'],
+          ['Why the charts stop at today', 'Interviews are booked <strong>weeks ahead</strong>, and an interview that has not happened yet is not an outcome. So the period always ends at <strong>today</strong>, even when the To date is later in the year.'],
           ['Week view, Month view and Day view', 'Week and month view cover the whole period. <strong>Day view shows the last 30 days</strong> of it. Under each week sits the month it falls in &mdash; by its Thursday, which is the standard rule for a week that straddles two months.'],
           ['The dashed trend line', 'A straight line fitted through the <strong>totals</strong> of the bars shown, so it answers one question: is the volume rising or falling across this period. It follows the bars you are looking at, so changing the rounds, the dates or the view redraws it. It is grey because it is not a fifth outcome.'],
           ['Numbers beside a bar', 'A slice too thin to print a number inside it puts the number <strong>next to the bar</strong>, in that slice&rsquo;s own colour.'],
