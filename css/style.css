@@ -287,7 +287,10 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
    ⚠ The negative margins cancel .container's 24px/28px padding so the band meets the nav edge-to-edge.
    .container is max-width 1400, so above that width the band stops there while the nav keeps going. */
 .subtab-band {
-  display: flex; gap: 0.25rem; flex-wrap: wrap; align-items: center;
+  /* #214 (Jerin, 8 Oct 2026 - option B): the 12 Overall Efficiency sub-tabs needed 1,274px against a 1,190px
+     band and wrapped onto a second row, stranding Interview Traction and Panelists. The gap and the chip
+     padding below are the whole fix - MEASURED at 37px spare afterwards, and no label was renamed. */
+  display: flex; gap: 0.15rem; flex-wrap: wrap; align-items: center;
   background: #eef1f7;
   border: 1px solid var(--border);
   border-top: 0;
@@ -464,6 +467,8 @@ tr.pt-p > td.pt-name { padding-left: 2.5rem; font-weight: 500; color: var(--text
 .subtab-chip:hover { color: var(--text); background: var(--border-light); }
 .subtab-chip.active,
 .subtab-chip.active:hover { background: var(--accent-light); color: var(--accent-deep); font-weight: 600; }
+/* #214: tighter on the BAND only - the same chip used for the levels below the page keeps its proportions. */
+.subtab-band .subtab-chip { padding-left: 0.45rem; padding-right: 0.45rem; }
 /* on the recessed band the chip lifts off it in white; tinted would blend into the band */
 .subtab-band .subtab-chip:hover { background: #e3e8f1; }
 .subtab-band .subtab-chip.active,
