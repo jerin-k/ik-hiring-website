@@ -1,3 +1,9 @@
+// ===== #204 RUNNER - KEEP THIS FIRST IN THE FILE =====
+// The editor function picker cannot be driven from a background tab (its dropdown needs a real click) and it
+// DEFAULTS TO THE FIRST FUNCTION IN THE OPEN FILE. So #204 is driven from here: point this at the step you
+// want and press Run. Same reason the note below says testTofu was "first in the file on purpose".
+function run204() { return trigger204Build(); }
+
 // Diagnostics for the ToFU pass (Tofu.gs). READ-ONLY. First function in the file on purpose.
 // (A temporary probeAgencyUsers() lived here on 7 Sep 2026 to answer #11's "can the API spot an agency?"
 //  question. Answer: YES - user.list returns globalRole, and 'External Recruiter' IS the agency tier.
@@ -158,4 +164,106 @@ function probeHistoryAndOnBehalf() {
 
   log('=== PROBE COMPLETE - no deletions, no status changes, no production records touched ===');
   return L.length + ' lines - read the execution log';
+}
+
+// ===== PROBE 204 (8 Oct 2026) — can application.list be read INCREMENTALLY? =====
+// MEASURED, NOT ASSUMED. Ashby's pagination guide confirms syncToken for candidate.list and job.list and says
+// support is PER ENDPOINT: "check if the syncToken parameter is available in its request schema". application.list's
+// own published schema is truncated, so option 2 (#204) cannot be built on it until this probe settles it.
+// Every call is a READ. Nothing is written. Safe at any hour.
+function probe204() {
+  var L = 0;
+  function log(s) { L++; Logger.log(s); }
+  function post(body) {
+    var options = { method: 'post', contentType: 'application/json',
+      headers: { 'Authorization': 'Basic ' + Utilities.base64Encode(getAshbyApiKey_() + ':') },
+      payload: JSON.stringify(body), muteHttpExceptions: true };
+    var r = UrlFetchApp.fetch(ASHBY_API_BASE + '/application.list', options);
+    var txt = r.getContentText(), j = null;
+    try { j = JSON.parse(txt); } catch (e) {}
+    return { code: r.getResponseCode(), raw: txt.substring(0, 300), j: j };
+  }
+  function brief(tag, body) {
+    var t0 = Date.now(), r = post(body), ms = Date.now() - t0, j = r.j || {};
+    log(tag + '\n    HTTP ' + r.code + ' success=' + j.success + ' n=' + ((j.results || []).length)
+      + ' more=' + j.moreDataAvailable + ' syncToken=' + (j.syncToken ? 'YES(len ' + String(j.syncToken).length + ')' : 'none')
+      + ' cursor=' + (j.nextCursor ? 'yes' : 'none') + ' ' + ms + 'ms'
+      + (j.success === false ? '\n    ERR ' + r.raw.substring(0, 220) : ''));
+    return r;
+  }
+
+  var FUTURE = Date.now() + 86400000 * 365;   // a year ahead — nothing can match it
+
+  log('===== PROBE 204 START =====');
+
+  // Q0 — baseline, and prove the far-future technique can tell HONOURED from IGNORED.
+  brief('Q0  baseline {limit:2}', { limit: 2 });
+  brief('Q0b createdAfter=FUTURE  -> expect n=0 (a KNOWN filter is honoured)', { limit: 100, createdAfter: FUTURE });
+  brief('Q0c CONTROL zzBogusAfter=FUTURE -> expect n=100 (an UNKNOWN param is ignored)', { limit: 100, zzBogusAfter: FUTURE });
+
+  // Q1 — is syncToken a RECOGNISED parameter? A garbage token should be REJECTED, not ignored.
+  brief('Q1  syncToken="not-a-real-token" -> recognised => sync_token_invalid', { limit: 1, syncToken: 'not-a-real-token' });
+  brief('Q1c CONTROL zzSyncTokenCtl="not-a-real-token" -> expect 200', { limit: 1, zzSyncTokenCtl: 'not-a-real-token' });
+
+  // Q4 — is there a SIMPLER timestamp filter? It would beat syncToken: no 14-day expiry, no 100-page cap, no stored token.
+  brief('Q4  updatedAfter=FUTURE  -> n=0 means HONOURED', { limit: 100, updatedAfter: FUTURE });
+  brief('Q4b modifiedAfter=FUTURE -> n=0 means HONOURED', { limit: 100, modifiedAfter: FUTURE });
+
+  // Q2 — can a REAL token be obtained? Walk a deliberately narrow slice to the end so this costs a few pages,
+  // and take the token from the SAME createdAfter-filtered shape the pipeline actually uses.
+  var since = Date.now() - 86400000 * 2;
+  var cur = null, pages = 0, got = 0, tok = null;
+  while (pages < 12) {
+    var b = { limit: 100, createdAfter: since };
+    if (cur) b.cursor = cur;
+    var r = post(b), j = r.j || {};
+    pages++; got += (j.results || []).length;
+    if (j.syncToken) tok = j.syncToken;
+    if (!j.moreDataAvailable || !j.nextCursor) break;
+    cur = j.nextCursor;
+    Utilities.sleep(30);
+  }
+  log('Q2  narrow full sync (createdAfter = 2 days ago): ' + pages + ' pages, ' + got + ' apps, token=' + (tok ? 'YES(len ' + tok.length + ')' : 'NONE'));
+
+  // Q3 — does that token actually return a DELTA? Replayed seconds later it should return almost nothing.
+  if (tok) {
+    var r3 = brief('Q3  replay the syncToken immediately -> expect a SMALL n', { limit: 100, syncToken: tok });
+    var j3 = r3.j || {};
+    log('Q3  verdict: n=' + ((j3.results || []).length) + ' of ' + got + ' in the slice; newToken=' + (j3.syncToken ? 'yes' : 'no'));
+  }
+
+  // Q5 — how big is a trimmed record? This decides whether the Drive store is one file or sharded.
+  var pg = post({ limit: 100 });
+  var apps = (pg.j && pg.j.results) || [];
+  if (apps.length) {
+    var full = JSON.stringify(apps).length, trim = JSON.stringify(apps.map(trim204_)).length;
+    log('Q5  100 apps: full=' + full + 'B  trimmed=' + trim + 'B  per-app=' + Math.round(trim / apps.length) + 'B'
+      + '  => 67,142 apps ~ ' + (Math.round(trim / apps.length * 67142 / 104857.6) / 10) + ' MB trimmed'
+      + ' (untrimmed would be ~' + (Math.round(full / apps.length * 67142 / 104857.6) / 10) + ' MB)');
+    log('Q5b keys on one application: ' + Object.keys(apps[0]).join(','));
+  }
+
+  log('===== PROBE 204 END =====');
+  return L;   // DLP: a count only — read the detail in the execution log
+}
+
+// The trimmed record the Drive store would hold: every field fetchAndProcessApps_ actually reads, and nothing else.
+// 🔒 ce = candidate email. The store is DRIVE-ONLY and must NEVER be pushed to GitHub (Rule 9, same boundary as
+// offer_contacts.json). dashboard.json is a PUBLIC repo.
+function trim204_(a) {
+  var ht = [], src = a.hiringTeam || [];
+  for (var i = 0; i < src.length; i++) {
+    var m = src[i];
+    if (m.role === 'Recruiter' || m.role === 'Sourcer') ht.push({ r: m.role === 'Recruiter' ? 1 : 2, n: memberName_(m), u: m.userId || null });
+  }
+  var st = a.source && a.source.sourceType ? (a.source.sourceType.title || a.source.sourceType) : null;
+  if (typeof st === 'object') st = null;
+  return { i: a.id, c: a.createdAt || null, u: a.updatedAt || null, s: a.status || null,
+    av: a.archivedAt || null, ar: (a.archiveReason && a.archiveReason.text) || null,
+    rt: (a.archiveReason && a.archiveReason.reasonType) || null,
+    j: (a.job && a.job.id) || null,
+    sg: (a.currentInterviewStage && a.currentInterviewStage.title) || null,
+    cn: (a.candidate && (a.candidate.name || ((a.candidate.firstName || '') + ' ' + (a.candidate.lastName || '')).trim())) || null,
+    ce: (a.candidate && a.candidate.primaryEmailAddress && a.candidate.primaryEmailAddress.value) || null,
+    sT: st, sN: (a.source && typeof a.source.title === 'string' && a.source.title) ? a.source.title : null, ht: ht };
 }
