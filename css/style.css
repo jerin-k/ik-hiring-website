@@ -2012,7 +2012,13 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   font-size: 0.6875rem; color: var(--text-secondary); }
 .it-legend i { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px;
   margin-right: 0.3rem; vertical-align: -1px; }
-.it-round { margin-bottom: 1.4rem; }
+/* Jerin, 8 Oct 2026: "Can we give a light background for these charts?" The Interview Traction charts were
+   the ONLY ones on the site sitting straight on the page - every other chart (13 of them, across Hiring
+   Manager, Recruiter Efficiency, Overall Efficiency and Panelists) is already inside .chart-wrap. So this is
+   not a new device, it is the existing container: same fill, border, radius and padding, copied deliberately.
+   A tinted fill was mocked at his request (#f5f8fc / #eef2f9 / #e9eef7) and he rejected it - do not reintroduce. */
+.it-round { background: var(--card); border: 1px solid var(--border); border-radius: 0.5rem;
+            padding: 1rem; margin-bottom: 1.25rem; }
 .it-round h4 { margin: 0 0 0.08rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--text-secondary); }
 .it-meta { font-size: 0.6875rem; color: var(--muted); margin: 0 0 0.35rem;
