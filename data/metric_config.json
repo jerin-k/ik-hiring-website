@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-07T10:56:05.250Z",
+  "updatedAt": "2026-10-09T08:25:50.041Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "pods": {
     "2026-Q3": {
@@ -33,31 +33,31 @@
       "G Darshan": "Others"
     },
     "2026-Q4": {
-      "Alokita Dhumne": "Lateral",
-      "Mahima Agarwal": "Sales",
-      "Praveetha A": "Sales",
-      "Rijo John": "Sales",
-      "Tina Anisha Bibeiro": "Sales",
-      "Sanghamitra Moulik": "Lateral",
-      "G Darshan": "Sales",
+      "Sangha - Talent Diary": "Others",
       "Satinder Kaur": "Lateral",
       "Neha Vivekanand Pattar": "Lateral",
       "Deepti Leslie": "Lateral",
       "Oshin Verma": "SME-India",
       "V Pooja": "Lateral",
       "Aditya Singh": "SME-US",
+      "Rijo John": "Sales",
       "Smriti Das": "Sales",
-      "Kaashvika Kashyap": "Sales",
       "Ritika Bhasin": "SME-US",
+      "Kaashvika Kashyap": "Sales",
+      "Alokita Dhumne": "Sales",
+      "Praveetha A": "Sales",
+      "Mahima Agarwal": "Sales",
       "Ankita Kabra": "Lateral",
       "Chhavi Rana": "Sales",
+      "Tina Anisha Bibeiro": "Sales",
       "Leenita Joseph Albert": "Sales",
       "M Navya": "Sales",
       "Gopu Nair V": "Others",
       "Mashika De Almeida": "Lateral",
       "Astha Thakur": "Lateral",
+      "Sanghamitra Moulik": "Lateral",
       "Tabitha Anceline E": "Sales",
-      "Sangha": "Others",
+      "G Darshan": "Others",
       "Siva Sruthi V S": "Sales"
     }
   },
@@ -90,8 +90,8 @@
       "Tina Anisha Bibeiro": 180,
       "Unassigned": 220,
       "V Pooja": 210,
-      "Praveetha A": 100,
-      "Leenita Joseph Albert": 100,
+      "Praveetha A": 0,
+      "Leenita Joseph Albert": 0,
       "Sangha": 0
     },
     "2026-Q1": {
@@ -104,78 +104,71 @@
       "Ritika Bhasin": 225
     },
     "2026-Q4": {
-      "Alokita Dhumne": 210,
-      "Mahima Agarwal": 210,
-      "Praveetha A": 210,
-      "Rijo John": 225,
-      "Tina Anisha Bibeiro": 225,
-      "G Darshan": 210,
       "Satinder Kaur": 218,
       "Neha Vivekanand Pattar": 220,
       "Deepti Leslie": 225,
       "Oshin Verma": 225,
       "V Pooja": 210,
       "Aditya Singh": 225,
+      "Rijo John": 180,
       "Smriti Das": 220,
-      "Kaashvika Kashyap": 220,
       "Ritika Bhasin": 225,
+      "Kaashvika Kashyap": 220,
+      "Alokita Dhumne": 180,
+      "Praveetha A": 0,
+      "Mahima Agarwal": 180,
       "Ankita Kabra": 220,
       "Chhavi Rana": 220,
-      "Leenita Joseph Albert": 100,
+      "Tina Anisha Bibeiro": 180,
+      "Leenita Joseph Albert": 0,
       "M Navya": 220,
       "Gopu Nair V": 0,
       "Mashika De Almeida": 220,
       "Astha Thakur": 220,
       "Sanghamitra Moulik": 220,
       "Tabitha Anceline E": 220,
-      "Sangha": 0,
+      "Sangha - Talent Diary": 0,
+      "G Darshan": 0,
       "Siva Sruthi V S": 220,
       "Prathima Pai": 218
     }
   },
   "scoreGrid": {
     "2026-Q3": {
-      "v": 2,
       "tierPoints": {
-        "S1": 6,
-        "S2": 12,
-        "S3": 15,
-        "S4": 20,
-        "S5": 30,
-        "S6": 40,
-        "S7": 60,
-        "S8": 90,
-        "S9": 120
+        "Vanilla": 6,
+        "Regular": 12,
+        "Semi-Niche": 15,
+        "Niche": 20,
+        "Super Niche": 40,
+        "Leadership": 60,
+        "Senior Leadership": 120
       },
       "rowTier": {
-        "India SME - Normal": "S1",
-        "India SME - Complex": "S2",
-        "India SME - Uber Complex": "S3",
-        "US SME - Normal": "S2",
-        "US SME - Complex": "S3",
-        "US SME - Uber Complex": "S4",
-        "India PA Junior": "S1",
-        "Associate & Sr.Associate - Pre Sales": "S2",
-        "India PA": "S3",
-        "US PA Junior": "S1",
-        "US PA": "S3",
-        "NonTech - Intern - Normal": "S1",
-        "NonTech - Intern - Complex": "S2",
-        "NonTech L1 to L2 - Normal": "S3",
-        "NonTech L1 to L2 - Complex": "S4",
-        "NonTech L3 to L4 - Normal": "S5",
-        "NonTech L3 to L4 - Complex": "S6",
-        "NonTech L5 to L6 - Normal": "S6",
-        "NonTech L5 to L6 - Complex": "S7",
-        "Tech - Intern - Normal": "S3",
-        "Tech - Intern - Complex": "S4",
-        "Tech L1 to L3 - Normal": "S5",
-        "Tech L1 to L3 - Complex": "S6",
-        "Tech L4 to L6 - Normal": "S6",
-        "Tech L4 to L6 - Complex": "S7",
-        "L7 - L8 - Normal": "S7",
-        "L7 - L8 - Complex": "S8",
-        "L9 & above": "S9"
+        "India SME - Normal": "Vanilla",
+        "India SME - Complex": "Regular",
+        "India SME - Uber Complex": "Semi-Niche",
+        "US SME - Normal": "Regular",
+        "US SME - Complex": "Semi-Niche",
+        "US SME - Uber Complex": "Niche",
+        "India PA Junior": "Vanilla",
+        "India PA": "Semi-Niche",
+        "US PA Junior": "Vanilla",
+        "US PA": "Semi-Niche",
+        "NonTech - Intern - Normal": "Vanilla",
+        "NonTech - Intern - Complex": "Regular",
+        "NonTech L1 to L3 - Normal": "Niche",
+        "NonTech L1 to L3 - Complex": "Niche",
+        "NonTech L4 to L6 - Normal": "Niche",
+        "NonTech L4 to L6 - Complex": "Super Niche",
+        "Tech - Intern - Normal": "Regular",
+        "Tech - Intern - Complex": "Semi-Niche",
+        "Tech L1 to L3 - Normal": "Niche",
+        "Tech L1 to L3 - Complex": "Super Niche",
+        "Tech L4 to L6 - Normal": "Super Niche",
+        "Tech L4 to L6 - Complex": "Leadership",
+        "L7 - L8": "Leadership",
+        "L9 & above": "Senior Leadership"
       }
     },
     "2026-Q4": {
@@ -242,26 +235,6 @@
     "Test": "Exclude"
   },
   "userType": {},
-  "recruiterDates": {
-    "Kaashvika Kashyap": {
-      "end": "2026-07-31"
-    },
-    "Leenita Joseph Albert": {
-      "end": "2026-09-25"
-    },
-    "Ankita Kabra": {
-      "end": "2026-07-07"
-    }
-  },
-  "podDefs": {
-    "2026-Q4": {
-      "Sales": {
-        "measuredOn": "offer",
-        "dropInDelta": true,
-        "dropPts": true,
-        "capUnit": "Offers",
-        "goalUnit": "Offers"
-      }
-    }
-  }
+  "recruiterDates": {},
+  "podDefs": {}
 }
