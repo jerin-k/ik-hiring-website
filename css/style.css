@@ -439,6 +439,60 @@ tbody.pt3.pt3c td.pl-topic { white-space: nowrap; overflow: hidden; text-overflo
 /* 🚨 MEASURED, 8 Oct: truncating the Opening ALONE moved the table by 109px out of 14,950 — because the row's
    height was then set by TOPIC, which wraps to five lines on a long one. A row is only as short as its TALLEST
    cell, so every long-text cell in the row has to be dealt with or none of them is worth doing. */
+
+/* ===== #216 (Jerin, 9 Oct 2026): the tooltip that gives a truncated cell's text back =====
+   🗣 "The hovering over opening isnt showing the full openinbg; in Joiner tab"
+   The site's own device, not the browser's. The `title` attribute was present and correct on all 156 truncated
+   Opening cells and every link in that chain measured sound — a native tooltip is simply the wrong instrument
+   for a column that HIDES data on the promise of a hover: it waits about a second, cannot be styled, and
+   cannot be read back from the DOM, so it can never be verified. Shape and shadow copied from `.heat-tip`
+   so a tip reads the same wherever it appears. Driven by js/cell-tip.js. */
+.cell-tip {
+  position: absolute; z-index: 60; pointer-events: none; display: none;
+  background: #fff; border: 1px solid var(--border); border-radius: 0.375rem;
+  box-shadow: 0 0.375rem 1.125rem rgba(15, 23, 42, 0.13);
+  padding: 0.375rem 0.5625rem; font-size: 0.71875rem; line-height: 1.45; color: var(--text);
+  /* An opening's full name runs to 481px of text, so the tip is allowed to be wide AND to wrap — a one-line
+     tip would be clamped by the window and cut off exactly the tail the reader hovered for. */
+  max-width: 26rem; white-space: normal; overflow-wrap: anywhere;
+}
+
+/* ===== #217 (Jerin, 9 Oct 2026): the Joining Pipeline tables fit the page =====
+   🗣 "Also, check this overlap between columns. Please log a tab to fix."
+   📏 MEASURED at the real 1,210px content column, 9 Oct: the table was the exact sum of its declared column
+      widths and ran PAST the page — Hiring Manager and Overall Efficiency 1,282px (72 over), and the Recruiter
+      tab's, with a tenth column, 1,309px (99 over). ⚠ The Recruiter one was NOT in the report and nobody had
+      noticed it; it is the worst of the three. The Joiners lists all fit already (#213).
+   🔑 THE WHOLE OVERFLOW WAS PAID FOR OUT OF SLACK, so no column that used to fit got narrower than it needs.
+      Widest content actually needed per column, against what was declared:
+        Sourcer 67 vs 130 · Department 93 vs 115 · Sub-stage 108 vs 115 · Opening quarter 114 vs 130
+      — 100.8px of width being held by four columns that did not want it, against the 72px (and 99px) owed.
+      Recruiter 159 vs 166 and the person column were left alone, both being at their need.
+   ⚠ Job 364, Opening 481 and Topic 303 all need more than the page can give — everything at once needs
+      1,944px. Those three truncate and give their text back on hover (#216), which is the same trade Jerin
+      settled for the Joiners list. He has NOT been asked to drop a column here; that is the deeper fix. */
+/* 🚨 table-layout:fixed is what makes the widths BINDING — the same lesson as #213. Under the default `auto`
+   a max-width on a cell is only advisory, which is how a table whose declared widths come to 1,282px simply
+   drew itself 1,282px wide inside a 1,210px box. With `fixed` + width:100% the numbers act as proportions and
+   the table fills the column exactly, so this table can never overflow again whatever is added to it. */
+table.jp { table-layout: fixed; width: 100%; }
+table.jp th.c-src,   table.jp td.c-src   { width: 5rem;   min-width: 5rem;   max-width: 5rem; }
+table.jp th.c-dept,  table.jp td.c-dept  { width: 6.5rem; min-width: 6.5rem; max-width: 6.5rem; }
+table.jp th.c-stage, table.jp td.c-stage { width: 7.5rem; min-width: 7.5rem; max-width: 7.5rem; }
+table.jp th.c-open,  table.jp td.c-open  { width: 8rem;   min-width: 8rem;   max-width: 8rem; }
+/* ⚠ The Recruiter tab's Month column is the one column on these tables with no family of its own. Left to
+   itself under table-layout:fixed it would have split the leftover space EQUALLY with the pod/recruiter tree
+   beside it — 144px each — starving the tree and handing 144px to the word "Oct 2026". `c-mon` names it on
+   the heading; the body cell already carries `pl-mon` from tdMonth. Deliberately NOT added to the FAMILIES
+   list in js/table-cols.js: nothing needs it copied down the column. */
+table.jp th.c-mon,   table.jp td.pl-mon  { width: 5rem;   min-width: 5rem;   max-width: 5rem; }
+/* The three columns that cannot fit: cut them cleanly and let #216's tip carry the rest. The inner spans have
+   to be told too — a `.pl-job` / `.pl-rec` pill keeps its own white-space and wrapped INSIDE a nowrap cell,
+   which is the trap #213 hit on the recruiter badge. */
+table.jp td.c-job, table.jp td.c-open-name, table.jp td.c-topic,
+table.jp td.pl-open-name, table.jp td.pl-topic { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+table.jp td.c-job .pl-job, table.jp td.c-rec .pl-rec,
+table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .pt-count {
   display: inline-block; min-width: 1.125rem; text-align: center; margin-left: 0.4375rem;
   font-size: 0.625rem; font-weight: 600; color: var(--muted);
