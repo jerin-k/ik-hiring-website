@@ -10,6 +10,7 @@ import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../pe
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
+import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
 import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup } from '../job-filter.js';   // #172c
@@ -75,7 +76,7 @@ const recMetrics = (r, rb, gap) =>
   + `<td class="${r.joined ? 'good' : 'zero'}">${r.joined || '&mdash;'}</td>`
   + `<td style="color:var(--orange)">${rb.jpP || '<span class="zero">&mdash;</span>'}</td>`
   + `<td class="gapcell">${rb.drop ? `<span style="color:var(--red);font-weight:600">${rb.drop}</span>` : '<span class="zero">&mdash;</span>'}</td>`
-  + `<td class="gapcell"><span class="deltacell"><span class="dnum ${gap === 0 ? 'none' : ''}">${gap}</span></span></td>`;
+  + `<td class="gapcell">${deltaPill(gap)}</td>`;   // #218: the same pill as every other Delta on the site
 
 // #187: the topics belonging to ONE recruiter's openings. Same rows, narrowed and re-counted from that
 // recruiter's own openings, so a topic row under a recruiter closes THAT recruiter's row rather than the job's.
@@ -897,13 +898,14 @@ export function initHmFilters(data) {
     const deltaOf = (v) => (v.total || 0) - (v.joined || 0) - (v.jpP || 0);
     const metrics = (v) => {
       const delta = deltaOf(v);
-      // #1 Option A (2026-08-22): the bar used to fill with COVERAGE while the bold number counted the GAP,
-      // so a nearly-full-looking cell could sit beside a 7. Both now measure the same thing — the shortfall.
-      const gapPct = v.total > 0 ? Math.max(0, Math.min(100, Math.round((delta / v.total) * 100))) : 0;
+      // #218 (9 Oct 2026): the bar is GONE from Delta — `deltaPill` is the one home for this cell now. The
+      // old `gapPct` that filled it went with it: it measured the shortfall as a share of the department,
+      // which drew nothing at all on the 79 rows of 112 where Delta is exactly zero, and nothing on a surplus
+      // either, so the best row on the board looked like an average one.
       // #153 (Jerin, 19 Sep 2026): the caption under Delta is GONE — it read "13 of 32 still to fill",
       // "nothing outstanding", or "1 more in closing than opened" when Delta went negative. 🚨 Rule 1 still
-      // holds: a NEGATIVE Delta is correct and is never clamped. It now reads as a rose minus number, with the
-      // reason in the definitions block under the panel rather than on every row.
+      // holds: a NEGATIVE Delta is correct and is never clamped. The pill now says which of the three states
+      // a row is in; the reason stays in the definitions block under the panel rather than on every row.
       // Drop % denominator INCLUDES Dropped itself (Jerin, 2026-08-22): of everything that reached a
       // conclusion or is about to, what share fell out.
       const den = v.joined + v.jpP + v.drop;
@@ -915,8 +917,7 @@ export function initHmFilters(data) {
       return `<td style="font-weight:600">${v.total}</td><td class="good">${v.joined}</td>`
         + `<td style="color:var(--orange)">${v.jpP || `<span class="zero">0</span>`}</td>`
         + `<td class="gapcell">${dropCell}</td>`
-        + `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
-        + `<span class="dnum ${delta === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${delta}</span></span></td>`;
+        + `<td class="gapcell">${deltaPill(delta)}</td>`;
     };
     // #188: attach the PEOPLE to the position-derived recruiter splits, so the merged rows carry both halves.
     // A recruiter with people but no position of their own is added here too — the same rule as the job level.
