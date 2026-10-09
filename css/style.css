@@ -478,14 +478,30 @@ tbody.pt3.pt3c td.pl-topic { white-space: nowrap; overflow: hidden; text-overflo
 table.jp { table-layout: fixed; width: 100%; }
 table.jp th.c-src,   table.jp td.c-src   { width: 5rem;   min-width: 5rem;   max-width: 5rem; }
 table.jp th.c-dept,  table.jp td.c-dept  { width: 6.5rem; min-width: 6.5rem; max-width: 6.5rem; }
-table.jp th.c-stage, table.jp td.c-stage { width: 7.5rem; min-width: 7.5rem; max-width: 7.5rem; }
+/* #217b. 🚨 `overflow: hidden` is the STRUCTURAL half and the more important one: the cell was `overflow:
+   visible`, so a badge wider than its column simply drew itself over the Recruiter column next door — 12 of 15
+   rows did, by up to 19px. A width alone would have been one long badge away from the same bug. Now nothing can
+   escape the cell whatever it says.
+   📏 The width STAYS at 7.5rem, and that is the measurement talking: plainer type took the widest badge ("Offer
+   Accepted") from 116px to 83px, but the cell spends 21.6px on padding, so 7.5rem leaves an 86.4px content box —
+   83 fits with 3px to spare. ⚠ 6rem was tried first and CLIPPED 12 of the 15 badges to "Offer Accept…", trading
+   a spill for a truncation. The saving here was never column width; it was the overlap. */
+table.jp th.c-stage, table.jp td.c-stage { width: 7.5rem; min-width: 7.5rem; max-width: 7.5rem; overflow: hidden; }
+/* #217b: OPENING gains 1.5rem — the most starved column on the table (it needs 481px) and the one actually being
+   read through the #216 hover. Paid for by Topic (-0.5rem) and, on the Recruiter tab, by Month and DOJ, all three
+   of which were holding more than their content needs. The override has to name `c-open-name` because the global
+   `.pl-open-name { max-width: 10rem }` would otherwise cap it straight back. */
+table.jp th.c-open-name, table.jp td.c-open-name,
+table.jp td.pl-open-name { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }
+table.jp th.c-topic, table.jp td.c-topic, table.jp td.pl-topic { width: 9rem; min-width: 9rem; max-width: 9rem; }
+table.jp th.c-date,  table.jp td.c-date  { width: 5.5rem; min-width: 5.5rem; max-width: 5.5rem; }
 table.jp th.c-open,  table.jp td.c-open  { width: 8rem;   min-width: 8rem;   max-width: 8rem; }
 /* ⚠ The Recruiter tab's Month column is the one column on these tables with no family of its own. Left to
    itself under table-layout:fixed it would have split the leftover space EQUALLY with the pod/recruiter tree
    beside it — 144px each — starving the tree and handing 144px to the word "Oct 2026". `c-mon` names it on
    the heading; the body cell already carries `pl-mon` from tdMonth. Deliberately NOT added to the FAMILIES
    list in js/table-cols.js: nothing needs it copied down the column. */
-table.jp th.c-mon,   table.jp td.pl-mon  { width: 5rem;   min-width: 5rem;   max-width: 5rem; }
+table.jp th.c-mon,   table.jp td.pl-mon  { width: 4.5rem; min-width: 4.5rem; max-width: 4.5rem; }
 /* The three columns that cannot fit: cut them cleanly and let #216's tip carry the rest. The inner spans have
    to be told too — a `.pl-job` / `.pl-rec` pill keeps its own white-space and wrapped INSIDE a nowrap cell,
    which is the trap #213 hit on the recruiter badge. */
@@ -1678,11 +1694,12 @@ table.pl-list td:not(:first-child) { text-align: left; }
    a joining date that has passed with nobody moved to Hired still reads rose, and today still reads teal. */
 .pl-doj.pl-passed b { color: var(--red); }
 .pl-doj.pl-today b { color: #1E7590; font-weight: 700; }
-.pl-stage { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.1875rem 0.5rem 0.1875rem 0.4375rem; border-radius: 0.375rem;
-  font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
-.pl-ticks { display: inline-flex; gap: 2px; }
-.pl-ticks i { width: 0.1875rem; height: 0.5625rem; border-radius: 1px; background: currentColor; opacity: .22; }
-.pl-ticks i.on { opacity: 1; }
+/* #217b (Jerin, 9 Oct 2026): smaller and plainer. 🗣 "the overlap is heavy; shall we reduce the font panel size of
+   sub-stage … Can make it less fancier." The five tick marks came out of tdStage (they were 23px of a 116px badge
+   in a 108px column, and the pl-s1…pl-s5 shades already carry the same five steps), the type drops a step and the
+   padding tightens. MEASURED after: the widest badge, "Offer Accepted", is 79px — comfortably inside the column. */
+.pl-stage { display: inline-flex; align-items: center; padding: 0.1875rem 0.4375rem; border-radius: 0.375rem;
+  font-size: 0.625rem; font-weight: 600; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .pl-s0 { background: var(--border-light); color: var(--text-secondary); }
 .pl-s1 { background: #eef1f7; color: #4a5578; }
 .pl-s2 { background: #e4eaf5; color: #33507f; }
