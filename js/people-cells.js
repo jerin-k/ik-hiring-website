@@ -79,13 +79,19 @@ export function tdDoj(day, { live = false } = {}) {
   return `<td class="pl-doj" data-sv="${sv}" title="${day.slice(0, 10)} — ${wd} · ${when}"><b>${shown}</b></td>`;
 }
 
-// The badge fills in one step per stage of closing, so it darkens as the person gets closer to joining; it sorts in that order too.
+// The badge DARKENS one step per stage of closing, so it reads as progress towards joining; it sorts in that order too.
+// 🚨 #217b (Jerin, 9 Oct 2026): the five tick marks are GONE — 🗣 "the overlap is heavy; shall we reduce the font
+// panel size of sub-stage … Can make it less fancier." MEASURED: "Offer Accepted" drew a 116px badge inside a 108px
+// column and 12 of the 15 rows spilled into the Recruiter column beside them, by up to 19px. The ticks alone were
+// 23px of that. They were also REDUNDANT — `pl-s1`…`pl-s5` already darken through exactly the same five steps, so
+// the badge says the same thing with colour and nothing is lost by removing them.
+// ⚠ My own width measurement for #217 missed this: it probed the cell's TEXT, and the ticks are elements, not text.
+// Measure the RENDERED element, not the string inside it. [[feedback_ask-the-real-question]]
 export function tdStage(s) {
   if (!s) return `<td data-sv="">${DASH}</td>`;
   const k = STAGES.indexOf(s) + 1;
   if (!k) return `<td data-sv="${esc(s)}"><span class="pl-stage pl-s0">${esc(s)}</span></td>`;
-  const ticks = [1, 2, 3, 4, 5].map((i) => `<i${i <= k ? ' class="on"' : ''}></i>`).join('');
-  return `<td data-sv="${k}"><span class="pl-stage pl-s${k}"><span class="pl-ticks" aria-hidden="true">${ticks}</span>${s}</span></td>`;
+  return `<td data-sv="${k}"><span class="pl-stage pl-s${k}">${s}</span></td>`;
 }
 
 // The class suffix for a pod's colour (`pl-pod-<x>` here, `pod-<x>` on Admin's pod dropdowns — #137b). Unassigned / unknown = 'none'.
