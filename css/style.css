@@ -409,15 +409,23 @@ table.jt { table-layout: fixed; width: 100%; }
 table.jt th.c-jname { width: 13rem; min-width: 13rem; max-width: 13rem; }
 table.jt th.c-rec   { width: 11.5rem; min-width: 11.5rem; max-width: 11.5rem; }   /* 161px is the widest recruiter name - this holds it */
 table.jt th.c-src   { width: 5rem; min-width: 5rem; max-width: 5rem; }   /* 4rem broke the word "Sourcer" across two lines */
-table.jt th.c-open-name { width: 9rem; min-width: 9rem; max-width: 9rem; }   /* LAST column now, deliberately small - full name on hover */
-table.jt th.c-topic { width: 26rem; min-width: 26rem; max-width: 26rem; }   /* 367px is the longest topic - this shows every one in full */
+/* 🔄 #219 (Jerin, 9 Oct 2026) SWAPS THESE TWO ROUND, reversing half of #213 on his own word:
+   🗣 "the blank Topic column is looking odd. Make Topic of normal width & use hovering to reveal full name."
+   📏 MEASURED on the 164 Q3 joiners: Topic was the WIDEST column on the table at 374px and **122 of the 164
+      rows - 74% - are blank**, because most roles do not use topics at all. Only 40 carry one. Meanwhile
+      Opening, the column he actually reads, was squeezed to 130px against the 559px its longest name needs.
+   🔑 The two trade places and the SUM IS UNCHANGED, so the person column keeps the slack it had: Topic gives
+      up 15rem, Opening takes it. Opening goes 9rem ➡ 24rem, which fits most names outright; the rest, and the
+      long topics, come back on hover (#216). */
+table.jt th.c-open-name { width: 24rem; min-width: 24rem; max-width: 24rem; }
+table.jt th.c-topic { width: 11rem; min-width: 11rem; max-width: 11rem; }   /* normal width now - the long ones hover */
 table.jt th.c-open  { width: 6rem; min-width: 6rem; max-width: 6rem; }
 /* the body cells have to agree, or table-layout:auto widens the column back to its content */
 table.jt tbody.pt3c td.pt-name      { max-width: 13rem; }
 table.jt tbody.pt3c td.c-rec        { max-width: 11.5rem; }
 table.jt tbody.pt3c td:nth-child(3) { max-width: 5rem; }
-table.jt tbody.pt3c td.pl-open-name { max-width: 9rem; }
-table.jt tbody.pt3c td.pl-topic     { max-width: 26rem; }
+table.jt tbody.pt3c td.pl-open-name { max-width: 24rem; }
+table.jt tbody.pt3c td.pl-topic     { max-width: 11rem; }
 /* the person's name is the one cell that must never be cut — it is the row's subject. */
 table.jt tbody.pt3c tr.pt-p > td.pt-name { white-space: normal; overflow-wrap: anywhere; }
 table.jt tbody.pt3c td.c-rec,
@@ -474,7 +482,14 @@ tbody.pt3.pt3c td.pl-topic { white-space: nowrap; overflow: hidden; text-overflo
 /* 🚨 table-layout:fixed is what makes the widths BINDING — the same lesson as #213. Under the default `auto`
    a max-width on a cell is only advisory, which is how a table whose declared widths come to 1,282px simply
    drew itself 1,282px wide inside a 1,210px box. With `fixed` + width:100% the numbers act as proportions and
-   the table fills the column exactly, so this table can never overflow again whatever is added to it. */
+   the table fills the column exactly, so this table can never overflow again whatever is added to it.
+   📌 WHAT `jp` MEANS NOW: the FLAT people tables whose widths are bound — the three Joining Pipeline tables
+   AND, since #219, the Recruiter tab's Joiners table. (The two TREE Joiners lists use `jt`, which has its own
+   budget above.) It was named for Joining Pipeline and outgrew the name.
+   ⚠ #219 is why the Recruiter Joiners table joined them, and it is a worked example of why `auto` is unsafe:
+   putting the topic in a CHIP added its padding and border to the column's intrinsic width, and under `auto`
+   that quietly pushed that one table 61px past the page. Nothing about the chip was wrong; the table simply
+   had no binding width to hold it. Bound now, so it cannot happen again there either. */
 table.jp { table-layout: fixed; width: 100%; }
 table.jp th.c-src,   table.jp td.c-src   { width: 5rem;   min-width: 5rem;   max-width: 5rem; }
 table.jp th.c-dept,  table.jp td.c-dept  { width: 6.5rem; min-width: 6.5rem; max-width: 6.5rem; }
@@ -1720,6 +1735,20 @@ table.pl-list td:not(:first-child) { text-align: left; }
 .pl-s3 { background: #ddebf0; color: #2a5f7a; }
 .pl-s4 { background: #cfe4eb; color: #17586c; }
 .pl-s5 { background: #1E7590; color: #fff; }
+/* ===== #219 (Jerin, 9 Oct 2026): the light lift on the Joiners list =====
+   🗣 "do a slight design uplift for it. Its bland compared to Joining pending tab."
+   Joining Pipeline reads livelier because it carries badges and coloured state; Joiners is one stage end to
+   end, so it has none — and #195 settled that a column which never varies carries no information, which rules
+   out stamping "Hired" on all 164 rows. These two touches add meaning instead of decoration.
+   1. A real TOPIC becomes a chip, in the page's own accent tint. 122 of the 164 rows have no topic, so the 40
+      that do now read as tags rather than as stray words among dashes. */
+.pl-tchip { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  vertical-align: middle; font-size: 0.6875rem; font-weight: 600; line-height: 1rem; padding: 1px 0.4375rem;
+  border-radius: 0.375rem; background: var(--accent-light); border: 1px solid #d5ddee; color: var(--accent-deep); }
+/* 2. The opening leads with its IK number — the part the team says out loud — and the rest of the name drops
+      to secondary ink, so a column of near-identical strings can be scanned instead of read. */
+.pl-ik { font-weight: 700; color: var(--text); }
+.pl-open-rest { color: var(--muted); }
 .pl-chip { display: inline-block; font-size: 0.6875rem; font-weight: 600; line-height: 1rem; padding: 1px 0.4375rem; border-radius: 0.375rem; white-space: nowrap;
   border: 1px solid var(--border); color: var(--text-secondary); background: var(--card); }
 .pl-chip.pl-prev { background: #fbefe3; border-color: #f0d9c2; color: #9a5b1e; }
