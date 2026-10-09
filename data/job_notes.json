@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-09T06:05:53.239Z",
+  "updatedAt": "2026-10-09T06:06:54.231Z",
   "notes": {
     "19982198": {
       "text": "Sourcing in progress .",
@@ -78,14 +78,14 @@
       "at": "2026-10-09T06:01:25.902Z"
     },
     "a6729ee8": {
-      "text": "HE - 6\n- Smit (Applied Ai)",
-      "by": "gopu.nair@interviewkickstart.com",
-      "at": "2026-09-25T07:21:05.046Z"
+      "text": "HE - 6\nR1 - 1 \nR2 - 1 ( Aman)",
+      "by": "Deepti",
+      "at": "2026-10-09T06:06:54.230Z"
     },
     "a9747a0f": {
-      "text": "HE - 11 \nR1 - 2 \nR2 - 1\nR5 - 1 ( Divyanshu)",
-      "by": "Deepti",
-      "at": "2026-10-09T06:05:53.238Z"
+      "text": "HE - 13; Round 1 (4)",
+      "by": "gopu.nair@interviewkickstart.com",
+      "at": "2026-09-25T07:27:44.668Z"
     },
     "4078cca1": {
       "text": "HE - 9",
@@ -103,9 +103,9 @@
       "at": "2026-09-26T17:41:08.856Z"
     },
     "378e5361": {
-      "text": "HE - 3\nR1 - 4 (TBS)\nR2 -  1\nR3 (Dipen) - 1 (TBS)\nFinal round (Madhav)- 1",
+      "text": "HE - 3\nR1 - 6 (TBS)\nR2 -  1\nR3 - 1 (TBS)\nRef Check - 1",
       "by": "Alokita",
-      "at": "2026-10-08T11:01:02.210Z"
+      "at": "2026-10-09T06:05:54.165Z"
     }
   }
 }
