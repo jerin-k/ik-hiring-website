@@ -13,6 +13,7 @@ import { initTableSorting } from './table-sort.js';
 import { initFilterDropdowns } from './filter-dropdowns.js';   // 17 Sep: filter dropdowns open in full, never clipped by their row
 import { mountStickyChrome } from './sticky-chrome.js';   // #147 C+: the sub-tab band + filter row are what freeze, not the navy block
 import { watchColumnFamilies } from './table-cols.js';   // #151b: a column's family is declared on its heading and mirrored down the column
+import { initCellTips } from './cell-tip.js';   // #216: a truncated people-list cell gives its full text back on hover — the site's own tip, not the browser's
 import { startBuildWatch } from './build-watch.js';   // #164: a tab left open runs old code and old numbers — it says so, and offers a reload
 import { startRefresh } from './refresh-status.js';   // #162: Refresh runs in a hidden frame and reports in a card, not a window of raw JSON
 import { valueLabelsPlugin, stackTotalsPlugin } from './chart-datalabels.js';
@@ -306,6 +307,7 @@ function navigateTo(page, sub) {
 
   mountStickyChrome();   // #147 C+: measure the frozen block and publish its height for the table headings
   startColumnFamilies();   // #151b: one width per family, carried from each heading down its column
+  startCellTips();   // #216: hovering a cut-off Opening / Job / Topic gives the full text back
   applySub(currentSub);
 }
 
@@ -318,6 +320,16 @@ function startColumnFamilies() {
   if (!root) return;
   watchColumnFamilies(root);
   columnFamiliesWatching = true;
+}
+
+// #216: ONE delegated listener for the whole session, for the same reason the column families use one observer
+// — every people list is rebuilt with `body.innerHTML = …` on every filter change, and a listener attached to
+// the document cannot be lost to a rebuild. Installed once, needs no re-arming per page.
+let cellTipsInstalled = false;
+function startCellTips() {
+  if (cellTipsInstalled) return;
+  initCellTips(document);
+  cellTipsInstalled = true;
 }
 
 // Browser back/forward, and any hash typed by hand, route through the same entry point.

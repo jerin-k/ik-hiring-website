@@ -523,7 +523,7 @@ export function renderHmReport(data) {
     <!-- ===== PANEL: JOINING PENDING (#130b — was the Cases list under Position Fulfilment) ===== -->
     <div class="hm-panel" data-panel="joiningpending" style="display:none">
       <p class="sub-note" id="hmJPCaption" style="margin-bottom:0.5rem"></p>
-      <div class="scroll-table"><table class="pl-list">
+      <div class="scroll-table"><table class="pl-list jp">
         <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
       </table></div>

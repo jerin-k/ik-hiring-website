@@ -66,7 +66,7 @@ export const DEFINITIONS = {
   'hm-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; the people behind the Joining Pipeline card on <strong>Position Fulfilment</strong>. A <strong>live</strong> list, so on this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -84,6 +84,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Slightly longer than the Joining Pipeline card', 'The same people, without the card&rsquo;s subtraction: the card leaves out anyone whose opening was raised before the period. This list shows everyone, so nobody is lost.'],
+      ['Three columns are cut off, not shortened', 'Opening, Job and Topic hold more text than the page can show, so each is cut with an ellipsis &mdash; <strong>hover a cut-off cell to read it in full</strong>. Nothing is abbreviated or rounded; only the display is clipped.'],
     ]
   },
 
@@ -270,7 +271,7 @@ export const DEFINITIONS = {
   'rec-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Every person in closing &mdash; <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; one row each, grouped <strong>Pod &rarr; Recruiter &rarr; Candidate</strong>. A <strong>live</strong> list: each person sits in their recruiter&rsquo;s pod for the quarter we are in today. On this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>, and <em>Expand all</em> opens every pod and recruiter.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026.',
     groups: [
       {
         heading: 'Reading it',
@@ -289,6 +290,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Longer than Joining pipeline on Position Fulfilment', 'Those tables count a person only against a recruiter with a row there, and three of the five pods also leave out anyone on an earlier quarter&rsquo;s opening. This list shows everyone.'],
+      ['Three columns are cut off, not shortened', 'Opening, Job and Topic hold more text than the page can show, so each is cut with an ellipsis &mdash; <strong>hover a cut-off cell to read it in full</strong>. Nothing is abbreviated or rounded; only the display is clipped.'],
     ]
   },
 
@@ -531,7 +533,7 @@ export const DEFINITIONS = {
   'eff-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so on this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>.',
-    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -550,6 +552,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Slightly longer than the Joining pipeline column', 'That column leaves out people on an opening raised before the period starts. This list shows everyone, so nobody is lost.'],
+      ['Three columns are cut off, not shortened', 'Opening, Job and Topic hold more text than the page can show, so each is cut with an ellipsis &mdash; <strong>hover a cut-off cell to read it in full</strong>. Nothing is abbreviated or rounded; only the display is clipped.'],
     ]
   },
 
