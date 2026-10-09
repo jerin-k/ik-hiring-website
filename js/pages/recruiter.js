@@ -647,10 +647,10 @@ export function renderRecruiter(data) {
     <!-- PANEL: Joiners (#130c) — the Joining Pending columns minus Sub-Stage: Hired is one stage -->
     <div class="rec-panel" data-panel="joiners" style="display:none">
       <p class="sub-note" id="recJoinersCaption" style="margin-bottom:0.5rem"></p>
-      <div class="scroll-table"><table class="metrics pl-list">
+      <div class="scroll-table"><table class="metrics pl-list jp">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th class="c-src">Sourcer</th><th>Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th>
+          <th class="c-src">Sourcer</th><th class="c-mon">Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJoinersBody"></tbody>
       </table></div>

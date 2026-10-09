@@ -177,7 +177,12 @@ export function tdTopic(openingId, job8, idx) {
   // saying it again here would be noise. This column answers exactly one question: which TOPIC.
   if (!key || !(key in known.byOpening)) return `<td class="pl-topic" data-sv="">${DASH}</td>`;
   const t = known.byOpening[key];
-  return t ? `<td class="pl-topic" data-sv="${esc(t)}" title="${esc(t)}">${esc(t)}</td>` : why('opening has no topic');   // #213C: the title is what makes it safe to truncate
+  // #219 (Jerin, 9 Oct 2026): a real topic is a CHIP now, not loose text. On the Joiners list 122 of the 164
+  // rows carry no topic at all, so a column of plain grey words among 122 dashes read as an accident. A chip
+  // makes the 40 that DO have one look deliberate, and it is the site's own device, not a new one.
+  // ⚠ The chip truncates itself: a cell that cuts a bordered chip in half looks broken rather than clipped.
+  return t ? `<td class="pl-topic" data-sv="${esc(t)}" title="${esc(t)}"><span class="pl-tchip">${esc(t)}</span></td>`
+    : why('opening has no topic');   // #213C: the title is what makes it safe to truncate
 }
 
 // ===== #169 (Jerin, 23 Sep 2026): "Opening & Topic to be 2 columns; makes life cleaner/clearer for all" =====
@@ -193,7 +198,18 @@ export function tdOpening(openingId, idx) {
   if (!key) return why('no opening on the offer');
   if (!(key in known.byOpening)) return why('not in this period');
   const nm = (known.nameOf || {})[key];
-  if (nm) return `<td class="pl-open-name" data-sv="${esc(nm)}" title="${esc(nm)}">${esc(nm)}</td>`;   // #213C: the title is what makes it safe to truncate
+  // #219 (Jerin, 9 Oct 2026): lead with the IK number. An opening is named "IK-350 - Ritika Bhasin - As per
+  // AOP - NA" (#159), and the part anyone actually looks for is the number — it is how the team refers to a
+  // position out loud. It takes the primary ink and the rest drops to secondary, so a column of near-identical
+  // strings becomes scannable. Purely a rendering split: the sort value and the hover text stay the whole name.
+  // ⚠ Falls back to the plain name when it does not match the pattern — not every opening is named to #159.
+  if (nm) {
+    const cut = nm.indexOf(' - ');
+    const body = cut > 0
+      ? `<b class="pl-ik">${esc(nm.slice(0, cut))}</b><span class="pl-open-rest">${esc(nm.slice(cut))}</span>`
+      : esc(nm);
+    return `<td class="pl-open-name" data-sv="${esc(nm)}" title="${esc(nm)}">${body}</td>`;   // #213C: the title is what makes it safe to truncate
+  }
   return `<td class="pl-open-name" data-sv="${esc(key)}" title="The opening's name arrives with the next data refresh.">`
     + `<span class="pl-open-id">${esc(key)}</span></td>`;
 }
