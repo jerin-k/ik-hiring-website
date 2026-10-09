@@ -24,6 +24,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
+import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -1618,19 +1619,17 @@ export function initRecruiterFilters(baseData) {
       // Gap bar: filled = (Goal - Gap) / Goal, so the bar can never disagree with the number beside it.
       const gapCell = (v) => {
         if (v.gSc == null) return `<td class="score">${DASH}</td>`;
-        const fill = v.aSc > 0 ? Math.max(0, Math.min(100, Math.round(((v.aSc - v.gSc) / v.aSc) * 100))) : 0;
-        const cls = v.gSc === 0 ? 'done' : (fill < 75 ? 'short' : '');
         // #153 (Jerin, 19 Sep 2026): the caption under this number is GONE — it read "219 of 441 · 50%",
         // "goal met" or "no goal set". The bar and the number carry the shortfall on their own.
         // ⚠ If it is ever brought back, derive it from Goal MINUS Gap and never from the raw outcome: at pod
         // level Gap is the SUM of each recruiter's shortfall, so a pod whose total output beats its total goal
         // still carries a real gap, and quoting the raw outcome there produced "2252 of 1313 · 81%" — three
         // numbers that disagreed with each other.
-        // #19 (2026-08-23): same treatment as the HM Delta cell — a slim track that fills with the SHORTFALL,
-        // number beside it, so the bar and the number can never point in opposite directions.
-        const gapPct = v.aSc > 0 ? Math.max(0, Math.min(100, Math.round((v.gSc / v.aSc) * 100))) : 0;
-        return `<td class="score gapcell"><span class="deltacell"><span class="track"><i style="width:${gapPct}%"></i></span>`
-          + `<span class="dnum ${v.gSc === 0 ? 'none' : (gapPct >= 50 ? 'high' : '')}">${Math.round(v.gSc)}</span></span></td>`;
+        // #19 (2026-08-23) put a slim track here, matching the HM Delta cell. #218 (9 Oct 2026) removes the
+        // track from BOTH, for the same reason and in the same place: `deltaPill` in js/delta-cell.js. The
+        // two tabs are near-mirrors and this cell must never differ between them (Rule 3).
+        // 🚨 Still never clamped — a recruiter who beat their goal shows a teal minus (Jerin, 25 Sep: #179).
+        return `<td class="score gapcell">${deltaPill(v.gSc)}</td>`;
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
       const utilCell = (v) => {

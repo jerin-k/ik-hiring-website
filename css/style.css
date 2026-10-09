@@ -1349,6 +1349,20 @@ td.gapcell { min-width: 9.375rem; }
    track vanished on exactly the rows that summarise a whole department. */
 .deltacell .track { width: 4rem; height: 0.375rem; border-radius: 0.1875rem; background: var(--border); overflow: hidden; flex: none; }
 .deltacell .track i { display: block; height: 100%; background: var(--red); opacity: .75; }
+/* ===== #218 (Jerin, 9 Oct 2026): the Delta PILL — mock-up option A, muted =====
+   🗣 "I like A, Muted; but without the '+', cz thats obvious; but '-' can be there."
+   The bar is gone from Delta. Rose = still short, teal = more in closing than opened, quiet grey = met. The
+   colours are the house --red and --green (a muted rose and a teal), not a traffic light; both clear 4.5:1.
+   🔑 Why the quiet state matters: 79 of the 112 rows on Position Fulfilment are exactly zero, so the loudest
+   thing on the old column was the row with nothing to say. Colour now lands only where there is something to
+   do. ⚠ Scoped to `.dpill` — the Joining-conversion cells keep `.deltacell .track` and are untouched. */
+.deltacell .dpill { font-weight: 600; font-size: 0.6875rem; line-height: 1rem; padding: 0.125rem 0.4375rem;
+  border-radius: 0.375rem; border: 1px solid transparent; white-space: nowrap;
+  font-variant-numeric: tabular-nums; text-align: center; min-width: 2.75rem; }
+.deltacell .dpill.short { background: var(--red-light); border-color: #e8cdd5; color: var(--red); }
+.deltacell .dpill.over { background: var(--green-light); border-color: #c6dde3; color: var(--green); }
+/* Met is deliberately the quietest thing in the column: a plain outline, lighter weight, muted ink. */
+.deltacell .dpill.met { background: var(--card); border-color: var(--border); color: var(--muted); font-weight: 500; }
 .deltacell .dnum { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; min-width: 1.125rem; text-align: right; }
 .deltacell .dnum.high { color: var(--red); }
 .deltacell .dnum.none { color: var(--green); }

@@ -31,6 +31,7 @@ import { jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
          FULFIL_COLORS, fulfilStackOpts } from '../chart-style.js';   // #182e: moved to chart-style so HM shares them
+import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 
 // Overall Efficiency = everything Recruiter Efficiency has, but the Recruiter dimension is replaced by
 // Department. Trees are Department → Job; charts are one-per-department with Y = Job, plus an overall. (Pods were dropped 2026-08-21 — see #18.) Formerly pods mapped to
@@ -927,11 +928,10 @@ export function initEfficiencyFilters(data) {
     // or "1 more in closing than opened" when Delta went negative. 🚨 A NEGATIVE Delta is still real and still
     // allowed (Rule 1) — it now says so through the rose number alone, and the definitions block under the
     // panel explains it in words.
-    const gapCell = (x) => {
-      const pct = x.total > 0 ? Math.max(0, Math.min(100, Math.round((x.gap / x.total) * 100))) : 0;
-      return `<td class="gapcell"><span class="deltacell"><span class="track"><i style="width:${pct}%"></i></span>`
-        + `<span class="dnum ${x.gap === 0 ? 'none' : (pct >= 50 ? 'high' : '')}">${x.gap}</span></span></td>`;
-    };
+    // #218 (9 Oct 2026): the bar is gone from Delta — one pill, built in js/delta-cell.js, identical on all
+    // three tabs. The share-of-total fill that used to drive it is gone with it: it drew nothing on a met row
+    // and nothing on a surplus, which is most of this table.
+    const gapCell = (x) => `<td class="gapcell">${deltaPill(x.gap)}</td>`;
     // Column order mirrors HM → Department Summary exactly:
     // Total Positions · Joined · Joining Pending · Drop · Gap · Missed. Each carries its Score alongside.
     const cells = (x, bold) => {
