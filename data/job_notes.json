@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-09T06:15:52.319Z",
+  "updatedAt": "2026-10-09T06:31:29.387Z",
   "notes": {
     "19982198": {
       "text": "Sourcing in progress .",
@@ -101,6 +101,11 @@
       "text": "HE - 3\nR1 - 6 (TBS)\nR2 -  1\nR3 - 1 (TBS)\nRef Check - 1",
       "by": "Alokita",
       "at": "2026-10-09T06:05:54.165Z"
+    },
+    "e15be8f5": {
+      "text": "HE - 4\nR1 - 3",
+      "by": "Deepti",
+      "at": "2026-10-09T06:31:29.387Z"
     }
   }
 }
