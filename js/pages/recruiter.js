@@ -20,7 +20,8 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData,
          joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
-         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #133
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl,
+         reportingQuarters } from '../period.js';   // #127 · #129 · #133 · #227
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
@@ -556,7 +557,7 @@ export function renderRecruiter(data) {
       <span class="fdiv"></span>
       
       
-    <span class="period" id="recPeriod"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span>${dojFilterHtml('rec', data.joiningPendingCases)}</div>
+    <span class="period" id="recPeriod"><div class="fchip"><span class="lbl">Year</span><select id="recVelYear">${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="recVelQuarter"></select></div><div class="fchip" id="recQuartersWrap"><div class="ms" id="msRecQuarter"></div></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="recVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="recVelTo"></div></span>${dojFilterHtml('rec', data.joiningPendingCases)}</div>
 
     <!-- PANEL: Momentum — candidates added to ToFU, one column per day.
          🚨 The day columns were replaced with summary columns (Total / Last 7d / Prev 7d / Trend / Active
@@ -1162,7 +1163,14 @@ export function initRecruiterFilters(baseData) {
   // EVERY quarter the selector covers; null = nothing picked (= all time). Panels whose data carries a date
   // read THIS, not selQuarter(): one quarter under a "Quarter: All" filter silently hides the rest of the
   // year — Sourcing Mix was showing 3,223 of 54,501 applications that way.
+  let msRecQuarters = null;   // #227
+  // #227 (Jerin, 13 Oct 2026): several quarters at once. Everything downstream already took an ARRAY of quarter
+  // keys, so this is a CONTROL change, not a maths change. Position Fulfilment stays on ONE quarter: pods,
+  // capacity and the scoring grid are per-quarter with copy-forward, so Goal and Delta have no defined value
+  // across two of them. Ticking nothing falls back to Year/Quarter, so the default is exactly as before.
   function selQuarters() {
+    const multi = msRecQuarters ? msRecQuarters.getSelected() : [];
+    if (multi.length) return multi.slice().sort();
     return periodQuarters(document.getElementById('recVelYear')?.value || '', document.getElementById('recVelQuarter')?.value || '');
   }
   // Plain-English name for a period, for the line printed above a table.
@@ -3846,6 +3854,12 @@ export function initRecruiterFilters(baseData) {
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     // #189e: Position Fulfilment is the only table here with a level to take away, so it gets the chooser;
     // every other sub-tab gets the plain Expand all tick. The same rule as the other two tabs (#189d).
+    // #227: ONE period control at a time - see the note on selQuarters(). Data Hygiene keeps the single
+    // Quarter (its lists are per quarter); Joining Pipeline is live and swaps to the DOJ boxes (#133).
+    const multiQ = name !== 'fulfilment' && name !== 'joiningpending' && name !== 'hygiene';
+    showControl(document.getElementById('recQuartersWrap'), multiQ);
+    showControl(document.getElementById('recVelYear')?.closest('.fchip'), !multiQ);
+    showControl(document.getElementById('recVelQuarter')?.closest('.fchip'), !multiQ);
     showLevels('recLevels', name === 'fulfilment');
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -3897,6 +3911,15 @@ export function initRecruiterFilters(baseData) {
   // #172c: ids, not names — labelled by job-filter.js (department shown only where a name repeats).
   const jobOptions = jobFilterOptions(baseData, new Set((baseData.jobs || []).map(j => j.id).filter(Boolean)));
   msJob = makeMultiSelect(document.getElementById('msJob'), 'Job', jobOptions, onJobChange);   // #172c
+  // #227: the Quarters chip. Absolute quarter keys, so Year never enters into it.
+  msRecQuarters = makeMultiSelect(document.getElementById('msRecQuarter'), 'Quarters',
+    reportingQuarters().map(q => ({ v: q, t: q.replace('-', ' ') })), () => {
+      const qs = msRecQuarters.getSelected();
+      setDateBounds(document.getElementById('recVelFrom'), document.getElementById('recVelTo'),
+        qs.length ? qs.slice().sort() : selectionQuarters(document.getElementById('recVelYear')?.value || '',
+                                                          document.getElementById('recVelQuarter')?.value || ''), true);
+      renderAll();
+    });
   document.addEventListener('click', closeMsPanels);
   wireLevels('recLevels', renderAll);   // #189e: one delegated listener for both ticks
 

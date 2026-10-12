@@ -231,7 +231,7 @@ export function renderEfficiency(data) {
       <span class="fdiv"></span>
       
       
-    <span class="period" id="effPeriod"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>${dojFilterHtml('eff', data.joiningPendingCases)}
+    <span class="period" id="effPeriod"><div class="fchip"><span class="lbl">Year</span><select id="effYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="effQuarter"><option value="">All</option></select></div><div class="fchip" id="effQuartersWrap"><div class="ms" id="effMsQuarter"></div></div><div class="fchip vel-dates"><span class="lbl">From</span><input type="date" id="effVelFrom"></div><div class="fchip vel-dates"><span class="lbl">To</span><input type="date" id="effVelTo"></div></span>${dojFilterHtml('eff', data.joiningPendingCases)}
       </div>
 
     <!-- PANEL: Position Fulfilment -->
@@ -482,6 +482,7 @@ export function initEfficiencyFilters(data) {
   // matchesJob / matchesJobRow here instead of being threaded through a dozen panels. One chokepoint, so no
   // panel can quietly ignore the filter (Rule 13).
   let msTopic = null;
+  let msQuarters = null;   // #227: the multi-tick Quarters chip
   const selTopics = () => (msTopic ? msTopic.getSelected() : []);
   const topicJobs = (() => {
     const m = new Map();
@@ -1637,6 +1638,14 @@ export function initEfficiencyFilters(data) {
       return v ? { a: acc.a + (v.a || 0), b: acc.b + (v.b || 0), w: acc.w + (v.w || 0) } : acc; }, { a: 0, b: 0, w: 0 });
   }
   function tisPeriod() {
+    // #227 (Jerin, 13 Oct 2026): several quarters at once. Everything downstream already took an ARRAY of
+    // quarter keys - periodQuarters has always returned one - so this is a CONTROL change, not a maths change.
+    // 🚨 Position Fulfilment is the one panel that stays single-quarter, and the reason is not squeamishness:
+    // pods, capacity and the scoring grid are configured PER QUARTER with copy-forward, so Goal and Delta have
+    // no defined value across two of them (add the capacities, or average them? both are arguable, so neither
+    // is right). Counts and rates made of counts are safe; a per-quarter CONFIGURATION is not.
+    const multi = msQuarters ? msQuarters.getSelected() : [];
+    if (multi.length) return multi.slice().sort();
     return periodQuarters(document.getElementById('effYear')?.value || '', document.getElementById('effQuarter')?.value || '');   // #127c: never before Q3 2026
   }
   // #129 (Jerin, 15 Sep 2026): the From / To boxes narrow every panel on this tab. effRange() is the two dates kept inside the Year/Quarter
@@ -2218,7 +2227,20 @@ export function initEfficiencyFilters(data) {
     // there — they hide, exactly as on the Hiring Manager tab (#141d, Rule 13).
     ['effVelFrom', 'effVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
     // #207: Interview Traction brings its own multi-tick Quarter chip, so the page's single-pick one hides there.
-    showControl(document.getElementById('effQuarter')?.closest('.fchip'), name !== 'traction');
+    // #227 (Jerin, 13 Oct 2026): ONE period control visible at a time.
+    //   Position Fulfilment keeps Year + the single Quarter, because its Goal and Delta come from a PER-QUARTER
+    //     configuration (pods, capacity, the scoring grid, all with copy-forward). "Capacity across Q3 and Q4"
+    //     has no defined answer - add them or average them? - so the panel that depends on it stays on one.
+    //   Interview Traction has its own multi-tick chip (#207). Joining Pipeline is LIVE and swaps to the DOJ
+    //     boxes (#133), so no quarter control belongs there at all.
+    //   Everywhere else: the Quarters chip, and Year hides because the chip's options are absolute quarter keys.
+    // 🔑 TICKING NOTHING FALLS BACK TO Year/Quarter, so the page starts exactly as it did before this existed.
+    const multiQ = name !== 'fulfilment' && name !== 'traction' && name !== 'joiningpending';
+    showControl(document.getElementById('effQuartersWrap'), multiQ);
+    // Year belongs ONLY to the single-quarter picker, so it shows exactly where that does. It was briefly
+    // visible on Interview Traction, where that panel's own chip governs and Year moved nothing (Rule 13).
+    showControl(document.getElementById('effYear')?.closest('.fchip'), name === 'fulfilment');
+    showControl(document.getElementById('effQuarter')?.closest('.fchip'), !multiQ && name !== 'traction');
     // #207: same as the Hiring Manager tab - apply the panel's span on entering, put the page's own bounds
     // back on leaving, so no other panel here inherits a widened period.
     if (name === 'traction') {
@@ -2230,6 +2252,14 @@ export function initEfficiencyFilters(data) {
       tractionBounds = false;
       applyVelYearQuarter();
     }
+    // #226 (Jerin, 13 Oct 2026, raised by the team): Rule 13 - a control shown where it moves nothing is a
+    // bug. MEASURED by ticking each filter on each panel and checking whether any rendered number moved,
+    // not read off the code. The Recruiter filter (#196) was wired into three panels and SHOWN on all of
+    // them. Topic reaches every panel but the two below. [[project_quarter-scoping-audit]]
+    showControl(document.getElementById('effMsRec')?.closest('.fchip'),
+      name === 'fulfilment' || name === 'joiners' || name === 'pipeline');
+    showControl(document.getElementById('effMsTopic')?.closest('.fchip'),
+      name !== 'traction' && name !== 'panelists');
     // #129: From / To show on every sub-tab again — they now narrow every panel (#127e had shown them on Momentum only).
     document.querySelectorAll('.eff-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.eff-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
@@ -2259,6 +2289,17 @@ export function initEfficiencyFilters(data) {
   msJob = makeMultiSelect(document.getElementById('effMsJob'), 'Job', jobOptions, renderAll);   // #172c
   // #213: Topic, right after Job, wired to the same renderAll so it reaches every sub-tab.
   msTopic = makeMultiSelect(document.getElementById('effMsTopic'), 'Topic', topicOptions, renderAll);
+  // #227: the Quarters chip. Options are absolute quarter keys, so Year never enters into it - which is why
+  // Year and the single Quarter box hide wherever this one shows. Ticking nothing falls back to Year/Quarter,
+  // so the page can never end up with no period at all.
+  msQuarters = makeMultiSelect(document.getElementById('effMsQuarter'), 'Quarters',
+    reportingQuarters().map(q => ({ v: q, t: q.replace('-', ' ') })), () => {
+      const qs = msQuarters.getSelected();
+      setDateBounds(document.getElementById('effVelFrom'), document.getElementById('effVelTo'),
+        qs.length ? qs.slice().sort() : selectionQuarters(document.getElementById('effYear')?.value || '',
+                                                          document.getElementById('effQuarter')?.value || ''), true);
+      renderAll();
+    });
 
   // #206 Interview Traction - the SAME module the Hiring Manager tab mounts, with this page's own scope.
   renderTraction = mountInterviewTraction(document.getElementById('effTractionHost'), data, () => {
