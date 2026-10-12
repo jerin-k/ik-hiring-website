@@ -114,13 +114,14 @@ export const DEFINITIONS = {
 
   'hm-throughput': {
     summary: 'How these numbers are worked out',
-    intro: 'Of the people <strong>assessed</strong> at a stage, how many <strong>progressed</strong> to a later one. Built from real events in Ashby &mdash; interviews held, assignments triggered, feedback submitted &mdash; not from a snapshot of where people sit today.',
-    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: App Review and HM Review count everyone added, and rounds out of order count as progress &middot; 8 Oct 2026.',
+    intro: 'Of the people <strong>assessed</strong> at a stage, how many <strong>progressed</strong> to a later one. Built from real events in Ashby &mdash; interviews held, assessments sent, feedback submitted &mdash; not from a snapshot of where people sit today.',
+    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: assessments are read from every tool, and each one is placed at the stage the candidate was in that day &middot; 12 Oct 2026.',
     groups: [
       {
         heading: 'Reading the squares',
         items: [
-          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at that stage in the period &mdash; an interview held there, an assignment triggered there, or a feedback form where no interview exists. <strong>Progressed</strong> means they then moved on. <strong>Five stages are counted differently</strong>: nobody is interviewed at <strong>App Review, HM Review, Ref Check, Documentation or Offer</strong>, so those count every candidate <strong>added</strong> to the stage. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at that stage in the period &mdash; an interview held there, an assessment sent while they were at that stage &mdash; whichever tool ran it, or a feedback form where no interview exists. <strong>Progressed</strong> means they then moved on. <strong>Five stages are counted differently</strong>: nobody is interviewed at <strong>App Review, HM Review, Ref Check, Documentation or Offer</strong>, so those count every candidate <strong>added</strong> to the stage. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['Where an assessment is counted', 'An assessment carries <strong>no stage of its own</strong> in Ashby &mdash; it is not an interview, so nothing records which stage it belonged to. We place it at <strong>the stage the candidate was sitting in on the day it was sent</strong>, read from that candidate&rsquo;s own history. That is worked out, not recorded, so treat a single square as indicative; across a department it is reliable.'],
           ['Moving on does not mean moving down the list', 'The interview rounds are <strong>not run in a fixed order here</strong> &mdash; R2 sometimes happens before R1. So a move to <strong>any other round</strong> counts as progress. Going back to a screening stage does not.'],
           ['People with no decision yet', 'Someone assessed whose next step has not happened yet counts as <strong>assessed but not progressed</strong>, so they pull a rate down. The line under the table says how many there are. They are <strong>not</strong> taken out of the sum.'],
           ['R1/OA &rarr; late', 'One span per candidate: assessed at <strong>R1 or Online Assessment</strong>, whichever came first, through to <strong>Ref Check, Documentation or Offer</strong>, whichever they reached first. Counted per person, never one column divided by another.'],
@@ -144,7 +145,7 @@ export const DEFINITIONS = {
   'interview-traction': {
     summary: 'How Interview Traction is counted',
     intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted into one of four outcomes. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
-    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: the period always ends at today &middot; 8 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: Online Assessment now counts assessments from every tool &middot; 12 Oct 2026.',
     groups: [
       {
         heading: 'The four outcomes',
@@ -195,7 +196,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['Do not add it to the Throughput numbers', 'Throughput counts movement during a period; this counts people standing still today. Different questions, different totals.'],
-      ['Online Assessment is thin, not empty', 'It is genuinely used, but its volumes are small next to App Review and R1, so read a single role&rsquo;s OA numbers with care.'],
+      ['Online Assessment is busier than it looks', 'Assessments are sent from more than one tool, and for a long time this dashboard could only see a fraction of them. It now counts every one. A single role&rsquo;s numbers are still small, so read those with care.'],
     ]
   },
 
@@ -321,12 +322,12 @@ export const DEFINITIONS = {
   'rec-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day &mdash; one row per person, not one per stage. A deeper teal square means more people added that day; weekends are greyed and a thin line marks each new week.',
-    confirmed: 'Settled with Jerin &middot; 26 Aug 2026. Latest: every day From &rarr; To &middot; 17 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 26 Aug 2026. Latest: an assessment counts wherever the candidate was sitting when it was sent &middot; 12 Oct 2026.',
     groups: [
       {
         heading: 'What counts as being added',
         items: [
-          ['Whichever comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is triggered</strong> while they sit in Online Assessment, or an <strong>R1 interview is booked</strong>. The first of the three is the day they were added.'],
+          ['Whichever comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is sent</strong> &mdash; wherever they were sitting at the time, or an <strong>R1 interview is booked</strong>. The first of the three is the day they were added.'],
           ['R1 is dated when the interview was BOOKED', 'Not the day it is held &mdash; booking is the piece of work, and the interview can be a week later.'],
           ['Counted once per role', 'Moving somebody on afterwards does not add to the number. This counts <em>people arriving</em>, not steps taken. The count resets each quarter, so quarters do not add up to a year.'],
           ['Cancelled does not count', 'A cancelled booking or assessment is removed, and if it was the only thing that put somebody in, the day ticks back down.'],
@@ -344,7 +345,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This will not match Screening Efficiency', 'That panel counts every R1 action, including candidates who arrived earlier through HM Review. This counts <em>people entering the funnel</em>, by whichever signal came first. Two different questions.'],
-      ['Assessments count from 8 July 2026', 'That is when the team began sending assessments through Ashby. Before it, a candidate could only be added by HM Review or an R1 booking.'],
+      ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, a candidate could only be added here by HM Review or an R1 booking.'],
     ]
   },
 
@@ -584,12 +585,12 @@ export const DEFINITIONS = {
   'eff-momentum': {
     summary: 'How these numbers are worked out',
     intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org &mdash; one row per person, not one per stage. A deeper teal square means more people added that day; weekends are greyed and a thin line marks each new week.',
-    confirmed: 'Settled with Jerin &middot; 29 Aug 2026. Latest: every day From &rarr; To &middot; 17 Sep 2026.',
+    confirmed: 'Settled with Jerin &middot; 29 Aug 2026. Latest: an assessment counts wherever the candidate was sitting when it was sent &middot; 12 Oct 2026.',
     groups: [
       {
         heading: 'What counts as being added',
         items: [
-          ['Whichever comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is triggered</strong> while they sit in Online Assessment, or an <strong>R1 interview is booked</strong>.'],
+          ['Whichever comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is sent</strong> &mdash; wherever they were sitting at the time, or an <strong>R1 interview is booked</strong>.'],
           ['R1 is dated when the interview was BOOKED', 'Not the day it is held.'],
           ['Counted once per role, per quarter', 'Somebody already added is not counted again for that role in the same quarter, and the count resets each quarter, so quarters do not add up to a year.'],
           ['Cancelled does not count', 'A cancelled booking or assessment is removed, which can take a count back off a past day.'],
@@ -607,7 +608,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['This will not match Screening Efficiency', 'That panel counts every R1 action. This counts everyone entering the funnel, by whichever of the three signals came first.'],
-      ['Assessments count from 8 July 2026', 'That is when the team began sending assessments through Ashby. Before it, a candidate could only be added by HM Review or an R1 booking.'],
+      ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, a candidate could only be added here by HM Review or an R1 booking.'],
     ]
   },
 
@@ -636,12 +637,13 @@ export const DEFINITIONS = {
   'eff-throughput': {
     summary: 'How these numbers are worked out',
     intro: 'The full funnel, stage by stage, <strong>Department &rarr; Job</strong>. Of the people <strong>assessed</strong> at each stage, how many <strong>progressed</strong> to a later one.',
-    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: App Review and HM Review count everyone added, and rounds out of order count as progress &middot; 8 Oct 2026.',
+    confirmed: 'Rebuilt with Jerin &middot; 30 Aug 2026. Latest: assessments are read from every tool, and each one is placed at the stage the candidate was in that day &middot; 12 Oct 2026.',
     groups: [
       {
         heading: 'Reading the squares',
         items: [
-          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at the stage in the period &mdash; an interview held there, an assignment triggered there, or a feedback form where no interview exists. Sitting in the queue does not count. <strong>Progressed</strong> means they then moved on; being rejected or withdrawing does not. <strong>Five stages are counted differently</strong>: nobody is interviewed at <strong>App Review, HM Review, Ref Check, Documentation or Offer</strong>, so those count every candidate <strong>added</strong>. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['One column per stage', 'Each cell reads <strong>assessed &rarr; progressed</strong>, with the rate below it. <strong>Assessed</strong> means seen at the stage in the period &mdash; an interview held there, an assessment sent while they were at that stage &mdash; whichever tool ran it, or a feedback form where no interview exists. Sitting in the queue does not count. <strong>Progressed</strong> means they then moved on; being rejected or withdrawing does not. <strong>Five stages are counted differently</strong>: nobody is interviewed at <strong>App Review, HM Review, Ref Check, Documentation or Offer</strong>, so those count every candidate <strong>added</strong>. For Offer, progressed means they went on to be <strong>hired</strong>.'],
+          ['Where an assessment is counted', 'An assessment carries <strong>no stage of its own</strong> in Ashby &mdash; it is not an interview, so nothing records which stage it belonged to. We place it at <strong>the stage the candidate was sitting in on the day it was sent</strong>, read from that candidate&rsquo;s own history. That is worked out, not recorded, so treat a single square as indicative; across a department it is reliable.'],
           ['Moving on does not mean moving down the list', 'The interview rounds are <strong>not run in a fixed order here</strong> &mdash; R2 sometimes happens before R1. So a move to <strong>any other round</strong> counts as progress. Going back to a screening stage does not.'],
           ['People with no decision yet', 'Someone assessed whose next step has not happened yet counts as <strong>assessed but not progressed</strong>, so they pull a rate down. The line under the table says how many there are. They are <strong>not</strong> taken out of the sum.'],
           ['%', 'Progressed &divide; Assessed. It cannot exceed 100%, because Progressed is a subset of Assessed.'],
@@ -659,7 +661,7 @@ export const DEFINITIONS = {
       ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. That is also why <strong>R1/OA &rarr; late</strong> is a single per-candidate span rather than a sum.'],
       ['A role with no movement reads empty, not its history', 'A role with no activity in the period shows dots rather than its all-time numbers.'],
-      ['Online Assessment carries small numbers', 'Used, but thinly next to App Review and R1. Treat a single role&rsquo;s OA conversion as indicative, not solid.'],
+      ['Online Assessment counts every tool', 'Assessments come from more than one provider, and this column counts all of them, whichever tool ran it. A single role&rsquo;s conversion is still a small number &mdash; read it as indicative, not solid.'],
     ]
   },
 
@@ -711,7 +713,7 @@ export const DEFINITIONS = {
     warnings: [
       ['Do not add it to the Throughput numbers', 'Throughput counts movement during a period; this counts people standing still today. Different questions, different totals.'],
       ['Time in Process answers &ldquo;how long&rdquo;', 'This table says how many people are at each stage, never how long they have been there.'],
-      ['Online Assessment is thin, not empty', 'It is genuinely used, but its volumes are small next to App Review and R1, so read a single role&rsquo;s OA numbers with care.'],
+      ['Online Assessment is busier than it looks', 'Assessments are sent from more than one tool, and for a long time this dashboard could only see a fraction of them. It now counts every one. A single role&rsquo;s numbers are still small, so read those with care.'],
     ]
   },
 
