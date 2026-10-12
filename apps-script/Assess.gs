@@ -117,6 +117,183 @@ function assessAssignments_() {
 // Signal 3 ‚Äî feedback with NO interview behind it. Returns [{ app, day }].
 // A form counts as "behind an interview" when the same person wrote it after one of that candidate's
 // interview events ended. Those are dropped: the interview already counted, exactly, at its own stage.
+// ===== #222 - VENDOR ASSESSMENTS, read through a saved Ashby REPORT (12 Oct 2026) =====
+// Ashby exposes an assessment TRIGGER through NO object endpoint at all - only through Reports. The take-home
+// endpoint above (/takeHomeAssignment.list) sees a different, much smaller population: of the 783 assessments
+// HackerEarth and Truffle actually ran, Interview Traction could see 22. This closes that hole.
+//
+// THE REPORT'S SUBJECT IS THE WHOLE DESIGN (Jerin: "assessment could be HackerEarth or anthing else as well,
+// like Truffle being used for US Program advisor. Fool proof it, based on any type of assessment triggers in any
+// stage."). Subject = `Assessments`, so EVERY assessment is one row whatever tool ran it and whatever stage it
+// fired in, and `Integration Partner` merely names the vendor. A tool wired in tomorrow appears on its own, with
+// no change here. There are no per-vendor columns and no vendor list to maintain.
+//
+// WHAT COUNTS - Jerin's rulings, 12 Oct, settled:
+//   Complete (321) + Started (167) = 488. 'Started' means SENT and not finished, which is a real negative
+//   OUTCOME - "not started will also count as failed - which is the right thing to do" - so it must be visible,
+//   not dropped. Cancelled (41) is out: "a cancelled assessment is not an evaluation".
+//   Waiting to Start (231) and Starting (23) are out because they were NEVER SENT - verified in the Ashby UI,
+//   where a "Start Assessment" button is still waiting for a RECRUITER to press it. Those 231 are task #223,
+//   a process problem, and deliberately not a number on this grid.
+//   Dedupe one per (application + assessment name); two DIFFERENT assessments both count.
+//
+// 'THE REPORT CANNOT SUPPLY THE STAGE.' `Scheduled in Stage Name` is null on all 783 rows - an assessment has no
+// interview attached, so the related Interview entity is empty. The stage is INFERRED from our own stage history
+// through assessStageAt_(), exactly as an unmatched feedback form already is. It is an inference, and it is
+// labelled as one wherever it is shown.
+var ASSESS_REPORT_ID = '1e5e5d45-b5d9-45fb-8e4c-d37325bc0cea';   // "Dashboard feed - Assessments (all partners)"
+var ASSESS_REPORT_COUNTS = { 'Complete': 1, 'Started': 1 };
+var ASSESS_MONTHS_ = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+                       jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+
+// The report returns a HUMAN date ("07 Oct 2026 19:19"), not the ISO stamp every other pipeline field carries.
+// Returns null rather than guessing, so an unparseable date is counted and logged instead of silently becoming
+// today.
+function assessReportDay_(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
+  var m = s.match(/^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/);
+  if (m) {
+    var mo = ASSESS_MONTHS_[m[2].toLowerCase()];
+    if (mo) return m[3] + '-' + mo + '-' + (m[1].length === 1 ? '0' + m[1] : m[1]);
+  }
+  return null;
+}
+
+// `reportData`'s exact shape is NOT documented by Ashby. Normalise whatever comes back to
+// { shape, header:[names], rows:[[cells]] } and report WHICH shape was found, so a change at Ashby's end is
+// loud in the log instead of silently producing zero.
+function assessReportShape_(rd) {
+  if (!rd) return null;
+  var isArr = function (v) { return Object.prototype.toString.call(v) === '[object Array]'; };
+  var hdr = null, rows = null;
+  if (isArr(rd)) {
+    if (!rd.length) return null;
+    if (isArr(rd[0])) { hdr = rd[0]; rows = rd.slice(1); }
+    else { hdr = Object.keys(rd[0]); rows = rd; }
+  } else {
+    rows = rd.rows || rd.data || rd.values || null;
+    if (!rows || !rows.length) return null;
+    hdr = rd.columns || rd.headers || rd.columnNames || null;
+    if (hdr && hdr.length && typeof hdr[0] === 'object' && hdr[0] !== null) {
+      hdr = hdr.map(function (c) { return c.title || c.name || c.label || c.header || String(c); });
+    }
+    if (!hdr && isArr(rows[0])) { hdr = rows[0]; rows = rows.slice(1); }
+    if (!hdr && !isArr(rows[0])) hdr = Object.keys(rows[0]);
+  }
+  if (!hdr || !rows) return null;
+  // 'ASHBY SENDS BOTH' - a `columns` list AND the same header repeated as rows[0] - measured 12 Oct 2026, where it
+  // showed up as a phantom row whose Activity Status was the literal text "Assessment's Activity Status". It never
+  // reached a count (it matches no status we keep) but it inflated the row total by one. Drop it when it is there.
+  if (rows.length && isArr(rows[0])) {
+    var same = rows[0].length === hdr.length;
+    for (var z = 0; same && z < hdr.length; z++) if (String(rows[0][z]) !== String(hdr[z])) same = false;
+    if (same) rows = rows.slice(1);
+  }
+  var shape = isArr(rd) ? 'bare' : 'wrapped';
+  if (rows.length && !isArr(rows[0])) {                      // objects keyed by column name -> arrays
+    shape += '-objects';
+    rows = rows.map(function (o) { return hdr.map(function (h) { return o[h]; }); });
+  } else {
+    shape += '-arrays';
+  }
+  return { shape: shape, header: hdr.map(function (h) { return String(h); }), rows: rows };
+}
+
+// Columns are matched BY NAME, loosely (case and punctuation ignored), so reordering or retitling a column in
+// the Ashby report builder cannot silently shift the join key onto the wrong field.
+// 'ASHBY RETURNS THE WHOLE ENTITY PATH AS THE HEADER', not the field name you picked in the builder - measured
+// 12 Oct 2026: the join key comes back as "Assessment's Job Consideration's Ashby Job Consideration ID", and the
+// status as "Assessment's Activity Status". An exact match therefore finds NOTHING. So: exact first, then a
+// unique SUFFIX, then a unique substring - and -2 (refuse) if two columns match, rather than guessing which.
+function assessReportCol_(header, name) {
+  var want = String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+  var norm = [], i;
+  for (i = 0; i < header.length; i++) norm.push(String(header[i]).toLowerCase().replace(/[^a-z0-9]/g, ''));
+  for (i = 0; i < norm.length; i++) if (norm[i] === want) return i;
+  var hits = [];
+  for (i = 0; i < norm.length; i++) {
+    if (norm[i].length >= want.length && norm[i].substring(norm[i].length - want.length) === want) hits.push(i);
+  }
+  if (hits.length === 1) return hits[0];
+  if (hits.length > 1) return -2;
+  hits = [];
+  for (i = 0; i < norm.length; i++) if (norm[i].indexOf(want) >= 0) hits.push(i);
+  if (hits.length === 1) return hits[0];
+  return hits.length > 1 ? -2 : -1;
+}
+
+// Returns { byApp: { applicationId: [day, ...] }, stats: {...} }. NO stage - the caller infers it.
+function assessReportAssessments_() {
+  var empty = { byApp: {}, stats: { ok: false, rows: 0, kept: 0, status: {}, partner: {} } };
+  var resp = null;
+  try { resp = ashbyPost_('/report.synchronous', { reportId: ASSESS_REPORT_ID }); }
+  catch (e) {
+    Logger.log('assess report: report.synchronous FAILED: ' + e.message + ' - vendor assessments NOT counted this run');
+    return empty;
+  }
+  var r = resp && resp.results;
+  if (!r) { Logger.log('assess report: no `results` block - NOT counted'); return empty; }
+  // The same endpoint also fronts the ASYNC path, so status must be read before reportData is trusted.
+  var st = String(r.status || '').toLowerCase();
+  if (st !== 'complete') {
+    Logger.log('assess report: status "' + r.status + '" (' + (r.failureReason || 'no reason given')
+      + ') - reportData NOT trusted, vendor assessments NOT counted this run');
+    return empty;
+  }
+  var t = assessReportShape_(r.reportData);
+  if (!t || !t.rows.length) {
+    Logger.log('assess report: status complete but reportData unreadable (keys: '
+      + (r.reportData ? Object.keys(r.reportData).join(',') : 'none') + ') - NOT counted');
+    return empty;
+  }
+  var cApp = assessReportCol_(t.header, 'Ashby Job Consideration ID');
+  var cSt  = assessReportCol_(t.header, 'Activity Status');
+  var cDay = assessReportCol_(t.header, 'Assessment Sent Date');
+  var cNm  = assessReportCol_(t.header, 'Assessment Name');
+  var cPt  = assessReportCol_(t.header, 'Integration Partner');
+  if (cApp < 0 || cSt < 0 || cDay < 0) {
+    Logger.log('assess report: REQUIRED column ' + (cApp === -2 || cSt === -2 || cDay === -2 ? 'AMBIGUOUS' : 'missing')
+      + ' (app=' + cApp + ' status=' + cSt + ' sent=' + cDay + '; -1 none, -2 more than one)'
+      + ' in header [' + t.header.join(' | ') + '] - NOT counted');
+    return empty;
+  }
+  var byApp = {}, seen = {}, byStatus = {}, byPartner = {};
+  var kept = 0, noApp = 0, noDay = 0, dupes = 0;
+  t.rows.forEach(function (row) {
+    var s = String(row[cSt] == null ? '' : row[cSt]).trim();
+    byStatus[s || '(blank)'] = (byStatus[s || '(blank)'] || 0) + 1;
+    if (cPt >= 0) {
+      var p = String(row[cPt] == null ? '' : row[cPt]).trim() || '(blank)';
+      byPartner[p] = (byPartner[p] || 0) + 1;
+    }
+    if (!ASSESS_REPORT_COUNTS[s]) return;                       // Complete + Started only
+    var app = String(row[cApp] == null ? '' : row[cApp]).trim();
+    if (!app) { noApp++; return; }
+    var day = assessReportDay_(row[cDay]);
+    if (!day) { noDay++; return; }                              // every Complete/Started row carries a sent date
+    var dk = app + '|' + String(cNm >= 0 ? (row[cNm] == null ? '' : row[cNm]) : '').trim();
+    if (seen[dk]) { dupes++; return; }                          // the SAME assessment repeated - his ruling
+    seen[dk] = 1;
+    (byApp[app] || (byApp[app] = [])).push(day);
+    kept++;
+  });
+  Logger.log('assess report [' + t.shape + ']: ' + t.rows.length + ' rows; status ' + JSON.stringify(byStatus)
+    + '; partner ' + JSON.stringify(byPartner));
+  Logger.log('assess report: ' + kept + ' counted (Complete+Started, deduped) across ' + Object.keys(byApp).length
+    + ' applications; dropped ' + dupes + ' repeat, ' + noApp + ' with no application id, ' + noDay
+    + ' with no usable sent date');
+  return { byApp: byApp, stats: { ok: true, shape: t.shape, header: t.header, rows: t.rows.length,
+    kept: kept, apps: Object.keys(byApp).length, status: byStatus, partner: byPartner,
+    noApp: noApp, noDay: noDay, dupes: dupes } };
+}
+
+// #222 IS OFF until Jerin has seen the before-and-after (his review gate, step 12). probe222 shows exactly what
+// flipping this does, and writes nothing. Flip to true in the SAME edit that ships the panel wording.
+var ASSESS_USE_REPORT = false;
+
 function assessFeedback_(ends) {
   var rows = [];
   try { rows = ashbyListAll_('/applicationFeedback.list', { createdAfter: SCOPE_FROM_MS }); }
@@ -167,6 +344,11 @@ function computeAssessedRollups_(events, opts) {
   var iv = (opts.pre && opts.pre.iv) || assessInterviews_();
   var asg = (opts.pre && opts.pre.asg) || assessAssignments_();
   var fb = (opts.pre && opts.pre.fb) || assessFeedback_(iv.ends);
+  // #222 - vendor assessments (HackerEarth, Truffle, anything added later), read through the saved report.
+  // `opts.pre.rep` lets probe222 fetch once and feed both runs; `opts.noReport` is how it produces the TODAY
+  // column. While ASSESS_USE_REPORT is false the live refresh behaves exactly as it did before.
+  var rep = (opts.pre && opts.pre.rep !== undefined) ? opts.pre.rep
+          : ((opts.noReport || !ASSESS_USE_REPORT) ? {} : assessReportAssessments_().byApp);
 
   // Stage windows + who owns the application. Live apps come from the stage-history store; archived ones
   // from the v4 sweep, without which any review-stage feedback on somebody since rejected is unplaceable.
@@ -206,6 +388,23 @@ function computeAssessedRollups_(events, opts) {
     mark(f.app, k, f.day); placed++;
   });
   Logger.log('assess feedback placed: ' + placed + ' (no stage history for ' + unplaceable + ')');
+
+  // #222 - the report carries a DAY but NO stage: `Scheduled in Stage Name` is null on every row, because an
+  // assessment has no interview attached to carry one. So the stage is INFERRED from our own stage history,
+  // through the very same assessStageAt_() an unmatched feedback form already goes through. It is an inference
+  // and is labelled as one on every panel that shows it.
+  var repPlaced = 0, repUnplaced = 0;
+  for (var ra in rep) {
+    var rdays = rep[ra] || [];
+    for (var ri = 0; ri < rdays.length; ri++) {
+      var rk = assessStageAt_(win[ra], rdays[ri]);
+      if (!rk) { repUnplaced++; continue; }
+      mark(ra, rk, rdays[ri]); repPlaced++;
+    }
+  }
+  if (repPlaced || repUnplaced) {
+    Logger.log('assess report placed: ' + repPlaced + ' (no stage history for ' + repUnplaced + ')');
+  }
 
   // Did they enter a LATER stage on or after the day they were assessed here?
   function progressed(app, stage, day) {
@@ -334,4 +533,115 @@ function probe210() {
   });
   Logger.log('');
   Logger.log('probe210 done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
+}
+
+// ===== #222 DRY RUN - reads the report, infers the stage, WRITES NOTHING =====
+// The expected figures below were MEASURED on 12 Oct 2026 at 15:22 IST by reading the report directly. They are
+// CONTROLS on the parse, not a specification: the report is live, so a few new assessments since then is a
+// legitimate drift, and the probe says DRIFT rather than failing. A big or structural difference means the parse
+// is wrong, which is exactly what this is here to catch - a silent zero is the failure mode this project keeps
+// hitting (CLAUDE.md rule 5).
+var P222_EXPECT_STATUS = { 'Complete': 321, 'Started': 167, 'Waiting to Start': 231, 'Cancelled': 41, 'Starting': 23 };
+var P222_EXPECT_PARTNER = { 'HackerEarth': 635, 'Truffle': 148 };
+var P222_EXPECT_ROWS = 783;
+var P222_EXPECT_COUNTED = 488;        // Complete + Started, before dedupe
+
+function probe222() {
+  var t0 = Date.now();
+  var events = loadDriveJson_('stage_events.json') || {};
+  if (!Object.keys(events).length) { Logger.log('probe222 REFUSED: stage_events.json is empty'); return; }
+
+  var rep = assessReportAssessments_();
+  if (!rep.stats.ok) { Logger.log('probe222 STOPPED: the report did not return usable rows. See the line above.'); return; }
+  var s = rep.stats;
+
+  Logger.log('');
+  Logger.log('===== #222 STEP 7 - THE REPORT, READ BY THE PIPELINE =====');
+  Logger.log('reportData shape : ' + s.shape);
+  Logger.log('columns          : ' + s.header.join(' | '));
+
+  function cmp(label, got, want) {
+    var tag = (got === want) ? 'MATCH' : (Math.abs(got - want) <= Math.max(5, want * 0.02) ? 'drift ok' : '<== CHECK');
+    Logger.log('  ' + label + String('                    ').substring(label.length) + got + '  (expected ' + want + ')  ' + tag);
+  }
+  Logger.log('ROWS');
+  cmp('total', s.rows, P222_EXPECT_ROWS);
+  Logger.log('ACTIVITY STATUS');
+  var statKeys = {}; for (var k1 in P222_EXPECT_STATUS) statKeys[k1] = 1; for (var k2 in s.status) statKeys[k2] = 1;
+  for (var k in statKeys) cmp(k, s.status[k] || 0, P222_EXPECT_STATUS[k] || 0);
+  Logger.log('INTEGRATION PARTNER  (a NEW vendor showing up here is the design working, not a fault)');
+  var ptKeys = {}; for (var p1 in P222_EXPECT_PARTNER) ptKeys[p1] = 1; for (var p2 in s.partner) ptKeys[p2] = 1;
+  for (var p in ptKeys) cmp(p, s.partner[p] || 0, P222_EXPECT_PARTNER[p] || 0);
+  Logger.log('COUNTED  (Complete + Started, Jerin 12 Oct)');
+  cmp('counted', s.kept + s.dupes, P222_EXPECT_COUNTED);
+  Logger.log('  after dedupe      ' + s.kept + ' across ' + s.apps + ' applications ('
+    + s.dupes + ' repeat of the same assessment dropped)');
+  Logger.log('  unusable          ' + s.noApp + ' no application id, ' + s.noDay + ' no sent date');
+
+  // ----- STEP 8: can we actually place these in a stage? Same windows computeAssessedRollups_ builds.
+  var win = {};
+  for (var id in events) win[id] = events[id].ev || [];
+  var archWin = (loadDriveJson_('archived_late_stage.json') || {}).win || {};
+  var archAdded = 0;
+  for (var aid in archWin) { if (!win[aid]) { win[aid] = archWin[aid]; archAdded++; } }
+
+  var placed = 0, noHistory = 0, noStage = 0, byStage = {}, oaDays = {};
+  for (var app in rep.byApp) {
+    var days = rep.byApp[app];
+    if (!win[app]) { noHistory += days.length; continue; }
+    for (var i = 0; i < days.length; i++) {
+      var ks = assessStageAt_(win[app], days[i]);
+      if (!ks) { noStage++; continue; }
+      byStage[ks] = (byStage[ks] || 0) + 1;
+      placed++;
+      if (ks === 'oa') oaDays[assessQ_(days[i])] = (oaDays[assessQ_(days[i])] || 0) + 1;
+    }
+  }
+  Logger.log('');
+  Logger.log('===== #222 STEP 8 - INFERRED STAGE  (the report cannot supply it; this is OUR history) =====');
+  Logger.log('windows available : ' + Object.keys(events).length + ' live + ' + archAdded + ' archived');
+  Logger.log('placed            : ' + placed + ' of ' + s.kept
+    + '   (' + (s.kept ? Math.round(100 * placed / s.kept) : 0) + '%)');
+  Logger.log('unplaceable       : ' + noHistory + ' no stage history at all, ' + noStage + ' history but no stage on the day');
+  Logger.log('WHERE THEY LAND:');
+  ASSESS_ORDER.forEach(function (st) { if (byStage[st]) Logger.log('  ' + st + String('                    ').substring(st.length) + byStage[st]); });
+  var stray = []; for (var sk in byStage) if (ASSESS_IDX[sk] == null) stray.push(sk + ' ' + byStage[sk]);
+  if (stray.length) Logger.log('  (outside ASSESS_ORDER: ' + stray.join(', ') + ')');
+  Logger.log('ONLINE ASSESSMENT by quarter: ' + JSON.stringify(oaDays)
+    + '   <== today Interview Traction sees 22 in total');
+
+  // ----- The before / after Jerin has to see (step 12) - what the grid WOULD become.
+  Logger.log('');
+  Logger.log('===== #222 - WHAT THIS WOULD DO TO THE GRID  (nothing written) =====');
+  var iv = assessInterviews_(), asg = assessAssignments_(), fb = assessFeedback_(iv.ends);
+  var A = computeAssessedRollups_(events, { pre: { iv: iv, asg: asg, fb: fb }, noReport: true });   // today
+  var B = computeAssessedRollups_(events, { pre: { iv: iv, asg: asg, fb: fb, rep: rep.byApp } });  // with #222
+  function tot(res, q) {
+    var by = res.assessedByJobQ || {}, out = {};
+    for (var job in by) for (var st in by[job]) {
+      var v = by[job][st][q]; if (!v) continue;
+      var c = out[st] || (out[st] = { a: 0, b: 0 });
+      c.a += v.a || 0; c.b += v.b || 0;
+    }
+    return out;
+  }
+  function pc(c) { return c.a ? Math.round(100 * c.b / c.a) : 0; }
+  function pad(v, n) { v = String(v); while (v.length < n) v += ' '; return v; }
+  ['2026-Q3', '2026-Q4'].forEach(function (q) {
+    var ta = tot(A, q), tb = tot(B, q);
+    Logger.log('');
+    Logger.log('--- ' + q + ' ---   ' + pad('TODAY', 24) + 'WITH #222');
+    ASSESS_ORDER.forEach(function (st) {
+      var x = ta[st] || { a: 0, b: 0 }, y = tb[st] || { a: 0, b: 0 };
+      if (!x.a && !y.a) return;
+      Logger.log(pad(st, 14) + '    ' + pad(x.a + ' -> ' + x.b + ' (' + pc(x) + '%)', 24)
+        + pad(y.a + ' -> ' + y.b + ' (' + pc(y) + '%)', 24) + ((y.a !== x.a || y.b !== x.b) ? '  <== CHANGED' : ''));
+    });
+    function span(res) { var sp = res.assessedSpanByJobQ || {}, a = 0, b = 0;
+      for (var j in sp) { var v = sp[j][q]; if (v) { a += v.a || 0; b += v.b || 0; } } return a + ' -> ' + b; }
+    Logger.log(pad('SPAN', 14) + '    ' + pad(span(A), 24) + pad(span(B), 24)
+      + '  <== the span gets WORSE and that is it becoming TRUE');
+  });
+  Logger.log('');
+  Logger.log('probe222 done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
 }
