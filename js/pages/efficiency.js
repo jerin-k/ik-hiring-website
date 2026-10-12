@@ -1578,7 +1578,14 @@ export function initEfficiencyFilters(data) {
       if (!j.pipeline) return;
       const dept = deptOfJob(j);
       if (dsel.length && !dsel.includes(dept)) return;
-      if (!matchesJobRow(jsel, data, j.jid, j.dept || j.rawDept, j.title)) return;   // #172c
+      // 🚨 #224 (Jerin, 12 Oct 2026) - THIS ROW USED TO READ `j.jid, j.dept || j.rawDept`, AND NONE OF THOSE
+      // FIELDS EXIST ON A `data.jobs` ENTRY. They are `id` and `department`. So the id was undefined,
+      // matchesJobRow fell through to its department+title path with an EMPTY department, nothing matched,
+      // and this panel went completely blank the moment ANY job was picked - 'No roles match the filter'
+      // over a role with 951 live candidates. The Topic gate took the same undefined id, so a topic
+      // selection emptied it too. The other call sites are fine: they iterate a tree whose nodes really
+      // do carry `jid`. ⚠ The names differ by SOURCE, not by panel - check which object you are holding.
+      if (!matchesJobRow(jsel, data, String(j.id || '').slice(0, 8), j.department, j.title)) return;   // #172c, fixed #224
       if (openIds && !openIds.has(String(j.id || '').slice(0, 8))) return;
       if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return;
       const G = groups[dept] || (groups[dept] = { total: 0, stages: {}, jobs: [] });
