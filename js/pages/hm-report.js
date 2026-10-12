@@ -506,7 +506,7 @@ export function renderHmReport(data) {
       
       
       <span id="hmExpandWrap" style="margin-left:auto">${levelChooser('hmLevels')}</span>
-    <span class="period" id="hmPeriod"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span>${dojFilterHtml('hm', data.joiningPendingCases, 'margin-left:auto')}</div>
+    <span class="period" id="hmPeriod"><div class="fchip"><span class="lbl">Year</span><select id="hmYear"><option value="">All</option>${years.map(y => `<option value="${y}">${y}</option>`).join('')}</select></div><div class="fchip"><span class="lbl">Quarter</span><select id="hmQuarter"><option value="">All</option></select></div><div class="fchip" id="hmQuartersWrap"><div class="ms" id="msHmQuarter"></div></div><div class="fchip"><span class="lbl">From</span><input type="date" id="hmDateFrom"></div><div class="fchip"><span class="lbl">To</span><input type="date" id="hmDateTo"></div></span>${dojFilterHtml('hm', data.joiningPendingCases, 'margin-left:auto')}</div>
 
     <!-- ===== PANEL: POSITION FULFILMENT ===== -->
     <div class="hm-panel" data-panel="positions">
@@ -689,7 +689,16 @@ export function initHmFilters(data) {
   // "If there is a filter applied, data needs to change as well." hmRange() is the two dates, kept inside the Year/Quarter period (#127b).
   // A window covering whole quarters reads the quarter figures exactly as before; a narrower one reads the pipeline's day fields, whose
   // days add up to those quarter figures. Pipeline counts and Joining Pending stay live.
-  function hmQuarters() { return selectionQuarters(document.getElementById('hmYear')?.value || '', document.getElementById('hmQuarter')?.value || ''); }
+  // #227 (Jerin, 13 Oct 2026): several quarters at once. Everything downstream already took an ARRAY of
+  // quarter keys, so this is a CONTROL change, not a maths change. Position Fulfilment stays on ONE
+  // quarter: pods, capacity and the scoring grid are configured per quarter with copy-forward, so Goal
+  // and Delta have no defined value across two of them. Ticking nothing falls back to Year/Quarter.
+  let msHmQuarters = null;   // #227
+  function hmQuarters() {
+    const multi = msHmQuarters ? msHmQuarters.getSelected() : [];
+    if (multi.length) return multi.slice().sort();
+    return selectionQuarters(document.getElementById('hmYear')?.value || '', document.getElementById('hmQuarter')?.value || '');
+  }
   function hmRange() { return rangeOf(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'), hmQuarters()); }
   // A quarter is inside the window when ANY of its days is. The old rule needed the quarter's FIRST day inside, so moving From to
   // 15 Aug dropped Q3 — every job list emptied and every count read zero.
@@ -1586,7 +1595,18 @@ export function initHmFilters(data) {
     showControl(document.getElementById('hmExpandWrap'), name !== 'joiningpending' && name !== 'joiners' && name !== 'traction');   // #206: no tree here
     // #207: Interview Traction carries its own Quarter chip, which ticks several. The page's single-pick
     // Quarter box would be a second, contradictory control, so it steps aside on that sub-tab only.
-    showControl(document.getElementById('hmQuarter')?.closest('.fchip'), name !== 'traction');
+    // #227: ONE period control at a time - see the note on hmQuarters().
+    const multiQ = name !== 'positions' && name !== 'traction' && name !== 'joiningpending';
+    showControl(document.getElementById('hmQuartersWrap'), multiQ);
+    showControl(document.getElementById('hmYear')?.closest('.fchip'), name === 'positions');
+    showControl(document.getElementById('hmQuarter')?.closest('.fchip'), !multiQ && name !== 'traction');
+    // #226 (Jerin, 13 Oct 2026, raised by the team): Rule 13 - a control shown where it moves nothing is a
+    // bug. MEASURED by ticking each filter on each panel and checking whether any rendered number moved,
+    // not read off the code. The Recruiter filter (#196) was wired into three panels and SHOWN on all of
+    // them. Topic reaches every panel but the two below. [[project_quarter-scoping-audit]]
+    showControl(document.getElementById('msHmRec')?.closest('.fchip'),
+      name === 'positions' || name === 'joiners' || name === 'joiningpending');
+    showControl(document.getElementById('msHmTopic')?.closest('.fchip'), name !== 'traction');
     // #207: the page re-bounds From / To from its OWN single Quarter after this panel mounts, which would
     // leave the dates stuck inside one quarter again. So the panel's span is applied when its sub-tab is
     // ENTERED, once, and the page's own bounds are put back the moment you leave - otherwise every other
@@ -1642,6 +1662,16 @@ export function initHmFilters(data) {
     return out;
   })();
   msHmRec = makeMultiSelect(document.getElementById('msHmRec'), 'Recruiter', recNames, renderActive);
+  // #227: the Quarters chip. Absolute quarter keys, so Year never enters into it - which is why Year and the
+  // single Quarter box hide wherever this one shows.
+  msHmQuarters = makeMultiSelect(document.getElementById('msHmQuarter'), 'Quarters',
+    reportingQuarters().map(q => ({ v: q, t: q.replace('-', ' ') })), () => {
+      const qs = msHmQuarters.getSelected();
+      setDateBounds(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'),
+        qs.length ? qs.slice().sort() : selectionQuarters(document.getElementById('hmYear')?.value || '',
+                                                          document.getElementById('hmQuarter')?.value || ''), true);
+      renderActive();
+    });
   // Panelist names are the long tail here (hundreds of rows) — the shared multi-select gives
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
