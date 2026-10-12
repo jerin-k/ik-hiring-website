@@ -625,6 +625,20 @@ table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overfl
 .subtab-band .subtab-chip.active,
 .subtab-band .subtab-chip.active:hover { background: var(--navy-sub); color: #fff; font-weight: 600; }
 
+/* #225 (Jerin, 12 Oct 2026): the sub-tabs read as four bundles - what we delivered, what is in play now, how
+   well each step converts, and the inputs and operating load around it. Same four groups, same order, on every
+   tab, so it is learned once.
+   🚨 A HAIRLINE, NOT COLOUR, and the reason matters: colour on this dashboard already MEANS something - select /
+   reject / cancelled / awaiting, Hired green, Offer blue, the heat shading on the grids. A tinted chip would
+   invite a meaning that is not there and compete with the colour that carries one.
+   ⚠ #214 left only 37px spare on the Overall Efficiency band. This is therefore the cheapest separator that still
+   reads as a break: 1px, and the smallest margin that does not look like a squeeze. MEASURE after changing it. */
+.subtab-sep {
+  width: 1px; height: 1.125rem; margin: 0 0.15rem; flex: 0 0 auto; align-self: center;
+  background: var(--border);
+}
+.subtab-band .subtab-sep { background: #cfd6e4; }
+
 /* legacy classes kept for JS compat */
 .nav-strip-home, .nav-strip-cards, .nav-strip-card { display: none; }
 

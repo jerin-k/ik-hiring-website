@@ -480,11 +480,14 @@ export function renderHmReport(data) {
     <div class="hm-subtabs subtab-band">
       <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
       <button class="hm-subtab subtab-chip active" data-tab="positions">Position Fulfilment</button>
-      <button class="hm-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="joiners">Joiners</button>
-      <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <button class="hm-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
       <button class="hm-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
       <button class="hm-subtab subtab-chip" data-tab="traction">Interview Traction</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
+      <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
     </div>
 

@@ -204,16 +204,19 @@ export function renderEfficiency(data) {
     <div class="eff-subtabs subtab-band">
       <!-- #130 (Jerin, 15 Sep 2026): one name on every tab, and the two people lists on their own sub-tabs. Tab keys unchanged, so saved links still open. -->
       <button class="eff-subtab subtab-chip active" data-tab="fulfilment">Position Fulfilment</button>
-      <button class="eff-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <button class="eff-subtab subtab-chip" data-tab="joiners">Joiners</button>
-      <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
-      <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
-      <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <button class="eff-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
       <button class="eff-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
-      <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
-      <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
-      <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
       <button class="eff-subtab subtab-chip" data-tab="traction">Interview Traction</button>
+      <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
+      <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
+      <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
+      <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
+      <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
+      <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="panelists">Panelists</button>
     </div>
 
