@@ -105,10 +105,58 @@ function tofuR1BookingDays_() {
   return out;
 }
 
+// #221 (Jerin, 12 Oct 2026) - WHICH ROUNDS ARE AN EVALUATION.
+// "TA screening bookings to be negated" and, of HM Review bookings, "Remove". Neither is an evaluation of the
+// candidate's ability - they are the conversations that decide WHETHER to evaluate. Everything else counts,
+// "regardless of Online Assessment (triggered) or Interviews (scheduled)".
+var TOFU_NOT_EVALUATION = { taScreen: 1, hmReview: 1 };
+
+// #221 - interviews count on the day they were HELD, not the day they were booked:
+// "For Interview booking - date of interview needs to be considered."
+// assessInterviews_() already does exactly this - it keeps only events whose start time has passed, dates them by
+// that start time, and keys them by stage - so this reuses it rather than building a second, divergent reader.
+// It replaces tofuR1BookingDays_() for MOMENTUM ONLY. Screening Efficiency still uses R1 BOOKINGS further down,
+// deliberately: that panel asks whether R1 is being actioned, which is a different question.
+function tofuInterviewHeldDays_() {
+  var iv = assessInterviews_();
+  var out = {}, kept = 0, dropped = {};
+  for (var app in iv.byApp) {
+    var byK = iv.byApp[app];
+    for (var k in byK) {
+      if (TOFU_NOT_EVALUATION[k]) { dropped[k] = (dropped[k] || 0) + 1; continue; }
+      if (!byK[k]) continue;
+      (out[app] || (out[app] = [])).push(byK[k]);
+      kept++;
+    }
+  }
+  var dr = Object.keys(dropped).map(function (k) { return k + ' ' + dropped[k]; });
+  Logger.log('ToFU #221 interviews HELD: ' + kept + ' across ' + Object.keys(out).length
+    + ' applications' + (dr.length ? ' (not an evaluation, dropped: ' + dr.join(', ') + ')' : ''));
+  return out;
+}
+
 // The whole pass. The 'events' argument is the stage-history store: { appId: {r, j, ev, x, s} }.
 // Returns the maps that get merged into stage_rollups.json.
 function computeTofuRollups_(events) {
   var oaDays = tofuAssignmentDays_(/online assessment/i, 'the Online Assessment stage');
+  // #222 (Jerin, 12 Oct 2026): "every assessment be forced into Online Assessment regardless of where they were
+  // sitting" - "This is better for Momentum." Momentum asks WHEN somebody was first evaluated, not where, so every
+  // assessment the report knows about counts here whatever stage it actually fired in. Interview Traction and
+  // Throughput do the OPPOSITE and use the real stage - the same ruling, the same message.
+  // THIS IS THE ONLY PLACE the two measures are deliberately fed different versions of the same fact. Say so
+  // before anyone reconciles Momentum's Online Assessment count against Throughput's - they will never agree.
+  if (ASSESS_USE_REPORT) {
+    var repT = assessReportAssessments_();
+    var repAdded = 0, repApps = 0;
+    for (var rApp in repT.byApp) {
+      var rDays = repT.byApp[rApp] || [];
+      if (!rDays.length) continue;
+      repApps++;
+      for (var rI = 0; rI < rDays.length; rI++) { (oaDays[rApp] || (oaDays[rApp] = [])).push(rDays[rI]); repAdded++; }
+    }
+    Logger.log('ToFU #222: ' + repAdded + ' vendor assessments across ' + repApps
+      + ' applications folded into the Online Assessment signal, whatever stage they fired in');
+  }
   var r1Days = tofuR1BookingDays_();
 
   // applicationId -> { r: recruiter, j: jobId }. Live apps come from the stage-history store; archived ones
@@ -126,30 +174,30 @@ function computeTofuRollups_(events) {
     if (!aid || !day) return;
     (days[aid] || (days[aid] = [])).push(day);
   }
-  for (var aid2 in events) {
-    var ev = events[aid2].ev || [];
-    for (var k = 0; k < ev.length; k++) if (ev[k].k === 'hmReview' && ev[k].e) add(aid2, ev[k].e);
-  }
+  // #221: HM Review is OUT ENTIRELY - the stage entry AND its bookings. "Omit additions to HM" / "Remove".
+  // Entering HM Review is not an evaluation; it is the step that decides whether to evaluate. The archived store
+  // still carries tofuHm and it is now deliberately left unread.
   var archStore = loadDriveJson_('archived_late_stage.json') || {};
-  var archHm = archStore.tofuHm || {};
-  var archHmCount = 0;
-  for (var aid3 in archHm) { add(aid3, archHm[aid3]); archHmCount++; }
+  var archHmCount = 0;   // #221: HM contributes nothing now; kept at 0 so tofuMeta keeps its shape
   for (var aid4 in oaDays) oaDays[aid4].forEach(function (d) { add(aid4, d); });
-  for (var aid5 in r1Days) r1Days[aid5].forEach(function (d) { add(aid5, d); });
+  // #221: every round that is a real evaluation, dated by when the interview was HELD. r1Days is NOT used here
+  // any more - it is bookings, and R1 only - but it is still used by Screening Efficiency below.
+  var heldDays = tofuInterviewHeldDays_();
+  for (var aid5 in heldDays) heldDays[aid5].forEach(function (d) { add(aid5, d); });
 
-  // one count per application per QUARTER, on the earliest signal in that quarter
+  // #221 (Jerin, 12 Oct 2026): ONCE PER APPLICATION, EVER - not once per quarter. Somebody is a new arrival the
+  // first time anyone evaluates them, and never again.
+  // THIS IS WHAT MAKES THE QUARTERS ADD UP. Under the old per-quarter rule the SAME candidate could be counted in
+  // two quarters, so a year's total could exceed the number of people in it and nothing looked wrong.
   var byRec = {}, byJob = {}, byRecJob = {}, total = 0, unattributed = 0;
   for (var aid6 in days) {
-    var earliestInQ = {};
-    days[aid6].forEach(function (d) {
-      var q = tofuQuarter_(d);
-      if (!q) return;
-      if (!earliestInQ[q] || d < earliestInQ[q]) earliestInQ[q] = d;
-    });
+    var first = null;
+    days[aid6].forEach(function (d) { if (d && (!first || d < first)) first = d; });
+    if (!first || !tofuQuarter_(first)) continue;
     var w = who[aid6] || {};
     var rec = w.r || null, job8 = w.j ? String(w.j).substring(0, 8) : null;
-    for (var q2 in earliestInQ) {
-      var day = earliestInQ[q2];
+    {
+      var day = first;
       total++;
       if (!rec && !job8) { unattributed++; continue; }
       if (rec) {
@@ -170,13 +218,16 @@ function computeTofuRollups_(events) {
 
   // ===== R1 SCREENING (added 2026-08-29, Jerin) =====
   // Screening Efficiency stopped being three stage columns and became ONE set about R1:
-  //   Added   = an R1 interview was BOOKED in the quarter — the same signal ToFU uses, but on its own,
-  //             so a candidate who arrived via HM still counts here once their R1 is booked. Cancelled
+  //   Added   = an R1 interview was BOOKED in the quarter. (#221, 12 Oct 2026: this USED to be "the same
+  //             signal ToFU uses". It no longer is - Momentum now counts interviews when they are HELD, at
+  //             any round, and HM is out of it entirely. This panel stays on R1 BOOKINGS on purpose: it
+  //             asks whether R1 is being actioned, a different question.) Cancelled
   //             bookings do not count. One count per APPLICATION per QUARTER.
   //   Cleared = they went PAST R1 — reached R2, R3, R4, R5, Ref Check, Documentation or Offer on or after
   //             the day the R1 was booked.
-  // ⚠ This is NOT the R1 number Momentum shows: Momentum only credits R1 when it was the candidate's
-  // FIRST signal, so its R1 is a subset of this one. And it is not the old per-stage 'Added' either, which
+  // ⚠ This is NOT a Momentum number at all any more (#221). Momentum counts the FIRST evaluation of a
+  // candidate, EVER, from an assessment sent or an interview HELD. The two will not reconcile and are not
+  // meant to. And it is not the old per-stage 'Added' either, which
   // counted stage ENTRIES and re-counted anyone who came back round.
   var beyondR1 = { r2: 1, r3: 1, r4: 1, r5: 1, refCheck: 1, docSub: 1, offer: 1 };
   var archLate = archStore.hits || {};
@@ -286,11 +337,66 @@ function computeTofuRollups_(events) {
       rule: 'added = an interview scheduled at R1 OR an assignment triggered at R1, one per application per quarter, cancellations excluded; cleared = reached R2 or beyond on or after that day' },
     tofuMeta: {
       generatedAt: new Date().toISOString(),
-      dedupe: 'application per quarter, earliest signal',
-      signals: ['hmReview stage entry', 'assessment triggered in the Online Assessment stage', 'R1 interview booked'],
+      dedupe: 'application ONCE EVER, earliest signal (#221)',
+      signals: ['an assessment sent, whatever stage it fired in (#222)',
+        'an interview HELD at any round except TA Screen and HM Review (#221)'],
       arrivals: total,
+      // #221 CONTROL: the number of DISTINCT applications that produced any signal. Under "once ever" arrivals
+      // MUST equal this exactly. Under the old per-quarter rule arrivals EXCEEDED it, by the number of people
+      // counted in two quarters. That is the only comparison that actually tests the dedupe - summing the day
+      // buckets by quarter is tautological and passes whatever the rule is.
+      applications: Object.keys(days).length,
       unattributed: unattributed,
       archivedHmApplications: archHmCount
     }
   };
+}
+
+// ===== #221 DRY RUN - the new Momentum against the one that is live. WRITES NOTHING. =====
+// No dual code path: the BEFORE is the tofuByJob already sitting in stage_rollups.json on Drive, written under the
+// old rules. The AFTER is computed fresh. That keeps it honest - the "before" is the real shipped number, not a
+// reimplementation of the old rule that might flatter itself.
+function probe221() {
+  var t0 = Date.now();
+  var events = loadDriveJson_('stage_events.json') || {};
+  if (!Object.keys(events).length) { Logger.log('probe221 REFUSED: stage_events.json is empty'); return; }
+  var before = loadDriveJson_('stage_rollups.json') || {};
+  if (!before.tofuByJob) { Logger.log('probe221 REFUSED: no tofuByJob in the live rollups'); return; }
+  var after = computeTofuRollups_(events);
+  function tot(by) {
+    var o = {};
+    for (var j in by) for (var d in by[j]) {
+      var q = tofuQuarter_(d);
+      if (!q) continue;
+      o[q] = (o[q] || 0) + (by[j][d] || 0);
+    }
+    return o;
+  }
+  function people(by) { var n = 0; for (var j in by) for (var d in by[j]) n += (by[j][d] || 0); return n; }
+  var A = tot(before.tofuByJob || {}), B = tot(after.tofuByJob || {});
+  var qs = {};
+  for (var a in A) qs[a] = 1;
+  for (var b in B) qs[b] = 1;
+  Logger.log('');
+  Logger.log('===== #221 - MOMENTUM, live rules vs new  (nothing written) =====');
+  Logger.log('  quarter      live    #221');
+  Object.keys(qs).sort().forEach(function (q) {
+    var x = A[q] || 0, y = B[q] || 0;
+    Logger.log('  ' + q + '    ' + x + '      ' + y + (x !== y ? '    <== CHANGED' : ''));
+  });
+  Logger.log('  ALL TIME     ' + people(before.tofuByJob || {}) + '      ' + people(after.tofuByJob || {}));
+  var sumB = 0, sumA = 0;
+  Object.keys(qs).forEach(function (q) { sumB += (B[q] || 0); sumA += (A[q] || 0); });
+  var allB = people(after.tofuByJob || {});
+  Logger.log('');
+  Logger.log('THE POINT OF #221: a candidate is counted ONCE EVER, so nobody appears in two quarters.');
+  var arr = (after.tofuMeta && after.tofuMeta.arrivals) || 0;
+  var apps = (after.tofuMeta && after.tofuMeta.applications) || 0;
+  Logger.log('  THE REAL CONTROL: arrivals ' + arr + ' vs distinct applications ' + apps + '  -> '
+    + (arr === apps ? 'EQUAL, so every candidate is counted exactly once'
+                    : 'NOT EQUAL by ' + (arr - apps) + ' - the dedupe is NOT once-ever'));
+  Logger.log('  FOR REFERENCE ONLY, NOT a control: quarters sum to ' + sumB + ' new / ' + sumA + ' old, all-time '
+    + allB + ' new / ' + people(before.tofuByJob || {}) + ' old. These agree under BOTH rules because the day buckets are summed either way, so they prove nothing.');
+  Logger.log('');
+  Logger.log('probe221 done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
 }
