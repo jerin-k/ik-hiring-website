@@ -795,8 +795,8 @@ function refreshDashboardData() {
   // Corroborated against activity: 12 of the 15 roster recruiters WITHOUT an elevated seat had ZERO
   // 2026-Q3 throughput while active in Q1/Q2 - the signature of having left.
   var RECRUITER_SEAT_ROLES = { 'Elevated Access': 1, 'Organization Admin': 1 };
-  var enabledById = {}, userNameById = {}, roleById = {};
-  try { ashbyListAll_('/user.list').forEach(function (u) { enabledById[u.id] = (u.isEnabled !== false); roleById[u.id] = u.globalRole || null; var nm = ((u.firstName || '') + ' ' + (u.lastName || '')).trim(); if (nm) userNameById[u.id] = nm; }); Logger.log('user.list: ' + Object.keys(enabledById).length + ' users'); } catch (e) { Logger.log('user.list failed: ' + e.message); }
+  var enabledById = {}, userNameById = {}, roleById = {}, emailById = {};   // #228c: the address Ashby holds
+  try { ashbyListAll_('/user.list').forEach(function (u) { enabledById[u.id] = (u.isEnabled !== false); roleById[u.id] = u.globalRole || null; if (u.email) emailById[u.id] = String(u.email).trim().toLowerCase(); var nm = ((u.firstName || '') + ' ' + (u.lastName || '')).trim(); if (nm) userNameById[u.id] = nm; }); Logger.log('user.list: ' + Object.keys(enabledById).length + ' users'); } catch (e) { Logger.log('user.list failed: ' + e.message); }
 
   // #157: now that user.list has been read, turn the owner ids into names. Done here and not in the
   // buckets loop because userNameById does not exist yet at that point in the run.
@@ -827,6 +827,11 @@ function refreshDashboardData() {
     rc.userId = rUid;
     rc.activeKnown = (rn === 'Unassigned') ? true : !!rUid;
     rc.seatRole = rUid ? (roleById[rUid] || null) : null;
+    // #228c (Jerin, 13 Oct 2026): carry the recruiter's ASHBY address through, so the dashboard can tell
+    // which signed-in person IS which recruiter by an EXACT match instead of comparing the spelling of an
+    // address against the spelling of a name - which is what made 'aditya.s' ambiguous. user.list is already
+    // fetched every run for the seat and the name; the email was being thrown away.
+    rc.email = rUid ? (emailById[rUid] || null) : null;
     rc.isActive = (rn === 'Unassigned') ? true : (rUid ? !!RECRUITER_SEAT_ROLES[roleById[rUid]] : true);
     if (rn !== 'Unassigned' && !rUid) recruitersWithoutUserId.push(rn);
     if (rUid && userNameById[rUid] && userNameById[rUid] !== rn) nameDrift.push(rn + ' -> ' + userNameById[rUid]);
