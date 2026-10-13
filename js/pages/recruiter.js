@@ -6,7 +6,7 @@ import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-selec
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdSourcer, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup } from '../people-cells.js';   // #168/#169: the opening and the topic
-import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } from '../grid-shade.js';   // #137c · #145b
+import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline, scrollToLatest} from '../grid-shade.js';   // #137c · #145b
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
@@ -3311,7 +3311,8 @@ export function initRecruiterFilters(baseData) {
     });
     body.innerHTML = html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
     wireTreePath(body);
-    shadeMomentum(body, dates);   // #137c
+    shadeMomentum(body, dates);
+    scrollToLatest(body.closest('.scroll-table'));   // #231b: open on the newest day   // #137c
   }
 
   // ===== charts (standard palette + square legends) =====
@@ -3380,6 +3381,9 @@ export function initRecruiterFilters(baseData) {
       alignSel: '.rec-panel[data-panel="velocity"] .vel-table thead th',
       emptyMsg: 'Nobody was added in this window for the recruiters shown.'
     });
+    // #231b: the heatmap sits directly above the grid and is aligned to its columns, so it has to open at the
+    // same end or the two would disagree on screen.
+    scrollToLatest(wrapEl);
   }
 
   const SCREEN_SOLID = '#4E6BA6', SCREEN_PALE = '#C5CFE5';
@@ -3849,7 +3853,12 @@ export function initRecruiterFilters(baseData) {
 
   function renderActiveChart() {
     if (activeTab === 'traction') { if (renderTraction) renderTraction(); }   // #228a
-    else if (activeTab === 'velocity') buildVelChart();
+    else if (activeTab === 'velocity') { buildVelChart();
+      // 🚨 #231b: the grid is written while this panel is still display:none, and a hidden element has NO
+      // layout — scrollWidth and clientWidth are both 0, so the scroll could not be set at render time. It has
+      // to happen again HERE, once the panel is actually on screen. (The heatmap got away with it because it
+      // is rebuilt on every tab switch; the grid is not.)
+      scrollToLatest(document.getElementById('recVelBody')?.closest('.scroll-table')); }
     else if (activeTab === 'screening') buildScreenChart();
     else if (activeTab === 'joining') buildJoinChart();
     else if (activeTab === 'fulfilment') buildFulfilChart();

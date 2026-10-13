@@ -8,7 +8,7 @@ import { jobFilterOptions, matchesJob as matchesJobBase, matchesJobRow as matche
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdQuarter, tdSourcer, pointsCaption } from '../people-cells.js';   // #137 · #176b · #195: tdQuarter replaces tdLinked · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup, realTopic } from '../people-cells.js';   // #168/#169: the opening and the topic · #213: realTopic
 import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
-import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars } from '../grid-shade.js';   // #137c · #145a
+import { shadeMomentum, shadeTis, shadePipeline, shareBars, colorShareBars, scrollToLatest} from '../grid-shade.js';   // #137c · #145a
 import { renderInterviewer, initInterviewer } from './interviewer.js';
 // #145a (Jerin, 19 Sep 2026): the Pipeline panel moves here as it stands on the Hiring Manager tab, so it reads
 // that tab's stage list — one list for both tables.
@@ -1813,7 +1813,8 @@ export function initEfficiencyFilters(data) {
     }
     body.innerHTML = html || `<tr><td colspan="${dkeys.length + 2}" style="text-align:center;color:var(--muted);padding:1rem">Nobody was added in these days on jobs with an opening in the period.</td></tr>`;
     wireTreePath(body, expandAll());
-    shadeMomentum(body, dates);   // #137c
+    shadeMomentum(body, dates);
+    scrollToLatest(body.closest('.scroll-table'));   // #231b: open on the newest day   // #137c
     buildVelChartEff();
   }
 
@@ -2023,6 +2024,9 @@ export function initEfficiencyFilters(data) {
       alignSel: '.eff-panel[data-panel="velocity"] .evel-table thead th',
       emptyMsg: 'Nobody was added in this window for the departments shown.'
     });
+    // #231b: the heatmap sits directly above the grid and is aligned to its columns, so it has to open at the
+    // same end or the two would disagree on screen.
+    scrollToLatest(wrap);
   }
 
   // screenDeptCfg (the old per-department Added/Cleared-per-stage chart) went with the single R1 set on
