@@ -3206,16 +3206,22 @@ export function initRecruiterFilters(baseData) {
     if (end > today) end = today; // never show future dates — cap the window at today
     const start = fromV ? new Date(fromV + 'T00:00:00') : null;
     const out = [];
-    // #141c (Jerin, 17 Sep): every day From → To, newest first. It used to stop at 30 days, so a From earlier than that moved
+    // #141c (Jerin, 17 Sep): every day From → To. It used to stop at 30 days, so a From earlier than that moved
     // nothing (Rule 13). A long range scrolls sideways (Jerin, 31 Aug: "let that lead to scrolling, its ok"). From is always set
     // from the period; without one the grid keeps the old 30 days, so it can never run away.
+    // 🔁 #231 (Jerin, 13 Oct 2026): OLDEST first — the latest day is now the RIGHTMOST column.
+    // 🗣 "Lets always have latest on the right end then." This REVERSES his own 31 Aug 2026 call of newest
+    // first, deliberately and on his word, so that every grid and chart reads the same way round as
+    // Interview Traction (whose dashed trend line has to run left to right to mean anything).
+    // ⚠ The GRID and the HEATMAP above it both derive their columns from here, as does shadeMomentum's
+    // weekend shading and week-edge line — so this one return flips all of them together.
     const days = start ? Math.floor((end - start) / 86400000) + 1 : 30;
     for (let i = 0; i < days; i++) {
       const d = new Date(end); d.setDate(end.getDate() - i);
       if (start && d < start) break;
       out.push(d);
     }
-    return out; // most recent first
+    return out.reverse();   // #231: oldest → newest, so the latest day sits at the right-hand end
   }
   function applyVelYearQuarter() {
     const fromEl = document.getElementById('recVelFrom'), toEl = document.getElementById('recVelTo');
