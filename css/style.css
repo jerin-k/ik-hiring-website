@@ -1648,6 +1648,10 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 .heat-cell.heat-hd .hd-d { font-size:0.75rem; font-weight:600; color:var(--text); }
 .heat-cell.heat-hd .hd-m { font-size:0.5625rem; font-weight:500; letter-spacing:0.03em; text-transform:uppercase; opacity:0.75; }
 .heat-cell.heat-hd.wknd .hd-d { color:#C08497; }
+/* #232: a booked column on the heatmap — a ring, so a filled cell keeps the count's own teal untouched. */
+.heat-cell.future { box-shadow:inset 0 0 0 1px rgba(30,117,144,.30); }
+.heat-cell.heat-hd.future .hd-d, .heat-cell.heat-hd.future .hd-m { color:#1E7590; }
+.heat-foot .heat-cell.future { box-shadow:none; }
 .heat-hd.wknd { color:#C08497; }
 .heat-foot .heat-cell { background:none; color:var(--muted); font-weight:400; height:1.5rem; font-size:0.75rem; }
 .heat-foot .heat-name { font-size:0.75rem; color:var(--muted); }
@@ -1801,6 +1805,10 @@ th.gs-wkedge { box-shadow:inset 1px 0 0 var(--navy-line); }
 table th.wknd.gs-wkedge { box-shadow:inset 1px 0 0 var(--navy-line), inset 0 -2px 0 rgba(163,50,83,0.38); }   /* #197c · keeps the page's weekend underline */
 .gs-dow { display:block; margin-top:1px; font-size:0.59375rem; font-weight:500; line-height:1.1; letter-spacing:0; text-transform:none; color:#9aa3b8; }
 .gs-dow.is-today { color:#1E7590; font-weight:700; }
+/* #232 (Jerin, 14 Oct 2026): a day AFTER today holds interviews that are BOOKED, not held. Deliberately AFTER
+   .gs-wkend — both set background-image, and on a booked weekend "booked" is the more useful of the two. */
+th.gs-future, td.gs-future { background-image:linear-gradient(rgba(30,117,144,.07), rgba(30,117,144,.07)); }
+.gs-dow.is-future { color:#1E7590; font-weight:600; }
 .gs-bar { display:inline-block; height:0.3125rem; margin-left:0.375rem; border-radius:0.1875rem; background:#9fb3d6; vertical-align:middle; }
 td.tis .tis-med.gs-m { display:inline-block; min-width:1.875rem; padding:1px 0.375rem; border-radius:0.3125rem; }
 .gs-m1 { background:#f3f6fa; } .gs-m2 { background:#e6ecf5; } .gs-m3 { background:#d8e1ef; } .gs-m4 { background:#c9d6ea; } .gs-m5 { background:#b6c7e2; }

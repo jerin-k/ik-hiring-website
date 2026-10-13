@@ -322,31 +322,32 @@ export const DEFINITIONS = {
 
   'rec-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day &mdash; one row per person, not one per stage. A deeper teal square means more people added that day; weekends are greyed and a thin line marks each new week.',
-    confirmed: 'Settled with Jerin &middot; 26 Aug 2026. Latest: an assessment counts wherever the candidate was sitting when it was sent &middot; 12 Oct 2026.',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> on each day &mdash; one row per person, not one per stage. A deeper teal square means more people added that day; weekends are greyed and a thin line marks each new week. Days <strong>after today</strong> hold interviews that are already booked, marked <em>Booked</em>.',
+    confirmed: 'Settled with Jerin &middot; 26 Aug 2026. Latest: interviews booked ahead of today are shown, marked Booked &middot; 14 Oct 2026.',
     groups: [
       {
         heading: 'What counts as being added',
         items: [
-          ['Whichever comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is sent</strong> &mdash; wherever they were sitting at the time, or an <strong>R1 interview is booked</strong>. The first of the three is the day they were added.'],
-          ['R1 is dated when the interview was BOOKED', 'Not the day it is held &mdash; booking is the piece of work, and the interview can be a week later.'],
-          ['Counted once per role', 'Moving somebody on afterwards does not add to the number. This counts <em>people arriving</em>, not steps taken. The count resets each quarter, so quarters do not add up to a year.'],
+          ['Whichever comes first', 'An <strong>assessment is sent</strong> &mdash; wherever the candidate was sitting at the time &mdash; or an <strong>interview is held</strong> in a round that is a real evaluation. The earlier of the two is the day they were added. <strong>TA Screen and HM Review do not count</strong>: those are the conversations that decide whether to evaluate somebody, not the evaluation itself.'],
+          ['An interview counts on the day it is HELD', 'Not the day it was booked &mdash; the interview can be a week after the call that arranged it, and this panel asks when the candidate was actually looked at. A booking still ahead of today counts on its own future date.'],
+          ['Counted once, ever', 'Somebody is a new arrival the <strong>first time anyone evaluates them</strong> and never again &mdash; not once a quarter, and not once per role. This is what makes the quarters add up: under the old rule the same person could be counted in two of them, so a year could come to more than the number of people in it.'],
           ['Cancelled does not count', 'A cancelled booking or assessment is removed, and if it was the only thing that put somebody in, the day ticks back down.'],
+          ['Days after today are BOOKED, not held', 'The columns now run past today, as far as the last interview already on the calendar and no further &mdash; so a day only appears once something is booked on it. Those columns are tinted and the slot under the date reads <em>Booked</em>. They can still change: a booking can be moved or cancelled, and the day ticks back down. Only interviews reach into the future; an assessment is dated when it was sent, which is always in the past.'],
         ]
       },
       {
         heading: 'Reading it',
         items: [
-          ['Pod / Recruiter / Job, and the day columns', 'Pod &rarr; Recruiter &rarr; Job, then one column per day. Every day of the selected range runs across the top, most recent first; a long range scrolls sideways. <strong>Hover a square</strong> to list the roles behind it.'],
-          ['Total', 'Every day column beside it added up &mdash; the row&rsquo;s arrivals for the window shown, not for the whole quarter.'],
+          ['Pod / Recruiter / Job, and the day columns', 'Pod &rarr; Recruiter &rarr; Job, then one column per day, <strong>oldest on the left and the latest on the right</strong>. A long range scrolls sideways and opens at the latest day. <strong>Hover a square</strong> to list the roles behind it.'],
+          ['Total', 'Every day column beside it added up &mdash; the row&rsquo;s arrivals for the window shown, not for the whole quarter. It is <strong>one number</strong>, so it counts the booked days together with the held ones.'],
           ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon. An empty weekend square is a weekend, not a bad day.'],
           ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected period</strong> &mdash; the team does not work jobs whose opening was opened in an earlier quarter &mdash; and of those, only jobs with something to show. An opening with no opened date does not count; those are listed in <strong>Data Hygiene</strong>.'],
         ]
       },
     ],
     warnings: [
-      ['This will not match Screening Efficiency', 'That panel counts every R1 action, including candidates who arrived earlier through HM Review. This counts <em>people entering the funnel</em>, by whichever signal came first. Two different questions.'],
-      ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, a candidate could only be added here by HM Review or an R1 booking.'],
+      ['This will not match Screening Efficiency', 'That panel counts every R1 action. This counts <em>people entering the funnel</em>, once each, by whichever evaluation came first. Two different questions.'],
+      ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, the only way onto this panel was an interview actually being held.'],
     ]
   },
 
@@ -369,7 +370,7 @@ export const DEFINITIONS = {
     ],
     warnings: [
       ['It will not match Momentum&rsquo;s R1 either', 'Momentum credits R1 only when it was the candidate&rsquo;s <em>first</em> signal into the funnel. Here every R1 action counts, so Momentum&rsquo;s R1 is a subset of this one.'],
-      ['HM Review and Online Assessment are not on this panel', 'By design &mdash; this one is about R1. Both still count towards <strong>Momentum</strong>.'],
+      ['Online Assessment is not on this panel', 'By design &mdash; this one is about R1. An assessment still counts towards <strong>Momentum</strong>. <strong>HM Review counts nowhere</strong>: entering it is the step that decides whether to evaluate somebody, not an evaluation.'],
     ]
   },
 
@@ -585,31 +586,32 @@ export const DEFINITIONS = {
 
   'eff-momentum': {
     summary: 'How these numbers are worked out',
-    intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org &mdash; one row per person, not one per stage. A deeper teal square means more people added that day; weekends are greyed and a thin line marks each new week.',
-    confirmed: 'Settled with Jerin &middot; 29 Aug 2026. Latest: an assessment counts wherever the candidate was sitting when it was sent &middot; 12 Oct 2026.',
+    intro: 'How many candidates were <strong>added to the top of the funnel</strong> each day, across the whole org &mdash; one row per person, not one per stage. A deeper teal square means more people added that day; weekends are greyed and a thin line marks each new week. Days <strong>after today</strong> hold interviews that are already booked, marked <em>Booked</em>.',
+    confirmed: 'Settled with Jerin &middot; 29 Aug 2026. Latest: interviews booked ahead of today are shown, marked Booked &middot; 14 Oct 2026.',
     groups: [
       {
         heading: 'What counts as being added',
         items: [
-          ['Whichever comes first', 'The candidate <strong>enters HM Review</strong>, or an <strong>assessment is sent</strong> &mdash; wherever they were sitting at the time, or an <strong>R1 interview is booked</strong>.'],
-          ['R1 is dated when the interview was BOOKED', 'Not the day it is held.'],
-          ['Counted once per role, per quarter', 'Somebody already added is not counted again for that role in the same quarter, and the count resets each quarter, so quarters do not add up to a year.'],
+          ['Whichever comes first', 'An <strong>assessment is sent</strong> &mdash; wherever the candidate was sitting at the time &mdash; or an <strong>interview is held</strong> in a round that is a real evaluation. The earlier of the two is the day they were added. <strong>TA Screen and HM Review do not count</strong>: those are the conversations that decide whether to evaluate somebody, not the evaluation itself.'],
+          ['An interview counts on the day it is HELD', 'Not the day it was booked &mdash; the interview can be a week after the call that arranged it, and this panel asks when the candidate was actually looked at. A booking still ahead of today counts on its own future date.'],
+          ['Counted once, ever', 'Somebody is a new arrival the <strong>first time anyone evaluates them</strong> and never again &mdash; not once a quarter, and not once per role. This is what makes the quarters add up: under the old rule the same person could be counted in two of them, so a year could come to more than the number of people in it.'],
           ['Cancelled does not count', 'A cancelled booking or assessment is removed, which can take a count back off a past day.'],
+          ['Days after today are BOOKED, not held', 'The columns now run past today, as far as the last interview already on the calendar and no further &mdash; so a day only appears once something is booked on it. Those columns are tinted and the slot under the date reads <em>Booked</em>. They can still change: a booking can be moved or cancelled, and the day ticks back down. Only interviews reach into the future; an assessment is dated when it was sent, which is always in the past.'],
         ]
       },
       {
         heading: 'Reading it',
         items: [
-          ['Department / Job, and the day columns', 'Department &rarr; Role down the side, every day of the selected range across the top, most recent first; a long range scrolls sideways. <strong>Hover a square</strong> to list the roles behind it.'],
-          ['Total', 'Every day column beside it added up &mdash; the window shown, not the whole quarter.'],
+          ['Department / Job, and the day columns', 'Department &rarr; Role down the side, then one column per day, <strong>oldest on the left and the latest on the right</strong>. A long range scrolls sideways and opens at the latest day. <strong>Hover a square</strong> to list the roles behind it.'],
+          ['Total', 'Every day column beside it added up &mdash; the row&rsquo;s arrivals for the window shown, not for the whole quarter. It is <strong>one number</strong>, so it counts the booked days together with the held ones.'],
           ['Weekends', 'Saturday and Sunday dates are printed in a soft maroon. An empty weekend square is a weekend, not a bad day.'],
           ['Which jobs are listed', 'Only jobs with an <strong>opening opened in the selected period</strong> &mdash; the team does not work jobs whose opening was opened in an earlier quarter &mdash; and of those, only jobs with something to show. An opening with no opened date does not count; those are listed in <strong>Data Hygiene</strong>.'],
         ]
       },
     ],
     warnings: [
-      ['This will not match Screening Efficiency', 'That panel counts every R1 action. This counts everyone entering the funnel, by whichever of the three signals came first.'],
-      ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, a candidate could only be added here by HM Review or an R1 booking.'],
+      ['This will not match Screening Efficiency', 'That panel counts every R1 action. This counts everyone entering the funnel, once each, by whichever evaluation came first.'],
+      ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, the only way onto this panel was an interview actually being held.'],
     ]
   },
 
@@ -631,7 +633,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['HM Review and Online Assessment are not on this panel', 'By design &mdash; this one is about R1. Both still count towards <strong>Momentum</strong>, where they are two of the three ways a candidate enters the funnel.'],
+      ['Online Assessment is not on this panel', 'By design &mdash; this one is about R1. An assessment still counts towards <strong>Momentum</strong>. <strong>HM Review counts nowhere</strong>: entering it is the step that decides whether to evaluate somebody, not an evaluation.'],
     ]
   },
 

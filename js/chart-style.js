@@ -647,6 +647,11 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   const { alignSel = null, emptyMsg = 'Nothing arrived in this window.', rowLabel = 'added' } = opts;
   if (!rows.length) { host.innerHTML = `<p class="sub-note" style="margin:0.375rem 0 0">${emptyMsg}</p>`; return; }
   const isWknd = chrono.map(d => d.getDay() === 0 || d.getDay() === 6);
+  // #232 (Jerin, 14 Oct 2026): the heatmap sits directly above the grid and is aligned to its columns, so it
+  // has to mark a BOOKED day the same way or the two disagree on screen (Rule 3). A hairline ring, not a
+  // background: a filled cell already carries the count's own teal and must keep it unchanged.
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  const isFut = chrono.map(d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() > today0.getTime());
   const mx = Math.max(...rows.map(r => Math.max(...r.per)));
   const dayTot = chrono.map((_, i) => rows.reduce((a, r) => a + r.per[i], 0));
   const grand = dayTot.reduce((a, v) => a + v, 0);
@@ -655,14 +660,14 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   // label, so a 30-day window spanning two months left you counting columns to work out which was which.
   let html = '<div class="heat-row"><div class="heat-name heat-hd"></div>'
     + `<div class="heat-tot heat-hd">Total · ${chrono.length}d</div>`
-    + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}" style="background:none">`
+    + chrono.map((d, i) => `<div class="heat-cell heat-hd${isWknd[i] ? ' wknd' : ''}${isFut[i] ? ' future' : ''}" style="background:none"${isFut[i] ? ' title="Booked — this interview has not happened yet"' : ''}>`
         + `<span class="hd-d">${d.getDate()}</span><span class="hd-m">${HEAT_MON[d.getMonth()]}</span></div>`).join('')
     + '</div>';
   rows.forEach((r, ri) => {
     html += `<div class="heat-row"><div class="heat-name" title="${heatEsc(r.sub || r.name)}">${heatEsc(r.name)}</div>`
       + `<div class="heat-tot">${r.total}</div>`;
     r.per.forEach((v, i) => {
-      const cls = 'heat-cell' + (v ? ' has' : (isWknd[i] ? ' wknd' : ''));
+      const cls = 'heat-cell' + (v ? ' has' : (isWknd[i] ? ' wknd' : '')) + (isFut[i] ? ' future' : '');   // #232
       const st = v ? ` style="background:${heatShade(v, mx)};color:${v / mx > 0.45 ? '#fff' : '#334155'}"` : '';
       html += `<div class="${cls}"${st} data-r="${ri}" data-d="${i}">${v || ''}</div>`;
     });

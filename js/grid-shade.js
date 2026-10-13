@@ -39,13 +39,17 @@ export function shadeMomentum(tbody, dates) {
   const monday = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.getTime(); };
   const today = dayMs(new Date());
   // weekend columns are greyed; a thin line runs down the first column of each new Monday-to-Sunday week, whichever way the days run
-  const colCls = dates.map((d, i) => [d.getDay() === 0 || d.getDay() === 6 ? 'gs-wkend' : '', i > 0 && monday(d) !== monday(dates[i - 1]) ? 'gs-wkedge' : ''].filter(Boolean));
+  // #232 (Jerin, 14 Oct 2026): a day AFTER today is an interview already booked, not one that was held. It gets
+  // its own faint wash and its day-of-week slot reads "Booked" instead of the weekday — 🗣 option B, "no note
+  // required", so the column itself has to carry the whole signal. The numbers are left exactly as they are.
+  const colCls = dates.map((d, i) => [d.getDay() === 0 || d.getDay() === 6 ? 'gs-wkend' : '', i > 0 && monday(d) !== monday(dates[i - 1]) ? 'gs-wkedge' : '', dayMs(d) > today ? 'gs-future' : ''].filter(Boolean));
   const ths = table.querySelectorAll('thead th');
   dates.forEach((d, i) => {
     const th = ths[FIRST + i]; if (!th) return;
     th.classList.add(...colCls[i]);
     const isToday = dayMs(d) === today;
-    if (!th.querySelector('.gs-dow')) th.insertAdjacentHTML('beforeend', `<span class="gs-dow${isToday ? ' is-today' : ''}">${isToday ? 'Today' : WD[d.getDay()]}</span>`);
+    const isFuture = dayMs(d) > today;   // #232
+    if (!th.querySelector('.gs-dow')) th.insertAdjacentHTML('beforeend', `<span class="gs-dow${isToday ? ' is-today' : ''}${isFuture ? ' is-future' : ''}">${isToday ? 'Today' : isFuture ? 'Booked' : WD[d.getDay()]}</span>`);
   });
   const rows = [...tbody.rows].filter(tr => tr.cells.length === FIRST + dates.length);
   const tops = rows.filter(isTop), rest = rows.filter(tr => !isTop(tr));
