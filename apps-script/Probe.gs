@@ -1,7 +1,7 @@
 // ===== run210 - KEEP THIS FIRST IN THE FILE. The Run picker cannot be driven, so the function that runs is
 // whichever comes first here; run210 fires RUN210_FN on a one-off trigger (30 min, not the editor 6) and
 // asserts the refreshDashboardData clock triggers are untouched. Point RUN210_FN, open this file, press Run.
-var RUN210_FN = 'run228Apply';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
+var RUN210_FN = 'run228cApply';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
 function run210() {
   var before = 0, after = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
@@ -140,4 +140,36 @@ function run222Apply() {
 // counts refreshDashboardData. Read-only against Ashby; rewrites interview_traction.json only.
 function run228Apply() {
   refreshInterviewTraction();
+}
+
+
+// ===== #228c (13 Oct 2026): READ-ONLY. Does Ashby give us an address for every recruiter? =====
+// Jerin: "In Admin Access Management, every user has an email ID / Same is the ID they have in Ashby as
+// well / Isnt that a simple match?" - he is right, and this measures it before anything depends on it.
+// Writes NOTHING. Compares the Ashby address against the dashboard's own recruiter list.
+function probe228c() {
+  var dash = loadDriveJson_('dashboard.json') || {};
+  var recs = dash.recruiters || [];
+  var emailById = {}, users = 0, withEmail = 0;
+  ashbyListAll_('/user.list').forEach(function (u) {
+    users++;
+    if (u.email) { emailById[u.id] = String(u.email).trim().toLowerCase(); withEmail++; }
+  });
+  Logger.log('228c| ashby users=' + users + ' withEmail=' + withEmail);
+  var hit = 0, noUid = [], noMail = [];
+  for (var r = 0; r < recs.length; r++) {
+    var rc = recs[r]; if (!rc.name || rc.name === 'Unassigned') continue;
+    if (!rc.userId) { noUid.push(rc.name); continue; }
+    if (emailById[rc.userId]) { hit++; Logger.log('228c| ' + rc.name + ' = ' + emailById[rc.userId]); }
+    else noMail.push(rc.name);
+  }
+  Logger.log('228c| recruiters WITH an ashby address: ' + hit);
+  Logger.log('228c| no userId at all (' + noUid.length + '): ' + noUid.join(' | '));
+  Logger.log('228c| userId but no address (' + noMail.length + '): ' + noMail.join(' | '));
+}
+
+// #228c: the full refresh, wrapped so run210's trigger sweep cannot touch refreshDashboardData's own
+// schedule. 🚨 NEVER point RUN210_FN at refreshDashboardData itself - it has three clock triggers.
+function run228cApply() {
+  refreshDashboardData();
 }
