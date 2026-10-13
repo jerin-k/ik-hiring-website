@@ -233,9 +233,10 @@ export function setRecruiterDate(name, field, value) {
 // `aditya.s` was ambiguous between Aditya Singh and Siva Sruthi V S. A confident wrong match would have
 // shown one person another's numbers under their own name, which is worse than no default at all.
 // So: a committed baseline, overridden by whatever Admin publishes.
-// ✅ The two that measurement could NOT settle were put to Jerin and he settled them by hand (13 Oct):
-//    `aditya.s@` is Aditya Singh (not Siva Sruthi V S), and the `talent@` mailbox really is the
-//    'Sangha - Talent Diary' agency record. Both are below now — decided by a person, not inferred.
+// ✅ The one that measurement could not settle was put to Jerin and he settled it by hand (13 Oct):
+//    `aditya.s@` is Aditya Singh, not Siva Sruthi V S. 🚨 The other — `talent@` — turned out to be HIS OWN
+//    TEST ID, not the agency's, so it is mapped to NOBODY. Measurement said it matched 'Sangha - Talent
+//    Diary' confidently; it was wrong, and only a person could know that.
 const RECRUITER_EMAIL_BASELINE = {
   'Gopu Nair V': 'gopu.nair@interviewkickstart.com',
   'Alokita Dhumne': 'alokita.dhumne@interviewkickstart.com',
@@ -249,9 +250,12 @@ const RECRUITER_EMAIL_BASELINE = {
   'Tina Anisha Bibeiro': 'tina.anisha@interviewkickstart.com',
   'V Pooja': 'v.pooja@interviewkickstart.com',
   'G Darshan': 'g.darshan@interviewkickstart.com',
-  'Aditya Singh': 'aditya.s@interviewkickstart.com',          // Jerin, 13 Oct: not Siva Sruthi V S
-  'Sangha - Talent Diary': 'talent@interviewkickstart.com'    // Jerin, 13 Oct: the agency mailbox IS this record
+  'Aditya Singh': 'aditya.s@interviewkickstart.com'           // Jerin, 13 Oct: not Siva Sruthi V S
 };
+// 🚨 'Sangha - Talent Diary' is deliberately ABSENT. I briefly mapped it to talent@interviewkickstart.com,
+// which is 🗣 "my own test ID" (Jerin, 13 Oct) — that would have opened HIS test sign-in filtered to the
+// agency's record, the exact harm this stored map exists to prevent. Sangha's real address is
+// sangha.moulik@talentdiary.in, which #228c already supplies straight from Ashby, so no entry is needed.
 
 // { recruiter name: email }. Published config wins; the baseline fills the rest, so the default works on day
 // one without waiting for an admin pass.
