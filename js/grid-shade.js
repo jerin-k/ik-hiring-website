@@ -17,6 +17,19 @@ const isTop = (tr) => tr.classList.contains('lvl-pod') || tr.classList.contains(
 const depthOf = (tr) => (tr.dataset.path || '').split('-').length;
 const tint = (td, n, cls) => { if (td && n) td.innerHTML = `<span class="${cls} gs-h${n}">${td.innerHTML}</span>`; };
 
+// #231b (Jerin, 13 Oct 2026): now the latest date sits at the RIGHT, anything that scrolls sideways must OPEN
+// at that end — 🗣 "If there are 30 days to show; the page should start with a defaul view of showing latest
+// date scrolled to the right end." Without this a long range opens on the OLDEST days and today is off screen,
+// which is worse than before the flip.
+// ⚠ Called after the render that filled the box: widths are not final until the browser has laid it out, so it
+// is set once now and once on the next frame. A box that does not overflow is left alone.
+export function scrollToLatest(el) {
+  if (!el) return;
+  const put = () => { if (el.scrollWidth > el.clientWidth + 1) el.scrollLeft = el.scrollWidth; };
+  put();
+  requestAnimationFrame(put);
+}
+
 // Momentum: `dates` = the Date for each day column, in the order the header draws them (columns 3+ after name and total).
 export function shadeMomentum(tbody, dates) {
   const table = tbody && tbody.closest('table');

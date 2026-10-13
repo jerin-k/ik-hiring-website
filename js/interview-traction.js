@@ -10,6 +10,7 @@
 // is often never submitted, so scoring on it would leave silent holes. The pipeline (Traction.gs) decides
 // the four buckets; this file only ADDS UP and DRAWS. The chart computes nothing of its own.
 import { defsBlock } from './definitions.js';
+import { scrollToLatest } from './grid-shade.js';   // #231b
 
 const SERIES = [
   { key: 'Select',                  col: 'var(--it-sel)' },
@@ -422,6 +423,8 @@ export function mountInterviewTraction(host, data, getScope, opts) {
     });
     if (hidden) html += `<p class="it-empty">${hidden} round${hidden === 1 ? '' : 's'} with no interviews in this period ${hidden === 1 ? 'is' : 'are'} hidden.</p>`;
     chartsEl.innerHTML = html;
+    // #231b: a chart wider than its box opens on the OLDEST bars otherwise, which day view hits every time.
+    chartsEl.querySelectorAll('.it-scroller').forEach(scrollToLatest);
   }
   return render;
 }
