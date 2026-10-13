@@ -10,7 +10,7 @@ import { shadeMomentum, shadeTis, shareBars, colorShareBars, shadePipeline } fro
 import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
-import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates } from '../metric-config.js';   // #111: dates
+import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates, signedInEmail, recruiterForEmail } from '../metric-config.js';   // #111: dates · #228b: whose tab this is
 import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.js';   // #120a: the Job filter narrows every number · #125
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
 // so all three name the stages identically and in the same order. One owner, three readers.
@@ -3972,6 +3972,21 @@ export function initRecruiterFilters(baseData) {
   keepDatesInBounds(document.getElementById('recVelFrom'), document.getElementById('recVelTo'));   // #127b
   selectCurrentQuarter(document.getElementById('recVelYear'), document.getElementById('recVelQuarter'), false);
   applyVelYearQuarter();
+
+  // #228b (Jerin, 13 Oct 2026): a recruiter opening this tab sees THEIR OWN name already ticked.
+  // 🗣 "Doesnt mean that they cannot select someone elses name & check out their data. Thats fine!" — so it
+  // is a DEFAULT, not a lock: untick it and the whole team comes back, exactly as before.
+  // Done HERE, after every control is wired, because ticking fires the chip's own change handler and that
+  // re-renders the page. Anyone who is not a recruiter — or whose address nobody has set in Admin — gets no
+  // default at all and sees everyone, which is the old behaviour.
+  const meRec = recruiterForEmail(signedInEmail());
+  if (meRec) {
+    const box = document.getElementById('msRec');
+    const cb = box && [...box.querySelectorAll('input[type=checkbox]')].find(c => c.value === meRec);
+    // Only if they are actually on this tab's list — a recruiter with no pod is excluded (decision #23),
+    // and silently ticking a name that is not there would leave the chip reading a person with no rows.
+    if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
 
   renderAll();
   showTab('fulfilment');

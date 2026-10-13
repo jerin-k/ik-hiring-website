@@ -2,7 +2,7 @@ import './ui-scale.js';   // #140: first, so every chart is built by the scaled 
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
 import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
 import { loadDashboardData, getFilteredData, getLastUpdated } from './data.js';
-import { loadMetricConfig } from './metric-config.js';
+import { loadMetricConfig, setSignedInEmail} from './metric-config.js';
 import { renderHome, initHomeFilters } from './pages/home.js';
 import { renderHmReport, initHmFilters } from './pages/hm-report.js';
 import { renderRecruiter, initRecruiterFilters } from './pages/recruiter.js';
@@ -60,6 +60,7 @@ async function onAuthSuccess(user) {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   document.getElementById('user-email').textContent = user.email;
+  setSignedInEmail(user.email);   // #228b: who this is, for the Recruiter tab's default filter
 
   accessConfig = await loadAccessConfig();
   await loadDashboardData();

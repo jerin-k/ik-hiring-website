@@ -2236,6 +2236,14 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .it-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; margin: 0.45rem 0; }
 /* #228a: the recruiter-attribution gap, said out loud above the charts. Amber because it is a caveat on
    what is shown, the same weight as the other 'worth knowing' notes - never a red alarm. */
+/* #228b: the sign-in address beside each recruiter in Admin. Same quiet treatment as the other cfg inputs;
+   an unset one is muted rather than flagged, because most people are not recruiters and blank is normal. */
+.cfg-email { appearance:none; width:100%; max-width:14rem; height:1.75rem; padding:0 0.5rem;
+  border:1px solid var(--border); border-radius:0.375rem; font-family:inherit; font-size:0.6875rem;
+  background:var(--card); color:var(--text); }
+.cfg-email:hover { border-color:var(--muted); }
+.cfg-email:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 0.1875rem rgba(78,107,166,0.16); }
+.cfg-email.is-empty { color:var(--muted); background:var(--bg); }
 .it-gap { font-size: 0.6875rem; color: #9a6b1f; margin: 0 0 0.9rem; line-height: 1.5; max-width: 62rem; }
 .it-trendkey { display: inline-flex; align-items: center; }
 .it-trendkey::before { content: ''; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.3rem;
