@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-13T10:22:22.512Z",
+  "updatedAt": "2026-10-13T10:22:54.630Z",
   "notes": {
     "19982198": {
       "text": "Sourcing in progress .",
@@ -111,6 +111,11 @@
       "text": "5 demos scheduled",
       "by": "Oshin",
       "at": "2026-10-13T10:22:22.512Z"
+    },
+    "5a5f471f": {
+      "text": "2 demos scheduled",
+      "by": "Oshin",
+      "at": "2026-10-13T10:22:54.630Z"
     }
   }
 }
