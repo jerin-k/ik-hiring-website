@@ -158,6 +158,10 @@ function refreshInterviewTraction() {
 
   // --- classify and bucket: job8 -> round -> day -> [sel, rej, can, pen] ---
   var byJob = {}, tot = { sel: 0, rej: 0, can: 0, pen: 0 }, noJob = 0, unmapped = {};
+  // #228a (Jerin, 13 Oct 2026): the SAME bookings, also bucketed by the recruiter on the application, so
+  // Recruiter Efficiency can show this panel narrowed to one person. recOf[] is already built at the top of
+  // this function from stage_events.json .r and archived_apps.json .r - nothing new is fetched.
+  var byRec = {}, noRec = 0;
   for (var z = 0; z < rows.length; z++) {
     var R = rows[z], title = nameOf[R.sid];
     if (!title) { unmapped['(unresolved stage)'] = (unmapped['(unresolved stage)'] || 0) + 1; continue; }
@@ -173,8 +177,18 @@ function refreshInterviewTraction() {
     if (!j8) { noJob++; continue; }
     var slot = ((byJob[j8] || (byJob[j8] = {}))[title] || (byJob[j8][title] = {}));
     var cell = slot[R.d] || (slot[R.d] = [0, 0, 0, 0]);
+    // !! ONE classification, TWO buckets. The outcome is decided once below and written to both, so the
+    // recruiter view can NEVER drift from the role view - the thing Rule 3 exists to prevent. Same population
+    // too: a booking with no known role is dropped above, before either bucket is opened.
+    var recNm = recOf[R.app] || '', rcell = null;
+    if (recNm) {
+      var rjob = (byRec[recNm] || (byRec[recNm] = {}));
+      var rslot = ((rjob[j8] || (rjob[j8] = {}))[title] || (rjob[j8][title] = {}));
+      rcell = rslot[R.d] || (rslot[R.d] = [0, 0, 0, 0]);
+    } else noRec++;
+    var bump = function (i) { cell[i]++; if (rcell) rcell[i]++; };
 
-    if (R.canc) { cell[2]++; tot.can++; continue; }
+    if (R.canc) { bump(2); tot.can++; continue; }
     var advanced = false, mine = laterByApp[R.app] || [];
     for (var m = 0; m < mine.length; m++) if (mine[m][0] > ord && mine[m][1] >= R.d) { advanced = true; break; }
     if (!advanced) {
@@ -182,12 +196,12 @@ function refreshInterviewTraction() {
       for (var w = 0; w < ev.length; w++) { var oo = TRACTION_KORD[ev[w].k];
         if (oo && oo > ord && ev[w].e && ev[w].e >= R.d) { advanced = true; break; } }
     }
-    if (advanced) { cell[0]++; tot.sel++; }
+    if (advanced) { bump(0); tot.sel++; }
     // #209: archived is decided by the archived LIST now, not by 'missing from stage_events' - that
     // proxy was only ever right because the archived trail was absent. An application WITH a trail
     // that shows no later stage is still in flight; one with no trail anywhere is archived.
-    else if (archived[R.app] || !winOf[R.app]) { cell[1]++; tot.rej++; }
-    else { cell[3]++; tot.pen++; }
+    else if (archived[R.app] || !winOf[R.app]) { bump(1); tot.rej++; }
+    else { bump(3); tot.pen++; }
   }
 
   var un = Object.keys(unmapped);
@@ -200,12 +214,20 @@ function refreshInterviewTraction() {
     from: fromDay,
     rounds: TRACTION_ROUNDS,
     byJobRoundDay: byJob,
+    byRecJobRoundDay: byRec,
     totals: { select: tot.sel, reject: tot.rej, cancelled: tot.can, awaiting: tot.pen,
-              bookings: tot.sel + tot.rej + tot.can + tot.pen, excludedNoRole: noJob },
+              bookings: tot.sel + tot.rej + tot.can + tot.pen, excludedNoRole: noJob,
+              noRecruiter: noRec },
     skippedStages: unmapped
   };
   saveDriveJson_('interview_traction.json', out);
   pushFileToGitHub_('data/interview_traction.json', JSON.stringify(out), 'Update interview traction');
+  // #228a: coverage decides whether the recruiter panel is usable, so it is MEASURED every run, never
+  // assumed. A booking with no recruiter is counted here and shown on the page - never silently dropped.
+  var withRec = out.totals.bookings - noRec;
+  Logger.log('traction #228a: ' + Object.keys(byRec).length + ' recruiters, ' + withRec + ' of ' +
+    out.totals.bookings + ' bookings carry a recruiter (' +
+    (out.totals.bookings ? Math.round(withRec / out.totals.bookings * 100) : 0) + '%), ' + noRec + ' do not');
   Logger.log('=== traction done: select ' + tot.sel + ', reject ' + tot.rej + ', cancelled ' + tot.can +
     ', awaiting ' + tot.pen + ' (' + out.totals.bookings + ' bookings, ' + noJob + ' with no job) in ' +
     Math.round((Date.now() - t0) / 1000) + 's ===');
