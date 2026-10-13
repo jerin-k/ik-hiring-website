@@ -226,7 +226,11 @@ function assessReportCol_(header, name) {
 }
 
 // Returns { byApp: { applicationId: [day, ...] }, stats: {...} }. NO stage - the caller infers it.
+var ASSESS_REPORT_CACHE_ = null;
 function assessReportAssessments_() {
+  // One report.synchronous per run. refreshStageHistory reaches this from Throughput AND from Momentum, and the
+  // call costs ~8 s; without this the same report would be pulled two or three times in a single run.
+  if (ASSESS_REPORT_CACHE_) return ASSESS_REPORT_CACHE_;
   var empty = { byApp: {}, stats: { ok: false, rows: 0, kept: 0, status: {}, partner: {} } };
   var resp = null;
   try { resp = ashbyPost_('/report.synchronous', { reportId: ASSESS_REPORT_ID }); }
@@ -285,14 +289,83 @@ function assessReportAssessments_() {
   Logger.log('assess report: ' + kept + ' counted (Complete+Started, deduped) across ' + Object.keys(byApp).length
     + ' applications; dropped ' + dupes + ' repeat, ' + noApp + ' with no application id, ' + noDay
     + ' with no usable sent date');
-  return { byApp: byApp, stats: { ok: true, shape: t.shape, header: t.header, rows: t.rows.length,
+  ASSESS_REPORT_CACHE_ = { byApp: byApp, stats: { ok: true, shape: t.shape, header: t.header, rows: t.rows.length,
     kept: kept, apps: Object.keys(byApp).length, status: byStatus, partner: byPartner,
     noApp: noApp, noDay: noDay, dupes: dupes } };
+  return ASSESS_REPORT_CACHE_;
+}
+
+// ===== #222b - STAGE HISTORY FOR THE ASSESSMENT POPULATION. Fetched ONCE and kept. =====
+// Jerin, 12 Oct 2026, in full: "Why not." He was right. I had called 295 of the 496 assessments unplaceable;
+// probe222b asked Ashby for all 294 of their applications and got all 294 back - 0 empty, 0 failed - which made
+// 291 of the 295 placeable. 99%, not 41%.
+//
+// WHY THEY WERE MISSING, AND WHY THAT FOOLED ME: they were missing from OUR stores, not from Ashby.
+// stage_events.json holds LIVE applications; archived_late_stage.json was built for Drop and only ever covered
+// applications that reached Ref Check / Documentation / Offer. An assessment is exactly where people get REJECTED,
+// so the archived assessment population was never in scope for either. A good explanation of an absence is not
+// evidence that it cannot be fetched. [[feedback_ask-the-real-question]]
+//
+// ARCHIVED STAGE HISTORY IS FROZEN (CLAUDE.md rule 8b), so an archived application is fetched once and cached for
+// ever. One that is NOT archived is deliberately NOT cached - it can still move - so it costs a call each run, and
+// there are few of them (19 of the 294 measured). First catch-up ~162 s; near-nothing after that.
+var ASSESS_WIN_FILE = 'assess_windows.json';
+var ASSESS_WIN_BUDGET_MS = 420000;   // 7 min. refreshStageHistory ran 575 s today against a 30-min ceiling.
+
+function assessWindowBackfill_(need, win) {
+  var store = loadDriveJson_(ASSESS_WIN_FILE) || {};
+  if (!store.win) store.win = {};     // archived -> the stage window, frozen
+  if (!store.none) store.none = {};   // archived, but no stage we map -> never ask again
+  var served = 0, todo = [], i;
+  for (i = 0; i < need.length; i++) {
+    var a = need[i];
+    if (store.win[a]) { win[a] = store.win[a]; served++; continue; }
+    if (store.none[a]) { served++; continue; }
+    todo.push(a);
+  }
+  if (!todo.length) {
+    Logger.log('assess windows: ' + served + ' served from the cache, nothing new to fetch');
+    return { served: served, fetched: 0, live: 0, empty: 0, failed: 0, left: 0 };
+  }
+  var t0 = Date.now(), fetched = 0, live = 0, empty = 0, failed = 0;
+  for (i = 0; i < todo.length; i++) {
+    if (Date.now() - t0 > ASSESS_WIN_BUDGET_MS) break;      // resume next run - the store is saved below anyway
+    var id = todo[i];
+    try {
+      var resp = ashbyPost_('/application.listHistory', { applicationId: id });
+      var hist = resp.results || resp.history || [];
+      var ev = [], arch = false;
+      for (var h = 0; h < hist.length; h++) {
+        // 'Archived' is not a pipeline stage and has no STAGE_KEY_MAP entry, but it is the ONLY record that
+        // this application is finished and its history will never change. 275 of the 294 measured carried one.
+        if (hist[h].title === 'Archived') arch = true;
+        var k = STAGE_KEY_MAP[hist[h].title];
+        if (!k) continue;
+        ev.push({ k: k,
+          e: hist[h].enteredStageAt ? dayKey_(new Date(hist[h].enteredStageAt).getTime()) : null,
+          l: hist[h].leftStageAt ? dayKey_(new Date(hist[h].leftStageAt).getTime()) : null });
+      }
+      if (ev.length) {
+        win[id] = ev;
+        if (arch) { store.win[id] = ev; fetched++; } else { live++; }
+      } else {
+        empty++;
+        if (arch) store.none[id] = 1;
+      }
+    } catch (e) { failed++; }
+  }
+  saveDriveJson_(ASSESS_WIN_FILE, store);
+  var left = todo.length - i;
+  Logger.log('assess windows: ' + served + ' from cache, ' + fetched + ' archived and cached, ' + live
+    + ' still live (re-read each run), ' + empty + ' with no mapped stage, ' + failed + ' failed'
+    + (left > 0 ? ', ' + left + ' LEFT for the next run (time budget)' : '')
+    + ' in ' + Math.round((Date.now() - t0) / 1000) + 's');
+  return { served: served, fetched: fetched, live: live, empty: empty, failed: failed, left: left };
 }
 
 // #222 IS OFF until Jerin has seen the before-and-after (his review gate, step 12). probe222 shows exactly what
 // flipping this does, and writes nothing. Flip to true in the SAME edit that ships the panel wording.
-var ASSESS_USE_REPORT = false;
+var ASSESS_USE_REPORT = true;    // LIVE from 12 Oct 2026, with Jerin at the review gate. See the note above.
 
 function assessFeedback_(ends) {
   var rows = [];
@@ -393,6 +466,12 @@ function computeAssessedRollups_(events, opts) {
   // assessment has no interview attached to carry one. So the stage is INFERRED from our own stage history,
   // through the very same assessStageAt_() an unmatched feedback form already goes through. It is an inference
   // and is labelled as one on every panel that shows it.
+  // #222b (Jerin: "Why not.") - the application behind an assessment is often archived AT the assessment
+  // stage, which is the one population neither stage store ever covered. Fetch exactly those, once, and keep them.
+  var needW = [];
+  for (var rNeed in rep) if (!win[rNeed]) needW.push(rNeed);
+  if (needW.length) assessWindowBackfill_(needW, win);
+
   var repPlaced = 0, repUnplaced = 0;
   for (var ra in rep) {
     var rdays = rep[ra] || [];
@@ -642,6 +721,270 @@ function probe222() {
     Logger.log(pad('SPAN', 14) + '    ' + pad(span(A), 24) + pad(span(B), 24)
       + '  <== the span gets WORSE and that is it becoming TRUE');
   });
+  // ----- MOMENTUM, under Jerin's ruling: EVERY assessment forced to Online Assessment, whatever stage it fired
+  // in. Toggling the global is safe here - the probe writes nothing and it is put straight back.
+  Logger.log('');
+  Logger.log('===== #222 - MOMENTUM, before and after  (nothing written) =====');
+  var keepFlag = ASSESS_USE_REPORT;
+  ASSESS_USE_REPORT = false; var M1 = computeTofuRollups_(events);
+  ASSESS_USE_REPORT = true;  var M2 = computeTofuRollups_(events);
+  ASSESS_USE_REPORT = keepFlag;
+  function tofuTot(res) {
+    var by = res.tofuByJob || {}, out = {};
+    for (var jj in by) for (var qq in by[jj]) {
+      var v = by[jj][qq];
+      out[qq] = (out[qq] || 0) + (typeof v === 'number' ? v : ((v && (v.n || v.a || v.count)) || 0));
+    }
+    return out;
+  }
+  var mA = tofuTot(M1), mB = tofuTot(M2), qSeen = {};
+  for (var qa in mA) qSeen[qa] = 1;
+  for (var qb in mB) qSeen[qb] = 1;
+  Object.keys(qSeen).sort().forEach(function (q) {
+    var x = mA[q] || 0, y = mB[q] || 0;
+    Logger.log('  ' + q + '    today ' + x + '    with #222 ' + y + (x !== y ? '    <== CHANGED' : ''));
+  });
+  Logger.log('  arrivals in total: today ' + ((M1.tofuMeta && M1.tofuMeta.arrivals) || '?')
+    + '    with #222 ' + ((M2.tofuMeta && M2.tofuMeta.arrivals) || '?'));
+
   Logger.log('');
   Logger.log('probe222 done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
+}
+
+// ===== #222b - CAN THE 295 "UNPLACEABLE" ASSESSMENTS BE GIVEN A STAGE? Jerin, 12 Oct: "Why not." =====
+// He was right to push. They are unplaceable only because we never FETCHED their history, not because it does not
+// exist. `stage_events.json` holds LIVE applications; `archived_late_stage.json` deliberately holds only those that
+// reached Ref Check / Documentation / Offer (it was built for Drop). Somebody archived AT the assessment stage was
+// never in scope for either store - which is precisely the population an assessment produces.
+// `application.listHistory` answers for ANY single application, and the report hands us the exact list, so this
+// walks all of them and reports how many become placeable. WRITES NOTHING.
+function probe222b() {
+  var t0 = Date.now();
+  var events = loadDriveJson_('stage_events.json') || {};
+  if (!Object.keys(events).length) { Logger.log('probe222b REFUSED: stage_events.json is empty'); return; }
+  var rep = assessReportAssessments_();
+  if (!rep.stats.ok) { Logger.log('probe222b STOPPED: the report returned no usable rows'); return; }
+
+  var win = {};
+  for (var id in events) win[id] = events[id].ev || [];
+  var archWin = (loadDriveJson_('archived_late_stage.json') || {}).win || {};
+  for (var aid in archWin) if (!win[aid]) win[aid] = archWin[aid];
+
+  var todo = [], missedAssessments = 0;
+  for (var app in rep.byApp) if (!win[app]) { todo.push(app); missedAssessments += (rep.byApp[app] || []).length; }
+  Logger.log('probe222b: ' + todo.length + ' applications hold ' + missedAssessments
+    + ' counted assessments and have NO stage window today.');
+
+  var got = 0, empty = 0, failed = 0, placed = 0, noStageOnDay = 0, byStage = {}, unmapped = {}, stopped = -1;
+  for (var i = 0; i < todo.length; i++) {
+    if (Date.now() - t0 > 1500000) { stopped = i; break; }          // 25-min guard, well inside the 30-min trigger
+    var a = todo[i];
+    try {
+      var resp = ashbyPost_('/application.listHistory', { applicationId: a });
+      var hist = resp.results || resp.history || [];
+      if (!hist.length) { empty++; continue; }
+      var ev = [];
+      for (var h = 0; h < hist.length; h++) {
+        var k = STAGE_KEY_MAP[hist[h].title];
+        if (!k) { if (hist[h].title) unmapped[hist[h].title] = (unmapped[hist[h].title] || 0) + 1; continue; }
+        ev.push({ k: k,
+          e: hist[h].enteredStageAt ? dayKey_(new Date(hist[h].enteredStageAt).getTime()) : null,
+          l: hist[h].leftStageAt ? dayKey_(new Date(hist[h].leftStageAt).getTime()) : null });
+      }
+      got++;
+      var days = rep.byApp[a] || [];
+      for (var d = 0; d < days.length; d++) {
+        var ks = assessStageAt_(ev, days[d]);
+        if (!ks) { noStageOnDay++; continue; }
+        byStage[ks] = (byStage[ks] || 0) + 1; placed++;
+      }
+    } catch (e) { failed++; }
+    if (i && i % 100 === 0) Logger.log('  ' + i + '/' + todo.length + ' (' + Math.round((Date.now() - t0) / 1000) + 's)');
+  }
+
+  Logger.log('');
+  Logger.log('===== #222b - ARE THE "UNPLACEABLE" ONES RECOVERABLE? =====');
+  Logger.log('asked Ashby for   : ' + todo.length + ' applications' + (stopped >= 0 ? '  (STOPPED at ' + stopped + ' on the time guard)' : ''));
+  Logger.log('history came back : ' + got + '   (empty ' + empty + ', call failed ' + failed + ')');
+  Logger.log('ASSESSMENTS NOW PLACEABLE: ' + placed + ' of ' + missedAssessments
+    + '   (' + (missedAssessments ? Math.round(100 * placed / missedAssessments) : 0) + '%)');
+  Logger.log('history but no stage on the assessment day: ' + noStageOnDay);
+  Logger.log('WHERE THEY LAND:');
+  ASSESS_ORDER.forEach(function (st) { if (byStage[st]) Logger.log('  ' + st + String('                    ').substring(st.length) + byStage[st]); });
+  var un = Object.keys(unmapped);
+  if (un.length) Logger.log('UNMAPPED stage titles (skipped, and they count for nothing): '
+    + un.map(function (t) { return t + ' x' + unmapped[t]; }).join(', '));
+  Logger.log('');
+  Logger.log('probe222b done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
+}
+
+// ===== #223 - ASSESSMENTS SET UP AND NEVER SENT, and the people parked in Online Assessment. WRITES NOTHING. =====
+// Jerin, 12 Oct 2026, asked whether this deserved its own task: "Yes."
+// This is a PROCESS finding, not a reporting one. #222 made it visible; it does not fix it. The point of this probe
+// is to turn "231 assessments were never sent" into something a person can act on: WHICH recruiter, WHICH role,
+// and HOW LONG it has been sitting.
+// PII: no candidate identity leaves Ashby here - only application ids, and nothing is written anywhere public.
+function probe223() {
+  var t0 = Date.now();
+  var resp = null;
+  try { resp = ashbyPost_('/report.synchronous', { reportId: ASSESS_REPORT_ID }); }
+  catch (e) { Logger.log('probe223 STOPPED: report.synchronous failed - ' + e.message); return; }
+  var r = resp && resp.results;
+  if (!r || String(r.status || '').toLowerCase() !== 'complete') {
+    Logger.log('probe223 STOPPED: report status "' + (r && r.status) + '"'); return;
+  }
+  var t = assessReportShape_(r.reportData);
+  if (!t || !t.rows.length) { Logger.log('probe223 STOPPED: reportData unreadable'); return; }
+  var cApp = assessReportCol_(t.header, 'Ashby Job Consideration ID');
+  var cSt  = assessReportCol_(t.header, 'Activity Status');
+  if (cApp < 0 || cSt < 0) { Logger.log('probe223 STOPPED: required column missing'); return; }
+
+  var events = loadDriveJson_('stage_events.json') || {};
+  var who = {};
+  for (var aid in events) who[aid] = { r: events[aid].r, j: events[aid].j };
+  var arch = (loadDriveJson_('archived_apps.json') || {}).apps || [];
+  arch.forEach(function (a) { if (a && a.id && !who[a.id]) who[a.id] = { r: a.r || null, j: a.j || null }; });
+  var jobName = {};
+  try {
+    var dash = loadDriveJson_('dashboard.json') || {};
+    (dash.jobs || []).forEach(function (j) { jobName[String(j.id || '').substring(0, 8)] = j.title || '(untitled)'; });
+  } catch (eD) { Logger.log('probe223: dashboard.json unreadable, roles show as ids - ' + eD.message); }
+
+  var NEVER_SENT = { 'Waiting to Start': 1, 'Starting': 1 };
+  var byRec = {}, byJob = {}, nUnsent = 0, noOwner = 0, unsentApps = {};
+  t.rows.forEach(function (row) {
+    var st = String(row[cSt] == null ? '' : row[cSt]).trim();
+    if (!NEVER_SENT[st]) return;
+    nUnsent++;
+    var app = String(row[cApp] == null ? '' : row[cApp]).trim();
+    if (!app) { noOwner++; return; }
+    unsentApps[app] = 1;
+    var w = who[app];
+    if (!w) { noOwner++; return; }
+    var rec = w.r || '(no recruiter on the application)';
+    var j8 = w.j ? String(w.j).substring(0, 8) : null;
+    byRec[rec] = (byRec[rec] || 0) + 1;
+    if (j8) { var key = (jobName[j8] || j8); byJob[key] = (byJob[key] || 0) + 1; }
+  });
+
+  var today = dayKey_(Date.now());
+  function daysBetween(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+  var parked = 0, parkedRec = {}, ages = [], parkedWithUnsent = 0, oldest = 0;
+  for (var id in events) {
+    var ev = events[id].ev || [], inOa = null;
+    for (var i = 0; i < ev.length; i++) {
+      if (ev[i].k !== 'oa' || !ev[i].e) continue;
+      if (ev[i].l) continue;
+      if (!inOa || ev[i].e > inOa) inOa = ev[i].e;
+    }
+    if (!inOa) continue;
+    parked++;
+    var age = daysBetween(inOa, today);
+    ages.push(age);
+    if (age > oldest) oldest = age;
+    var rec2 = (events[id].r) || '(no recruiter on the application)';
+    var cell = parkedRec[rec2] || (parkedRec[rec2] = { n: 0, unsent: 0, oldest: 0 });
+    cell.n++;
+    if (cell.oldest < age) cell.oldest = age;
+    if (unsentApps[id]) { cell.unsent++; parkedWithUnsent++; }
+  }
+  ages.sort(function (a, b) { return a - b; });
+  var median = ages.length ? ages[Math.floor(ages.length / 2)] : 0;
+
+  function top(obj, n, isCell) {
+    return Object.keys(obj).sort(function (a, b) {
+      var va = isCell ? obj[a].n : obj[a], vb = isCell ? obj[b].n : obj[b];
+      return vb - va;
+    }).slice(0, n);
+  }
+
+  Logger.log('');
+  Logger.log('===== #223 - ASSESSMENTS NEVER SENT =====');
+  Logger.log('total never sent (configured, nobody pressed send): ' + nUnsent
+    + '   across ' + Object.keys(unsentApps).length + ' candidates'
+    + (noOwner ? '   (' + noOwner + ' could not be tied to a recruiter)' : ''));
+  Logger.log('BY RECRUITER:');
+  top(byRec, 15).forEach(function (k) { Logger.log('  ' + byRec[k] + '   ' + k); });
+  Logger.log('BY ROLE:');
+  top(byJob, 15).forEach(function (k) { Logger.log('  ' + byJob[k] + '   ' + k); });
+  Logger.log('');
+  Logger.log('===== #223 - SITTING IN ONLINE ASSESSMENT TODAY =====');
+  Logger.log('people parked there : ' + parked);
+  Logger.log('how long they have waited: median ' + median + ' days, longest ' + oldest + ' days');
+  Logger.log('OF THOSE, waiting on an assessment NOBODY SENT: ' + parkedWithUnsent
+    + '   (' + (parked ? Math.round(100 * parkedWithUnsent / parked) : 0) + '%)');
+  Logger.log('BY RECRUITER  (parked / of which never sent / longest wait in days):');
+  top(parkedRec, 20, true).forEach(function (k) {
+    var c = parkedRec[k];
+    Logger.log('  ' + c.n + ' / ' + c.unsent + ' / ' + c.oldest + '   ' + k);
+  });
+  Logger.log('');
+  Logger.log('probe223 done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
+}
+
+// ===== #224b - TRACE: how Momentum arrives at its number for ONE role. WRITES NOTHING. =====
+// Jerin, 12 Oct 2026: "for automation role, are you sure that 9 ... is correct? If so, help me understand how we
+// arrived at it?" This lists every candidate that counts, the day it counted them, and WHICH signal did it - then
+// checks the total against the PUBLISHED rollup, which is the outside check: if the trace and the shipped file
+// disagree, the trace is wrong, not the file.
+var TRACE_JOB8 = '378e5361';   // Intern - Software Development Engineer (Automation)
+function probeTrace() {
+  var t0 = Date.now();
+  var events = loadDriveJson_('stage_events.json') || {};
+  if (!Object.keys(events).length) { Logger.log('probeTrace REFUSED: stage_events.json empty'); return; }
+
+  var who = {};
+  for (var aid in events) who[aid] = { r: events[aid].r, j: events[aid].j };
+  var arch = (loadDriveJson_('archived_apps.json') || {}).apps || [];
+  arch.forEach(function (a) { if (a && a.id && !who[a.id]) who[a.id] = { r: a.r || null, j: a.j || null }; });
+
+  var src = {};
+  function note(app, day, label) {
+    if (!app || !day) return;
+    (src[app] || (src[app] = [])).push({ d: day, s: label });
+  }
+  var oa = tofuAssignmentDays_(/online assessment/i, 'the Online Assessment stage');
+  for (var a1 in oa) oa[a1].forEach(function (d) { note(a1, d, 'take-home triggered in OA'); });
+  if (ASSESS_USE_REPORT) {
+    var rep = assessReportAssessments_();
+    for (var a2 in rep.byApp) rep.byApp[a2].forEach(function (d) { note(a2, d, 'assessment SENT (#222)'); });
+  }
+  var held = tofuInterviewHeldDays_();
+  for (var a3 in held) held[a3].forEach(function (d) { note(a3, d, 'interview HELD (#221)'); });
+
+  var rows = [];
+  for (var app in src) {
+    var w = who[app] || {};
+    if (!w.j || String(w.j).substring(0, 8) !== TRACE_JOB8) continue;
+    var list = src[app].slice().sort(function (x, y) { return x.d < y.d ? -1 : (x.d > y.d ? 1 : 0); });
+    var first = list[0];
+    var q = tofuQuarter_(first.d);
+    rows.push({ app: app.substring(0, 8), day: first.d, q: q, why: first.s, n: list.length,
+                rec: w.r || '(none)' });
+  }
+  rows.sort(function (x, y) { return x.day < y.day ? -1 : 1; });
+
+  Logger.log('');
+  Logger.log('===== #224b - EVERY CANDIDATE MOMENTUM COUNTS ON THIS ROLE =====');
+  Logger.log('Momentum counts each candidate ONCE, on their FIRST evaluation ever (#221).');
+  Logger.log('app      first evaluation  quarter   what counted them                 recruiter');
+  var byQ = {};
+  rows.forEach(function (r) {
+    byQ[r.q] = (byQ[r.q] || 0) + 1;
+    Logger.log('  ' + r.app + '  ' + r.day + '   ' + r.q + '   '
+      + (r.why + '                                 ').substring(0, 33) + r.rec);
+  });
+  Logger.log('');
+  Logger.log('TRACE TOTALS by quarter: ' + JSON.stringify(byQ) + '   (' + rows.length + ' candidates in all)');
+
+  var pub = (loadDriveJson_('stage_rollups.json') || {}).tofuByJob || {};
+  var mine = pub[TRACE_JOB8] || {};
+  var pubQ = {};
+  for (var d2 in mine) { var qq = tofuQuarter_(d2); if (qq) pubQ[qq] = (pubQ[qq] || 0) + mine[d2]; }
+  Logger.log('PUBLISHED rollup for the same role: ' + JSON.stringify(pubQ));
+  var ok = JSON.stringify(byQ) === JSON.stringify(pubQ);
+  Logger.log('THE CHECK: trace ' + (ok ? 'MATCHES' : 'DOES NOT MATCH')
+    + ' the shipped file. If it does not, trust the file and fix the trace.');
+  Logger.log('');
+  Logger.log('probeTrace done in ' + Math.round((Date.now() - t0) / 1000) + 's. NOTHING WAS WRITTEN.');
 }
