@@ -1,7 +1,7 @@
 // ===== run210 - KEEP THIS FIRST IN THE FILE. The Run picker cannot be driven, so the function that runs is
 // whichever comes first here; run210 fires RUN210_FN on a one-off trigger (30 min, not the editor 6) and
 // asserts the refreshDashboardData clock triggers are untouched. Point RUN210_FN, open this file, press Run.
-var RUN210_FN = 'probe223';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
+var RUN210_FN = 'run228Apply';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
 function run210() {
   var before = 0, after = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
@@ -131,4 +131,13 @@ function trim204_(a) {
 // refreshStageHistory rebuilds the stage rollups AND calls refreshInterviewTraction, so one run covers both.
 function run222Apply() {
   refreshStageHistory();
+}
+
+
+// #228a (13 Oct 2026): a wrapper with NO TRIGGER OF ITS OWN, so run210's trigger sweep deletes nothing.
+// 🚨 Never point RUN210_FN at refreshStageHistory itself - it HAS its own schedule (four rows on the
+// Triggers page) and run210 deletes every trigger whose handler matches, while its safety check only
+// counts refreshDashboardData. Read-only against Ashby; rewrites interview_traction.json only.
+function run228Apply() {
+  refreshInterviewTraction();
 }
