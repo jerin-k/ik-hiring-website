@@ -232,8 +232,10 @@ export function setRecruiterDate(name, field, value) {
 // 25 logins: 13 matched cleanly, but `talent@` matched the AGENCY record 'Sangha - Talent Diary' and
 // `aditya.s` was ambiguous between Aditya Singh and Siva Sruthi V S. A confident wrong match would have
 // shown one person another's numbers under their own name, which is worse than no default at all.
-// So: a committed baseline of the ones that were unambiguous, overridden by whatever Admin publishes.
-// The two that were NOT safe are deliberately absent — they are for a human to set in Admin.
+// So: a committed baseline, overridden by whatever Admin publishes.
+// ✅ The two that measurement could NOT settle were put to Jerin and he settled them by hand (13 Oct):
+//    `aditya.s@` is Aditya Singh (not Siva Sruthi V S), and the `talent@` mailbox really is the
+//    'Sangha - Talent Diary' agency record. Both are below now — decided by a person, not inferred.
 const RECRUITER_EMAIL_BASELINE = {
   'Gopu Nair V': 'gopu.nair@interviewkickstart.com',
   'Alokita Dhumne': 'alokita.dhumne@interviewkickstart.com',
@@ -246,7 +248,9 @@ const RECRUITER_EMAIL_BASELINE = {
   'Ritika Bhasin': 'ritika.bhasin@interviewkickstart.com',
   'Tina Anisha Bibeiro': 'tina.anisha@interviewkickstart.com',
   'V Pooja': 'v.pooja@interviewkickstart.com',
-  'G Darshan': 'g.darshan@interviewkickstart.com'
+  'G Darshan': 'g.darshan@interviewkickstart.com',
+  'Aditya Singh': 'aditya.s@interviewkickstart.com',          // Jerin, 13 Oct: not Siva Sruthi V S
+  'Sangha - Talent Diary': 'talent@interviewkickstart.com'    // Jerin, 13 Oct: the agency mailbox IS this record
 };
 
 // { recruiter name: email }. Published config wins; the baseline fills the rest, so the default works on day
