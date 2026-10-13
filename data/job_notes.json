@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-09T07:05:36.879Z",
+  "updatedAt": "2026-10-13T10:22:22.512Z",
   "notes": {
     "19982198": {
       "text": "Sourcing in progress .",
@@ -106,6 +106,11 @@
       "text": "HE - 4\nR1 - 3",
       "by": "Deepti",
       "at": "2026-10-09T06:32:02.984Z"
+    },
+    "7c1706f1": {
+      "text": "5 demos scheduled",
+      "by": "Oshin",
+      "at": "2026-10-13T10:22:22.512Z"
     }
   }
 }
