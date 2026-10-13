@@ -287,14 +287,17 @@ export function mountInterviewTraction(host, data, getScope, opts) {
   const allQ = (opts && opts.quarters) || [];
   const onQuarters = (opts && opts.onQuarters) || (() => {});
   const qSel = new Set(allQ.slice(-2));            // the two most recent, ticked to begin with
-  const state = { view: 'week', hide: true };
+  const state = { view: 'day', hide: true };   // #230 (Jerin, 13 Oct 2026): opens on Day
 
   host.innerHTML = `
     <div class="it-controls">
+      <!-- #230 (Jerin, 13 Oct 2026): shortest period first - Day, Week, Month - and the panel OPENS on Day.
+           ⚠ Day view shows the LAST 30 DAYS of the period, not all of it (DAY_WINDOW), so the panel now
+           opens on recent detail rather than the whole range. One module, so all three tabs move together. -->
       <div class="it-seg" role="group" aria-label="Group interviews by">
-        <button type="button" class="active" data-view="week">Week view</button>
+        <button type="button" class="active" data-view="day">Day view</button>
+        <button type="button" data-view="week">Week view</button>
         <button type="button" data-view="month">Month view</button>
-        <button type="button" data-view="day">Day view</button>
       </div>
       <div class="ms it-quarters"></div>
       <div class="ms it-rounds"></div>
