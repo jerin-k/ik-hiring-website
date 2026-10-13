@@ -145,7 +145,7 @@ export const DEFINITIONS = {
   'interview-traction': {
     summary: 'How Interview Traction is counted',
     intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted into one of four outcomes. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
-    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: Online Assessment now counts assessments from every tool &middot; 12 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: added to Recruiter Efficiency, counted per recruiter and role &middot; 13 Oct 2026.',
     groups: [
       {
         heading: 'The four outcomes',
@@ -166,12 +166,13 @@ export const DEFINITIONS = {
           ['The dashed trend line', 'A straight line fitted through the <strong>totals</strong> of the bars shown, so it answers one question: is the volume rising or falling across this period. It follows the bars you are looking at, so changing the rounds, the dates or the view redraws it. It is grey because it is not a fifth outcome.'],
           ['Numbers beside a bar', 'A slice too thin to print a number inside it puts the number <strong>next to the bar</strong>, in that slice&rsquo;s own colour.'],
           ['Rounds and Hide rounds with no interviews', 'The <strong>Rounds</strong> chip chooses which charts appear; Online Assessment and R1 to R5 are on to begin with. The tick-box drops any round with nothing in the period.'],
-          ['Quarter', 'This panel has its <strong>own</strong> Quarter box and you can tick more than one. It opens on the <strong>two most recent quarters</strong>. The page&rsquo;s own Quarter dropdown steps aside while you are here, because it only ever holds one &mdash; and it is what used to stop From and To reaching back past the current quarter.'],
+          ['Quarter', 'On <strong>Hiring Manager</strong> and <strong>Overall Efficiency</strong> this panel has its <strong>own</strong> Quarter box, opening on the two most recent quarters, and the page&rsquo;s single-pick Quarter dropdown steps aside while you are here. On <strong>Recruiter Efficiency</strong> the page already has a multi-pick Quarters chip, so that one governs and the panel adds none of its own &mdash; two period controls over one panel is exactly what was taken away.'],
           ['Each chart has its own scale', 'A round with two bookings is not drawn at the same height as a round with seventy a week. Compare a round against <strong>itself over time</strong>, not against the round above it.'],
         ]
       },
     ],
     warnings: [
+      ['On Recruiter Efficiency, an interview needs a recruiter on the application', 'This panel is built from the recruiter named on the <strong>candidate&rsquo;s application</strong>. An interview whose application names nobody belongs to no recruiter, so it <strong>cannot appear on this tab</strong> &mdash; while it still counts in full on Hiring Manager and Overall Efficiency. <strong>The two tabs will therefore not agree, by design.</strong> How many are affected is printed above the charts for the period you are looking at, because it changes with every refresh. Older months are affected far more than recent ones: the habit of naming a recruiter took hold during Q3.'],
       ['Rescheduled only counts from 7 October 2026', 'When an interview is moved, Ashby <strong>overwrites the original time</strong> and keeps no record of the old one, so moves made before this panel existed cannot be recovered. Cancellations are complete back to 1 July.'],
       ['The most recent days look heavy on Awaiting outcome', 'Nothing is wrong &mdash; those decisions have not been made yet.'],
       ['Do not add the rounds together', 'One candidate doing R1, R2 and R3 appears in all three charts. The rounds are separate questions, not parts of a total.'],

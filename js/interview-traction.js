@@ -55,8 +55,33 @@ function dayStart(scope) {
 }
 
 // Add up every job the scope lets through, for one round, into {day: [s,r,c,p]}.
+// #228a (Jerin, 13 Oct 2026): the Recruiter tab sets scope.byRecruiter, which reads the
+// recruiter -> role -> round -> day store instead, so its Recruiter and Role chips both bite.
+// 🔑 ONE function, deliberately. Hiring Manager and Overall Efficiency pass neither flag and are
+// byte-for-byte unaffected — copying this into the Recruiter page is exactly the drift Rule 3 forbids.
 function daysForRound(tr, round, scope) {
   const out = {};
+  const take = (days) => {
+    if (!days) return;
+    for (const d in days) {
+      if (d < scope.from || d > scope.to) continue;
+      const v = days[d], c = out[d] || (out[d] = [0, 0, 0, 0]);
+      c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; c[3] += v[3];
+    }
+  };
+  if (scope.byRecruiter) {
+    const byRec = tr.byRecJobRoundDay || {};
+    for (const rec in byRec) {
+      if (scope.recOk && !scope.recOk(rec)) continue;
+      const jobs = byRec[rec];
+      for (const j8 in jobs) {
+        if (!j8 || j8 === '(no job)') continue;
+        if (scope.jobOk && !scope.jobOk(j8)) continue;
+        take(jobs[j8][round]);
+      }
+    }
+    return out;
+  }
   const byJob = tr.byJobRoundDay || {};
   for (const j8 in byJob) {
     // #206b: belt and braces. The pipeline no longer emits a '(no job)' bucket, but a cached older file
@@ -64,15 +89,34 @@ function daysForRound(tr, round, scope) {
     // drops by design (#37). Test interviews must never reach a business number.
     if (!j8 || j8 === '(no job)') continue;
     if (scope.jobOk && !scope.jobOk(j8)) continue;
-    const days = byJob[j8][round];
-    if (!days) continue;
-    for (const d in days) {
-      if (d < scope.from || d > scope.to) continue;
-      const v = days[d], c = out[d] || (out[d] = [0, 0, 0, 0]);
-      c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; c[3] += v[3];
-    }
+    take(byJob[j8][round]);
   }
   return out;
+}
+
+// #228a: on the Recruiter tab a booking can only appear if its application names a recruiter, and today
+// many do not — so this panel is SMALLER than the same panel on Hiring Manager and Overall Efficiency.
+// 🚨 Say so on screen, for the period actually being shown. A figure two panels disagree about must never
+// be left for someone to trip over. It is a READING, not a rule, so it belongs here in the live state and
+// never in the definitions block (Rule 6).
+function gapNote(tr, picked, scope) {
+  if (!scope.byRecruiter) return '';
+  // Only when you are looking at EVERYONE. Pick a recruiter and the unattributed interviews are not hers by
+  // definition — nothing is missing from her view — so the line would be a number about a different
+  // population sitting directly above her own.
+  if (scope.recPicked) return '';
+  const base = { from: scope.from, to: scope.to, jobOk: scope.jobOk };
+  let all = 0, mine = 0;
+  const add = (m) => { let n = 0; for (const d in m) n += m[d][0] + m[d][1] + m[d][2] + m[d][3]; return n; };
+  picked.forEach(r => {
+    all  += add(daysForRound(tr, r, base));
+    mine += add(daysForRound(tr, r, { ...base, byRecruiter: true }));
+  });
+  const gap = all - mine;
+  if (gap <= 0) return '';
+  return `<p class="it-gap">${gap.toLocaleString()} of the ${all.toLocaleString()} interviews booked in this
+    period have no recruiter on the application, so they are counted on Hiring Manager and Overall Efficiency
+    but cannot be shown here.</p>`;
 }
 
 // Turn those days into the slots the chart draws. EVERY slot in the window is present, including the empty
@@ -345,14 +389,18 @@ export function mountInterviewTraction(host, data, getScope, opts) {
     // view draws a month of empty future days.
     const now = new Date();
     const today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
-    const scope = { from: raw.from, to: raw.to > today ? today : raw.to, jobOk: raw.jobOk };
+    // 🚨 SPREAD raw — do NOT rebuild this object field by field. It used to copy only from/to/jobOk, which
+    // silently DROPPED #228a's byRecruiter and recOk: the Recruiter tab then read the role store and its
+    // Recruiter chip moved no number at all, while the charts still looked perfectly reasonable.
+    // Any new scope key must survive this clamp (Rule 13).
+    const scope = { ...raw, to: raw.to > today ? today : raw.to };
     if (scope.from > scope.to) { chartsEl.innerHTML = ''; return; }
     const picked = rounds.filter(r => sel.has(r));
     if (!picked.length) {
       chartsEl.innerHTML = '<p class="it-empty">No rounds selected &mdash; pick at least one from Rounds.</p>';
       return;
     }
-    let html = '', hidden = 0;
+    let html = gapNote(tr, picked, scope), hidden = 0;
     const blocks = picked.map(r => {
       const slots = slotsFor(daysForRound(tr, r, scope), state.view, scope);
       let tot = 0;

@@ -2234,6 +2234,9 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .it-scroller { overflow-x: auto; }
 .it-scroller svg { display: block; min-width: 48rem; width: 100%; height: auto; }
 .it-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; margin: 0.45rem 0; }
+/* #228a: the recruiter-attribution gap, said out loud above the charts. Amber because it is a caveat on
+   what is shown, the same weight as the other 'worth knowing' notes - never a red alarm. */
+.it-gap { font-size: 0.6875rem; color: #9a6b1f; margin: 0 0 0.9rem; line-height: 1.5; max-width: 62rem; }
 .it-trendkey { display: inline-flex; align-items: center; }
 .it-trendkey::before { content: ''; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.3rem;
   border-top: 1.5px dashed var(--it-trend); vertical-align: middle; }
