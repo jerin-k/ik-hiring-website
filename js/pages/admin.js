@@ -461,6 +461,66 @@ function acDeptsFrom(data, users) {
 }
 // Tabs a restricted user can be granted (Overview is always on; Admin is admin-only, never offered here).
 const AC_TABS = [['hm-report', 'Hiring Manager'], ['recruiter', 'Recruiter Efficiency'], ['efficiency', 'Overall Efficiency']];
+// #229: every role the data knows, as {v: 8-char job id, l: title, d: department}. The ID is stored, never the
+// title — titles repeat across departments and get edited; the id is what scopeData matches on anyway.
+let AC_JOBS = [];
+function acJobsFrom(data) {
+  const out = {}, ji = (data && data.jobIndex) || {};
+  Object.keys(ji).forEach(j8 => { if (ji[j8] && ji[j8].title) out[j8] = { v: j8, l: ji[j8].title, d: ji[j8].department || '' }; });
+  ((data && data.jobs) || []).forEach(j => { const j8 = String(j.id || '').slice(0, 8);
+    if (j8 && !out[j8] && j.title) out[j8] = { v: j8, l: j.title, d: j.department || '' }; });
+  return Object.keys(out).map(k => out[k]).sort((a, b) => (a.d || '').localeCompare(b.d || '') || a.l.localeCompare(b.l));
+}
+
+// #229 (Jerin, 13 Oct 2026): the Roles picker. Grouped under the person's OWN departments only — so a role can
+// never be stranded outside them — and each department carries its own "All N roles", ticked when nothing in
+// it is picked. 🗣 "no, shows all. / or, give me an all option. better"
+function acJobsMs(i, u) {
+  const depts = u.departments || [];
+  const sel = new Set(u.jobs || []);
+  if (!depts.length) {
+    return `<details class="ac-ms"><summary><span class="ac-ms-word">Roles</span>${acJobChips(u)}</summary>
+      <div class="ac-ms-list"><p class="ac-ms-hint">Pick a department first — roles are chosen within one.</p></div></details>`;
+  }
+  const body = depts.slice().sort().map(d => {
+    const inD = AC_JOBS.filter(j => j.d === d);
+    if (!inD.length) return `<div class="ac-grp">${acEsc(d)}</div><p class="ac-ms-hint">No roles in this department.</p>`;
+    const all = !inD.some(j => sel.has(j.v));
+    return `<div class="ac-grp">${acEsc(d)}</div>`
+      + `<label class="ac-allrow"><input type="checkbox" class="ac-joball" data-i="${i}" data-d="${acEsc(d)}"${all ? ' checked' : ''}> <b>All ${inD.length} role${inD.length === 1 ? '' : 's'}</b></label>`
+      + inD.map(j => `<label class="${all ? 'is-dim' : ''}"><input type="checkbox" class="ac-jobs" data-i="${i}" data-d="${acEsc(d)}" value="${acEsc(j.v)}"${sel.has(j.v) ? ' checked' : ''}> ${acEsc(j.l)}</label>`).join('');
+  }).join('');
+  const search = depts.length > 1 ? '<input class="ac-ms-search" placeholder="Search roles…">' : '';
+  return `<details class="ac-ms"><summary><span class="ac-ms-word">Roles</span>${acJobChips(u)}</summary>
+    <div class="ac-ms-list">${search}${body}</div></details>`;
+}
+
+// The summary reads "Dept: All" where nothing is narrowed, so the chips never imply a limit that is not there.
+function acJobChips(u) {
+  const depts = u.departments || [], sel = new Set(u.jobs || []);
+  if (!depts.length) return '<span class="ac-chip is-any">Any</span>';
+  const out = [];
+  depts.slice().sort().forEach(d => {
+    const inD = AC_JOBS.filter(j => j.d === d), mine = inD.filter(j => sel.has(j.v));
+    if (!mine.length) out.push(`<span class="ac-chip is-any">${acEsc(d)}: All</span>`);
+    else mine.forEach(j => out.push(`<span class="ac-chip">${acEsc(j.l)}</span>`));
+  });
+  return out.join('');
+}
+
+// 🗣 "a note that role is restricted to only X roles from the department. If 2 departments with limited roles
+// from each - Then 2 notes & so on." ONLY where a department is actually narrowed: an All department has
+// nothing to say, and saying it anyway would make a full view look like a limited one.
+function acJobNotes(u) {
+  const depts = u.departments || [], sel = new Set(u.jobs || []);
+  if (!sel.size || !depts.length) return '';
+  const lines = [];
+  depts.slice().sort().forEach(d => {
+    const inD = AC_JOBS.filter(j => j.d === d), mine = inD.filter(j => sel.has(j.v));
+    if (mine.length) lines.push(`<p class="ac-note"><b>${acEsc(d)}</b> &mdash; restricted to only <b>${mine.length}</b> of its ${inD.length} roles.</p>`);
+  });
+  return lines.length ? `<div class="ac-notes">${lines.join('')}</div>` : '';
+}
 // #118 (Jerin, 14 Sep 2026): a User type label per person. It moves no access — role, tabs and departments still decide what they
 // see — it only groups people and drives the User type filter. A person with no saved label shows the one their role suggests.
 const AC_USER_TYPES = ['Hiring Manager', 'Recruitment Team', 'Admin', 'Others'];   // Others: Jerin, 14 Sep 2026
@@ -499,6 +559,7 @@ export function initAdminAccess(accessConfig, data, viewer) {
   const work = JSON.parse(JSON.stringify(accessConfig || { defaultRole: 'none', users: [] }));
   if (!Array.isArray(work.users)) work.users = [];
   if (data) AC_DEPTS = acDeptsFrom(data, work.users);
+  if (data) AC_JOBS = acJobsFrom(data);   // #229
   if (!work.defaultRole) work.defaultRole = 'none';
   // Migrate legacy restricted users (old isRecruiter flag) to the explicit per-user Tabs model.
   work.users.forEach(u => { if (u.role === 'restricted' && !Array.isArray(u.tabs)) { u.tabs = ['hm-report']; if (u.isRecruiter) u.tabs.push('recruiter'); } });
@@ -552,7 +613,7 @@ export function initAdminAccess(accessConfig, data, viewer) {
   let invites = {};
   const sameList = (a, b) => JSON.stringify((a || []).slice().sort()) === JSON.stringify((b || []).slice().sort());
   const isPublished = (u) => ((accessConfig && accessConfig.users) || []).some(p => (p.email || '').toLowerCase() === (u.email || '').toLowerCase()
-    && p.role === u.role && (u.role !== 'restricted' || (sameList(p.tabs, u.tabs) && sameList(p.departments, u.departments))));
+    && p.role === u.role && (u.role !== 'restricted' || (sameList(p.tabs, u.tabs) && sameList(p.departments, u.departments) && sameList(p.jobs, u.jobs))));   // #229: without jobs here a roles-only edit could never confirm itself
   const inviteCell = (u, i) => {
     if (u.role === 'none') return '';
     if (!isPublished(u)) return `<button class="btn btn-secondary btn-sm" disabled title="Publish access first: this access is not live yet, so they could not sign in.">Send invite</button>`;
@@ -605,10 +666,13 @@ export function initAdminAccess(accessConfig, data, viewer) {
           ? `<div class="ac-roscope">
               <span class="ac-ms-word">Tabs</span><span class="ac-rochips">${roChips(u.tabs, AC_TABS, true)}</span>
               <span class="ac-ms-word">Depts</span><span class="ac-rochips">${roChips(u.departments, AC_DEPTS, false)}</span>
-            </div>`
+              <span class="ac-ms-word">Roles</span><span class="ac-rochips">${acJobChips(u)}</span>
+            </div>${acJobNotes(u)}`
           : `<div style="display:flex;flex-direction:column;gap:0.1875rem;max-width:25rem">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
+              ${acJobsMs(i, u)}
+              ${acJobNotes(u)}
             </div>`;
       // "Invited" stays for a viewer — it is information. The buttons that act on it do not.
       const actionCell = ro
@@ -647,6 +711,22 @@ export function initAdminAccess(accessConfig, data, viewer) {
     }));
     wireMs('ac-tabs', 'tabs', 'Tabs', AC_TABS);
     wireMs('ac-depts', 'departments', 'Depts', AC_DEPTS);
+    // #229: the Roles picker is grouped by this person's departments, so changing them redraws the row.
+    body.querySelectorAll('.ac-depts').forEach(cb => cb.addEventListener('change', () => renderRows()));
+    // Ticking "All N roles" clears that department's picks; ticking a role clears its All. One department
+    // never touches another — that is the whole point of the per-department rule.
+    const jobsOf = (i) => new Set(work.users[i].jobs || []);
+    const saveJobs = (i, set) => { work.users[i].jobs = [...set]; setDirtyAc(true); renderRows(); };
+    body.querySelectorAll('.ac-joball').forEach(cb => cb.addEventListener('change', () => {
+      const i = +cb.dataset.i, d = cb.dataset.d, set = jobsOf(i);
+      AC_JOBS.filter(j => j.d === d).forEach(j => set.delete(j.v));   // All = nothing picked for it
+      saveJobs(i, set);
+    }));
+    body.querySelectorAll('.ac-jobs').forEach(cb => cb.addEventListener('change', () => {
+      const i = +cb.dataset.i, set = jobsOf(i);
+      if (cb.checked) set.add(cb.value); else set.delete(cb.value);
+      saveJobs(i, set);
+    }));
     body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
     body.querySelectorAll('.ac-invite').forEach(b => b.addEventListener('click', async () => {
       const u = work.users[+b.dataset.i]; const prev = invites[(u.email || '').toLowerCase()];
@@ -670,7 +750,7 @@ export function initAdminAccess(accessConfig, data, viewer) {
     const email = (emailEl.value || '').trim().toLowerCase(), role = roleEl.value;
     if (!email || email.indexOf('@') < 0) { emailEl.focus(); emailEl.style.borderColor = 'var(--red)'; return; }
     if (work.users.some(u => (u.email || '').toLowerCase() === email)) { emailEl.style.borderColor = 'var(--red)'; return; }
-    const u = { email, role }; if (role === 'restricted') { u.tabs = ['hm-report']; u.departments = []; }
+    const u = { email, role }; if (role === 'restricted') { u.tabs = ['hm-report']; u.departments = []; u.jobs = []; }   // #229
     u.userType = acUserType(u);   // #118: saved explicitly, so the label never shifts if the role changes later
     work.users.push(u); emailEl.value = ''; emailEl.style.borderColor = ''; setDirtyAc(true); renderRows();
   });

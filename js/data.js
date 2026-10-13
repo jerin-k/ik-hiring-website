@@ -167,8 +167,33 @@ export function getData() {
 // back" — and every figure follows it, not only the openings and jobs lists. Overview never comes through here.
 export function getFilteredData(access) {
   if (!dashboardData) return null;
-  const depts = access && access.filters && access.filters.departments;
-  return scopeData(dashboardData, { departments: depts && depts.length ? depts : null });
+  const f = (access && access.filters) || {};
+  const depts = f.departments && f.departments.length ? f.departments : null;
+  const jobs = f.jobs && f.jobs.length ? f.jobs : null;
+  // #229: no roles picked ⇒ EXACTLY as before. Everyone scoped by department alone is untouched.
+  if (!jobs) return scopeData(dashboardData, { departments: depts });
+  return scopeData(dashboardData, { jobIds: resolveJobScope(dashboardData, depts, jobs) });
+}
+
+// #229 (Jerin, 13 Oct 2026): the rule is PER DEPARTMENT — 🗣 "no, shows all. / or, give me an all option.
+// better". So: for every department the person may see, the roles picked IN THAT DEPARTMENT, or ALL of its
+// roles when none are picked. With no department limit at all, the picked roles are the whole restriction.
+// 🚨 Resolved to a flat job list HERE, on purpose, so scopeData keeps the single jobIds path that has been in
+// production since #120a. Do NOT try to express this by handing scopeData both lists: it ANDs them, which
+// blanks out any department that happens to have no picks — the wrong rule, and the one he corrected.
+function resolveJobScope(data, depts, jobs) {
+  const picked = new Set(jobs.map(j => String(j).slice(0, 8)));
+  if (!depts) return [...picked];
+  const deptOf = {};
+  Object.keys(data.jobIndex || {}).forEach(j8 => { const d = (data.jobIndex[j8] || {}).department; if (d) deptOf[j8] = d; });
+  (data.jobs || []).forEach(j => { const j8 = String(j.id || '').slice(0, 8); if (j8 && !deptOf[j8] && j.department) deptOf[j8] = j.department; });
+  const allow = new Set();
+  depts.forEach(d => {
+    const inDept = Object.keys(deptOf).filter(j8 => deptOf[j8] === d);
+    const mine = inDept.filter(j8 => picked.has(j8));
+    (mine.length ? mine : inDept).forEach(j8 => allow.add(j8));
+  });
+  return [...allow];
 }
 
 // ===== #120a / #120b (14 Sep 2026): ONE function narrows the data to a set of jobs and/or departments =====

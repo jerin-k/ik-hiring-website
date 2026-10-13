@@ -75,6 +75,9 @@ function buildAccess(user) {
       // #120b (Jerin, 14 Sep 2026): departments alone scope the data. A `teams` list left on an older user entry is ignored.
       const filters = {};
       if (user.departments && user.departments.length > 0) filters.departments = user.departments;
+      // #229 (Jerin, 13 Oct 2026): named roles, applied PER DEPARTMENT — "a department with no roles picked
+      // shows all", and each department carries its own All in Admin. The rule is resolved in data.js.
+      if (user.jobs && user.jobs.length > 0) filters.jobs = user.jobs;
 
       return { role: 'restricted', pages, adminReadOnly: false, filters };
     }
