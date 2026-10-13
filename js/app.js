@@ -1,8 +1,8 @@
 import './ui-scale.js';   // #140: first, so every chart is built by the scaled Chart
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
 import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
-import { loadDashboardData, getFilteredData, getLastUpdated } from './data.js';
-import { loadMetricConfig, setSignedInEmail} from './metric-config.js';
+import { loadDashboardData, getFilteredData, getLastUpdated, getData } from './data.js';
+import { loadMetricConfig, setSignedInEmail, setAshbyEmails} from './metric-config.js';
 import { renderHome, initHomeFilters } from './pages/home.js';
 import { renderHmReport, initHmFilters } from './pages/hm-report.js';
 import { renderRecruiter, initRecruiterFilters } from './pages/recruiter.js';
@@ -64,6 +64,7 @@ async function onAuthSuccess(user) {
 
   accessConfig = await loadAccessConfig();
   await loadDashboardData();
+  setAshbyEmails((getData().recruiters) || []);   // #228c: the address Ashby holds for each recruiter
   await loadMetricConfig();   // hydrate team-wide pods/capacity/score-grid/dept-family before tabs read them
 
   currentAccess = getUserAccess(user.email);

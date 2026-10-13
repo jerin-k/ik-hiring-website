@@ -1,7 +1,7 @@
 import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey, podDefOf, podDefSetAt } from '../recruiter-pods.js';   // #205: podDefOf / podDefSetAt
-import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter, getRecruiterEmails, setRecruiterEmail } from '../metric-config.js';   // #11b · #111 · #228b
+import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter, getRecruiterEmails, setRecruiterEmail, getAshbyEmails } from '../metric-config.js';   // #11b · #111 · #228b
 import { markDirty, isDirty, getMeta, publishConfig, configFileText, collectConfig } from '../metric-config.js';
 import { publishAccess, accessFileText, sendInvite, fetchInvites } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
@@ -791,6 +791,9 @@ export function initAdminMetricConfig(data, viewer) {
     const sorted = showPast ? all : all.filter(r => here(r).in);
     const dates = getRecruiterDates();
     const emails = getRecruiterEmails();   // #228b
+    // #228c: what Ashby holds, shown as the placeholder so an empty box explains itself rather than
+    // looking like missing data. Ashby's address is used for matching even when the box is empty.
+    const ashbyMail = (() => { const o = {}; const a = getAshbyEmails(); for (const e in a) o[a[e]] = e; return o; })();
     const podOpts = [...POD_OPTIONS, 'Unassigned'];
     // #11b, WIDENED 10 Sep 2026 (Jerin): the type is now editable for EVERY recruiter, not only accounts Ashby
     // flags as `External Recruiter`. The flag was never a reliable gate — a genuine external can hold an
@@ -819,7 +822,7 @@ export function initAdminMetricConfig(data, viewer) {
     // Blank is a real answer — it means "do not default for anyone with this address", and it is what the two
     // unsafe email guesses (an agency mailbox, and one ambiguous first name) are left as until a human decides.
     const emailBox = (name) => { const v = emails[name] || '';
-      return `<input type="email" class="cfg-email${v ? '' : ' is-empty'}" data-name="${name}" value="${v}" placeholder="not set" spellcheck="false" aria-label="Sign-in email for ${name}">`; };
+      return `<input type="email" class="cfg-email${v ? '' : ' is-empty'}" data-name="${name}" value="${v}" placeholder="${(ashbyMail[name] || 'not set').replace(/"/g, '&quot;')}" spellcheck="false" aria-label="Sign-in email for ${name}">`; };
     const fmtCap = (n) => (+n || 0).toLocaleString('en-IN');
     const rowHtml = (r) => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false;
       const pod = podOf(name, q), cap = capacityOf(name, q), ut = userTypeOf(name, ext); return `<tr data-pod="${pod}">
