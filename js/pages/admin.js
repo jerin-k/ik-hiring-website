@@ -477,35 +477,45 @@ function acJobsFrom(data) {
 // it is picked. 🗣 "no, shows all. / or, give me an all option. better"
 function acJobsMs(i, u) {
   const depts = u.departments || [];
-  const sel = new Set(u.jobs || []);
   if (!depts.length) {
-    return `<details class="ac-ms"><summary><span class="ac-ms-word">Roles</span>${acJobChips(u)}</summary>
+    return `<details class="ac-ms ac-jobsms"><summary><span class="ac-ms-word">Roles</span>${acJobChips(u)}</summary>
       <div class="ac-ms-list"><p class="ac-ms-hint">Pick a department first — roles are chosen within one.</p></div></details>`;
   }
-  const body = depts.slice().sort().map(d => {
+  return `<details class="ac-ms ac-jobsms"><summary><span class="ac-ms-word">Roles</span>${acJobChips(u)}</summary>
+    <div class="ac-ms-list">${acJobsBody(i, u)}</div></details>`;
+}
+
+// 🚨 The list ONLY. Kept separate so a tick can repaint it without touching the <details>, which is what used
+// to slam the panel shut on every single selection (Jerin, 13 Oct: "when i select one - the pop up closes.
+// So, to select 5, i have to open the pop-up 5 times").
+function acJobsBody(i, u) {
+  const depts = (u.departments || []).slice().sort();
+  const sel = new Set(u.jobs || []);
+  const body = depts.map(d => {
     const inD = AC_JOBS.filter(j => j.d === d);
     if (!inD.length) return `<div class="ac-grp">${acEsc(d)}</div><p class="ac-ms-hint">No roles in this department.</p>`;
     const all = !inD.some(j => sel.has(j.v));
     return `<div class="ac-grp">${acEsc(d)}</div>`
       + `<label class="ac-allrow"><input type="checkbox" class="ac-joball" data-i="${i}" data-d="${acEsc(d)}"${all ? ' checked' : ''}> <b>All ${inD.length} role${inD.length === 1 ? '' : 's'}</b></label>`
-      + inD.map(j => `<label class="${all ? 'is-dim' : ''}"><input type="checkbox" class="ac-jobs" data-i="${i}" data-d="${acEsc(d)}" value="${acEsc(j.v)}"${sel.has(j.v) ? ' checked' : ''}> ${acEsc(j.l)}</label>`).join('');
+      + inD.map(j => `<label class="ac-joblbl${all ? ' is-dim' : ''}" data-d="${acEsc(d)}"><input type="checkbox" class="ac-jobs" data-i="${i}" data-d="${acEsc(d)}" value="${acEsc(j.v)}"${sel.has(j.v) ? ' checked' : ''}> <span>${acEsc(j.l)}</span></label>`).join('');
   }).join('');
-  const search = depts.length > 1 ? '<input class="ac-ms-search" placeholder="Search roles…">' : '';
-  return `<details class="ac-ms"><summary><span class="ac-ms-word">Roles</span>${acJobChips(u)}</summary>
-    <div class="ac-ms-list">${search}${body}</div></details>`;
+  // Always searchable — 100+ roles is not a list anyone should scroll blind.
+  return `<input class="ac-ms-search" type="search" placeholder="Type to search roles…" aria-label="Search roles">`
+    + `<div class="ac-joblist">${body}</div>`;
 }
 
-// The summary reads "Dept: All" where nothing is narrowed, so the chips never imply a limit that is not there.
+// 🗣 Jerin, 13 Oct: "Can these roles given access to be wrapped in an collapsible section - so that it doesnt
+// worsen the UX." Five role names ran to three lines and made every row tall. The summary is now ONE short
+// chip per department — the names live inside the picker, which is the collapsible section.
 function acJobChips(u) {
-  const depts = u.departments || [], sel = new Set(u.jobs || []);
+  const depts = (u.departments || []).slice().sort(), sel = new Set(u.jobs || []);
   if (!depts.length) return '<span class="ac-chip is-any">Any</span>';
-  const out = [];
-  depts.slice().sort().forEach(d => {
+  return depts.map(d => {
     const inD = AC_JOBS.filter(j => j.d === d), mine = inD.filter(j => sel.has(j.v));
-    if (!mine.length) out.push(`<span class="ac-chip is-any">${acEsc(d)}: All</span>`);
-    else mine.forEach(j => out.push(`<span class="ac-chip">${acEsc(j.l)}</span>`));
-  });
-  return out.join('');
+    return mine.length
+      ? `<span class="ac-chip">${acEsc(d)}: ${mine.length}</span>`
+      : `<span class="ac-chip is-any">${acEsc(d)}: All</span>`;
+  }).join('');
 }
 
 // 🗣 "a note that role is restricted to only X roles from the department. If 2 departments with limited roles
@@ -668,7 +678,7 @@ export function initAdminAccess(accessConfig, data, viewer) {
               <span class="ac-ms-word">Depts</span><span class="ac-rochips">${roChips(u.departments, AC_DEPTS, false)}</span>
               <span class="ac-ms-word">Roles</span><span class="ac-rochips">${acJobChips(u)}</span>
             </div>${acJobNotes(u)}`
-          : `<div style="display:flex;flex-direction:column;gap:0.1875rem;max-width:25rem">
+          : `<div class="ac-scope" style="display:flex;flex-direction:column;gap:0.1875rem;max-width:25rem">
               ${acMs('ac-tabs', i, u.tabs, AC_TABS, 'Tabs')}
               ${acMs('ac-depts', i, u.departments, AC_DEPTS, 'Depts')}
               ${acJobsMs(i, u)}
@@ -711,22 +721,81 @@ export function initAdminAccess(accessConfig, data, viewer) {
     }));
     wireMs('ac-tabs', 'tabs', 'Tabs', AC_TABS);
     wireMs('ac-depts', 'departments', 'Depts', AC_DEPTS);
-    // #229: the Roles picker is grouped by this person's departments, so changing them redraws the row.
-    body.querySelectorAll('.ac-depts').forEach(cb => cb.addEventListener('change', () => renderRows()));
-    // Ticking "All N roles" clears that department's picks; ticking a role clears its All. One department
-    // never touches another — that is the whole point of the per-department rule.
-    const jobsOf = (i) => new Set(work.users[i].jobs || []);
-    const saveJobs = (i, set) => { work.users[i].jobs = [...set]; setDirtyAc(true); renderRows(); };
-    body.querySelectorAll('.ac-joball').forEach(cb => cb.addEventListener('change', () => {
-      const i = +cb.dataset.i, d = cb.dataset.d, set = jobsOf(i);
-      AC_JOBS.filter(j => j.d === d).forEach(j => set.delete(j.v));   // All = nothing picked for it
-      saveJobs(i, set);
+    // #229b (Jerin, 13 Oct 2026): everything below repaints IN PLACE. 🚨 The first version called renderRows()
+    // on every tick, which rebuilt the table and closed the <details> — so picking five roles meant opening the
+    // panel five times. Nothing here may re-render the row.
+    const scopeOf = (el) => el.closest('.ac-scope');
+    const repaint = (el, i) => {
+      const scope = scopeOf(el); if (!scope) return;
+      const u = work.users[i];
+      const det = scope.querySelector('.ac-jobsms');
+      if (det) {
+        const sum = det.querySelector('summary');
+        if (sum) sum.innerHTML = `<span class="ac-ms-word">Roles</span>${acJobChips(u)}`;
+        // the All ticks and the dimming, without rebuilding the list (it holds focus and scroll position)
+        const sel = new Set(u.jobs || []);
+        det.querySelectorAll('.ac-joball').forEach(cb => {
+          const inD = AC_JOBS.filter(j => j.d === cb.dataset.d);
+          const all = !inD.some(j => sel.has(j.v));
+          cb.checked = all;
+          det.querySelectorAll(`.ac-joblbl[data-d="${CSS.escape(cb.dataset.d)}"]`).forEach(l => l.classList.toggle('is-dim', all));
+        });
+      }
+      const old = scope.querySelector('.ac-notes');
+      if (old) old.remove();
+      const html = acJobNotes(u);
+      if (html) scope.insertAdjacentHTML('beforeend', html);
+    };
+
+    const wireJobList = (root) => {
+      root.querySelectorAll('.ac-joball').forEach(cb => cb.addEventListener('change', () => {
+        const i = +cb.dataset.i, d = cb.dataset.d, set = new Set(work.users[i].jobs || []);
+        AC_JOBS.filter(j => j.d === d).forEach(j => set.delete(j.v));   // All = nothing picked for it
+        work.users[i].jobs = [...set];
+        root.querySelectorAll(`.ac-jobs[data-d="${CSS.escape(d)}"]`).forEach(x => { x.checked = false; });
+        cb.checked = true;
+        setDirtyAc(true); repaint(cb, i);
+      }));
+      root.querySelectorAll('.ac-jobs').forEach(cb => cb.addEventListener('change', () => {
+        const i = +cb.dataset.i, set = new Set(work.users[i].jobs || []);
+        if (cb.checked) set.add(cb.value); else set.delete(cb.value);
+        work.users[i].jobs = [...set];
+        setDirtyAc(true); repaint(cb, i);
+      }));
+      // type to narrow the list; a group heading hides when nothing under it survives
+      root.querySelectorAll('.ac-ms-search').forEach(inp => inp.addEventListener('input', () => {
+        const q = inp.value.trim().toLowerCase();
+        const list = inp.parentElement.querySelector('.ac-joblist'); if (!list) return;
+        list.querySelectorAll('.ac-joblbl').forEach(l => {
+          l.style.display = !q || l.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+        });
+        list.querySelectorAll('.ac-grp').forEach(g => {
+          let any = false, n = g.nextElementSibling;
+          while (n && n.tagName === 'LABEL') { if (!n.classList.contains('ac-allrow') && n.style.display !== 'none') any = true; n = n.nextElementSibling; }
+          g.style.display = any ? '' : 'none';
+          const allRow = g.nextElementSibling;
+          if (allRow && allRow.classList.contains('ac-allrow')) allRow.style.display = (any && !q) ? '' : 'none';
+        });
+      }));
+    };
+    wireJobList(body);
+
+    // Departments decide which groups exist, so changing them rebuilds the ROLES LIST ONLY — never the row.
+    body.querySelectorAll('.ac-depts').forEach(cb => cb.addEventListener('change', () => {
+      const i = +cb.dataset.i, scope = scopeOf(cb); if (!scope) return;
+      const u = work.users[i];
+      // a role whose department has just been removed is dropped, or it would scope invisibly
+      const keep = new Set(AC_JOBS.filter(j => (u.departments || []).indexOf(j.d) >= 0).map(j => j.v));
+      u.jobs = (u.jobs || []).filter(v => keep.has(v));
+      const det = scope.querySelector('.ac-jobsms');
+      if (det) {
+        const list = det.querySelector('.ac-ms-list');
+        if (list) { list.innerHTML = (u.departments || []).length ? acJobsBody(i, u)
+          : '<p class="ac-ms-hint">Pick a department first — roles are chosen within one.</p>'; wireJobList(list); }
+      }
+      repaint(cb, i);
     }));
-    body.querySelectorAll('.ac-jobs').forEach(cb => cb.addEventListener('change', () => {
-      const i = +cb.dataset.i, set = jobsOf(i);
-      if (cb.checked) set.add(cb.value); else set.delete(cb.value);
-      saveJobs(i, set);
-    }));
+
     body.querySelectorAll('.ac-del').forEach(b => b.addEventListener('click', () => { work.users.splice(+b.dataset.i, 1); setDirtyAc(true); renderRows(); }));
     body.querySelectorAll('.ac-invite').forEach(b => b.addEventListener('click', async () => {
       const u = work.users[+b.dataset.i]; const prev = invites[(u.email || '').toLowerCase()];
