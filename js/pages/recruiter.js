@@ -25,6 +25,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
+import { mountInterviewTraction } from '../interview-traction.js';   // #228a: the SAME module HM and Overall Efficiency mount
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
@@ -539,6 +540,7 @@ export function renderRecruiter(data) {
       <button class="rec-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <span class="subtab-sep" aria-hidden="true"></span>
       <button class="rec-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
+      <button class="rec-subtab subtab-chip" data-tab="traction">Interview Traction</button>
       <button class="rec-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <span class="subtab-sep" aria-hidden="true"></span>
       <button class="rec-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
@@ -565,6 +567,10 @@ export function renderRecruiter(data) {
          columns? I never asked for it." He asked for the CLUTTER to be fixed, not for the table to measure
          something else — and the per-day grid is the thing he specified when he defined this panel. Fix the
          look here if it needs fixing; do not swap the day columns for derived metrics again. -->
+    <div class="rec-panel" data-panel="traction" style="display:none">
+      <div id="recTractionHost"></div>
+    </div>
+
     <div class="rec-panel" data-panel="velocity" style="display:none">
       <div class="tofu-heat-wrap" id="recVelHeatWrap"><div id="recVelHeat" class="tofu-heat"></div><div id="recVelHeatTip" class="heat-tip"></div></div>
       <div class="scroll-table"><table class="vel-table">
@@ -3832,8 +3838,12 @@ export function initRecruiterFilters(baseData) {
     shadePipeline(body);   // #137c — the same grid shading the mirror panel carries
   }
 
+  // #228a: set once the page is in the DOM; the module owns the metric, this page owns the filters.
+  let renderTraction = null;
+
   function renderActiveChart() {
-    if (activeTab === 'velocity') buildVelChart();
+    if (activeTab === 'traction') { if (renderTraction) renderTraction(); }   // #228a
+    else if (activeTab === 'velocity') buildVelChart();
     else if (activeTab === 'screening') buildScreenChart();
     else if (activeTab === 'joining') buildJoinChart();
     else if (activeTab === 'fulfilment') buildFulfilChart();
@@ -3920,6 +3930,31 @@ export function initRecruiterFilters(baseData) {
                                                           document.getElementById('recVelQuarter')?.value || ''), true);
       renderAll();
     });
+  // #228a Interview Traction — the SAME module Hiring Manager and Overall Efficiency mount (Rule 3), given
+  // this page's scope. byRecruiter makes it read the recruiter -> role -> round -> day store, so the
+  // Recruiter AND Role chips both move its numbers (Rule 13). No Quarter chip of its own: #227 already gave
+  // this page a multi-tick Quarters chip, and two period controls over one panel is the thing #227 removed.
+  renderTraction = mountInterviewTraction(document.getElementById('recTractionHost'), data, () => {
+    const rg = rangeOf(document.getElementById('recVelFrom'), document.getElementById('recVelTo'), selQuarters());
+    const rsel = msRec ? msRec.getSelected() : [];
+    const jsel = msJob ? msJob.getSelected() : [];
+    const psel = msPod ? msPod.getSelected() : [];
+    const q = selQuarter();
+    return {
+      from: rg.from, to: rg.to, byRecruiter: true, recPicked: rsel.length > 0,
+      recOk: (name) => {
+        if (rsel.length && rsel.indexOf(name) < 0) return false;
+        // Pod is a property of the RECRUITER, so it narrows this panel too — and a recruiter with no pod
+        // is off this tab entirely (decision #23), exactly as every other panel here treats them.
+        const pod = podOf(name, q);
+        if (!pod || POD_OPTIONS.indexOf(pod) < 0) return false;
+        if (psel.length && psel.indexOf(pod) < 0) return false;
+        return true;
+      },
+      jobOk: (j8) => !jsel.length || jsel.some(id => String(id).slice(0, 8) === j8)
+    };
+  });
+
   document.addEventListener('click', closeMsPanels);
   wireLevels('recLevels', renderAll);   // #189e: one delegated listener for both ticks
 
