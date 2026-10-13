@@ -24,12 +24,12 @@ const PENDING_LS = 'ik_metric_config_pending';   // #111b: the payload Publish l
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
 // #11b: userType is the Agency|Freelancer toggle set beside the pod selector. It is NOT per-quarter — a user
 // either is an agency or is not — so it is a flat { name: 'Agency' | 'Freelancer' } map, unlike pods/capacity.
-const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates', podDefs: 'ik_pod_defs_q' };   // #111: start/leaving dates, flat per person · #205: what each pod measures, per quarter
+const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates', podDefs: 'ik_pod_defs_q', recruiterEmail: 'ik_recruiter_email' };   // #228b: which login IS which recruiter   // #111: start/leaving dates, flat per person · #205: what each pod measures, per quarter
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
 function readLS(key, dflt) { try { const v = localStorage.getItem(key); return v == null ? dflt : JSON.parse(v); } catch (e) { return dflt; } }
-function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType || c.recruiterDates || c.podDefs); }   // #205
+function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacity || c.scoreGrid || c.deptFamily || c.userType || c.recruiterDates || c.podDefs || c.recruiterEmail); }   // #205 · #228b
 
 // Fetch server config (with degradation ladder) and hydrate the runtime keys. Call once, before rendering.
 export async function loadMetricConfig() {
@@ -69,6 +69,7 @@ function hydrate(cfg) {
   if (cfg.userType) localStorage.setItem(KEYS.userType, JSON.stringify(cfg.userType));   // #11b
   if (cfg.recruiterDates) localStorage.setItem(KEYS.recruiterDates, JSON.stringify(cfg.recruiterDates));   // #111
   if (cfg.podDefs) localStorage.setItem(KEYS.podDefs, JSON.stringify(cfg.podDefs));   // #205: what each pod measures
+  if (cfg.recruiterEmail) localStorage.setItem(KEYS.recruiterEmail, JSON.stringify(cfg.recruiterEmail));   // #228b
 }
 
 export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); localStorage.removeItem(PENDING_LS); }   // an edit after Publish makes the sent payload stale
@@ -77,12 +78,12 @@ export function getMeta() { return readLS(META_LS, null); }
 
 // Snapshot the runtime config into a publishable object.
 export function collectConfig() {
-  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}), podDefs: readLS(KEYS.podDefs, {}) };   // #205
+  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}), podDefs: readLS(KEYS.podDefs, {}), recruiterEmail: readLS(KEYS.recruiterEmail, {}) };   // #205 · #228b
 }
 
 // Deep-equal of the meaningful config fields (for confirm-by-read).
 function sameConfig(a, b) {
-  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates', 'podDefs'];   // #205: a podDefs-only publish must confirm too
+  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates', 'podDefs', 'recruiterEmail'];   // #205 · #228b: an email-only publish must confirm too
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
@@ -222,6 +223,62 @@ export function setRecruiterDate(name, field, value) {
   localStorage.setItem(KEYS.recruiterDates, JSON.stringify(m));
   markDirty();
 }
+// ===== #228b (Jerin, 13 Oct 2026): which LOGIN is which RECRUITER =====
+// 🗣 "When a recruiter logs in, can you filter their name by default?" — and, settled the same day,
+// "Doesnt mean that they cannot select someone elses name & check out their data. Thats fine!"
+// So this is a DEFAULT, never a lock.
+//
+// 🚨 IT IS STORED, NOT GUESSED. Matching logins to recruiter names by email was MEASURED on 13 Oct over all
+// 25 logins: 13 matched cleanly, but `talent@` matched the AGENCY record 'Sangha - Talent Diary' and
+// `aditya.s` was ambiguous between Aditya Singh and Siva Sruthi V S. A confident wrong match would have
+// shown one person another's numbers under their own name, which is worse than no default at all.
+// So: a committed baseline of the ones that were unambiguous, overridden by whatever Admin publishes.
+// The two that were NOT safe are deliberately absent — they are for a human to set in Admin.
+const RECRUITER_EMAIL_BASELINE = {
+  'Gopu Nair V': 'gopu.nair@interviewkickstart.com',
+  'Alokita Dhumne': 'alokita.dhumne@interviewkickstart.com',
+  'Deepti Leslie': 'deepti@interviewkickstart.com',
+  'Leenita Joseph Albert': 'leenita.albert@interviewkickstart.com',
+  'Mahima Agarwal': 'mahima.agarwal@interviewkickstart.com',
+  'Oshin Verma': 'oshin.verma@interviewkickstart.com',
+  'Praveetha A': 'praveetha.a@interviewkickstart.com',
+  'Rijo John': 'rijo@interviewkickstart.com',
+  'Ritika Bhasin': 'ritika.bhasin@interviewkickstart.com',
+  'Tina Anisha Bibeiro': 'tina.anisha@interviewkickstart.com',
+  'V Pooja': 'v.pooja@interviewkickstart.com',
+  'G Darshan': 'g.darshan@interviewkickstart.com'
+};
+
+// { recruiter name: email }. Published config wins; the baseline fills the rest, so the default works on day
+// one without waiting for an admin pass.
+export function getRecruiterEmails() {
+  return Object.assign({}, RECRUITER_EMAIL_BASELINE, readLS(KEYS.recruiterEmail, {}) || {});
+}
+export function setRecruiterEmail(name, email) {
+  if (!name) return;
+  const m = readLS(KEYS.recruiterEmail, {}) || {};
+  const v = String(email || '').trim().toLowerCase();
+  // An empty box must STICK as empty, even against the baseline — that is how the two unsafe guesses get
+  // cleared. '' is stored on purpose; only a name never touched falls through to the baseline.
+  if (v || RECRUITER_EMAIL_BASELINE[name]) m[name] = v; else delete m[name];
+  localStorage.setItem(KEYS.recruiterEmail, JSON.stringify(m));
+  markDirty();
+}
+
+// The signed-in address, set once by app.js. Kept here rather than imported from app.js, which would be a cycle.
+let signedIn = '';
+export function setSignedInEmail(e) { signedIn = String(e || '').trim().toLowerCase(); }
+export function signedInEmail() { return signedIn; }
+
+// The recruiter this address IS, or '' — exact match on the stored address, never a name comparison.
+export function recruiterForEmail(email) {
+  const want = String(email || '').trim().toLowerCase();
+  if (!want) return '';
+  const m = getRecruiterEmails();
+  for (const name in m) if (m[name] && String(m[name]).toLowerCase() === want) return name;
+  return '';
+}
+
 // 'YYYY-Qn' -> ['YYYY-MM-DD' first day, 'YYYY-MM-DD' last day], or null.
 export function quarterBounds(q) {
   const mt = /^(\d{4})-Q([1-4])$/.exec(String(q || '')); if (!mt) return null;

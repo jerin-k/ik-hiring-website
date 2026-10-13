@@ -1,7 +1,7 @@
 import { defsBlock } from '../definitions.js';
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey, podDefOf, podDefSetAt } from '../recruiter-pods.js';   // #205: podDefOf / podDefSetAt
-import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter } from '../metric-config.js';   // #11b · #111
+import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter, getRecruiterEmails, setRecruiterEmail } from '../metric-config.js';   // #11b · #111 · #228b
 import { markDirty, isDirty, getMeta, publishConfig, configFileText, collectConfig } from '../metric-config.js';
 import { publishAccess, accessFileText, sendInvite, fetchInvites } from '../access-config.js';
 import { getCurrentUser } from '../auth.js';
@@ -363,7 +363,7 @@ export function renderAdmin(accessConfig, data, viewer) {
           <label class="adm-check"><input type="checkbox" id="cfgShowPast"> Show recruiters who weren't here this quarter <span id="cfgPastCount" class="adm-count"></span></label>
         </div>
         <div class="cfg-scroll"><table class="ac-table adm-roomy">
-          <thead><tr><th style="min-width:14.375rem">Recruiter</th><th style="width:9.375rem">Pod</th><th style="width:10.625rem">Capacity (score)</th><th style="width:8.75rem">Type</th><th style="width:9.375rem">Started on</th><th style="width:9.375rem">Left on</th><th style="width:14.375rem">In quarter</th><th style="width:7.5rem">Ashby account</th></tr></thead>
+          <thead><tr><th style="min-width:14.375rem">Recruiter</th><th style="width:9.375rem">Pod</th><th style="width:10.625rem">Capacity (score)</th><th style="width:8.75rem">Type</th><th style="width:9.375rem">Started on</th><th style="width:9.375rem">Left on</th><th style="width:14.375rem">In quarter</th><th style="width:15rem">Email (sign-in)</th><th style="width:7.5rem">Ashby account</th></tr></thead>
           <tbody id="cfgPodBody"></tbody>
         </table></div>
       </div>
@@ -790,6 +790,7 @@ export function initAdminMetricConfig(data, viewer) {
     if (pc) pc.textContent = pastCount ? `(${pastCount})` : '';
     const sorted = showPast ? all : all.filter(r => here(r).in);
     const dates = getRecruiterDates();
+    const emails = getRecruiterEmails();   // #228b
     const podOpts = [...POD_OPTIONS, 'Unassigned'];
     // #11b, WIDENED 10 Sep 2026 (Jerin): the type is now editable for EVERY recruiter, not only accounts Ashby
     // flags as `External Recruiter`. The flag was never a reliable gate — a genuine external can hold an
@@ -814,6 +815,11 @@ export function initAdminMetricConfig(data, viewer) {
     const fmtDay = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || ''); return m ? `${+m[3]} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+m[2] - 1]} ${m[1]}` : ''; };
     const dateBox = (name, f, label) => { const v = (dates[name] || {})[f] || '';
       return `<span class="adm-date${v ? ' is-set' : ''}"><input type="date" class="cfg-date${v ? '' : ' is-empty'}" data-name="${name}" data-f="${f}" value="${v}" aria-label="${label} for ${name}"><span class="adm-date-face" aria-hidden="true">${v ? fmtDay(v) : '—'}</span></span>`; };
+    // #228b: the address this person signs in with, so the Recruiter tab can open on their own name.
+    // Blank is a real answer — it means "do not default for anyone with this address", and it is what the two
+    // unsafe email guesses (an agency mailbox, and one ambiguous first name) are left as until a human decides.
+    const emailBox = (name) => { const v = emails[name] || '';
+      return `<input type="email" class="cfg-email${v ? '' : ' is-empty'}" data-name="${name}" value="${v}" placeholder="not set" spellcheck="false" aria-label="Sign-in email for ${name}">`; };
     const fmtCap = (n) => (+n || 0).toLocaleString('en-IN');
     const rowHtml = (r) => { const name = r.name; const off = r.isActive === false; const unk = r.activeKnown === false;
       const pod = podOf(name, q), cap = capacityOf(name, q), ut = userTypeOf(name, ext); return `<tr data-pod="${pod}">
@@ -835,14 +841,15 @@ export function initAdminMetricConfig(data, viewer) {
         const txt = !s.in ? (s.note ? 'Not here · ' + s.note : 'Not here') : (s.note ? 'Yes · ' + s.note : (s.basis === 'account' ? 'Yes · no dates set' : 'Yes'));
         const cls = !s.in ? ' is-out' : (/left/.test(s.note) ? ' is-left' : (/joined/.test(s.note) ? ' is-joined' : ''));
         return `<span class="adm-inq${cls}" title="${s.basis === 'account' ? 'No Started on / Left on dates yet, so the Ashby account decides for ' + q0 + '.' : 'Decided by the dates for ' + q0 + '.'}">${txt}</span>`; })()}</td>
+      <td>${ro ? `<span class="ac-rotext">${emails[name] || '—'}</span>` : emailBox(name)}</td>
       <td><span class="adm-acct ${unk ? 'is-unk' : (off ? 'is-off' : 'is-on')}">${unk ? 'Unknown' : (off ? 'Disabled' : 'Enabled')}</span></td></tr>`; };
     // #142 (Jerin, 17 Sep — option C): grouped under each pod, in pod order, with its recruiters and their capacity for the quarter.
     const podsListed = [...podOpts, ...new Set(sorted.map(r => podOf(r.name, q)).filter(p => !podOpts.includes(p)))];
     body.innerHTML = podsListed.map(p => [p, sorted.filter(r => podOf(r.name, q) === p)]).filter(([, rs]) => rs.length).map(([p, rs]) =>
-      `<tr class="grp-row" data-pod="${p}"><td colspan="8"><span class="adm-grp"><span class="adm-podchip pl-pod-${podClass(p)}">${p}</span>`
+      `<tr class="grp-row" data-pod="${p}"><td colspan="9"><span class="adm-grp"><span class="adm-podchip pl-pod-${podClass(p)}">${p}</span>`
       + `<span class="adm-grp-n">${rs.length} ${rs.length === 1 ? 'recruiter' : 'recruiters'} · capacity <b class="grp-cap">${fmtCap(rs.reduce((t, r) => t + (+capacityOf(r.name, q) || 0), 0))}</b></span></span></td></tr>`
       + rs.map(rowHtml).join('')).join('')
-      || `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1rem">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
+      || `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:1rem">${pastCount && !showPast ? 'Nobody here this quarter — switch on “Show recruiters who weren\'t here this quarter” to see the ' + pastCount + ' others.' : 'No recruiters in the data yet.'}</td></tr>`;
     // #198b: a viewer attaches NOTHING. The guard sits above every listener block, not after some of them, so
     // "a viewer wires nothing" is readable at a glance instead of depending on which selectors happen to miss.
     if (ro) { updatePodSummary(); return; }
@@ -863,6 +870,12 @@ export function initAdminMetricConfig(data, viewer) {
     body.querySelectorAll('.cfg-utype').forEach(sel => sel.addEventListener('change', () => { setUserType(sel.dataset.name, sel.value); touched(); sel.classList.toggle('is-agency', sel.value === 'Agency'); }));   // #11b
     // #111: dates are per person, not per quarter. Re-render on change so 'In quarter' and the list follow at once.
     body.querySelectorAll('.cfg-date').forEach(inp => inp.addEventListener('change', () => { inp.classList.toggle('is-empty', !inp.value); setRecruiterDate(inp.dataset.name, inp.dataset.f, inp.value); touched(); renderPodCapacity(); }));
+    // #228b: no re-render — redrawing the table on every keystroke-blur would move the row under the cursor.
+    body.querySelectorAll('.cfg-email').forEach(inp => inp.addEventListener('change', () => {
+      inp.value = inp.value.trim().toLowerCase();
+      inp.classList.toggle('is-empty', !inp.value);
+      setRecruiterEmail(inp.dataset.name, inp.value); touched();
+    }));
     updatePodSummary();
   }
   function renderScoreGrid() {
