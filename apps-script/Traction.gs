@@ -27,6 +27,11 @@ var TRACTION_ROUNDS = ['TA Screen', 'HM Review', 'Online Assessment', 'R1', 'R2'
 var TRACTION_TORD = { 'App Review':1, 'Application Review':1, 'Hello Christy':2, 'TA Screen':3, 'HM Review':4,
   'Online Assessment':5, 'OA':5, 'R1':6, 'R2':7, 'R3':8, 'R4':9, 'R5':10, 'Reference Check':11,
   'Document Submission':12, 'Offer':13 };
+// #222 (Jerin, 12 Oct 2026): a vendor assessment has NO interview behind it and therefore no interviewStageId
+// of its own, so it cannot be matched to a round the way a booking is. It gets this synthetic id, mapped straight
+// to 'Online Assessment' - his ruling. Everything downstream then treats it exactly like any other row: the
+// select / reject / awaiting logic asks only whether the candidate reached a LATER round afterwards.
+var TRACTION_ASSESS_SID = '__assessment_222__';
 var TRACTION_KORD = { appReview:1, helloChristy:2, taScreen:3, hmReview:4, oa:5, r1:6, r2:7, r3:8, r4:9,
   r5:10, refCheck:11, docSub:12, offer:13, hired:14 };
 var TRACTION_STAGE_CACHE = 'TRACTION_STAGE_TITLES';
@@ -104,6 +109,24 @@ function refreshInterviewTraction() {
       asgN++;
     }
   } catch (eA) { Logger.log('traction: takeHomeAssignment.list failed - ' + eA.message); }
+  // #222: the assessments the take-home endpoint cannot see. It found 18 in the Online Assessment stage; the
+  // saved Ashby report finds 496. Cancelled ones are already excluded upstream, and the counting rule (finished
+  // plus sent-but-unfinished) is Jerin's, applied once in assessReportAssessments_ so every panel shares it.
+  var repN = 0;
+  if (ASSESS_USE_REPORT) {
+    try {
+      var repR = assessReportAssessments_();
+      for (var rApp in repR.byApp) {
+        var rDs = repR.byApp[rApp] || [];
+        for (var rd = 0; rd < rDs.length; rd++) {
+          if (!rDs[rd] || rDs[rd] < fromDay) continue;
+          rows.push({ sid: TRACTION_ASSESS_SID, app: rApp, d: rDs[rd], canc: false });
+          repN++;
+        }
+      }
+      Logger.log('traction #222: ' + repN + ' vendor assessments added to the Online Assessment round');
+    } catch (eR) { Logger.log('traction: #222 assessments failed - ' + eR.message); }
+  }
   Logger.log('traction: ' + rows.length + ' events (' + asgN + ' take-home), ' + pages + ' pages, ' +
     Object.keys(stageIds).length + ' stages');
 
@@ -111,6 +134,7 @@ function refreshInterviewTraction() {
   var props = PropertiesService.getScriptProperties();
   var nameOf = {};
   try { nameOf = JSON.parse(props.getProperty(TRACTION_STAGE_CACHE) || '{}'); } catch (eC) { nameOf = {}; }
+  nameOf[TRACTION_ASSESS_SID] = 'Online Assessment';   // #222: synthetic, never looked up against Ashby
   var resolved = 0;
   for (var sid in stageIds) {
     if (nameOf[sid]) continue;
