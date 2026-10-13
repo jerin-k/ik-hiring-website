@@ -262,9 +262,11 @@ export function setRecruiterEmail(name, email) {
   if (!name) return;
   const m = readLS(KEYS.recruiterEmail, {}) || {};
   const v = String(email || '').trim().toLowerCase();
-  // An empty box must STICK as empty, even against the baseline — that is how the two unsafe guesses get
-  // cleared. '' is stored on purpose; only a name never touched falls through to the baseline.
-  if (v || RECRUITER_EMAIL_BASELINE[name]) m[name] = v; else delete m[name];
+  // 🚨 A CLEARED BOX IS A DECISION — "no default for this person" — so it is STORED as '' and never deleted.
+  // Deleting it would let the baseline, or the address Ashby holds, supply one again, which is the opposite
+  // of what the person just asked for. Only a name nobody has ever touched is absent from this map, and
+  // those are the ones that fall through to the baseline and then to Ashby.
+  m[name] = v;
   localStorage.setItem(KEYS.recruiterEmail, JSON.stringify(m));
   markDirty();
 }
@@ -274,13 +276,41 @@ let signedIn = '';
 export function setSignedInEmail(e) { signedIn = String(e || '').trim().toLowerCase(); }
 export function signedInEmail() { return signedIn; }
 
-// The recruiter this address IS, or '' — exact match on the stored address, never a name comparison.
+// #228c (Jerin, 13 Oct 2026): "In Admin Access Management, every user has an email ID / Same is the ID they
+// have in Ashby as well / Isnt that a simple match?" — he was right that Ashby HAS the address, and the
+// pipeline now carries it through as recruiter.email. MEASURED the same day, though, it does not replace the
+// stored map, for two reasons:
+//   1. Ashby has an address for only 14 of the 27 recruiters. 13 carry a userId with no email on it.
+//   2. An Ashby address is not always the DASHBOARD sign-in. 'Sangha - Talent Diary' is
+//      sangha.moulik@talentdiary.in in Ashby but signs in here as talent@interviewkickstart.com.
+// So a recruiter may be identified by EITHER address, and neither source is authoritative alone.
+let ashbyEmailToName = {};
+export function setAshbyEmails(recruiters) {
+  ashbyEmailToName = {};
+  (recruiters || []).forEach(r => {
+    if (r && r.name && r.email) ashbyEmailToName[String(r.email).trim().toLowerCase()] = r.name;
+  });
+}
+export function getAshbyEmails() { return Object.assign({}, ashbyEmailToName); }
+
+// The recruiter this address IS, or ''. EXACT match on a stored address — never a name comparison, which is
+// the whole point: comparing 'aditya.s' against 'Aditya Singh' and 'Siva Sruthi V S' is what was ambiguous.
 export function recruiterForEmail(email) {
   const want = String(email || '').trim().toLowerCase();
   if (!want) return '';
+  // What a person set in Admin wins, then the committed baseline (both are getRecruiterEmails), then the
+  // address Ashby holds. A human decision must always be able to override what a system reports.
   const m = getRecruiterEmails();
   for (const name in m) if (m[name] && String(m[name]).toLowerCase() === want) return name;
-  return '';
+  const viaAshby = ashbyEmailToName[want] || '';
+  // 🚨 Someone who CLEARED the box in Admin meant "do not default for this person". Ashby must not undo
+  // that, or the override is not an override. An explicitly stored blank beats what the system reports;
+  // a name nobody has touched is not stored at all, and falls through to Ashby as intended.
+  if (viaAshby) {
+    const raw = readLS(KEYS.recruiterEmail, {}) || {};
+    if (Object.prototype.hasOwnProperty.call(raw, viaAshby) && !raw[viaAshby]) return '';
+  }
+  return viaAshby;
 }
 
 // 'YYYY-Qn' -> ['YYYY-MM-DD' first day, 'YYYY-MM-DD' last day], or null.
