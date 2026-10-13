@@ -1734,12 +1734,31 @@ export function initEfficiencyFilters(data) {
   }
 
   // ===== Momentum (Department → Job → Stage; every day of the range, descending) =====
+  // #232 (Jerin, 14 Oct 2026) — THE FURTHEST DAY THE STORE ACTUALLY HAS AN ARRIVAL ON, or null.
+  // The mirror of Recruiter Efficiency's own tofuLastDay(); this tab's Momentum reads tofuByJob. Both exist so
+  // the two tabs open the same window — if you change one, change the other (Rule 3).
+  // 🗣 "We should also include bookings for the future dates." The pipeline now keeps an interview whose start
+  // time is still ahead (Assess.gs assessInterviews_(true), MOMENTUM path only), so the store can carry days
+  // after today and the grid needs columns for them.
+  function tofuLastDay() {
+    let max = null;
+    for (const j in (tofuByJob || {})) { const m = tofuByJob[j] || {}; for (const k in m) if (!max || k > max) max = k; }
+    if (!max) return null;
+    const d = new Date(max + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
   function velDates() {
     const toV = document.getElementById('effVelTo')?.value;
     const fromV = document.getElementById('effVelFrom')?.value;
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    let end = toV ? new Date(toV + 'T00:00:00') : today;
-    if (end > today) end = today;
+    // #232 (Jerin, 14 Oct 2026): the window may run PAST today, as far as the furthest booking and no further.
+    // ⚠ NOT simply "drop the cap" — To is the whole quarter, which would open dozens of empty columns out to
+    // 31 December. With nothing booked ahead this behaves exactly as it did before #232, and `end` is only ever
+    // reduced from To, so From/To still bites (Rule 13). Mirrors recruiter.js.
+    const horizon = tofuLastDay();
+    const limit = (horizon && horizon > today) ? horizon : today;
+    let end = toV ? new Date(toV + 'T00:00:00') : limit;
+    if (end > limit) end = limit;
     const start = fromV ? new Date(fromV + 'T00:00:00') : null;
     const out = [];
     // #141c (Jerin, 17 Sep): every day From → To — the same as Recruiter Efficiency (was the last 30 days only).

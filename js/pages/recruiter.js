@@ -3198,12 +3198,36 @@ export function initRecruiterFilters(baseData) {
   }
 
   // ===== Momentum render (Pod -> Recruiter -> Stage; every day of the range, descending) =====
+  // #232 (Jerin, 14 Oct 2026) — THE FURTHEST DAY THE STORE ACTUALLY HAS AN ARRIVAL ON, or null.
+  // 🗣 "We should also include bookings for the future dates." An interview is dated by when it is HELD (#221),
+  // and the pipeline now keeps one whose start time is still ahead (Assess.gs assessInterviews_(true), on the
+  // MOMENTUM path only — Throughput must not see it, an interview not yet held has assessed nobody). So the
+  // store can carry days after today, and the grid needs columns for them or they have nowhere to appear.
+  // ⚠ Read from the WHOLE store, not the filtered recruiters: the grid and the heatmap above it must agree on
+  // the window, and a window that moved as you ticked a filter would be worse than one spare empty column.
+  function tofuLastDay() {
+    const { rec, recJob } = tofuStores();
+    let max = null;
+    const scan = (m) => { for (const k in m) if (!max || k > max) max = k; };
+    for (const r in (rec || {})) scan(rec[r] || {});
+    for (const r in (recJob || {})) for (const j in (recJob[r] || {})) scan(recJob[r][j] || {});
+    if (!max) return null;
+    const d = new Date(max + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
   function velDates() {
     const toV = document.getElementById('recVelTo')?.value;
     const fromV = document.getElementById('recVelFrom')?.value;
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    let end = toV ? new Date(toV + 'T00:00:00') : today;
-    if (end > today) end = today; // never show future dates — cap the window at today
+    // #232 (Jerin, 14 Oct 2026): the window may now run PAST today — but only as far as a real booking goes.
+    // ⚠ NOT simply "drop the cap". To is the whole quarter, so an uncapped window would open dozens of empty
+    // columns out to 31 December. The end is the LATER of today and the furthest day the store has an arrival
+    // on, so with nothing booked ahead this behaves EXACTLY as it did before #232.
+    // ⚠ `end` is only ever reduced from To, so From/To still bites (Rule 13).
+    const horizon = tofuLastDay();
+    const limit = (horizon && horizon > today) ? horizon : today;
+    let end = toV ? new Date(toV + 'T00:00:00') : limit;
+    if (end > limit) end = limit;
     const start = fromV ? new Date(fromV + 'T00:00:00') : null;
     const out = [];
     // #141c (Jerin, 17 Sep): every day From → To. It used to stop at 30 days, so a From earlier than that moved
