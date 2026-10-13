@@ -1,7 +1,7 @@
 // ===== run210 - KEEP THIS FIRST IN THE FILE. The Run picker cannot be driven, so the function that runs is
 // whichever comes first here; run210 fires RUN210_FN on a one-off trigger (30 min, not the editor 6) and
 // asserts the refreshDashboardData clock triggers are untouched. Point RUN210_FN, open this file, press Run.
-var RUN210_FN = 'probe222';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
+var RUN210_FN = 'probe223';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
 function run210() {
   var before = 0, after = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
@@ -121,4 +121,14 @@ function trim204_(a) {
     cn: (a.candidate && (a.candidate.name || ((a.candidate.firstName || '') + ' ' + (a.candidate.lastName || '')).trim())) || null,
     ce: (a.candidate && a.candidate.primaryEmailAddress && a.candidate.primaryEmailAddress.value) || null,
     sT: st, sN: (a.source && typeof a.source.title === 'string' && a.source.title) ? a.source.title : null, ht: ht };
+}
+
+// ===== #222 - apply the new rules to the live data, ONCE. =====
+// 🚨 DO NOT point RUN210_FN at refreshStageHistory itself. run210 DELETES every trigger whose handler matches
+// RUN210_FN before creating its one-off, and its safety assertion only counts refreshDashboardData triggers - so
+// it would quietly destroy the refreshStageHistory SCHEDULE and report "UNTOUCHED, correct". This wrapper has no
+// trigger of its own, so deleting "every trigger for run222Apply" deletes nothing.
+// refreshStageHistory rebuilds the stage rollups AND calls refreshInterviewTraction, so one run covers both.
+function run222Apply() {
+  refreshStageHistory();
 }
