@@ -113,12 +113,14 @@ var TOFU_NOT_EVALUATION = { taScreen: 1, hmReview: 1 };
 
 // #221 - interviews count on the day they were HELD, not the day they were booked:
 // "For Interview booking - date of interview needs to be considered."
-// assessInterviews_() already does exactly this - it keeps only events whose start time has passed, dates them by
-// that start time, and keys them by stage - so this reuses it rather than building a second, divergent reader.
+// assessInterviews_() already does exactly this - it dates an interview by its start time and keys it by stage -
+// so this reuses it rather than building a second, divergent reader.
+// #232 (Jerin, 14 Oct 2026): and it is the ONLY caller that passes includeFuture=true, so a booking still ahead
+// of today lands on its own future day HERE AND NOWHERE ELSE. Throughput keeps the old behaviour deliberately.
 // It replaces tofuR1BookingDays_() for MOMENTUM ONLY. Screening Efficiency still uses R1 BOOKINGS further down,
 // deliberately: that panel asks whether R1 is being actioned, which is a different question.
 function tofuInterviewHeldDays_() {
-  var iv = assessInterviews_();
+  var iv = assessInterviews_(true);   // #232: keep interviews whose start time is still in the future
   var out = {}, kept = 0, dropped = {};
   for (var app in iv.byApp) {
     var byK = iv.byApp[app];
