@@ -1805,6 +1805,8 @@ th.gs-wkedge { box-shadow:inset 1px 0 0 var(--navy-line); }
 table th.wknd.gs-wkedge { box-shadow:inset 1px 0 0 var(--navy-line), inset 0 -2px 0 rgba(163,50,83,0.38); }   /* #197c · keeps the page's weekend underline */
 .gs-dow { display:block; margin-top:1px; font-size:0.59375rem; font-weight:500; line-height:1.1; letter-spacing:0; text-transform:none; color:#9aa3b8; }
 .gs-dow.is-today { color:#1E7590; font-weight:700; }
+/* #233: the header's second clock — present, but quieter than the main time it sits beside. */
+.meta-stage { opacity:0.75; }
 /* #232 (Jerin, 14 Oct 2026): a day AFTER today holds interviews that are BOOKED, not held. Deliberately AFTER
    .gs-wkend — both set background-image, and on a booked weekend "booked" is the more useful of the two. */
 th.gs-future, td.gs-future { background-image:linear-gradient(rgba(30,117,144,.07), rgba(30,117,144,.07)); }

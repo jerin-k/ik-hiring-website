@@ -134,6 +134,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Rejections do not count as progress', 'Someone rejected or withdrawn at a stage counts as assessed there and not progressed.'],
       ['A role with no movement reads empty, not its history', 'A role with no activity in the period shows dots rather than its all-time numbers.'],
@@ -172,6 +173,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['On Recruiter Efficiency, an interview needs a recruiter on the application', 'This panel is built from the recruiter named on the <strong>candidate&rsquo;s application</strong>. An interview whose application names nobody belongs to no recruiter, so it <strong>cannot appear on this tab</strong> &mdash; while it still counts in full on Hiring Manager and Overall Efficiency. <strong>The two tabs will therefore not agree, by design.</strong> How many are affected is printed above the charts for the period you are looking at, because it changes with every refresh. Older months are affected far more than recent ones: the habit of naming a recruiter took hold during Q3.'],
       ['Rescheduled only counts from 7 October 2026', 'When an interview is moved, Ashby <strong>overwrites the original time</strong> and keeps no record of the old one, so moves made before this panel existed cannot be recovered. Cancellations are complete back to 1 July.'],
       ['The most recent days look heavy on Awaiting outcome', 'Nothing is wrong &mdash; those decisions have not been made yet.'],
@@ -346,6 +348,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['This will not match Screening Efficiency', 'That panel counts every R1 action. This counts <em>people entering the funnel</em>, once each, by whichever evaluation came first. Two different questions.'],
       ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, the only way onto this panel was an interview actually being held.'],
     ]
@@ -369,6 +372,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['It will not match Momentum&rsquo;s R1 either', 'Momentum credits R1 only when it was the candidate&rsquo;s <em>first</em> signal into the funnel. Here every R1 action counts, so Momentum&rsquo;s R1 is a subset of this one.'],
       ['Online Assessment is not on this panel', 'By design &mdash; this one is about R1. An assessment still counts towards <strong>Momentum</strong>. <strong>HM Review counts nowhere</strong>: entering it is the step that decides whether to evaluate somebody, not an evaluation.'],
     ]
@@ -443,6 +447,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['Why the two figures are kept apart', 'Pooled into one median the number would measure the calendar, not the process: anyone who never left would count as today minus the day they applied, so an older quarter would always read higher just for being older.'],
       ['One column is not on the same clock as the others', 'App Review is live; every other stage follows the period. That is why it carries the asterisk &mdash; do not read across the row as one candidate&rsquo;s journey.'],
     ]
@@ -610,6 +615,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['This will not match Screening Efficiency', 'That panel counts every R1 action. This counts everyone entering the funnel, once each, by whichever evaluation came first.'],
       ['Assessments count once the team started using them', 'Before the team began sending assessments through Ashby, the only way onto this panel was an interview actually being held.'],
     ]
@@ -633,6 +639,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['Online Assessment is not on this panel', 'By design &mdash; this one is about R1. An assessment still counts towards <strong>Momentum</strong>. <strong>HM Review counts nowhere</strong>: entering it is the step that decides whether to evaluate somebody, not an evaluation.'],
     ]
   },
@@ -661,6 +668,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. That is also why <strong>R1/OA &rarr; late</strong> is a single per-candidate span rather than a sum.'],
       ['A role with no movement reads empty, not its history', 'A role with no activity in the period shows dots rather than its all-time numbers.'],
@@ -740,6 +748,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+        ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['Why the two figures are kept apart', 'Pooled into one median the number would measure the calendar, not the process: anyone who never left would count as today minus the day they applied, so an older quarter would always read higher just for being older.'],
       ['One column is not on the same clock as the others', 'App Review is live; every other stage follows the period. Do not read across a row as one candidate&rsquo;s journey.'],
     ]
