@@ -1,7 +1,7 @@
 // ===== run210 - KEEP THIS FIRST IN THE FILE. The Run picker cannot be driven, so the function that runs is
 // whichever comes first here; run210 fires RUN210_FN on a one-off trigger (30 min, not the editor 6) and
 // asserts the refreshDashboardData clock triggers are untouched. Point RUN210_FN, open this file, press Run.
-var RUN210_FN = 'run228cApply';   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
+var RUN210_FN = 'run228cApply';   // #232b done 14 Oct: pointed back off run232Triggers, which is now spent   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
 function run210() {
   var before = 0, after = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
@@ -12,6 +12,36 @@ function run210() {
   Logger.log('#210: refreshDashboardData clock triggers before=' + before + ' after=' + after
     + (before === after ? ' (UNTOUCHED, correct)' : ' CHANGED - THE SCHEDULE IS DAMAGED, reinstall it'));
   return after;
+}
+
+// ===== #232b (Jerin, 14 Oct 2026) - stage history THREE times a day, pinned to the half hour =====
+// "yes set them, pin to the half hour". 07:30 / 14:30 / 19:30 IST - one hour after each main refresh
+// (6 AM / 1 PM / 6 PM), so every run works from a freshly rebuilt worklist. nearMinute(30) holds each firing
+// within 15 minutes of the half hour, so a late-running 6 PM refresh can no longer overlap the evening start.
+// Replaces the everyHours(12) trigger Recon.gs left behind, which drifted and was tied to nothing.
+// SAFE BY CONSTRUCTION: deletes ONLY refreshStageHistory handlers, creates no recurring trigger for itself,
+// and asserts the refreshDashboardData schedule is untouched before reporting success.
+function run232Triggers() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'run232Triggers') ScriptApp.deleteTrigger(t);   // its own one-off from run210
+  });
+  var before = {}, n0 = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) { var h = t.getHandlerFunction(); before[h] = (before[h] || 0) + 1; n0++; });
+  Logger.log('#232b BEFORE: ' + n0 + ' triggers - ' + JSON.stringify(before));
+  var deleted = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'refreshStageHistory') { ScriptApp.deleteTrigger(t); deleted++; }
+  });
+  [7, 14, 19].forEach(function (h) {
+    ScriptApp.newTrigger('refreshStageHistory').timeBased().atHour(h).nearMinute(30).everyDays(1).inTimezone('Asia/Kolkata').create();
+  });
+  var after = {}, n1 = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) { var h = t.getHandlerFunction(); after[h] = (after[h] || 0) + 1; n1++; });
+  Logger.log('#232b deleted ' + deleted + ' refreshStageHistory trigger(s), created 3 at 07:30 / 14:30 / 19:30 IST');
+  Logger.log('#232b AFTER: ' + n1 + ' triggers - ' + JSON.stringify(after));
+  var b = before['refreshDashboardData'] || 0, a = after['refreshDashboardData'] || 0;
+  Logger.log('#232b CONTROL refreshDashboardData ' + b + ' -> ' + a + (b === a ? ' (UNTOUCHED, correct)' : ' CHANGED - THE MAIN SCHEDULE IS DAMAGED'));
+  Logger.log('#232b refreshStageHistory now ' + (after['refreshStageHistory'] || 0) + ' (expect 3)');
 }
 
 // ===== #222 PROBE - read-only. run210 now leads this file, because the picker defaults to the FIRST one =====
