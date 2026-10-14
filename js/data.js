@@ -382,6 +382,23 @@ export function getLastUpdated() {
   return dashboardData?.lastUpdated || null;
 }
 
+// #233 (Jerin, 14 Oct 2026) — THE SECOND CLOCK THE HEADER NEEDS.
+// `dashboard.json` and the stage-history files are written by TWO DIFFERENT JOBS on their own schedules
+// (`refreshDashboardData` ~6 AM / 1 PM / 6 PM IST, `refreshStageHistory` 07:30 / 14:30 / 19:30 IST), so one
+// timestamp cannot speak for both. He read the header at 1:35pm, saw it fresh, and reasonably concluded
+// Momentum had moved when it had not — measured that afternoon at 13:35 against 00:27, nearly 13 hours apart.
+// Returns the OLDER of the two stage-history files so the figure can never OVERSTATE how fresh they are. They
+// are minutes apart in practice (one run writes both), and null when neither loaded, so the caller stays silent.
+// ⚠ EITHER FILE CAN BE THE NEWER ONE — a stage run lands on both sides of the main refresh through the day,
+// so nothing built on this may say "behind" or "ahead".
+export function getStageDataTime() {
+  const a = dashboardData?.stageRollups?.generatedAt || null;
+  const b = dashboardData?.interviewTraction?.generatedAt || null;
+  if (!a) return b;
+  if (!b) return a;
+  return a < b ? a : b;        // ISO-8601 strings compare correctly as strings
+}
+
 // ===== #182f (Jerin, 27 Sep 2026): ONE Joining Pending rule, read by the Hiring Manager tab AND the Overview =====
 // 🗣 "use the HM logic for Overview. Thats what was always supposed to be done."
 // 🚨 WHY THIS EXISTS: `dashboard.json` carries TWO Joining Pending figures on purpose, and the pipeline says so

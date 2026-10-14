@@ -1,7 +1,7 @@
 import './ui-scale.js';   // #140: first, so every chart is built by the scaled Chart
 import { initAuth, getStoredUser, signOut, getCurrentUser } from './auth.js';
 import { loadAccessConfig, getUserAccess, canAccessPage } from './access.js';
-import { loadDashboardData, getFilteredData, getLastUpdated, getData } from './data.js';
+import { loadDashboardData, getFilteredData, getLastUpdated, getStageDataTime, getData } from './data.js';   // #233
 import { loadMetricConfig, setSignedInEmail, setAshbyEmails} from './metric-config.js';
 import { renderHome, initHomeFilters } from './pages/home.js';
 import { renderHmReport, initHmFilters } from './pages/hm-report.js';
@@ -93,10 +93,23 @@ async function onAuthSuccess(user) {
 
   const lastUpdated = getLastUpdated();
   if (lastUpdated) {
-    document.getElementById('last-updated').textContent =
+    const el = document.getElementById('last-updated');
+    el.textContent =
       'Data as of ' + new Date(lastUpdated).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
       });
+    // #233 (Jerin, 14 Oct 2026, option A of the mock): Momentum, Throughput, Screening Efficiency, Time in
+    // Process and Interview Traction are rebuilt by a SEPARATE job, so the line above cannot speak for them.
+    // Named only when it is genuinely a different time, and never with a direction — that job lands on both
+    // sides of the main refresh through the day, so "behind" would be wrong about half the time.
+    const stageAt = getStageDataTime();
+    if (stageAt && Math.abs(new Date(stageAt) - new Date(lastUpdated)) >= 60000) {
+      const span = document.createElement('span');
+      span.className = 'meta-stage';
+      span.textContent = ' · stage data ' + new Date(stageAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      span.title = 'Momentum, Throughput, Screening Efficiency, Time in Process and Interview Traction are rebuilt by a separate job, so they carry their own time.';
+      el.appendChild(span);
+    }
   }
 
   // #164: from here on the page keeps asking whether the code and the numbers have moved on, and says so
