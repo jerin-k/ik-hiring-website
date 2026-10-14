@@ -49,7 +49,7 @@ function assessQ_(day) {
 // Signal 1 ‚Äî interviews HELD, per application per stage, earliest day.
 // Also returns the event end times keyed (applicationId|userId), which is how a feedback form is matched
 // back to the interview it was written about ‚Äî the same match the interviewer turnaround already uses.
-function assessInterviews_() {
+function assessInterviews_(includeFuture) {
   var rows = [];
   try { rows = ashbyListAll_('/interviewSchedule.list', { createdAfter: Date.UTC(new Date().getFullYear(), 0, 1) }); }
   catch (e) { Logger.log('assess: interviewSchedule.list failed: ' + e.message); return { byApp: {}, ends: {} }; }
@@ -71,11 +71,21 @@ function assessInterviews_() {
       if (!stMs) continue;
       // Ashby has no "attended" flag. A non-cancelled interview whose time has passed is the closest
       // thing to it ‚Äî a booking still in the future has assessed nobody yet.
-      if (stMs > nowMs) { future++; continue; }
+      // #232 (Jerin, 14 Oct 2026): MOMENTUM is the one measure that wants the future. It asks when somebody
+      // was first evaluated and dates an interview by when it is HELD, so a booking already on the calendar
+      // belongs on its own future day - "We should also include bookings for the future dates."
+      // ONLY tofuInterviewHeldDays_() MAY PASS includeFuture. The three assessed-rollup callers must not: an
+      // interview not yet held has assessed nobody, so Throughput would read a booking as an assessment and
+      // its rate would fall for no reason at all.
+      var isFuture = stMs > nowMs;
+      if (isFuture) { future++; if (!includeFuture) continue; }
       var day = String(ev.startTime).substring(0, 10);
       var a = byApp[s.applicationId] || (byApp[s.applicationId] = {});
       if (!a[k] || day < a[k]) a[k] = day;
       kept++;
+      // #232: a booking that has not happened cannot have produced feedback, so a future event never
+      // joins "ends" - that map exists only to match a feedback form back to its interview.
+      if (isFuture) continue;
       var endMs = ev.endTime ? new Date(ev.endTime).getTime() : 0;
       var uids = ev.interviewerUserIds || [];
       for (var u = 0; u < uids.length; u++) {
@@ -87,7 +97,7 @@ function assessInterviews_() {
   });
   var un = Object.keys(unmapped);
   Logger.log('assess interviews: ' + rows.length + ' schedules -> ' + kept + ' events held (cancelled ' + cancelled
-    + ', not yet held ' + future + ')' + (un.length ? ', UNMAPPED stage titles: ' + un.join(', ') : ''));
+    + ', not yet held ' + future + (includeFuture ? ' KEPT (#232)' : ' skipped') + ')' + (un.length ? ', UNMAPPED stage titles: ' + un.join(', ') : ''));
   return { byApp: byApp, ends: ends };
 }
 
