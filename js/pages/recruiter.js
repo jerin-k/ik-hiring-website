@@ -11,7 +11,7 @@ import { scoreForRole, familyForJob, creditSplit } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel, hasRealTopic, NO_TOPIC } from '../opening-topics.js';   // #157 · #160a
 import { userTypeOf, sourcerOnlyNames, recruiterInQuarter, getRecruiterDates, signedInEmail, recruiterForEmail } from '../metric-config.js';   // #111: dates · #228b: whose tab this is
-import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.js';   // #120a: the Job filter narrows every number · #125
+import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows, joiningConversionPct, jpCaseInPeriod } from '../data.js';   // #120a: the Job filter narrows every number · #125 · #237: ONE Joining Pipeline period rule
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
 // so all three name the stages identically and in the same order. One owner, three readers.
 import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
@@ -2509,9 +2509,11 @@ export function initRecruiterFilters(baseData) {
       bump(headTo(rec, e.sourcer, e.department), 'j', e.jobTitle);   // #43
     });
     // Joining Pending - identical rule to the HM Positions card, and LIVE.
+    // #237: that sentence is an INVARIANT, so this had to move when the HM card did. It now calls the same
+    // function rather than keeping a fourth private copy of the test (Rule 3 - a shared rule is a mirror too).
     (data.joiningPendingCases || []).forEach(c => {
       const rec = c.recruiter; if (!rec || rec === 'Unassigned') return;
-      if (c.openingQuarter && c.openingQuarter < q) return;
+      if (!jpCaseInPeriod(c, q, q)) return;
       bump(headTo(rec, c.sourcer, c.department), 'p', c.job || c.jobTitle);   // #43
     });
     // Dropped - the one unified list, shared with HM and both Fulfilment tables.

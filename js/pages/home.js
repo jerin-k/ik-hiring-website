@@ -446,7 +446,9 @@ function aggregateOpenings(data, val, isQuarter, year) {
   //    14 people against 12 positions on 27 Sep. The rule now lives ONCE, in data.js, and both tabs read it.
   // ⚠ It is counted by DEPARTMENT, not per job+quarter, because a person in closing need not have an opening
   //    at all - which is exactly what the per-job count could not see.
-  const jp = joiningPendingByDept(data, isQuarter ? val : (year + '-Q1'));
+  // #237: both ends of the period now, not just the start - a position opened in a LATER quarter cannot be
+  // filled inside this one. A whole year spans Q1 to Q4.
+  const jp = joiningPendingByDept(data, isQuarter ? val : (year + '-Q1'), isQuarter ? val : (year + '-Q4'));
   const tot = { total: 0, joined: 0, open: 0, missed: 0, pending: jp.total };
   const byDept = {};
   Object.entries(ob).forEach(([job8, rec]) => {

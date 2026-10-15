@@ -414,21 +414,32 @@ export function getStageDataTime() {
 //    period being shown (Jerin, 22 Aug 2026) — their offer is last quarter's demand still in flight, and
 //    counting it again would inflate every quarter. A case with NO opening stays in: there is nothing to judge
 //    it by, and most cases have no opening.
-export function jpCaseInPeriod(c, fromQuarter) {
+export function jpCaseInPeriod(c, fromQuarter, toQuarter) {
   if (!c) return false;
-  if (!c.openingQuarter || !fromQuarter || fromQuarter === '—') return true;
-  return !(c.openingQuarter < fromQuarter);
+  // No opening attached: nothing to judge them by, so they stay. That was the Aug 2026 call and it still holds -
+  // 8 of the 21 people in closing have no opening (15 Oct 2026), and filing them by quarter would hide them.
+  if (!c.openingQuarter) return true;
+  // An EARLIER opening is last quarter's demand still in flight. Real, but not this quarter's, so it is excluded.
+  if (fromQuarter && fromQuarter !== '—' && c.openingQuarter < fromQuarter) return false;
+  // #237 (Jerin, 15 Oct 2026) - THE OTHER HALF, WHICH WAS NEVER WRITTEN.
+  // 🗣 "Q3 cannot have someone who was closed in an opening from a future quarter. That will be time
+  // traveling - hence illogical." · "any quarter cannot have that."
+  // 🔑 The asymmetry is deliberate and is NOT a bug: an older position filled late is an ordinary thing, so it
+  // is excluded only to keep it off this quarter's demand. A LATER position filled early is IMPOSSIBLE - nothing
+  // can fill a position before it is opened. Hence one rule each way, for different reasons.
+  if (toQuarter && toQuarter !== '—' && c.openingQuarter > toQuarter) return false;
+  return true;
 }
 
 // The people in closing for a period, counted once each and grouped by DEPARTMENT.
 // `fromQuarter` is the first quarter of the period on screen ('2026-Q3', or '2026-Q1' for a whole year).
 // ⚠ Department comes straight off the case, which is already the PARENT department — see CLAUDE.md
 //   "Read `job.department` directly"; dept-map.js is a no-op and must not be reintroduced here.
-export function joiningPendingByDept(data, fromQuarter) {
+export function joiningPendingByDept(data, fromQuarter, toQuarter) {
   const byDept = {};
   let total = 0;
   ((data && data.joiningPendingCases) || []).forEach(c => {
-    if (!jpCaseInPeriod(c, fromQuarter)) return;
+    if (!jpCaseInPeriod(c, fromQuarter, toQuarter)) return;   // #237
     const dept = c.department || 'Unknown';
     byDept[dept] = (byDept[dept] || 0) + 1;
     total += 1;

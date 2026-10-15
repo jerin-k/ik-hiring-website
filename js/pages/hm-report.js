@@ -857,11 +857,12 @@ export function initHmFilters(data) {
     // Only 25 of 166 cases carry an opening at all, so this can only judge those; the 141 unlinked stay in
     // because there is nothing to judge them by. Under Q3 2026 it removes the 2 sitting on Q2 openings.
     const fromQ = dateFrom ? quarterOf(dateFrom) : null;
+    const toQ = dateTo ? quarterOf(dateTo) : null;   // #237: a position from a LATER quarter cannot be filled here
     (data.joiningPendingCases || []).forEach(c => {
       const dept = deptOf(c.department || '') || 'Unknown', title = c.job || c.jobTitle || '(no job)';
       if (!inScope(dept, title, c.jobId8)) return;
       // #182f: the ONE copy of this test now lives in data.js, so the Overview cannot drift from it.
-      if (!jpCaseInPeriod(c, fromQ)) return;
+      if (!jpCaseInPeriod(c, fromQ, toQ)) return;   // #237
       bump(dept, title, 'jpP', c, c.jobId8);   // #150: the case itself, for the "Who is joining" cell
     });
     dropRows(data).forEach(e => {
