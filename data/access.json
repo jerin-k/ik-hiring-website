@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-15T10:13:49.796Z",
-  "updatedBy": "gopu.nair@interviewkickstart.com",
+  "updatedAt": "2026-10-15T10:15:04.326Z",
+  "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
     {
@@ -181,9 +181,21 @@
       "userType": "Others"
     },
     {
-      "email": "smriti.das@interviewkickstart.com",
-      "role": "full_access",
-      "userType": "Recruitment Team"
+      "email": "kartikey@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "US Business"
+      ],
+      "jobs": [
+        "3d31c20f",
+        "22fcd2e7",
+        "cac9b029",
+        "51f95272"
+      ],
+      "userType": "Hiring Manager"
     }
   ]
 }
