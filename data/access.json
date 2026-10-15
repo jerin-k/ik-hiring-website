@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-15T10:15:04.326Z",
+  "updatedAt": "2026-10-15T10:16:36.754Z",
   "updatedBy": "jerin@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -196,6 +196,16 @@
         "51f95272"
       ],
       "userType": "Hiring Manager"
+    },
+    {
+      "email": "smriti.das@interviewkickstart.com",
+      "role": "full_access",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [],
+      "jobs": [],
+      "userType": "Recruitment Team"
     }
   ]
 }
