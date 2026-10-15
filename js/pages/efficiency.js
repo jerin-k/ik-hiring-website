@@ -27,7 +27,7 @@ import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobS
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187, rewritten by #192
 import { levelChooser, levelsOn, wireLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
-import { jobsWithOpeningIn, offerDropRows, joiningConversionPct } from '../data.js';   // #125 · #189f: one conversion formula
+import { jobsWithOpeningIn, offerDropRows, joiningConversionPct, jpCaseInPeriod } from '../data.js';   // #125 · #189f: one conversion formula · #237: and ONE Joining Pipeline period rule
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
          FULFIL_COLORS, fulfilStackOpts } from '../chart-style.js';   // #182e: moved to chart-style so HM shares them
@@ -671,7 +671,7 @@ export function initEfficiencyFilters(data) {
     loadNotes().then(() => { try { redraw(); } catch (e) { /* the panel may have been left */ } });
   }
   function peopleMaps(per) {
-    const startQ = per ? per[0] : null;
+    const startQ = per ? per[0] : null, endQ = per ? per[per.length - 1] : null;   // #237
     const jp = {}, jpc = {}, drop = {}, dropOp = {}, jn = {};
     // #182c: the people behind "Who has joined" - accepted offer AND moved to Hired, dated by their START date
     // inside From / To. The SAME definition the Hiring Manager tab and the Joiners sub-tab use, deliberately:
@@ -685,7 +685,9 @@ export function initEfficiencyFilters(data) {
       (jn[k] || (jn[k] = [])).push(e);
     });
     (data.joiningPendingCases || []).forEach(c => {
-      if (c.openingQuarter && startQ && c.openingQuarter < startQ) return;
+      // #237: this tab kept its OWN copy of the rule and so could not inherit the fix. It now reads the one in
+      // data.js, the same one the Hiring Manager tab and the Overview use (Rule 3 - a shared test is a mirror too).
+      if (!jpCaseInPeriod(c, startQ, endQ)) return;
       const k = dkey(c.department) + '|' + (c.job || c.jobTitle || '');
       jp[k] = (jp[k] || 0) + 1;
       (jpc[k] || (jpc[k] = [])).push(c);   // #161: the same people, kept, so a topic row can count the ones tied to its openings
@@ -1400,8 +1402,9 @@ export function initEfficiencyFilters(data) {
     const cacheKey = (period ? period.join(',') : '*') + '|' + rg.from + '|' + rg.to;
     if (_jcKey === cacheKey && _jc) return _jc;
     const startQ = period ? period[0] : null;   // #203: the local qOf() went with the Joined rule it served
+    const endQ = period ? period[period.length - 1] : null;   // #237
     const inPeriod = (qq) => !!qq && (!period || period.includes(qq));
-    const earlier = (oq) => !!(oq && startQ && oq < startQ);
+    // #237: `earlier` is gone - it was a THIRD private copy of the Joining Pipeline period rule.
     const byKey = {};
     const bump = (key, field) => { const a = byKey[key] || (byKey[key] = { o: 0, j: 0, p: 0, dr: 0 }); a[field] += 1; };
     (data.offerEvents || []).forEach(e => {
@@ -1413,7 +1416,7 @@ export function initEfficiencyFilters(data) {
       bump(dkey(e.department) + '|' + (e.jobTitle || ''), 'j');
     });
     (data.joiningPendingCases || []).forEach(c => {
-      if (earlier(c.openingQuarter)) return;
+      if (!jpCaseInPeriod(c, startQ, endQ)) return;   // #237: the shared rule, both ends
       bump(dkey(c.department) + '|' + (c.job || c.jobTitle || ''), 'p');
     });
     dropRows(data).forEach(e => {
