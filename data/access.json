@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-13T17:47:51.750Z",
-  "updatedBy": "jerin@interviewkickstart.com",
+  "updatedAt": "2026-10-15T10:13:49.796Z",
+  "updatedBy": "gopu.nair@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
     {
@@ -179,6 +179,11 @@
       "email": "aashish.kumar@interviewkickstart.com",
       "role": "full_access",
       "userType": "Others"
+    },
+    {
+      "email": "smriti.das@interviewkickstart.com",
+      "role": "full_access",
+      "userType": "Recruitment Team"
     }
   ]
 }
