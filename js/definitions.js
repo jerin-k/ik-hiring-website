@@ -1038,7 +1038,7 @@ export const HYGIENE_LISTS = [
   { id: 'unscored', group: 'Offers & openings', name: 'Roles Missing Score Inputs', sub: 'Adds headcount but no Score', scope: 'quarter', unit: 'roles',
     why: 'A role that scores zero adds headcount but nothing to its department’s Score — usually a Tech or Non-Tech role with no Level.', fix: ['Ashby', 'Job', 'Level'] },
   { id: 'anomalies', group: 'System', name: 'Other Anomalies', sub: 'Unknown stage names, mis-credited interviewers', scope: 'live', unit: 'issues',
-    why: 'Catches an Ashby stage the dashboard doesn’t recognise before its candidates silently drop out of every count.', fix: ['See each row'] },
+    why: 'Catches an Ashby stage the dashboard doesn’t recognise before its candidates silently drop out of every count. Terminal statuses (Hired, Archived) and sourcing statuses (New Lead, Reached Out, Replied) are expected and sit in a footnote — anything listed above it is a real problem. On 15 Oct 2026 this list had been naming “R0 - Online Assessment” and its 71 hidden candidates for some time before anyone read it.', fix: ['See each row'] },
 ];
 
 // Renders one definitions block. Collapsed by default — it is reference material, not something to read

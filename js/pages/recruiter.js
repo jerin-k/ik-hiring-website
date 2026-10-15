@@ -3002,7 +3002,17 @@ export function initRecruiterFilters(baseData) {
     // A stage title Ashby uses that the pipeline has no mapping for is dropped from EVERY count, silently. That is how "Online
     // Assessment" reported zero for months while candidates sat in it. 'Hired' and 'Archived' are unmapped BY DESIGN (status, not
     // stage) and the two biggest, so they sit in a muted footnote rather than burying the real signal.
-    const EXPECTED_UNMAPPED = { Hired: 'counted from application status, not stage', Archived: 'rejected/withdrawn — deliberately outside the live pipeline' };
+    // #234 (Jerin, 15 Oct 2026): the list WORKED — it had been naming "R0 - Online Assessment" and its 71 people
+    // all along — and nobody saw it, because three SOURCING states sat in the same list making it look like routine
+    // noise. They are pre-application statuses, not pipeline stages, and belong in the footnote with Hired and
+    // Archived. 🔑 A warning nobody reads is not a warning: what is left here is only ever a REAL problem.
+    const EXPECTED_UNMAPPED = {
+      Hired: 'counted from application status, not stage',
+      Archived: 'rejected/withdrawn — deliberately outside the live pipeline',
+      'New Lead': 'sourcing status before an application exists',
+      'Reached Out': 'sourcing status before an application exists',
+      'Replied': 'sourcing status before an application exists'
+    };
     const unmapped = Object.entries(dq.unmappedStages || {}).sort((a, b) => b[1] - a[1]);
     unmapped.filter(([stage]) => !EXPECTED_UNMAPPED[stage]).forEach(([stage, n]) => anomList.push({
       what: 'Ashby stage not recognised by the dashboard',
