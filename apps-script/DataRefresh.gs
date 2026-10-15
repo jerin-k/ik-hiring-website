@@ -34,7 +34,11 @@ var STAGE_KEY_MAP = {
   // which every job in every department uses). The map previously had ONLY 'OA', so every Online
   // Assessment record fell through and the dashboard reported 0 assessments for months while real
   // candidates sat in the stage. 'OA' is kept as an alias in case the stage is ever renamed back.
-  'Online Assessment': 'oa', 'OA': 'oa',
+  // #234 (Jerin, 15 Oct 2026): 'R0 - Online Assessment' is a SECOND TITLE FOR THE SAME STAGE - his words,
+  // "R0 - Online Assessment is the same as Online Assessment". 71 applications were sitting in it, counted
+  // in Applications and placed in NO stage, which is why SE2 Machine Learning read 0 assessments with two
+  // people already at R1. THIS IS THE THIRD TIME THE SAME GAP HAS BITTEN - see the note above.
+  'Online Assessment': 'oa', 'OA': 'oa', 'R0 - Online Assessment': 'oa',
   'R1': 'r1', 'R2': 'r2', 'R3': 'r3', 'R4': 'r4', 'R5': 'r5',
   'Reference Check': 'refCheck', 'Document Submission': 'docSub', 'Offer': 'offer'
 };
