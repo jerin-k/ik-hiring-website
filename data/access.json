@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-15T13:27:41.111Z",
+  "updatedAt": "2026-10-15T14:43:41.116Z",
   "updatedBy": "gopu.nair@interviewkickstart.com",
   "defaultRole": "none",
   "users": [
@@ -181,23 +181,6 @@
       "userType": "Others"
     },
     {
-      "email": "kartikey@interviewkickstart.com",
-      "role": "restricted",
-      "tabs": [
-        "hm-report"
-      ],
-      "departments": [
-        "US Business"
-      ],
-      "jobs": [
-        "3d31c20f",
-        "22fcd2e7",
-        "cac9b029",
-        "51f95272"
-      ],
-      "userType": "Hiring Manager"
-    },
-    {
       "email": "smriti.das@interviewkickstart.com",
       "role": "full_access",
       "tabs": [
@@ -206,6 +189,24 @@
       "departments": [],
       "jobs": [],
       "userType": "Recruitment Team"
+    },
+    {
+      "email": "kartikey.sharma@interviewkickstart.com",
+      "role": "restricted",
+      "tabs": [
+        "hm-report"
+      ],
+      "departments": [
+        "US Business"
+      ],
+      "jobs": [
+        "e218808b",
+        "22fcd2e7",
+        "51f95272",
+        "3d31c20f",
+        "cac9b029"
+      ],
+      "userType": "Hiring Manager"
     }
   ]
 }
