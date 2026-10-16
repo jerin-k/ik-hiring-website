@@ -62,7 +62,7 @@ function assessInterviews_(includeFuture) {
     if (!s.applicationId) return;
     if (String(s.status || '') === 'Cancelled') { cancelled++; return; }
     var title = titles[s.interviewStageId] || '';
-    var k = STAGE_KEY_MAP[title];
+    var k = stageKeyFor(title);   // #236a
     if (!k) { if (title) unmapped[title] = (unmapped[title] || 0) + 1; return; }
     var evs = s.interviewEvents || [];
     for (var i = 0; i < evs.length; i++) {
@@ -113,7 +113,7 @@ function assessAssignments_() {
   rows.forEach(function (t) {
     if (!t.applicationId || !t.createdAt) return;
     if (t.status === 'Cancelled') { cancelled++; return; }
-    var k = STAGE_KEY_MAP[titles[t.interviewStageId] || ''];
+    var k = stageKeyFor(titles[t.interviewStageId] || '');   // #236a
     if (!k) return;
     var day = String(t.createdAt).substring(0, 10);
     var a = byApp[t.applicationId] || (byApp[t.applicationId] = {});
@@ -349,7 +349,7 @@ function assessWindowBackfill_(need, win) {
         // 'Archived' is not a pipeline stage and has no STAGE_KEY_MAP entry, but it is the ONLY record that
         // this application is finished and its history will never change. 275 of the 294 measured carried one.
         if (hist[h].title === 'Archived') arch = true;
-        var k = STAGE_KEY_MAP[hist[h].title];
+        var k = stageKeyFor(hist[h].title);   // #236a
         if (!k) continue;
         ev.push({ k: k,
           e: hist[h].enteredStageAt ? dayKey_(new Date(hist[h].enteredStageAt).getTime()) : null,
@@ -795,7 +795,7 @@ function probe222b() {
       if (!hist.length) { empty++; continue; }
       var ev = [];
       for (var h = 0; h < hist.length; h++) {
-        var k = STAGE_KEY_MAP[hist[h].title];
+        var k = stageKeyFor(hist[h].title);   // #236a
         if (!k) { if (hist[h].title) unmapped[hist[h].title] = (unmapped[hist[h].title] || 0) + 1; continue; }
         ev.push({ k: k,
           e: hist[h].enteredStageAt ? dayKey_(new Date(hist[h].enteredStageAt).getTime()) : null,
