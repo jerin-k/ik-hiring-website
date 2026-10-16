@@ -42,6 +42,94 @@ var STAGE_KEY_MAP = {
   'R1': 'r1', 'R2': 'r2', 'R3': 'r3', 'R4': 'r4', 'R5': 'r5',
   'Reference Check': 'refCheck', 'Document Submission': 'docSub', 'Offer': 'offer'
 };
+
+// #236a (Jerin, 16 Oct 2026) - TAKE STAGE NAMES FROM ASHBY WITHOUT ASKING HIM EVERY TIME.
+// "sync the stage names in dashboard as per Ashby; i dont have to be in the middle of this process."
+// A title with no entry above is counted in Applications and placed in NO stage. That is how
+// "R0 - Online Assessment" hid 71 people (#234), and the same gap had already cost months once before.
+// THE RULE IS DELIBERATELY NARROW, because a wrong auto-map is INVISIBLE once made:
+//   1. an exact title match always wins;
+//   2. otherwise strip ONE leading round prefix ("R0 - ", "Round 2: ", "3. ") and ONE trailing bracket
+//      ("(HackerRank)"), fold case, punctuation and spacing, then require an EXACT match on what is left.
+// NO CONTAINMENT MATCHING. "Pre Online Assessment Screening" must NOT become Online Assessment - it merely
+// contains the words. Narrow and occasionally silent beats broad and wrong, every time.
+// Proved against 17 cases before shipping, 11 that must match and 6 that must not.
+var STAGE_AUTO_MATCHED = {};   // title -> key: what it decided WITHOUT being asked, for the email
+var STAGE_NORM_INDEX = null;
+
+function stageNormalise_(t) {
+  return String(t || '')
+    .replace(/\s*\([^)]*\)\s*$/, ' ')
+    .replace(/^\s*(?:r\d+|round\s*\d+|stage\s*\d+|\d+)\s*[-–—:.)]\s*/i, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function stageKeyFor(title) {
+  if (!title) return null;
+  var exact = STAGE_KEY_MAP[title];
+  if (exact) return exact;
+  if (!STAGE_NORM_INDEX) {
+    STAGE_NORM_INDEX = {};
+    for (var k in STAGE_KEY_MAP) {
+      var n = stageNormalise_(k);
+      if (n) STAGE_NORM_INDEX[n] = STAGE_KEY_MAP[k];
+    }
+  }
+  var hit = STAGE_NORM_INDEX[stageNormalise_(title)];
+  if (hit) { STAGE_AUTO_MATCHED[title] = hit; return hit; }
+  return null;
+}
+
+// #236a - the mail. Only on a CHANGE: a daily "all fine" is unread within a week, which is the #234 lesson.
+// Admins come from the PUBLISHED access.json, exactly as #163 does, so there is no second list to keep in step.
+// MailApp is already consented (#118), so this adds no OAuth scope. A mail problem must never fail a refresh.
+function notifyStageNames_(autoMatched, unmapped) {
+  try {
+    var EXPECTED = { 'Hired': 1, 'Archived': 1, 'New Lead': 1, 'Reached Out': 1, 'Replied': 1 };
+    var unknown = {}, nUnknown = 0;
+    for (var t in (unmapped || {})) { if (!EXPECTED[t]) { unknown[t] = unmapped[t]; nUnknown++; } }
+    var autoKeys = [], au = [];
+    for (var a in (autoMatched || {})) { autoKeys.push(a); au.push(a + ' -> ' + autoMatched[a]); }
+    autoKeys.sort();
+    var unkKeys = Object.keys(unknown).sort();
+    var now = { auto: autoKeys, unknown: unkKeys, at: new Date().toISOString() };
+    var last = loadDriveJson_('stage_name_watch.json') || { auto: [], unknown: [] };
+    var same = autoKeys.join('|') === (last.auto || []).join('|') && unkKeys.join('|') === (last.unknown || []).join('|');
+    Logger.log('#236a stage names: ' + autoKeys.length + ' auto-matched, ' + nUnknown + ' unrecognised'
+      + (same ? ' - unchanged since the last report, no mail' : ' - CHANGED, mailing'));
+    if (same) return;
+    var access = loadDriveJson_('access.json');
+    var admins = (((access && access.users) || []).filter(function (u) {
+      return u && u.email && String(u.role || '').toLowerCase() === 'admin';
+    })).map(function (u) { return u.email; });
+    if (!admins.length) { Logger.log('#236a NO EMAIL: nobody in access.json has role=admin'); return; }
+    var body = '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">';
+    if (nUnknown) {
+      body += '<p style="margin:0 0 10px"><strong>Ashby is using a stage name the dashboard does not recognise.</strong>'
+        + ' Anyone sitting in it is counted as an application but appears in no stage, so they are missing from'
+        + ' Momentum, Throughput, Screening Efficiency, Time in Process, Interview Pipeline and Interview Traction.</p><ul>';
+      for (var u2 in unknown) body += '<li><strong>' + String(u2).replace(/[<>]/g, '') + '</strong> - ' + unknown[u2] + ' people</li>';
+      body += '</ul><p style="margin:0 0 10px">Is this the same stage under a new name, or a genuinely new round?'
+        + ' If it is a rename, it is a one-line fix. If it is a new round it needs its own column.</p>';
+    }
+    if (au.length) {
+      body += '<p style="margin:12px 0 6px;color:#6b7391">Renamed stages the dashboard matched on its own, with no'
+        + ' action needed from you. Listed so a wrong match cannot hide:</p><ul style="color:#6b7391">';
+      for (var i = 0; i < au.length; i++) body += '<li>' + String(au[i]).replace(/[<>]/g, '') + '</li>';
+      body += '</ul>';
+    }
+    body += '<p style="margin:12px 0 0"><a href="https://hiring.interviewkickstart.com" style="color:#4E6BA6">Open the Hiring Dashboard</a>'
+      + ' - the full list is under Data Hygiene, Other Anomalies.</p></div>';
+    MailApp.sendEmail({ to: admins.join(','), name: 'IK Hiring Dashboard',
+      subject: nUnknown ? 'Hiring Dashboard: a stage name is not recognised' : 'Hiring Dashboard: stage names changed in Ashby',
+      htmlBody: body });
+    Logger.log('#236a EMAIL SENT to ' + admins.length + ' admin(s)');
+    saveDriveJson_('stage_name_watch.json', now);
+  } catch (e) {
+    Logger.log('#236a stage-name notice FAILED (refresh unaffected): ' + e);
+  }
+}
+
 // The three late stages. A candidate's FIRST entry into any of them marks the quarter whose opening they
 // were working against - the convention Drop is attributed by, since Ashby cannot supply the opening.
 var LATE_STAGES_ = { 'Reference Check': 1, 'Document Submission': 1, 'Offer': 1 };
@@ -1030,7 +1118,9 @@ function refreshDashboardData() {
   var uaRow = appResult.recruiterCounts['Unassigned'];
   var dataQuality = { recruitersWithoutUserId: recruitersWithoutUserId, unassigned: appResult.unassignedCases.slice(0, 800), unassignedTotal: uaRow ? uaRow.total : 0, offerMissingLink: offerMissingLink, openingsNoOpenedAt: openingsNoOpenedAt, excludedAsRecruiter: recruitersList.filter(function (r) { return r.name === 'G Darshan' && (r.total || 0) > 0; }).map(function (r) { return r.name; }),
     multiRecruiter: appResult.anomalies.multiRecruiter.slice(0, 200), multiSourcer: appResult.anomalies.multiSourcer.slice(0, 200),
-    unmappedStages: appResult.unmappedStages || {} };
+    unmappedStages: appResult.unmappedStages || {},
+    autoMatchedStages: STAGE_AUTO_MATCHED };   // #236a
+  notifyStageNames_(STAGE_AUTO_MATCHED, dataQuality.unmappedStages);
   Logger.log('ATTRIBUTION: recruiters(incl Unassigned)=' + recruitersList.length + ' | Unassigned total=' + dataQuality.unassignedTotal +
     ' | unassigned reached-screening+ list=' + dataQuality.unassigned.length + ' | multi-recruiter=' + appResult.anomalies.multiRecruiter.length +
     ' | multi-sourcer=' + appResult.anomalies.multiSourcer.length + ' | offerEvents=' + offerEvents.length + ' | joiningPendingCases=' + joiningPendingCases.length);
@@ -1457,13 +1547,13 @@ function backfillArchivedLateStage() {
         // ToFU needs the HM arrival of people who have since been archived. Without it a July ToFU
         // number shrinks every time somebody from July is rejected in August - the past quietly
         // rewriting itself, which is the one thing this metric must not do.
-        if (STAGE_KEY_MAP[ht.title] === 'hmReview' && (!hmEarliest || String(ht.enteredStageAt) < String(hmEarliest))) hmEarliest = ht.enteredStageAt;
+        if (stageKeyFor(ht.title) === 'hmReview' && (!hmEarliest || String(ht.enteredStageAt) < String(hmEarliest))) hmEarliest = ht.enteredStageAt;
         // Screening Efficiency asks whether a candidate got PAST R1. For someone since archived the live
         // stage store holds nothing, so without this the answer defaults to 'no' — and 1,029 of 1,787 R1
         // bookings are archived, so the rate would read about 23% when the truth is higher. Record the
         // earliest stage beyond R1 here, on the same sweep that already has the history open.
         if (BEYOND_R1_[ht.title] && (!beyondR1 || String(ht.enteredStageAt) < String(beyondR1))) beyondR1 = ht.enteredStageAt;
-        var wk = STAGE_KEY_MAP[ht.title];
+        var wk = stageKeyFor(ht.title);   // #236a
         if (wk) wins.push({ k: wk, e: String(ht.enteredStageAt).substring(0, 10),
                             l: ht.leftStageAt ? String(ht.leftStageAt).substring(0, 10) : null });
       }
@@ -1534,7 +1624,7 @@ function refreshStageHistory() {
         // candidate dropped out - Ashby moves them off their stage when archiving, so the main pull cannot see it.
         // Capture the day it happened before the unmapped-title skip throws it away, or Drop counts nothing.
         if (hist[h].title === 'Archived' && hist[h].enteredStageAt) { arch = dayKey_(new Date(hist[h].enteredStageAt).getTime()); }
-        var k = STAGE_KEY_MAP[hist[h].title];
+        var k = stageKeyFor(hist[h].title);   // #236a
         if (!k) { if (hist[h].title) unmappedHist[hist[h].title] = (unmappedHist[hist[h].title] || 0) + 1; continue; }
         ev.push({ k: k, e: hist[h].enteredStageAt ? dayKey_(new Date(hist[h].enteredStageAt).getTime()) : null, l: hist[h].leftStageAt ? dayKey_(new Date(hist[h].leftStageAt).getTime()) : null });
       }
@@ -2301,7 +2391,7 @@ function appsAccumOne_(ctx, app, jobLookup, excludedJobIds_) {
   if (app.id) ctx.appMap[app.id] = { jobId: jobId, recruiter: recruiter, sourcer: sourcer, candidate: candName, email: candEmail };
   var jd = jobLookup[jobId];
   var stageName = app.currentInterviewStage ? app.currentInterviewStage.title : null;
-  var stageKey = stageName ? (STAGE_KEY_MAP[stageName] || null) : null;
+  var stageKey = stageName ? (stageKeyFor(stageName) || null) : null;   // #236a: follows a rename on its own
   if (stageName && !stageKey) ctx.unmappedStages[stageName] = (ctx.unmappedStages[stageName] || 0) + 1;
   var isHired = (app.status === 'Hired');
   if (app.id && ctx.appMap[app.id]) {
