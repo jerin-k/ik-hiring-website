@@ -21,7 +21,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData,
          joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl,
-         reportingQuarters } from '../period.js';   // #127 · #129 · #133 · #227
+         reportingQuarters, currentReportingQuarter} from '../period.js';   // #127 · #129 · #133 · #227
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
 import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
@@ -3987,7 +3987,7 @@ export function initRecruiterFilters(baseData) {
         qs.length ? qs.slice().sort() : selectionQuarters(document.getElementById('recVelYear')?.value || '',
                                                           document.getElementById('recVelQuarter')?.value || ''), true);
       renderAll();
-    });
+    }, [currentReportingQuarter()]);
   // #228a Interview Traction — the SAME module Hiring Manager and Overall Efficiency mount (Rule 3), given
   // this page's scope. byRecruiter makes it read the recruiter -> role -> round -> day store, so the
   // Recruiter AND Role chips both move its numbers (Rule 13). No Quarter chip of its own: #227 already gave

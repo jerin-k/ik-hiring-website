@@ -59,6 +59,13 @@ export function fillQuarterSelect(sel, year, withAll, now) {
 }
 
 // Puts a Year + Quarter pair on the quarter today falls in — so every tab opens on Q4 from 1 Oct without anyone touching it.
+// #238 (Jerin, 16 Oct 2026): the quarter we are in, as an absolute key ('2026-Q4'). ONE home — the single
+// Year/Quarter boxes and the multi-tick Quarters chips must agree, or switching sub-tab silently changes the
+// period under you, which is exactly what they did before this.
+export function currentReportingQuarter(now = new Date()) {
+  return reportingQuarters(now).slice(-1)[0];
+}
+
 export function selectCurrentQuarter(yearSel, quarterSel, withAll, now = new Date()) {
   if (!yearSel || !quarterSel) return;
   const cur = reportingQuarters(now).slice(-1)[0];
