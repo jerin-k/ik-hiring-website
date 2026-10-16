@@ -19,7 +19,7 @@
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export function makeMultiSelect(container, label, options, onChange) {
+export function makeMultiSelect(container, label, options, onChange, initial) {
   if (!container) return null;
   const selected = new Set();
   const norm = (options || []).map(o => (o && typeof o === 'object')
@@ -37,6 +37,16 @@ export function makeMultiSelect(container, label, options, onChange) {
   const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
   const opts = [...container.querySelectorAll('.ms-opt')];
   const emptyMsg = container.querySelector('.ms-empty');
+  // #238: an optional STARTING selection. Seeded silently — onChange is deliberately NOT fired, because the page
+  // is still being assembled here and a render would run before its data is ready. A value that is not on offer
+  // is ignored rather than ticked blind, so a stale default can never select nothing and look like "All".
+  (initial || []).forEach(v => {
+    const key = String(v);
+    if (!Object.prototype.hasOwnProperty.call(textOf, key)) return;
+    selected.add(key);
+    const box = opts.map(o => o.querySelector('input')).find(i => i && i.value === key);
+    if (box) box.checked = true;
+  });
   btn.textContent = labelText();
   // The full label is the tooltip, so a name the cap trims is still readable on hover (#196).
   const paint = () => { btn.textContent = labelText(); btn.title = labelText(); };

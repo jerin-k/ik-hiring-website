@@ -21,7 +21,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl,
-         reportingQuarters } from '../period.js';   // #127 · #129 · #133 · #207
+         reportingQuarters, currentReportingQuarter} from '../period.js';   // #127 · #129 · #133 · #207
 import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
@@ -2331,7 +2331,7 @@ export function initEfficiencyFilters(data) {
         qs.length ? qs.slice().sort() : selectionQuarters(document.getElementById('effYear')?.value || '',
                                                           document.getElementById('effQuarter')?.value || ''), true);
       renderAll();
-    });
+    }, [currentReportingQuarter()]);
 
   // #206 Interview Traction - the SAME module the Hiring Manager tab mounts, with this page's own scope.
   renderTraction = mountInterviewTraction(document.getElementById('effTractionHost'), data, () => {

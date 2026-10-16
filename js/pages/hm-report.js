@@ -16,7 +16,7 @@ import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expan
 import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
-         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl } from '../period.js';   // #127 · #129 · #130 · #133
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter} from '../period.js';   // #127 · #129 · #130 · #133
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -1672,7 +1672,7 @@ export function initHmFilters(data) {
         qs.length ? qs.slice().sort() : selectionQuarters(document.getElementById('hmYear')?.value || '',
                                                           document.getElementById('hmQuarter')?.value || ''), true);
       renderActive();
-    });
+    }, [currentReportingQuarter()]);
   // Panelist names are the long tail here (hundreds of rows) — the shared multi-select gives
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
