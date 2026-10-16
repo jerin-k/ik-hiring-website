@@ -3026,6 +3026,13 @@ export function initRecruiterFilters(baseData) {
     if (anBody) {
       let ah = anomList.map(a => `<tr><td style="font-weight:500">${esc(a.what)}</td><td>${esc(a.detail)}</td><td style="color:var(--muted)">${esc(a.fix)}</td></tr>`).join('')
         || `<tr><td colspan="3" style="text-align:center;color:var(--green);padding:1rem">No anomalies. ✓</td></tr>`;
+      // #236a: a stage the pipeline RENAMED ITSELF onto a known key. Not a problem and never a row - it is
+      // shown so a wrong auto-match cannot hide. The #234 lesson: anything above the footnote must be real.
+      const autoM = Object.entries(dq.autoMatchedStages || {});
+      if (autoM.length) {
+        ah += `<tr><td colspan="3" style="color:var(--muted);font-size:0.6875rem;padding-top:0.625rem;border-top:1px solid var(--border-light)">Ashby renamed these, and the dashboard followed on its own \u2014 nothing to do: `
+          + autoM.map(([t, k]) => `<strong>${esc(t)}</strong> &rarr; ${esc(k)}`).join(' \u00b7 ') + `.</td></tr>`;
+      }
       if (expectedSeen.length) {
         ah += `<tr><td colspan="3" style="color:var(--muted);font-size:0.6875rem;padding-top:0.625rem;border-top:1px solid var(--border-light)">Also outside the stage map, as expected: `
           + expectedSeen.map(([st, n]) => `<strong>${esc(st)}</strong> (${n.toLocaleString()})`).join(' · ') + `.</td></tr>`;
