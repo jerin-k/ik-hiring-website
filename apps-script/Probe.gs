@@ -1,7 +1,7 @@
 // ===== run210 - KEEP THIS FIRST IN THE FILE. The Run picker cannot be driven, so the function that runs is
 // whichever comes first here; run210 fires RUN210_FN on a one-off trigger (30 min, not the editor 6) and
 // asserts the refreshDashboardData clock triggers are untouched. Point RUN210_FN, open this file, press Run.
-var RUN210_FN = 'run228cApply';   // parked on a read-only wrapper. NEVER leave this on a refresh - a stray Run would rebuild live data   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
+var RUN210_FN = 'run228cApply';   // #240: read-only Ashby probe. Park back on run228cApply when done   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
 function run210() {
   var before = 0, after = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
@@ -12,6 +12,57 @@ function run210() {
   Logger.log('#210: refreshDashboardData clock triggers before=' + before + ' after=' + after
     + (before === after ? ' (UNTOUCHED, correct)' : ' CHANGED - THE SCHEDULE IS DAMAGED, reinstall it'));
   return after;
+}
+
+
+// ===== #240 PROBE - can Ashby LIST its interview stages? Read-only, writes nothing. =====
+// Decides step B of WORKLIST-240: whether a brand-new EMPTY stage can be caught the moment it is created, or
+// only once the first candidate enters it. The pipeline today resolves ONE stage at a time by id
+// (/interviewStage.info); it has never asked what stages EXIST.
+// THE 403-vs-404 RULE: always include an invented control. A 404 identical to the control is proof of absence;
+// a DIFFERENT code means the endpoint is real and something else is wrong (permissions, payload shape).
+// SAFETY: only .list and .info are probed. NEVER a create/update/set - #234's lesson is that an empty body can
+// still WRITE (opening.create did, and cost two stray openings).
+function probe240Stages() {
+  var eps = [
+    ['/interviewStage.list',        'the one we want - every stage'],
+    ['/interviewPlan.list',         'every plan, stages probably nested'],
+    ['/interviewStage.info',        'KNOWN GOOD - the pipeline uses it (empty body should complain about a missing id)'],
+    ['/interviewPlan.info',         'a plan by id'],
+    ['/interviewStageGroup.list',   'a guess at the grouping level'],
+    ['/job.list',                   'KNOWN GOOD - proves the key and the control are both working'],
+    ['/interviewStage.zzInvented',  'CONTROL - definitely absent, same namespace'],
+    ['/totallyMadeUp.endpoint',     'CONTROL - definitely absent']
+  ];
+  Logger.log('#240 probe: ' + eps.length + ' endpoints, READ-ONLY, empty bodies. Nothing is written.');
+  for (var i = 0; i < eps.length; i++) {
+    var ep = eps[i][0];
+    // #240 FIX 16 Oct: the old guard was /\.(list|info)$/ which SILENTLY SKIPPED BOTH
+    // INVENTED CONTROLS, leaving the one 404 uninterpretable. Block write verbs instead,
+    // so a made-up path still gets called and can serve as the control it was meant to be.
+    if (/\.(create|update|delete|set|add|remove|hire|archive)/i.test(ep)) {
+      Logger.log('#240 SKIPPED (write verb, refusing): ' + ep); continue;
+    }
+    var out = { code: 0, text: '' };
+    try {
+      var resp = UrlFetchApp.fetch(ASHBY_API_BASE + ep, {
+        method: 'post', contentType: 'application/json',
+        headers: { 'Authorization': 'Basic ' + Utilities.base64Encode(getAshbyApiKey_() + ':') },
+        payload: '{}', muteHttpExceptions: true });
+      out.code = resp.getResponseCode();
+      out.text = String(resp.getContentText() || '').substring(0, 220);
+    } catch (e) { out.code = -1; out.text = 'threw: ' + e.message; }
+    var n = '';
+    try { var j = JSON.parse(out.text);
+      if (j && j.results && j.results.length != null) n = '  results=' + j.results.length;
+      else if (j && j.success === false) n = '  errors=' + JSON.stringify(j.errors || j.errorInfo || '').substring(0, 90);
+    } catch (x) {}
+    Logger.log('#240 | ' + (ep + '                          ').substring(0, 28) + ' HTTP ' + out.code + n
+      + '  <- ' + eps[i][1]);
+    Logger.log('#240 |     body: ' + out.text.replace(/\s+/g, ' ').substring(0, 1500));
+    Utilities.sleep(200);
+  }
+  Logger.log('#240 probe done. Compare each against the two CONTROLS: same code as a control = that endpoint does not exist.');
 }
 
 // ===== #232b (Jerin, 14 Oct 2026) - stage history THREE times a day, pinned to the half hour =====
@@ -202,4 +253,140 @@ function probe228c() {
 // schedule. 🚨 NEVER point RUN210_FN at refreshDashboardData itself - it has three clock triggers.
 function run228cApply() {
   refreshDashboardData();
+}
+
+// ===== #240 housekeeping: delete SPENT one-off triggers =====
+// 16 Oct 2026. The project hit Apps Script 20-trigger ceiling, so run210 could not
+// create its one-off and probe240Stages never ran:
+//   "This script has too many triggers. Triggers must be deleted from the script
+//    before more can be added."
+// Deletes ONLY handlers listed in SPENT_240. refreshDashboardData and refreshStageHistory
+// are absent from that list AND guarded by KEEP_240; the function throws if either count
+// moves. Idempotent - safe to re-run. Anything on neither list is reported as UNKNOWN
+// and left alone.
+function cleanupSpentTriggers_240() {
+  var SPENT_240 = ["probeTrace","probe210","probe221","probe222","probe222b","probe223",
+                   "probe228c","probe222Reports","buildRetagPlan","run222Apply",
+                   "run228Apply","run228cApply","runRefreshOnceSafe","probe240Stages"];
+  var KEEP_240 = ["refreshDashboardData","refreshStageHistory"];
+  function tally(ts) {
+    var mm = {}, i, h;
+    for (i = 0; i < ts.length; i++) { h = ts[i].getHandlerFunction(); mm[h] = (mm[h] || 0) + 1; }
+    return mm;
+  }
+  var all = ScriptApp.getProjectTriggers();
+  var before = tally(all);
+  var deleted = [], keptReal = [], unknown = [], i, h;
+  for (i = 0; i < all.length; i++) {
+    h = all[i].getHandlerFunction();
+    if (KEEP_240.indexOf(h) !== -1) { keptReal.push(h); continue; }
+    if (SPENT_240.indexOf(h) === -1) { unknown.push(h); continue; }
+    ScriptApp.deleteTrigger(all[i]);
+    deleted.push(h);
+  }
+  var now = ScriptApp.getProjectTriggers();
+  var after = tally(now);
+  Logger.log("BEFORE  total %s  %s", all.length, JSON.stringify(before));
+  Logger.log("DELETED %s  %s", deleted.length, JSON.stringify(deleted.sort()));
+  Logger.log("KEPT (real jobs) %s  %s", keptReal.length, JSON.stringify(keptReal.sort()));
+  Logger.log("UNKNOWN (left alone) %s  %s", unknown.length, JSON.stringify(unknown.sort()));
+  Logger.log("AFTER   total %s  %s", now.length, JSON.stringify(after));
+  for (i = 0; i < KEEP_240.length; i++) {
+    var n = KEEP_240[i], b = before[n] || 0, a = after[n] || 0;
+    Logger.log("GUARD %s before=%s after=%s %s", n, b, a, (b === a ? "OK" : "CHANGED"));
+    if (b !== a) throw new Error("GUARD FAILED: " + n + " went from " + b + " to " + a);
+  }
+  Logger.log("Trigger slots free now: %s of 20", 20 - now.length);
+  return { deleted: deleted.length, total: now.length };
+}
+
+// ===== #240 probe B - READ-ONLY. Does Ashby hand back its canonical stage titles? =====
+// 16 Oct 2026. Probe A proved the endpoints EXIST but logged only 150 chars of each body,
+// so it never showed the stage names - the one thing #240 actually needs. Uses ashbyPost_
+// (the pipeline helper) because these calls are expected to succeed. Only .list endpoints.
+function probe240StagesB() {
+  var plans = ashbyPost_("/interviewPlan.list", {});
+  var ps = (plans && plans.results) || [];
+  Logger.log("#240B interviewPlan.list -> %s plans", ps.length);
+  if (ps.length) Logger.log("#240B plan keys = %s", JSON.stringify(Object.keys(ps[0])));
+  var i, j, k;
+  for (i = 0; i < Math.min(ps.length, 8); i++) {
+    Logger.log("#240B   plan %s | %s", i, ps[i].title || ps[i].name || "(no title)");
+  }
+  for (var pi = 0; pi < ps.length; pi++) {
+    try {
+      var st = ashbyPost_("/interviewStage.list", { interviewPlanId: ps[pi].id });
+      var sr = (st && st.results) || [];
+      Logger.log("#240B PLAN %s [%s] -> %s stages  ok=%s", pi, ps[pi].title, sr.length, st && st.success);
+      if (sr.length) Logger.log("#240B stage keys = %s", JSON.stringify(Object.keys(sr[0])));
+      for (j = 0; j < sr.length; j++) {
+        Logger.log("#240B   p%s stage %s | title=%s | order=%s | type=%s", pi, j, sr[j].title,
+          sr[j].orderInInterviewPlan, sr[j].type || sr[j].interviewStageType || "");
+      }
+    } catch (e) {
+      Logger.log("#240B interviewStage.list THREW: %s", String(e).substring(0, 300));
+    }
+  }
+  try {
+    var grp = ashbyPost_("/interviewStageGroup.list", {});
+    var gr = (grp && grp.results) || [];
+    Logger.log("#240B interviewStageGroup.list -> %s groups", gr.length);
+    if (gr.length) Logger.log("#240B group keys = %s", JSON.stringify(Object.keys(gr[0])));
+    for (k = 0; k < Math.min(gr.length, 25); k++) {
+      Logger.log("#240B   group %s | %s", k, gr[k].title || gr[k].name || "(no title)");
+    }
+  } catch (e2) {
+    Logger.log("#240B interviewStageGroup.list THREW: %s", String(e2).substring(0, 300));
+  }
+  Logger.log("#240B done - nothing was written.");
+}
+
+// ===== #240 probe C - WHICH JOBS USE WHICH INTERVIEW PLAN. READ-ONLY. =====
+// 16 Oct 2026, Jerin: "tell me which job number is HR Operations & Test. I'd like to check and figure
+// why it has different stage approaches. Shouldnt ideally."
+// Only .list and .info. Nothing is written.
+function probe240JobPlans() {
+  var plans = ashbyPost_("/interviewPlan.list", {});
+  var ps = (plans && plans.results) || [];
+  var nameById = {}, i;
+  for (i = 0; i < ps.length; i++) {
+    nameById[ps[i].id] = ps[i].title;
+    Logger.log("#240C plan | %s | %s | archived=%s", ps[i].id, ps[i].title, ps[i].isArchived);
+  }
+  var probe = ashbyPost_("/job.list", { limit: 3 });
+  var pr = (probe && probe.results) || [];
+  if (pr.length) Logger.log("#240C job.list keys = %s", JSON.stringify(Object.keys(pr[0])));
+  if (pr.length) {
+    try {
+      var info = ashbyPost_("/job.info", { jobId: pr[0].id });
+      var ir = info && info.results;
+      if (ir) Logger.log("#240C job.info keys = %s", JSON.stringify(Object.keys(ir)));
+    } catch (e) { Logger.log("#240C job.info threw: %s", String(e).substring(0, 200)); }
+  }
+  var cursor = null, page = 0, tally = {}, odd = [], total = 0, j;
+  do {
+    var body = { limit: 100 };
+    if (cursor) body.cursor = cursor;
+    var res = ashbyPost_("/job.list", body);
+    var rows = (res && res.results) || [];
+    for (j = 0; j < rows.length; j++) {
+      var job = rows[j];
+      var pid = job.interviewPlanId || job.defaultInterviewPlanId ||
+        (job.interviewPlan && job.interviewPlan.id) || null;
+      total++;
+      var key = pid ? (nameById[pid] || ("unknown plan " + pid)) : "(no plan field on job.list)";
+      tally[key] = (tally[key] || 0) + 1;
+      if (pid && nameById[pid] && nameById[pid].indexOf("Global Shared") < 0) {
+        odd.push(job.title + " || num=" + (job.jobNumber || job.customJobNumber || "?") +
+          " || " + nameById[pid] + " || status=" + job.status + " || id=" + job.id);
+      }
+    }
+    cursor = (res && res.moreDataAvailable) ? res.nextCursor : null;
+    page++;
+  } while (cursor && page < 6);
+  Logger.log("#240C jobs scanned: %s (pages %s)", total, page);
+  for (var k in tally) Logger.log("#240C TALLY | %s | %s jobs", k, tally[k]);
+  for (i = 0; i < odd.length; i++) Logger.log("#240C NONSHARED | %s", odd[i]);
+  if (!odd.length) Logger.log("#240C NONSHARED | none found on job.list");
+  Logger.log("#240C done - nothing was written.");
 }
