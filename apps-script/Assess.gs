@@ -19,7 +19,7 @@
 // person legitimately appears at SEVERAL stages ‚Äî the dedupe is within a stage, not across them, so the
 // stage rows must never be summed. B is a SUBSET of A, so a rate can never exceed 100%.
 
-var ASSESS_ORDER = ['appReview', 'helloChristy', 'taScreen', 'hmReview', 'oa', 'r1', 'r2', 'r3', 'r4', 'r5', 'refCheck', 'docSub', 'offer'];
+var ASSESS_ORDER = smAssessOrder();
 var ASSESS_IDX = (function () { var m = {}; for (var i = 0; i < ASSESS_ORDER.length; i++) m[ASSESS_ORDER[i]] = i; return m; })();
 // The exit side of the headline span: whichever of these a candidate reaches first.
 var ASSESS_SPAN_END = { refCheck: 1, docSub: 1, offer: 1 };
@@ -35,11 +35,11 @@ var ASSESS_ADDED = { refCheck: 1, docSub: 1, offer: 1 };
 // #210 (Jerin, 8 Oct 2026) - LIVE since 8 Oct. Measured first, then published on his word.
 // (d) The rounds are an UNORDERED POOL: "R2 might happen before R1." A move to any OTHER round is progress.
 //     A move back into a screening stage is NOT - he asked about round order, not about returning to screening.
-var ASSESS_ROUND_POOL = { oa: 1, r1: 1, r2: 1, r3: 1, r4: 1, r5: 1 };
+var ASSESS_ROUND_POOL = smRoundPool();
 // (a) App Review and HM Review are REVIEWS, not interviews: an unmatched feedback form saw only 41 and 19
 //     people in a quarter. Count everyone ADDED instead, as Ref Check / Doc / Offer do. TA Screen is NOT
 //     included - real screening calls happen there and are already picked up.
-var ASSESS_ADDED_210 = { refCheck: 1, docSub: 1, offer: 1, appReview: 1, hmReview: 1 };
+var ASSESS_ADDED_210 = smAddedPool();
 
 function assessQ_(day) {
   if (!day || day.length < 7) return null;
