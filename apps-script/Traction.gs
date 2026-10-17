@@ -21,19 +21,15 @@
 // application missing from BOTH stores is treated as archived. Do not "fix" this by reading stage_events alone.
 
 var TRACTION_SCHEMA = 1;
-var TRACTION_ROUNDS = ['TA Screen', 'HM Review', 'Online Assessment', 'R1', 'R2', 'R3', 'R4', 'R5',
-                       'Reference Check', 'Document Submission', 'Offer'];
+var TRACTION_ROUNDS = smTractionRounds();
 // Pipeline order by stage TITLE (what interviewSchedule gives us) and by stage KEY (what stage_events stores).
-var TRACTION_TORD = { 'App Review':1, 'Application Review':1, 'Hello Christy':2, 'TA Screen':3, 'HM Review':4,
-  'Online Assessment':5, 'OA':5, 'R1':6, 'R2':7, 'R3':8, 'R4':9, 'R5':10, 'Reference Check':11,
-  'Document Submission':12, 'Offer':13 };
+var TRACTION_TORD = smTractionTord();
 // #222 (Jerin, 12 Oct 2026): a vendor assessment has NO interview behind it and therefore no interviewStageId
 // of its own, so it cannot be matched to a round the way a booking is. It gets this synthetic id, mapped straight
 // to 'Online Assessment' - his ruling. Everything downstream then treats it exactly like any other row: the
 // select / reject / awaiting logic asks only whether the candidate reached a LATER round afterwards.
 var TRACTION_ASSESS_SID = '__assessment_222__';
-var TRACTION_KORD = { appReview:1, helloChristy:2, taScreen:3, hmReview:4, oa:5, r1:6, r2:7, r3:8, r4:9,
-  r5:10, refCheck:11, docSub:12, offer:13, hired:14 };
+var TRACTION_KORD = smTractionKord();
 var TRACTION_STAGE_CACHE = 'TRACTION_STAGE_TITLES';
 
 function refreshInterviewTraction() {
