@@ -23,25 +23,7 @@ var HYGIENE_FLOOR_MS = new Date(HYGIENE_FLOOR + 'T00:00:00+05:30').getTime();
 var LEVEL_CF_ID = '4d1ff143-8066-4601-9492-9c8ac126e7ff';
 var COMPLEXITY_CF_ID = '883e744b-30c9-400d-9ec6-85adf401d3e0';
 
-var STAGE_KEY_MAP = {
-  'App Review': 'appReview', 'Application Review': 'appReview',
-  // 'Hello Christy' is a bot-driven ALTERNATIVE to TA Screen, not a test stage (confirmed by the user
-  // 2026-08-21). It gets its own key rather than being folded into taScreen, so bot-screened and
-  // human-screened volume stay separable. It sits immediately BEFORE taScreen everywhere.
-  'Hello Christy': 'helloChristy',
-  'TA Screen': 'taScreen', 'HM Review': 'hmReview',
-  // Ashby's stage is titled 'Online Assessment' (verified against the Global Shared Interview Plan,
-  // which every job in every department uses). The map previously had ONLY 'OA', so every Online
-  // Assessment record fell through and the dashboard reported 0 assessments for months while real
-  // candidates sat in the stage. 'OA' is kept as an alias in case the stage is ever renamed back.
-  // #234 (Jerin, 15 Oct 2026): 'R0 - Online Assessment' is a SECOND TITLE FOR THE SAME STAGE - his words,
-  // "R0 - Online Assessment is the same as Online Assessment". 71 applications were sitting in it, counted
-  // in Applications and placed in NO stage, which is why SE2 Machine Learning read 0 assessments with two
-  // people already at R1. THIS IS THE THIRD TIME THE SAME GAP HAS BITTEN - see the note above.
-  'Online Assessment': 'oa', 'OA': 'oa', 'R0 - Online Assessment': 'oa',
-  'R1': 'r1', 'R2': 'r2', 'R3': 'r3', 'R4': 'r4', 'R5': 'r5',
-  'Reference Check': 'refCheck', 'Document Submission': 'docSub', 'Offer': 'offer'
-};
+var STAGE_KEY_MAP = smStageKeyMap();
 
 // #236a (Jerin, 16 Oct 2026) - TAKE STAGE NAMES FROM ASHBY WITHOUT ASKING HIM EVERY TIME.
 // "sync the stage names in dashboard as per Ashby; i dont have to be in the middle of this process."
@@ -132,12 +114,12 @@ function notifyStageNames_(autoMatched, unmapped) {
 
 // The three late stages. A candidate's FIRST entry into any of them marks the quarter whose opening they
 // were working against - the convention Drop is attributed by, since Ashby cannot supply the opening.
-var LATE_STAGES_ = { 'Reference Check': 1, 'Document Submission': 1, 'Offer': 1 };
+var LATE_STAGES_ = smLateStages();
 // Everything that counts as having moved PAST R1, for Screening Efficiency's Cleared column.
-var BEYOND_R1_ = { 'R2': 1, 'R3': 1, 'R4': 1, 'R5': 1, 'Reference Check': 1, 'Document Submission': 1, 'Offer': 1 };
-var PIPELINE_KEYS = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
-var RECRUITER_STAGES = ['hc','ta','hm','oa','r1','r2','r3','r4','r5','offer','hired'];
-var STAGEKEY_TO_RECKEY = { helloChristy:'hc', taScreen:'ta', hmReview:'hm', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', offer:'offer' };
+var BEYOND_R1_ = smBeyondR1();
+var PIPELINE_KEYS = smPipelineKeys();
+var RECRUITER_STAGES = smRecruiterStages();
+var STAGEKEY_TO_RECKEY = smStageKeyToRecKey();
 // Keyed by the raw Ashby stage TITLE (not the internal key), which is why the 'OA' vs 'Online Assessment'
 // mismatch bit here too: OA candidates were in the pipeline counts but missing from funnel.screened.
 var SCREENED_STAGES = { 'Hello Christy':1,'TA Screen':1,'HM Review':1,'Online Assessment':1,'OA':1,'R1':1,'R2':1,'R3':1,'R4':1,'R5':1,'Reference Check':1,'Document Submission':1,'Offer':1 };
