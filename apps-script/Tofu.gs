@@ -109,7 +109,7 @@ function tofuR1BookingDays_() {
 // "TA screening bookings to be negated" and, of HM Review bookings, "Remove". Neither is an evaluation of the
 // candidate's ability - they are the conversations that decide WHETHER to evaluate. Everything else counts,
 // "regardless of Online Assessment (triggered) or Interviews (scheduled)".
-var TOFU_NOT_EVALUATION = { taScreen: 1, hmReview: 1 };
+var TOFU_NOT_EVALUATION = smNotEvaluation();
 
 // #221 - interviews count on the day they were HELD, not the day they were booked:
 // "For Interview booking - date of interview needs to be considered."
