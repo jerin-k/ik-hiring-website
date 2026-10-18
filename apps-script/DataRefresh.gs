@@ -1267,11 +1267,25 @@ function refreshDashboardData() {
 
   // #120b: title + department of EVERY in-scope job (jobs[] lists only some), so a department scope can place an
   // event, a rollup key or an owned opening whose job is not in jobs[]. Job titles and departments only - no people.
+  // ===== #241: which opening each person filled, resolved ONCE, here =====
+  // 🔑 PLACED DELIBERATELY LATE — after offer_contacts.json, joiningPendingCases, offerLinkGaps and
+  // dropEvents are all built. Those four keep reading the opening the OFFER names, which is what they have
+  // always meant; dropEvents in particular prices a drop from its offer's own opening (#183b). Moving this
+  // earlier would silently change them. Everything the SITE reads is resolved; everything else is not.
+  // ⚠ If the link file cannot be read, resolution comes back null, the records keep the offer's own links
+  // and the site merges in the browser exactly as it did before #241. A degraded day, never a wrong one.
+  var hl241_ = hlResolve_(offerEvents, joiningPendingCases, offerLinkGaps, HYGIENE_FLOOR);
+  if (hl241_.resolution) {
+    offerLinkGaps = hl241_.offerLinkGaps;
+    dataQuality.joinersNoOpening = hl241_.joinersNoOpening;
+  }
+
   var jobIndex_ = {};
   for (var _jx in jobLookup) { var _jl = jobLookup[_jx]; if (!_jl || excludedJobIds[_jx]) continue; jobIndex_[String(_jx).substring(0, 8)] = { title: _jl.title || '', department: _jl.department || '' }; }
   var dashboard = {
     stagePlans: safeStagePlans_(livePlanJobs_),   // #240c: the Admin Stage Mapping screen reads this
     stageLists: smPublish(),   // #240b: the site reads its stage lists from here, so there is one source
+    hireLinkResolution: hl241_.resolution,   // #241: one answer for which opening a joiner filled; null = not resolved this run
     lastUpdated: new Date().toISOString(), schemaVersion: 5, probe167: PROBE_167_, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
