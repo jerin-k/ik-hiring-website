@@ -400,6 +400,19 @@ export function initEfficiencyFilters(data) {
   const tisSplit = hasWaitSplit(rollups);
   const arDwellJob = data.appReviewDwellByJob || null;       // {job8:{days:count}} — App Review dwell (still-parked candidates)
   let activeTab = 'fulfilment';
+  // ===== #243 (18 Oct 2026): the Quarters chip governs ONLY the sub-tabs it is SHOWN on =====
+  // #227 hid it on Position Fulfilment deliberately - Goal and Delta come from a PER-QUARTER configuration
+  // (pods, capacity, the scoring grid, all with copy-forward), so that panel keeps Year + the single Quarter
+  // box. #238 then SEEDED the chip with the current quarter, and tisPeriod() preferred it over those boxes,
+  // so a control the user cannot even see outranked the one they can. Picking Q3 left the period on Q4 while
+  // the date boxes correctly moved to 1 Jul - 30 Sep; rangeOf() then clamped those dates INTO Q4 and collapsed
+  // the range to the single day 30 Sep, `whole` went false, and the per-day path counted only the positions
+  // opened on that one day - so Fulfilment read 0 against a true 174. Measured 18 Oct 2026.
+  // 🔑 The chip's own note already said "ticking nothing falls back to Year/Quarter"; seeding it meant nothing
+  //    was ever un-ticked. ONE predicate now decides both whether the chip is DRAWN and whether it is OBEYED,
+  //    so its visibility and its authority cannot drift apart again (Rule 13: a filter that moves no number is
+  //    a bug - and its mirror, a hidden filter that moves every number).
+  const chipGoverns = (name) => name !== 'fulfilment' && name !== 'traction' && name !== 'joiningpending';
   let msPod = null, msDept = null, msJob = null, msRec = null, msEffTpStage = null, msEffPipeStage = null;   // #145a · #196: msRec
 
   // #188: on Position Fulfilment a ticked level is drawn open — the chooser IS the expand control there.
@@ -1647,7 +1660,7 @@ export function initEfficiencyFilters(data) {
     // pods, capacity and the scoring grid are configured PER QUARTER with copy-forward, so Goal and Delta have
     // no defined value across two of them (add the capacities, or average them? both are arguable, so neither
     // is right). Counts and rates made of counts are safe; a per-quarter CONFIGURATION is not.
-    const multi = msQuarters ? msQuarters.getSelected() : [];
+    const multi = (msQuarters && chipGoverns(activeTab)) ? msQuarters.getSelected() : [];   // #243: only where it is shown
     if (multi.length) return multi.slice().sort();
     return periodQuarters(document.getElementById('effYear')?.value || '', document.getElementById('effQuarter')?.value || '');   // #127c: never before Q3 2026
   }
@@ -2267,7 +2280,7 @@ export function initEfficiencyFilters(data) {
     //     boxes (#133), so no quarter control belongs there at all.
     //   Everywhere else: the Quarters chip, and Year hides because the chip's options are absolute quarter keys.
     // 🔑 TICKING NOTHING FALLS BACK TO Year/Quarter, so the page starts exactly as it did before this existed.
-    const multiQ = name !== 'fulfilment' && name !== 'traction' && name !== 'joiningpending';
+    const multiQ = chipGoverns(name);   // #243: ONE predicate - shown exactly where it is obeyed
     showControl(document.getElementById('effQuartersWrap'), multiQ);
     // Year belongs ONLY to the single-quarter picker, so it shows exactly where that does. It was briefly
     // visible on Interview Traction, where that panel's own chip governs and Year moved nothing (Rule 13).

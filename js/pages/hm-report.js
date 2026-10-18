@@ -694,8 +694,18 @@ export function initHmFilters(data) {
   // quarter: pods, capacity and the scoring grid are configured per quarter with copy-forward, so Goal
   // and Delta have no defined value across two of them. Ticking nothing falls back to Year/Quarter.
   let msHmQuarters = null;   // #227
+  // ===== #243 (18 Oct 2026): the Quarters chip governs ONLY the sub-tabs it is SHOWN on =====
+  // #227 hid it on Position Fulfilment deliberately (Goal and Delta come from a per-quarter configuration),
+  // and #238 then SEEDED it with the current quarter - so hmQuarters() returned the chip's Q4 however the
+  // visible Quarter box was set. Here the damage was WORSE than a wrong number: the Q3 dates were clamped
+  // into Q4 and collapsed to the single day 30 Sep, windowQuarters() filtered that down to NO quarters, and
+  // coversQuarters(range, []) THREW inside renderSection1 - so the render died half-way and the table kept
+  // whatever was on it, showing Q4's 137 / 15 under a Q3 heading with nothing on screen to say so.
+  // ⚠ Exactly Rule 4's lie: a quarter heading over another quarter's numbers. Measured 18 Oct 2026.
+  // 🔑 ONE predicate decides both whether the chip is DRAWN and whether it is OBEYED.
+  const chipGoverns = (name) => name !== 'positions' && name !== 'traction' && name !== 'joiningpending';
   function hmQuarters() {
-    const multi = msHmQuarters ? msHmQuarters.getSelected() : [];
+    const multi = (msHmQuarters && chipGoverns(activeTab)) ? msHmQuarters.getSelected() : [];   // #243: only where it is shown
     if (multi.length) return multi.slice().sort();
     return selectionQuarters(document.getElementById('hmYear')?.value || '', document.getElementById('hmQuarter')?.value || '');
   }
@@ -1597,7 +1607,7 @@ export function initHmFilters(data) {
     // #207: Interview Traction carries its own Quarter chip, which ticks several. The page's single-pick
     // Quarter box would be a second, contradictory control, so it steps aside on that sub-tab only.
     // #227: ONE period control at a time - see the note on hmQuarters().
-    const multiQ = name !== 'positions' && name !== 'traction' && name !== 'joiningpending';
+    const multiQ = chipGoverns(name);   // #243: ONE predicate - shown exactly where it is obeyed
     showControl(document.getElementById('hmQuartersWrap'), multiQ);
     showControl(document.getElementById('hmYear')?.closest('.fchip'), name === 'positions');
     showControl(document.getElementById('hmQuarter')?.closest('.fchip'), !multiQ && name !== 'traction');
