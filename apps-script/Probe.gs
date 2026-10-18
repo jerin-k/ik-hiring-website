@@ -390,3 +390,44 @@ function probe240JobPlans() {
   if (!odd.length) Logger.log("#240C NONSHARED | none found on job.list");
   Logger.log("#240C done - nothing was written.");
 }
+
+// ===== #241 probe - CAN THE API SEE WHICH APPLICATION WAS HIRED INTO AN OPENING? READ-ONLY. =====
+// data/hire_links.json says "the public API cannot see these links" and was captured BY HAND from the
+// Ashby Openings screen on 15 Sep. That is a claim about the SOURCE, and this project has been wrong
+// about that kind of claim before, so it is measured rather than repeated.
+// Test case: opening d3c3bf6a... has candidate "Pradeepthi J" hired into it per hire_links.json.
+// Includes an INVENTED control endpoint: a 404 identical to the control is proof of absence.
+function probe241Links() {
+  var TARGET = "d3c3bf6a-7c43-420a-9faa-954e6e113f76";
+  var all = ashbyListAll_("/opening.list"), hit = null, i;
+  for (i = 0; i < all.length; i++) if (all[i].id === TARGET) { hit = all[i]; break; }
+  Logger.log("#241 opening.list -> " + all.length + " openings; target found=" + !!hit);
+  if (hit) {
+    Logger.log("#241 TOP KEYS: " + JSON.stringify(Object.keys(hit)));
+    if (hit.latestVersion) Logger.log("#241 latestVersion KEYS: " + JSON.stringify(Object.keys(hit.latestVersion)));
+    var s = JSON.stringify(hit);
+    Logger.log("#241 blob mentions application=" + (s.indexOf("pplication") >= 0)
+      + " hired=" + (s.indexOf("ired") >= 0) + " locked=" + (s.indexOf("ocked") >= 0)
+      + " blobLen=" + s.length);
+  }
+  var eps = ["/opening.info", "/opening.getApplications", "/opening.listApplications", "/zzzNotARealEndpoint.list"];
+  for (i = 0; i < eps.length; i++) {
+    try {
+      var r = ashbyPost_(eps[i], { openingId: TARGET, id: TARGET });
+      Logger.log("#241 " + eps[i] + " -> success=" + (r && r.success)
+        + " keys=" + JSON.stringify(Object.keys(r || {})).substring(0, 160)
+        + " err=" + JSON.stringify((r && (r.errors || r.error)) || "").substring(0, 120));
+      if (r && r.results) {
+        var rr = r.results, isArr = Object.prototype.toString.call(rr) === "[object Array]";
+        var one = isArr ? (rr[0] || {}) : rr;
+        Logger.log("#241 " + eps[i] + " RESULTS isArray=" + isArr + " n=" + (isArr ? rr.length : 1)
+          + " resultKeys=" + JSON.stringify(Object.keys(one)).substring(0, 300));
+        var blob = JSON.stringify(rr);
+        Logger.log("#241 " + eps[i] + " RESULTS mentions application=" + (blob.indexOf("pplication") >= 0)
+          + " hired=" + (blob.indexOf("ired") >= 0) + " locked=" + (blob.indexOf("ocked") >= 0)
+          + " candidate=" + (blob.indexOf("andidate") >= 0) + " len=" + blob.length);
+      }
+    } catch (e) { Logger.log("#241 " + eps[i] + " THREW " + String(e).substring(0, 160)); }
+  }
+  Logger.log("#241 done - nothing was written.");
+}
