@@ -26,8 +26,10 @@ export async function loadDashboardData() {
   // which is what a department scope narrows.
   dashboardData.panelistRows = dashboardData.panelists || [];
   dashboardData.panelists = mergePanelists(dashboardData.panelistRows);
-  // #131: before anything reads offerEvents, give hires whose offer names no opening the opening they were hired into.
-  applyHireLinks(dashboardData, await loadHireLinks_());
+  // #131 / #241: before anything reads offerEvents, make sure every record names the opening the person
+  // really filled. Since #241 the PIPELINE has already done it and we just take its answer; an older
+  // dashboard.json has not, and the browser merge below is what it gets.
+  adoptHireLinks(dashboardData, await loadHireLinks_());
   // Stage-history rollups (true daily velocity + reached/cleared throughput). Best-effort — the UI
   // degrades gracefully to the snapshot approximation if this file isn't present yet.
   dashboardData.stageRollups = await loadStageRollups_();
@@ -60,6 +62,69 @@ async function loadHireLinks_() {
   return null;
 }
 
+// ===== #241 (19 Oct 2026): ONE ANSWER FOR WHICH OPENING A PERSON FILLED =====
+// Until #241 the browser did the merge below on every page load. The screen was right; the FILE was not —
+// dashboard.json on its own said "no opening" for 40 joiners who all had one, and the first thing to read it
+// without knowing that (the Q3 leadership pack, 18 Oct) produced a confident, wrong number. So the pipeline
+// now resolves it once and publishes the answer on the records themselves, with `openingSource` saying where
+// each one came from: 'offer' · 'hireLink' · 'none'.
+//
+// 🔑 THE PIPELINE RESOLVES, THE SITE READS — the same division as #240b's stage lists and CLAUDE.md rule 3
+// ("the table computes, the chart reads"). Nothing below re-derives anything when the answer is published.
+// ⚠ THE FALLBACK IS A REAL CODE PATH, not decoration: it is what any dashboard.json written before #241
+// gets, and what everyone gets if the pipeline cannot read hire_links.json on a given run. The two must give
+// the same answer, which is why applyHireLinks() now stamps `openingSource` too and writes the same 8-char
+// opening id onto a Joining Pipeline case that HireLinks.gs does.
+
+let hireLinksSrc = 'fallback';
+/** 'published' once the pipeline's own resolution has been adopted, otherwise 'fallback'. For tests. */
+export function hireLinksSource() { return hireLinksSrc; }
+
+// 🚨 VALIDATE, DO NOT TRUST. A half-written resolution would not throw — it would quietly leave some people
+// with no opening and look like a data outage. So it is adopted whole or not at all, and a refusal says why.
+// The last test is the one that matters: the summary block can only be believed if the RECORDS actually
+// carry the marker, which is the thing the summary claims was done.
+function resolutionProblem(data) {
+  const r = data && data.hireLinkResolution;
+  if (!r || typeof r !== 'object') return 'no hireLinkResolution in dashboard.json';
+  if (!(r.schema >= 1)) return 'schema is ' + JSON.stringify(r.schema);
+  if (!Number.isFinite(r.applied) || r.applied < 0) return 'applied is ' + JSON.stringify(r.applied);
+  if (!Number.isFinite(r.fromOffer) || !Number.isFinite(r.fromLink)) return 'fromOffer/fromLink missing';
+  if (!Array.isArray(r.unusedLinks)) return 'unusedLinks is not a list';
+  const OK = { offer: 1, hireLink: 1, none: 1 };
+  const events = data.offerEvents || [];
+  for (let i = 0; i < events.length; i++) {
+    if (!OK[events[i].openingSource]) return 'offerEvents[' + i + '] has openingSource '
+      + JSON.stringify(events[i].openingSource) + ' — the pipeline did not resolve every record';
+  }
+  const seen = events.filter(e => e.openingSource === 'hireLink').length;
+  if (seen !== r.fromLink) return 'the summary says ' + r.fromLink + ' records came from hire_links.json but '
+    + seen + ' are marked that way';
+  return null;
+}
+
+/**
+ * Take the pipeline's resolution if it is sound, otherwise merge the two sources here as before.
+ * Called once by loadDashboardData() before any page renders. Returns 'published' or 'fallback'.
+ */
+export function adoptHireLinks(data, file) {
+  const problem = resolutionProblem(data);
+  if (problem) {
+    // Silent on the ordinary case — a dashboard.json from before #241 simply has no resolution and the
+    // browser merge is correct for it. Loud only when something IS there and is wrong: that is a pipeline
+    // fault, and the screen is still right, so it must not pass unnoticed.
+    if (data && data.hireLinkResolution) console.warn('#241: ignoring the published opening resolution and merging in the browser — ' + problem);
+    applyHireLinks(data, file);
+    hireLinksSrc = 'fallback';
+    return hireLinksSrc;
+  }
+  const r = data.hireLinkResolution;
+  data.hireLinks = { generatedAt: r.fileGeneratedAt || null, applied: r.applied,
+                     unused: r.unusedLinks.slice(), source: 'published' };
+  hireLinksSrc = 'published';
+  return hireLinksSrc;
+}
+
 // ===== #131 / #132 (Jerin, 15 Sep 2026): the opening a person is really tied to =====
 // The opening named on the OFFER is what the API gives the pipeline (offerEvents.openingId). Two more links are not in the API at all
 // (#84): the opening picked at the Hired step — when it is picked there, the offer's box stays empty — and a person tied to an opening
@@ -74,8 +139,7 @@ async function loadHireLinks_() {
 // never guessed onto someone else.
 export function applyHireLinks(data, file) {
   const links = (file && file.links) || [];
-  data.hireLinks = { generatedAt: (file && file.generatedAt) || null, applied: 0, unused: [] };
-  if (!links.length) return;
+  data.hireLinks = { generatedAt: (file && file.generatedAt) || null, applied: 0, unused: [], source: 'fallback' };
   const person = (name, j8) => `${String(name || '').trim().toLowerCase()}|${j8 || ''}`;
   const hires = new Map(), locks = new Map();
   links.forEach(l => {
@@ -84,26 +148,32 @@ export function applyHireLinks(data, file) {
   });
   const used = new Set(), cleared = new Set();
   (data.offerEvents || []).forEach(e => {
-    if (e.openingId) return;
+    if (e.openingId) { e.openingSource = 'offer'; return; }
     const p = person(e.candidate, e.jobId8);
     const l = e.appStatus === 'Hired' ? hires.get(p + '|' + (e.startDate || '')) : (e.appStatus === 'Active' ? locks.get(p) : null);
-    if (!l) return;
+    if (!l) { e.openingSource = 'none'; return; }
     e.openingId = l.openingId;
     e.openingQuarter = l.openingQuarter;
     if (!e.openingIdAny) { e.openingIdAny = l.openingId; e.openingQuarterAny = l.openingQuarter; }
     e.openingVia = e.appStatus === 'Hired' ? 'hire' : 'lock';
+    e.openingSource = 'hireLink';
     cleared.add(e.appStatus + '|' + p + '|' + (e.appStatus === 'Hired' ? (e.startDate || '') : ''));
     used.add(l);
     data.hireLinks.applied++;
   });
   (data.joiningPendingCases || []).forEach(c => {
-    if (c.linked) return;
+    if (c.linked) { c.openingSource = 'offer'; return; }
     const l = locks.get(person(c.candidate, c.jobId8));
-    if (!l) return;
+    if (!l) { c.openingSource = 'none'; return; }
     c.linked = true;
-    c.openingId = l.openingId;
+    // 8 characters, which is what this field carries everywhere else on a Joining Pipeline case (#161) and
+    // what openingRows is keyed by. This wrote the full uuid until #241, which would have matched nothing on
+    // the SME level; no live row has ever taken this branch, and HireLinks.gs in the pipeline agrees — the
+    // published path and this fallback must never give different answers.
+    c.openingId = String(l.openingId || '').substring(0, 8);
     c.openingQuarter = l.openingQuarter;
     c.openingVia = 'lock';
+    c.openingSource = 'hireLink';
     used.add(l);
     data.hireLinks.applied++;
   });
@@ -282,6 +352,8 @@ export function scopeData(data, { jobIds = null, departments = null } = {}) {
       unassigned: (dq.unassigned || []).filter(x => allow8(x.job8)),
       multiRecruiter: (dq.multiRecruiter || []).filter(x => allow8(x.job8)),
       multiSourcer: (dq.multiSourcer || []).filter(x => allow8(x.job8)),
+      // #241: joiners whose opening is in neither place. Carries its own job, so it narrows like any other row.
+      joinersNoOpening: (dq.joinersNoOpening || []).filter(x => allowRow(x.jobId8, x.department, x.job)),
       unassignedTotal: ua ? ua.total : 0,
       unmappedStages: {} };   // a stage name Ashby sends that we do not recognise carries no job, so it cannot be placed
   }

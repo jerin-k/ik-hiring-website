@@ -776,6 +776,13 @@ export function renderRecruiter(data) {
             </table></div>
           </div>
 
+          <div class="hyg-panel" data-h="joinergap" style="display:none">
+            <div class="scroll-table"><table>
+              <thead><tr><th class="c-cand">Candidate</th><th class="c-job">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th class="c-date">Offer made</th><th class="c-date">DOJ</th><th class="c-rec">Recruiter</th></tr></thead>
+              <tbody id="hygJoinerGapBody"></tbody>
+            </table></div>
+          </div>
+
           <div class="hyg-panel" data-h="nodate" style="display:none">
             <div class="scroll-table"><table>
               <thead><tr><th style="min-width:18.75rem">Job</th><th class="c-jstat">Job status</th><th class="c-dept">Department</th><th class="c-txt">Opening ID</th></tr></thead>
@@ -2680,7 +2687,7 @@ export function initRecruiterFilters(baseData) {
   // 🚨 It applies to all eight of those lists at once, not just the one on screen — the panels are rendered
   // together and only shown/hidden, so a filter that knew which list was active would leave the others stale.
   const HY_JS_OPTS = [['all', 'All'], ['open', 'Open'], ['shut', 'Closed & archived']];
-  const HY_JS_LISTS = new Set(['unassigned', 'multirec', 'multisrc', 'nosrc', 'offergap', 'hiredgap', 'nodate', 'unscored', 'notopic']);
+  const HY_JS_LISTS = new Set(['unassigned', 'multirec', 'multisrc', 'nosrc', 'offergap', 'hiredgap', 'joinergap', 'nodate', 'unscored', 'notopic']);
   const HY_JS_LABEL = { all: 'All', open: 'Open', shut: 'Closed & archived' };
   let hygJobStatus = (() => { try { const v = localStorage.getItem('ik_hyg_jobstatus'); return HY_JS_OPTS.some(o => o[0] === v) ? v : 'all'; } catch (e) { return 'all'; } })();
   let hygTotals = {};   // the unfiltered counts, so the header can say "of N" instead of losing the total
@@ -2870,6 +2877,21 @@ export function initRecruiterFilters(baseData) {
     if (hgBody) {
       hgBody.innerHTML = gapDone.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td>${jobStatusCell(g.jobId8)}<td>${esc(g.department)}</td><td>${esc(g.subStage)}</td><td>${esc(g.appStatus || '')}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
         || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Nothing here since ${FLOOR_LONG}.</td></tr>`;
+    }
+
+    // --- #241: joiners whose position is in NEITHER source ---
+    // The pipeline resolves each person's opening once and publishes whoever is left over, already cut to
+    // its own floor. 🔑 It is published, never re-derived here: a second derivation in the browser is the
+    // exact thing #241 removed. A dashboard.json from before #241 carries no such field, which is a real
+    // null and not an empty list — the rail says "next refresh" rather than claiming nothing is wrong.
+    const joinerGapRaw = dq.joinersNoOpening || null;
+    const joinerGapAll = joinerGapRaw || [];
+    const joinerGap = joinerGapAll.filter(g => keepJob(g.jobId8));
+    const jgBody = document.getElementById('hygJoinerGapBody');
+    if (jgBody) {
+      jgBody.innerHTML = !joinerGapRaw ? waitRow(7)
+        : (joinerGap.map(g => `<tr><td style="font-weight:500">${esc(g.candidate)}</td><td>${esc(g.job)}</td>${jobStatusCell(g.jobId8)}<td>${esc(g.department)}</td><td>${esc(g.offerCreatedAt || '—')}</td><td>${esc(g.doj || '—')}</td><td>${esc(g.recruiter || '—')}</td></tr>`).join('')
+          || `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:1rem">Every joiner since ${FLOOR_LONG} traces to a position. ✓</td></tr>`);
     }
 
     // --- Roles that score zero for the selected quarter ---
@@ -3144,6 +3166,7 @@ export function initRecruiterFilters(baseData) {
       nosrc: noSrcAll.length,
       offergap: gapsAll.filter(g => g.needsFix).length,
       hiredgap: gapsAll.filter(g => !g.needsFix).length,
+      joinergap: joinerGapRaw ? joinerGapAll.length : null,
       nodate: noDateAll.length,
       notopic: noTopicAll.length,   // #168 part 3
       unscored: unscoredAll.length,
@@ -3158,6 +3181,7 @@ export function initRecruiterFilters(baseData) {
       nocap: noCap.length,
       offergap: gapLive.length,
       hiredgap: gapDone.length,
+      joinergap: joinerGapRaw ? joinerGap.length : null,   // #241: null, not 0, on a file from before it
       nodate: noDate.length,
       notopic: noTopic.length,       // #168 part 3
       noopening: noOpening.length,   // #125
@@ -3192,6 +3216,8 @@ export function initRecruiterFilters(baseData) {
         ...gapLive.map(g => [g.candidate || '', g.job || '', jobStatusOf(g.jobId8), g.department || '', g.subStage || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
       hiredgap: () => [['Candidate', 'Job', 'Job status', 'Department', 'Stage', 'Application status', 'Offer made', 'DOJ', 'Recruiter'],
         ...gapDone.map(g => [g.candidate || '', g.job || '', jobStatusOf(g.jobId8), g.department || '', g.subStage || '', g.appStatus || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
+      joinergap: () => [['Candidate', 'Job', 'Job status', 'Department', 'Offer made', 'DOJ', 'Recruiter'],
+        ...joinerGap.map(g => [g.candidate || '', g.job || '', jobStatusOf(g.jobId8), g.department || '', g.offerCreatedAt || '', g.doj || '', g.recruiter || ''])],
       noopening: () => [['Job', 'Department', 'New candidates', 'R1 screened', 'Assessed', 'Finished stays', 'Interviews', 'Openings in Ashby'],
         ...noOpening.map(x => [x.j.title || '', x.j.department || '', x.tofu, x.r1, x.assessed, x.stays, x.interviews, x.openings])],
       nodate: () => [['Job', 'Job status', 'Department', 'Opening ID', 'Jobs on this opening'],
