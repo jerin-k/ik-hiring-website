@@ -44,7 +44,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&
 // rounds count as progress. Today those always travel together, which is what makes the merge safe.
 const MEASURE = [
   ['round',    'Interview round', 'Someone is interviewed, and the rounds can happen in any order — so moving to another round counts as progress.'],
-  ['arrivals', 'By arrivals',     'Nobody is interviewed here, so Throughput counts who arrived rather than looking for assessments it will never find.'],
+  ['arrivals', 'By arrivals',     'Throughput counts who arrived rather than assessments held. At most of these nobody is interviewed at all; at a screening step it is how many turned up that matters.'],
   ['ordered',  'Ordered step',    'Someone is interviewed, but the stage has a fixed place in the process, so going backwards is not progress.'],
 ];
 // Momentum's question, and a separate one: does what happens here tell you whether the person can do the job?
