@@ -1251,6 +1251,7 @@ function refreshDashboardData() {
   var jobIndex_ = {};
   for (var _jx in jobLookup) { var _jl = jobLookup[_jx]; if (!_jl || excludedJobIds[_jx]) continue; jobIndex_[String(_jx).substring(0, 8)] = { title: _jl.title || '', department: _jl.department || '' }; }
   var dashboard = {
+    stageLists: smPublish(),   // #240b: the site reads its stage lists from here, so there is one source
     lastUpdated: new Date().toISOString(), schemaVersion: 5, probe167: PROBE_167_, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
     openingBuckets: openingBuckets,
