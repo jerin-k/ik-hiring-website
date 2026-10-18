@@ -86,6 +86,43 @@ function smTractionRounds() { var o=[],i,s; for(i=0;i<M_().length;i++){ s=M_()[i
 function smTractionTord() { var o={},i,j,s; for(i=0;i<M_().length;i++){ s=M_()[i]; if(!s.assess) continue;
   for(j=0;j<s.titles.length;j++) o[s.titles[j]]=i+1; } return o; }
 
+// ===== 240b: publish the model for the frontend =============================
+// The site is a STATIC page and cannot call into Apps Script, so the one model reaches it by
+// riding in dashboard.json. THE PIPELINE DERIVES, THE SITE READS - it computes nothing of its
+// own, the same division as "the table computes, the chart reads". A stage added to stageModel_()
+// therefore reaches every column on the site at the next refresh with NO frontend edit, which is
+// what #240d needs.
+//
+// Each list replaces a literal the site used to keep by hand:
+//   stagesOrder  <- STAGES_ORDER (hm-report.js), re-exported to Overall Efficiency and Recruiter
+//   stageLabels  <- STAGE_LABELS (hm-report.js)
+//   tisStages    <- TIS_STAGES   (stage-time.js), the Time in Process columns
+//   tpKeys       <- TP_KEYS      (hm-report.js AND efficiency.js - two copies, now one)
+//   tpLabels     <- TP_LABELS    (the same two copies)
+//   tpToStage    <- TP_TO_STAGE / TP_TO_SK (one map that had two names)
+// Throughput keeps its own shorter vocabulary (app/rc/ds against appReview/refCheck/docSub)
+// because both are on screen today; the model carries both rather than silently picking one.
+//
+// stageSchema marks a change in what a FIELD MEANS, never the adding of a stage - a new stage must
+// flow through without a bump or the whole point is lost. The site validates this object and keeps
+// its own built-in copy if anything is off, so a bad emit degrades rather than empties the screen.
+function smPublish() {
+  var m = M_(), i, s, tpKeys = [], tpLabels = {};
+  for (i = 0; i < m.length; i++) {
+    s = m[i];
+    if (s.tp) { tpKeys.push(s.tp); tpLabels[s.tp] = s.label; }
+  }
+  return {
+    stageSchema: 1,
+    stagesOrder: smPipelineKeys(),
+    stageLabels: smStageLabels(),
+    tisStages:   smTisStages(),
+    tpKeys:      tpKeys,
+    tpLabels:    tpLabels,
+    tpToStage:   smTpToStage()
+  };
+}
+
 // ===== FROZEN BASELINE - the BEFORE half of the before/after check ============
 // Captured 16 Oct 2026 from the live DataRefresh.gs / Assess.gs / Tofu.gs / Traction.gs /
 // stage-time.js / hm-report.js / efficiency.js, BEFORE any of them was switched to the model.
