@@ -1,3 +1,4 @@
+import { adoptStageLists } from './stage-lists.js';   // #240b: the stage lists come from the pipeline
 const LIVE_DATA_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/dashboard.json';
 const LOCAL_DATA_URL = '/data/dashboard.json';
 const LIVE_ROLLUPS_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/stage_rollups.json';
@@ -34,6 +35,10 @@ export async function loadDashboardData() {
   // refresh, which is already at the 30-minute ceiling (#204). Optional, like the two above: the panel
   // says so plainly if it is missing rather than drawing an empty chart.
   dashboardData.interviewTraction = await loadInterviewTraction_();
+  // #240b: take the stage lists the pipeline published, BEFORE any page module renders. It lives here
+  // rather than in app.js so every entry point gets it — opening-requests.js also loads data this way.
+  // An older dashboard.json carries none and the built-in fallback stands; a malformed one is refused.
+  adoptStageLists(dashboardData);
   return dashboardData;
 }
 

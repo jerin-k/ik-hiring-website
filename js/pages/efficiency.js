@@ -62,10 +62,11 @@ const CARET = '<span class="caret" style="display:inline-block;width:0.875rem;co
 const DASH = '<span class="zero">—</span>';
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// Throughput stages (mirrors the HM tab)
-const TP_KEYS = ['app','hc','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];   // Hello Christy added #120 (14 Sep 2026): the HM tab had it, this mirror did not
-const TP_LABELS = { app:'App Review', hc:'Hello Christy', ta:'TA Screen', hm:'HM Review', oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', rc:'Ref Check', ds:'Doc Sub', offer:'Offer' };
-const TP_TO_SK = { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' };
+// Throughput stages. #240b (18 Oct 2026): these were three hand-kept copies of the HM tab's lists — the
+// kind of mirror #120 had to fix once already, when Hello Christy was on the HM tab and missing here.
+// All three now come from the one list the pipeline publishes. TP_TO_SK keeps its local name because it
+// is used in a dozen places below; it IS the same map as the HM tab's TP_TO_STAGE.
+import { TP_KEYS, TP_LABELS, TP_TO_STAGE as TP_TO_SK } from '../stage-lists.js';
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 

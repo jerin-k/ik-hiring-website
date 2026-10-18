@@ -19,6 +19,7 @@ import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter} from '../period.js';   // #127 · #129 · #130 · #133
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
+import { STAGES_ORDER, STAGE_LABELS, TP_KEYS, TP_LABELS, TP_TO_STAGE } from '../stage-lists.js';   // #240b: published by the pipeline, one source
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat, FULFIL_COLORS } from '../chart-style.js';   // #182e: the shared Joined/Pending/Delta colours
 
@@ -26,18 +27,10 @@ import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip
 // route or the other. It sits immediately to the LEFT of TA Screen everywhere, per the user 2026-08-21.
 // #145a (19 Sep 2026): exported so the Overall Efficiency Pipeline reads the SAME stage list and labels — one
 // list, so the two tables can never drift apart (Rule 3).
-export const STAGES_ORDER = ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'];
-export const STAGE_LABELS = {
-  appReview:'App Review', helloChristy:'Hello Christy', taScreen:'TA Screen', hmReview:'HM Review', oa:'OA',
-  r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
-  refCheck:'Ref Check', docSub:'Doc Sub', offer:'Offer', hired:'Hired'
-};
-const TP_KEYS = ['app','hc','ta','hm','oa','r1','r2','r3','r4','r5','rc','ds','offer'];
-const TP_LABELS = {
-  app:'App Review', hc:'Hello Christy', ta:'TA Screen', hm:'HM Review', oa:'OA',
-  r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5',
-  rc:'Ref Check', ds:'Doc Sub', offer:'Offer'
-};
+// #240b (18 Oct 2026): and that one list is no longer typed out here — the PIPELINE publishes it in
+// dashboard.json and stage-lists.js reads it, so the site and the pipeline cannot disagree about what
+// the stages are. The re-export below keeps Overall Efficiency and Recruiter importing them from here.
+export { STAGES_ORDER, STAGE_LABELS };
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // The HM tab uses Department only (team is intentionally not a dimension here).
@@ -1184,8 +1177,7 @@ export function initHmFilters(data) {
   }
 
   // ===== Section 2: Throughput (Department -> Job tree) =====
-  // TP column keys -> stage keys used by the stage-history rollups.
-  const TP_TO_STAGE = { app: 'appReview', hc: 'helloChristy', ta: 'taScreen', hm: 'hmReview', oa: 'oa', r1: 'r1', r2: 'r2', r3: 'r3', r4: 'r4', r5: 'r5', rc: 'refCheck', ds: 'docSub', offer: 'offer' };
+  // TP column keys -> stage keys used by the stage-history rollups. #240b: imported, not typed out.
 
   // Which quarters the current From/To window covers, taken from whatever the rollups hold.
   function quartersInWindow(from, to) {

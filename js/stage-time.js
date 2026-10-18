@@ -7,11 +7,10 @@ import { selectionQuarters } from './period.js';
 // is COMPLETED stays only (real enteredStageAt → leftStageAt), and waitingByJob/ByRecruiter is how long
 // the people still sitting in the stage have waited. See the split note further down for why.
 
-// Stage columns, in pipeline order. keys match the histogram stage keys.
-export const TIS_STAGES = [
-  ['appReview', 'App Review'], ['helloChristy', 'Hello Christy'], ['taScreen', 'TA Screen'], ['hmReview', 'HM Review'], ['oa', 'OA'],
-  ['r1', 'R1'], ['r2', 'R2'], ['r3', 'R3'], ['r4', 'R4'], ['r5', 'R5'], ['refCheck', 'Ref Check'], ['docSub', 'Doc Sub'], ['offer', 'Offer']
-];
+// Stage columns, in pipeline order; keys match the histogram stage keys. #240b (18 Oct 2026): the list
+// is published by the pipeline now (stage-lists.js) rather than typed out here. Re-exported so the two
+// Time in Process tabs keep importing it from this module.
+export { TIS_STAGES } from './stage-lists.js';
 
 export function mergeHist(target, src) { if (src) for (const d in src) target[d] = (target[d] || 0) + src[d]; return target; }
 export function poolHists(hists) { const out = {}; hists.forEach(h => mergeHist(out, h)); return out; }
