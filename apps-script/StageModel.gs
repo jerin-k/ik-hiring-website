@@ -30,11 +30,11 @@ function stageModel_() {
   if (STAGE_MODEL_CACHE_) return STAGE_MODEL_CACHE_;
   STAGE_MODEL_CACHE_ = [
   { key:'appReview', titles:['App Review','Application Review'], label:'App Review', roundLabel:null,
-    assess:true, round:false, added:true, evaluation:true, tis:true, rec:null, recMapped:false, tp:'app', late:false, beyondR1:false },
+    assess:true, round:false, added:true, evaluation:false, tis:true, rec:null, recMapped:false, tp:'app', late:false, beyondR1:false },
   { key:'helloChristy', titles:['Hello Christy'], label:'Hello Christy', roundLabel:null,
-    assess:true, round:false, added:false, evaluation:true, tis:true, rec:'hc', recMapped:true, tp:'hc', late:false, beyondR1:false },
+    assess:true, round:false, added:true, evaluation:false, tis:true, rec:'hc', recMapped:true, tp:'hc', late:false, beyondR1:false },
   { key:'taScreen', titles:['TA Screen'], label:'TA Screen', roundLabel:'TA Screen',
-    assess:true, round:false, added:false, evaluation:false, tis:true, rec:'ta', recMapped:true, tp:'ta', late:false, beyondR1:false },
+    assess:true, round:false, added:true, evaluation:false, tis:true, rec:'ta', recMapped:true, tp:'ta', late:false, beyondR1:false },
   { key:'hmReview', titles:['HM Review'], label:'HM Review', roundLabel:'HM Review',
     assess:true, round:false, added:true, evaluation:false, tis:true, rec:'hm', recMapped:true, tp:'hm', late:false, beyondR1:false },
   { key:'oa', titles:['Online Assessment','OA','R0 - Online Assessment'], label:'OA', roundLabel:'Online Assessment',
@@ -50,11 +50,11 @@ function stageModel_() {
   { key:'r5', titles:['R5'], label:'R5', roundLabel:'R5',
     assess:true, round:true, added:false, evaluation:true, tis:true, rec:'r5', recMapped:true, tp:'r5', late:false, beyondR1:true },
   { key:'refCheck', titles:['Reference Check'], label:'Ref Check', roundLabel:'Reference Check',
-    assess:true, round:false, added:true, evaluation:true, tis:true, rec:null, recMapped:false, tp:'rc', late:true, beyondR1:true },
+    assess:true, round:false, added:true, evaluation:false, tis:true, rec:null, recMapped:false, tp:'rc', late:true, beyondR1:true },
   { key:'docSub', titles:['Document Submission'], label:'Doc Sub', roundLabel:'Document Submission',
-    assess:true, round:false, added:true, evaluation:true, tis:true, rec:null, recMapped:false, tp:'ds', late:true, beyondR1:true },
+    assess:true, round:false, added:true, evaluation:false, tis:true, rec:null, recMapped:false, tp:'ds', late:true, beyondR1:true },
   { key:'offer', titles:['Offer'], label:'Offer', roundLabel:'Offer',
-    assess:true, round:false, added:true, evaluation:true, tis:true, rec:'offer', recMapped:true, tp:'offer', late:true, beyondR1:true },
+    assess:true, round:false, added:true, evaluation:false, tis:true, rec:'offer', recMapped:true, tp:'offer', late:true, beyondR1:true },
   { key:'hired', titles:[], label:'Hired', roundLabel:null,
     assess:false, round:false, added:false, evaluation:true, tis:false, rec:'hired', recMapped:false, tp:null, late:false, beyondR1:false }
   ];
@@ -107,10 +107,12 @@ function smTractionTord() { var o={},i,j,s; for(i=0;i<M_().length;i++){ s=M_()[i
 // flow through without a bump or the whole point is lost. The site validates this object and keeps
 // its own built-in copy if anything is off, so a bad emit degrades rather than empties the screen.
 function smPublish() {
-  var m = M_(), i, s, tpKeys = [], tpLabels = {};
+  var m = M_(), i, s, tpKeys = [], tpLabels = {}, rules = {};
   for (i = 0; i < m.length; i++) {
     s = m[i];
     if (s.tp) { tpKeys.push(s.tp); tpLabels[s.tp] = s.label; }
+    // #240c: the pipeline's own default for each stage, so the Admin screen can mark his corrections apart.
+    rules[s.key] = { label: s.label, round: !!s.round, added: !!s.added, evaluation: !!s.evaluation };
   }
   return {
     stageSchema: 1,
@@ -119,7 +121,8 @@ function smPublish() {
     tisStages:   smTisStages(),
     tpKeys:      tpKeys,
     tpLabels:    tpLabels,
-    tpToStage:   smTpToStage()
+    tpToStage:   smTpToStage(),
+    rules:       rules
   };
 }
 
@@ -193,8 +196,15 @@ function stageModelSelfTest() {
   arr('TIS_STAGES', smTisStages(), B.TIS_STAGES);
   arr('TRACTION_ROUNDS', smTractionRounds(), B.TRACTION_ROUNDS);
   obj('ASSESS_ROUND_POOL', smRoundPool(), B.ASSESS_ROUND_POOL);
-  obj('ASSESS_ADDED_210', smAddedPool(), B.ASSESS_ADDED_210);
-  obj('TOFU_NOT_EVALUATION', smNotEvaluation(), B.TOFU_NOT_EVALUATION);
+  // TWO APPROVED DIFFERENCES FROM THE FROZEN BASELINE (Jerin, 19 Oct 2026). The baseline records how the
+  // code behaved BEFORE #240a and is never regenerated, so a deliberate change of DEFAULT is declared
+  // here instead - and the test still fails on anything missing or flipped.
+  //   ASSESS_ADDED_210    + helloChristy, taScreen - neither books an interview (Hello Christy is a bot),
+  //                         so Throughput counts who ARRIVED rather than assessments it will never find.
+  //   TOFU_NOT_EVALUATION + appReview, helloChristy, refCheck, docSub, offer - the first two decide
+  //                         WHETHER to evaluate, the last three happen after the deciding is done.
+  objPlus('ASSESS_ADDED_210', smAddedPool(), B.ASSESS_ADDED_210, ['helloChristy','taScreen']);
+  objPlus('TOFU_NOT_EVALUATION', smNotEvaluation(), B.TOFU_NOT_EVALUATION, ['appReview','helloChristy','refCheck','docSub','offer']);
   obj('TRACTION_KORD', smTractionKord(), B.TRACTION_KORD);
   obj('STAGEKEY_TO_RECKEY', smStageKeyToRecKey(), B.STAGEKEY_TO_RECKEY);
   obj('STAGE_KEY_MAP', smStageKeyMap(), B.STAGE_KEY_MAP);
@@ -248,8 +258,8 @@ function stageGlobalsSelfTest() {
   chk('LATE_STAGES_', LATE_STAGES_, B.LATE_STAGES, true);
   chk('BEYOND_R1_', BEYOND_R1_, B.BEYOND_R1, true);
   chk('ASSESS_ROUND_POOL', ASSESS_ROUND_POOL, B.ASSESS_ROUND_POOL, true);
-  chk('ASSESS_ADDED_210', ASSESS_ADDED_210, B.ASSESS_ADDED_210, true);
-  chk('TOFU_NOT_EVALUATION', TOFU_NOT_EVALUATION, B.TOFU_NOT_EVALUATION, true);
+  chk('ASSESS_ADDED_210', ASSESS_ADDED_210, B.ASSESS_ADDED_210, true, ['helloChristy','taScreen']);   // declared 19 Oct
+  chk('TOFU_NOT_EVALUATION', TOFU_NOT_EVALUATION, B.TOFU_NOT_EVALUATION, true, ['appReview','helloChristy','refCheck','docSub','offer']);
   chk('TRACTION_KORD', TRACTION_KORD, B.TRACTION_KORD, true);
   chk('TRACTION_TORD', TRACTION_TORD, B.TRACTION_TORD, true, ['R0 - Online Assessment']);
   var out = ['#240 LIVE GLOBALS vs the frozen pre-switchover baseline',
@@ -260,4 +270,113 @@ function stageGlobalsSelfTest() {
   Logger.log(s);
   if (fails.length) throw new Error('stageGlobalsSelfTest: ' + fails.length + ' global(s) differ');
   return s;
+}
+
+// ===== #240c: THE ASHBY INVENTORY, AND HIS CORRECTIONS ==========================================
+// Two jobs, both feeding the Admin -> Stage Mapping screen:
+//   stageInventory_()      what stages Ashby actually has, per interview plan
+//   applyStageOverrides_() his corrections to how a stage is counted, read from the published config
+//
+// WHY THE OVERRIDES CANNOT BE APPLIED IN THE BROWSER. Everything else configurable here (pods,
+// capacity, the score grid) is applied by the SITE, on numbers the pipeline already worked out. These
+// three rules work EARLIER - they decide how raw stage history is aggregated in the first place - so
+// the site cannot apply them after the fact. The refresh has to read the config itself.
+//
+// AND WHY IT IS A FUNCTION CALLED FROM THE REFRESH, NOT WORK DONE AT LOAD TIME. ASSESS_ROUND_POOL,
+// ASSESS_ADDED_210 and TOFU_NOT_EVALUATION are built the moment their files load. A Drive read there
+// would run on EVERY execution, including every web-app request. So the globals are built from the
+// defaults as before, and the refresh REASSIGNS them before any aggregation starts. Every use site
+// reads the global inside a function at call time, so one reassignment reaches all of them.
+// Call it FIRST in a refresh. refreshStageHistory needs it too - it builds the assessed rollups.
+
+var STAGE_EXCLUDED_ = {};   // titles he has switched off; notifyStageNames_ skips them
+
+// Every stage Ashby holds, with the dashboard key it maps to (or null when nothing matches).
+// Cheap: one call for the plans, one per plan. Four calls today.
+var STAGE_INVENTORY_CACHE_ = null;
+function stageInventory_() {
+  if (STAGE_INVENTORY_CACHE_) return STAGE_INVENTORY_CACHE_;
+  var out = [], map = smStageKeyMap(), i, j, ps = [];
+  // DEGRADE, NEVER ABORT. This runs inside the refresh critical path; an Ashby hiccup here must cost the
+  // Stage Mapping screen its data, not the whole rebuild. An empty inventory means no overrides are
+  // applied (the defaults stand) and no stagePlans is published (the screen says so plainly).
+  try {
+    var plans = ashbyPost_("/interviewPlan.list", {});
+    ps = (plans && plans.results) || [];
+  } catch (e) { Logger.log("#240c stageInventory_ could not read the plans: " + String(e).substring(0,200)); return []; }
+  for (i = 0; i < ps.length; i++) {
+    var sr = [];
+    try { var st = ashbyPost_("/interviewStage.list", { interviewPlanId: ps[i].id }); sr = (st && st.results) || []; }
+    catch (e2) { Logger.log("#240c stageInventory_ skipped a plan: " + String(e2).substring(0,160)); continue; }
+    for (j = 0; j < sr.length; j++) {
+      out.push({ id: sr[j].id, title: sr[j].title, order: sr[j].orderInInterviewPlan,
+                 type: sr[j].type || "", planId: ps[i].id, planTitle: ps[i].title || "",
+                 planArchived: !!ps[i].isArchived, key: map[sr[j].title] || null });
+    }
+  }
+  STAGE_INVENTORY_CACHE_ = out;
+  return out;
+}
+
+// What the Admin screen renders: the plans, and each plan stages in ASHBY OWN ORDER.
+// liveJobs decides whether a plan is OFFERED for mapping - archiving the last job that used a plan is
+// how a retired plan stops asking him things. The stages stay MAPPED in the data either way; this
+// governs only what he is asked about.
+function buildStagePlans_(liveJobCountByPlanId) {
+  var inv = stageInventory_(), byPlan = {}, order = [], i, s;
+  for (i = 0; i < inv.length; i++) {
+    s = inv[i];
+    if (!byPlan[s.planId]) {
+      byPlan[s.planId] = { id: s.planId, title: s.planTitle, archived: s.planArchived,
+                           liveJobs: (liveJobCountByPlanId && liveJobCountByPlanId[s.planId]) || 0, stages: [] };
+      order.push(s.planId);
+    }
+    byPlan[s.planId].stages.push({ id: s.id, title: s.title, order: s.order, type: s.type, key: s.key });
+  }
+  var plans = [];
+  for (i = 0; i < order.length; i++) {
+    var p = byPlan[order[i]];
+    // orderInInterviewPlan is NOT dense (the Test plan runs 0-6 then 1001-1003): SORT by it, never index.
+    p.stages.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    plans.push(p);
+  }
+  return { stageRulesSchema: 1, plans: plans };
+}
+
+// His corrections. Keyed by Ashby STAGE ID: a title changes, an id does not, so a renamed stage keeps
+// what he set for it. Returns how many were applied; throws nothing.
+function applyStageOverrides_() {
+  try { return applyStageOverridesInner_(); }
+  catch (e) { Logger.log("#240c overrides NOT applied, defaults stand: " + String(e).substring(0,200)); return -1; }
+}
+function applyStageOverridesInner_() {
+  var cfg = loadDriveJson_("metric_config.json");
+  var rules = (cfg && cfg.stageRules) || {};
+  var ids = Object.keys(rules);
+  if (!ids.length) { Logger.log("#240c stage overrides: none set - the defaults stand"); return 0; }
+  var byId = {}, inv = stageInventory_(), i;
+  for (i = 0; i < inv.length; i++) byId[inv[i].id] = inv[i];
+  var round = smRoundPool(), added = smAddedPool(), notEval = smNotEvaluation(), excl = {}, applied = [];
+  for (i = 0; i < ids.length; i++) {
+    var id = ids[i], r = rules[id] || {}, st = byId[id];
+    if (!st) { applied.push("(stage " + id.substring(0, 8) + " no longer in Ashby - skipped)"); continue; }
+    if (r.exclude) {
+      excl[st.title] = 1;
+      if (st.key) { delete round[st.key]; delete added[st.key]; }
+      applied.push(st.title + ": excluded");
+      continue;
+    }
+    if (!st.key) { applied.push(st.title + ": unrecognised, nothing to re-point"); continue; }
+    if (r.measure === "round")         { round[st.key] = 1; delete added[st.key]; applied.push(st.title + ": interview round"); }
+    else if (r.measure === "arrivals") { added[st.key] = 1; delete round[st.key]; applied.push(st.title + ": by arrivals"); }
+    else if (r.measure === "ordered")  { delete round[st.key]; delete added[st.key]; applied.push(st.title + ": ordered step"); }
+    if (r.evaluation === true) { delete notEval[st.key]; applied.push(st.title + ": evaluates"); }
+    else if (r.evaluation === false) { notEval[st.key] = 1; applied.push(st.title + ": does not evaluate"); }
+  }
+  ASSESS_ROUND_POOL = round;
+  ASSESS_ADDED_210 = added;
+  TOFU_NOT_EVALUATION = notEval;
+  STAGE_EXCLUDED_ = excl;
+  Logger.log("#240c stage overrides applied (" + applied.length + "): " + applied.join(" | "));
+  return applied.length;
 }
