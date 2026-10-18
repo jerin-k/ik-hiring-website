@@ -902,6 +902,40 @@ export const DEFINITIONS = {
     ]
   },
 
+  'admin-stages': {
+    summary: 'How stage mapping works',
+    intro: 'Which Ashby stage counts as what, across every panel that measures the interview process. Ashby is the source of the list: a stage added, renamed or retired there shows up here by itself.',
+    confirmed: 'Settled with Jerin \u00b7 16 Oct 2026 (his own suggestion; layout B1 of two mock rounds).',
+    groups: [
+      {
+        heading: 'Reading it',
+        items: [
+          ['The list on the left', 'One interview plan per row, with the number of stages in it. A plan appears only while at least one <strong>live</strong> job uses it, so retiring the last job that used a plan takes it off this screen.'],
+          ['Stage in Ashby', 'The stage exactly as Ashby names it, listed in the order Ashby holds them &mdash; not in the order the dashboard shows columns.'],
+          ['Ashby type', 'Ashby&rsquo;s own label for the kind of stage. <strong>Active</strong> marks the evaluation stages, which are the ones that get added or renamed; the others are either before the process starts or after it ends, and carry no settings here.'],
+          ['Counted as', 'The stage the dashboard matches this Ashby stage to. Several Ashby titles can point at the same one &mdash; that is normal, not a fault.'],
+          ['Round', 'One of the interview rounds. The rounds are an <strong>unordered pool</strong>, so ticking this does not place a stage in a sequence.'],
+          ['By people added', 'Measured by how many people arrive rather than by assessments held. It is right for the stages where nobody is interviewed.'],
+          ['Evaluation', 'An interview at this stage counts towards Momentum.'],
+          ['Exclude', 'The stage reaches no number at all, and the pipeline stops mailing about it. It stays listed so it can be put back.'],
+        ]
+      },
+      {
+        heading: 'Worth knowing',
+        items: [
+          ['This screen corrects defaults, it does not set them', 'A stage Ashby adds is picked up and counted straight away, using the sensible default for its kind. You only need this screen when that default is wrong.'],
+          ['Amber means come and confirm, not broken', 'An amber row is an evaluation stage the dashboard does not recognise. It is <strong>still being counted</strong> by its default while it waits for you.'],
+          ['A tick you set is underlined', 'That distinguishes your correction from the pipeline&rsquo;s own default. Setting a tick back to the default removes the correction rather than storing it.'],
+          ['A renamed stage keeps its settings', 'Stages are remembered by their Ashby identity, not their name, so renaming one in Ashby does not lose what you set here.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Edits are local until you publish', 'Changes apply in <strong>this browser</strong> immediately, and to nobody else. <strong>Publish to team</strong> writes the shared config everyone sees &mdash; one config with <strong>Pod &amp; Capacity</strong> and <strong>Scoring</strong>.'],
+      ['The numbers follow on the next refresh', 'The pipeline reads these rules when it rebuilds the data, so a change here shows in the panels after the next data refresh rather than instantly.'],
+    ]
+  },
+
   'admin-family': {
     summary: 'How this list works',
     intro: 'Which scoring family each Ashby department belongs to. The same in every quarter.',

@@ -1,4 +1,5 @@
 import { defsBlock } from '../definitions.js';
+import { renderStageMap, initStageMap } from '../admin-stage-map.js';   // #240c: Admin ➝ Stage Mapping
 import { DEPT_TREE } from '../dept-map.js';
 import { podOf, POD_OPTIONS, setPod, capacityOf, setCapacity, currentQuarter, qKey, podDefOf, podDefSetAt } from '../recruiter-pods.js';   // #205: podDefOf / podDefSetAt
 import { userTypeOf, setUserType, USER_TYPES, sourcerOnlyNames, getRecruiterDates, setRecruiterDate, recruiterInQuarter, getRecruiterEmails, setRecruiterEmail, getAshbyEmails } from '../metric-config.js';   // #11b · #111 · #228b
@@ -283,6 +284,26 @@ export function renderAdmin(accessConfig, data, viewer) {
       .cfg-scroll { overflow-x:auto; }
       @media (max-width:48.375rem) { .adm-split { grid-template-columns:1fr; } }
       /* .adm-subtabs is the recessed .subtab-band and .adm-subtab inherits .subtab-chip — see style.css */
+      .adm-empty { padding:0.75rem; font-size:0.75rem; color:var(--muted); text-align:center; }
+      /* ===== #240c Stage Mapping (layout B1) =====
+         The amber marks a row HE must confirm, in place — his pick over lifting them to the top or hiding
+         the rest behind a filter. Tokens are the product's own --orange family; there is no amber border
+         token, so #ecdcb4 is reused from .update-band, which named the same gap. */
+      .stm-row.stm-needs { box-shadow:inset 0.1875rem 0 0 var(--orange); }
+      .stm-row .stm-badge { color:#8a5406; background:var(--orange-light); }
+      .stm-table tr.stm-flag > td:first-child { box-shadow:inset 0.1875rem 0 0 var(--orange); }
+      .stm-table tr.stm-flag { background:#fffdf7; }
+      .stm-dot { display:inline-block; width:0.4375rem; height:0.4375rem; border-radius:50%; background:var(--orange); margin-right:0.4375rem; vertical-align:0.0625rem; }
+      /* An excluded stage stays LISTED but inert, so it can be put back — never removed from the table. */
+      .stm-table tr.stm-off > td { opacity:0.55; }
+      .stm-table tr.stm-off > td:first-child { text-decoration:line-through; text-decoration-color:var(--muted); }
+      .stm-type { font-size:0.6875rem; color:var(--text-secondary); background:#eef1f6; border:1px solid var(--border); border-radius:0.3125rem; padding:1px 0.4375rem; }
+      .stm-key { font-size:0.75rem; color:var(--text); font-weight:600; }
+      .stm-new { font-size:0.71875rem; color:#8a5406; }
+      .stm-tick { display:inline-flex; align-items:center; justify-content:center; width:100%; cursor:pointer; }
+      .stm-tick input { cursor:pointer; }
+      /* A tick he has overridden is marked, so the screen distinguishes his correction from the default. */
+      .stm-tick.stm-over { box-shadow:inset 0 -0.125rem 0 var(--orange); border-radius:0.25rem; }
     </style>
 
     <div class="adm-subtabs subtab-band">
@@ -291,6 +312,7 @@ export function renderAdmin(accessConfig, data, viewer) {
       <button class="adm-subtab subtab-chip" data-atab="poddefs">Pod Definitions</button>
       <button class="adm-subtab subtab-chip" data-atab="depts">Departments &amp; Teams</button>
       <button class="adm-subtab subtab-chip" data-atab="scoring">Scoring</button>
+      <button class="adm-subtab subtab-chip" data-atab="stages">Stage Mapping</button>
     </div>
 
     <div class="adm-panel" data-apanel="access">
@@ -438,6 +460,8 @@ export function renderAdmin(accessConfig, data, viewer) {
         </div>
       </div>
     </div><!-- /scoring panel -->
+
+    ${renderStageMap()}
   `;
 }
 
@@ -880,11 +904,16 @@ export function initAdminMetricConfig(data, viewer) {
     showMetricStrip();
   }));
   // Scoring's side list: it lands on the Grid, and one section shows at a time.
-  document.querySelectorAll('.adm-row').forEach(row => row.addEventListener('click', () => {
-    document.querySelectorAll('.adm-row').forEach(r => r.setAttribute('aria-selected', String(r === row)));
-    document.querySelectorAll('.adm-ssec').forEach(x => { x.style.display = x.dataset.ssec === row.dataset.ssec ? '' : 'none'; });
+  // 🚨 SCOPED TO THE SCORING PANEL (#240c). This used to select `.adm-row` across the whole page, which was
+  // harmless only while Scoring owned the only rail. Stage Mapping now has one too, and an unscoped handler
+  // would deselect Scoring's rows and hide every `.adm-ssec` when you clicked a plan. A shared hook with one
+  // user is a trap waiting for the second (CLAUDE.md rule 12).
+  document.querySelectorAll('[data-apanel="scoring"] .adm-row').forEach(row => row.addEventListener('click', () => {
+    document.querySelectorAll('[data-apanel="scoring"] .adm-row').forEach(r => r.setAttribute('aria-selected', String(r === row)));
+    document.querySelectorAll('[data-apanel="scoring"] .adm-ssec').forEach(x => { x.style.display = x.dataset.ssec === row.dataset.ssec ? '' : 'none'; });
     showMetricStrip();
   }));
+  initStageMap(data, viewer);   // #240c: its own rail and table, wired inside its module
 
   function updatePodSummary() {
     const el = document.getElementById('cfgPodSummary'); if (!el) return;

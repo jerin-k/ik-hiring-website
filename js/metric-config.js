@@ -24,7 +24,7 @@ const PENDING_LS = 'ik_metric_config_pending';   // #111b: the payload Publish l
 // runtime localStorage keys the readers consume (must match recruiter-pods.js / score-model.js)
 // #11b: userType is the Agency|Freelancer toggle set beside the pod selector. It is NOT per-quarter — a user
 // either is an agency or is not — so it is a flat { name: 'Agency' | 'Freelancer' } map, unlike pods/capacity.
-const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates', podDefs: 'ik_pod_defs_q', recruiterEmail: 'ik_recruiter_email' };   // #228b: which login IS which recruiter   // #111: start/leaving dates, flat per person · #205: what each pod measures, per quarter
+const KEYS = { pods: 'ik_recruiter_pods_q', capacity: 'ik_recruiter_capacity_q', scoreGrid: 'ik_score_grid_q', deptFamily: 'ik_dept_family', userType: 'ik_user_type', recruiterDates: 'ik_recruiter_dates', podDefs: 'ik_pod_defs_q', recruiterEmail: 'ik_recruiter_email', stageRules: 'ik_stage_rules' };   // #240c: his corrections to how a stage is counted   // #228b: which login IS which recruiter   // #111: start/leaving dates, flat per person · #205: what each pod measures, per quarter
 
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 
@@ -70,6 +70,7 @@ function hydrate(cfg) {
   if (cfg.recruiterDates) localStorage.setItem(KEYS.recruiterDates, JSON.stringify(cfg.recruiterDates));   // #111
   if (cfg.podDefs) localStorage.setItem(KEYS.podDefs, JSON.stringify(cfg.podDefs));   // #205: what each pod measures
   if (cfg.recruiterEmail) localStorage.setItem(KEYS.recruiterEmail, JSON.stringify(cfg.recruiterEmail));   // #228b
+  if (cfg.stageRules) localStorage.setItem(KEYS.stageRules, JSON.stringify(cfg.stageRules));   // #240c: Admin ➝ Stage Mapping
 }
 
 export function markDirty() { localStorage.setItem(DIRTY_LS, '1'); localStorage.removeItem(PENDING_LS); }   // an edit after Publish makes the sent payload stale
@@ -78,12 +79,12 @@ export function getMeta() { return readLS(META_LS, null); }
 
 // Snapshot the runtime config into a publishable object.
 export function collectConfig() {
-  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}), podDefs: readLS(KEYS.podDefs, {}), recruiterEmail: readLS(KEYS.recruiterEmail, {}) };   // #205 · #228b
+  return { schemaVersion: 1, pods: readLS(KEYS.pods, {}), capacity: readLS(KEYS.capacity, {}), scoreGrid: readLS(KEYS.scoreGrid, {}), deptFamily: readLS(KEYS.deptFamily, {}), userType: readLS(KEYS.userType, {}), recruiterDates: readLS(KEYS.recruiterDates, {}), podDefs: readLS(KEYS.podDefs, {}), recruiterEmail: readLS(KEYS.recruiterEmail, {}), stageRules: readLS(KEYS.stageRules, {}) };   // #205 · #228b · #240c
 }
 
 // Deep-equal of the meaningful config fields (for confirm-by-read).
 function sameConfig(a, b) {
-  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates', 'podDefs', 'recruiterEmail'];   // #205 · #228b: an email-only publish must confirm too
+  const f = ['pods', 'capacity', 'scoreGrid', 'deptFamily', 'userType', 'recruiterDates', 'podDefs', 'recruiterEmail', 'stageRules'];   // #205 · #228b: an email-only publish must confirm too · #240c: so does a stage-rule-only one
   return f.every(k => JSON.stringify(a && a[k] || {}) === JSON.stringify(b && b[k] || {}));
 }
 
