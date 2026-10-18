@@ -25,6 +25,12 @@ import { familyForJob, classificationFor, gridForQuarter, scoreForRole, isSmeDep
 const FIRST_DAY = '2026-07-01';   // #127: nothing before Q3 2026
 const LEVELS = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'];
 const ROLE_TYPES = ['New', 'Replacement', 'Anticipation Of Exit', 'As per AOP', 'Buffer'];
+// 244 (Jerin, 19 Oct 2026): "Anticipation Of Exit" means someone is leaving soon, so it has to ask the same
+// question Replacement already does - who is being replaced. 🚨 ONE list, because the form, the Submit check and
+// the clear-on-change rule must never disagree about which Role Types ask it. Ashby takes it in the opening's
+// "Replacement of, if applicable" field, which is why the wording stays the same for both.
+const NEEDS_REPLACED_NAME = ['Replacement', 'Anticipation Of Exit'];
+const needsReplacedName = (t) => NEEDS_REPLACED_NAME.includes(String(t || ''));
 const COMPLEXITIES = ['Normal', 'Complex', 'Uber Complex'];
 // A topic this short or this generic cannot tell two openings on one job apart - ask rather than accept it.
 const VAGUE = /^(ai|ml|tech|technology|general|misc|others?|na|n\/a|tbd|tbc|any|role|instructor|sme|trainer|-+)$/i;
@@ -177,7 +183,7 @@ function evaluate(d, ctx) {
     if (!x.roleType) noType.push(n);
     if (!x.recruiter) noRec.push(n);
     else if (!ctx.recruiters.some((u) => u.name === x.recruiter)) ghost.push(`${n} (${x.recruiter})`);
-    if (x.roleType === 'Replacement' && !x.replacementOf) noName.push(n);
+    if (needsReplacedName(x.roleType) && !x.replacementOf) noName.push(n);
   });
   const many = (list, one, more) => block(list.length === 1 ? one(list[0]) : more(list.join(', ')));
   if (noType.length) many(noType, (n) => `Pick the Role Type on opening ${n}.`, (l) => `Pick the Role Type on openings ${l}.`);
@@ -700,6 +706,14 @@ export async function mountOpeningRequests(root, backend) {
     // the Role Type is always As per AOP, so it is shown set rather than offered.
     const rowsBlock = (() => {
       const rws = ev.rows || [];
+      // 244b (Jerin, 19 Oct 2026): these two boxes must show what was TYPED, not what evaluate() trimmed.
+      // evaluate() trims topic and replacementOf so the Submit check and the opening's name are clean - but both
+      // boxes re-render on EVERY keystroke, so rendering the trimmed value made a trailing space vanish as it was
+      // typed: "Jerin Kesavan" came out "JerinKesavan" and "Agentic AI" came out "AgenticAI". `d` is the untyped
+      // draft, so it still holds the space. 🚨 The `bad` class keeps using the TRIMMED value - a box holding only
+      // spaces is still empty - so only the displayed value changes here.
+      const raw = (i) => ((d.rows || [])[i] || {});
+      const typed = (i, k, fallback) => { const v = raw(i)[k]; return v == null ? fallback : v; };
       const line = (x, i) => {
         const n = i + 1;
         const rt = ev.aopOnly
@@ -709,11 +723,11 @@ export async function mountOpeningRequests(root, backend) {
           <select class="or-in" data-row="${i}" data-rf="recruiter" aria-label="Opening ${n} recruiter"${dis}>${opt(S.recruiters.map(u => u.name), x.recruiter, 'Recruiter…')}</select>
           <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select>
           <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
-            value="${esc(x.topic)}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}></div>`;
-        if (x.roleType !== 'Replacement') return head;
+            value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}></div>`;
+        if (!needsReplacedName(x.roleType)) return head;
         return head + `<div class="or-op-sub"><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
-            value="${esc(x.replacementOf)}" placeholder="name of the person being replaced"${dis}></div>`;
+            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>`;
       };
       const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
       return `<div class="or-f wide"><span>How many openings</span>
@@ -1043,7 +1057,7 @@ export async function mountOpeningRequests(root, backend) {
       if (!rows[i]) return;
       rows[i] = Object.assign({}, rows[i], { [el.dataset.rf]: el.value });
       // a name left behind on a line no longer set to Replacement never travels
-      if (el.dataset.rf === 'roleType' && el.value !== 'Replacement') rows[i].replacementOf = '';
+      if (el.dataset.rf === 'roleType' && !needsReplacedName(el.value)) rows[i].replacementOf = '';
       S.draft.rows = rows; render(); revealNext();   // #112i
     }));
     // 112l: the topic is TEXT, so it takes the same treatment as the replacement name — commit on every keystroke and
