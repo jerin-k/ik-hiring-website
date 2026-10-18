@@ -68,6 +68,9 @@ function stageKeyFor(title) {
 function notifyStageNames_(autoMatched, unmapped) {
   try {
     var EXPECTED = { 'Hired': 1, 'Archived': 1, 'New Lead': 1, 'Reached Out': 1, 'Replied': 1 };
+    // #240c: and anything he has switched off on the Stage Mapping screen. Without this an undeletable
+    // Ashby stage would re-prompt him at every refresh, which is what Exclude exists to stop.
+    for (var _x in (STAGE_EXCLUDED_ || {})) EXPECTED[_x] = 1;
     var unknown = {}, nUnknown = 0;
     for (var t in (unmapped || {})) { if (!EXPECTED[t]) { unknown[t] = unmapped[t]; nUnknown++; } }
     var autoKeys = [], au = [];
@@ -629,8 +632,15 @@ function reconInterviews() {
   Logger.log('applicationFeedback.list: got=' + (f.results || []).length + ' more=' + f.moreDataAvailable + ' submittedAt=' + f0.submittedAt + ' evId=' + f0.interviewEventId + ' by=' + (f0.submittedByUser ? (f0.submittedByUser.firstName + ' ' + f0.submittedByUser.lastName) : null));
 }
 
+// #240c: never let the Stage Mapping data cost us the whole refresh.
+function safeStagePlans_(live) {
+  try { return buildStagePlans_(live); }
+  catch (e) { Logger.log("#240c stagePlans not built: " + String(e).substring(0,200)); return null; }
+}
+
 function refreshDashboardData() {
   var startTime = Date.now();
+  applyStageOverrides_();   // #240c: his stage corrections, BEFORE anything is counted
   Logger.log('=== Dashboard refresh (v4, createdAfter) scope=' + SCOPE_YEAR + ' ===');
   var existing = loadExistingDashboard_() || {};
 
@@ -658,6 +668,15 @@ function refreshDashboardData() {
     var lf = deptMap[j.departmentId] ? deptMap[j.departmentId].name : '';
     if (EXCLUDED_DEPTS[topDept(j.departmentId) || lf] || EXCLUDED_DEPTS[lf]) { excludedJobIds[j.id] = 1; return false; }
     return true;
+  });
+  // #240c: which interview plans are actually in use. A plan with no live job is not offered on the
+  // Stage Mapping screen, so archiving the last job that used one retires it with no further action.
+  var livePlanJobs_ = {};
+  allJobs.forEach(function (j) {
+    var st = String(j.status || '');
+    if (st === 'Closed' || st === 'Archived') return;
+    var pid = j.interviewPlanId || j.defaultInterviewPlanId || (j.interviewPlan && j.interviewPlan.id) || null;
+    if (pid) livePlanJobs_[pid] = (livePlanJobs_[pid] || 0) + 1;
   });
   Logger.log('#37 excluded department(s) [' + Object.keys(EXCLUDED_DEPTS).join(', ') + ']: ' + (jobsBeforeExcl_ - allJobs.length) + ' job(s) dropped, ' + allJobs.length + ' kept');
 
@@ -1251,6 +1270,7 @@ function refreshDashboardData() {
   var jobIndex_ = {};
   for (var _jx in jobLookup) { var _jl = jobLookup[_jx]; if (!_jl || excludedJobIds[_jx]) continue; jobIndex_[String(_jx).substring(0, 8)] = { title: _jl.title || '', department: _jl.department || '' }; }
   var dashboard = {
+    stagePlans: safeStagePlans_(livePlanJobs_),   // #240c: the Admin Stage Mapping screen reads this
     stageLists: smPublish(),   // #240b: the site reads its stage lists from here, so there is one source
     lastUpdated: new Date().toISOString(), schemaVersion: 5, probe167: PROBE_167_, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
@@ -1579,6 +1599,7 @@ var ROLLUP_WINDOW_DAYS = 120;     // velocity days kept in the rollup (frontend 
 
 function refreshStageHistory() {
   var startTime = Date.now();
+  applyStageOverrides_();   // #240c: this job builds the assessed rollups, so it needs them too
   Logger.log('=== stage-history accumulator ===');
   var scopedDoc = loadDriveJson_('scoped_apps.json');
   var scoped = (scopedDoc && scopedDoc.apps) || [];
