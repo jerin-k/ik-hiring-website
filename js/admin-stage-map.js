@@ -35,13 +35,22 @@ import { markDirty } from './metric-config.js';
 const LS_KEY = 'ik_stage_rules';
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// The three rules a stage carries, and the one that switches it off. Labels are the words already on screen
-// elsewhere, so the screen explains the pipeline rather than inventing a second vocabulary for it.
-const RULES = [
-  ['round',      'Round',           'One of the interview rounds. The rounds are an unordered pool, so this does not place it in a sequence.'],
-  ['added',      'By people added', 'Measured by how many people arrive, not by assessments held — right where nobody is interviewed.'],
-  ['evaluation', 'Evaluation',      'An interview here counts towards Momentum.'],
+// 🔑 ONE QUESTION WITH THREE ANSWERS, not two tick-boxes (Jerin, 19 Oct 2026). "Round" and "By people
+// added" were separate ticks and were never both set — they cannot be, because a stage that IS an interview
+// round has interviews by definition, so it can never be the "nobody is interviewed here" case. Two switches
+// that are logically exclusive read as two independent choices, which is exactly what confused him:
+// 🗣 "Round reads like evaluation itself. hence confused." So they are one dropdown.
+// ⚠ It does carry TWO consequences at once — how the stage is counted, AND whether moves between it and the
+// rounds count as progress. Today those always travel together, which is what makes the merge safe.
+const MEASURE = [
+  ['round',    'Interview round', 'Someone is interviewed, and the rounds can happen in any order — so moving to another round counts as progress.'],
+  ['arrivals', 'By arrivals',     'Nobody is interviewed here, so Throughput counts who arrived rather than looking for assessments it will never find.'],
+  ['ordered',  'Ordered step',    'Someone is interviewed, but the stage has a fixed place in the process, so going backwards is not progress.'],
 ];
+// Momentum's question, and a separate one: does what happens here tell you whether the person can do the job?
+// It holds the same six stages as "Interview round" today. Kept as its own control deliberately, so a future
+// stage that evaluates without being one of the numbered rounds can be set without a code change.
+const EVAL_LABEL = 'Counts as evaluating ability';
 
 export function readStageRules() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch (e) { return {}; }
@@ -72,12 +81,22 @@ export function countNeedsHim(plan, rules) {
   return ((plan && plan.stages) || []).filter(s => needsHim(s, rules)).length;
 }
 
-/** What a stage's rule reads today: the override if he set one, otherwise the pipeline's own default. */
-function effective(stage, defaults, rules, field) {
-  const r = rules[ruleKeyOf(stage)] || {};
-  if (Object.prototype.hasOwnProperty.call(r, field)) return !!r[field];
+/** The pipeline's own default for a stage, as one of the three measures. */
+function defaultMeasure(stage, defaults) {
   const d = (stage.key && defaults[stage.key]) || {};
-  return !!d[field];
+  if (d.round) return 'round';
+  if (d.added) return 'arrivals';
+  return 'ordered';
+}
+/** What a stage reads today: his override if he set one, otherwise the pipeline's default. */
+function effectiveMeasure(stage, defaults, rules) {
+  const r = rules[ruleKeyOf(stage)] || {};
+  return r.measure || defaultMeasure(stage, defaults);
+}
+function effectiveEval(stage, defaults, rules) {
+  const r = rules[ruleKeyOf(stage)] || {};
+  if (Object.prototype.hasOwnProperty.call(r, 'evaluation')) return !!r.evaluation;
+  return !!((stage.key && defaults[stage.key]) || {}).evaluation;
 }
 
 export function renderStageMap() {
@@ -96,7 +115,8 @@ export function renderStageMap() {
                 <th style="min-width:13rem">Stage in Ashby</th>
                 <th style="width:9rem">Ashby type</th>
                 <th style="min-width:9rem">Counted as</th>
-                ${RULES.map(([, label, why]) => `<th style="width:8.5rem" title="${esc(why)}">${esc(label)}</th>`).join('')}
+                <th style="min-width:10.5rem;width:10.5rem" title="How Throughput counts people at this stage, and whether moving away from it counts as progress.">How it&rsquo;s counted</th>
+                <th style="width:9.5rem" title="Whether an interview here counts towards Momentum — does what happens here tell you if the person can do the job?">${EVAL_LABEL}</th>
                 <th style="width:7rem" title="Reaches no number at all, and stops the pipeline mailing about it. Durable, and reversible.">Exclude</th>
               </tr></thead>
               <tbody id="stmBody"></tbody>
@@ -121,7 +141,7 @@ export function initStageMap(data, viewer) {
   // empty table that looks like every plan vanished — CLAUDE.md rule 4's cousin, a blank that reads as a fact.
   if (!sp) {
     rail.innerHTML = '<div class="adm-empty">No interview plans yet</div>';
-    body.innerHTML = `<tr><td colspan="${4 + RULES.length}" style="text-align:center;color:var(--muted);padding:1.25rem">
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.25rem">
       The stage list has not been published by the pipeline yet. It appears after the next data refresh.</td></tr>`;
     const n = document.getElementById('stmNote'); if (n) n.textContent = '';
     return;
@@ -157,7 +177,7 @@ export function initStageMap(data, viewer) {
     const title = document.getElementById('stmTitle');
     const note = document.getElementById('stmNote');
     if (!plan) {
-      body.innerHTML = `<tr><td colspan="${4 + RULES.length}" style="text-align:center;color:var(--muted);padding:1.25rem">
+      body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.25rem">
         Nothing to map — no interview plan has a live job. A plan reappears here when a job starts using it.</td></tr>`;
       if (title) title.textContent = 'Stages';
       if (note) note.textContent = '';
@@ -186,42 +206,63 @@ export function initStageMap(data, viewer) {
         : (s.type === 'Active'
             ? `<span class="stm-new">not recognised — counted by default</span>`
             : `<span class="zero">—</span>`);
-      const ticks = RULES.map(([field]) => {
-        if (!measured) return '<td><span class="zero">—</span></td>';
-        const on = effective(s, defaults, rules, field);
-        const over = Object.prototype.hasOwnProperty.call(r, field);
-        return `<td><label class="stm-tick${over ? ' stm-over' : ''}" title="${over ? 'You set this' : 'The pipeline’s own default'}">
-          <input type="checkbox" data-sk="${esc(k)}" data-field="${field}" ${on ? 'checked' : ''} ${ro || excluded ? 'disabled' : ''}>
-        </label></td>`;
-      }).join('');
+      // The two controls. A stage outside the process (Lead / Archived / Hired) carries neither, and says so
+      // with a dash rather than an empty box that looks like an unticked setting.
+      let controls;
+      if (!measured) {
+        controls = '<td><span class="zero">—</span></td><td><span class="zero">—</span></td>';
+      } else {
+        const m = effectiveMeasure(s, defaults, rules);
+        const mOver = !!r.measure;
+        const ev = effectiveEval(s, defaults, rules);
+        const eOver = Object.prototype.hasOwnProperty.call(r, 'evaluation');
+        const srcTitle = (o) => o ? 'You set this' : 'The pipeline’s own default';
+        controls =
+          `<td><select class="stm-sel${mOver ? ' stm-over' : ''}" data-sk="${esc(k)}" data-field="measure"
+              title="${srcTitle(mOver)}" ${ro || excluded ? 'disabled' : ''}>
+            ${MEASURE.map(([v, label, why]) => `<option value="${v}" title="${esc(why)}" ${v === m ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+          </select></td>` +
+          `<td><label class="stm-tick${eOver ? ' stm-over' : ''}" title="${srcTitle(eOver)}">
+            <input type="checkbox" data-sk="${esc(k)}" data-field="evaluation" ${ev ? 'checked' : ''} ${ro || excluded ? 'disabled' : ''}>
+          </label></td>`;
+      }
       return `<tr class="${cls}">
         <td>${flag ? '<span class="stm-dot" title="Needs you to confirm"></span>' : ''}${esc(s.title)}</td>
         <td><span class="stm-type">${esc(s.type || '')}</span></td>
         <td>${mapped}</td>
-        ${ticks}
+        ${controls}
         <td><label class="stm-tick"><input type="checkbox" data-sk="${esc(k)}" data-field="exclude" ${excluded ? 'checked' : ''} ${ro ? 'disabled' : ''}></label></td>
       </tr>`;
     }).join('');
 
     if (ro) return;
-    body.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', () => {
-      const k = cb.dataset.sk, field = cb.dataset.field;
+    // 🔑 AN OVERRIDE EQUAL TO THE DEFAULT IS NOT AN OVERRIDE. Setting a control back to what the pipeline
+    // already does DELETES the stored correction rather than recording it, so the config stays a short list
+    // of his genuine corrections — and a later change of default still reaches every stage he never touched.
+    const onEdit = (el) => {
+      const k = el.dataset.sk, field = el.dataset.field;
       const row = rules[k] || (rules[k] = {});
-      row[field] = cb.checked;
-      // An override equal to the default is not an override — drop it, so the stored config stays a list of
-      // his CORRECTIONS and a later change of default still reaches the stages he never touched.
       const plan2 = plans.find(p => p.id === current);
-      const stage = ((plan2 && plan2.stages) || []).find(s => ruleKeyOf(s) === k);
-      if (stage && field !== 'exclude') {
-        const d = (stage.key && defaults[stage.key]) || {};
-        if (!!d[field] === !!cb.checked) delete row[field];
+      const stage = ((plan2 && plan2.stages) || []).find(s2 => ruleKeyOf(s2) === k);
+      if (field === 'measure') {
+        row.measure = el.value;
+        if (stage && defaultMeasure(stage, defaults) === el.value) delete row.measure;
+      } else if (field === 'exclude') {
+        if (el.checked) row.exclude = true; else delete row.exclude;
+      } else {
+        row[field] = el.checked;
+        if (stage) {
+          const d = (stage.key && defaults[stage.key]) || {};
+          if (!!d[field] === !!el.checked) delete row[field];
+        }
       }
-      if (field === 'exclude' && !cb.checked) delete row.exclude;
       if (!Object.keys(row).length) delete rules[k];
       writeStageRules(rules);
-      markDirty();   // an edit after Publish makes the sent payload stale — same contract as every other Admin screen
+      markDirty();   // an edit after Publish makes the sent payload stale — the same contract as every other Admin screen
       drawRail(); drawTable();
-    }));
+    };
+    body.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', () => onEdit(cb)));
+    body.querySelectorAll('select.stm-sel').forEach(sel => sel.addEventListener('change', () => onEdit(sel)));
   }
 
   drawRail();

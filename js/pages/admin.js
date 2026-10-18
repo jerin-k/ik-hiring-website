@@ -302,8 +302,13 @@ export function renderAdmin(accessConfig, data, viewer) {
       .stm-new { font-size:0.71875rem; color:#8a5406; }
       .stm-tick { display:inline-flex; align-items:center; justify-content:center; width:100%; cursor:pointer; }
       .stm-tick input { cursor:pointer; }
-      /* A tick he has overridden is marked, so the screen distinguishes his correction from the default. */
+      /* A control he has overridden is marked, so the screen distinguishes his correction from the default. */
       .stm-tick.stm-over { box-shadow:inset 0 -0.125rem 0 var(--orange); border-radius:0.25rem; }
+      /* 🚨 A <select> does not inherit the page font (style.css says so for button/select/input) - set it. */
+      .stm-sel { font-family:inherit; font-size:0.75rem; color:var(--text); background:var(--card);
+        border:1px solid var(--border); border-radius:0.375rem; padding:0.25rem 0.375rem; width:100%; }
+      .stm-sel:disabled { color:var(--muted); background:#f4f6fa; }
+      .stm-sel.stm-over { border-color:var(--orange); box-shadow:inset 0 -0.125rem 0 var(--orange); }
     </style>
 
     <div class="adm-subtabs subtab-band">
