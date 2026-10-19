@@ -640,6 +640,7 @@ function safeStagePlans_(live) {
 
 function refreshDashboardData() {
   var startTime = Date.now();
+  stageRegisterSync_();     // #240d: adopt a new stage, alias a renamed one, retire a vanished one
   applyStageOverrides_();   // #240c: his stage corrections, BEFORE anything is counted
   Logger.log('=== Dashboard refresh (v4, createdAfter) scope=' + SCOPE_YEAR + ' ===');
   var existing = loadExistingDashboard_() || {};
@@ -1613,6 +1614,7 @@ var ROLLUP_WINDOW_DAYS = 120;     // velocity days kept in the rollup (frontend 
 
 function refreshStageHistory() {
   var startTime = Date.now();
+  stageRegisterSync_();     // #240d: must run BEFORE the overrides, so a new stage can be corrected too
   applyStageOverrides_();   // #240c: this job builds the assessed rollups, so it needs them too
   Logger.log('=== stage-history accumulator ===');
   var scopedDoc = loadDriveJson_('scoped_apps.json');
