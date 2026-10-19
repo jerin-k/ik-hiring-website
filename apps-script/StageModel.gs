@@ -380,3 +380,147 @@ function applyStageOverridesInner_() {
   Logger.log("#240c stage overrides applied (" + applied.length + "): " + applied.join(" | "));
   return applied.length;
 }
+
+// ===== #240d — a new or renamed stage looks after itself =====================================
+// Goes into StageModel.gs, after applyStageOverrides_().
+//
+// 🔑 IDENTITY LIVES ON THE STAGE DEFINITION, NOT ON EVERY APPLICATION. The original plan costed
+// capturing Ashby's stage id onto each application and backfilling the #204 shard. Not needed:
+// stageInventory_() already reads every stage Ashby defines WITH ITS ID, so a rename is recognised
+// here and becomes another TITLE on the stage that already exists. History keeps arriving by title,
+// and the alias makes that title resolve to the stage it always was.
+//
+// 🚨 ITS OWN DRIVE FILE, on purpose. metric_config.json is owned by Admin ➝ Publish and its guard
+// compares against the Drive copy, so a pipeline write into it would fight the publish. One owner
+// per file.
+//
+// 🚨 DEGRADE, NEVER ABORT. This runs inside the refresh. An Ashby hiccup must cost the register an
+// update, never the rebuild — so an empty inventory means "do nothing", not "forget everything".
+var STAGE_REGISTER_FILE_ = 'stage_register.json';
+var STAGE_REGISTER_CACHE_ = null;
+
+function stageRegisterLoad_() {
+  if (STAGE_REGISTER_CACHE_) return STAGE_REGISTER_CACHE_;
+  var r = loadDriveJson_(STAGE_REGISTER_FILE_);
+  if (!r || typeof r !== 'object' || !r.stages) r = { schema: 1, updatedAt: null, stages: {} };
+  STAGE_REGISTER_CACHE_ = r;
+  return r;
+}
+
+// A stable key for a stage we have never seen. Minted ONCE and stored against the Ashby id, so it
+// survives every later rename — which is the whole point of keying on the id.
+function smMintKey_(title, taken) {
+  var base = String(title || '').replace(/[^0-9A-Za-z ]/g, ' ').split(/\s+/).filter(String);
+  var k = '';
+  for (var i = 0; i < base.length; i++) {
+    var w = base[i].toLowerCase();
+    k += i ? (w.charAt(0).toUpperCase() + w.slice(1)) : w;
+  }
+  if (!k) k = 'stage';
+  if (/^[0-9]/.test(k)) k = 's' + k;
+  var out = k, n = 2;
+  while (taken[out]) { out = k + n; n++; }
+  return out;
+}
+
+// What a stage Ashby has just grown looks like to us. 🔑 These defaults need NOTHING from him:
+// Jerin's constraint (16 Oct) is "it is only evaluation level stages that might get added or edited",
+// so a new stage is an interview round, counts as assessed, and counts for Momentum.
+// ⚠ tp / rec MUST be set. tp drives the Throughput column and rec the Recruiter pipeline column —
+// leave either null and the new stage silently has no column, which is the exact bug #240 exists to kill.
+function smNewStageEntry_(key, title) {
+  return { key: key, titles: [title], label: title, roundLabel: title,
+           assess: true, round: true, added: false, evaluation: true, tis: true,
+           rec: key, recMapped: true, tp: key, late: false, beyondR1: true, autoAdded: true };
+}
+
+// Reconcile what Ashby has against what we have seen before.
+// Returns { added:[], renamed:[], gone:[] } — the three things the #236a mail has to distinguish.
+function stageRegisterSync_(dry) {
+  try { return stageRegisterSyncInner_(dry); }
+  catch (e) {
+    Logger.log('#240d register NOT synced, the model stands as it was: ' + String(e).substring(0, 200));
+    return { added: [], renamed: [], gone: [], failed: true };
+  }
+}
+
+function stageRegisterSyncInner_(dry) {
+  var out = { added: [], renamed: [], gone: [] };
+  var inv = stageInventory_();
+  // 🚨 An empty inventory is Ashby being unreachable, NOT Ashby having no stages. Marking everything
+  // gone on a bad network call would wipe the register and mail him a fiction.
+  if (!inv || !inv.length) { Logger.log('#240d register: no inventory, nothing done'); return out; }
+
+  var reg = stageRegisterLoad_(), st = reg.stages || {}, now = new Date().toISOString();
+  var model = stageModel_(), byKey = {}, i, id;
+  for (i = 0; i < model.length; i++) byKey[model[i].key] = model[i];
+  // seed: on the very first run every stage Ashby already maps is recorded, so nothing it has always
+  // had is reported as "added".
+  var seen = {}, firstRun = !reg.updatedAt;
+
+  for (i = 0; i < inv.length; i++) {
+    var s = inv[i];
+    if (!s || !s.id) continue;
+    seen[s.id] = 1;
+    var rec = st[s.id];
+
+    if (rec) {
+      rec.lastSeen = now;
+      if (rec.gone) { rec.gone = false; }
+      if ((rec.titles || []).indexOf(s.title) < 0) {
+        var was = rec.titles[rec.titles.length - 1];
+        rec.titles.push(s.title);
+        var m = byKey[rec.key];
+        // the alias is what makes history under the OLD name and the NEW name the same stage
+        if (m && m.titles.indexOf(s.title) < 0) m.titles.push(s.title);
+        out.renamed.push(s.title + ' (was "' + was + '")');
+      }
+      continue;
+    }
+
+    // an id we have never seen
+    if (s.key) {                      // already mapped by title - record it, report nothing
+      st[s.id] = { key: s.key, titles: [s.title], type: s.type, firstSeen: now, lastSeen: now, gone: false };
+      continue;
+    }
+    if (STAGE_EXCLUDED_ && STAGE_EXCLUDED_[s.title]) continue;   // he switched it off; stay quiet
+    if (String(s.type || '') !== 'Active') continue;             // only evaluation stages are ever added
+    var key = smMintKey_(s.title, byKey);
+    var entry = smNewStageEntry_(key, s.title);
+    model.push(entry);
+    byKey[key] = entry;
+    st[s.id] = { key: key, titles: [s.title], type: s.type, firstSeen: now, lastSeen: now, gone: false, auto: true };
+    if (!firstRun) out.added.push(s.title);
+  }
+
+  for (id in st) {
+    if (!st.hasOwnProperty(id) || seen[id] || st[id].gone) continue;
+    st[id].gone = true; st[id].goneAt = now;
+    // 🔑 The key and every alias STAY. Its history is real, and E says it shows in any period that
+    // still holds data for it.
+    out.gone.push((st[id].titles || ['?'])[(st[id].titles || ['?']).length - 1]);
+  }
+
+  reg.schema = 1; reg.stages = st; reg.updatedAt = now;
+  if (dry) { Logger.log('#240d DRY - nothing written to Drive'); }
+  else saveDriveJson_(STAGE_REGISTER_FILE_, reg);
+  // the inventory cached a key per stage against the OLD map; a rename or an adoption changes that
+  if (out.added.length || out.renamed.length) STAGE_INVENTORY_CACHE_ = null;
+  Logger.log('#240d register: ' + out.added.length + ' added, ' + out.renamed.length
+    + ' renamed, ' + out.gone.length + ' gone' + (firstRun ? ' (first run - seeded, nothing reported)' : ''));
+  return out;
+}
+
+// #240d test entry points. The Run picker hides names ending in _, so these exist to reach it.
+// run240dDry() changes NOTHING - it reports what a sync would do against live Ashby data.
+function run240dDry() {
+  var r = stageRegisterSync_(true);
+  Logger.log('#240d DRY RESULT  added=' + JSON.stringify(r.added)
+    + '  renamed=' + JSON.stringify(r.renamed) + '  gone=' + JSON.stringify(r.gone)
+    + (r.failed ? '  (FAILED - see above)' : ''));
+  var reg = stageRegisterLoad_(), n = 0, k;
+  for (k in (reg.stages || {})) n++;
+  Logger.log('#240d register currently holds ' + n + ' stage ids; model is now '
+    + stageModel_().length + ' stages');
+}
+function run240dSync() { var r = stageRegisterSync_(false); Logger.log('#240d SYNCED ' + JSON.stringify(r)); }
