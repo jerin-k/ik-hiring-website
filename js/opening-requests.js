@@ -111,13 +111,13 @@ const mixOrder = (m) => ROLE_TYPES.concat(Object.keys(m || {}).filter(t => !ROLE
 function rowsOf(x) {
   if (Array.isArray(x.rows) && x.rows.length) return x.rows.slice(0, 25).map(r => ({ roleType: String(r.roleType || ''),
     recruiter: String(r.recruiter || ''), sourcer: String(r.sourcer || ''), topic: String(r.topic || x.topic || ''),
-    replacementOf: String(r.replacementOf || '') }));
+    replacementOf: String(r.replacementOf || ''), budget: String(r.budget || '') }));
   const out = [], mix = mixOf(x), types = Object.keys(mix);
   const names = String(x.replacementOf || '').split(';').map(v => v.trim()).filter(Boolean);
   let ri = 0;
   // an older request carried ONE topic for the whole thing — give every row that same value so nothing reads blank
   const add = (t) => out.push({ roleType: t, recruiter: String(x.recruiter || ''), sourcer: String(x.sourcer || ''),
-    topic: String(x.topic || ''), replacementOf: t === 'Replacement' ? (names[ri++] || '') : '' });
+    topic: String(x.topic || ''), replacementOf: t === 'Replacement' ? (names[ri++] || '') : '', budget: '' });
   if (types.length) types.forEach(t => { for (let i = 0; i < mix[t]; i++) add(t); });
   else { const n = parseInt(x.count, 10) || 1; for (let j = 0; j < n && j < 25; j++) add(String(x.roleType || '')); }
   return out;
@@ -142,8 +142,12 @@ function evaluate(d, ctx) {
   // 170b: the lines are the request, so they are read BEFORE the job check below returns early - otherwise the
   // openings box renders empty and the counter reads 0 until a job is picked, which looks broken. Only the
   // As-per-AOP fold needs the job, and that happens further down once the department is known.
+  // 244c: budget is DIGITS ONLY. Ashby's "Budget (Replacement / Anticipation of Exit)" is a Currency
+  // field, so "approx 25L" or "₹25,00,000" cannot land in it - the commas and words are stripped here,
+  // once, so the window, the Sheet and Ashby all carry the same plain number.
   r.rows = (d.rows || []).slice(0, 25).map((x) => ({ roleType: String(x.roleType || ''), recruiter: String(x.recruiter || ''),
-    sourcer: String(x.sourcer || ''), topic: String(x.topic || '').trim(), replacementOf: String(x.replacementOf || '').trim() }));
+    sourcer: String(x.sourcer || ''), topic: String(x.topic || '').trim(), replacementOf: String(x.replacementOf || '').trim(),
+    budget: String(x.budget == null ? '' : x.budget).replace(/[^0-9]/g, '') }));
   r.total = r.rows.length;
 
   const job = ctx.jobById[d.jobId];
@@ -190,6 +194,14 @@ function evaluate(d, ctx) {
   if (noRec.length) many(noRec, (n) => `Pick the recruiter on opening ${n}.`, (l) => `Pick the recruiter on openings ${l}.`);
   if (ghost.length) block(`Not an active Ashby user, so they cannot own the opening: ${ghost.join(', ')}.`);
   if (noName.length) many(noName, (n) => `Say who opening ${n} replaces.`, (l) => `Say who openings ${l} replace.`);
+  // 244c: ASKED FOR, NOT DEMANDED. Ashby's own field is labelled "Only if applicable", so a missing budget
+  // is a question, never a Submit blocker - blocking on a number the requester may not have yet would
+  // just teach people to type a placeholder.
+  const noBudget = [];
+  r.rows.forEach((x, i) => { if (needsReplacedName(x.roleType) && !x.budget) noBudget.push(i + 1); });
+  if (noBudget.length) check('q', noBudget.length === 1
+    ? `No budget on opening ${noBudget[0]}. Add one if it is known \u2014 it goes onto the opening in Ashby.`
+    : `No budget on openings ${noBudget.join(', ')}. Add them if they are known \u2014 they go onto the openings in Ashby.`);
   const who = [];
   r.rows.forEach((x) => { if (x.recruiter && !who.includes(x.recruiter)) who.push(x.recruiter); });
   if (who.length && !ghost.length) check('ok', who.length === 1
@@ -436,7 +448,7 @@ export async function mountOpeningRequests(root, backend) {
   // 170b (Jerin, 23 Sep 2026: "A row per opening actually. Count is pointless; nix count."): a request is a LIST of
   // openings, each with its own Role Type, Recruiter and Sourcer, because five openings are routinely five people's work.
   // The person raising it is only the default recruiter on the FIRST line - the rest are theirs to set deliberately.
-  function orRow(recruiter) { return { roleType: '', recruiter: recruiter || '', sourcer: '', replacementOf: '' }; }
+  function orRow(recruiter) { return { roleType: '', recruiter: recruiter || '', sourcer: '', replacementOf: '', budget: '' }; }
 
   function newDraft() {
     const mine = S.recruiters.find(x => x.email === S.me.email);
@@ -725,9 +737,14 @@ export async function mountOpeningRequests(root, backend) {
           <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
             value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}></div>`;
         if (!needsReplacedName(x.roleType)) return head;
-        return head + `<div class="or-op-sub"><label for="orrep${i}">Replacing whom?</label>
+        // 244c: the budget sits beside the name on the SAME sub-line, because both are asked for exactly
+        // the same two Role Types. One gate (needsReplacedName) decides both, so they cannot drift apart.
+        return head + `<div class="or-op-sub two"><div><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
-            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>`;
+            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>
+          <div><label for="orbud${i}">Budget (if known)</label>
+          <input id="orbud${i}" class="or-in" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
+            value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div></div>`;
       };
       const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
       return `<div class="or-f wide"><span>How many openings</span>
@@ -1057,7 +1074,7 @@ export async function mountOpeningRequests(root, backend) {
       if (!rows[i]) return;
       rows[i] = Object.assign({}, rows[i], { [el.dataset.rf]: el.value });
       // a name left behind on a line no longer set to Replacement never travels
-      if (el.dataset.rf === 'roleType' && !needsReplacedName(el.value)) rows[i].replacementOf = '';
+      if (el.dataset.rf === 'roleType' && !needsReplacedName(el.value)) { rows[i].replacementOf = ''; rows[i].budget = ''; }
       S.draft.rows = rows; render(); revealNext();   // #112i
     }));
     // 112l: the topic is TEXT, so it takes the same treatment as the replacement name — commit on every keystroke and
@@ -1074,6 +1091,12 @@ export async function mountOpeningRequests(root, backend) {
       if (!rows[i]) return;
       rows[i] = Object.assign({}, rows[i], { replacementOf: el.value });
       S.draft.rows = rows; render(); keep(`[data-rrep="${i}"]`, pos);
+    }));
+    root.querySelectorAll('[data-rbud]').forEach(el => el.addEventListener('input', () => {
+      const i = Number(el.dataset.rbud), pos = el.selectionStart, rows = (S.draft.rows || []).slice();
+      if (!rows[i]) return;
+      rows[i] = Object.assign({}, rows[i], { budget: el.value });
+      S.draft.rows = rows; render(); keep(`[data-rbud="${i}"]`, pos);
     }));
     const act = (name, fn) => root.querySelectorAll(`[data-act="${name}"]`).forEach(b => b.addEventListener('click', fn));
     act('approve', () => decide('approve', ''));
@@ -1246,7 +1269,7 @@ export async function mountOpeningRequests(root, backend) {
       // 170b: `rows` IS the request - one entry per opening. count, roleType, recruiter, sourcer and replacementOf are
       // sent as well, but ONLY so an older reader still finds them; the server derives them again from the rows
       // (orNormalize_), so a stale value here can never become the record.
-      rows: ev.rows.map(x => ({ roleType: x.roleType, recruiter: x.recruiter, sourcer: x.sourcer, topic: x.topic, replacementOf: x.replacementOf })),
+      rows: ev.rows.map(x => ({ roleType: x.roleType, recruiter: x.recruiter, sourcer: x.sourcer, topic: x.topic, replacementOf: x.replacementOf, budget: x.budget })),
       count: ev.total, recruiter: (Object.keys(ev.goal || {})[0] || ''), roleType: ev.roleType,
       replacementOf: ev.replacementOf, mix: Object.fromEntries(Object.entries(ev.mix).filter(([, n]) => n > 0)),
       sourcer: ev.rows.map(x => x.sourcer).filter(Boolean).join('; '),
