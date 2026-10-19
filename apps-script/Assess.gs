@@ -571,14 +571,31 @@ function computeAssessedRollups_(events, opts) {
     assessedSpanByJobQ: spanByJobQ,
     assessedByJobD: byJobD,
     assessedSpanByJobD: spanByJobD,
-    assessedMeta: {
+    assessedMeta: (function () {
+      // 240e: DERIVED, NEVER TYPED. These two literals said "refCheck, docSub, offer" - THREE - from
+      // before #210 made it five and #240c made it seven. Nothing failed, because nothing on the site
+      // reads them: the data file simply described itself wrongly, and that is what made me stop and
+      // re-measure before trusting the 19 Oct numbers. 🚨 Rule 6 reaches into the DATA file too, not
+      // only definitions.js.
+      // They now follow ADDED_SET - the set this very computation used, which applyStageOverrides_()
+      // builds from his Admin choices - so they cannot drift from the formula again, and they move
+      // the moment he changes a stage in Stage Mapping.
+      var _lbl = smStageLabels(), _ak = [], _an = [], _k;
+      for (_k in ADDED_SET) if (ADDED_SET.hasOwnProperty(_k)) { _ak.push(_k); _an.push(_lbl[_k] || _k); }
+      var _names = _an.length <= 1 ? (_an[0] || 'none')
+                 : _an.slice(0, -1).join(', ') + ' and ' + _an[_an.length - 1];
+      return {
       generatedAt: new Date().toISOString(),
-      definition: 'A = interviewed at the stage, or an assignment triggered there, or feedback with no interview behind it. For Ref Check / Documentation / Offer, A = candidates ADDED to the stage, since nobody is assessed there. B = of those, entered a later stage afterwards; for Offer, B = went on to be Hired.',
-      addedStages: ['refCheck', 'docSub', 'offer'],
+      definition: 'A = assessed at the stage: an interview held there, an assignment triggered while the '
+        + 'candidate was there, or a feedback form with no interview behind it. For ' + _names + ', A = every '
+        + 'candidate who ARRIVED at the stage instead, because that is what the step does. B = of those, '
+        + 'entered a later stage afterwards; for Offer, B = went on to be Hired.',
+      addedStages: _ak,
       dedupe: 'one application per stage per quarter; B is a subset of A',
       span: 'assessed at R1 or OA (whichever first) -> reached Ref Check, Documentation or Offer (whichever first)',
       assessedRows: nA, progressedRows: nB
-    }
+      };
+    })()
   };
 }
 
