@@ -398,6 +398,34 @@ function applyStageOverridesInner_() {
 // update, never the rebuild — so an empty inventory means "do nothing", not "forget everything".
 var STAGE_REGISTER_FILE_ = 'stage_register.json';
 var STAGE_REGISTER_CACHE_ = null;
+var STAGE_LIVE_PLANS_CACHE_ = null;
+
+// 🚨 WHICH PLANS ARE ACTUALLY IN USE. Found by running the dry sync against live Ashby, 19 Oct 2026:
+// it adopted THREE stages - Initial Screen, First Round, Second Round - all from "Custom Plan for
+// Test", which has ZERO live jobs. They reached the live dashboard before this gate existed.
+// 🔑 The signal already existed and was already reasoned: buildStagePlans_ uses live jobs to decide
+// whether a plan is even OFFERED for mapping. Adoption obeys the same rule rather than a test-name
+// guess. Self-contained because refreshStageHistory does not fetch jobs of its own.
+function stagePlanLiveJobs_() {
+  if (STAGE_LIVE_PLANS_CACHE_) return STAGE_LIVE_PLANS_CACHE_;
+  var out = {};
+  try {
+    var jobs = ashbyListAll_('/job.list');
+    for (var i = 0; i < jobs.length; i++) {
+      var j = jobs[i], stt = String(j.status || '');
+      if (stt === 'Closed' || stt === 'Archived') continue;
+      var pid = j.interviewPlanId || j.defaultInterviewPlanId || (j.interviewPlan && j.interviewPlan.id) || null;
+      if (pid) out[pid] = (out[pid] || 0) + 1;
+    }
+  } catch (e) {
+    // DEGRADE SAFELY: an unknown live map must mean "adopt nothing", never "adopt everything".
+    Logger.log('#240d could not read jobs, so NOTHING will be adopted this run: ' + String(e).substring(0, 160));
+    STAGE_LIVE_PLANS_CACHE_ = {};
+    return STAGE_LIVE_PLANS_CACHE_;
+  }
+  STAGE_LIVE_PLANS_CACHE_ = out;
+  return out;
+}
 
 function stageRegisterLoad_() {
   if (STAGE_REGISTER_CACHE_) return STAGE_REGISTER_CACHE_;
@@ -456,7 +484,7 @@ function stageRegisterSyncInner_(dry) {
   for (i = 0; i < model.length; i++) byKey[model[i].key] = model[i];
   // seed: on the very first run every stage Ashby already maps is recorded, so nothing it has always
   // had is reported as "added".
-  var seen = {}, firstRun = !reg.updatedAt;
+  var seen = {}, live = stagePlanLiveJobs_();
 
   for (i = 0; i < inv.length; i++) {
     var s = inv[i];
@@ -465,6 +493,9 @@ function stageRegisterSyncInner_(dry) {
     var rec = st[s.id];
 
     if (rec) {
+      // 🚨 RETIRE A STAGE ADOPTED BEFORE THE GATE EXISTED. Without this the gate is useless for the
+      // damage already done: an id already in the register takes THIS branch and never faces the gate.
+      if (rec.auto && !live[s.planId]) { delete st[s.id]; out.unadopted = (out.unadopted || 0) + 1; continue; }
       rec.lastSeen = now;
       if (rec.gone) { rec.gone = false; }
       if ((rec.titles || []).indexOf(s.title) < 0) {
@@ -485,12 +516,16 @@ function stageRegisterSyncInner_(dry) {
     }
     if (STAGE_EXCLUDED_ && STAGE_EXCLUDED_[s.title]) continue;   // he switched it off; stay quiet
     if (String(s.type || '') !== 'Active') continue;             // only evaluation stages are ever added
+    // 🚨 and only from a plan somebody is actually hiring on.
+    if (!live[s.planId]) { out.ignored = (out.ignored || 0) + 1; continue; }
     var key = smMintKey_(s.title, byKey);
     var entry = smNewStageEntry_(key, s.title);
     model.push(entry);
     byKey[key] = entry;
     st[s.id] = { key: key, titles: [s.title], type: s.type, firstSeen: now, lastSeen: now, gone: false, auto: true };
-    if (!firstRun) out.added.push(s.title);
+    // 🚨 ALWAYS reported. A "first run" suppression here adopts a stage SILENTLY - the exact failure
+    // this task exists to kill, rebuilt inside its own fix.
+    out.added.push(s.title);
   }
 
   for (id in st) {
@@ -507,7 +542,8 @@ function stageRegisterSyncInner_(dry) {
   // the inventory cached a key per stage against the OLD map; a rename or an adoption changes that
   if (out.added.length || out.renamed.length) STAGE_INVENTORY_CACHE_ = null;
   Logger.log('#240d register: ' + out.added.length + ' added, ' + out.renamed.length
-    + ' renamed, ' + out.gone.length + ' gone' + (firstRun ? ' (first run - seeded, nothing reported)' : ''));
+    + ' renamed, ' + out.gone.length + ' gone, ' + (out.ignored || 0) + ' ignored, '
+    + (out.unadopted || 0) + ' retired (adopted in error)');
   return out;
 }
 
