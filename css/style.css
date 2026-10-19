@@ -741,6 +741,31 @@ table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overfl
    nothing here anyway. Do not put `overflow: hidden` back on a table inside .scroll-table. */
 .scroll-table > table { border: 0; border-radius: 0; overflow: visible; }
 
+/* ===== #252a (Jerin, 20 Oct 2026) - a wide working table may leave the content column =====
+   \ud83d\udde3 "todays design is adopted to Edge to Edge design". NOTHING about the table's own design changes -
+   no new accent, border or box - only the width it is allowed to take.
+   \ud83d\udd11 A RULE, NOT A ONE-OFF. Any reporting table that outgrows `.container` uses this class, so the
+   product does not drift table by table. Measured 20 Oct: `.container` is 87.5rem, which at the site's
+   90% root is 1260px, leaving a 1210px content column - and Position Fulfilment on Overall Efficiency
+   already needs 1192 of it, which is why its Remarks column is down to 115px.
+   \ud83d\udea8 `--vw` IS PUBLISHED BY js/sticky-chrome.js FROM `clientWidth`, NOT `100vw`: 100vw includes the
+   vertical scrollbar, so it would overhang and give the page a horizontal scrollbar. The fallback is 100%,
+   so with no script the table simply stays inside its column.
+   \u26a0 The 3.5rem keeps the SAME left/right gutter `.container` uses (1.75rem each side), so the table's
+   edges line up with everything above it instead of running into the window edge. */
+/* \ud83d\udea8 ONLY WHERE THERE IS ROOM FOR IT. Below this the panel is left EXACTLY as it is today, because
+   widening it on a narrow window makes things worse, not better: measured at 1280, the wide treatment made
+   a table that fits today start scrolling sideways. 90rem in a media query is 1440px - a media query's rem
+   is the INITIAL 16px font, NOT this site's 90% root, so it is not the same 90rem as everywhere else. */
+@media (min-width: 90rem) {
+  .scroll-table.wide-table {
+    width: calc(var(--vw, 100%) - 3.5rem);
+    margin-left: calc(50% - (var(--vw, 100%) - 3.5rem) / 2);
+    max-width: none;
+  }
+}
+
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -2191,6 +2216,23 @@ table.metrics.eff-fulfil th:first-child,
 table.metrics.eff-fulfil td:first-child { width: 17rem; max-width: 17rem; }
 table.metrics.eff-fulfil th.jn-th,
 table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8rem; }
+
+/* \ud83d\udea8 #252a (Jerin, 20 Oct 2026) - WIDTH ALONE DOES NOT REACH REMARKS, AND THAT WAS THE POINT OF ASKING.
+   Measured on the live table: widening the panel 1210 \u2794 1450 gave **191 of the 240px to `Total positions`**
+   and **5px to Remarks**. The cause is the rule directly above: the three text columns are pinned to exactly
+   8rem by `width` AND `min-width` AND `max-width`, so they cannot take a single pixel of any extra width.
+   \ud83d\udd11 In the wide table those columns are WHAT THE WIDTH IS FOR, so the pin is lifted there and only there.
+   The narrow table keeps the 8rem pin exactly as it is - nothing changes for anyone who is not on this panel.
+   \u26a0 THIS BLOCK MUST STAY BELOW THE PIN IT RELAXES. Equal specificity is settled by source order, and the
+   whole reason the first attempt at this did nothing was a rule written 1,400 lines earlier (Rule 12).
+   \u26a0 Remarks is the LAST of the three, so `:last-child` is it. Add a column after Remarks and this stops
+   pointing at it - re-derive rather than nudge. */
+@media (min-width: 90rem) {
+  .wide-table table.metrics.eff-fulfil th.jn-th,
+  .wide-table table.metrics.eff-fulfil td.jn-cell { width: auto; min-width: 9.5rem; max-width: none; }
+  .wide-table table.metrics.eff-fulfil th.jn-th:last-child,
+  .wide-table table.metrics.eff-fulfil td.jn-cell:last-child { min-width: 20rem; }
+}
 /* A remark shown read-only: the same quiet size as a name, wrapping rather than clipping. It is WRITTEN on the
    Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
 .jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }

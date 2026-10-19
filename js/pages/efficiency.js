@@ -240,7 +240,7 @@ export function renderEfficiency(data) {
       <h4 id="effFulfilCombinedHdr" style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Positions by department</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 1.125rem"><canvas id="effFulfilCombined"></canvas></div>
 
-      <div class="scroll-table"><table class="metrics eff-fulfil painted-halves">
+      <div class="scroll-table wide-table"><table class="metrics eff-fulfil painted-halves">
         <thead>
           <tr><th rowspan="2" style="min-width:17rem">Department / Job / Recruiter / Topic</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pipeline</th><th colspan="2" class="stage-hdr">Offer drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
           <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
