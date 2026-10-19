@@ -146,16 +146,17 @@ export const DEFINITIONS = {
   // #206 (Jerin, 7 Oct 2026). ONE entry for BOTH tabs - the panel is one module, so its words are one block.
   'interview-traction': {
     summary: 'How Interview Traction is counted',
-    intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted into one of four outcomes. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
-    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: added to Recruiter Efficiency, counted per recruiter and role &middot; 13 Oct 2026.',
+    intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted by what happened at it. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: interviews booked for days still ahead are shown, in their own colour &middot; 20 Oct 2026.',
     groups: [
       {
-        heading: 'The four outcomes',
+        heading: 'The four outcomes, and one that is not an outcome yet',
         items: [
           ['Select', 'The candidate reached a <strong>later stage</strong> after that interview.'],
           ['Reject', 'The candidate was <strong>archived</strong> without going further.'],
           ['Rescheduled / Cancelled', 'The booking was cancelled, or moved to another day. A <strong>no-show is recorded the same way</strong>, so it is counted here.'],
-          ['Awaiting outcome', 'The interview happened and nothing has been decided yet. These change colour as decisions are made.'],
+          ['Awaiting outcome', 'The interview <strong>happened</strong> and nothing has been decided yet. These change colour as decisions are made.'],
+          ['Booked, not yet held', 'An interview in the diary for a day that <strong>has not arrived</strong>. It is kept apart from Awaiting outcome on purpose: one is waiting for a decision, the other has not taken place, and counting them together would make the first look bigger than it is.'],
         ]
       },
       {
@@ -163,9 +164,10 @@ export const DEFINITIONS = {
         items: [
           ['Where the outcome comes from', 'What <strong>actually happened next</strong>, never the interviewer&rsquo;s feedback form. Feedback is often never submitted, so scoring on it would leave silent holes.'],
           ['A zero bar', 'A day or week with no interviews keeps its place and shows a <strong>0</strong>, so a quiet spell reads as quiet rather than disappearing. In day view weekends are shaded.'],
-          ['Why the charts stop at today', 'Interviews are booked <strong>weeks ahead</strong>, and an interview that has not happened yet is not an outcome. So the period always ends at <strong>today</strong>, even when the To date is later in the year.'],
+          ['How far ahead the charts run', 'To the <strong>last day anything is booked</strong>, and no further &mdash; so a quarter that ends in December does not draw empty weeks out to the 31st. Days past today carry only <strong>Booked, not yet held</strong>. Setting an earlier To date still cuts the charts short.'],
+          ['The line marked today', 'In <strong>day view</strong> a dashed line marks today, so the bars beyond it read as the diary rather than as results. Week and month view have no such line: a week can hold days from both sides of today, so a line drawn inside a bar would claim a precision the bar does not have.'],
           ['Day view, Week view and Month view', 'The panel <strong>opens on Day view</strong>, which shows the <strong>last 30 days</strong> of the period rather than all of it. Week and month view cover the whole period. Under each week sits the month it falls in &mdash; by its Thursday, which is the standard rule for a week that straddles two months.'],
-          ['The dashed trend line', 'A straight line fitted through the <strong>totals</strong> of the bars shown, so it answers one question: is the volume rising or falling across this period. It follows the bars you are looking at, so changing the rounds, the dates or the view redraws it. It is grey because it is not a fifth outcome.'],
+          ['The dashed trend line', 'A straight line fitted through the <strong>totals</strong> of the bars shown, so it answers one question: is the volume rising or falling across this period. It follows the bars you are looking at, so changing the rounds, the dates or the view redraws it. It is grey on purpose, so that a colour on this chart always means an outcome.'],
           ['Numbers beside a bar', 'A slice too thin to print a number inside it puts the number <strong>next to the bar</strong>, in that slice&rsquo;s own colour.'],
           ['Rounds and Hide rounds with no interviews', 'The <strong>Rounds</strong> chip chooses which charts appear; Online Assessment and R1 to R5 are on to begin with. The tick-box drops any round with nothing in the period.'],
           ['Quarter', 'On <strong>Hiring Manager</strong> and <strong>Overall Efficiency</strong> this panel has its <strong>own</strong> Quarter box, opening on the two most recent quarters, and the page&rsquo;s single-pick Quarter dropdown steps aside while you are here. On <strong>Recruiter Efficiency</strong> the page already has a multi-pick Quarters chip, so that one governs and the panel adds none of its own &mdash; two period controls over one panel is exactly what was taken away.'],
@@ -178,6 +180,7 @@ export const DEFINITIONS = {
       ['On Recruiter Efficiency, an interview needs a recruiter on the application', 'This panel is built from the recruiter named on the <strong>candidate&rsquo;s application</strong>. An interview whose application names nobody belongs to no recruiter, so it <strong>cannot appear on this tab</strong> &mdash; while it still counts in full on Hiring Manager and Overall Efficiency. <strong>The two tabs will therefore not agree, by design.</strong> How many are affected is printed above the charts for the period you are looking at, because it changes with every refresh. Older months are affected far more than recent ones: the habit of naming a recruiter took hold during Q3.'],
       ['Rescheduled only counts from 7 October 2026', 'When an interview is moved, Ashby <strong>overwrites the original time</strong> and keeps no record of the old one, so moves made before this panel existed cannot be recovered. Cancellations are complete back to 1 July.'],
       ['The most recent days look heavy on Awaiting outcome', 'Nothing is wrong &mdash; those decisions have not been made yet.'],
+      ['Days ahead will look empty of outcomes', 'They are, and that is the point: nothing has happened there yet. A day past today shows only what is booked, and fills in with real outcomes as those interviews are held.'],
       ['Do not add the rounds together', 'One candidate doing R1, R2 and R3 appears in all three charts. The rounds are separate questions, not parts of a total.'],
     ]
   },

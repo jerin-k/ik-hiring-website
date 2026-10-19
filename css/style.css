@@ -2204,6 +2204,10 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 :root {
   --it-sel: #398AA2; --it-rej: #b45a72; --it-can: #C08457; --it-pen: #9fb3d6;
   --it-zero: #c8d0de; --it-quiet: #f7f9fc;
+  /* #245 (Jerin, 20 Oct 2026, option A): interviews already in the diary for a day that has not arrived.
+     A desaturated slate-blue - a RELATIVE of --it-pen rather than a new hue, because it is the same
+     candidates one step earlier, but clearly darker so "booked" never reads as "awaiting outcome". */
+  --it-ahead: #6f8ba6;
   /* #206c: the trend line. A GREY, deliberately - it is not a fifth outcome, and giving it a hue would
      put a colour on the chart that means nothing in the legend above it. */
   --it-trend: #8b94a7;

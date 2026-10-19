@@ -16,8 +16,43 @@ const SERIES = [
   { key: 'Select',                  col: 'var(--it-sel)' },
   { key: 'Reject',                  col: 'var(--it-rej)' },
   { key: 'Rescheduled / Cancelled', col: 'var(--it-can)' },
-  { key: 'Awaiting outcome',        col: 'var(--it-pen)' }
+  { key: 'Awaiting outcome',        col: 'var(--it-pen)' },
+  // #245 (Jerin, 20 Oct 2026, option A): interviews already in the diary for a day that has not arrived.
+  // \ud83d\udea8 ITS OWN SLOT, NEVER FOLDED INTO AWAITING OUTCOME. "Awaiting outcome" means HELD, no decision yet;
+  // a booking for next Tuesday has not happened, so counting it there would have quietly moved that figure
+  // from 249 to 304 on the day this shipped and changed what the word means.
+  { key: 'Booked, not yet held',    col: 'var(--it-ahead)', ahead: true }
 ];
+// \ud83d\udd11 FIVE IS STRUCTURAL. Every slot array, sum and loop goes through these three, so a sixth series
+// would be one edit here rather than fourteen scattered ones - which is how the fourth nearly got missed.
+// \u26a0 `addInto` tolerates a FOUR-long input on purpose: the data file's day arrays are [s,r,c,p], with no
+// fifth element, and `v[4]` on them is undefined.
+const NSLOT = SERIES.length;
+const zeroSlots = () => new Array(NSLOT).fill(0);
+const slotSum = (v) => { let t = 0; for (let i = 0; i < NSLOT; i++) t += (v[i] || 0); return t; };
+const addInto = (c, v) => { for (let i = 0; i < NSLOT; i++) c[i] += (v[i] || 0); };
+// Today, as the store writes its day keys. A FUNCTION, not a const: this module is loaded once and a tab
+// left open overnight would otherwise keep yesterday's idea of "not yet held".
+function todayKey() {
+  const n = new Date();
+  return n.getFullYear() + '-' + pad2(n.getMonth() + 1) + '-' + pad2(n.getDate());
+}
+// The furthest day anything is booked on, or null. Mirrors Momentum's horizon (#232), including which
+// store it reads - the Recruiter tab's own store is a SUBSET, so reading the job store there would open
+// columns that tab can never fill.
+function horizonOf(tr, scope) {
+  let max = null;
+  const scan = (days) => { if (days) for (const d in days) if (!max || d > max) max = d; };
+  const walkRounds = (byRound) => { for (const r in byRound) scan(byRound[r]); };
+  if (scope.byRecruiter) {
+    const byRec = tr.byRecJobRoundDay || {};
+    for (const rec in byRec) for (const j8 in byRec[rec]) walkRounds(byRec[rec][j8]);
+  } else {
+    const byJob = tr.byJobRoundDay || {};
+    for (const j8 in byJob) walkRounds(byJob[j8]);
+  }
+  return max;
+}
 // Jerin, 7 Oct: "keep Online assessment, R1 to R5 ticked by default".
 const DEFAULT_ROUNDS = ['Online Assessment', 'R1', 'R2', 'R3', 'R4', 'R5'];
 const DAY_WINDOW = 30;   // "lets show the last 30 days in the range" (Jerin, 7 Oct)
@@ -66,8 +101,15 @@ function daysForRound(tr, round, scope) {
     if (!days) return;
     for (const d in days) {
       if (d < scope.from || d > scope.to) continue;
-      const v = days[d], c = out[d] || (out[d] = [0, 0, 0, 0]);
-      c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; c[3] += v[3];
+      const v = days[d], c = out[d] || (out[d] = zeroSlots());
+      // #245: THE WHOLE of a future day goes to "booked, not yet held" - not just its awaiting count.
+      // Nothing dated after today has happened, so no part of it is an outcome. Measured 19 Oct 2026: all
+      // 55 future bookings were already awaiting-only, so this moves no number today; it is here so that a
+      // stray select or reject on a future date cannot be reported as something that took place.
+      // \ud83d\udd11 Read from todayKey() rather than from `scope`: gapNote builds a cut-down scope of its own, and
+      // a key it forgot to copy would silently turn this rule off there (the same trap as #228a's spread).
+      if (d > todayKey()) c[NSLOT - 1] += v[0] + v[1] + v[2] + v[3];
+      else addInto(c, v);
     }
   };
   if (scope.byRecruiter) {
@@ -108,7 +150,7 @@ function gapNote(tr, picked, scope) {
   if (scope.recPicked) return '';
   const base = { from: scope.from, to: scope.to, jobOk: scope.jobOk };
   let all = 0, mine = 0;
-  const add = (m) => { let n = 0; for (const d in m) n += m[d][0] + m[d][1] + m[d][2] + m[d][3]; return n; };
+  const add = (m) => { let n = 0; for (const d in m) n += slotSum(m[d]); return n; };
   picked.forEach(r => {
     all  += add(daysForRound(tr, r, base));
     mine += add(daysForRound(tr, r, { ...base, byRecruiter: true }));
@@ -127,25 +169,25 @@ function slotsFor(dayMap, view, scope) {
   if (view === 'day') {
     const start = dayStart(scope);
     for (let d = start; d <= scope.to; d = addDays(d, 1)) {
-      const v = dayMap[d] || [0, 0, 0, 0];
+      const v = dayMap[d] || zeroSlots();
       const dow = new Date(d + 'T00:00:00Z').getUTCDay();
-      slots.push({ lab: d.slice(8), sub: MON[Number(d.slice(5, 7)) - 1], v, quiet: dow === 0 || dow === 6 });
+      slots.push({ lab: d.slice(8), sub: MON[Number(d.slice(5, 7)) - 1], v, quiet: dow === 0 || dow === 6,
+                   ahead: d > todayKey() });   // #245: for the today divider below
     }
     return slots;
   }
   if (view === 'month') {
     const byMon = {};
     for (const d in dayMap) {
-      const k = d.slice(0, 7), c = byMon[k] || (byMon[k] = [0, 0, 0, 0]);
-      const v = dayMap[d];
-      c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; c[3] += v[3];
+      const k = d.slice(0, 7), c = byMon[k] || (byMon[k] = zeroSlots());
+      addInto(c, dayMap[d]);
     }
     // Every month across the range, so a silent month is a visible gap rather than a missing column.
     let cur = scope.from.slice(0, 7);
     const last = scope.to.slice(0, 7);
     while (cur <= last) {
       slots.push({ lab: MON[Number(cur.slice(5, 7)) - 1], sub: cur.slice(0, 4),
-                   v: byMon[cur] || [0, 0, 0, 0], quiet: false });
+                   v: byMon[cur] || zeroSlots(), quiet: false });
       let yy = Number(cur.slice(0, 4)), mm = Number(cur.slice(5, 7)) + 1;
       if (mm > 12) { mm = 1; yy++; }
       cur = yy + '-' + pad2(mm);
@@ -154,9 +196,8 @@ function slotsFor(dayMap, view, scope) {
   }
   const byWeek = {};
   for (const d in dayMap) {
-    const k = isoWeek(d), c = byWeek[k] || (byWeek[k] = [0, 0, 0, 0]);
-    const v = dayMap[d];
-    c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; c[3] += v[3];
+    const k = isoWeek(d), c = byWeek[k] || (byWeek[k] = zeroSlots());
+    addInto(c, dayMap[d]);
   }
   const ks = Object.keys(byWeek).map(Number);
   if (!ks.length) return [];
@@ -166,7 +207,7 @@ function slotsFor(dayMap, view, scope) {
   // the bar - printing it twice told you nothing and cost the one line that could carry the calendar.
   for (let w = Math.min(...ks); w <= Math.max(...ks); w++) {
     slots.push({ lab: 'W' + w, sub: MON[isoWeekThursday(yr, w).getUTCMonth()],
-                 v: byWeek[w] || [0, 0, 0, 0], quiet: false });
+                 v: byWeek[w] || zeroSlots(), quiet: false });
   }
   return slots;
 }
@@ -175,7 +216,7 @@ function chartSvg(slots) {
   const W = 1120, H = 186, padL = 34, padR = 8, padT = 18, padB = 32;
   const n = slots.length || 1, iw = (W - padL - padR) / n;
   let max = 0;
-  slots.forEach(s => { max = Math.max(max, s.v[0] + s.v[1] + s.v[2] + s.v[3]); });
+  slots.forEach(s => { max = Math.max(max, slotSum(s.v)); });
   // Floor the scale at 4. Without it a round with one booking a week draws a FULL-HEIGHT bar, the same size
   // as R1's seventy, because every chart scales to its own maximum. A small round has to look small.
   if (max < 4) max = 4;
@@ -188,7 +229,7 @@ function chartSvg(slots) {
        + `<text x="${padL - 6}" y="${yy + 3.5}" text-anchor="end" font-size="9" fill="var(--muted)">${val}</text>`;
   }
   slots.forEach((sl, ix) => {
-    const x0 = padL + ix * iw, tot = sl.v[0] + sl.v[1] + sl.v[2] + sl.v[3];
+    const x0 = padL + ix * iw, tot = slotSum(sl.v);
     const bw = Math.min(26, Math.max(5, iw * 0.56)), bx = x0 + (iw - bw) / 2;
     if (sl.quiet && tot === 0) s += `<rect x="${x0}" y="${padT}" width="${iw}" height="${plotH}" fill="var(--it-quiet)"/>`;
     if (tot === 0) {
@@ -196,7 +237,7 @@ function chartSvg(slots) {
          + `<text x="${bx + bw / 2}" y="${base - 6}" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-weight="600">0</text>`;
     } else {
       let acc = 0; const outside = [];
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < NSLOT; i++) {
         const v = sl.v[i]; if (v <= 0) continue;
         const hh = (v / max) * plotH, yy = y(acc + v);
         s += `<rect x="${bx}" y="${yy}" width="${bw}" height="${hh}" fill="${SERIES[i].col}"><title>${SERIES[i].key}: ${v}</title></rect>`;
@@ -247,10 +288,22 @@ function chartSvg(slots) {
       ? `<text x="${x0 + iw / 2}" y="${H - 8.5}" text-anchor="middle" font-size="7.5" fill="var(--muted)">${sl.sub}</text>`
       : `<text x="${x0 + iw / 2}" y="${H - 8.5}" text-anchor="middle" font-size="8" fill="var(--muted)">(${tot})</text>`;
   });
+  // ---- #245: the today divider ----
+  // DAY VIEW ONLY, and deliberately. In week or month view a bucket straddles today - the week of the 19th
+  // holds both held and booked days - so a line drawn "at today" would fall INSIDE a bar and claim a
+  // precision the bar does not have. There the colour carries the meaning on its own.
+  const firstAhead = slots.findIndex(sl => sl.ahead);
+  if (firstAhead > 0) {
+    const dx = padL + firstAhead * iw;
+    s += `<line x1="${dx}" y1="${padT - 7}" x2="${dx}" y2="${base}" stroke="var(--text-secondary)"
+           stroke-width="1" stroke-dasharray="3 2.5"/>`
+       + `<text x="${dx + 3}" y="${padT - 9}" font-size="8.5" fill="var(--text-secondary)" font-weight="600">today</text>`;
+  }
+
   // ---- trend line over the slot TOTALS (Jerin, 8 Oct: "Add a trendline if it makes sense") ----
   // A straight least-squares fit, so it answers one question: is the volume rising or falling across the
   // period shown. It is drawn from the totals ALREADY computed above - the chart reads, it never recomputes.
-  const tots = slots.map(sl => sl.v[0] + sl.v[1] + sl.v[2] + sl.v[3]);
+  const tots = slots.map(sl => slotSum(sl.v));
   if (tots.length >= 3) {
     const n2 = tots.length;
     let sx = 0, sy = 0, sxx = 0, sxy = 0;
@@ -304,7 +357,8 @@ export function mountInterviewTraction(host, data, getScope, opts) {
       <div class="ms it-rounds"></div>
       <label class="it-chk"><input type="checkbox" class="it-hide" checked> Hide rounds with no interviews</label>
       <div class="it-legend">${SERIES.map(s =>
-        `<span><i style="background:${s.col}"></i>${s.key}</span>`).join('')}<span class="it-trendkey">Trend</span></div>
+        `<span${s.ahead ? ' class="it-ahead-key" hidden' : ''}><i style="background:${s.col}"></i>${s.key}</span>`
+        ).join('')}<span class="it-trendkey">Trend</span></div>
     </div>
     <div class="it-charts"></div>
     ${defsBlock('interview-traction')}`;
@@ -387,28 +441,37 @@ export function mountInterviewTraction(host, data, getScope, opts) {
   function render() {
     const raw = getScope() || {};
     if (!raw.from || !raw.to) { chartsEl.innerHTML = ''; return; }
-    // 🚨 NEVER let the window run past today. Interviews are booked WEEKS AHEAD - the data file already
-    // carries bookings nine days out - and a future booking has not happened, so it is not traction and
-    // must not sit in Awaiting outcome. Left unclamped, picking Q4 ends the range on 31 December and day
-    // view draws a month of empty future days.
-    const now = new Date();
-    const today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+    // #245 (Jerin, 20 Oct 2026, option A). The window used to stop dead at today, so interviews already in
+    // the diary were drawn nowhere. It now runs to the FURTHEST BOOKING and no further — the same shape
+    // Momentum has used since #232 — and those days draw in their own colour, so nothing lands in Awaiting
+    // outcome that has not happened.
+    // 🚨 THE OLD WARNING STILL HOLDS, and is why this is a horizon rather than a lifted clamp: picking Q4
+    // ends the range on 31 December, and running to THAT would draw ten empty weeks of future.
+    // 🔑 AND IT NEVER OVERRIDES HIS OWN To DATE. The limit is the EARLIER of what he asked for and the
+    // furthest booking, so narrowing To still bites (Rule 13).
+    const today = todayKey();
+    const horizon = horizonOf(tr, raw);
+    const limit = (horizon && horizon > today) ? horizon : today;
     // 🚨 SPREAD raw — do NOT rebuild this object field by field. It used to copy only from/to/jobOk, which
     // silently DROPPED #228a's byRecruiter and recOk: the Recruiter tab then read the role store and its
     // Recruiter chip moved no number at all, while the charts still looked perfectly reasonable.
     // Any new scope key must survive this clamp (Rule 13).
-    const scope = { ...raw, to: raw.to > today ? today : raw.to };
+    const scope = { ...raw, to: raw.to > limit ? limit : raw.to };
     if (scope.from > scope.to) { chartsEl.innerHTML = ''; return; }
     const picked = rounds.filter(r => sel.has(r));
     if (!picked.length) {
       chartsEl.innerHTML = '<p class="it-empty">No rounds selected &mdash; pick at least one from Rounds.</p>';
       return;
     }
+    // #245: the fifth key shows only when the window actually reaches past today. Shown always it would sit
+    // there meaning nothing on every past quarter — a key for a colour the chart cannot draw.
+    const aheadKey = host.querySelector('.it-ahead-key');
+    if (aheadKey) aheadKey.hidden = !(scope.to > today);
     let html = gapNote(tr, picked, scope), hidden = 0;
     const blocks = picked.map(r => {
       const slots = slotsFor(daysForRound(tr, r, scope), state.view, scope);
       let tot = 0;
-      slots.forEach(s => { tot += s.v[0] + s.v[1] + s.v[2] + s.v[3]; });
+      slots.forEach(s => { tot += slotSum(s.v); });
       return { r, slots, tot };
     });
     blocks.forEach(b => {
