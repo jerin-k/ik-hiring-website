@@ -45,6 +45,10 @@ const FB_TIS_STAGES = [
   ['r1', 'R1'], ['r2', 'R2'], ['r3', 'R3'], ['r4', 'R4'], ['r5', 'R5'], ['refCheck', 'Ref Check'], ['docSub', 'Doc Sub'], ['offer', 'Offer']
 ];
 
+// #240d E: the stages Ashby no longer has. Empty in the fallback and on every day so far — a stage only
+// lands here once the pipeline's register has seen it vanish.
+const FB_STAGE_GONE = [];
+
 // ----- what the rest of the site imports -------------------------------------------------------------
 export let STAGES_ORDER = FB_STAGES_ORDER;
 export let STAGE_LABELS = FB_STAGE_LABELS;
@@ -52,6 +56,9 @@ export let TP_KEYS = FB_TP_KEYS;
 export let TP_LABELS = FB_TP_LABELS;
 export let TP_TO_STAGE = FB_TP_TO_STAGE;
 export let TIS_STAGES = FB_TIS_STAGES;
+/** #240d E: stage keys Ashby no longer has. Their history is real, so they keep their place in every
+ *  list above — this is what lets a table drop one from the periods that hold nothing for it. */
+export let STAGE_GONE = FB_STAGE_GONE;
 
 let source = 'fallback';
 /** 'published' once a valid stageLists has been adopted, otherwise 'fallback'. For diagnostics and tests. */
@@ -84,6 +91,16 @@ function problemWith(p) {
     // this in the #240b test payload, where only one of the two had been changed.)
     if (p.stageLabels[pair[0]] !== pair[1]) return 'tisStages calls "' + pair[0] + '" "' + pair[1] + '" but stageLabels calls it "' + p.stageLabels[pair[0]] + '"';
   }
+  // #240d E — OPTIONAL, because an older dashboard.json has no goneKeys and its stages are all live.
+  // Validated when present: a key that is not a known stage would silently hide nothing, or worse hide
+  // the wrong column, and neither would throw.
+  if (p.goneKeys !== undefined) {
+    if (!Array.isArray(p.goneKeys)) return 'goneKeys is not a list';
+    for (const k of p.goneKeys) {
+      if (typeof k !== 'string' || !k) return 'goneKeys holds something that is not a key';
+      if (p.stagesOrder.indexOf(k) < 0) return 'goneKeys names "' + k + '", which is not in stagesOrder';
+    }
+  }
   return null;
 }
 
@@ -107,6 +124,31 @@ export function adoptStageLists(data) {
   TP_LABELS = p.tpLabels;
   TP_TO_STAGE = p.tpToStage;
   TIS_STAGES = p.tisStages;
+  STAGE_GONE = p.goneKeys || [];
   source = 'published';
   return source;
+}
+
+// ===== #240d E — which GONE stages a period leaves out ===============================================
+// 🗣 HIS RULE, 16 Oct 2026, verbatim: "a stage shows in a period if Ashby still has it, OR it has data in
+// that period." Both halves matter:
+//   · a stage Ashby STILL HAS always shows, even reading zero — that zero is a real fact about the period,
+//     and hiding it would be a lie about what happened (CLAUDE.md rule 4's cousin).
+//   · a stage Ashby no longer has shows ONLY where it holds something, so a deleted round stops cluttering
+//     every period for ever while its real history stays reachable.
+// 🔑 ONE HOME, and the caller supplies the data test because only the caller knows what ITS table counts —
+// the same division as "the table computes, the chart reads".
+// ⚠ Returns an empty Set the moment nothing is gone, which is every day so far: this is a provable no-op
+// until the pipeline's register actually reports a vanished stage.
+/**
+ * @param {string[]} keys        the key list the table is about to render (throughput keys, stage keys…)
+ * @param {function} stageKeyOf  maps one of those keys to its STAGE key (identity, or TP_TO_STAGE)
+ * @param {function} hasData     true when that key holds anything in the period on screen
+ * @returns {Set<string>}        the keys to leave out
+ */
+export function dropGoneEmpty(keys, stageKeyOf, hasData) {
+  const out = new Set();
+  if (!STAGE_GONE.length) return out;
+  for (const k of keys) if (STAGE_GONE.indexOf(stageKeyOf(k)) >= 0 && !hasData(k)) out.add(k);
+  return out;
 }
