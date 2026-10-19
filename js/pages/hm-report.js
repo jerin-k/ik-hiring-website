@@ -19,7 +19,7 @@ import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter} from '../period.js';   // #127 · #129 · #130 · #133
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
-import { STAGES_ORDER, STAGE_LABELS, TP_KEYS, TP_LABELS, TP_TO_STAGE } from '../stage-lists.js';   // #240b: published by the pipeline, one source
+import { STAGES_ORDER, STAGE_LABELS, TP_KEYS, TP_LABELS, TP_TO_STAGE, dropGoneEmpty } from '../stage-lists.js';   // #240b: published by the pipeline, one source
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildStageHeat, FULFIL_COLORS } from '../chart-style.js';   // #182e: the shared Joined/Pending/Delta colours
 
@@ -1266,9 +1266,6 @@ export function initHmFilters(data) {
   function renderThroughput() {
     const jobSel = selJobs();
     const hideEmpty = document.getElementById('hm2HideEmpty')?.checked;
-    // #122 (15 Sep 2026): the Stages dropdown replaced a row of 13 tick-boxes. Nothing picked = every stage.
-    const stSel = msHmTpStage ? msHmTpStage.getSelected() : [];
-    const visStages = TP_KEYS.filter(k => !stSel.length || stSel.includes(TP_LABELS[k]));
 
     const quarters = quartersInWindow(gFrom(), gTo());
     const openIds = openJobIds();   // #125
@@ -1286,6 +1283,18 @@ export function initHmFilters(data) {
     // of zeros, and the department's job count was inflated to match. It now tests throughput IN THE SELECTED
     // PERIOD, which is what the checkbox claims and what the quarter selector implies.
     const withT = filtered.map(j => ({ j, t: throughputFor(j, quarters, !!(gFrom() || gTo())) }));
+
+    // #240d E: a stage Ashby no longer has keeps its column only where it holds something. A stage Ashby
+    // STILL has always keeps its column, even at zero — that zero is a real fact about the period.
+    // 🔑 Computed from withT, which is why this sits below it: only this table knows what it is counting.
+    const goneDrop = dropGoneEmpty(TP_KEYS, k => TP_TO_STAGE[k],
+      k => withT.some(({ t }) => t[k] && (t[k].i > 0 || t[k].o > 0 || t[k].w > 0)));
+    // ...and it comes off the Stages dropdown too, so there is never a tick box that moves no number (#13).
+    if (msHmTpStage) msHmTpStage.setHidden([...goneDrop].map(k => TP_LABELS[k]));
+    // #122 (15 Sep 2026): the Stages dropdown replaced a row of 13 tick-boxes. Nothing picked = every stage.
+    const stSel = msHmTpStage ? msHmTpStage.getSelected() : [];
+    const visStages = TP_KEYS.filter(k => !goneDrop.has(k) && (!stSel.length || stSel.includes(TP_LABELS[k])));
+
     const shown = hideEmpty
       ? withT.filter(({ t }) => TP_KEYS.some(k => (t[k].i > 0 || t[k].o > 0)))
       : withT;
@@ -1502,9 +1511,6 @@ export function initHmFilters(data) {
   function renderPipeline() {
     const jobSel = selJobs();
     const hideEmpty = document.getElementById('hm3HideEmpty')?.checked;
-    // #128: nothing picked in the Stages dropdown = every stage, as on Throughput.
-    const stPick = msHmPipeStage ? msHmPipeStage.getSelected() : [];
-    const visStages = STAGES_ORDER.filter(k => !stPick.length || stPick.includes(STAGE_LABELS[k]));
 
     // #8 (2026-08-22): the row list was every job that had ever existed, so roles whose opening closed
     // quarters ago kept appearing. The COUNTS here stay live — this panel is a snapshot of where people stand
@@ -1517,15 +1523,27 @@ export function initHmFilters(data) {
         if (quarterInRange(q, gFrom(), gTo())) openTitles.add(rec.title);
       });
     });
-    const filtered = jobs.filter(j => {
+    // Split in two (#240d E): everything that does not depend on which stages are shown, then the stage
+    // test. The gone-stage decision has to be made from the rows in scope, so it cannot sit after a filter
+    // that itself reads the stage list.
+    const inScope = jobs.filter(j => {
       if (!okDept(j._dept)) return false;
       if (!matchesJob(jobSel, j.id)) return false;   // #172c
       if (!j.pipeline) return false;
       // #120: with a period set, a job needs an opening in it. An EMPTY set used to mean "list every job".
       if ((gFrom() || gTo()) && !openTitles.has(j.title)) return false;
-      if (hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)) return false;
       return true;
-    }).sort(byDept);
+    });
+    // #240d E: this panel is a LIVE snapshot, so "has data" means somebody is standing in the stage right
+    // now — which, for a stage Ashby has deleted, is normally nobody, so it drops out here first.
+    const goneDrop = dropGoneEmpty(STAGES_ORDER, k => k, k => inScope.some(j => (j.pipeline[k] || 0) > 0));
+    if (msHmPipeStage) msHmPipeStage.setHidden([...goneDrop].map(k => STAGE_LABELS[k]));
+    // #128: nothing picked in the Stages dropdown = every stage, as on Throughput.
+    const stPick = msHmPipeStage ? msHmPipeStage.getSelected() : [];
+    const visStages = STAGES_ORDER.filter(k => !goneDrop.has(k) && (!stPick.length || stPick.includes(STAGE_LABELS[k])));
+    const filtered = inScope
+      .filter(j => !(hideEmpty && !visStages.some(k => (j.pipeline[k] || 0) > 0)))
+      .sort(byDept);
 
     let hdr = '<tr><th>Department / Job</th><th class="c-num">Total</th>';   /* first column = the dept ➡ job tree, no family */
     visStages.forEach(s => { hdr += `<th class="c-num">${STAGE_LABELS[s]}</th>`; });

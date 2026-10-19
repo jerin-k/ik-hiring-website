@@ -66,7 +66,7 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 // kind of mirror #120 had to fix once already, when Hello Christy was on the HM tab and missing here.
 // All three now come from the one list the pipeline publishes. TP_TO_SK keeps its local name because it
 // is used in a dozen places below; it IS the same map as the HM tab's TP_TO_STAGE.
-import { TP_KEYS, TP_LABELS, TP_TO_STAGE as TP_TO_SK } from '../stage-lists.js';
+import { TP_KEYS, TP_LABELS, TP_TO_STAGE as TP_TO_SK, dropGoneEmpty } from '../stage-lists.js';
 
 function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 
@@ -1276,7 +1276,7 @@ export function initEfficiencyFilters(data) {
   // throughput percentage in every cell, and the R1 -> Documentation span as the final column.
   // 🚨 The stage cells must NEVER be added up: one person passing R1, R2 and R3 sits in all three. Each cell
   // is comparable only to its own In, which is what the Overall column is for.
-  function buildTpChartEff(q, vis) {
+  function buildTpChartEff(q) {
     const host = document.getElementById('effTpHeat'); if (!host) return;
     const hint = document.getElementById('effTpHint');
     // #129: this used to demand the all-time throughputByJob just to draw, although the squares read assessedByJobQ. Only a file with
@@ -1284,7 +1284,6 @@ export function initEfficiencyFilters(data) {
     if (!tpByJob && !(rollups && rollups.assessedByJobQ)) { host.innerHTML = '<p class="sheat-empty">Stage history is not in this data file yet.</p>'; if (hint) hint.textContent = ''; return; }
     // App Review is kept — see the note on the same line in hm-report.js. It was excluded while throughput
     // meant reached/cleared, which made the stage read 100% and worthless; it is a real figure now.
-    const stageCols = vis.slice();
     const per = tisPeriod();   // #120: the squares follow the whole period, like Screening and Time in Process
     const asJ2 = (rollups && rollups.assessedByJobQ) || null;
     const spanQ = (rollups && rollups.assessedSpanByJobQ) || null;
@@ -1304,6 +1303,18 @@ export function initEfficiencyFilters(data) {
       const c = (tpByJob[jid] || {})[TP_TO_SK[k]] || { reached: 0, cleared: 0 };
       return { inN: a.inN + c.reached, outN: a.outN + c.cleared };
     }, { inN: 0, outN: 0 });
+    // #240d E: a stage Ashby no longer has keeps its column only where it holds something in this period;
+    // a stage Ashby STILL has keeps its column even at zero, because that zero is a real fact.
+    // 🔑 The decision lives HERE, not in renderThroughput, because cellOf — the only thing that knows what a
+    // square counts — is in this function. Reading the Stages pick here too is what keeps the two in step:
+    // setHidden can untick a withheld stage, so the pick must be read AFTER it, never before.
+    const scopeJids = [];
+    deptJobs(q, false, true).forEach(({ jobs: js }) => js.forEach(j => scopeJids.push(j.jid)));
+    const goneDrop = dropGoneEmpty(TP_KEYS, k => TP_TO_SK[k],
+      k => { const c = cellOf(scopeJids, k); return c.inN > 0 || c.outN > 0; });
+    if (msEffTpStage) msEffTpStage.setHidden([...goneDrop].map(k => TP_LABELS[k]));
+    const stSel = msEffTpStage ? msEffTpStage.getSelected() : [];
+    const stageCols = TP_KEYS.filter(k => !goneDrop.has(k) && (!stSel.length || stSel.includes(TP_LABELS[k])));
     // 🚨 The overall column is its OWN per-candidate span from the pipeline — assessed at R1 or OA
     // (whichever first) through to Ref Check / Documentation / Offer (whichever first). Never one stage
     // column divided by another: a person sits in several stages, so that double-counts and can exceed 100%.
@@ -1571,9 +1582,9 @@ export function initEfficiencyFilters(data) {
   function renderThroughput() {
     // #122 (15 Sep 2026): a Stages dropdown (nothing picked = every stage) replaced the row of stage tick-boxes, and the
     // Department / Job table under the squares is gone — the squares open into jobs themselves (buildTpChartEff).
-    const stSel = msEffTpStage ? msEffTpStage.getSelected() : [];
-    const vis = TP_KEYS.filter(k => !stSel.length || stSel.includes(TP_LABELS[k]));
-    buildTpChartEff(selQuarter(), vis);
+    // The Stages pick and the #240d E gone-stage drop are both applied inside buildTpChartEff, which is the
+    // only place that can tell whether a stage holds anything in this period.
+    buildTpChartEff(selQuarter());
   }
 
   // ===== Pipeline — the live snapshot (#145a, Jerin 19 Sep 2026) =====
@@ -1583,13 +1594,26 @@ export function initEfficiencyFilters(data) {
   function renderPipeline() {
     const head = document.getElementById('effPipeHead'), body = document.getElementById('effPipeBody');
     if (!head || !body) return;
-    const stPick = msEffPipeStage ? msEffPipeStage.getSelected() : [];
-    const visStages = PIPE_KEYS.filter(k => !stPick.length || stPick.includes(PIPE_LABELS[k]));
     const dsel = msDept ? msDept.getSelected() : [], jsel = msJob ? msJob.getSelected() : [];
     const hideEmpty = !!document.getElementById('effPipeHideEmpty')?.checked;
     const per = tisPeriod();
     const openIds = per ? jobsWithOpeningIn(data, qq => per.includes(qq)) : null;   // #125
     const deptOfJob = (j) => resolveDeptTeam(j.department).dept || j.department || 'Unknown';
+
+    // #240d E: a LIVE snapshot, so "has data" means somebody is standing in the stage right now — which,
+    // for a stage Ashby has deleted, is normally nobody. Measured over the rows this panel would list,
+    // ignoring only the hide-empty tick, which itself depends on the stage list.
+    const inScope = (data.jobs || []).filter(j => {
+      if (!j.pipeline) return false;
+      if (dsel.length && !dsel.includes(deptOfJob(j))) return false;
+      if (!matchesJobRow(jsel, data, String(j.id || '').slice(0, 8), j.department, j.title)) return false;
+      if (openIds && !openIds.has(String(j.id || '').slice(0, 8))) return false;
+      return true;
+    });
+    const goneDrop = dropGoneEmpty(PIPE_KEYS, k => k, k => inScope.some(j => (j.pipeline[k] || 0) > 0));
+    if (msEffPipeStage) msEffPipeStage.setHidden([...goneDrop].map(k => PIPE_LABELS[k]));
+    const stPick = msEffPipeStage ? msEffPipeStage.getSelected() : [];
+    const visStages = PIPE_KEYS.filter(k => !goneDrop.has(k) && (!stPick.length || stPick.includes(PIPE_LABELS[k])));
 
     head.innerHTML = '<tr><th style="min-width:17.5rem">Department / Job</th><th class="c-num">Total</th>'
       + visStages.map(s => `<th class="c-num">${PIPE_LABELS[s]}</th>`).join('') + '</tr>';
@@ -1702,18 +1726,25 @@ export function initEfficiencyFilters(data) {
 
   // ===== Time in Process (Department → Job; median days parked per stage, red > 5) =====
   function renderTimeInProcess() {
+    const body = document.getElementById('effTisBody');
     const head = document.getElementById('effTisHead');
-    if (head) {
-      const perH = tisPeriod();
-      let h = '<tr><th style="min-width:16.25rem">Department / Job</th>';
-      TIS_STAGES.forEach(([sk, lbl]) => {
+    if (!body) { if (head) head.innerHTML = ''; return; }
+    // \u26a0 The header is now drawn from the VISIBLE stage list, which is derived from the data below \u2014 so the
+    // no-data path has to draw its own, full-width, or the skeleton would sit under an empty header row.
+    const drawHead = (pairs, perH) => {
+      if (!head) return;
+      let hh = '<tr><th style="min-width:16.25rem">Department / Job</th>';
+      pairs.forEach(([sk, lbl]) => {
         const live = perH && sk === 'appReview';
-        h += `<th class="stage-sub" style="min-width:3rem"${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
+        hh += `<th class="stage-sub" style="min-width:3rem"${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
       });
-      head.innerHTML = h + '</tr>';
+      head.innerHTML = hh + '</tr>';
+    };
+    if (!tisByJob && !arDwellJob) {
+      drawHead(TIS_STAGES, tisPeriod());
+      podSkeletonBody('effTisBody', TIS_STAGES.length, () => dashTds(TIS_STAGES.length));
+      return;
     }
-    const body = document.getElementById('effTisBody'); if (!body) return;
-    if (!tisByJob && !arDwellJob) { podSkeletonBody('effTisBody', TIS_STAGES.length, () => dashTds(TIS_STAGES.length)); return; }
     const q = selQuarter();
     const per = tisPeriod();
     // Per job: one histogram per stage column. App Review from the main-pull dwell (live, never period-scoped),
@@ -1725,18 +1756,34 @@ export function initEfficiencyFilters(data) {
     // #129: inside a narrower From / To range the stays come from the day twins, by the day the candidate entered the stage.
     const rgT = effRange(), dayTis = !coversQuarters(rgT, per);
     const tisD = rollups.timeInStageByJobD || null, waitD = rollups.waitingByJobD || null;
-    const jobHists = (jid) => TIS_STAGES.map(([sk]) => sk === 'appReview'
+    const histsFull = (jid) => TIS_STAGES.map(([sk]) => sk === 'appReview'
       ? arPair(arDwellJob && arDwellJob[jid])
       : (dayTis ? tisPairRange(tisD, waitD, jid, sk, rgT, tisSplit) : tisPair(tisByJob, tisByJobQ, waitByJob, waitByJobQ, jid, sk, per, tisSplit)));
+    const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
+
+    // #240d E: a stage Ashby no longer has keeps its column only where it holds somebody — finished or still
+    // waiting — in this period. A stage Ashby STILL has keeps its column even when every cell reads "—".
+    // ⚠ Measured over the FULL stage list first, because the visible list is what we are deriving.
+    const tisKeys = TIS_STAGES.map(([sk]) => sk);
+    const scopeH = [];
+    deptJobs(q, false, true).forEach(({ jobs: jsAll }) => jsAll.forEach(j => scopeH.push(histsFull(j.jid))));
+    const goneDrop = dropGoneEmpty(tisKeys, k => k, (k) => {
+      const i = tisKeys.indexOf(k);
+      return scopeH.some(h => h[i] && (hasAny(h[i].fin) || hasAny(h[i].wait)));
+    });
+    const visIdx = tisKeys.map((k, i) => i).filter(i => !goneDrop.has(tisKeys[i]));
+    const VIS_TIS = visIdx.map(i => TIS_STAGES[i]);
+    const jobHists = (jid) => { const h = histsFull(jid); return visIdx.map(i => h[i]); };
+
+    drawHead(VIS_TIS, per);
     // On an older data file there is no split to show, so fall back to exactly the previous single-number
     // cell rather than passing a pooled median off as a completed-stay time. tisNote says so on screen.
     const cell = (p) => tisSplit ? tisCellSplit(p, 5) : tisCell(p.live ? p.wait : p.fin, 5);
     const rowCells = (histArr) => histArr.map(cell).join('');
-    const poolCells = (arrs) => TIS_STAGES.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
+    const poolCells = (arrs) => VIS_TIS.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
     let html = '';
     // #125: only jobs with an opening opened in the period, and no empty rows — a job with nobody finished or waiting at any stage is
     // left out, and so is a department left with none. The department row pools exactly the jobs listed under it.
-    const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
     deptJobs(q, false, true).forEach(({ dept, jobs: jsAll }, di) => {
       const kept = jsAll.map(j => ({ j, h: jobHists(j.jid) })).filter(x => x.h.some(p => hasAny(p.fin) || hasAny(p.wait)));
       if (!kept.length) return;
@@ -1744,7 +1791,7 @@ export function initEfficiencyFilters(data) {
       html += `<tr data-path="${di}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${dept}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${js.length}</span></td>${poolCells(jh)}</tr>`;
       js.forEach((j, ji) => { html += `<tr data-path="${di}-${ji}" style="display:none"><td style="padding-left:1.875rem;color:var(--muted)">${j.title}</td>${rowCells(jh[ji])}</tr>`; });
     });
-    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No departments match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${VIS_TIS.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No departments match the filter.</td></tr>`;
     wireTreePath(body, expandAll());
     shadeTis(body);   // #137c
     tisNote(per);

@@ -134,6 +134,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
         ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Rejections do not count as progress', 'Someone rejected or withdrawn at a stage counts as assessed there and not progressed.'],
@@ -198,6 +199,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
       ['Do not add it to the Throughput numbers', 'Throughput counts movement during a period; this counts people standing still today. Different questions, different totals.'],
       ['Online Assessment is busier than it looks', 'Assessments are sent from more than one tool, and for a long time this dashboard could only see a fraction of them. It now counts every one. A single role&rsquo;s numbers are still small, so read those with care.'],
     ]
@@ -447,6 +449,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
         ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['Why the two figures are kept apart', 'Pooled into one median the number would measure the calendar, not the process: anyone who never left would count as today minus the day they applied, so an older quarter would always read higher just for being older.'],
       ['One column is not on the same clock as the others', 'App Review is live; every other stage follows the period. That is why it carries the asterisk &mdash; do not read across the row as one candidate&rsquo;s journey.'],
@@ -670,6 +673,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
         ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['The columns are not a funnel &mdash; do not read them left to right', 'Each stage is measured on its own. One column&rsquo;s <em>progressed</em> will not equal the next column&rsquo;s <em>assessed</em>, for three real reasons: candidates skip stages, <em>progressed</em> means reaching <em>any</em> later stage or another interview round, and each figure is dated by when the assessment happened. Compare a stage to itself over time, not to its neighbour.'],
       ['Do not add the stage columns together', 'One person assessed at R1, R2 and R3 appears in all three, so a total across stages counts them three times. That is also why <strong>R1/OA &rarr; late</strong> is a single per-candidate span rather than a sum.'],
@@ -700,6 +704,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
       ['It will not match this tab&rsquo;s other panels', 'Everything else here measures what a recruiter <em>did</em> in a period. This measures where the pipeline <em>is</em>, today, including work nobody is credited for.'],
       ['Recruiter not listed on this tab', 'A second grey row, above the untagged one. These candidates <em>are</em> tagged &mdash; to somebody this tab leaves out, because they have left or have no pod set. They earn no row and no credit, but they are still standing in the process, so they are counted here.'],
       ['Time in Process answers &ldquo;how long&rdquo;', 'This table says how many people are at each stage, never how long they have been there.'],
@@ -724,6 +729,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
       ['Do not add it to the Throughput numbers', 'Throughput counts movement during a period; this counts people standing still today. Different questions, different totals.'],
       ['Time in Process answers &ldquo;how long&rdquo;', 'This table says how many people are at each stage, never how long they have been there.'],
       ['Online Assessment is busier than it looks', 'Assessments are sent from more than one tool, and for a long time this dashboard could only see a fraction of them. It now counts every one. A single role&rsquo;s numbers are still small, so read those with care.'],
@@ -750,6 +756,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A stage deleted in Ashby shows only where it was used', 'If a stage is removed from Ashby, its history is kept: its column still appears in the periods where people passed through it, and is left out of the periods where nobody did. A stage Ashby <strong>still has</strong> always keeps its column, even when it reads zero.'],
         ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['Why the two figures are kept apart', 'Pooled into one median the number would measure the calendar, not the process: anyone who never left would count as today minus the day they applied, so an older quarter would always read higher just for being older.'],
       ['One column is not on the same clock as the others', 'App Review is live; every other stage follows the period. Do not read across a row as one candidate&rsquo;s journey.'],

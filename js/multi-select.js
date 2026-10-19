@@ -31,7 +31,7 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
     + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
     + `<div class="ms-list">`
-    + (norm.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}"> ${esc(o.t)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
+    + (norm.map(o => `<label class="ms-opt" data-v="${esc(o.v)}"><input type="checkbox" value="${esc(o.v)}"> ${esc(o.t)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
     + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
   const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
   const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
@@ -51,11 +51,16 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   // The full label is the tooltip, so a name the cap trims is still readable on hover (#196).
   const paint = () => { btn.textContent = labelText(); btn.title = labelText(); };
   paint();
+  // #240d E: options withheld because they cannot change a number right now. Kept as a Set rather than
+  // removed from the DOM, because what is offered changes with the period and has to come back.
+  const hidden = new Set();
   function applyFilter(q) {
     const needle = q.trim().toLowerCase();
     let shown = 0;
     opts.forEach(o => {
-      const hit = !needle || o.textContent.toLowerCase().indexOf(needle) >= 0;
+      // \u26a0 HIDDEN WINS OVER THE SEARCH. Without this, typing in the filter box would put a withheld
+      // option back on screen — the one place the two mechanisms can fight.
+      const hit = !hidden.has(o.dataset.v) && (!needle || o.textContent.toLowerCase().indexOf(needle) >= 0);
       o.style.display = hit ? '' : 'none';
       if (hit) shown++;
     });
@@ -82,5 +87,34 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
     if (cb.checked) selected.add(cb.value); else selected.delete(cb.value);
     paint(); onChange();
   }));
-  return { getSelected: () => [...selected] };
+  /**
+   * #240d E \u2014 withhold options that cannot change a number in the period on screen.
+   * Used for a stage Ashby has deleted which nobody reached in the selected window: offering it would be
+   * a tick box that moves nothing, which is the bug Jerin named on 15 Sep 2026 \u2014 \ud83d\udde3 *"If there is a filter
+   * applied, data needs to change as well."*
+   * \ud83d\udea8 A withheld option is also UNTICKED. A selection the user can no longer see would go on filtering the
+   * table from behind a closed panel, and a filter you cannot find is worse than one that does nothing.
+   * \ud83d\udd11 It does NOT fire onChange \u2014 the caller is mid-render when it calls this, and re-entering the render
+   * from here would loop. It returns true when a tick was actually cleared, so a caller that has already
+   * read getSelected() knows to read it again.
+   * @param {string[]} values option values to withhold ([] restores every option)
+   * @returns {boolean} true if this call cleared a selection
+   */
+  function setHidden(values) {
+    const next = new Set((values || []).map(String));
+    let same = next.size === hidden.size;
+    if (same) for (const v of next) if (!hidden.has(v)) { same = false; break; }
+    let cleared = false;
+    hidden.clear(); next.forEach(v => hidden.add(v));
+    hidden.forEach(v => {
+      if (!selected.has(v)) return;
+      selected.delete(v); cleared = true;
+      const box = opts.map(o => o.querySelector('input')).find(i => i && i.value === v);
+      if (box) box.checked = false;
+    });
+    if (!same || cleared) { applyFilter(search ? search.value : ''); paint(); }
+    return cleared;
+  }
+
+  return { getSelected: () => [...selected], setHidden };
 }

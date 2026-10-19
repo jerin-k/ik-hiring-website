@@ -15,6 +15,7 @@ import { scopeData, scopeToOpenings, jobsWithOpeningIn, offerDropRows, joiningCo
 // #145b: the same stage list and labels the Hiring Manager tab and Overall Efficiency's Pipeline panel use,
 // so all three name the stages identically and in the same order. One owner, three readers.
 import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
+import { dropGoneEmpty } from '../stage-lists.js';   // #240d E
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
@@ -2595,15 +2596,18 @@ export function initRecruiterFilters(baseData) {
     const body = document.getElementById('recTisBody'); if (!body) return;
     const head = document.getElementById('recTisHead');
     const per = tisPeriod();
-    if (head) {
+    // ⚠ #240d E: the header is drawn from the VISIBLE stage list, which is derived from the data below — so
+    // the no-data path draws its own, full-width, rather than leaving an empty header row.
+    const drawHead = (pairs) => {
+      if (!head) return;
       let h = '<tr><th style="min-width:14.375rem">Pod / Recruiter / Job</th>';
-      TIS_STAGES.forEach(([sk, lbl]) => {
+      pairs.forEach(([sk, lbl]) => {
         const live = per && sk === 'appReview';
         h += `<th${live ? ` title="${APP_REVIEW_LIVE_NOTE}"` : ''}>${lbl}${live ? '<span style="color:var(--orange)">*</span>' : ''}</th>`;
       });
       head.innerHTML = h + '</tr>';
-    }
-    if (!tisRec && !arDwellRec) { body.innerHTML = `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">Time-in-stage data pending the next stage-history refresh.</td></tr>`; return; }
+    };
+    if (!tisRec && !arDwellRec) { drawHead(TIS_STAGES); body.innerHTML = `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">Time-in-stage data pending the next stage-history refresh.</td></tr>`; return; }
     const q = selQuarter();
     const groups = groupByPod(getFilteredRecs(), q);
     // App Review is a live snapshot with no historical dimension, so it never takes the period; the rest do.
@@ -2624,25 +2628,46 @@ export function initRecruiterFilters(baseData) {
     const rgT = selRange(), dayTis = !coversQuarters(rgT, per);
     const dTisRec = asr.timeInStageByRecruiterD || null, dWaitRec = asr.waitingByRecruiterD || null;
     const dTisRecJob = asr.timeInStageByRecruiterJobD || {}, dWaitRecJob = asr.waitingByRecruiterJobD || {};
-    const recHists = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview'
+    const recHistsFull = (r) => TIS_STAGES.map(([sk]) => sk === 'appReview'
       ? arPair(aArRec && aArRec[r.name])
       : (dayTis ? tisPairRange(dTisRec, dWaitRec, r.name, sk, rgT, tisSplit)
                 : tisPair(aTisRec, aTisRecQ, aWaitRec, aWaitRecQ, r.name, sk, per, tisSplit)));
     // #120a (Jerin, 14 Sep 2026): a job row under a recruiter shows THAT recruiter's own candidates on the role, so the job rows
     // add up to the recruiter row. They used to show everyone on the role. A file without the recruiter x job split leaves the
     // row empty rather than put the whole role's figure under one person's name.
-    const recJobHists = (r, j8) => TIS_STAGES.map(([sk]) => {
+    const recJobHistsFull = (r, j8) => TIS_STAGES.map(([sk]) => {
       if (sk === 'appReview') return arPair(aArRecJob ? (aArRecJob[r.name] || {})[j8] : null);
       if (dayTis) return tisPairRange(dTisRecJob[r.name] || {}, dWaitRecJob[r.name] || {}, j8, sk, rgT, tisSplit);   // #129
       if (!aTisRecJobQ) return { fin: {}, wait: tisSplit ? {} : null };
       const fq = aTisRecJobQ[r.name] || {}, wq = (aWaitRecJobQ || {})[r.name] || {};
       return tisPair(allTimeOf(fq), fq, allTimeOf(wq), wq, j8, sk, per, tisSplit);
     });
+    const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
+    // #240d E: a stage Ashby no longer has keeps its column only where somebody is in it — finished or still
+    // waiting — in this period. A stage Ashby STILL has keeps its column even when every cell reads "—".
+    // ⚠ Measured over the FULL list, recruiter rows AND their job rows, because a stage can be empty at the
+    // recruiter level and still hold somebody on one role.
+    const tisKeys = TIS_STAGES.map(([sk]) => sk);
+    const scopeH = [];
+    groups.forEach(G => G.recs.forEach(r => {
+      scopeH.push(recHistsFull(r));
+      (aByJob[r.name] || []).forEach(bj => scopeH.push(recJobHistsFull(r, (bj.jobId || '').slice(0, 8))));
+    }));
+    const goneDrop = dropGoneEmpty(tisKeys, k => k, (k) => {
+      const i = tisKeys.indexOf(k);
+      return scopeH.some(h => h[i] && (hasAny(h[i].fin) || hasAny(h[i].wait)));
+    });
+    const visIdx = tisKeys.map((k, i) => i).filter(i => !goneDrop.has(tisKeys[i]));
+    const VIS_TIS = visIdx.map(i => TIS_STAGES[i]);
+    const recHists = (r) => { const h = recHistsFull(r); return visIdx.map(i => h[i]); };
+    const recJobHists = (r, j8) => { const h = recJobHistsFull(r, j8); return visIdx.map(i => h[i]); };
+    drawHead(VIS_TIS);
+
     // On an older data file there is no split to show, so fall back to exactly the previous single-number
     // cell rather than passing a pooled median off as a completed-stay time. tisNote says so on screen.
     const cell = (p) => tisSplit ? tisCellSplit(p, 5) : tisCell(p.live ? p.wait : p.fin, 5);
     const rowCells = (arr) => arr.map(cell).join('');
-    const poolCells = (arrs) => TIS_STAGES.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
+    const poolCells = (arrs) => VIS_TIS.map((_, i) => cell(poolPairs(arrs.map(a => a[i])))).join('');
     let html = '';
     groups.forEach((G, pi) => {
       html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)"><td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${G.recs.length}</span></td>${poolCells(G.recs.map(recHists))}</tr>`;
@@ -2650,17 +2675,16 @@ export function initRecruiterFilters(baseData) {
         const rk = `t${pi}-${ri}`;
         html += `<tr class="lvl-rec" data-pod="${pi}" data-rec="${rk}" data-exp="0" style="display:none;cursor:pointer"><td style="padding-left:1.625rem;font-weight:500">${CARET}${r.name}${inactiveTag(r)}</td>${rowCells(recHists(r))}</tr>`;
         // #125: only this recruiter's jobs with an opening opened in the period, and no empty rows (nobody finished or waiting).
-        const hasAny = (h) => !!h && Object.values(h).some(v => v > 0);
         const jobs = (aByJob[r.name] || []).slice().sort((a, b) => (b.total || 0) - (a.total || 0))
           .map(bj => ({ bj, h: recJobHists(r, (bj.jobId || '').slice(0, 8)) }))
           .filter(x => x.h.some(p => hasAny(p.fin) || hasAny(p.wait)));
         if (jobs.length) jobs.forEach(({ bj, h }) => {
           html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted)">${bj.title || '(untitled)'}</td>${rowCells(h)}</tr>`;
         });
-        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero">·</td>'.repeat(TIS_STAGES.length)}</tr>`;
+        else html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none"><td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No activity on jobs with an opening in this period</td>${'<td class="zero">·</td>'.repeat(VIS_TIS.length)}</tr>`;
       });
     });
-    body.innerHTML = html || `<tr><td colspan="${TIS_STAGES.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="${VIS_TIS.length + 1}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters match the filter.</td></tr>`;
     wireVelTree(body);
     shadeTis(body);   // #137c
     tisNote(per);
@@ -3814,8 +3838,6 @@ export function initRecruiterFilters(baseData) {
     const head = document.getElementById('recPipeHead'), body = document.getElementById('recPipeBody');
     if (!head || !body) return;
 
-    const stPick = msRecPipeStage ? msRecPipeStage.getSelected() : [];
-    const visStages = PIPE_KEYS.filter(k => !stPick.length || stPick.includes(PIPE_LABELS[k]));
     const hideEmpty = !!document.getElementById('recPipeHideEmpty')?.checked;
     const jsel = msJob ? msJob.getSelected() : [];
     const pods = msPod ? msPod.getSelected() : [];
@@ -3825,15 +3847,38 @@ export function initRecruiterFilters(baseData) {
     const per = selQuarters();
     const openIds = per && per.length ? jobsWithOpeningIn(baseData, qq => per.includes(qq)) : null;
 
-    head.innerHTML = '<tr><th style="min-width:16.25rem">Pod / Recruiter / Job</th><th class="c-num">In pipeline</th>'
-      + visStages.map(k => `<th class="c-num">${PIPE_LABELS[k]}</th>`).join('') + '</tr>';
-
     const keepJob = (bj) => {
       const j8 = String(bj.jobId || '').slice(0, 8);     // ⚠ byJob carries the FULL uuid; jobs[].id is 8 chars
       if (openIds && !openIds.has(j8)) return false;
       if (!matchesJob(jsel, bj.jobId)) return false;   // #172c
       return true;
     };
+
+    // the pods, from the same grouping every other panel on this tab uses
+    const groups = groupByPod(getFilteredRecs(q), q);
+
+    // #240d E: a LIVE snapshot, so "has data" means somebody is standing in the stage right now — which, for
+    // a stage Ashby has deleted, is normally nobody. Measured before the hide-empty tick, which itself reads
+    // the stage list.
+    // 🚨 OVER EVERY RECRUITER THIS PANEL CAN DRAW, NOT JUST THE PODS. The two blocks under the pods —
+    // "Recruiter not listed on this tab" and "No recruiter tagged" — hold most of the pipeline between them,
+    // and they are built from `allRecs`, not from `groups`. Scoping this to the pod groups alone was wrong
+    // and the test caught it: R5 held 32 people in those blocks and its column vanished anyway.
+    // ⚠ The condition mirrors the one that adds those blocks below — with a Pod or Recruiter filter on, the
+    // panel shows the pods only, so the scope must narrow with it (Rule 13: the filter has to bite here too).
+    const scopeRecs = (!pods.length && !names.length) ? allRecs : groups.flatMap(G => G.recs);
+    const scopePipes = [];
+    scopeRecs.forEach(r => (r.byJob || []).forEach(bj => {
+      if (bj.pipeline && keepJob(bj)) scopePipes.push(bj.pipeline);
+    }));
+    const goneDrop = dropGoneEmpty(PIPE_KEYS, k => k, k => scopePipes.some(pp => (pp[k] || 0) > 0));
+    // ...and off the Stages dropdown too, so no tick box is offered that cannot move a number (#13).
+    if (msRecPipeStage) msRecPipeStage.setHidden([...goneDrop].map(k => PIPE_LABELS[k]));
+    const stPick = msRecPipeStage ? msRecPipeStage.getSelected() : [];
+    const visStages = PIPE_KEYS.filter(k => !goneDrop.has(k) && (!stPick.length || stPick.includes(PIPE_LABELS[k])));
+
+    head.innerHTML = '<tr><th style="min-width:16.25rem">Pod / Recruiter / Job</th><th class="c-num">In pipeline</th>'
+      + visStages.map(k => `<th class="c-num">${PIPE_LABELS[k]}</th>`).join('') + '</tr>';
     const add = (acc, p) => { visStages.forEach(k => { if (p[k]) acc[k] = (acc[k] || 0) + p[k]; }); return acc; };
     const sum = (o) => visStages.reduce((t, k) => t + (o[k] || 0), 0);
     // 🚨 THE FIRST COLUMN IS CALLED "In pipeline", NOT "Total", and the name is load-bearing. Overall
@@ -3858,8 +3903,6 @@ export function initRecruiterFilters(baseData) {
       .filter(x => !hideEmpty || sum(x.p) > 0)
       .sort((a, b) => sum(b.p) - sum(a.p) || String(a.title).localeCompare(String(b.title)));
 
-    // the pods, from the same grouping every other panel on this tab uses
-    const groups = groupByPod(getFilteredRecs(q), q);
     const blocks = groups.map(G => ({
       label: G.pod, untagged: false,
       recs: G.recs.map(r => ({ name: r.name, tag: inactiveTag(r), jobs: jobsOf(r) })),
