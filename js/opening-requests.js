@@ -194,14 +194,15 @@ function evaluate(d, ctx) {
   if (noRec.length) many(noRec, (n) => `Pick the recruiter on opening ${n}.`, (l) => `Pick the recruiter on openings ${l}.`);
   if (ghost.length) block(`Not an active Ashby user, so they cannot own the opening: ${ghost.join(', ')}.`);
   if (noName.length) many(noName, (n) => `Say who opening ${n} replaces.`, (l) => `Say who openings ${l} replace.`);
-  // 244c: ASKED FOR, NOT DEMANDED. Ashby's own field is labelled "Only if applicable", so a missing budget
-  // is a question, never a Submit blocker - blocking on a number the requester may not have yet would
-  // just teach people to type a placeholder.
+  // 244c revised (Jerin, 20 Oct 2026): \ud83d\udde3 *"The replacement of, and budget should be made mandatory - not if you
+  // kow bro!"* \u2014 BOTH are now Submit blockers. The earlier reading took its cue from Ashby's own field label
+  // ("Only if applicable") and made this a question; his point is that on a Replacement or an Anticipation Of
+  // Exit the requester DOES know, so asking nicely just produces blanks. Same gate as the name beside it, so
+  // the two cannot drift apart.
   const noBudget = [];
   r.rows.forEach((x, i) => { if (needsReplacedName(x.roleType) && !x.budget) noBudget.push(i + 1); });
-  if (noBudget.length) check('q', noBudget.length === 1
-    ? `No budget on opening ${noBudget[0]}. Add one if it is known \u2014 it goes onto the opening in Ashby.`
-    : `No budget on openings ${noBudget.join(', ')}. Add them if they are known \u2014 they go onto the openings in Ashby.`);
+  if (noBudget.length) many(noBudget, (n) => `Give the budget on opening ${n}.`,
+    (l) => `Give the budget on openings ${l}.`);
   const who = [];
   r.rows.forEach((x) => { if (x.recruiter && !who.includes(x.recruiter)) who.push(x.recruiter); });
   if (who.length && !ghost.length) check('ok', who.length === 1
@@ -742,8 +743,8 @@ export async function mountOpeningRequests(root, backend) {
         return head + `<div class="or-op-sub two"><div><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
             value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>
-          <div><label for="orbud${i}">Budget (if known)</label>
-          <input id="orbud${i}" class="or-in" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
+          <div><label for="orbud${i}">Budget</label>
+          <input id="orbud${i}" class="or-in${x.budget ? '' : ' bad'}" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
             value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div></div>`;
       };
       const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
