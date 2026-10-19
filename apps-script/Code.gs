@@ -948,9 +948,14 @@ function orRow_(r, fb) {
   r = r || {};
   // 112l (Jerin, 1 Oct 2026): the TOPIC is per opening. `fb` is the one request-level topic an older window still
   // sends, so a payload written before this change still fills every row and nothing ever reads blank.
+  // 244c (Jerin, 19 Oct 2026): a budget on Replacement / Anticipation Of Exit rows. 🚨 THIS WHITELIST IS
+  // WHY IT HAD TO CHANGE - orRow_ returns a FIXED set of keys and every reader goes through orRows_, so a
+  // budget sent by the window was silently dropped before this line existed. DIGITS ONLY: Ashby's
+  // "Budget (Replacement / Anticipation of Exit)" is a Currency field and will not take "25,00,000".
   return { roleType: String(r.roleType || '').trim().slice(0, 40), recruiter: String(r.recruiter || '').trim().slice(0, 80),
            sourcer: String(r.sourcer || '').trim().slice(0, 80), topic: String(r.topic || fb || '').trim().slice(0, 60),
-           replacementOf: String(r.replacementOf || '').trim().slice(0, 80) };
+           replacementOf: String(r.replacementOf || '').trim().slice(0, 80),
+           budget: String(r.budget == null ? '' : r.budget).replace(/[^0-9]/g, '').slice(0, 12) };
 }
 
 // What the old single-value columns are worth once the rows decide. Several different values read "A, B +2 more" so a
@@ -972,12 +977,13 @@ function orDerive_(rows) {
 //    count and the Role-Type tally identical, so the change list read "5 openings (New 2 · Replacement 2 · Buffer 1)
 //    ➔ 5 openings (New 2 · Replacement 2 · Buffer 1)" - it announced a change and showed nothing. Measured, not guessed.
 // The window's own rowEdits() is the same rule; this one is what gets RECORDED.
-var OR_ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['sourcer', 'sourcer'], ['replacementOf', 'replaces']];
+var OR_ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['sourcer', 'sourcer'], ['replacementOf', 'replaces'], ['budget', 'budget']];
 
 function orRowLine_(r) {
   return (r.roleType || '(no Role Type)') + ' — ' + (r.recruiter || '(no recruiter)')
     + (r.topic ? ', ' + r.topic : '')   // 112l
-    + (r.sourcer ? ', sourced by ' + r.sourcer : '') + (r.replacementOf ? ', replacing ' + r.replacementOf : '');
+    + (r.sourcer ? ', sourced by ' + r.sourcer : '') + (r.replacementOf ? ', replacing ' + r.replacementOf : '')
+    + (r.budget ? ', budget ' + r.budget : '');   // 244c
 }
 
 function orRowEdits_(a, b) {
