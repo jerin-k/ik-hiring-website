@@ -87,6 +87,36 @@ function doGet(e) {
   //   ?action=orQueue     -> the approved requests still waiting to be created
   //   ?action=orCreated&id=OR-007&openings=<json array>&note=...  -> record what was made
   // 🚨 Never widen these past orUser_(). They read and write the private requests Sheet.
+  // 256 (Jerin, 19 Oct 2026): "set a routine to create this every Qtr, on the 15th of the first month
+  // of the Qtr - to my Email." The routine runs on his Mac and cannot send mail itself; MailApp here
+  // sends AS HIM and was already consented for #118, so this adds no OAuth scope.
+  // \ud83d\udea8 The body is built HERE from a fixed template. Only a url, a quarter and a short needs-list
+  // come in as parameters, and they are escaped - an action that emailed arbitrary text supplied in a
+  // query string would be a nice way to send anything from Jerin's own address.
+  // \ud83d\udea8 orUser_() gates it, same as the queue actions. Never widen that.
+  if (action === 'emailPack') {
+    var pm = orUser_();
+    var po = { ok: false, message: 'only Jerin or Gopu can send the pack' };
+    if (pm.allowed && pm.isApprover) {
+      var purl = String((e.parameter && e.parameter.url) || '');
+      var pq   = String((e.parameter && e.parameter.quarter) || '').replace(/[^0-9A-Za-z \\-]/g, '').slice(0, 20);
+      var pn   = String((e.parameter && e.parameter.needs) || '').replace(/[<>]/g, '').slice(0, 300);
+      if (!/^https:\/\/claude\.ai\/artifact\/[A-Za-z0-9]+$/.test(purl)) {
+        po = { ok: false, message: 'the link must be a claude.ai artifact url' };
+      } else {
+        var subj = 'Hiring pack \u2014 ' + (pq || 'this quarter');
+        var body = 'The hiring pack for ' + (pq || 'this quarter') + ' has been rebuilt from the dashboard.'
+                 + '\n\n' + purl
+                 + '\n\nEvery figure is worked out from the dashboard and checked against it before this is sent.'
+                 + (pn ? '\n\n\u26a0 It still needs from you: ' + pn : '')
+                 + '\n\nThe link is private to you until you share it from the page\u2019s Share menu.';
+        MailApp.sendEmail({ to: pm.email, subject: subj, body: body, name: 'IK Hiring Dashboard' });
+        po = { ok: true, sentTo: pm.email, quarter: pq };
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify(po)).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (action === 'orQueue' || action === 'orCreated') {
     var out;
     try {
