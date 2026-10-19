@@ -288,12 +288,6 @@ function publish(band, filters) {
   root.style.setProperty('--sc-nav', (n + u) + 'px');             // where the band starts
   root.style.setProperty('--sc-band', (n + u + b) + 'px');        // where the filter row starts
   root.style.setProperty('--sc-frozen', (n + u + b + f) + 'px');  // where everything below the block starts
-  // #252a (Jerin, 20 Oct 2026): the width a full-window table may take.
-  // \ud83d\udea8 MEASURED, and NOT `100vw`. `100vw` INCLUDES the vertical scrollbar, so a table sized by it overhangs
-  // the page by the scrollbar's width and gives the whole page a horizontal scrollbar - on a page that is
-  // meant to scroll vertically only. `documentElement.clientWidth` excludes it. Same rule as --sc-frozen:
-  // measured here, never hard-coded. It is re-published by the same resize and observer wiring below.
-  root.style.setProperty('--vw', root.clientWidth + 'px');
 }
 
 // Re-measure whenever any piece of the block changes shape. The band and filter row change for the reasons

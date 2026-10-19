@@ -753,16 +753,20 @@ table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overfl
    so with no script the table simply stays inside its column.
    \u26a0 The 3.5rem keeps the SAME left/right gutter `.container` uses (1.75rem each side), so the table's
    edges line up with everything above it instead of running into the window edge. */
-/* \ud83d\udea8 ONLY WHERE THERE IS ROOM FOR IT. Below this the panel is left EXACTLY as it is today, because
-   widening it on a narrow window makes things worse, not better: measured at 1280, the wide treatment made
-   a table that fits today start scrolling sideways. 90rem in a media query is 1440px - a media query's rem
-   is the INITIAL 16px font, NOT this site's 90% root, so it is not the same 90rem as everywhere else. */
-@media (min-width: 90rem) {
-  .scroll-table.wide-table {
-    width: calc(var(--vw, 100%) - 3.5rem);
-    margin-left: calc(50% - (var(--vw, 100%) - 3.5rem) / 2);
-    max-width: none;
-  }
+/* ===== #252a (Jerin, 20 Oct 2026) - a wide working table uses the FULL CONTAINER =====
+   Edge to edge went live first and he looked at it: "No dude; lets do full container."
+   So the table spans `.container`'s full width - out to where its padding sits, and no further. It does NOT
+   reach the window edge: a row running the whole width of a wide monitor is what made him ask for frozen
+   columns in the first place.
+   A RULE, NOT A ONE-OFF: any reporting table that outgrows the content column uses this class, so the
+   product does not drift table by table.
+   MEASURED: `.container` is 87.5rem, which at this site's 90% root is 1260px, and its 1.75rem of padding
+   each side leaves the usual 1210px content column. Cancelling that padding is the whole gain: 50px.
+   No media query and no measured width: `.container` is already fluid below its max, so on a narrow window
+   this simply tracks it and the table never outgrows the page. */
+.scroll-table.wide-table {
+  margin-left: -1.75rem;
+  margin-right: -1.75rem;
 }
 
 
@@ -2227,12 +2231,20 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    whole reason the first attempt at this did nothing was a rule written 1,400 lines earlier (Rule 12).
    \u26a0 Remarks is the LAST of the three, so `:last-child` is it. Add a column after Remarks and this stops
    pointing at it - re-derive rather than nudge. */
-@media (min-width: 90rem) {
-  .wide-table table.metrics.eff-fulfil th.jn-th,
-  .wide-table table.metrics.eff-fulfil td.jn-cell { width: auto; min-width: 9.5rem; max-width: none; }
-  .wide-table table.metrics.eff-fulfil th.jn-th:last-child,
-  .wide-table table.metrics.eff-fulfil td.jn-cell:last-child { min-width: 20rem; }
-}
+/* THE WIDTH STILL HAS TO BE AIMED, OR IT DOES NOT REACH REMARKS. Measured on the live table: the three text
+   columns are pinned to exactly 8rem by the rule directly above - `width` AND `min-width` AND `max-width` -
+   so they cannot take a pixel of any extra width. Widening the panel without touching this gave 191 of 240px
+   to `Total positions` and 5px to Remarks, the opposite of what was asked for.
+   So ONLY Remarks is unpinned, and only in the wide table. The two people columns keep their 8rem: with just
+   50px to give away, splitting it three ways would be worth nothing to any of them.
+   THE 12rem FLOOR IS ARITHMETIC, NOT TASTE: the table needs 1192px with Remarks at 8rem, and the full
+   container gives 1260 - so there are 68px of headroom, and 8rem -> 12rem (115 -> ~173px) spends almost
+   exactly that. A BIGGER FLOOR MAKES THE TABLE SCROLL SIDEWAYS AGAIN, which is the thing being removed.
+   Re-derive it if a column is ever added or removed.
+   Must stay BELOW the pin it relaxes: equal specificity is settled by source order, and the first attempt at
+   this did nothing because it sat 1,400 lines earlier (Rule 12). */
+.wide-table table.metrics.eff-fulfil th.jn-th:last-child,
+.wide-table table.metrics.eff-fulfil td.jn-cell:last-child { width: auto; min-width: 12rem; max-width: none; }
 /* A remark shown read-only: the same quiet size as a name, wrapping rather than clipping. It is WRITTEN on the
    Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
 .jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }
