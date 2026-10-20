@@ -1107,7 +1107,6 @@ export const DEFINITIONS = {
         heading: 'The columns',
         items: [
           ['Positions', 'Positions opened inside the period shown above, for this department.'],
-          ['Can carry a budget', 'Of those, how many were raised as <em>Replacement</em> or <em>Anticipation Of Exit</em> &mdash; the only two kinds a budget is asked for. It is the ceiling on what the Added column could ever cover.'],
           ['Starting point', 'The budget the department began the period with. Nothing in Ashby holds this, so it is typed in here.'],
           ['Added from Replacement / Anticipation', 'The budget freed up by the people being replaced, added together for the department.'],
           ['Spent on new &amp; replacement offers', 'What the offers made in the period cost, added together for the department.'],

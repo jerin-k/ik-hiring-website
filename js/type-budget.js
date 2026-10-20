@@ -306,14 +306,14 @@ function budgetPanel(ix, oneQ) {
              : '<br><b>Pick a single quarter above to type a starting point</b> &mdash; a budget is saved against one quarter, so a range has no single place to file it.'}
     </div>
     <div class="scroll-table"><table class="tb-table tb-budget">
-      <thead><tr><th>Department</th><th>Positions</th><th>Can carry a budget</th>
+      <thead><tr><th>Department</th><th>Positions</th>
         <th>Starting point</th><th>Added from Replacement / Anticipation</th>
         <th>Spent on new &amp; replacement offers</th><th>Delta</th></tr></thead>
       <tbody>
-        ${ix.deptRows.map((d) => `<tr><td>${esc(d.key)}</td><td>${d.total}</td><td>${d.canCarryBudget}</td>
+        ${ix.deptRows.map((d) => `<tr><td>${esc(d.key)}</td><td>${d.total}</td>
           <td>${startCell(d.key)}</td><td>${none}</td><td>${none}</td>
           <td><span class="tb-none">&mdash;</span></td></tr>`).join('')}
-        ${ix.deptRows.length ? `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td><td>${canCarry}</td>
+        ${ix.deptRows.length ? `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td>
           <td><span class="tb-none">&mdash;</span></td><td><span class="tb-none">&mdash;</span></td>
           <td><span class="tb-none">&mdash;</span></td><td><span class="tb-none">&mdash;</span></td></tr>` : ''}
       </tbody>
