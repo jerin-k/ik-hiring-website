@@ -89,6 +89,49 @@ const FULFIL_NCOL = 13;   // #182c: +2 people columns · #252g: five Heads/Score
 //   itself (inset 1px 0 0 #0f1c2e). Checked in the stylesheet, not assumed.
 // ⚠ No rowspan anywhere now, so the thead th[rowspan=2] rule's 2px bottom rule no longer applies; the
 //   "table.metrics.eff-fulfil, table.metrics.wide-fulfil thead th" rule in style.css restates it for both.
+// ===== #272 (Jerin, 20 Oct 2026) — A TOTAL ROW AT THE FOOT OF EVERY POD TABLE, AND ONE FOR THE PANEL =====
+// 🗣 *"In recruiter efficiency, need bottom total for pod table, and for the whole panel as well. And ofcz
+//    freeze it like we do in other tabs."* — with the Overall Efficiency table sent as the sample.
+// 🔑 THE FREEZE IS FREE, and this is CLAUDE.md's #247 trap: it is NOT `position: sticky`. #186 holds
+//    `tr.totals-row` against the bottom edge with a TRANSFORM, from holdTable() in js/sticky-chrome.js, over
+//    every `.scroll-table > table` under #page-content. Grepping the stylesheet for a sticky rule therefore
+//    finds nothing and says, wrongly, that no bottom row freezes anywhere. The whole job here is the ROWS.
+// 🚨 Rule 3 — THE TABLE COMPUTES, THE PANEL READS. Each table stores its own total in `fulfilTotals`, and the
+//    panel row is those five added. Each was already worked out under ITS OWN pod rule (#205), so the panel is
+//    never recomputed from raw data under one rule: the pods are NOT measured alike (Capacity and Goal read in
+//    Offers on Lateral, Joiners on Sales and the two SME pods, NA on Others). The definitions block says so.
+// 🔑 ONE SHAPE for all three grains. The pod roll-up used to declare its own object literal, which is what the
+//    "a new field must be added in FOUR places or it reads 0" warning below is about. Pod, table and panel now
+//    share this factory and addFulfilAgg(), so a new field reaches every grain at once.
+const emptyFulfilAgg = () => ({
+  aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, drWho: [], gHC: 0, gSc: 0, aNoCx: 0,   // #252c
+  joN: 0, jpN: 0,   // #193c: how many people are NAMED below, heads or sourced
+  aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
+  jp: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } },
+  // #39: roll the Joined split up the same way as the JP one, or every roll-up row would print 0 in three
+  // columns while the rows underneath show real numbers — the exact bug the JP roll-up was written about.
+  jx: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 }, u: { hc: 0, sc: 0, so: 0, ns: 0 } },
+});
+const FULFIL_AGG_KEYS = ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo', 'aNoCx'];   // #165e
+// Rolls `src` into `dst`. Tolerant of a missing jp/jx, because a recruiter row can arrive without either.
+function addFulfilAgg(dst, src) {
+  FULFIL_AGG_KEYS.forEach(k => { dst[k] += (src[k] || 0); });
+  if (src.jp) ['t', 'a', 'b'].forEach(k => { if (!src.jp[k]) return;
+    dst.jp[k].hc += src.jp[k].hc || 0; dst.jp[k].sc += src.jp[k].sc || 0;
+    dst.jp[k].so += src.jp[k].so || 0; dst.jp[k].ns += src.jp[k].ns || 0; });   // #176c
+  if (src.jx) ['t', 'a', 'b', 'u'].forEach(k => { if (!src.jx[k]) return;
+    dst.jx[k].hc += src.jx[k].hc || 0; dst.jx[k].sc += src.jx[k].sc || 0; dst.jx[k].so += src.jx[k].so || 0; });   // #39
+  // #193c: how many people are NAMED below. Two shapes arrive here: a RECRUITER carries the lists themselves
+  // (joWho/jpWho), while a roll-up that has already been through here carries the counts. Taking only the
+  // counts left all three people columns dashed on the Total rows while the rows above them showed numbers —
+  // the same silent-zero bug the JP roll-up warning is about, one grain further up.
+  dst.joN += (src.joN != null ? src.joN : (src.joWho || []).length);
+  dst.jpN += (src.jpN != null ? src.jpN : (src.jpWho || []).length);
+  return dst;
+}
+// Every table's own total, keyed by T.key, written by fulfilRows as it renders and read by the panel row.
+let fulfilTotals = {};
+
 const fulfilHeadHtml = (T) => `
   <tr><th style="min-width:${T.lblWidth}">Pod / Recruiter / Job / Topic</th>
       <th class="stage-hdr" data-unit="cap-${T.key}">Capacity (${T.capUnit})</th>
@@ -105,6 +148,19 @@ const fulfilHeadHtml = (T) => `
       <th class="stage-hdr pri-th c-num">Pri</th></tr>`;
 // #179e: the chart sits INSIDE its own block, under the table's heading — one chart per table, each reading
 // only the recruiters that table rendered. 🚨 Rule 3 still holds: THE TABLE COMPUTES, THE CHART READS.
+// #272: the panel total's own block. No chart — it is a single row, and #179e deliberately gives each chart
+// the table it belongs to. The two unit-bearing headings are repainted to plain "Capacity" / "Goal" by the
+// render, because the five pods are not measured in the same thing and a unit here would be wrong whichever
+// one it named. The reason is spelled out in definitions.js under `rec-fulfilment` (Rule 6), never on the page.
+const fulfilPanelBlockHtml = () => `
+  <div class="fulfil-block" id="fulfilBlock-all" style="display:none">
+    <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:1.75rem 0 0.5rem">Position Fulfilment — all pods</h4>
+    <div class="scroll-table"><table class="metrics wide-fulfil painted-halves">
+      <thead>${fulfilHeadHtml({ key: 'all', pod: 'All pods', lblWidth: '12.5rem', capUnit: '', goalUnit: '' })}</thead>
+      <tbody id="fulfilBody-all"></tbody>
+    </table></div>
+  </div>`;
+
 const fulfilBlockHtml = (T, i) => `
   <div class="fulfil-block" id="fulfilBlock-${T.key}">
     <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:${i ? '1.75rem' : '0'} 0 0.5rem">Position Fulfilment — ${T.pod}</h4>
@@ -663,6 +719,7 @@ export function renderRecruiter(data) {
          the five can never drift apart the way three hand-written <thead>s did. -->
     <div class="rec-panel" data-panel="fulfilment">
       ${FULFIL_TABLES.map(fulfilBlockHtml).join('')}
+      ${fulfilPanelBlockHtml()}
       <p class="sub-note" id="recFulfilStray" style="color:var(--orange);display:none"></p>
 
       ${defsBlock('rec-fulfilment')}
@@ -677,6 +734,16 @@ export function renderRecruiter(data) {
           <th class="c-src">Sourcer</th><th class="c-mon">Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recJPBody"></tbody>
+      </table></div>
+      <hr class="section-divider">
+      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.5rem">Offer drops</h4>
+      <p class="sub-note" id="recDropCaption" style="margin-bottom:0.5rem"></p>
+      <div class="scroll-table"><table class="metrics pl-list jp">
+        <thead><tr>
+          <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
+          <th class="c-src">Sourcer</th><th class="c-mon">Month</th><th class="c-date">Drop date</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
+        </tr></thead>
+        <tbody id="recDropBody"></tbody>
       </table></div>
       ${defsBlock('rec-joiningpending')}
     </div>
@@ -1346,6 +1413,7 @@ export function initRecruiterFilters(baseData) {
     // fulfilRows() runs once per table (Non-Sales, then Sales) and both write into lastFulfil, so it is
     // cleared HERE — once per render — not inside fulfilRows, which would wipe the first table's rows.
     lastFulfil = {};
+    fulfilTotals = {};   // #272: same reason — a pod filtered out of this render must stop contributing to the panel total
 
     // #127a (Jerin, 15 Sep 2026): this tab has no Quarter: All — goals, pods and capacity belong to a quarter and people move between Sales
     // and Non-Sales, so quarters are never added together. Every panel is on the one quarter picked (the old Quarter: All note is gone).
@@ -1953,16 +2021,19 @@ export function initRecruiterFilters(baseData) {
         || v.aHC > 0 || v.aSc > 0 || v.dHC > 0 || v.dSc > 0
         || v.aSo > 0 || v.xSo > 0 || v.dSo > 0 || (v.jp && v.jp.t.so > 0);   // #108: a sourcer-only row carries only these
 
+      // #272: one row, built from an aggregate, through the SAME cells() every other row uses — so the
+      // total can never be formatted differently from the numbers it adds up. `rollup` is what makes the three
+      // people columns print a quiet count instead of trying to name everyone (see peopleCells).
+      const totalsRowHtml = (agg, label, rollup) => `<tr class="totals-row"><td>${label}</td>${cells({ ...agg, rollup }, true)}</tr>`;
       let html = '';
+      // #272: the table's own total — every pod shown in THIS table, added. Stored for the panel row below.
+      const tableAgg = emptyFulfilAgg();
+      let tableRecs = 0, tablePods = 0;
+      // #272 totals-only mode: the panel block has no recruiters of its own, just the five tables' totals
+      // added. It renders through the SAME cells() as every other row, so the two can never drift apart.
+      if (T.aggOnly) return totalsRowHtml(T.aggOnly, 'All pods', T.aggRollup || '');
       gs.forEach((G, pi) => {
-        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, drWho: [], gHC: 0, gSc: 0, aNoCx: 0,   // #252c
-                         joN: 0, jpN: 0,   // #193c: how many people are NAMED below, heads or sourced
-                         aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
-                         jp: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } },
-                         // #39: roll the Joined split up the same way as the JP one, or every pod row would
-                         // print 0 in three columns while its recruiters underneath show real numbers — the
-                         // exact bug the JP roll-up comment below was written about.
-                         jx: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 }, u: { hc: 0, sc: 0, so: 0, ns: 0 } } };
+        const podAgg = emptyFulfilAgg();   // #272: one shape for pod, table and panel
         const shown = [];
         G.recs.forEach(r => { const a = recFulfil(r); if (!worthShowing(a)) return;
           // ONE source for the chart and the table. The chart used to recompute its own target, which is how
@@ -1976,14 +2047,13 @@ export function initRecruiterFilters(baseData) {
           lastFulfil[r.name] = { goalSc: a.aSc, capSc: a.capSc, achievedSc: a.uSc, shortSc: a.gSc,
                                  goalHC: a.aHC, achievedHC: a.uHC, shortHC: a.gHC,
                                  sales: isSales, table: T.key };
-          ['aHC', 'aSc', 'capSc', 'xHC', 'xSc', 'uHC', 'uSc', 'dHC', 'dSc', 'gHC', 'gSc', 'aSo', 'xSo', 'uSo', 'dSo', 'gSo', 'aNoCx'].forEach(k => podAgg[k] += (a[k] || 0));   // #165e
-          // ⚠ Roll the JP buckets up too. The old key list carried a 'jpHC' that recFulfil never returned, so
-          // every pod row read 0 in all three JP columns while its recruiters underneath showed real numbers.
-          ['t', 'a', 'b'].forEach(k => { podAgg.jp[k].hc += a.jp[k].hc; podAgg.jp[k].sc += a.jp[k].sc; podAgg.jp[k].so += a.jp[k].so || 0; podAgg.jp[k].ns += a.jp[k].ns || 0; });   // #176c
-          if (a.jx) ['t', 'a', 'b', 'u'].forEach(k => { podAgg.jx[k].hc += a.jx[k].hc; podAgg.jx[k].sc += a.jx[k].sc; podAgg.jx[k].so += a.jx[k].so || 0; });   // #39
-          podAgg.joN += (a.joWho || []).length; podAgg.jpN += (a.jpWho || []).length;   // #193c
+          // ⚠ Roll the JP and Joined buckets up too, not just the scalars. The old key list carried a 'jpHC'
+          // that recFulfil never returned, so every pod row read 0 in all three JP columns while its
+          // recruiters underneath showed real numbers. #272 moved all of it into addFulfilAgg().
+          addFulfilAgg(podAgg, a);   // #165e · #176c · #39
           shown.push({ r, a }); });
         if (!shown.length) return;
+        addFulfilAgg(tableAgg, podAgg); tableRecs += shown.length; tablePods += 1;   // #272
         html += `<tr class="lvl-pod" data-pod="${pi}" data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}${G.pod}<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${shown.length}</span></td>${cells({ ...podAgg, rollup: `${shown.length} recruiter${shown.length === 1 ? '' : 's'}` }, true)}</tr>`;
         shown.forEach(({ r, a }, ri) => {
@@ -2153,8 +2223,13 @@ export function initRecruiterFilters(baseData) {
           if (lastFulfil[r.name]) lastFulfil[r.name].roles = roleAch;
         });
       });
-      return html || `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters in this group.</td></tr>`;
+      if (!html) return `<tr><td colspan="${ncol}" style="text-align:center;color:var(--muted);padding:1rem">No recruiters in this group.</td></tr>`;
+      // #272: the Total row is ALWAYS the last row of its table — holdTable() relies on that to pin it to the
+      // bottom edge, and table-sort.js re-appends it after every sort for the same reason.
+      fulfilTotals[T.key] = tableAgg;
+      return html + totalsRowHtml(tableAgg, 'Total', `${tableRecs} recruiter${tableRecs === 1 ? '' : 's'}`);
     }
+
 
     // ===== #179a/#179d: one table per pod, and a pod that is filtered out takes its table off the page =====
     // 🗣 "when one pod is filtered, other pods shouldnt show" · "Same for recruiter, when one recruiter is
@@ -2181,6 +2256,30 @@ export function initRecruiterFilters(baseData) {
       body.innerHTML = gs.length ? fulfilRows(gs, T) : '';
       if (gs.length) { wireVelTree(body); wireMoreCells(body); }   // #182c: the "+N more" toggle on the people columns
     });
+    // ===== #272: the panel total — the five tables' own totals added =====
+    // 🚨 Rule 3. Each table wrote `fulfilTotals[key]` as it rendered, each under ITS OWN pod rule (#205). This
+    // adds those five. It must NEVER recompute from the raw data: Lateral counts offers where Sales counts
+    // hires, so one rule applied to all five would quietly disagree with the tables right above it.
+    // ⚠ Hidden when fewer than two pod tables are showing — a "total" that repeats the single table above it
+    // is noise, and under a one-pod filter it would be the same row twice.
+    {
+      const panelAgg = emptyFulfilAgg();
+      let podsIn = 0;
+      FULFIL_TABLES.forEach(T0 => { const agg = fulfilTotals[T0.key]; if (!agg) return; addFulfilAgg(panelAgg, agg); podsIn += 1; });
+      const allBlock = document.getElementById('fulfilBlock-all');
+      const allBody = document.getElementById('fulfilBody-all');
+      if (allBlock) allBlock.style.display = podsIn > 1 ? '' : 'none';
+      if (allBody && podsIn > 1) {
+        allBody.innerHTML = fulfilRows([], { key: 'all', aggOnly: panelAgg, aggRollup: `${podsIn} pods` });
+        // the two unit-bearing headings carry no unit here — see fulfilPanelBlockHtml
+        const capTh = document.querySelector('[data-unit="cap-all"]'); if (capTh) capTh.textContent = 'Capacity';
+        const goalTh = document.querySelector('[data-unit="goal-all"]'); if (goalTh) goalTh.textContent = 'Goal';
+        // ⚠ The caveat that the five pods are not measured alike is NOT printed here: above or below a table
+        // there is live state only, and an explanation belongs in the collapsible block (Rule 6). It is in
+        // definitions.js under `rec-fulfilment`, and it moves with this code.
+      }
+    }
+
     // 🚨 NOTHING MAY VANISH SILENTLY. Five tables cover the five pods in POD_OPTIONS, and groupByPod can
     // only produce those (Unassigned is dropped earlier, a sourcer-only person is put in Others). If a
     // sixth pod is ever added to POD_OPTIONS without a table here, its recruiters would disappear from
@@ -2319,6 +2418,55 @@ export function initRecruiterFilters(baseData) {
         ? `<strong>${jp.shown}</strong> in closing${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, <strong>live</strong>.`
           + (jp.orphanCount ? ` <strong>${jp.orphanCount}</strong> sit in the last group.` : '')
           + (jp.unlinked ? ` <strong>${jp.unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
+
+    // ===== #273 (Jerin, 20 Oct 2026) — the drops table under the Joining Pipeline list =====
+    // 🗣 *"the joining pending tabs to have a second table for drops at the botton, with the same columns"*
+    // The same pod ➔ recruiter ➔ candidate tree, through the SAME peopleTree and the same cell renderers, so
+    // the two tables cannot drift apart (Rule 3 treats them as a pair).
+    // 🚨 "The same columns" cannot be literal: a drop has NO joining date and NO current stage, because the
+    //    person left. So DOJ becomes the DROP DATE and Sub-stage reads a dash — a drop date sitting under a
+    //    heading that says DOJ is the wrong-date-under-a-heading mistake Rule 4 exists to stop.
+    // 🔑 offerDropRows() — the 112 OFFER drops the site counts (#183c), the same source as the Offer drop
+    //    column on Position Fulfilment, so the list and the number cannot disagree.
+    // ⚠ Newest first: this list looks BACK, where the one above it looks forward (#149).
+    const dropBody = document.getElementById('recDropBody');
+    if (dropBody) {
+      const qNow = currentQuarter(), sameQ = qNow === selQuarter(), dojF = dojFilterOf('rec');
+      const nowRecs = sameQ ? recs : getFilteredRecs(qNow);
+      // ⚠ Rule 13: the date boxes are this sub-tab's only period control, so they read against the DROP's own
+      // day. A row with no day at all (a pre-#129 data file) is kept rather than silently cut.
+      // 🚨 #127 / the Q3-only rule: the dashboard REPORTS FROM 2026-Q3 and nothing else on the site shows a
+      // pre-Q3 figure, so this list is floored at REPORTING_START too. Without it the table opened on 112 rows
+      // reaching back to 2025-Q2 — every one of them real, and every one of them outside the period the rest
+      // of the page covers. The caption says where the list starts, so the number is never bare.
+      const dList = dropRows(data)
+        .filter(e => !e.quarter || e.quarter >= REPORTING_START)
+        .filter(e => !e.day || inDojFilter(e.day, dojF));
+      const dTree = peopleTree(dList, {
+        q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
+        rest: 9,
+        isLinked: e => !!e.openingId,
+        // #176b: the same points caption as the list above. A drop is priced from the opening its offer names
+        // (#183b), so no opening means no score — and the caption says which, exactly as it does up there.
+        captionOf: (e) => pointsCaption(
+          scoreOfOpening(e.openingId,
+            { department: e.department, title: e.jobTitle, level: (jobById8[String(e.jobId8 || '').slice(0, 8)] || {}).level },
+            qNow, openingScores(data)),
+          e.openingId ? 'no complexity' : 'no opening'),
+        sortBy: (a, b) => String(b.day || '').localeCompare(String(a.day || '')),
+        cells: e => `${tdSourcer(e.sourcer)}${tdMonth(e.day)}${tdDoj(e.day, { live: false })}${tdDept(e.department)}`
+          + `${tdJob(e.jobTitle)}${tdOpening(e.openingId, TOPIX)}${tdTopic(e.openingId, e.jobId8, TOPIX)}`
+          + `<td class="c-stage"><span class="zero" title="This person left the process, so there is no stage to show.">&mdash;</span></td>${tdQuarter(e.openingQuarter || null)}`
+      });
+      dropBody.innerHTML = dTree.html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:1rem">Nobody with an offer has dropped out under these filters.</td></tr>`;
+      wireTreePath(dropBody);
+      const dcap = document.getElementById('recDropCaption');
+      if (dcap) dcap.innerHTML = dTree.shown
+        ? `<strong>${dTree.shown}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, dated by the day they first reached Ref Check, Documentation or Offer. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
+          + (dTree.orphanCount ? ` <strong>${dTree.orphanCount}</strong> sit in the last group.` : '')
+          + (dTree.unlinked ? ` <strong>${dTree.unlinked}</strong> have no opening attached.` : '')
         : '';
     }
 

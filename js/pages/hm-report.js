@@ -18,7 +18,8 @@ import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expan
 import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup } from '../job-filter.js';   // #172c
 import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
-         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter} from '../period.js';   // #127 · #129 · #130 · #133
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter,
+         REPORTING_START} from '../period.js';   // #127 · #129 · #130 · #133 · #273: the reporting floor
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { mountTypeBudget } from '../type-budget.js';   // #269
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
@@ -489,6 +490,13 @@ export function renderHmReport(data) {
       <div class="scroll-table"><table class="pl-list jp">
         <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmJPBody"></tbody>
+      </table></div>
+      <hr class="section-divider">
+      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.5rem">Offer drops</h4>
+      <p class="sub-note" id="hmDropCaption" style="margin-bottom:0.5rem"></p>
+      <div class="scroll-table"><table class="pl-list jp">
+        <thead><tr><th style="min-width:13rem">Drop date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <tbody id="hmDropBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiningpending')}
     </div>
@@ -1477,6 +1485,57 @@ export function initHmFilters(data) {
     pinMonthHeadings(body);
   }
 
+  // ===== #273 (Jerin, 20 Oct 2026) — the drops table under the Joining Pipeline list =====
+  // 🗣 *"the joining pending tabs to have a second table for drops at the botton, with the same columns"*
+  // Same nine columns, same month tree, same cell renderers as the list above it — the two are read together,
+  // so Rule 3 applies to them as a pair: a column added to one belongs on the other.
+  // 🚨 "THE SAME COLUMNS" CANNOT BE LITERAL, and forcing it would break Rule 4. A drop has NO joining date and
+  //    NO current stage, because the person left. So the first column is the DROP date — putting that date
+  //    under a heading reading "Joining date" would be a date under the wrong label, which is the mistake that
+  //    rule exists to stop — and Sub-stage reads a dash, with the reason on hover.
+  // ⚠ ORDER: newest first. This list looks BACK, where the one above it looks forward (#149).
+  // 🔑 The population is offerDropRows() — the 112 OFFER drops the site counts (#183c), never the 162 in the
+  //    file. Same source as the Offer drop column on Position Fulfilment, so the two cannot disagree.
+  function renderJPDrops() {
+    const body = document.getElementById('hmDropBody');
+    if (!body) return;
+    const jobSel = selJobs();
+    const dojF = dojFilterOf('hm');
+    // ⚠ Rule 13: every control shown over this sub-tab has to move this table. The date boxes are the
+    // sub-tab's only period control, so they are read against the DROP's own day — the date this table is
+    // keyed by. A drop with no day at all (a pre-#129 data file) is kept rather than silently dropped.
+      // 🚨 #127 / the Q3-only rule: the dashboard REPORTS FROM 2026-Q3 and nothing else on the site shows a
+      // pre-Q3 figure, so this list is floored at REPORTING_START too. Without it the table opened on 112 rows
+      // reaching back to 2025-Q2 — every one of them real, and every one of them outside the period the rest
+      // of the page covers. The caption says where the list starts, so the number is never bare.
+    const list = dropRows(data)
+      .filter(e => !e.quarter || e.quarter >= REPORTING_START)
+      .map(e => ({ ...e, job: e.jobTitle || '', _dept: deptOf(e.department || '') }))
+      .filter(e => okDept(e._dept) && okRec(e.recruiter) && matchesJob(jobSel, e.jobId8))
+      .filter(e => !e.day || inDojFilter(e.day, dojF));
+    const capEl = document.getElementById('hmDropCaption');
+    if (capEl) {
+      const unlinked = list.filter(e => !e.openingId).length;
+      capEl.innerHTML = list.length
+        ? `<strong>${list.length}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, dated by the day they first reached Ref Check, Documentation or Offer. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
+          + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
+    if (!list.length) {
+      body.innerHTML = `<tr><td colspan="9" style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem">Nobody with an offer has dropped out under these filters.</td></tr>`;
+      return;
+    }
+    list.sort((a, b) => String(a.candidate || '').localeCompare(String(b.candidate || '')));
+    body.innerHTML = monthTreeRows(list, {
+      dayOf: e => e.day,
+      nameOf: e => e.candidate,
+      cells: e => `<td class="c-stage"><span class="zero" title="This person left the process, so there is no stage to show.">&mdash;</span></td>`
+        + `${tdRecruiter(e.recruiter)}${tdSourcer(e.sourcer)}${tdDept(e._dept)}${tdJob(e.job)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter || null)}`,
+      cols: 9, order: 'newest', live: false,
+    });
+    pinMonthHeadings(body);
+  }
+
   // ===== #130c (Jerin, 15 Sep 2026): Joiners — one row per PERSON moved to Hired =====
   // The same test as every people-based Joined on the site (accepted offer AND moved to Hired), dated by START date inside From / To.
   // No earlier-quarter subtraction — like the Joining Pending list, it shows everyone and the Opening Quarter column says which is which.
@@ -1611,7 +1670,7 @@ export function initHmFilters(data) {
   let activeTab = 'positions';
   function renderActive() {
     if (activeTab === 'positions') renderSection1();
-    else if (activeTab === 'joiningpending') renderJoiningPending();   // #130b
+    else if (activeTab === 'joiningpending') { renderJoiningPending(); renderJPDrops(); }   // #130b · #273
     else if (activeTab === 'joiners') renderJoiners();                 // #130c
     else if (activeTab === 'throughput') renderThroughput();
     else if (activeTab === 'pipeline') renderPipeline();
@@ -1758,7 +1817,7 @@ export function initHmFilters(data) {
   });
   document.addEventListener('click', closeMsPanels);
   // #133: the DOJ boxes in the filter row (shown on the Joining Pending sub-tab only)
-  ['hmDojMonth', 'hmDojFrom', 'hmDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderJoiningPending));
+  ['hmDojMonth', 'hmDojFrom', 'hmDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { renderJoiningPending(); renderJPDrops(); }));   // #273: the date boxes move both tables
   // Throughput-local listeners — #122: a Stages dropdown (nothing picked = all 13) replaced the row of tick-boxes.
   msHmTpStage = makeMultiSelect(document.getElementById('msHmTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);

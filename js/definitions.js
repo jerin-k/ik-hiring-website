@@ -69,8 +69,18 @@ export const DEFINITIONS = {
   'hm-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; the people behind the Joining Pipeline card on <strong>Position Fulfilment</strong>. A <strong>live</strong> list, so on this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. An Offer drops table under the list &middot; 20 Oct 2026.',
     groups: [
+      {
+        heading: 'The Offer drops table underneath',
+        items: [
+          ['Who is on it', 'Everyone who <strong>received an offer and then left</strong>. Someone who fell away at Ref Check or Documentation before any offer was raised is <em>not</em> here &mdash; that is the same rule the <strong>Offer drop</strong> column on Position Fulfilment uses, and both read from the one list, so they cannot disagree.'],
+          ['Where it starts', 'From <strong>2026 Q3</strong> onwards, like every other figure on the dashboard. Earlier drops exist in the data and are deliberately not shown.'],
+          ['Why two columns read differently', 'A person who dropped has <strong>no joining date</strong> and <strong>no current stage</strong>, because they left. So the first column is the <strong>drop date</strong> &mdash; the day they first reached Ref Check, Documentation or Offer, which is the day the drop is counted on &mdash; and <strong>Sub-stage</strong> is a dash. Everything else is the same column as the list above.'],
+          ['The dates narrow this table too', 'The DOJ boxes read against the <strong>drop date</strong> here, so they move both tables rather than leaving this one sitting still.'],
+          ['No opening attached', 'Most drops carry no opening: the link is cleared when an application is archived, and the one that survives sits on the offer. Attaching an opening to an offer only became universal in August 2026, so recent drops trace and older ones cannot. The caption counts them.'],
+        ]
+      },
       {
         heading: 'The columns',
         items: [
@@ -214,7 +224,7 @@ export const DEFINITIONS = {
   'rec-fulfilment': {
     summary: 'How these numbers are worked out',
     intro: '<strong>Five tables, one per pod</strong> &mdash; Sales, SME-US, SME-India, Lateral and Others &mdash; the same shape, each with its own chart. Filter to one pod or recruiter and only their table stays. There is no <em>All</em> quarter here: goals, pods and capacity belong to a quarter. <strong>From</strong> and <strong>To</strong> narrow every column to the day, except Joining pipeline, which is live. While the <strong>Job</strong> filter is on, Capacity and Capacity used read a dash.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: five tables, one per pod, and a Delta that shows the surplus &middot; 25 Sep 2026. An offer drop needs an offer, and carries points on Lateral and Others &middot; 27 Sep 2026. One column per metric, with the score tucked under the count, and the "N no score" caption removed &middot; 20 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: five tables, one per pod, and a Delta that shows the surplus &middot; 25 Sep 2026. An offer drop needs an offer, and carries points on Lateral and Others &middot; 27 Sep 2026. One column per metric, with the score tucked under the count, and the "N no score" caption removed &middot; 20 Oct 2026. A Total row at the foot of every table, and an all-pods table under them &middot; 20 Oct 2026.',
     groups: [
       {
         heading: 'The two number types in every column',
@@ -232,6 +242,7 @@ export const DEFINITIONS = {
           ['What counts as achieved', '<strong>Joined</strong> on Sales and Others &middot; <strong>Joined + Joining pipeline</strong> on SME-US and SME-India &middot; <strong>Joined + Joining pipeline + Offer drop</strong> on Lateral.'],
           ['Earlier quarters', 'On SME-US, SME-India and Lateral a joiner counts in the quarter their <strong>position was opened</strong>, not the quarter they started. So someone opened for in July who starts in October counts in the July quarter, where the work was done. Sales and Others count everyone in the quarter they started, deliberately: their goal is joiners whenever the position was opened.'],
           ['Capacity (NA) on Others', 'Agencies are given no capacity. Only the heading says NA; the cells are a dash.'],
+          ['The Total row, and the all-pods table', 'Every table ends in a <strong>Total</strong> row, and it stays on screen while that table is in view, so a long list always has its total beside the row you are reading. Under the five tables an <strong>all pods</strong> table adds those five totals together. It appears only when more than one pod is on screen &mdash; under a single-pod filter it would just repeat the table above it. <strong>Capacity and Goal carry no unit there</strong>, because the pods are not measured on the same thing: offers on Lateral, joiners on Sales and the two SME pods, and no capacity at all on Others. Read that row as a count of positions and people, never as one shared target. Every figure in it is the five tables&rsquo; own totals added &mdash; nothing is worked out a second time, so it cannot disagree with them.'],
         ]
       },
       {
@@ -285,8 +296,18 @@ export const DEFINITIONS = {
   'rec-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Every person in closing &mdash; <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; one row each, grouped <strong>Pod &rarr; Recruiter &rarr; Candidate</strong>. A <strong>live</strong> list: each person sits in their recruiter&rsquo;s pod for the quarter we are in today. On this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>, and <em>Expand all</em> opens every pod and recruiter.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. A Pod, Recruiter or Job filter now hides the untagged group &middot; 20 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. A Pod, Recruiter or Job filter now hides the untagged group &middot; 20 Oct 2026. An Offer drops table under the list &middot; 20 Oct 2026.',
     groups: [
+      {
+        heading: 'The Offer drops table underneath',
+        items: [
+          ['Who is on it', 'Everyone who <strong>received an offer and then left</strong>. Someone who fell away at Ref Check or Documentation before any offer was raised is <em>not</em> here &mdash; that is the same rule the <strong>Offer drop</strong> column on Position Fulfilment uses, and both read from the one list, so they cannot disagree.'],
+          ['Where it starts', 'From <strong>2026 Q3</strong> onwards, like every other figure on the dashboard. Earlier drops exist in the data and are deliberately not shown.'],
+          ['Why two columns read differently', 'A person who dropped has <strong>no joining date</strong> and <strong>no current stage</strong>, because they left. So the first column is the <strong>drop date</strong> &mdash; the day they first reached Ref Check, Documentation or Offer, which is the day the drop is counted on &mdash; and <strong>Sub-stage</strong> is a dash. Everything else is the same column as the list above.'],
+          ['The dates narrow this table too', 'The DOJ boxes read against the <strong>drop date</strong> here, so they move both tables rather than leaving this one sitting still.'],
+          ['No opening attached', 'Most drops carry no opening: the link is cleared when an application is archived, and the one that survives sits on the offer. Attaching an opening to an offer only became universal in August 2026, so recent drops trace and older ones cannot. The caption counts them.'],
+        ]
+      },
       {
         heading: 'Reading it',
         items: [
@@ -557,8 +578,18 @@ export const DEFINITIONS = {
   'eff-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so on this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>.',
-    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. An Offer drops table under the list &middot; 20 Oct 2026.',
     groups: [
+      {
+        heading: 'The Offer drops table underneath',
+        items: [
+          ['Who is on it', 'Everyone who <strong>received an offer and then left</strong>. Someone who fell away at Ref Check or Documentation before any offer was raised is <em>not</em> here &mdash; that is the same rule the <strong>Offer drop</strong> column on Position Fulfilment uses, and both read from the one list, so they cannot disagree.'],
+          ['Where it starts', 'From <strong>2026 Q3</strong> onwards, like every other figure on the dashboard. Earlier drops exist in the data and are deliberately not shown.'],
+          ['Why two columns read differently', 'A person who dropped has <strong>no joining date</strong> and <strong>no current stage</strong>, because they left. So the first column is the <strong>drop date</strong> &mdash; the day they first reached Ref Check, Documentation or Offer, which is the day the drop is counted on &mdash; and <strong>Sub-stage</strong> is a dash. Everything else is the same column as the list above.'],
+          ['The dates narrow this table too', 'The DOJ boxes read against the <strong>drop date</strong> here, so they move both tables rather than leaving this one sitting still.'],
+          ['No opening attached', 'Most drops carry no opening: the link is cleared when an application is archived, and the one that survives sits on the offer. Attaching an opening to an offer only became universal in August 2026, so recent drops trace and older ones cannot. The caption counts them.'],
+        ]
+      },
       {
         heading: 'The columns',
         items: [

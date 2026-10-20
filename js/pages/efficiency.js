@@ -309,6 +309,13 @@ export function renderEfficiency(data) {
         <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="effFulfilJPBody"></tbody>
       </table></div>
+      <hr class="section-divider">
+      <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.5rem">Offer drops</h4>
+      <p class="sub-note" id="effDropCaption" style="margin-bottom:0.5rem"></p>
+      <div class="scroll-table"><table class="pl-list jp">
+        <thead><tr><th style="min-width:13rem">Drop date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <tbody id="effDropBody"></tbody>
+      </table></div>
       ${defsBlock('eff-joiningpending')}
     </div>
 
@@ -1307,6 +1314,52 @@ export function initEfficiencyFilters(data) {
         ? `<strong>${rows.length}</strong> in closing${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, <strong>live</strong>.` + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
         : '';
     }
+  }
+
+  // ===== #273 (Jerin, 20 Oct 2026) — the drops table under the Joining Pipeline list =====
+  // 🗣 *"the joining pending tabs to have a second table for drops at the botton, with the same columns"*
+  // The twin of the Hiring Manager one, and Rule 3 says the two move together — same nine columns, same month
+  // tree, same cell renderers as the list above it.
+  // 🚨 "The same columns" cannot be literal: a drop has NO joining date and NO current stage, so the first
+  //    column is the DROP date and Sub-stage reads a dash. A drop date under a "Joining date" heading would be
+  //    exactly the wrong-date-under-a-heading mistake Rule 4 exists to stop.
+  // 🔑 offerDropRows() — the 112 OFFER drops the site counts (#183c), the same source as the Offer drop column
+  //    on Position Fulfilment, so the list and the number cannot disagree.
+  function renderJPDrops() {
+    const body = document.getElementById('effDropBody'); if (!body) return;
+    const dsel = selDepts(), jsel = selJobs(), dojF = dojFilterOf('eff');
+    // ⚠ Rule 13: the date boxes are this sub-tab's only period control, so they read against the DROP's own
+    // day — the date this table is keyed by. A row with no day (a pre-#129 file) is kept, not silently cut.
+      // 🚨 #127 / the Q3-only rule: the dashboard REPORTS FROM 2026-Q3 and nothing else on the site shows a
+      // pre-Q3 figure, so this list is floored at REPORTING_START too. Without it the table opened on 112 rows
+      // reaching back to 2025-Q2 — every one of them real, and every one of them outside the period the rest
+      // of the page covers. The caption says where the list starts, so the number is never bare.
+    const rows = dropRows(data)
+      .filter(e => !e.quarter || e.quarter >= REPORTING_START)
+      .map(e => ({ ...e, job: e.jobTitle || '' }))
+      .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
+      .filter(e => matchesJob(jsel, e.jobId8))
+      .filter(e => okRec(e.recruiter))
+      .filter(e => !e.day || inDojFilter(e.day, dojF));
+    const cap = document.getElementById('effDropCaption');
+    if (cap) {
+      const unlinked = rows.filter(e => !e.openingId).length;
+      cap.innerHTML = rows.length
+        ? `<strong>${rows.length}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, dated by the day they first reached Ref Check, Documentation or Offer. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
+          + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
+        : '';
+    }
+    body.innerHTML = rows.length ? (() => {
+      const list = rows.slice().sort((a, b) => String(a.candidate || '').localeCompare(String(b.candidate || '')));
+      return monthTreeRows(list, {
+        dayOf: e => e.day,
+        nameOf: e => e.candidate,
+        cells: e => `<td class="c-stage"><span class="zero" title="This person left the process, so there is no stage to show.">&mdash;</span></td>`
+          + `${tdRecruiter(e.recruiter)}${tdSourcer(e.sourcer)}${tdDept(e.department)}${tdJob(e.job)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter || null)}`,
+        cols: 9, order: 'newest', live: false,   // #149: this list looks BACK, unlike the one above it
+      });
+    })() : `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Nobody with an offer has dropped out under these filters.</td></tr>`;
+    pinMonthHeadings(body);
   }
 
   // #130c (Jerin, 15 Sep 2026): Joiners — one row per PERSON moved to Hired (an accepted offer alone does not count), dated by START date
@@ -2385,7 +2438,7 @@ export function initEfficiencyFilters(data) {
   let tractionBounds = false;   // #207
   function renderActive() {
     if (activeTab === 'fulfilment') renderFulfilment();
-    else if (activeTab === 'joiningpending') renderFulfilJP();   // #130b
+    else if (activeTab === 'joiningpending') { renderFulfilJP(); renderJPDrops(); }   // #130b · #273
     else if (activeTab === 'joiners') renderJoiners();           // #130c
     else if (activeTab === 'velocity') renderVelocity();
     else if (activeTab === 'screening') renderScreening();   // its chart is built inside renderScreening
