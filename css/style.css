@@ -1714,6 +1714,27 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 /* Sits between the name and the day cells, exactly where the table puts TOTAL · 30D. */
 .heat-tot { width:6rem; min-width:6rem; text-align:right; padding-right:0.875rem; font-size:0.875rem;
   font-weight:600; color:var(--text); }
+/* ===== #247 (Jerin, 19 Oct 2026) — the name and the Total stay put while the days scroll =====
+   🗣 "In the Momentum tabs, help freeze tge first 2 columns. Obvious why we need it."
+   🚨 IT WAS THE HEATMAP, NOT THE TABLE. The Momentum panel stacks TWO grids: this heatmap on top and the
+   day grid below it. The TABLE's first two columns have been frozen since #151b (verified against an
+   unedited build on 20 Oct: they move 0px while the days move 664px) — so the block that was losing its
+   labels is this one, which carries exactly the two columns he named, a name and a Total, and had nothing
+   sticky in it at all. The two grids are deliberately aligned column-for-column, so one of them holding
+   its labels while the other let them slide was the thing on screen.
+   🔑 The Total's `left` is the NAME's width plus the row's flex gap, and that width is not fixed: the
+   heatmap matches itself to the table's own first column at render time (see the w1/w2 block in
+   js/chart-style.js), so --heat-c2 is published from there. The fallback is the CSS width above, for the
+   one frame before the script runs.
+   🚨 THE !important ANSWERS .heat-hd's OWN !important, which exists to keep the day headers unpainted.
+   Without it the heading row's two frozen cells stay transparent and the day columns scroll through them
+   in full view — and only on that one row, which is exactly the kind of fault a static look never shows
+   (CLAUDE.md Rule 12). The day headers keep `background:none`: this names only .heat-name and .heat-tot. */
+.heat-row > .heat-name, .heat-row > .heat-tot { position:sticky; z-index:2; background:var(--bg) !important; }
+.heat-row > .heat-name { left:0; }
+/* The edge the days scroll against, drawn as a SHADOW so it travels with the cell and costs no width
+   (#197d). The grid below marks the same boundary with a 2px rule on its own second column. */
+.heat-row > .heat-tot { left:var(--heat-c2, 13.125rem); box-shadow:2px 0 0 var(--border); }
 /* Two-line column header: the day, then its month underneath, so no column is ambiguous when a 30-day
    window spans two months (Jerin, 2026-08-31). */
 .heat-hd { font-size:0.71875rem; color:var(--muted); height:1.875rem; background:none !important;

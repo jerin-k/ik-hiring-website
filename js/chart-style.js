@@ -703,6 +703,14 @@ export function buildDayHeat(host, tip, wrap, rows, chrono, roleAt, opts = {}) {
   w1 = Math.min(w1, uiPx(190));
   host.querySelectorAll('.heat-name').forEach(el => { el.style.width = w1 + 'px'; el.style.minWidth = w1 + 'px'; });
   host.querySelectorAll('.heat-tot').forEach(el => { el.style.width = w2 + 'px'; el.style.minWidth = w2 + 'px'; });
+  // #247 (Jerin, 19 Oct 2026): the name and the Total are FROZEN while the days scroll — the rules live in
+  // style.css, and this is the one figure they cannot know. The Total sticks at the name's width plus the
+  // row's own flex gap, and w1 is computed just above (it matches the table's first column, trimmed to a
+  // cap), so a constant in the CSS would be wrong the moment the table's column changes width.
+  // ⚠ The gap is READ rather than written twice: .heat-row sets it, and a copy here would drift from it.
+  const heatRow0 = host.querySelector('.heat-row');
+  const heatGap = heatRow0 ? Math.round(parseFloat(getComputedStyle(heatRow0).columnGap) || 0) : 0;
+  host.style.setProperty('--heat-c2', (w1 + heatGap) + 'px');
   host.querySelectorAll('.heat-cell').forEach(el => { el.style.minWidth = cellMin + 'px'; });
   const sc = host.querySelector('.heat-scale');   // the scale describes the CELLS, so it starts under them
   if (sc) sc.style.paddingLeft = (w1 + w2) + 'px';
