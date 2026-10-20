@@ -769,6 +769,22 @@ table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overfl
   margin-right: -1.75rem;
 }
 
+/* ===== #252h (Jerin, 20 Oct 2026) — ONE PAIR OF EDGES FOR EVERY PAGE =====
+   🗣 "The bottom & top panel arent matching in width; can the filter & chart panel be revised to match?" and
+   then "I'd suggest that the body/filter panel width of all panels be changed to this".
+   #252a let a wide TABLE span `.container`'s full 1260px by cancelling its 1.75rem padding, but the filter
+   row, the sub-tab band and the charts stayed in the 1210px content column — so the table stuck out 25px each
+   side. Measured 20 Oct at a 1440px window: table 90 ➔ 1350, everything above it 115 ➔ 1325.
+   🔑 THE WHOLE PAGE RUNS AT THE CONTAINER'S WIDTH, so there is ONE left edge and ONE right edge. Every other
+   table is `width:100%` and simply follows; nothing else had to change.
+   🔑 ONE RULE, NOT ONE PER PAGE. It shipped first inside Overall Efficiency's own <style> block so he could
+   look at it on one tab; five copies of a layout rule is how five pages drift apart, so it lives here now.
+   🚨 THE SECOND LINE IS NOT OPTIONAL: without it a `.wide-table` keeps its own -1.75rem on top of this one
+   and lands at 1310, overhanging the container and giving the page a horizontal scrollbar.
+   ⚠ `.page-content` is the one element every page renders into, which is why this can be said once. */
+.page-content { margin-left: -1.75rem; margin-right: -1.75rem; }
+.page-content .scroll-table.wide-table { margin-left: 0; margin-right: 0; }
+
 
 table {
   width: 100%;

@@ -1,8 +1,9 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
-import { jnWhoCell, wireMoreCells, isMoreClick, remarkMore, markRemarkOverflow } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick · #252b: remarkMore
+import { jnWhoCell, wireMoreCells, isMoreClick, markRemarkOverflow } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick
+import { remarkCell, wireRemarks } from '../remark-cell.js';   // #252e: the remark cell + editor, shared with the Hiring Manager tab
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
-import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
+import { loadNotes } from '../job-notes.js';   // #252e: Remarks are EDITABLE here now - the cell and its editor are in remark-cell.js
 import { defsBlock } from '../definitions.js';
 import { jobFilterOptions, matchesJob as matchesJobBase, matchesJobRow as matchesJobRowBase } from '../job-filter.js';   // #172c
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdQuarter, tdSourcer, pointsCaption } from '../people-cells.js';   // #137 · #176b · #195: tdQuarter replaces tdLinked · #194: tdSourcer
@@ -157,21 +158,6 @@ export function renderEfficiency(data) {
 
   return `
     <style>
-      /* ===== #252h (Jerin, 20 Oct 2026) — ONE PAIR OF EDGES FOR THE WHOLE PAGE =====
-         🗣 "The bottom & top panel arent matching in width; can the filter & chart panel be revised to match?"
-         He is right, and it is #252a's loose end: that change let a wide TABLE span the container's full
-         1260px by cancelling the 1.75rem padding, but the filter row, the sub-tab band and the chart stayed
-         in the 1210px content column. Measured 20 Oct: table 90➔1350, everything above it 115➔1325 — the
-         table stuck out 25px each side.
-         🔑 WHY THE WHOLE PAGE AND NOT JUST THE TWO HE NAMED: the sub-tab band and the filter row are SHARED
-         by all nine sub-tabs, and only Position Fulfilment has a wide table. Widening just those two would
-         have lined up ONE tab and broken the other eight the other way round. Running the page at 1260
-         instead costs nothing, because every other table is width:100% and simply follows.
-         ⚠ The wide-table negative margins must be cancelled here or the table lands at 1310 and overhangs.
-         This block lives with the page, so it applies to Overall Efficiency only until he has looked at it. */
-      .page-content { margin-left: -1.75rem; margin-right: -1.75rem; }
-      .page-content .scroll-table.wide-table { margin-left: 0; margin-right: 0; }
-
       /* .eff-subtabs is the recessed .subtab-band — see style.css */
       /* .eff-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
@@ -1031,11 +1017,14 @@ export function initEfficiencyFilters(data) {
     const peopleCells = (x) => {
       if (x.rollup) return sumCell((x.joWho || []).length, x.rollup) + sumCell(x.pending || 0, x.rollup)
                           + '<td class="jn-cell"><span class="zero">&mdash;</span></td>';
-      const note = x.job8 ? (noteOf(x.job8) || {}).text : '';
       return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true, under: x.joUnder })
            + jnWhoCell(x, { under: x.jpUnder })
-           // #252b: the same cut and the same control as the Hiring Manager tab — `remarkMore` is the one home.
-           + `<td class="jn-cell jn-rem">${note ? `<span class="jn-note-ro">${String(note).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))}</span>${remarkMore(note)}` : '<span class="zero">&mdash;</span>'}</td>`;
+           // #252e (Jerin, 20 Oct 2026): EDITABLE here too, and drawn by the SAME `remarkCell` the Hiring
+           // Manager tab uses — it was a read-only span until today. 🗣 "Remarks editable from Overall
+           // Efficiency too". It carries its own cut and "more" (#252b) because the cell is one piece of code.
+           // ⚠ A remark belongs to a JOB: `remarkCell` dashes any row with no job8, which is every
+           //   department, recruiter and topic row here. That is the same rule as the Hiring Manager tab.
+           + remarkCell(x);
     };
     const rows = fulfilRows(per);
     // #157: same window as the job rows above - whole quarters when the range covers them, India-time days
@@ -1199,7 +1188,8 @@ export function initEfficiencyFilters(data) {
     //   unless the table is EMPTY, which is why it has gone stale twice: change it WITH the header.
     body.innerHTML = html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
-    wireMoreCells(body);   // #182c: the "+N more" toggle
+    wireMoreCells(body);   // #182c: the "+N more" toggle — registered FIRST, so it is asked before the editor
+    wireRemarks(body);      // #252e: the same editor the Hiring Manager tab uses. No dept count here, so no callback
     markRemarkOverflow(body);   // #252b: show a remark's "more" only where the text is really clipped
   }
 

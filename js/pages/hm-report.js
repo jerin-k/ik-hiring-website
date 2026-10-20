@@ -8,8 +8,9 @@ import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdRecru
 import { tdTopic, tdOpening, topicLookup, realTopic } from '../people-cells.js';   // #168/#169: the opening and the topic · #213: realTopic
 import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
-import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
-import { remarkMore, markRemarkOverflow } from '../people-list-cell.js';   // #252b: one home for the remark's "more"
+import { loadNotes, noteOf } from '../job-notes.js';   // #150 · #252e: the writer and its guard moved to remark-cell.js
+import { markRemarkOverflow } from '../people-list-cell.js';   // #252b: only a genuinely clipped remark gets a "more"
+import { remarkCell, wireRemarks } from '../remark-cell.js';   // #252e: the remark cell + editor, shared with Overall Efficiency
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
@@ -137,47 +138,12 @@ function joinTag(c) {
   return '';
 }
 const qOfDay_ = (ds) => (ds && ds.length >= 7) ? `${ds.slice(0, 4)}-Q${Math.floor((+ds.slice(5, 7) - 1) / 3) + 1}` : null;
-function jnRemarkCell(o) {
-  const n = o.job8 ? noteOf(o.job8) : null;
-  if (!o.job8) return '<td class="jn-cell"><span class="zero">—</span></td>';
-  if (!n || !n.text) {
-    // "Add a remark" down every row was nine repetitions of the same sentence; the column heading already says what
-    // this is, so the empty state is a quiet affordance (Jerin, 19 Sep).
-    return `<td class="jn-cell jn-rem" data-job8="${esc(o.job8)}"><button type="button" class="jn-add" data-jn-edit="1" title="Add a remark">+ Add</button></td>`;
-  }
-  // ===== #180 (Jerin, 26 Sep 2026): the cell carries the REMARK ALONE =====
-  // 🗣 "the email ... being mentioned is unecessary clutter. Can it just be shown when someone tries editing the
-  //    cell; right above the Cancel/Save" and then 🗣 "Move the date as well to the editor."
-  // 🚨 ONE EXCEPTION, kept deliberately: an UNSAVED draft still says so. That is LIVE STATE, not a byline —
-  //    without it a remark sitting in this browser alone looks identical to one the whole team can see, which is
-  //    the single thing the writer has to be told. CLAUDE.md: above a table there is LIVE STATE ONLY.
-  return `<td class="jn-cell jn-rem${n.unsaved ? ' jn-unsaved' : ''}" data-job8="${esc(o.job8)}">`
-    + `<button type="button" class="jn-text" data-jn-edit="1" title="Edit this remark">${esc(n.text)}</button>`
-    + remarkMore(n.text)   // #252b: cut to the same height as the capped people lists, with its own more
-    + (n.unsaved ? `<span class="jn-by">Unsaved — in this browser only</span>` : '') + `</td>`;
-}
-// ONE delegated listener for the life of the table: expand a long list, open an editor, save or cancel it.
-// ⚠ renderSection1 runs on every filter change and again when the notes land, so this must not stack — two
-// listeners toggled the same class twice and the list appeared frozen (found in the 19 Sep preview).
-function wireJobNotes(body) {
-  if (body.dataset.jnWired === '1') return;
-  body.dataset.jnWired = '1';
-  body.addEventListener('click', async (ev) => {
-    // #182c: the toggle lives in people-list-cell.js now, so all three tabs share one copy (and one bug fix).
-    if (moreClick(ev)) { requestAnimationFrame(() => markRemarkOverflow(body)); return; }
-    const edit = ev.target.closest('[data-jn-edit]');
-    if (edit) { ev.stopPropagation(); openEditor(edit.closest('td')); return; }
-    // #252b: a tree row that just opened reveals remark cells that measured 0 while hidden.
-    requestAnimationFrame(() => markRemarkOverflow(body));
-  });
-}
-// Close the editor by redrawing THIS CELL only — a full re-render would throw away which departments the
-// reader had open and where they were on the page, for a change that touches one cell.
-function closeEditor(cell) {
-  const job8 = cell.dataset.job8 || '';
-  cell.className = 'jn-cell jn-rem';
-  cell.outerHTML = jnRemarkCell({ job8 });
-  // The department row counts how many of its roles carry a remark, so keep it honest after a save.
+// ===== #252e (20 Oct 2026): the cell, the editor and the guard wording moved to js/remark-cell.js =====
+// 🚨 They are SHARED with Overall Efficiency now, so this tab keeps only what is ITS OWN: the department
+//    row's "N of M written" count. Do not re-add a local copy of the cell or the editor — two editors
+//    writing to the same PUBLIC file is exactly what that module exists to prevent (Rule 9).
+// The department row counts how many of its roles carry a remark; keep it honest after a save or a clear.
+function refreshDeptWritten() {
   const body = document.getElementById('hm1Body');
   if (!body) return;
   body.querySelectorAll('tr.dept-header').forEach(h => {
@@ -188,48 +154,16 @@ function closeEditor(cell) {
     if (c) c.innerHTML = written ? `${written} of ${leaves.length} written` : '<span class="zero">—</span>';
   });
 }
-function openEditor(cell) {
-  if (!cell || cell.querySelector('textarea')) return;
-  const job8 = cell.dataset.job8 || '';
-  const n = noteOf(job8) || { text: '' };
-  cell.innerHTML = `<textarea class="jn-ta" maxlength="${NOTE_MAX + 200}" rows="3"
-      placeholder="What should a hiring manager know about this role?">${esc(n.text)}</textarea>
-    <p class="jn-guard">Visible to anyone with the link — no candidate names, salaries, phone numbers or email addresses.</p>
-    ${n.by ? `<p class="jn-byline">Last written by <strong>${esc(firstNameOf(n.by))}</strong>${n.at ? ' \u00b7 ' + esc(dayLabel(n.at)) : ''}</p>` : ''}
-    <div class="jn-actions"><button type="button" class="jn-btn quiet" data-jn-cancel="1">Cancel</button>
-      <button type="button" class="jn-btn" data-jn-save="1">Save</button></div>`;
-  const ta = cell.querySelector('textarea'), guard = cell.querySelector('.jn-guard'), save = cell.querySelector('[data-jn-save]');
-  const check = () => {
-    const bad = guardProblem(ta.value);
-    guard.textContent = bad || 'Visible to anyone with the link — no candidate names, salaries, phone numbers or email addresses.';
-    guard.classList.toggle('bad', !!bad);
-    save.disabled = !!bad;
-  };
-  ta.addEventListener('input', check); ta.addEventListener('click', e => e.stopPropagation()); check();
-  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-  cell.querySelector('[data-jn-cancel]').addEventListener('click', (e) => { e.stopPropagation(); closeEditor(cell); });
-  save.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    save.disabled = true; save.textContent = 'Saving…';
-    const res = await publishNote(job8, ta.value);
-    if (res.ok && !res.warn) { closeEditor(cell); return; }
-    // Two different endings, and they must not read alike:
-    //  · res.warn — the note IS saved, but under a different Google account than the dashboard sign-in (#152a).
-    //    Amber, and the Save button says Saved, because nothing needs doing again.
-    //  · res.reason — we could NOT see the save. Never claim one we cannot see (#144); the note is kept locally
-    //    and the cell stays marked unsaved.
-    guard.textContent = res.warn || res.reason;
-    guard.classList.toggle('warn', !!res.warn);
-    guard.classList.toggle('bad', !res.warn);
-    if (res.ok) { save.textContent = 'Saved'; } else { save.disabled = false; save.textContent = 'Save'; }
-    if (!cell.querySelector('[data-jn-done]')) {   // pressing Save twice must not stack up Close buttons
-      const done = document.createElement('button');
-      done.type = 'button'; done.className = 'jn-btn quiet'; done.textContent = 'Close';
-      done.setAttribute('data-jn-done', '1');
-      done.addEventListener('click', (e2) => { e2.stopPropagation(); closeEditor(cell); });
-      cell.querySelector('.jn-actions').appendChild(done);
-    }
+
+function wireJobNotes(body) {
+  if (body.dataset.jnWired === '1') return;
+  body.dataset.jnWired = '1';
+  // 🚨 #193a: the people-list "+N more" toggle must be asked FIRST. This tbody owns the remark clicks too, and
+  //    without this a click on "+N more" would fall through and open an editor underneath the names.
+  body.addEventListener('click', (ev) => {
+    if (moreClick(ev)) requestAnimationFrame(() => markRemarkOverflow(body));
   });
+  wireRemarks(body, refreshDeptWritten);   // #252e: one editor, shared with Overall Efficiency
 }
 
 // YYYY-MM-DD -> "YYYY-QN" (Position Opened Quarter)
@@ -1042,7 +976,7 @@ export function initHmFilters(data) {
         const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true });
         const opens = hasRecs || topics;
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-lvl="2" data-g="${gi}"${opens ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${jnRemarkCell(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${remarkCell(o)}</tr>`;
         if (!opens) return;
         // With no recruiter level the topics hang off the job exactly as they did before #187.
         const under = hasRecs ? recs : [{ recruiter: null, openings: null }];
