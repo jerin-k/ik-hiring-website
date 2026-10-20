@@ -495,7 +495,7 @@ export function renderHmReport(data) {
       <h4 style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.5rem">Offer drops</h4>
       <p class="sub-note" id="hmDropCaption" style="margin-bottom:0.5rem"></p>
       <div class="scroll-table"><table class="pl-list jp">
-        <thead><tr><th style="min-width:13rem">Drop date / person</th><th class="c-stage">Sub-stage</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
+        <thead><tr><th style="min-width:13rem">Joining date / person</th><th class="c-stage">Dropped on</th><th class="c-rec">Recruiter</th><th class="c-src">Sourcer</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-open">Opening quarter</th></tr></thead>
         <tbody id="hmDropBody"></tbody>
       </table></div>
       ${defsBlock('hm-joiningpending')}
@@ -1512,12 +1512,12 @@ export function initHmFilters(data) {
       .filter(e => !e.quarter || e.quarter >= REPORTING_START)
       .map(e => ({ ...e, job: e.jobTitle || '', _dept: deptOf(e.department || '') }))
       .filter(e => okDept(e._dept) && okRec(e.recruiter) && matchesJob(jobSel, e.jobId8))
-      .filter(e => !e.day || inDojFilter(e.day, dojF));
+      .filter(e => !e.doj || inDojFilter(e.doj, dojF));   // #273a: the SAME field the list above filters on
     const capEl = document.getElementById('hmDropCaption');
     if (capEl) {
       const unlinked = list.filter(e => !e.openingId).length;
       capEl.innerHTML = list.length
-        ? `<strong>${list.length}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, dated by the day they first reached Ref Check, Documentation or Offer. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
+        ? `<strong>${list.length}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, listed by the joining date they had been given. <strong>Dropped on</strong> is the day the drop is counted on. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
           + (unlinked ? ` <strong>${unlinked}</strong> have no opening attached.` : '')
         : '';
     }
@@ -1526,12 +1526,22 @@ export function initHmFilters(data) {
       return;
     }
     list.sort((a, b) => String(a.candidate || '').localeCompare(String(b.candidate || '')));
+      // ===== #273a (Jerin, 20 Oct 2026) — the planned joining date is IN =====
+      // 🗣 *"someone who dropped can have a planned doj. Let tgat be included"*
+      // 🔑 That makes the table TRULY the same columns as the list above it: it is keyed by the PLANNED joining
+      //    date, exactly as that list is, and the date boxes read against the same field on both. The column
+      //    that cannot apply to a drop is Sub-stage — they left, so there is no stage — and THAT is the slot
+      //    the drop date takes, as "Dropped on". Nothing got wider and nothing sits under the wrong heading.
+      // 📏 All 112 drops carry a planned date (attachPlannedDoj_ in data.js), so the column is not sparse.
+      // ⚠ The FLOOR stays on the drop's own quarter, not on the joining date: that is the quarter the Offer
+      //    drop column counts it in, so the list and the number still reconcile.
     body.innerHTML = monthTreeRows(list, {
-      dayOf: e => e.day,
+      dayOf: e => e.doj,
       nameOf: e => e.candidate,
-      cells: e => `<td class="c-stage"><span class="zero" title="This person left the process, so there is no stage to show.">&mdash;</span></td>`
-        + `${tdRecruiter(e.recruiter)}${tdSourcer(e.sourcer)}${tdDept(e._dept)}${tdJob(e.job)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter || null)}`,
-      cols: 9, order: 'newest', live: false,
+      // `live: false` on purpose for BOTH dates: the countdown and the rose "date has passed, not moved to
+      // Hired yet" signal are about someone still coming. Neither is true of a person who dropped out.
+      cells: e => `${tdDoj(e.day, { live: false })}${tdRecruiter(e.recruiter)}${tdSourcer(e.sourcer)}${tdDept(e._dept)}${tdJob(e.job)}${tdOpening(e.openingId, topicLookup(data))}${tdTopic(e.openingId, e.jobId8, topicLookup(data))}${tdQuarter(e.openingQuarter || null)}`,
+      cols: 9, order: 'soonest', live: false,
     });
     pinMonthHeadings(body);
   }

@@ -741,7 +741,7 @@ export function renderRecruiter(data) {
       <div class="scroll-table"><table class="metrics pl-list jp">
         <thead><tr>
           <th style="min-width:15rem">Pod / Recruiter / Candidate</th>
-          <th class="c-src">Sourcer</th><th class="c-mon">Month</th><th class="c-date">Drop date</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-stage">Sub-stage</th><th class="c-open">Opening quarter</th>
+          <th class="c-src">Sourcer</th><th class="c-mon">Month</th><th class="c-date">DOJ</th><th class="c-dept">Department</th><th class="c-job">Job</th><th class="c-open-name">Opening</th><th class="c-topic">Topic</th><th class="c-stage">Dropped on</th><th class="c-open">Opening quarter</th>
         </tr></thead>
         <tbody id="recDropBody"></tbody>
       </table></div>
@@ -2443,7 +2443,7 @@ export function initRecruiterFilters(baseData) {
       // of the page covers. The caption says where the list starts, so the number is never bare.
       const dList = dropRows(data)
         .filter(e => !e.quarter || e.quarter >= REPORTING_START)
-        .filter(e => !e.day || inDojFilter(e.day, dojF));
+        .filter(e => !e.doj || inDojFilter(e.doj, dojF));   // #273a: the SAME field the list above filters on
       const dTree = peopleTree(dList, {
         q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
         rest: 9,
@@ -2455,16 +2455,24 @@ export function initRecruiterFilters(baseData) {
             { department: e.department, title: e.jobTitle, level: (jobById8[String(e.jobId8 || '').slice(0, 8)] || {}).level },
             qNow, openingScores(data)),
           e.openingId ? 'no complexity' : 'no opening'),
-        sortBy: (a, b) => String(b.day || '').localeCompare(String(a.day || '')),
-        cells: e => `${tdSourcer(e.sourcer)}${tdMonth(e.day)}${tdDoj(e.day, { live: false })}${tdDept(e.department)}`
+        // ===== #273a (Jerin, 20 Oct 2026) — the planned joining date is IN =====
+        // 🗣 *"someone who dropped can have a planned doj. Let tgat be included"*
+        // 🔑 Month and DOJ now mean exactly what they mean on the list above — the PLANNED joining date — so
+        //    the two tables really are the same columns. The one column a drop cannot answer is Sub-stage, and
+        //    that slot carries the drop date as "Dropped on". Nothing widened; nothing is mislabelled.
+        // 📏 All 112 drops carry a planned date (attachPlannedDoj_ in data.js), so the column is not sparse.
+        // ⚠ `live: false` on both dates: the countdown and the rose "passed, not Hired yet" mark are about
+        //    someone still coming, which a person who dropped out is not.
+        sortBy: (a, b) => String(a.doj || '').localeCompare(String(b.doj || '')),
+        cells: e => `${tdSourcer(e.sourcer)}${tdMonth(e.doj)}${tdDoj(e.doj, { live: false })}${tdDept(e.department)}`
           + `${tdJob(e.jobTitle)}${tdOpening(e.openingId, TOPIX)}${tdTopic(e.openingId, e.jobId8, TOPIX)}`
-          + `<td class="c-stage"><span class="zero" title="This person left the process, so there is no stage to show.">&mdash;</span></td>${tdQuarter(e.openingQuarter || null)}`
+          + `${tdDoj(e.day, { live: false })}${tdQuarter(e.openingQuarter || null)}`
       });
       dropBody.innerHTML = dTree.html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:1rem">Nobody with an offer has dropped out under these filters.</td></tr>`;
       wireTreePath(dropBody);
       const dcap = document.getElementById('recDropCaption');
       if (dcap) dcap.innerHTML = dTree.shown
-        ? `<strong>${dTree.shown}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, dated by the day they first reached Ref Check, Documentation or Offer. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
+        ? `<strong>${dTree.shown}</strong> received an offer and then left${dojFilterText(dojF) ? ' ' + dojFilterText(dojF) : ''}, listed by the joining date they had been given. <strong>Dropped on</strong> is the day the drop is counted on. From ${REPORTING_START.replace('-', ' ')} onwards, like the rest of the dashboard.`
           + (dTree.orphanCount ? ` <strong>${dTree.orphanCount}</strong> sit in the last group.` : '')
           + (dTree.unlinked ? ` <strong>${dTree.unlinked}</strong> have no opening attached.` : '')
         : '';

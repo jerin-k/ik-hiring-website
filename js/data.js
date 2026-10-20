@@ -213,14 +213,53 @@ export function mergePanelists(rows) {
 //    and Overall Efficiency tabs all read it (their old dropRows copies now delegate here), so the tabs cannot drift.
 // The opening-request tool's "dropped out after an offer on this job" reminder (#110) reads it too. It briefly kept ALL late-stage
 //    drops on the claim that someone who left at Ref Check frees a position; 🗣 Jerin: "How though?" - they never held one.
+// ===== #273a (Jerin, 20 Oct 2026) — a dropped person HAS a planned joining date =====
+// 🗣 *"someone who dropped can have a planned doj. Let tgat be included"* — and he is right: they had an offer,
+// and an offer carries a start date. `dropEvents` does not emit one, but the offer record does, so it is
+// attached HERE, in the one place the drop rule lives, rather than in three page modules that would drift.
+// 📏 MEASURED 20 Oct 2026: all 112 offer drops reach an offer record on candidate + job, and ALL 112 carry a
+//    start date. So this is not a best-effort enrichment — it resolves for every row.
+// ⚠ FOUR of the 112 match more than one offer: the same person re-offered on the same job. The tie-break is
+//    deliberate and ordered — the ARCHIVED offer first (that is the one that became the drop), then the most
+//    recent offer, then the highest version. Never the first one found.
+// 🚨 This joins on NAME + job, which this codebase normally forbids. It is safe ONLY because both arrays come
+//    out of the SAME pipeline build, so the candidate string is identical by construction — it is not the
+//    cross-system match that CLAUDE.md says to do on email. If dropEvents ever carries its own application id
+//    or start date, use that and delete this.
+function attachPlannedDoj_(drops, offers) {
+  if (!drops.length || !offers || !offers.length) return drops;
+  const by = new Map();
+  offers.forEach(o => {
+    const k = `${o.candidate || ''}|${o.jobId8 || ''}`;
+    const l = by.get(k); if (l) l.push(o); else by.set(k, [o]);
+  });
+  const pick = (list) => {
+    if (list.length === 1) return list[0];
+    const arch = list.filter(o => o.appStatus === 'Archived');
+    const pool = arch.length ? arch : list;
+    return pool.slice().sort((a, b) =>
+      String(b.offerCreatedAt || '').localeCompare(String(a.offerCreatedAt || '')) || ((b.verN || 0) - (a.verN || 0))
+    )[0];
+  };
+  return drops.map(e => {
+    if (e.doj) return e;   // the pipeline's own field wins the day it ever emits one
+    const list = by.get(`${e.candidate || ''}|${e.jobId8 || ''}`);
+    const o = list && list.length ? pick(list) : null;
+    return o && o.startDate ? { ...e, doj: o.startDate, dojFrom: 'offer' } : e;
+  });
+}
+
 export function offerDropRows(data) {
-  if (data.dropEvents && data.dropEvents.length) return data.dropEvents.filter(e => e.source === 'offer');
+  if (data.dropEvents && data.dropEvents.length) {
+    return attachPlannedDoj_(data.dropEvents.filter(e => e.source === 'offer'), data.offerEvents);   // #273a
+  }
   // Fallback for a data file older than the unified dropEvents list: the archived offers ARE the offer drops.
   return (data.offerEvents || [])
     .filter(e => e.appStatus === 'Archived')
     .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
                  level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
-                 openingId: e.openingId || null, day: e.lateEntryAt || e.archivedAt || null }));
+                 openingId: e.openingId || null, day: e.lateEntryAt || e.archivedAt || null,
+                 doj: e.startDate || null, dojFrom: 'offer' }));   // #273a: the planned joining date, straight off the offer
 }
 
 // ===== #189f (28 Sep 2026): ONE definition of Joining Conversion =====
