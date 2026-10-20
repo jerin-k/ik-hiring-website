@@ -1684,8 +1684,11 @@ export function initRecruiterFilters(baseData) {
       const pctOf = (num, den) => (den > 0 ? Math.round((num / den) * 100) : null);
 
       // Gap bar: filled = (Goal - Gap) / Goal, so the bar can never disagree with the number beside it.
-      const gapCell = (v) => {
-        if (v.gSc == null) return `<td class="score">${DASH}</td>`;
+      // #252i (Jerin, 20 Oct 2026): 🗣 "put the pill around the count on both" — this returns the SCORE line
+      // that sits under it, so the name changed with the job. 🚨 It used to return a whole <td>; since #252g
+      // merged Delta into one cell that would have nested a cell inside a cell. Caught before it shipped.
+      const gapScoreSub = (v) => {
+        if (v.gSc == null) return `<span class="sublab">${DASH}</span>`;
         // #153 (Jerin, 19 Sep 2026): the caption under this number is GONE — it read "219 of 441 · 50%",
         // "goal met" or "no goal set". The bar and the number carry the shortfall on their own.
         // ⚠ If it is ever brought back, derive it from Goal MINUS Gap and never from the raw outcome: at pod
@@ -1696,13 +1699,10 @@ export function initRecruiterFilters(baseData) {
         // track from BOTH, for the same reason and in the same place: `deltaPill` in js/delta-cell.js. The
         // two tabs are near-mirrors and this cell must never differ between them (Rule 3).
         // 🚨 Still never clamped — a recruiter who beat their goal shows a teal minus (Jerin, 25 Sep: #179).
-        // #252g: the inner pill only — the Delta cell is now ONE cell carrying the heads count with this
-        // under it, like every other metric here. `.deltacell` is inline-flex, so it sits on its own line.
-        // 🚩 WORTH HIS DECISION, NOT MINE: on THIS tab the pill wraps the SCORE (v.gSc) and the plain number
-        //    is heads; on Overall Efficiency it wraps the HEADCOUNT and the score is the plain one. They have
-        //    always differed that way and #252g did not change it — but the two tabs now sit side by side in
-        //    the same shape, so it reads as an inconsistency. Raised with him; do not "tidy" it unasked.
-        return `<span class="gap-sub">${deltaPill(v.gSc)}</span>`;
+        // ✅ #252i SETTLED IT: the pill wraps the COUNT on BOTH tabs, because the count is the big number in
+        // every other column now. It used to wrap the SCORE here and the HEADCOUNT on Overall Efficiency —
+        // an asymmetry nobody noticed until #252g gave the two tables the same shape. 🗣 "Yes, do it, please".
+        return `<span class="sublab">${Math.round(v.gSc)}</span>`;
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
       const utilCell = (v) => {
@@ -1801,7 +1801,10 @@ export function initRecruiterFilters(baseData) {
           + `<td${w}>${c(v.xHC)}<span class="sublab">${c(v.xSc)}</span>${srcSub(v.xSo)}</td>`   // #252g: one cell
           + jpCells(v)                                                          // Joining Pending (#177: total only)
           + dropCells(v)                                                        // Drop HC / Score + % subtext
-          + `<td${w} class="gapcell">${c(seatFmt(v.gHC))}${gapCell(v)}${srcSub(v.gSo)}</td>`   // #252g: Delta in one cell
+          // #252i: the pill carries the COUNT, as on Overall Efficiency; the score sits under it. The count is
+          // passed BOTH ways on purpose — as the number, so the colour and tooltip are right, and as the text,
+          // so a fractional half-position prints as 0.5 instead of being rounded to 1.
+          + `<td${w} class="gapcell">${v.gHC == null ? DASH : deltaPill(v.gHC, seatFmt(v.gHC))}${gapScoreSub(v)}${srcSub(v.gSo)}</td>`
           + peopleCells(v);                                                     // #182c: Who has joined · Who is joining
       };
 

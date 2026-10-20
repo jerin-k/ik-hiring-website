@@ -29,15 +29,24 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 
 // `n` is the Delta itself. Returns the inner pill only, so each caller keeps its own <td> classes — the
 // `gapcell` family is what js/table-cols.js sizes the column by, and that must not move.
-export function deltaPill(n) {
-  const v = Math.round(Number(n) || 0);
-  const state = v > 0 ? 'short' : (v < 0 ? 'over' : 'met');
+// #252i (Jerin, 20 Oct 2026): `label` lets a caller supply the text while the COLOUR and the tooltip still
+// come from `n`. The Recruiter tab needs it because a credit split makes its counts fractional - half a
+// position is real - and rounding 0.5 to 1 inside here would quietly change a number on screen.
+// ⚠ Additive: every existing caller passes one argument and gets exactly what it got before.
+export function deltaPill(n, label) {
+  const raw = Number(n) || 0;
+  const v = Math.round(raw);
+  // 🚨 #252i: the state comes from the RAW number, not the rounded one. Math.round(-0.5) is -0 in JavaScript,
+  // which is neither > 0 nor < 0, so half a position of SURPLUS used to read "met". Identical for whole
+  // numbers, which is every caller except the Recruiter tab.
+  const state = raw > 0 ? 'short' : (raw < 0 ? 'over' : 'met');
   // A plus is never drawn; a minus comes free with the number. "met" says in a word what a bare 0 does not.
-  const label = v === 0 ? '0 met' : String(v);
+  // ⚠ Zero keeps the house wording even when a label is passed, so both tabs say the same thing at zero.
+  const shown = v === 0 ? '0 met' : (label != null ? String(label) : String(v));
   const title = v > 0 ? `${v} still to fill`
     : v < 0 ? `${-v} more ${-v === 1 ? 'person' : 'people'} in closing than positions opened`
     : 'Met exactly — nothing outstanding';
-  return `<span class="deltacell"><span class="dpill ${state}" title="${esc(title)}">${label}</span></span>`;
+  return `<span class="deltacell"><span class="dpill ${state}" title="${esc(title)}">${shown}</span></span>`;
 }
 
 // The whole cell, for the three callers that need nothing else around it.
