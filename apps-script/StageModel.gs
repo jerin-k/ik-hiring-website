@@ -67,6 +67,21 @@ function smKeys_(pred) { var o=[],i; for(i=0;i<M_().length;i++) if(!pred||pred(M
 function smFlagSet_(f) { var o={},i,s; for(i=0;i<M_().length;i++){ s=M_()[i]; if(s[f]) o[s.key]=1; } return o; }
 function smPipelineKeys() { return smKeys_(null); }
 function smAssessOrder() { return smKeys_(function(s){ return s.assess; }); }
+// #240d E: the stages Ashby no longer has. Their history is real, so they keep their key, their
+// aliases and their place in every list; the SITE hides one only in a period that holds no data for
+// it. His rule, 16 Oct, verbatim: "a stage shows in a period if Ashby still has it, OR it has data
+// in that period."
+function smGoneKeys() { var o=[],i; for(i=0;i<M_().length;i++) if(M_()[i].gone) o.push(M_()[i].key); return o; }
+// WHERE a new or restored stage goes. model.push() put it after `hired`, so an adopted interview
+// round appeared to the RIGHT of Offer in every column list, and after Hired in the pipeline. The
+// agreed default for an adopted stage is "an interview round" (his constraint, 16 Oct), and a round
+// belongs before the late stages. Falls back to before `hired`, then to the end.
+function smInsertStage_(model, entry) {
+  var i;
+  for (i = 0; i < model.length; i++) if (model[i].late) { model.splice(i, 0, entry); return i; }
+  for (i = 0; i < model.length; i++) if (model[i].key === 'hired') { model.splice(i, 0, entry); return i; }
+  model.push(entry); return model.length - 1;
+}
 function smRoundPool() { return smFlagSet_('round'); }
 function smAddedPool() { return smFlagSet_('added'); }
 function smNotEvaluation() { var o={},i,s; for(i=0;i<M_().length;i++){ s=M_()[i]; if(!s.evaluation) o[s.key]=1; } return o; }
@@ -122,6 +137,7 @@ function smPublish() {
     tpKeys:      tpKeys,
     tpLabels:    tpLabels,
     tpToStage:   smTpToStage(),
+    goneKeys:    smGoneKeys(),   // #240d E: gone, but their history is real
     rules:       rules
   };
 }
@@ -381,6 +397,52 @@ function applyStageOverridesInner_() {
   return applied.length;
 }
 
+// ===== #240d E — THE CONTROL for stageDerivedRefresh_() ======================================
+// Two directions, and the second is the one that matters.
+// 1. NO-OP: with the model unchanged every derived list must recompute to exactly what it held. If
+//    this fails, the refresh is moving numbers on a quiet day - the one thing it must never do.
+// 2. LOAD-BEARING: add a stage to the model, assert STAGE_KEY_MAP does NOT know its title, call the
+//    refresh, assert it now does. 🚨 A test that only checked the no-op would PASS with the whole
+//    function body deleted, which is how a check that proves nothing gets written.
+// Restores the model and the lists before returning, pass or fail.
+function stageDerivedSelfTest() {
+  var fails = [], notes = [];
+  function snap() {
+    return JSON.stringify([STAGE_KEY_MAP, ASSESS_ORDER, ASSESS_ROUND_POOL, ASSESS_ADDED_210,
+      TOFU_NOT_EVALUATION, LATE_STAGES_, BEYOND_R1_, PIPELINE_KEYS, RECRUITER_STAGES,
+      STAGEKEY_TO_RECKEY, TRACTION_ROUNDS, TRACTION_TORD, TRACTION_KORD]);
+  }
+  var model = stageModel_(), before = snap(), lenBefore = model.length;
+
+  // --- 1. the no-op direction
+  stageDerivedRefresh_();
+  if (snap() !== before) fails.push('NOT A NO-OP: a derived list changed with the model untouched');
+  else notes.push('no-op on an unchanged model: PASS');
+
+  // --- 2. the load-bearing direction
+  var TITLE = '__selftest round__', KEY = '__selftestRound';
+  var entry = smNewStageEntry_(KEY, TITLE);
+  var at = smInsertStage_(model, entry);
+  if (STAGE_KEY_MAP[TITLE]) fails.push('the title was already mapped before the refresh - test is void');
+  stageDerivedRefresh_();
+  if (STAGE_KEY_MAP[TITLE] !== KEY) fails.push('STAGE_KEY_MAP did NOT learn the new title - adoption still inert');
+  else notes.push('STAGE_KEY_MAP learned the adopted title: PASS');
+  if (ASSESS_ORDER.indexOf(KEY) < 0) fails.push('ASSESS_ORDER did NOT gain the new stage - no rollup would count it');
+  else notes.push('ASSESS_ORDER gained it: PASS');
+  if (at >= model.length - 1) fails.push('inserted at the END - a round must not sit after Hired');
+  else notes.push('inserted before the late stages, at index ' + at + ': PASS');
+
+  // --- restore, whatever happened
+  model.splice(at, 1);
+  stageDerivedRefresh_();
+  if (model.length !== lenBefore) fails.push('model not restored (' + model.length + ' vs ' + lenBefore + ')');
+  if (snap() !== before) fails.push('lists not restored after the test');
+
+  Logger.log('#240d stageDerivedSelfTest: ' + (fails.length ? 'FAIL - ' + fails.join(' | ')
+    : 'all passed - ' + notes.join(' | ')));
+  return fails;
+}
+
 // ===== #240d — a new or renamed stage looks after itself =====================================
 // Goes into StageModel.gs, after applyStageOverrides_().
 //
@@ -397,6 +459,10 @@ function applyStageOverridesInner_() {
 // 🚨 DEGRADE, NEVER ABORT. This runs inside the refresh. An Ashby hiccup must cost the register an
 // update, never the rebuild — so an empty inventory means "do nothing", not "forget everything".
 var STAGE_REGISTER_FILE_ = 'stage_register.json';
+// #240d F: what the last sync did, for the #236a mail to report. A GLOBAL rather than an argument,
+// the same way STAGE_AUTO_MATCHED already works - the sync runs at the top of both refresh jobs and
+// the mail goes out hundreds of lines later, in only one of them.
+var STAGE_REGISTER_LAST_ = null;
 var STAGE_REGISTER_CACHE_ = null;
 var STAGE_LIVE_PLANS_CACHE_ = null;
 
@@ -462,13 +528,49 @@ function smNewStageEntry_(key, title) {
            rec: key, recMapped: true, tp: key, late: false, beyondR1: true, autoAdded: true };
 }
 
+// ===== #240d E - THE DERIVED LISTS MUST FOLLOW THE MODEL ====================================
+// MEASURED 19 Oct 2026, and it is why E could not work without this.
+// TWELVE stage lists are module-level `var`s across five files, so they are computed when the
+// project LOADS - before refreshDashboardData() runs a single line, and therefore long before
+// stageRegisterSync_() can add a stage to the model. smPublish() is called INSIDE the refresh, so
+// an adopted stage reached the site's columns while STAGE_KEY_MAP never learned its title.
+// A stage nothing can ever be mapped into: a column of zeros, for ever.
+// 🔑 THAT IS EXACTLY WHAT THE THREE SANDBOX STAGES DID TODAY - 21 appearances in `stageLists`,
+// ZERO rows in the rollups. The plan gate stopped them, but they were already inert; a GENUINE new
+// stage would have come out just as empty. So this is not a tidy-up, it is the half of D that was
+// missing.
+// applyStageOverridesInner_ already does this move for four of them (ASSESS_ROUND_POOL,
+// ASSESS_ADDED_210, TOFU_NOT_EVALUATION, STAGE_EXCLUDED_). These are the other nine.
+// ⚠ WITH AN UNCHANGED MODEL EVERY ONE RECOMPUTES TO THE VALUE IT ALREADY HELD, which is what
+// stageDerivedSelfTest() asserts and what makes this safe to land on a quiet day: it is a provable
+// no-op until a stage is actually adopted, renamed or gone.
+// 🚨 Assigning across files works because Apps Script shares ONE global scope - the same reason
+// StageModel.gs sorting last does not matter for a function BODY (only for a `var` initialiser).
+function stageDerivedRefresh_() {
+  STAGE_KEY_MAP      = smStageKeyMap();     // title -> key. THE critical one: without it nothing maps
+  STAGE_NORM_INDEX   = null;                // lazy, built FROM STAGE_KEY_MAP, so it must be dropped
+  ASSESS_ORDER       = smAssessOrder();
+  ASSESS_ROUND_POOL  = smRoundPool();
+  ASSESS_ADDED_210   = smAddedPool();
+  TOFU_NOT_EVALUATION = smNotEvaluation();
+  LATE_STAGES_       = smLateStages();
+  BEYOND_R1_         = smBeyondR1();
+  PIPELINE_KEYS      = smPipelineKeys();
+  RECRUITER_STAGES   = smRecruiterStages();
+  STAGEKEY_TO_RECKEY = smStageKeyToRecKey();
+  TRACTION_ROUNDS    = smTractionRounds();
+  TRACTION_TORD      = smTractionTord();
+  TRACTION_KORD      = smTractionKord();
+}
+
 // Reconcile what Ashby has against what we have seen before.
 // Returns { added:[], renamed:[], gone:[] } — the three things the #236a mail has to distinguish.
 function stageRegisterSync_(dry) {
   try { return stageRegisterSyncInner_(dry); }
   catch (e) {
     Logger.log('#240d register NOT synced, the model stands as it was: ' + String(e).substring(0, 200));
-    return { added: [], renamed: [], gone: [], failed: true };
+    STAGE_REGISTER_LAST_ = { added: [], renamed: [], gone: [], failed: true };
+    return STAGE_REGISTER_LAST_;
   }
 }
 
@@ -520,7 +622,7 @@ function stageRegisterSyncInner_(dry) {
     if (!live[s.planId]) { out.ignored = (out.ignored || 0) + 1; continue; }
     var key = smMintKey_(s.title, byKey);
     var entry = smNewStageEntry_(key, s.title);
-    model.push(entry);
+    smInsertStage_(model, entry);   // E: a round belongs before the late stages, not after Hired
     byKey[key] = entry;
     st[s.id] = { key: key, titles: [s.title], type: s.type, firstSeen: now, lastSeen: now, gone: false, auto: true };
     // 🚨 ALWAYS reported. A "first run" suppression here adopts a stage SILENTLY - the exact failure
@@ -536,14 +638,49 @@ function stageRegisterSyncInner_(dry) {
     out.gone.push((st[id].titles || ['?'])[(st[id].titles || ['?']).length - 1]);
   }
 
+  // ----- E: THE REGISTER IS THE MEMORY; THE BASELINE IS ONLY A SEED -------------------------
+  // 🚨 THIS IS THE BUG MY OWN TEST CAUGHT, and it is bigger than E as written. stageModel_()
+  // rebuilds from the HARD-CODED baseline on every project load, so a stage adopted on one run is
+  // gone from the model on the next. And because its id is by then IN the register, the next sync
+  // takes the "already known" branch and never re-adopts it. ➡ AN ADOPTED STAGE SURVIVED EXACTLY
+  // ONE REFRESH, then vanished - column, history and all - with nothing reported.
+  // 🔑 So the restore is not only for gone stages. EVERY register entry whose key is missing from
+  // the model is put back, every run: that is what makes the register, not the baseline, the record
+  // of what the dashboard knows. A key already in the baseline is skipped - it is hard-coded.
+  // ⚠ A gone stage comes back FLAGGED gone, which is what lets the site drop it from the periods
+  // that hold nothing for it. A still-live one comes back whole.
+  // ⚠ EDGE CASE, left deliberately: a stage adopted in error AND since deleted from Ashby would be
+  // restored for ever, because the retirement path only fires while Ashby still lists it. Nothing is
+  // in that state today (the three from 19 Oct were purged by run240dSync), and the alternative -
+  // guessing from a plan that no longer exists - would be worse than a line in the register.
+  for (id in st) {
+    if (!st.hasOwnProperty(id)) continue;
+    var g = st[id], gm = byKey[g.key], gt = (g.titles || []);
+    if (gm) { if (g.gone) gm.gone = true; continue; }    // hard-coded, or already restored this run
+    var back = smNewStageEntry_(g.key, gt[gt.length - 1] || g.key);
+    back.titles = gt.slice();                      // EVERY alias, so history under the old name resolves too
+    if (g.gone) back.gone = true;
+    smInsertStage_(model, back);
+    byKey[g.key] = back;
+    out.restored = (out.restored || 0) + 1;
+  }
+
+  // 🚨 WIRE THE MODEL INTO THE LISTS THAT COUNT. Until this call the nine lists above still held
+  // their load-time values, so an adopted or restored stage had a column and no data. Unconditional
+  // on purpose: it is a no-op when nothing moved (stageDerivedSelfTest proves that), and a
+  // conditional here is one more thing to get wrong.
+  stageDerivedRefresh_();
+
   reg.schema = 1; reg.stages = st; reg.updatedAt = now;
   if (dry) { Logger.log('#240d DRY - nothing written to Drive'); }
   else saveDriveJson_(STAGE_REGISTER_FILE_, reg);
   // the inventory cached a key per stage against the OLD map; a rename or an adoption changes that
   if (out.added.length || out.renamed.length) STAGE_INVENTORY_CACHE_ = null;
+  STAGE_REGISTER_LAST_ = out;
   Logger.log('#240d register: ' + out.added.length + ' added, ' + out.renamed.length
     + ' renamed, ' + out.gone.length + ' gone, ' + (out.ignored || 0) + ' ignored, '
-    + (out.unadopted || 0) + ' retired (adopted in error)');
+    + (out.unadopted || 0) + ' retired (adopted in error), '
+    + (out.restored || 0) + ' restored from the register');
   return out;
 }
 
