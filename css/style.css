@@ -951,6 +951,12 @@ table.metrics thead th:first-child { z-index: 4; background: var(--navy); text-a
 /* A rowspan=2 group cell ends on the header's own bottom edge, so it carries the 2px rule, not .stage-hdr's
    light 1px divider — that 1px is there to sit ABOVE the Heads/Score row, and these cells have none below them. */
 table.metrics thead th[rowspan="2"] { box-shadow: inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }   /* #197d: a shadow, so it survives sticking */
+/* #252g (20 Oct 2026): Overall Efficiency's Fulfilment header is a SINGLE row — the score moved under the
+   headcount in the body, so there is no Heads/Score row left to sit above. Every heading cell therefore ends
+   on the header's own bottom edge and takes the 2px rule, which is exactly what the rowspan rule above says;
+   this says it for a header that needs no rowspan to be true. Specificity (0,3,1) beats `.stage-hdr`'s
+   (0,1,0) box-shadow, so source order does not decide it (Rule 12). */
+table.metrics.eff-fulfil thead th { box-shadow: inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }
 table.metrics tbody tr { background: var(--card); }
 table.metrics tbody tr:hover { background: #f8fafc; }
 /* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */

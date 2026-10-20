@@ -81,26 +81,33 @@ function dashTds(n) { return `<td>${DASH}</td>`.repeat(n); }
 // the untied people. 🚨 Rule 8 as CORRECTED 27 Sep 2026: "never" was FALSE - some drops DO carry an opening (7 of
 // 18 in Q3). The dash is still right because the split would be incomplete, NOT because it is unknowable.
 // 🚨 Never put a number in a dashed cell: a wrong one here looks right and nobody will question it.
-const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td><td class="score nosplit"><span class="zero">\u2014</span></td>';
-// #182c: ONE dash cell. EFF_DASH above is a PAIR - it fills an HC/Score column - and the people columns are
-// single columns, so they need this instead.
+// 🚨 #252g (20 Oct 2026): ONE cell now, not a pair. A metric is a single column since the score moved under
+// the headcount, so this fills one. It was `<td>` + `<td class="score">` while the pairs existed.
+const EFF_DASH = '<td class="nosplit"><span class="zero">\u2014</span></td>';
+// #182c: a dash in one of the three PEOPLE columns. Same shape as EFF_DASH since #252g, but a different class
+// (`jn-cell` carries the people half's own background and width), so they stay separate constants.
 const EFF_ONE = '<td class="jn-cell nosplit"><span class="zero">\u2014</span></td>';
 // #188: `noPending` dashes the Joining pipeline pair. Under a JOB the topic rows carry a real count, because
 // the people are placed by the opening their offer names; at DEPARTMENT level, with the job gone, they are not
 // split at all — and a 0 there would read as "nobody", which is a different claim (#182a's rule).
+// 🚨 #252g: THE TOPIC ROWS ARE A SECOND BUILDER FOR THE SAME TABLE and have to be merged with cells() in the
+// SAME change, or they run 14 cells against a 9-column header. Measured when the merge was first applied:
+// 26 topic rows were still 14 wide. The comment below already records this going wrong once before, the other
+// way round — THIRD time this table's cell count has drifted. 🔑 Count cells per row; the page looks fine.
 const topicCells = (x, noPending, peopleHtml) =>
-  `<td style="font-weight:600">${x.total}</td><td class="score">${x.tS}</td>`
-  + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td><td class="score">${x.jS}</td>`
+  `<td style="font-weight:600">${x.total}<span class="sublab">${x.tS}</span></td>`
+  + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}<span class="sublab">${x.jS}</span></td>`
   + (noPending ? EFF_DASH
-    : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
-      + `<td class="score">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</td>`)
+    : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}`
+      + `<span class="sublab">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</span></td>`)
   + EFF_DASH + EFF_DASH
   // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE — it used to read "a topic row names nobody... repeating
   // them would show the same person twice in one open tree." 🗣 *"Not seeing joiner & joining pipeline names
   // against topics"*. Under his option (b) the ROLE row above now says "N under their topics" instead of
   // repeating them, so nobody is listed twice and the deepest row that can claim a person names them.
-  // 🚨 EFF_DASH is a PAIR of cells (an HC/Score column), not one. Using it three times here gave topic rows
-  //    17 cells against the header's 14 - caught by counting cells per row, not by looking at the page.
+  // 🚨 EFF_DASH WAS a PAIR of cells (an HC/Score column). Using it three times here gave topic rows 17 cells
+  //    against the header's 14 - caught by counting cells per row, not by looking at the page. Since #252g it
+  //    is ONE cell, because a metric is one column; the two uses above cover Offer drop and Delta.
   // ⚠ The THIRD cell is Remarks and stays a dash: a remark belongs to the role, never to a topic.
   + (peopleHtml || EFF_ONE + EFF_ONE) + EFF_ONE
 ;   // #182d: the Missed pair is gone - Delta already says what was not filled, live
@@ -150,6 +157,21 @@ export function renderEfficiency(data) {
 
   return `
     <style>
+      /* ===== #252h (Jerin, 20 Oct 2026) — ONE PAIR OF EDGES FOR THE WHOLE PAGE =====
+         🗣 "The bottom & top panel arent matching in width; can the filter & chart panel be revised to match?"
+         He is right, and it is #252a's loose end: that change let a wide TABLE span the container's full
+         1260px by cancelling the 1.75rem padding, but the filter row, the sub-tab band and the chart stayed
+         in the 1210px content column. Measured 20 Oct: table 90➔1350, everything above it 115➔1325 — the
+         table stuck out 25px each side.
+         🔑 WHY THE WHOLE PAGE AND NOT JUST THE TWO HE NAMED: the sub-tab band and the filter row are SHARED
+         by all nine sub-tabs, and only Position Fulfilment has a wide table. Widening just those two would
+         have lined up ONE tab and broken the other eight the other way round. Running the page at 1260
+         instead costs nothing, because every other table is width:100% and simply follows.
+         ⚠ The wide-table negative margins must be cancelled here or the table lands at 1310 and overhangs.
+         This block lives with the page, so it applies to Overall Efficiency only until he has looked at it. */
+      .page-content { margin-left: -1.75rem; margin-right: -1.75rem; }
+      .page-content .scroll-table.wide-table { margin-left: 0; margin-right: 0; }
+
       /* .eff-subtabs is the recessed .subtab-band — see style.css */
       /* .eff-subtab now inherits .subtab-chip from style.css — one chip for every level below the page */
 
@@ -242,8 +264,24 @@ export function renderEfficiency(data) {
 
       <div class="scroll-table wide-table"><table class="metrics eff-fulfil painted-halves">
         <thead>
-          <tr><th rowspan="2" style="min-width:17rem">Department / Job / Recruiter / Topic</th><th colspan="2" class="stage-hdr">Total positions</th><th colspan="2" class="stage-hdr">Joined</th><th colspan="2" class="stage-hdr">Joining pipeline</th><th colspan="2" class="stage-hdr">Offer drop</th><th colspan="2" class="stage-hdr">Delta</th><th rowspan="2" class="stage-hdr jn-th">Who has joined</th><th rowspan="2" class="stage-hdr jn-th">Who is joining</th><th rowspan="2" class="stage-hdr jn-th">Remarks</th></tr>
-          <tr><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th><th class="stage-sub">HC</th><th class="stage-sub">Score</th></tr>
+          <!-- #252g (Jerin, 20 Oct 2026): ONE row, ONE column per metric. The HC/Score pairs are merged and the
+               score is tucked under the headcount in the body, so the Heads/Score sub-row has nothing left to
+               label and is gone. 🗣 "Current approach is to tuck score under the count." · "Like it".
+               ⚠ No rowspan anywhere now, so the "thead th[rowspan=2]" rule's 2px bottom rule no longer applies —
+               the "table.metrics.eff-fulfil thead th" rule in style.css restates it. Do not re-add a rowspan to
+               get the line back; an attribute that lies about the markup is how the next reader is misled.
+               🚨 AND NO BACKTICKS IN THIS COMMENT: it sits inside a TEMPLATE LITERAL, so one backtick ends the
+               literal and the parse dies with "Unexpected identifier" pointing at the next word. It cost a
+               load here on 20 Oct 2026, caught by the browser console on the first run. -->
+          <!-- 🚨 #252g: THE FOUR TUCKED METRICS CARRY AN EXPLICIT c-num, and that is load-bearing, not tidiness.
+               table-cols.js infers a column's family from what its cells CONTAIN, and a sublab span means
+               "a number with a caption under it" ➔ c-cap, whose 7.8rem was sized for captions that are WORDS
+               ("+1 sourced"). Tucking the score put a sublab in all five, so the four plain ones ballooned to
+               c-cap and the number columns came out at 474px — WIDER than the 370 the merge was supposed to buy,
+               and Remarks fell 173 ➔ 143. An explicit family on the heading always wins, so this says plainly
+               that they are numbers. Measured 20 Oct 2026, on the real table at the real 1210px panel.
+               ⚠ Delta is deliberately left to infer: its pill makes it c-bar (9.5rem), which is what it needs. -->
+          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr jn-th">Remarks</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
@@ -951,23 +989,33 @@ export function initEfficiencyFilters(data) {
     // #218 (9 Oct 2026): the bar is gone from Delta — one pill, built in js/delta-cell.js, identical on all
     // three tabs. The share-of-total fill that used to drive it is gone with it: it drew nothing on a met row
     // and nothing on a surplus, which is most of this table.
-    const gapCell = (x) => `<td class="gapcell">${deltaPill(x.gap)}</td>`;
+    // #252g: the Delta score tucks under its pill, like every other metric here. `deltaPill` is untouched —
+    // it is the ONE home for this pill on all three tabs (#218) and must stay identical everywhere.
+    const gapCell = (x) => `<td class="gapcell">${deltaPill(x.gap)}<span class="sublab">${x.gS}</span></td>`;
     // Column order mirrors HM → Department Summary exactly:
     // Total Positions · Joined · Joining Pending · Drop · Gap · Missed. Each carries its Score alongside.
     const cells = (x, bold) => {
       const w = bold ? ' style="font-weight:600"' : '';
       // .score marks the secondary half of each HC/Score pair so headcount reads first.
       const dropPct = (() => { const den = x.joined + x.pending + x.drop; return den > 0 ? Math.round((x.drop / den) * 100) : null; })();
-      return `<td${w}>${z(x.total)}</td><td class="score">${z(x.tS)}</td>`
-        + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td><td class="score">${z(x.jS)}</td>`
-        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
-        // #176c: same caption, same words as the Recruiter tab's nsSub — the mirror tab is a default check.
-        // ⚠ Deliberately NOT on the topic rows below: a topic prices its people at the JOB's points
-        //   (pending × pt), not their own opening's, so a "no score" count there would not match its own number.
-        + `<td class="score">${z(x.pS)}${x.pNS > 0 ? `<span class="sublab warn">${x.pNS} no score</span>` : ''}</td>`
-        + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
-        + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td><td class="score">${z(x.dS)}</td>`
-        + gapCell(x) + `<td class="score">${x.gS}</td>`
+      // #252g: the score tucks UNDER its headcount as a `.sublab` — the house class for a small grey line
+      // beneath a figure. 🔑 It needs no special case on the totals row: `.totals-row` redefines `--muted`
+      // for the whole row, which is what `.sublab` reads, so it retints to a readable tint on the navy.
+      // ⚠ Each score keeps the formatting it had: the first four went through z(), gS never did.
+      const sc = (v) => `<span class="sublab">${v}</span>`;
+      return `<td${w}>${z(x.total)}${sc(z(x.tS))}</td>`
+        + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}${sc(z(x.jS))}</td>`
+        // 🗑 #252g: the `N no score` caption came off with the merge, and it was HIS catch that it was
+        //    redundant: the Joining Pipeline sub-tab already flags every one of those people individually
+        //    under their own name AND totals them, with the columns to go and find them. A count on a row
+        //    cannot beat that. ⚠ What it also used to warn is that THIS score is understated — that warning
+        //    now lives in words, in `definitions.js` under `eff-fulfilment` (Rule 6). `x.pNS` is still
+        //    computed and still correct; nothing on this tab renders it. Do not restore the caption without
+        //    re-reading that definition, or the two will say different things.
+        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}${sc(z(x.pS))}</td>`
+        + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}${sc(z(x.dS))}`
+        + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td>`
+        + gapCell(x)
  + peopleCells(x);   // #182c: Who has joined · Who is joining · Remarks
     };
     // ===== #182c (Jerin, 27 Sep 2026) — THE THREE PEOPLE COLUMNS =====
@@ -1144,9 +1192,11 @@ export function initEfficiencyFilters(data) {
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
     html += `<tr class="totals-row" style="font-weight:700"><td>All departments</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
-    // ⚠ 14 = 1 name + 10 number columns + 3 people columns. It read 13 even before #182c - stale since #182e
-    //   took the Missed pair off - so an empty table stretched its message across the wrong number of columns.
-    body.innerHTML = html || `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
+    // ⚠ 9 = 1 name + 5 number columns + 3 people columns. It was 14 while each metric had an HC/Score PAIR;
+    //   #252g merged them. It read 13 even before #182c - stale since #182e took the Missed pair off - so an
+    //   empty table stretched its message across the wrong number of columns. 🔑 This number is invisible
+    //   unless the table is EMPTY, which is why it has gone stale twice: change it WITH the header.
+    body.innerHTML = html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
     wireMoreCells(body);   // #182c: the "+N more" toggle
   }
