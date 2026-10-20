@@ -1202,7 +1202,7 @@ export function initEfficiencyFilters(data) {
       });
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
-    html += `<tr class="totals-row" style="font-weight:700"><td>All departments</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
+    html += `<tr class="totals-row" style="font-weight:700"><td>Total</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
     // ⚠ 10 = 1 name + 5 number columns + Who has joined + Who is joining + Pri (#252f) + Remarks. It was 9
     //   before the Pri column, and 14 while each metric had an HC/Score PAIR;
     //   #252g merged them. It read 13 even before #182c - stale since #182e took the Missed pair off - so an

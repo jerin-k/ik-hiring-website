@@ -371,7 +371,7 @@ export function renderHmReport(data) {
       /* ===== #182c/#182d (Jerin, 26 Sep 2026) — NINE COLUMNS, AND THE TABLE FITS ITS PANEL =====
          🗣 "can we get the table to fit inside the panel. Width can be reduced for Dropped, Delta, Who has
              joined, Who is joining." ... then 🗣 "Awesome - kill Missed column everywhere."
-         COLUMNS NOW: 1 Department · 2 Total openings · 3 Joined · 4 Joining pending · 5 Dropped · 6 Delta ·
+         COLUMNS NOW: 1 Department · 2 Total positions · 3 Joined · 4 Joining pending · 5 Dropped · 6 Delta ·
                       7 Who has joined · 8 Who is joining · 9 Remarks.
          🚨 MISSED WAS COLUMN 7, SO EVERY RULE BELOW MOVED DOWN ONE. If a column is ever added or removed again,
             re-derive this whole block rather than editing numbers in place - a half-shifted set silently puts a
@@ -453,7 +453,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary painted-halves">
-        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total openings</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total positions</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}

@@ -1006,6 +1006,24 @@ table.metrics tbody tr:hover { background: #f8fafc; }
 table.metrics td:first-child { box-shadow: 1px 0 0 var(--border); }
 table.metrics th:first-child { box-shadow: 1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }   /* #197d: its right edge AND the header rule, both as shadows */
 
+/* ===== #265 (Jerin, 20 Oct 2026) — every cell in a row starts on the SAME LINE =====
+   🗣 "the way columns are aligned vertically - looks better in Hiring Manager & Recruiter Efficiency."
+   🔑 IT WAS THE SAME FAULT ON ALL THREE, not a difference between them. The people columns are top-aligned
+   (td.jn-cell.jn-cell), while every number cell sat at MIDDLE — Hiring Manager from its own page block, and
+   Overall Efficiency from the browser's default for a table cell, with no rule of its own at all. A row is
+   as tall as its longest people list, so the taller it grew the further the numbers drifted from the names
+   they belong to. MEASURED on each tab's tallest row, as the gap between the first name and the numbers:
+   Overall Efficiency 49px (130px row) · Hiring Manager 44px (117px) · Recruiter Efficiency 31px (91px).
+   The other two only looked better because their rows are shorter.
+   ✅ After this rule all three measure a 2px spread, and NO ROW CHANGES HEIGHT — nothing reflows, nothing
+   resizes; only where the text sits inside each cell.
+   🚨 (0,1,3) IS DELIBERATE. `.hm-report table td` is (0,1,2) and lives in a per-page <style> block, which
+   loads AFTER this file and wins at equal specificity (Rule 12) — so naming the table is what carries it.
+   ⚠ `td.jn-cell.jn-cell` is (0,2,1) and still wins for the people cells; they were already top. */
+table.hm-summary tbody td,
+table.eff-fulfil tbody td,
+table.wide-fulfil tbody td { vertical-align: top; }
+
 /* Score sits beside its HC as the secondary number - lighten it so headcount reads first. */
 table.metrics td.score { color: var(--muted); font-weight: 400; }
 
