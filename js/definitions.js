@@ -1054,6 +1054,72 @@ export const DEFINITIONS = {
     ]
   },
 
+  // ===== #269 — the Type & Budget sub-tab, on Hiring Manager and Overall Efficiency =====
+  'tb-roletype': {
+    summary: 'What each role type and status counts',
+    intro: 'One row per <strong>position</strong>, counted in the quarter the position was opened. <strong>Total = Filled + Open + Missed</strong>, always.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026.',
+    groups: [
+      {
+        heading: 'The columns',
+        items: [
+          ['Role type', 'Why the position exists, as the recruitment team set it when the position was raised: <em>New</em>, <em>Replacement</em>, <em>Anticipation Of Exit</em>, <em>Buffer</em> or <em>As per AOP</em>.'],
+          ['Total positions', 'Positions opened inside the period shown above. Filled plus Open plus Missed.'],
+          ['Filled', 'Someone was moved to <em>Hired</em> against this position.'],
+          ['Open', 'Still to fill.'],
+          ['Missed', 'Carried forward to a later quarter without being filled.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['Filled is the same count Position Fulfilment calls Joined', 'Two names, one number &mdash; both count <strong>positions</strong> someone was hired into, in the quarter the position was opened. Neither is the count of <strong>people</strong> who started, which is what the Joiners list shows.'],
+      ['&ldquo;As per AOP&rdquo; is a real category, not a blank', 'It means the position was in the Annual Operating Plan. It is one of five choices the team picks from when raising a position, so a large count here is planned headcount rather than unanswered questions.'],
+      ['Where the role type is read from', 'The field on the position in Ashby. Where that is empty it falls back to the third part of the position&rsquo;s name, which is how the team has always written it. A line under the table says how many of each.'],
+    ]
+  },
+
+  'tb-emptype': {
+    summary: 'Where contract type comes from, and what a blank row means',
+    intro: 'The same positions as the Role Type panel, split instead by <strong>what kind of contract</strong> each one is.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026.',
+    groups: [
+      {
+        heading: 'The columns',
+        items: [
+          ['Contract type', 'Full time, part time, fixed term, contract or intern, read from the position itself in Ashby.'],
+          ['Total positions', 'Positions opened inside the period shown above. Filled plus Open plus Missed.'],
+          ['Filled, Open, Missed', 'Exactly as on the Role Type panel.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['A blank row is shown, never dropped', 'Any position with no contract type is gathered into its own row so the rows still add up to Total. If that row is large, the field has not been filled in on those positions.'],
+      ['The values are the full ones', 'The data holds <em>PTC - Direct</em> and <em>FTC - Direct</em>, not the shorter PTC and FTC.'],
+    ]
+  },
+
+  'tb-budget': {
+    summary: 'How the budget ledger adds up, and why it is empty',
+    intro: 'One row per <strong>department</strong>. <strong>Delta = Starting point + Added &minus; Spent</strong>.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026.',
+    groups: [
+      {
+        heading: 'The columns',
+        items: [
+          ['Positions', 'Positions opened inside the period shown above, for this department.'],
+          ['Can carry a budget', 'Of those, how many were raised as <em>Replacement</em> or <em>Anticipation Of Exit</em> &mdash; the only two kinds a budget is asked for. It is the ceiling on what the Added column could ever cover.'],
+          ['Starting point', 'The budget the department began the period with. Nothing in Ashby holds this, so it is typed in here.'],
+          ['Added from Replacement / Anticipation', 'The budget freed up by the people being replaced, added together for the department.'],
+          ['Spent on new &amp; replacement offers', 'What the offers made in the period cost, added together for the department.'],
+          ['Delta', 'What is left. A negative figure means more has been committed than was available, and is shown as it is.'],
+        ]
+      },
+    ],
+    warnings: [
+      ['An empty cell is not a zero', 'No position in Ashby carries a budget figure, so the three calculated columns have nothing to add up. They stay empty rather than showing a misleading nought.'],
+      ['What an offer costs is not held anywhere the dashboard reads', 'So the Spent column cannot be filled from today&rsquo;s data at all, even once budgets start being entered.'],
+    ]
+  },
 
 };
 

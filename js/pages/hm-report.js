@@ -20,6 +20,7 @@ import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter} from '../period.js';   // #127 · #129 · #130 · #133
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
+import { mountTypeBudget } from '../type-budget.js';   // #269
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
 import { STAGES_ORDER, STAGE_LABELS, TP_KEYS, TP_LABELS, TP_TO_STAGE, dropGoneEmpty } from '../stage-lists.js';   // #240b: published by the pipeline, one source
 import { HBAR, hbarHeight, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
@@ -430,6 +431,9 @@ export function renderHmReport(data) {
       <button class="hm-subtab subtab-chip" data-tab="throughput">Throughput</button>
       <span class="subtab-sep" aria-hidden="true"></span>
       <button class="hm-subtab subtab-chip" data-tab="panelists">Panelists</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
+      <!-- #269 (Jerin, 20 Oct 2026): ONE chip; the three panels nest vertically inside it. -->
+      <button class="hm-subtab subtab-chip" data-tab="typebudget">Type &amp; Budget</button>
     </div>
 
     <!-- ===== SUB-TAB STRIP ===== -->
@@ -521,6 +525,11 @@ export function renderHmReport(data) {
       <div id="hmTractionHost"></div>
     </div>
 
+    <!-- ===== PANEL: TYPE & BUDGET (#269) — one host, the shared module owns what is inside ===== -->
+    <div class="hm-panel" data-panel="typebudget" style="display:none">
+      <div id="hmTypeBudgetHost"></div>
+    </div>
+
     <!-- ===== PANEL: PANELISTS ===== -->
     <div class="hm-panel" data-panel="panelists" style="display:none">
       <div class="filter-bar"><div class="ms" id="msHmPanel"></div></div>
@@ -549,6 +558,7 @@ function dropIn(e, rg, qs) {
 }
 
 let renderTraction = null;   // #206: set once the page is in the DOM
+let renderTypeBudget = null;   // #269: set once the page is in the DOM
 // #207: the quarters ticked on the Interview Traction panel's OWN Quarter chip. Empty until it mounts,
 // and read ONLY by that panel's scope - no other panel on this tab sees it.
 let tractionQs = [];
@@ -644,7 +654,8 @@ export function initHmFilters(data) {
   // whatever was on it, showing Q4's 137 / 15 under a Q3 heading with nothing on screen to say so.
   // ⚠ Exactly Rule 4's lie: a quarter heading over another quarter's numbers. Measured 18 Oct 2026.
   // 🔑 ONE predicate decides both whether the chip is DRAWN and whether it is OBEYED.
-  const chipGoverns = (name) => name !== 'positions' && name !== 'traction' && name !== 'joiningpending';
+  const chipGoverns = (name) => name !== 'positions' && name !== 'traction' && name !== 'joiningpending'
+    && name !== 'typebudget';   // #269: this panel reads the same window Position Fulfilment does
   function hmQuarters() {
     const multi = (msHmQuarters && chipGoverns(activeTab)) ? msHmQuarters.getSelected() : [];   // #243: only where it is shown
     if (multi.length) return multi.slice().sort();
@@ -1577,6 +1588,7 @@ export function initHmFilters(data) {
     else if (activeTab === 'throughput') renderThroughput();
     else if (activeTab === 'pipeline') renderPipeline();
     else if (activeTab === 'traction') { if (renderTraction) renderTraction(); }   // #206
+    else if (activeTab === 'typebudget') { if (renderTypeBudget) renderTypeBudget(); }   // #269
     else if (activeTab === 'panelists') renderPanelist();
   }
   function showTab(name) {
@@ -1590,7 +1602,7 @@ export function initHmFilters(data) {
     // #227: ONE period control at a time - see the note on hmQuarters().
     const multiQ = chipGoverns(name);   // #243: ONE predicate - shown exactly where it is obeyed
     showControl(document.getElementById('hmQuartersWrap'), multiQ);
-    showControl(document.getElementById('hmYear')?.closest('.fchip'), name === 'positions');
+    showControl(document.getElementById('hmYear')?.closest('.fchip'), name === 'positions' || name === 'typebudget');   // #269
     showControl(document.getElementById('hmQuarter')?.closest('.fchip'), !multiQ && name !== 'traction');
     // #226 (Jerin, 13 Oct 2026, raised by the team): Rule 13 - a control shown where it moves nothing is a
     // bug. MEASURED by ticking each filter on each panel and checking whether any rendered number moved,
@@ -1668,6 +1680,25 @@ export function initHmFilters(data) {
   // type-to-filter so nobody has to scroll to find a person.
   const panelistNames = [...new Set((data.panelists || []).map(p => p.name || p.panelist).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   msHmPanel = makeMultiSelect(document.getElementById('msHmPanel'), 'Panelist', panelistNames, renderPanelist);
+
+  // #269 Type & Budget. Same contract as Interview Traction below: the page owns the filters, the shared
+  // module owns the metric, so Hiring Manager and Overall Efficiency cannot drift (Rule 3).
+  // 🔑 The `sel` object is the SAME one Position Fulfilment builds, so these rows close that table by
+  //    construction rather than by a second sum.
+  renderTypeBudget = mountTypeBudget(document.getElementById('hmTypeBudgetHost'), data, () => {
+    const rg = hmRange(), winQs = windowQuarters();
+    const jsel = msHmJob ? msHmJob.getSelected() : [];
+    const dsel = msHmDept ? msHmDept.getSelected() : [];
+    const ji = data.jobIndex || {};
+    return {
+      sel: { wholeWin: coversQuarters(rg, winQs), winQs, dayOK: hasDayData(data), inDay: (d) => inRange(d, rg) },
+      jobOk: (j8) => {
+        if (jsel.length && !jsel.some(id => String(id).slice(0, 8) === j8)) return false;
+        if (dsel.length) { const meta = ji[j8]; if (!meta || dsel.indexOf(meta.department) < 0) return false; }
+        return true;
+      }
+    };
+  });
 
   // #206 Interview Traction. The page owns the filters, the module owns the metric - so the SAME render
   // runs here and on Overall Efficiency and the two can never drift (Rule 3).

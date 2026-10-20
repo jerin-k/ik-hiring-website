@@ -15,6 +15,7 @@ import { renderInterviewer, initInterviewer } from './interviewer.js';
 // that tab's stage list — one list for both tables.
 import { STAGES_ORDER as PIPE_KEYS, STAGE_LABELS as PIPE_LABELS } from './hm-report.js';
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
+import { mountTypeBudget } from '../type-budget.js';   // #269
 import { resolveDeptTeam } from '../dept-map.js';
 import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist, APP_REVIEW_LIVE_NOTE,
          hasWaitSplit, tisPair, tisPairRange, poolPairs, tisCellSplit } from '../stage-time.js';
@@ -235,16 +236,23 @@ export function renderEfficiency(data) {
       <button class="eff-subtab subtab-chip" data-tab="joiningpending">Joining Pipeline</button>
       <span class="subtab-sep" aria-hidden="true"></span>
       <button class="eff-subtab subtab-chip" data-tab="pipeline">Interview Pipeline</button>
-      <button class="eff-subtab subtab-chip" data-tab="traction">Interview Traction</button>
+      <!-- #269e (20 Oct 2026): shortened from "Interview Traction". MEASURED - this band gives 1240px and its
+           twelve chips already used 1184 of it, so the new Type & Budget chip pushed it onto a SECOND ROW, the
+           fault #214 fixed. Shortening this and Screening Efficiency frees ~111px and puts it back on one row.
+           Only the CHIP is shortened - the panel below still heads itself "Interview Traction". -->
+      <button class="eff-subtab subtab-chip" data-tab="traction">Traction</button>
       <button class="eff-subtab subtab-chip" data-tab="velocity">Momentum</button>
       <span class="subtab-sep" aria-hidden="true"></span>
       <button class="eff-subtab subtab-chip" data-tab="throughput">Throughput</button>
-      <button class="eff-subtab subtab-chip" data-tab="screening">Screening Efficiency</button>
+      <button class="eff-subtab subtab-chip" data-tab="screening">Screening</button>   <!-- #269e: chip only; the panel keeps its full heading -->
       <button class="eff-subtab subtab-chip" data-tab="joining">Joining Conversion</button>
       <span class="subtab-sep" aria-hidden="true"></span>
       <button class="eff-subtab subtab-chip" data-tab="sourcing">Sourcing Mix</button>
       <button class="eff-subtab subtab-chip" data-tab="timeinprocess">Time in Process</button>
       <button class="eff-subtab subtab-chip" data-tab="panelists">Panelists</button>
+      <span class="subtab-sep" aria-hidden="true"></span>
+      <!-- #269 (Jerin, 20 Oct 2026): ONE chip; the three panels nest vertically inside it. -->
+      <button class="eff-subtab subtab-chip" data-tab="typebudget">Type &amp; Budget</button>
     </div>
 
     <div class="eff-filters">
@@ -419,6 +427,11 @@ export function renderEfficiency(data) {
       <div id="effTractionHost"></div>
     </div>
 
+    <!-- ===== PANEL: TYPE & BUDGET (#269) — the SAME shared module Hiring Manager mounts ===== -->
+    <div class="eff-panel" data-panel="typebudget" style="display:none">
+      <div id="effTypeBudgetHost"></div>
+    </div>
+
     <div class="eff-panel" data-panel="panelists" style="display:none">
       <div id="effPanelHost"></div>
     </div>
@@ -455,7 +468,8 @@ export function initEfficiencyFilters(data) {
   //    was ever un-ticked. ONE predicate now decides both whether the chip is DRAWN and whether it is OBEYED,
   //    so its visibility and its authority cannot drift apart again (Rule 13: a filter that moves no number is
   //    a bug - and its mirror, a hidden filter that moves every number).
-  const chipGoverns = (name) => name !== 'fulfilment' && name !== 'traction' && name !== 'joiningpending';
+  const chipGoverns = (name) => name !== 'fulfilment' && name !== 'traction' && name !== 'joiningpending'
+    && name !== 'typebudget';   // #269: this panel reads the same window Position Fulfilment does
   let msPod = null, msDept = null, msJob = null, msRec = null, msEffTpStage = null, msEffPipeStage = null;   // #145a · #196: msRec
 
   // #188: on Position Fulfilment a ticked level is drawn open — the chooser IS the expand control there.
@@ -2345,6 +2359,7 @@ export function initEfficiencyFilters(data) {
   }
 
   let renderTraction = null;   // #206: set once the page is in the DOM
+  let renderTypeBudget = null;   // #269: set once the page is in the DOM
   // #207: the quarters ticked on Interview Traction's OWN Quarter chip - read by that panel alone.
   let tractionQs = [];
   let tractionBounds = false;   // #207
@@ -2360,6 +2375,7 @@ export function initEfficiencyFilters(data) {
     else if (activeTab === 'joining') renderJoining();   // its chart is built inside renderJoining
     else if (activeTab === 'sourcing') renderSourcing();
     else if (activeTab === 'traction') { if (renderTraction) renderTraction(); }   // #206
+    else if (activeTab === 'typebudget') { if (renderTypeBudget) renderTypeBudget(); }   // #269
     else if (activeTab === 'panelists') renderPanelists();
   }
 
@@ -2418,7 +2434,7 @@ export function initEfficiencyFilters(data) {
     showControl(document.getElementById('effQuartersWrap'), multiQ);
     // Year belongs ONLY to the single-quarter picker, so it shows exactly where that does. It was briefly
     // visible on Interview Traction, where that panel's own chip governs and Year moved nothing (Rule 13).
-    showControl(document.getElementById('effYear')?.closest('.fchip'), name === 'fulfilment');
+    showControl(document.getElementById('effYear')?.closest('.fchip'), name === 'fulfilment' || name === 'typebudget');   // #269
     showControl(document.getElementById('effQuarter')?.closest('.fchip'), !multiQ && name !== 'traction');
     // #207: same as the Hiring Manager tab - apply the panel's span on entering, put the page's own bounds
     // back on leaving, so no other panel here inherits a widened period.
@@ -2481,6 +2497,24 @@ export function initEfficiencyFilters(data) {
     }, [currentReportingQuarter()]);
 
   // #206 Interview Traction - the SAME module the Hiring Manager tab mounts, with this page's own scope.
+  // #269 Type & Budget. The SAME module Hiring Manager mounts, given this page's own filters, so the two
+  // tabs cannot drift (Rule 3). The `sel` is the one Position Fulfilment builds, so the rows close that table.
+  renderTypeBudget = mountTypeBudget(document.getElementById('effTypeBudgetHost'), data, () => {
+    const per = tisPeriod();
+    const PM = peopleMaps(per);
+    const jsel = msJob ? msJob.getSelected() : [];
+    const dsel = msDept ? msDept.getSelected() : [];
+    const ji = data.jobIndex || {};
+    return {
+      sel: { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) },
+      jobOk: (j8) => {
+        if (jsel.length && !jsel.some(id => String(id).slice(0, 8) === j8)) return false;
+        if (dsel.length) { const meta = ji[j8]; if (!meta || dsel.indexOf(meta.department) < 0) return false; }
+        return true;
+      }
+    };
+  });
+
   renderTraction = mountInterviewTraction(document.getElementById('effTractionHost'), data, () => {
     // #207: this panel's period comes from ITS OWN Quarter chip (see hm-report.js for the same wiring).
     const rg = rangeOf(document.getElementById('effVelFrom'), document.getElementById('effVelTo'),
