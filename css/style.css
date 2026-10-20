@@ -1700,7 +1700,15 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
    Was defined inside recruiter.js's per-page <style>, so Overall Efficiency could only render it
    correctly if the user had already visited the Recruiter tab. Shared here now (2026-08-31). */
 .tofu-heat-wrap { position:relative; margin:0 0 1.375rem; overflow-x:auto; }
-.tofu-heat { display:block; min-width:100%; }
+/* 🚨 `width:max-content` IS LOAD-BEARING FOR #247, found 20 Oct at an 800px window. A sticky child is clamped
+   to its CONTAINING BLOCK, and these rows are flex boxes inside this element: left at the wrapper's width the
+   row box was 800px while its own children totalled 1475, so once you scrolled past that 675px shortfall the
+   browser DRAGGED the pinned name and Total along with the days (measured: name 45px, Total 134px adrift).
+   Sizing this element to its content makes every row's box as wide as the scroll, so the clamp never bites.
+   ⚠ It was invisible at a normal window — the shortfall has to exceed the scroll range before anything moves,
+   so #247 measured clean at 1024 and 1440 and was wrong at 800. `min-width:100%` still makes the block fill
+   the panel when the days DO fit, which is what keeps the cells spreading as before. */
+.tofu-heat { display:block; min-width:100%; width:max-content; }
 .heat-row { display:flex; align-items:center; gap:0.1875rem; margin-bottom:0.25rem; }
 /* Left-aligned and the SAME WIDTH as the table's first column, so the two blocks line up down the
    page (Jerin, 2026-08-30: "get the recruiter names left aligned, add some element to fill the gaps

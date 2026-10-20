@@ -200,6 +200,20 @@ export function renderEfficiency(data) {
       /* #151b: the heading band, not the page ground — these two are sticky, so they must be opaque (147a). */
       .evel-table thead th:nth-child(1), .evel-table thead th:nth-child(2) { z-index:3; background:var(--navy); }
       .evel-table tbody td:nth-child(1), .evel-table tbody td:nth-child(2) { background:var(--card); }
+      /* #263a (20 Oct 2026): THE DEPARTMENT BAND NEVER REACHED THE SCREEN. wireTreePath marks the depth-1 row
+         data-hold on this tab (#186b — the department is the row that freezes here), and style.css's
+         tr[data-hold] > td { background-color: var(--card) } then paints EVERY cell of it white, so the row
+         declared --border-light on itself and rendered flat white — identical to a job row.
+         🔑 .painted-halves already solves this one line below that rule in style.css; this grid is not a
+         painted-halves table, so it got the flattening without the repair. Measured 20 Oct: the row computed
+         rgb(234,238,246) while all four sampled cells rendered rgb(255,255,255).
+         ⚠ Recruiter's Momentum does NOT need this — its held row is the RECRUITER (depth 2), which carries no
+         band, so white is already its colour. */
+      .evel-table tbody tr.lvl-dept > td { background:var(--border-light); }
+      /* #263b: hover used to stop AT the frozen pair — see the matching note in recruiter.js. 🚨 LAST in this
+         block: it ties with the department rule above on specificity, so source order is what decides it. */
+      .evel-table tbody tr:hover > td,
+      .evel-table tbody tr:hover > td:nth-child(-n+2) { background:#f8fafc; }
 
       /* per-department chart cards */
       .eff-podcharts { display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); gap:0.75rem; margin-bottom:1.125rem; }

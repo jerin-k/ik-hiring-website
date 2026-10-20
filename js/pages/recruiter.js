@@ -515,6 +515,13 @@ export function renderRecruiter(data) {
       .vel-table thead th:nth-child(1), .vel-table thead th:nth-child(2) { z-index:3; background:var(--navy); }
       .vel-table tbody td:nth-child(1), .vel-table tbody td:nth-child(2) { background:var(--card); }
       .vel-table tbody tr.lvl-pod td:nth-child(1), .vel-table tbody tr.lvl-pod td:nth-child(2) { background:var(--border-light); }
+      /* #263b (20 Oct 2026): hover used to stop AT the frozen pair. The two rules above keep those cells
+         opaque at (0,2,2) and (0,3,2), both of which beat the site-wide tr:hover td at (0,1,2) — so every
+         cell on the row lit up except the two the eye is actually on. Two selectors, because the whole row
+         has to end up one colour: the plain one carries the day cells, the nth-child one outranks the pair's
+         own opaque rules. 🚨 It must stay LAST in this block — it ties with the pod rule on specificity. */
+      .vel-table tbody tr:hover > td,
+      .vel-table tbody tr:hover > td:nth-child(-n+2) { background:#f8fafc; }
 
       /* multi-select checkbox dropdown */
       .ms { position:relative; display:inline-block; }
@@ -1402,7 +1409,7 @@ export function initRecruiterFilters(baseData) {
               });
             } else {
               html += `<tr class="lvl-stage" data-pod="${pi}" data-parent-rec="${rk}" style="display:none">
-                <td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No R1 activity in this period</td>${'<td>' + DASH + '</td>'.repeat(3)}</tr>`;
+                <td style="padding-left:3.25rem;color:var(--muted);font-style:italic">No R1 activity in this period</td>${`<td>${DASH}</td>`.repeat(3)}</tr>`;
             }
           });
         });
