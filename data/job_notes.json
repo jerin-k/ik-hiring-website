@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-20T06:45:23.921Z",
+  "updatedAt": "2026-10-20T13:50:12.783Z",
   "notes": {
     "19982198": {
       "text": "HE : 5 \nR1 : 1",
@@ -123,5 +123,12 @@
       "at": "2026-10-15T12:26:07.257Z"
     }
   },
-  "priorities": {}
+  "priorities": {},
+  "budgets": {
+    "US Business|2026-Q4": {
+      "amount": 100,
+      "by": "Jerin",
+      "at": "2026-10-20T13:50:12.783Z"
+    }
+  }
 }
