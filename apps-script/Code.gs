@@ -153,6 +153,9 @@ function doGet(e) {
 
   // #150 (19 Sep 2026): one remark against one job. Any role but 'none' may write; the guard runs server-side too.
   if (page === 'doPublishNote') { return publishNotePage_(e, userEmail); }
+  // #252f (20 Oct 2026): the P0/P1/P2 priority on a job. Stored in the SAME file as the remarks but under
+  // its own `priorities` key, so it never tangles with the note record's delete-on-empty rule.
+  if (page === 'doPublishPri') { return publishPriPage_(e, userEmail); }
 
   if (page === 'admin') {
     var access = getUserAccess(userEmail);
@@ -795,6 +798,38 @@ function publishNotePage_(e, userEmail) {
     saveDriveJson_('job_notes.json', doc);
     pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Remark on job ' + job8 + ' by ' + firstNameOf_(userEmail));
     return page('<h2 style="color:#0f766e">Saved</h2><p>' + (text ? 'Remark saved' : 'Remark cleared') + ' by ' + userEmail + '. You can close this window.</p>');
+  } catch (err) {
+    return page('<h2 style="color:#be123c">Not saved</h2><p>' + String(err) + '</p>');
+  }
+}
+
+// ===== #252f (Jerin, 20 Oct 2026) — the PRIORITY a team sets on a job: P0, P1 or P2 =====
+// Same shape as publishNotePage_ above, and deliberately so: same auth check, same Drive file, same GitHub
+// push, same confirm-by-read from the caller. 🔑 It writes a SEPARATE top-level key, `priorities`, rather
+// than a field on the note — a job can carry a priority with no remark, and the note record is DELETED when
+// its text goes empty, which would have taken the priority with it.
+// 🚨 The whitelist IS the guard. A remark is free text and needs guardProblem(); a priority can only ever be
+//    P0, P1 or P2, so anything else is refused outright and nothing user-written reaches the public file.
+function publishPriPage_(e, userEmail) {
+  var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
+  var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Save priority'); };
+  var role = publishedRole_(userEmail);
+  if (!role || role === 'none') return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not on the published access list, so a priority cannot be saved from this account.</p>');
+  try {
+    var job8 = String(e.parameter.jpjob || '').toLowerCase().slice(0, 8);
+    if (!/^[0-9a-f]{8}$/.test(job8)) return page('<h2 style="color:#be123c">Not saved</h2><p>That is not a job id.</p>');
+    var val = String(e.parameter.jpval || '').toUpperCase().replace(/\s+/g, '');
+    if (val && !/^P[012]$/.test(val)) return page('<h2 style="color:#be123c">Not saved</h2><p>A priority is P0, P1 or P2.</p>');
+    var doc = null;
+    try { doc = loadDriveJson_('job_notes.json'); } catch (eR) { doc = null; }
+    if (!doc || typeof doc !== 'object' || !doc.notes) doc = { schema: 1, updatedAt: null, notes: {} };
+    if (!doc.priorities) doc.priorities = {};
+    if (val) doc.priorities[job8] = { pri: val, by: firstNameOf_(userEmail), at: new Date().toISOString() };
+    else delete doc.priorities[job8];
+    doc.updatedAt = new Date().toISOString();
+    saveDriveJson_('job_notes.json', doc);
+    pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Priority on job ' + job8 + ' by ' + firstNameOf_(userEmail));
+    return page('<h2 style="color:#0f766e">Saved</h2><p>' + (val ? 'Priority ' + val + ' saved' : 'Priority cleared') + ' by ' + userEmail + '. You can close this window.</p>');
   } catch (err) {
     return page('<h2 style="color:#be123c">Not saved</h2><p>' + String(err) + '</p>');
   }
