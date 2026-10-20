@@ -807,6 +807,23 @@ function refreshDashboardData() {
     // API call - opening.list already returns latestVersion.customFields (same as #157's topic). Title match, not
     // a captured uuid, so it survives the field being recreated. valueLabel, never value (value is the option id).
     var oComplexity = openingCustomFieldByTitle_(o, /role complexity/i);
+    // #269a (Jerin, 20 Oct 2026) - Role Type and Employment Type, for the Type & Budget panels.
+    // Costs NO extra API call: opening.list already returns latestVersion.customFields, the same place
+    // #157's topic and #165a's complexity are read from.
+    // MEASURED 20 Oct by probe269Fields over 2,683 openings: an opening carries only TWELVE distinct
+    //   custom-field titles, and neither 'role type' nor 'employment type' is a substring of any other,
+    //   so these loose regexes cannot collide. Employment Type sits on 2,667 of them; Role Type on 874.
+    // There is NO budget field on ANY opening - 0 of 2,683 - so nothing budget-shaped is read here.
+    var oRoleType = openingCustomFieldByTitle_(o, /role type/i);
+    var oEmpType = openingCustomFieldByTitle_(o, /employment type/i);
+    // The FIELD is the truth; the opening NAME is the fallback, because #159 puts the role type in the
+    // third segment of the name and that convention predates the field. A marker records which one
+    // answered, the way #241's openingSource does, so the site derives nothing.
+    var oRoleTypeSrc = oRoleType ? 'field' : null;
+    if (!oRoleType) {
+      var nmSeg = String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').split(' - ');
+      if (nmSeg.length > 2 && nmSeg[2].trim()) { oRoleType = nmSeg[2].trim(); oRoleTypeSrc = 'name'; }
+    }
     var oOwnerIds = [];
     ((o.latestVersion && o.latestVersion.hiringTeam) || []).forEach(function (mem) {
       if (mem.role === 'Recruiter' || mem.roleId === '22db8dc8-83f4-40de-8376-87efff4a6eb6') {
@@ -844,6 +861,7 @@ function refreshDashboardData() {
       //    somewhere else and NOTHING on the dashboard is wrong - the column simply stays empty until it is fixed.
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
         quarter: q, day: dOpen || null, state: cls, topic: oTopic, complexity: oComplexity, jpTied: 0,
+        roleType: oRoleType || null, roleTypeSource: oRoleTypeSrc, empType: oEmpType || null,
         name: String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').trim(),
         ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
@@ -1283,6 +1301,11 @@ function refreshDashboardData() {
       //   3 Sep, so it is not in openingRows). Stage-history drops (no offer) carry neither; the site no longer counts them (#183c).
       openingId: ev.openingId || null,
       openingComplexity: (ev.openingId && openingById_[ev.openingId]) ? (openingCustomFieldByTitle_(openingById_[ev.openingId], /role complexity/i) || null) : null,
+      // #252c (Jerin, 19 Oct 2026): the person behind the drop, so the NAME travels on the same row as
+      // the count and no second source has to be joined to it later (Rule 3: the table computes).
+      // PII: this name is ALREADY public in this same file - offerEvents carries `candidate` for every
+      // one of these archived applications - so it adds no new exposure. Emails stay Drive-only (Rule 9).
+      candidate: ev.candidate || null,
       quarter: ev.attrQuarter || null, source: 'offer',
       // #129: the DAY behind the date - the first Ref Check / Documentation / Offer arrival, else the archive date.
       day: ev.lateEntryAt || ev.archivedAt || null });
