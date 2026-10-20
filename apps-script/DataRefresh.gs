@@ -74,21 +74,57 @@ function notifyStageNames_(autoMatched, unmapped) {
     var unknown = {}, nUnknown = 0;
     for (var t in (unmapped || {})) { if (!EXPECTED[t]) { unknown[t] = unmapped[t]; nUnknown++; } }
     var autoKeys = [], au = [];
-    for (var a in (autoMatched || {})) { autoKeys.push(a); au.push(a + ' -> ' + autoMatched[a]); }
+    for (var a in (autoMatched || {})) { autoKeys.push(a); au.push([a, autoMatched[a]]); }
     autoKeys.sort();
     var unkKeys = Object.keys(unknown).sort();
+    // #240d F: what the register did this run - a stage ADDED, RENAMED or DISAPPEARED.
+    var reg = STAGE_REGISTER_LAST_ || {};
+    var rAdd = reg.added || [], rRen = reg.renamed || [], rGone = reg.gone || [];
+    var nEvent = rAdd.length + rRen.length + rGone.length;
     var now = { auto: autoKeys, unknown: unkKeys, at: new Date().toISOString() };
     var last = loadDriveJson_('stage_name_watch.json') || { auto: [], unknown: [] };
     var same = autoKeys.join('|') === (last.auto || []).join('|') && unkKeys.join('|') === (last.unknown || []).join('|');
-    Logger.log('#236a stage names: ' + autoKeys.length + ' auto-matched, ' + nUnknown + ' unrecognised'
-      + (same ? ' - unchanged since the last report, no mail' : ' - CHANGED, mailing'));
-    if (same) return;
+    // \ud83d\udea8 THE REGISTER DELTAS ARE EVENTS, NOT STATE, so they are deliberately NOT part of the
+    // signature above. Folded in, the signature would change on the run the stage was adopted and
+    // change BACK on the very next run - two mails for one event. They force a mail on their own
+    // instead, which is still change-only: the sync reports a delta only on the run it happens.
+    Logger.log('#236a stage names: ' + autoKeys.length + ' auto-matched, ' + nUnknown + ' unrecognised, '
+      + rAdd.length + ' added, ' + rRen.length + ' renamed, ' + rGone.length + ' gone'
+      + ((same && !nEvent) ? ' - nothing changed, no mail' : ' - CHANGED, mailing'));
+    if (same && !nEvent) return;
     var access = loadDriveJson_('access.json');
     var admins = (((access && access.users) || []).filter(function (u) {
       return u && u.email && String(u.role || '').toLowerCase() === 'admin';
     })).map(function (u) { return u.email; });
     if (!admins.length) { Logger.log('#236a NO EMAIL: nobody in access.json has role=admin'); return; }
     var body = '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">';
+    function esc_(v) { return String(v).replace(/[<>]/g, ''); }
+    function list_(arr) { var h = '<ul>', i; for (i = 0; i < arr.length; i++) h += '<li><strong>' + esc_(arr[i]) + '</strong></li>'; return h + '</ul>'; }
+    // #240d F - ADDED. The one case that can change a number, so it leads and it names the defaults.
+    if (rAdd.length) {
+      body += '<p style="margin:0 0 10px"><strong>Ashby has a new interview stage, and the dashboard has taken it on by itself.</strong>'
+        + ' It already has its own column everywhere and candidates in it are being counted \u2014 nothing is waiting on you.</p>'
+        + list_(rAdd)
+        + '<p style="margin:0 0 10px">It has been set up as an <strong>interview round</strong>: people in it count as assessed,'
+        + ' and it counts towards Momentum. If that is wrong for this stage, change it under'
+        + ' <strong>Admin \u2192 Stage Mapping</strong>.</p>'
+        + '<p style="margin:0 0 14px;color:#9a6b00"><strong>Worth knowing:</strong> a mistyped stage name in Ashby will'
+        + ' create a column of its own this way. If one of the names above is a typo, correct it in Ashby, or untick'
+        + ' the stage under Admin \u2192 Stage Mapping.</p>';
+    }
+    // #240d F - DISAPPEARED. Its history is real, so it is kept, not deleted.
+    if (rGone.length) {
+      body += '<p style="margin:0 0 10px"><strong>A stage is no longer in Ashby.</strong>'
+        + ' Everyone who passed through it is still counted, so it stays on the dashboard for the periods where it'
+        + ' holds people, and is hidden from the periods where it holds none. No history has been lost.</p>'
+        + list_(rGone);
+    }
+    // #240d F - RENAMED. Quiet by design: nothing moved, and that is the point worth saying.
+    if (rRen.length) {
+      body += '<p style="margin:12px 0 6px"><strong>A stage was renamed in Ashby.</strong>'
+        + ' The dashboard recognised it as the same stage, so its history is unbroken and no number has moved.</p>'
+        + list_(rRen);
+    }
     if (nUnknown) {
       body += '<p style="margin:0 0 10px"><strong>Ashby is using a stage name the dashboard does not recognise.</strong>'
         + ' Anyone sitting in it is counted as an application but appears in no stage, so they are missing from'
@@ -100,13 +136,19 @@ function notifyStageNames_(autoMatched, unmapped) {
     if (au.length) {
       body += '<p style="margin:12px 0 6px;color:#6b7391">Renamed stages the dashboard matched on its own, with no'
         + ' action needed from you. Listed so a wrong match cannot hide:</p><ul style="color:#6b7391">';
-      for (var i = 0; i < au.length; i++) body += '<li>' + String(au[i]).replace(/[<>]/g, '') + '</li>';
+      // \u26a0 ESCAPE EACH SIDE, THEN ADD THE ARROW. Built as 'a -> b' and escaped afterwards, the
+      // /[<>]/ strip ate the '>' and every line read "Ref Check - refCheck". A real arrow, escaped parts.
+      for (var i = 0; i < au.length; i++) body += '<li>' + esc_(au[i][0]) + ' \u2192 ' + esc_(au[i][1]) + '</li>';
       body += '</ul>';
     }
     body += '<p style="margin:12px 0 0"><a href="https://hiring.interviewkickstart.com" style="color:#4E6BA6">Open the Hiring Dashboard</a>'
       + ' - the full list is under Data Hygiene, Other Anomalies.</p></div>';
     MailApp.sendEmail({ to: admins.join(','), name: 'IK Hiring Dashboard',
-      subject: nUnknown ? 'Hiring Dashboard: a stage name is not recognised' : 'Hiring Dashboard: stage names changed in Ashby',
+      subject: rAdd.length ? 'Hiring Dashboard: a new stage was added in Ashby'
+        : rGone.length ? 'Hiring Dashboard: a stage disappeared from Ashby'
+        : nUnknown ? 'Hiring Dashboard: a stage name is not recognised'
+        : rRen.length ? 'Hiring Dashboard: a stage was renamed in Ashby'
+        : 'Hiring Dashboard: stage names changed in Ashby',
       htmlBody: body });
     Logger.log('#236a EMAIL SENT to ' + admins.length + ' admin(s)');
     saveDriveJson_('stage_name_watch.json', now);
