@@ -96,11 +96,12 @@ const EFF_ONE = '<td class="jn-cell nosplit"><span class="zero">\u2014</span></t
 // 26 topic rows were still 14 wide. The comment below already records this going wrong once before, the other
 // way round — THIRD time this table's cell count has drifted. 🔑 Count cells per row; the page looks fine.
 const topicCells = (x, noPending, peopleHtml) =>
-  // #266: no score line here either — a topic row has to match the rows above it.
-  `<td style="font-weight:600">${x.total}</td>`
-  + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}</td>`
+  // 🔄 #266 reversed: the score is back here too — a topic row has to match the rows above it.
+  `<td style="font-weight:600">${x.total}<span class="sublab">${x.tS}</span></td>`
+  + `<td class="${x.joined ? 'good' : 'zero'}">${x.joined}<span class="sublab">${x.jS}</span></td>`
   + (noPending ? EFF_DASH
-    : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`)
+    : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}`
+      + `<span class="sublab">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</span></td>`)
   + EFF_DASH + EFF_DASH
   // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE — it used to read "a topic row names nobody... repeating
   // them would show the same person twice in one open tree." 🗣 *"Not seeing joiner & joining pipeline names
@@ -1002,9 +1003,9 @@ export function initEfficiencyFilters(data) {
     // and nothing on a surplus, which is most of this table.
     // #252g: the Delta score tucks under its pill, like every other metric here. `deltaPill` is untouched —
     // it is the ONE home for this pill on all three tabs (#218) and must stay identical everywhere.
-    // #266: the pill alone, as on Hiring Manager. `deltaPill` is untouched — it is the ONE home for this
-    // cell on all three tabs (#218) and must stay identical everywhere.
-    const gapCell = (x) => `<td class="gapcell">${deltaPill(x.gap)}</td>`;
+    // 🔄 #266 reversed: the score tucks back under the pill. `deltaPill` is untouched — it is the ONE home
+    // for this cell on all three tabs (#218) and must stay identical everywhere.
+    const gapCell = (x) => `<td class="gapcell">${deltaPill(x.gap)}<span class="sublab">${x.gS}</span></td>`;
     // Column order mirrors HM → Department Summary exactly:
     // Total Positions · Joined · Joining Pending · Drop · Gap · Missed. Each carries its Score alongside.
     const cells = (x, bold) => {
@@ -1015,15 +1016,14 @@ export function initEfficiencyFilters(data) {
       // beneath a figure. 🔑 It needs no special case on the totals row: `.totals-row` redefines `--muted`
       // for the whole row, which is what `.sublab` reads, so it retints to a readable tint on the navy.
       // ⚠ Each score keeps the formatting it had: the first four went through z(), gS never did.
-      // #266 (Jerin, 20 Oct 2026): 🗣 "These 2 still look different, I like HM." THE SCORE LINE IS GONE from
-      // this table. #252g had tucked a score under every count here; Hiring Manager never had one and he
-      // settled the principle on the way past — 🗣 "Hiring Managers dont have anything to do with scores" —
-      // which is just as true of a DEPARTMENT view. Recruiter Efficiency keeps its scores: that tab measures
-      // recruiters, who genuinely are scored (Capacity, Goal and Delta are all in points there).
-      // 🔑 The drop PERCENTAGE below is not a score and stays — Hiring Manager carries the same one.
-      // ⚠ x.tS / x.jS / x.pS / x.dS / x.gS are still computed and still correct; nothing here renders them.
-      return `<td${w}>${z(x.total)}</td>`
-        + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}</td>`
+      // 🔄 #266 REVERSED, same day (Jerin): 🗣 "No score in Overall seems to be a mistake. Please out that
+      // back." The score tucks back under each count, as #252g had it. ⚠ I removed it on a reading of
+      // "Hiring Managers dont have anything to do with scores" that he did NOT extend to a department view —
+      // he was answering about Hiring Manager. **His rule about HM is not a rule about this tab.**
+      // 🔑 The drop PERCENTAGE is not a score and was never removed.
+      const sc = (v) => `<span class="sublab">${v}</span>`;
+      return `<td${w}>${z(x.total)}${sc(z(x.tS))}</td>`
+        + `<td${w} class="${x.joined > 0 ? 'good' : ''}">${z(x.joined)}${sc(z(x.jS))}</td>`
         // 🗑 #252g: the `N no score` caption came off with the merge, and it was HIS catch that it was
         //    redundant: the Joining Pipeline sub-tab already flags every one of those people individually
         //    under their own name AND totals them, with the columns to go and find them. A count on a row
@@ -1031,8 +1031,8 @@ export function initEfficiencyFilters(data) {
         //    now lives in words, in `definitions.js` under `eff-fulfilment` (Rule 6). `x.pNS` is still
         //    computed and still correct; nothing on this tab renders it. Do not restore the caption without
         //    re-reading that definition, or the two will say different things.
-        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}</td>`
-        + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}`
+        + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}${sc(z(x.pS))}</td>`
+        + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}${sc(z(x.dS))}`
         + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td>`
         + gapCell(x)
  + peopleCells(x);   // #182c: Who has joined · Who is joining · Remarks
