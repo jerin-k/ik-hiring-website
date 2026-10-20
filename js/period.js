@@ -197,7 +197,38 @@ export function dojFilterHtml(prefix, cases, style = '') {
   return `<span class="period jp-doj" id="${prefix}JpDoj" style="display:none;${style}">`
     + `<div class="fchip"><span class="lbl">DOJ Month</span><select id="${prefix}DojMonth">${opts}</select></div>`
     + `<div class="fchip"><span class="lbl">DOJ From</span><input type="date" id="${prefix}DojFrom"></div>`
-    + `<div class="fchip"><span class="lbl">DOJ To</span><input type="date" id="${prefix}DojTo"></div></span>`;
+    + `<div class="fchip"><span class="lbl">DOJ To</span><input type="date" id="${prefix}DojTo"></div>`
+    // #274 (Jerin, 21 Oct 2026): the Quarter multi-select lives INSIDE this group on purpose - the group is
+    // shown only on the Joining Pipeline sub-tab, so the control can never appear where it moves nothing
+    // (Rule 13). The page fills it with makeMultiSelect once the DOM exists.
+    + `<div class="fchip"><div class="ms" id="${prefix}JpQ"></div></div></span>`;
+}
+
+// ===== #274 - the Quarter filter on the Joining Pipeline sub-tab =====
+// 🗣 "The joining pipeline tabs should also have a Quarter filter with multiselect; with default selected as
+//    all. Same filters of this tab to apply to the dropped table as well."
+// 🔑 IT FILTERS ON THE OPENING'S QUARTER, not on when the person joins. The sub-tab already has DOJ Month /
+//    From / To for the joining date, so a second control on that same dimension would move nothing new; the
+//    OPENING quarter is the one this list shows a column for and had no filter. It is also the dimension the
+//    Fulfilment tables subtract by, so "who in closing sits against a Q3 opening" is now answerable here.
+// 🚨 NOTHING MAY VANISH SILENTLY: rows with NO opening are offered as their own option rather than being
+//    dropped when a quarter is picked. That is the whole point of these lists - they surface the unlinked.
+export const JP_Q_NONE = '(none)';
+export function jpQuarterOptions(rowSets) {
+  const qs = new Set();
+  let anyUnlinked = false;
+  (rowSets || []).forEach(rows => (rows || []).forEach(r => {
+    const q = r && r.openingQuarter;
+    if (q) qs.add(String(q)); else anyUnlinked = true;
+  }));
+  const out = [...qs].sort().reverse().map(q => ({ v: q, t: q.replace('-', ' ') }));
+  if (anyUnlinked) out.push({ v: JP_Q_NONE, t: 'No opening linked' });
+  return out;
+}
+// Empty selection means ALL - makeMultiSelect's own convention, which is what "default selected as all" asks for.
+export function inJpQuarter(openingQuarter, selected) {
+  if (!selected || !selected.length) return true;
+  return selected.indexOf(openingQuarter ? String(openingQuarter) : JP_Q_NONE) !== -1;
 }
 export function dojFilterOf(prefix) {
   const v = (id) => (document.getElementById(prefix + id) || {}).value || '';

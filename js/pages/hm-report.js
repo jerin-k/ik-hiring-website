@@ -19,7 +19,7 @@ import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup } from '../jo
 import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter,
-         REPORTING_START} from '../period.js';   // #127 · #129 · #130 · #133 · #273: the reporting floor
+         REPORTING_START, jpQuarterOptions, inJpQuarter} from '../period.js';   // #127 · #129 · #130 · #133 · #273: the reporting floor
 import { mountInterviewTraction } from '../interview-traction.js';   // #206
 import { mountTypeBudget } from '../type-budget.js';   // #269
 import { resolveDeptTeam as splitDT } from '../dept-map.js';
@@ -603,6 +603,7 @@ export function initHmFilters(data) {
   // #7 (2026-08-22): there used to be FOUR separate Job multi-selects, one per sub-tab, each filtering only
   // its own table. Now a single control in the main filter bar drives every panel and every chart on the tab.
   let msHmJob = null, msHmDept = null, msHmRec = null, msHmPanel = null, msHmTpStage = null, msHmPipeStage = null;   // #196
+  let msHmJpQ = null;   // #274: the Joining Pipeline Quarter filter
   const selJobs = () => (msHmJob ? msHmJob.getSelected() : []);
 
   // ===== #213 (Jerin, 8 Oct 2026): a TAB-WIDE Topic filter, sitting next to Job =====
@@ -1447,11 +1448,13 @@ export function initHmFilters(data) {
       doj: c.doj || c.startDate || '',
       _dept: deptOf(c.department || '')
     }));
+    const jpQ = msHmJpQ ? msHmJpQ.getSelected() : [];   // #274: empty = All
     list = list.filter(c => {
       if (!okDept(c._dept)) return false;
       if (!okRec(c.recruiter)) return false;   // #196: a person's own recruiter (#192), not the position's owner
       if (!matchesJob(jobSel, c.jobId8)) return false;   // #172c
       if (!inDojFilter(c.doj, dojF)) return false;
+      if (!inJpQuarter(c.openingQuarter, jpQ)) return false;   // #274: by the OPENING's quarter
       return true;
     });
 
@@ -1512,7 +1515,8 @@ export function initHmFilters(data) {
       .filter(e => !e.quarter || e.quarter >= REPORTING_START)
       .map(e => ({ ...e, job: e.jobTitle || '', _dept: deptOf(e.department || '') }))
       .filter(e => okDept(e._dept) && okRec(e.recruiter) && matchesJob(jobSel, e.jobId8))
-      .filter(e => !e.doj || inDojFilter(e.doj, dojF));   // #273a: the SAME field the list above filters on
+      .filter(e => !e.doj || inDojFilter(e.doj, dojF))
+      .filter(e => inJpQuarter(e.openingQuarter, msHmJpQ ? msHmJpQ.getSelected() : []));   // #274: the SAME control drives both tables   // #273a: the SAME field the list above filters on
     const capEl = document.getElementById('hmDropCaption');
     if (capEl) {
       const unlinked = list.filter(e => !e.openingId).length;
@@ -1828,6 +1832,13 @@ export function initHmFilters(data) {
   document.addEventListener('click', closeMsPanels);
   // #133: the DOJ boxes in the filter row (shown on the Joining Pending sub-tab only)
   ['hmDojMonth', 'hmDojFrom', 'hmDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { renderJoiningPending(); renderJPDrops(); }));   // #273: the date boxes move both tables
+  // #274 (Jerin, 21 Oct 2026): the Quarter multi-select on the Joining Pipeline sub-tab. Options come from
+  // the opening quarters actually present in BOTH tables, so it can never offer a quarter that filters to
+  // nothing, and an unlinked row is its own option rather than being dropped. Empty = All, which is
+  // makeMultiSelect's own convention and exactly the default he asked for.
+  msHmJpQ = makeMultiSelect(document.getElementById('hmJpQ'), 'Quarter',
+    jpQuarterOptions([data.joiningPendingCases, dropRows(data)]),
+    () => { renderJoiningPending(); renderJPDrops(); });   // #274: one control, BOTH tables
   // Throughput-local listeners — #122: a Stages dropdown (nothing picked = all 13) replaced the row of tick-boxes.
   msHmTpStage = makeMultiSelect(document.getElementById('msHmTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);

@@ -22,7 +22,7 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, coversQuarters, quarterOfDay, sumDayFields, hasDayData,
          joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
-         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl,
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, jpQuarterOptions, inJpQuarter,
          reportingQuarters, currentReportingQuarter} from '../period.js';   // #127 · #129 · #133 · #207
 import { scoreForRole } from '../score-model.js';
 import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobScoreCaption } from '../opening-score.js';   // #165 · #176a
@@ -562,6 +562,7 @@ export function initEfficiencyFilters(data) {
   // panel can quietly ignore the filter (Rule 13).
   let msTopic = null;
   let msQuarters = null;   // #227: the multi-tick Quarters chip
+  let msEffJpQ = null;   // #274: the Joining Pipeline Quarter filter
   const selTopics = () => (msTopic ? msTopic.getSelected() : []);
   const topicJobs = (() => {
     const m = new Map();
@@ -1288,7 +1289,8 @@ export function initEfficiencyFilters(data) {
       .filter(c => !dsel.length || dsel.includes(resolveDeptTeam(c.department || '').dept || c.department))
       .filter(c => matchesJob(jsel, c.jobId8))   // #172c
       .filter(c => okRec(c.recruiter))   // #196: the person's own recruiter (#192), never the position's owner
-      .filter(c => inDojFilter(c.doj, dojF));
+      .filter(c => inDojFilter(c.doj, dojF))
+      .filter(c => inJpQuarter(c.openingQuarter, msEffJpQ ? msEffJpQ.getSelected() : []));   // #274: by the OPENING's quarter, empty = All
     // #149 option A: month ➡ date ➡ people, soonest first — the twin of Hiring Manager's list, and Rule 3
     // says the two move together.
     body.innerHTML = rows.length ? monthTreeRows(rows, {
@@ -1340,7 +1342,8 @@ export function initEfficiencyFilters(data) {
       .filter(e => !dsel.length || dsel.includes(resolveDeptTeam(e.department || '').dept || e.department))
       .filter(e => matchesJob(jsel, e.jobId8))
       .filter(e => okRec(e.recruiter))
-      .filter(e => !e.doj || inDojFilter(e.doj, dojF));   // #273a: the SAME field the list above filters on
+      .filter(e => !e.doj || inDojFilter(e.doj, dojF))
+      .filter(e => inJpQuarter(e.openingQuarter, msEffJpQ ? msEffJpQ.getSelected() : []));   // #274: the SAME control drives both tables   // #273a: the SAME field the list above filters on
     const cap = document.getElementById('effDropCaption');
     if (cap) {
       const unlinked = rows.filter(e => !e.openingId).length;
@@ -2635,6 +2638,10 @@ export function initEfficiencyFilters(data) {
   // #129: the dates narrow every panel, so a change re-renders whichever is showing (they used to redraw Momentum only).
   ['effVelFrom', 'effVelTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));
   ['effDojMonth', 'effDojFrom', 'effDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));   // #133
+  // #274 (Jerin, 21 Oct 2026): the Quarter multi-select on the Joining Pipeline sub-tab - options from the
+  // opening quarters present in BOTH tables, unlinked rows as their own option, empty = All.
+  msEffJpQ = makeMultiSelect(document.getElementById('effJpQ'), 'Quarter',
+    jpQuarterOptions([data.joiningPendingCases, dropRows(data)]), renderAll);   // #274: one control, BOTH tables
   document.getElementById('effYear')?.addEventListener('change', () => {
     fillQuarterSelect(document.getElementById('effQuarter'), document.getElementById('effYear').value, true);   // #127c: only the year's quarters on offer
     applyVelYearQuarter(); renderAll();

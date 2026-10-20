@@ -22,7 +22,7 @@ import { TIS_STAGES, poolHists, tisCell, periodQuarters, hasQuarterTis, tisHist,
 import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, coversQuarters, quarterDays, quarterDaysIn, quarterOfDay, sumDayFields, hasDayData,
          joinerQuarter, joinerIn,   // #203: a joiner counts in the quarter of the opening they filled
-         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl,
+         dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, jpQuarterOptions, inJpQuarter, toggleJpFilters, showControl,
          reportingQuarters, currentReportingQuarter} from '../period.js';   // #127 · #129 · #133 · #227
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
@@ -1296,6 +1296,7 @@ export function initRecruiterFilters(baseData) {
   // read THIS, not selQuarter(): one quarter under a "Quarter: All" filter silently hides the rest of the
   // year — Sourcing Mix was showing 3,223 of 54,501 applications that way.
   let msRecQuarters = null;   // #227
+  let msRecJpQ = null;   // #274: the Joining Pipeline Quarter filter
   // #227 (Jerin, 13 Oct 2026): several quarters at once. Everything downstream already took an ARRAY of quarter
   // keys, so this is a CONTROL change, not a maths change. Position Fulfilment stays on ONE quarter: pods,
   // capacity and the scoring grid are per-quarter with copy-forward, so Goal and Delta have no defined value
@@ -2393,7 +2394,8 @@ export function initRecruiterFilters(baseData) {
       // hidden on this sub-tab, and a hidden box must not change what is shown — and narrowed by the DOJ boxes that take their place.
       const qNow = currentQuarter(), sameQ = qNow === selQuarter(), dojF = dojFilterOf('rec');
       const nowRecs = sameQ ? recs : getFilteredRecs(qNow);
-      const jp = peopleTree((data.joiningPendingCases || []).filter(c => inDojFilter(c.doj, dojF)), {
+      const jpQ = msRecJpQ ? msRecJpQ.getSelected() : [];   // #274: empty = All
+      const jp = peopleTree((data.joiningPendingCases || []).filter(c => inDojFilter(c.doj, dojF) && inJpQuarter(c.openingQuarter, jpQ)), {
         q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
         rest: 9,   // #168/#169: Opening + Topic joined the row · #194: +Sourcer
         isLinked: c => c.linked,
@@ -2443,7 +2445,8 @@ export function initRecruiterFilters(baseData) {
       // of the page covers. The caption says where the list starts, so the number is never bare.
       const dList = dropRows(data)
         .filter(e => !e.quarter || e.quarter >= REPORTING_START)
-        .filter(e => !e.doj || inDojFilter(e.doj, dojF));   // #273a: the SAME field the list above filters on
+        .filter(e => !e.doj || inDojFilter(e.doj, dojF))
+        .filter(e => inJpQuarter(e.openingQuarter, msRecJpQ ? msRecJpQ.getSelected() : []));   // #274: the SAME control drives both tables   // #273a: the SAME field the list above filters on
       const dTree = peopleTree(dList, {
         q2: qNow, inRecs: nowRecs, inGroups: sameQ ? groups : groupByPod(nowRecs, qNow),
         rest: 9,
@@ -4353,6 +4356,10 @@ export function initRecruiterFilters(baseData) {
   ['recVelFrom', 'recVelTo'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', renderAll));
   ['recDojMonth', 'recDojFrom', 'recDojTo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderAll));   // #133
+  // #274 (Jerin, 21 Oct 2026): the Quarter multi-select on the Joining Pipeline sub-tab - options from the
+  // opening quarters present in BOTH tables, unlinked rows as their own option, empty = All.
+  msRecJpQ = makeMultiSelect(document.getElementById('recJpQ'), 'Quarter',
+    jpQuarterOptions([data.joiningPendingCases, dropRows(data)]), renderAll);   // #274: one control, BOTH tables
   // Year/Quarter also picks the quarter for pod grouping + capacity, so re-render everything
   document.getElementById('recVelYear')?.addEventListener('change', () => {
     fillQuarterSelect(document.getElementById('recVelQuarter'), document.getElementById('recVelYear').value, false);   // #127a/c: the year's quarters on offer, no All

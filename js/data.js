@@ -245,7 +245,16 @@ function attachPlannedDoj_(drops, offers) {
     if (e.doj) return e;   // the pipeline's own field wins the day it ever emits one
     const list = by.get(`${e.candidate || ''}|${e.jobId8 || ''}`);
     const o = list && list.length ? pick(list) : null;
-    return o && o.startDate ? { ...e, doj: o.startDate, dojFrom: 'offer' } : e;
+    if (!o) return e;
+    // #274: the OPENING QUARTER comes off the same offer record. dropEvents does not carry one, so the
+    // "Opening quarter" column on the drops tables rendered a dash on EVERY row from #273 until this was
+    // added — and the #274 Quarter filter has nothing to read without it. Measured: reachable for 9 of the
+    // 14 shown, which is exactly the 9 that carry an openingId at all.
+    var oq = o.openingQuarter || o.openingQuarterAny || null;
+    return (o.startDate || oq)
+      ? { ...e, doj: e.doj || o.startDate || null, dojFrom: 'offer',
+          openingQuarter: e.openingQuarter || oq }
+      : e;
   });
 }
 
@@ -259,7 +268,8 @@ export function offerDropRows(data) {
     .map(e => ({ jobId8: e.jobId8, jobTitle: e.jobTitle, department: e.department, recruiter: e.recruiter,
                  level: e.level, complexity: e.complexity, quarter: e.attrQuarter, source: 'offer',
                  openingId: e.openingId || null, day: e.lateEntryAt || e.archivedAt || null,
-                 doj: e.startDate || null, dojFrom: 'offer' }));   // #273a: the planned joining date, straight off the offer
+                 doj: e.startDate || null, dojFrom: 'offer',
+                 openingQuarter: e.openingQuarter || e.openingQuarterAny || null }));   // #273a doj · #274 opening quarter
 }
 
 // ===== #189f (28 Sep 2026): ONE definition of Joining Conversion =====

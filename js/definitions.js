@@ -69,7 +69,7 @@ export const DEFINITIONS = {
   'hm-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'One row per person currently in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; the people behind the Joining Pipeline card on <strong>Position Fulfilment</strong>. A <strong>live</strong> list, so on this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. An Offer drops table under the list, listed by the planned joining date &middot; 20 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. An Offer drops table under the list, listed by the planned joining date &middot; 20 Oct 2026. A Quarter filter over both tables &middot; 21 Oct 2026.',
     groups: [
       {
         heading: 'The Offer drops table underneath',
@@ -78,6 +78,7 @@ export const DEFINITIONS = {
           ['Where it starts', 'From <strong>2026 Q3</strong> onwards, like every other figure on the dashboard. Earlier drops exist in the data and are deliberately not shown.'],
           ['The two dates', 'A dropped person still has a <strong>planned joining date</strong> &mdash; they had an offer, and an offer carries a start date &mdash; so this table is listed by that date, exactly as the list above it is. The one column a drop cannot answer is <strong>Sub-stage</strong>, because they left the process, so that slot carries <strong>Dropped on</strong>: the day they first reached Ref Check, Documentation or Offer, which is the day the drop is counted on. Every other column is the same column as the list above.'],
           ['The dates narrow this table too', 'The DOJ boxes read against the <strong>planned joining date</strong> on both tables, so the two always move together.'],
+          ['Quarter', 'Ticks the <strong>quarter of the opening</strong> a person sits against &mdash; not when they are due to join, which is what the DOJ boxes are for. It starts on <strong>All</strong>, and it narrows <em>both</em> tables at once. Anyone with no opening attached is offered as <strong>No opening linked</strong> rather than being dropped when you pick a quarter, because finding those people is half the point of these lists.'],
           ['No opening attached', 'Most drops carry no opening: the link is cleared when an application is archived, and the one that survives sits on the offer. Attaching an opening to an offer only became universal in August 2026, so recent drops trace and older ones cannot. The caption counts them.'],
         ]
       },
@@ -296,7 +297,7 @@ export const DEFINITIONS = {
   'rec-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Every person in closing &mdash; <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; one row each, grouped <strong>Pod &rarr; Recruiter &rarr; Candidate</strong>. A <strong>live</strong> list: each person sits in their recruiter&rsquo;s pod for the quarter we are in today. On this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>, and <em>Expand all</em> opens every pod and recruiter.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. A Pod, Recruiter or Job filter now hides the untagged group &middot; 20 Oct 2026. An Offer drops table under the list, listed by the planned joining date &middot; 20 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. A Pod, Recruiter or Job filter now hides the untagged group &middot; 20 Oct 2026. An Offer drops table under the list, listed by the planned joining date &middot; 20 Oct 2026. A Quarter filter over both tables &middot; 21 Oct 2026.',
     groups: [
       {
         heading: 'The Offer drops table underneath',
@@ -305,6 +306,7 @@ export const DEFINITIONS = {
           ['Where it starts', 'From <strong>2026 Q3</strong> onwards, like every other figure on the dashboard. Earlier drops exist in the data and are deliberately not shown.'],
           ['The two dates', 'A dropped person still has a <strong>planned joining date</strong> &mdash; they had an offer, and an offer carries a start date &mdash; so this table is listed by that date, exactly as the list above it is. The one column a drop cannot answer is <strong>Sub-stage</strong>, because they left the process, so that slot carries <strong>Dropped on</strong>: the day they first reached Ref Check, Documentation or Offer, which is the day the drop is counted on. Every other column is the same column as the list above.'],
           ['The dates narrow this table too', 'The DOJ boxes read against the <strong>planned joining date</strong> on both tables, so the two always move together.'],
+          ['Quarter', 'Ticks the <strong>quarter of the opening</strong> a person sits against &mdash; not when they are due to join, which is what the DOJ boxes are for. It starts on <strong>All</strong>, and it narrows <em>both</em> tables at once. Anyone with no opening attached is offered as <strong>No opening linked</strong> rather than being dropped when you pick a quarter, because finding those people is half the point of these lists.'],
           ['No opening attached', 'Most drops carry no opening: the link is cleared when an application is archived, and the one that survives sits on the offer. Attaching an opening to an offer only became universal in August 2026, so recent drops trace and older ones cannot. The caption counts them.'],
         ]
       },
@@ -578,7 +580,7 @@ export const DEFINITIONS = {
   'eff-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Everyone in <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> right now, one row each. A <strong>live</strong> list, so on this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>.',
-    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. An Offer drops table under the list, listed by the planned joining date &middot; 20 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 25 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. An Offer drops table under the list, listed by the planned joining date &middot; 20 Oct 2026. A Quarter filter over both tables &middot; 21 Oct 2026.',
     groups: [
       {
         heading: 'The Offer drops table underneath',
@@ -587,6 +589,7 @@ export const DEFINITIONS = {
           ['Where it starts', 'From <strong>2026 Q3</strong> onwards, like every other figure on the dashboard. Earlier drops exist in the data and are deliberately not shown.'],
           ['The two dates', 'A dropped person still has a <strong>planned joining date</strong> &mdash; they had an offer, and an offer carries a start date &mdash; so this table is listed by that date, exactly as the list above it is. The one column a drop cannot answer is <strong>Sub-stage</strong>, because they left the process, so that slot carries <strong>Dropped on</strong>: the day they first reached Ref Check, Documentation or Offer, which is the day the drop is counted on. Every other column is the same column as the list above.'],
           ['The dates narrow this table too', 'The DOJ boxes read against the <strong>planned joining date</strong> on both tables, so the two always move together.'],
+          ['Quarter', 'Ticks the <strong>quarter of the opening</strong> a person sits against &mdash; not when they are due to join, which is what the DOJ boxes are for. It starts on <strong>All</strong>, and it narrows <em>both</em> tables at once. Anyone with no opening attached is offered as <strong>No opening linked</strong> rather than being dropped when you pick a quarter, because finding those people is half the point of these lists.'],
           ['No opening attached', 'Most drops carry no opening: the link is cleared when an application is archived, and the one that survives sits on the offer. Attaching an opening to an offer only became universal in August 2026, so recent drops trace and older ones cannot. The caption counts them.'],
         ]
       },
