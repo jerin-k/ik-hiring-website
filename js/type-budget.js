@@ -23,6 +23,9 @@
 // Never assume the fields exist.
 
 import { defsBlock } from './definitions.js';
+// #269d: the Starting point cell is saved exactly the way Remarks and Pri are — by the web app, never by
+// git, into the same PUBLIC file, with a digits-only guard at both ends.
+import { budgetOf, publishBudget, loadNotes, notesLoadedAt } from './job-notes.js';
 
 /** What a row shows when the field has not been filled in. Shown, never dropped, so the total still adds up. */
 export const NO_ROLE_TYPE = '(role type not set)';
@@ -148,11 +151,33 @@ export function mountTypeBudget(host, data, getScope) {
 
   function render() {
     const scope = getScope() || {};
-    const ix = typeBudgetIndex(data, scope.sel || { wholeWin: false, dayOK: false }, scope.jobOk || (() => true));
+    const sel = scope.sel || { wholeWin: false, dayOK: false };
+    const ix = typeBudgetIndex(data, sel, scope.jobOk || (() => true));
     if (active === 'role') body.innerHTML = rolePanel(ix);
     else if (active === 'emp') body.innerHTML = empPanel(ix);
-    else body.innerHTML = budgetPanel(ix);
+    else {
+      // 🔑 A starting budget belongs to ONE department in ONE quarter, so the cell is only editable when a
+      //    single whole quarter is selected. Over a range or several quarters there is no one key to write
+      //    to, and inventing one would file the figure against the wrong period.
+      const qs = (sel.winQs || []);
+      const oneQ = sel.wholeWin && qs.length === 1 ? qs[0] : null;
+      body.innerHTML = budgetPanel(ix, oneQ);
+      // The store loads lazily with the page; if this panel is reached before it has, fill it and redraw.
+      if (oneQ && !notesLoadedAt()) loadNotes().then(() => { if (active === 'budget') render(); });
+    }
   }
+
+  // One listener on the body, so it survives every re-render of the table inside it.
+  body.addEventListener('change', async (e) => {
+    const inp = e.target.closest('.tb-set');
+    if (!inp) return;
+    const dept = inp.dataset.dept, q = inp.dataset.q;
+    inp.disabled = true;
+    const res = await publishBudget(dept, q, inp.value);
+    inp.disabled = false;
+    if (!res.ok) window.alert(res.reason || 'That did not save.');
+    render();
+  });
 
   render();
   return render;
@@ -252,9 +277,21 @@ function empPanel(ix) {
     ${defsBlock('tb-emptype')}`;
 }
 
-function budgetPanel(ix) {
+function budgetPanel(ix, oneQ) {
   const canCarry = ix.deptRows.reduce((s, d) => s + d.canCarryBudget, 0);
   const none = '<span class="tb-none">not held anywhere</span>';
+  const inr = (v) => (v === '' || v == null) ? '' : Number(v).toLocaleString('en-IN');
+  // The one cell that can hold a figure. Editable only against a single whole quarter — see render().
+  const startCell = (dept) => {
+    if (!oneQ) return '<span class="tb-none">pick one quarter</span>';
+    const b = budgetOf(dept, oneQ);
+    const val = b ? inr(b.amount) : '';
+    const mark = b && b.unsaved ? ' tb-unsaved' : '';
+    return `<input class="tb-set${mark}" type="text" inputmode="numeric" maxlength="18"
+      value="${esc(val)}" data-dept="${esc(dept)}" data-q="${esc(oneQ)}"
+      placeholder="set a figure" aria-label="Starting budget for ${esc(dept)} in ${esc(oneQ)}"
+      title="${b && b.unsaved ? 'Not confirmed saved yet' : (b && b.by ? 'Set by ' + esc(b.by) : 'Digits only')}">`;
+  };
   return `
     <h3 class="subsection-title">Budget status by department</h3>
     <p class="sub-note">Positions opened in this period, by department. Amounts in rupees.</p>
@@ -264,6 +301,9 @@ function budgetPanel(ix) {
       raised as a <b>Replacement</b> or <b>Anticipation Of Exit</b> &mdash; ${canCarry} of ${ix.totals.total} here
       &mdash; and that was made compulsory only on 20 Oct, so positions raised before then have none.
       <b>What an offer costs is not held anywhere the dashboard can read.</b> An empty cell is not a zero.
+      ${oneQ ? `<br><b>Starting point is yours to type</b> &mdash; digits only, saved against ${esc(oneQ)}.
+        Delta stays empty until the two middle columns have a source.`
+             : '<br><b>Pick a single quarter above to type a starting point</b> &mdash; a budget is saved against one quarter, so a range has no single place to file it.'}
     </div>
     <div class="scroll-table"><table class="tb-table tb-budget">
       <thead><tr><th>Department</th><th>Positions</th><th>Can carry a budget</th>
@@ -271,7 +311,7 @@ function budgetPanel(ix) {
         <th>Spent on new &amp; replacement offers</th><th>Delta</th></tr></thead>
       <tbody>
         ${ix.deptRows.map((d) => `<tr><td>${esc(d.key)}</td><td>${d.total}</td><td>${d.canCarryBudget}</td>
-          <td><span class="tb-none">not set</span></td><td>${none}</td><td>${none}</td>
+          <td>${startCell(d.key)}</td><td>${none}</td><td>${none}</td>
           <td><span class="tb-none">&mdash;</span></td></tr>`).join('')}
         ${ix.deptRows.length ? `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td><td>${canCarry}</td>
           <td><span class="tb-none">&mdash;</span></td><td><span class="tb-none">&mdash;</span></td>

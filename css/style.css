@@ -2554,3 +2554,19 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   .tb-rail-head { width: 100%; }
   .tb-rail .subtab-chip { width: auto; }
 }
+
+/* #269d — the Starting point cell. The ONE figure in the budget ledger a person types, so it looks typeable:
+   a real input, right-aligned like every other number on the tab. Digits only, guarded here and on the server. */
+.tb-set {
+  width: 100%; max-width: 8.5rem; height: 1.625rem; padding: 0 0.5rem;
+  border: 1px solid var(--border); border-radius: 0.375rem; background: var(--card);
+  color: var(--text); font-size: 0.6875rem; font-family: inherit; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tb-set::placeholder { color: var(--muted); font-style: italic; }
+.tb-set:hover { border-color: var(--muted); }
+.tb-set:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 0.1875rem rgba(78, 107, 166, 0.16); }
+.tb-set:disabled { opacity: 0.6; cursor: progress; }
+/* An unconfirmed figure is LIVE STATE, the same as an unsaved remark: it says so rather than being passed off
+   as saved. Same amber `.jn-unsaved` carries elsewhere, so this reads as the same thing. */
+.tb-set.tb-unsaved { border-color: var(--orange); color: var(--orange); }

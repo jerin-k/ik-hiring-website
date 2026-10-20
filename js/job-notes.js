@@ -22,6 +22,7 @@ const CONFIRM_URL = 'https://api.github.com/repos/jerin-k/ik-hiring-website/cont
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 const DRAFT_LS = 'ik_job_notes_draft';   // {job8: text} — notes this browser has typed but not confirmed saved
 const PRI_DRAFT_LS = 'ik_job_pri_draft';   // #252f: {job8: 'P0'|'P1'|'P2'|''} — the same idea, for priorities
+const BUD_DRAFT_LS = 'ik_dept_budget_draft';   // #269d: {'<dept>|<quarter>': '<digits>'} — and again, for budgets
 
 import { getStoredUser } from './auth.js';   // #152a — who the DASHBOARD thinks is signed in
 
@@ -38,9 +39,25 @@ let pubPri = {};        // job8 -> { pri, by, at }    as the server has it
 let priDrafts = {};     // job8 -> 'P0'|'P1'|'P2'|''  unconfirmed, this browser only
 export const PRIORITIES = ['P0', 'P1', 'P2'];
 
+// ===== #269d (Jerin, 20 Oct 2026): the STARTING POINT budget a department begins a quarter with =====
+// 🔑 A THIRD top-level key in the same file, for the same reason `priorities` is its own: it belongs to a
+//    DEPARTMENT and a QUARTER, not to a job, so it could never have been a field on a note.
+// 🚨 This is the ONLY cell in the budget ledger that can hold a figure. Ashby carries no budget anywhere
+//    (measured 20 Oct: 0 of 2,683 openings), so the other three columns have no source at all.
+// 🚨 job_notes.json is PUBLIC. The value is DIGITS ONLY, here and on the server, so nothing free-typed can
+//    reach it — the same reasoning that makes a priority need no guardProblem().
+let pubBud = {};        // '<dept>|<quarter>' -> { amount, by, at }   as the server has it
+let budDrafts = {};     // '<dept>|<quarter>' -> '<digits>'           unconfirmed, this browser only
+export const BUDGET_MAX_DIGITS = 12;
+export const budgetKey = (dept, quarter) => String(dept || '').trim() + '|' + String(quarter || '').trim().toUpperCase();
+
 function readDrafts() {
   try { drafts = JSON.parse(localStorage.getItem(DRAFT_LS) || '{}') || {}; } catch (e) { drafts = {}; }
   try { priDrafts = JSON.parse(localStorage.getItem(PRI_DRAFT_LS) || '{}') || {}; } catch (e) { priDrafts = {}; }
+  try { budDrafts = JSON.parse(localStorage.getItem(BUD_DRAFT_LS) || '{}') || {}; } catch (e) { budDrafts = {}; }   // #269d
+}
+function writeBudDrafts() {
+  try { localStorage.setItem(BUD_DRAFT_LS, JSON.stringify(budDrafts)); } catch (e) { /* private window — it still shows until reload */ }
 }
 function writeDrafts() {
   try { localStorage.setItem(DRAFT_LS, JSON.stringify(drafts)); } catch (e) { /* private window — the note still shows until reload */ }
@@ -87,6 +104,7 @@ export async function loadNotes() {
     if (live) {
       published = (live && live.notes) || {};
       pubPri = (live && live.priorities) || {};   // #252f
+      pubBud = (live && live.budgets) || {};      // #269d
       loadedAt = (live && live.updatedAt) || null;
       healDrafts();
       return true;
@@ -99,12 +117,13 @@ export async function loadNotes() {
       const j = await r.json();
       published = (j && j.notes) || {};
       pubPri = (j && j.priorities) || {};   // #252f
+      pubBud = (j && j.budgets) || {};      // #269d
       loadedAt = (j && j.updatedAt) || null;
       healDrafts();
       return true;
     } catch (e) { /* try the next one */ }
   }
-  published = {}; pubPri = {};
+  published = {}; pubPri = {}; pubBud = {};
   return false;
 }
 
@@ -118,6 +137,61 @@ export function priorityOf(job8) {
     return { pri: priDrafts[k] || '', by: p ? p.by : null, at: p ? p.at : null, unsaved: true };
   }
   return p ? { pri: p.pri || '', by: p.by || null, at: p.at || null, unsaved: false } : null;
+}
+
+// #269d: what to show in the Starting point cell. Same rule as priorityOf and noteOf — an unconfirmed draft
+// wins over the server's copy, so whoever typed it always sees their own figure, marked unsaved.
+export function budgetOf(dept, quarter) {
+  const k = budgetKey(dept, quarter);
+  const p = pubBud[k] || null;
+  if (Object.prototype.hasOwnProperty.call(budDrafts, k)) {
+    return { amount: budDrafts[k] || '', by: p ? p.by : null, at: p ? p.at : null, unsaved: true };
+  }
+  return p ? { amount: String(p.amount == null ? '' : p.amount), by: p.by || null, at: p.at || null, unsaved: false } : null;
+}
+
+// #269d: save one department's starting budget for one quarter. Same shape as publishPriority above, and
+// deliberately so — same popup (a background fetch or cross-site POST is stripped of the Google login, #150),
+// same confirm-by-read, same draft kept until the SERVER says it is there.
+// 🚨 DIGITS ONLY is the guard, here and again on the server, so nothing free-typed reaches a PUBLIC file.
+export async function publishBudget(dept, quarter, amount) {
+  const d = String(dept || '').trim();
+  const q = String(quarter || '').trim().toUpperCase();
+  if (!d) return { ok: false, reason: 'This row has no department, so a budget cannot be filed against it.' };
+  if (!/^[0-9]{4}-Q[1-4]$/.test(q)) return { ok: false, reason: 'A starting budget is saved against one quarter, so pick a single quarter first.' };
+  const clean = String(amount == null ? '' : amount).replace(/[^0-9]/g, '');
+  if (clean.length > BUDGET_MAX_DIGITS) return { ok: false, reason: 'That figure is too long.' };
+
+  const k = budgetKey(d, q);
+  budDrafts[k] = clean; writeBudDrafts();   // keep it before anything can go wrong
+
+  const w = window.open('', 'jnPublish', 'popup=yes,width=440,height=420');
+  if (!w) return { ok: false, reason: 'Pop-ups are blocked for this site. Allow them and type it again — your figure is kept here meanwhile.' };
+  const url = WEBAPP_URL + '?page=doPublishBudget&bddept=' + encodeURIComponent(d)
+    + '&bdq=' + encodeURIComponent(q)
+    + '&bdsid=bd' + Date.now().toString(36)
+    + '&bdval=' + encodeURIComponent(clean);
+  try { w.location = url; } catch (e) { /* the popup reports its own errors on screen */ }
+
+  const WAITS = [1200, 1500, 1500, 2000, 2500, 3000, 3000, 4000, 4000, 5000];
+  for (const wait of WAITS) {
+    await new Promise(r => setTimeout(r, wait));
+    const live = await fetchFresh();
+    if (!live) continue;
+    // 🚨 CLEARING sends '' and the server DELETES the key, so absent and empty are the same answer — the
+    //    same trap that made every remark clear time out before #152 fixed it.
+    const got = (live.budgets || {})[k];
+    if ((got && got.amount != null ? String(got.amount) : '') === clean) {
+      pubBud = live.budgets || {};
+      pubPri = live.priorities || pubPri;
+      published = live.notes || published;
+      loadedAt = live.updatedAt || loadedAt;
+      delete budDrafts[k]; writeBudDrafts();
+      try { w.close(); } catch (e) { }
+      return { ok: true };
+    }
+  }
+  return { ok: false, reason: 'Your figure is safe here, but the server has not confirmed it yet. Look at the small window for a sign-in or permission message. If it said Saved, reload in a minute and the amber mark clears itself.' };
 }
 
 // What to show in the cell: an unconfirmed draft wins over the server's copy, so the writer always sees their
