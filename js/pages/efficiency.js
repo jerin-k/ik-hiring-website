@@ -284,7 +284,7 @@ export function renderEfficiency(data) {
                and Remarks fell 173 ➔ 143. An explicit family on the heading always wins, so this says plainly
                that they are numbers. Measured 20 Oct 2026, on the real table at the real 1210px panel.
                ⚠ Delta is deliberately left to infer: its pill makes it c-bar (9.5rem), which is what it needs. -->
-          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr pri-th c-num">Pri</th><th class="stage-hdr jn-th">Remarks</th></tr>
+          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr jn-th">Who dropped</th><th class="stage-hdr pri-th c-num">Pri</th><th class="stage-hdr jn-th">Remarks</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
@@ -830,6 +830,10 @@ export function initEfficiencyFilters(data) {
       // #182c: the people behind this job's figures, and its id for the remark. Keyed exactly as `pending` is
       // keyed two lines up, so a list can never describe a different job from the number beside it.
       joWho: (PM.jn[key] || []), jpWho: (PM.jpc[key] || []), job8: (j.jid || '').slice(0, 8),
+      // #252c: the people behind the Offer drop figure, keyed exactly as `drop` is, so the list can never
+      // describe a different job from the number beside it. The pipeline puts `candidate` on the event.
+      drWho: (PM.dropOp[key] || []).map(d => ({ candidate: d.e.candidate || null, day: d.e.day || null }))
+                                   .filter(x => x.candidate),
       tS, jS, pS, pNS, dS, mS, gS: tS - jS - pS };   // #176c
   }
   // ===== #187 (Jerin, 27 Sep 2026) — the same split, one level down, per RECRUITER =====
@@ -886,6 +890,8 @@ export function initEfficiencyFilters(data) {
       if (!okRec(recruiterOfPerson(d.e))) return;   // #196
       const b = get(recruiterOfPerson(d.e));
       b.drop++;
+      // #252c: and the name, in the SAME loop that counts it.
+      if (d.e.candidate) (b.drWho || (b.drWho = [])).push({ candidate: d.e.candidate, day: d.e.day || null });
       // #183b: a drop is priced from the opening ITS OWN offer names, never from the job.
       b.dS += oIdx.ready ? scoreOfDropOpening(d.e, oMeta, d.q, oIdx) : 0;
     });
@@ -1042,11 +1048,17 @@ export function initEfficiencyFilters(data) {
       ? `<td class="jn-cell jn-sum">${n} across ${unit}</td>`
       : '<td class="jn-cell"><span class="zero">&mdash;</span></td>');
     const peopleCells = (x) => {
+      // 🚨 #252c: the ROLLUP branch returns its own cells, so a column added to the branch below has to
+      //    be added HERE TOO or every department and the Total row run one cell short. That is exactly what
+      //    happened on the first build - 12 rows, caught by counting cells, invisible to the eye.
       if (x.rollup) return sumCell((x.joWho || []).length, x.rollup) + sumCell(x.pending || 0, x.rollup)
+                          + (x.drop > 0 ? `<td class="jn-cell jn-sum">${x.drop} dropped</td>`
+                                        : '<td class="jn-cell"><span class="zero">&mdash;</span></td>')
                           + '<td class="pri-cell"><span class="zero">&mdash;</span></td>'
                           + '<td class="jn-cell"><span class="zero">&mdash;</span></td>';
       return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true, under: x.joUnder })
            + jnWhoCell(x, { under: x.jpUnder })
+           + jnWhoCell(x, { list: x.drWho || [], dateOf: (c) => c.day })   // #252c
            // #252e (Jerin, 20 Oct 2026): EDITABLE here too, and drawn by the SAME `remarkCell` the Hiring
            // Manager tab uses — it was a read-only span until today. 🗣 "Remarks editable from Overall
            // Efficiency too". It carries its own cut and "more" (#252b) because the cell is one piece of code.
@@ -1204,7 +1216,8 @@ export function initEfficiencyFilters(data) {
               //    which the comment in topicCells had already written down).
               + topicCells({ total: tot, joined: jn, missed: ms, tS, jS, mS, pending, pS }, false,
                             jnWhoCell({ joWho: tJo }, { list: tJo, dateOf: (c) => c.startDate, groupByDate: true })
-                            + jnWhoCell({ jpWho: tJp })) + `</tr>`;   // #193b
+                            + jnWhoCell({ jpWho: tJp })
+                            + '<td class="jn-cell"><span class="zero">—</span></td>') + `</tr>`;   // #193b · #252c
           });
         });
       });

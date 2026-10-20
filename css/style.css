@@ -1056,8 +1056,10 @@ table.metrics.wide-fulfil td:first-child { width: 12.5rem; max-width: 12.5rem; }
 /* 10rem, not the 10.5 the arithmetic allows: the LATERAL table is 0.3rem wider than the other four (its
    Capacity and Goal headings read "(Offers)" rather than "(Joiners)"), and at 10.5 it alone ran 0.2rem past
    the panel. A width that fits four tables out of five is not option A. */
+/* #252c: THREE text columns here now, not two. The 21rem the two shared becomes 7rem each — tighter than
+   the 10rem above, and the trade is the same one he took at #182c: narrow columns, nothing scrolls. */
 table.metrics.wide-fulfil th.jn-th,
-table.metrics.wide-fulfil td.jn-cell { width: 10rem; min-width: 10rem; max-width: 10rem; }
+table.metrics.wide-fulfil td.jn-cell { width: 7rem; min-width: 7rem; max-width: 7rem; }
 table.metrics.wide-fulfil th.stage-sub { padding-top: 0.25rem; padding-bottom: 0.375rem; }
 /* Captions under a number ("12 not linked", "18% of outcomes") must not be what widens a column. */
 table.metrics.wide-fulfil td .sublab { white-space: nowrap; font-size: 0.5625rem; }
@@ -2363,12 +2365,17 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    + Delta 9.5rem (137) + Pri 3.5rem (50) = 632, leaving 628 for the three text columns. They take 562, and
    the 66px spare goes to the name column, which `table.cols-sized > * > tr > :first-child` already hands it.
    ⚠ Re-derive again if a column is added or removed — that is what went stale here. */
+/* ===== #252c (20 Oct 2026) — RE-DERIVED AGAIN, for the fourth text column =====
+   The three widths below were Hiring Manager's (12.5 / 14 / 12.5rem) and are now FOUR columns sharing the
+   same room. 📏 At the 1260px container: name 17rem (245) + four numbers at 3.5rem (200) + Delta 9.5rem
+   (137) + Pri 3.5rem (50) = 632, leaving 628 for four columns = 10.4rem each.
+   🔑 10.4rem is a hair over the 10rem he already accepted on the Recruiter tables, so this is a width he has
+   seen and approved, not a new squeeze. ⚠ Re-derive AGAIN if a column is added — twice now this arithmetic
+   has gone stale the moment the table changed shape.
+   ⚠ 10.3, not 10.4: at 10.4 the table came out FOUR pixels over its panel and raised a scrollbar. Measured
+   at 1440, which is the only width that settles it. */
 .wide-table table.metrics.eff-fulfil th.jn-th,
-.wide-table table.metrics.eff-fulfil td.jn-cell { width: 12.5rem; min-width: 12.5rem; max-width: 12.5rem; }
-.wide-table table.metrics.eff-fulfil th.jn-th:nth-child(8),
-.wide-table table.metrics.eff-fulfil td.jn-cell:nth-child(8) { width: 14rem; min-width: 14rem; max-width: 14rem; }
-.wide-table table.metrics.eff-fulfil th.jn-th:last-child,
-.wide-table table.metrics.eff-fulfil td.jn-cell:last-child { width: 12.5rem; min-width: 12.5rem; max-width: 12.5rem; }
+.wide-table table.metrics.eff-fulfil td.jn-cell { width: 10.3rem; min-width: 10.3rem; max-width: 10.3rem; }
 /* A remark shown read-only: the same quiet size as a name, wrapping rather than clipping. It is WRITTEN on the
    Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
 .jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }

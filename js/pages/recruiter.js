@@ -78,7 +78,7 @@ const FULFIL_TABLES = [
 const tableFor = (T, q) => { const d = podDefOf(T.pod, q);
   return { ...T, count: d.measuredOn, drop: d.dropInDelta, dropPts: d.dropPts, capUnit: d.capUnit, goalUnit: d.goalUnit }; };
 
-const FULFIL_NCOL = 11;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns · #267: +1 Pri
+const FULFIL_NCOL = 12;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns · #267: +1 Pri
 // 🚨 THIS IS THE COLUMN COUNT THE EMPTY-STATE ROWS REPEAT OFF (`repeat(ncol - 1)`). Change the header builder
 // and this together, or a 'No jobs attributed' row runs short against its own heading — exactly #262's fault.
 // #252g (Jerin, 20 Oct 2026): ONE row, ONE column per metric — the score is tucked under the heads count in
@@ -100,6 +100,7 @@ const fulfilHeadHtml = (T) => `
       <th class="stage-hdr">Delta</th>
       <th class="stage-hdr jn-th">Who has joined</th>
       <th class="stage-hdr jn-th">Who is joining</th>
+      <th class="stage-hdr jn-th">Who dropped</th>
       <th class="stage-hdr pri-th c-num">Pri</th></tr>`;
 // #179e: the chart sits INSIDE its own block, under the table's heading — one chart per table, each reading
 // only the recruiters that table rendered. 🚨 Rule 3 still holds: THE TABLE COMPUTES, THE CHART READS.
@@ -1127,11 +1128,16 @@ export function initRecruiterFilters(baseData) {
     return idx.ready ? scoreOfDropOpening(e, meta, q, idx) : scoreForRole(meta, q);
   };
 
-  const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc, mOpen, open8) => {
+  // #252c (20 Oct 2026): `who` is optional and only the DROP caller passes it. The name is pushed in the
+  // same `put` that moves the credit, so a row's list and its figure are produced by one rule — including
+  // the #108 split, which is why a sourced drop is tagged here exactly as a sourced joiner is.
+  const addCredit = (mRec, mJob, job8, rec, srcr, dept, sc, mOpen, open8, who) => {
     const sp = splitOf(dept, srcr);
     const put = (name, f, head, sourced) => {
       if (!name || (!f && !head && !sourced)) return;
-      const bump = (o) => { o.hc += head ? 1 : 0; o.sc += sc * f; o.so += sourced ? 1 : 0; o.ns += (head && !sc) ? 1 : 0; };   // #176c
+      const w = who ? { candidate: who.candidate, day: who.day || null, srcOnly: sourced ? (rec || null) : null } : null;
+      const bump = (o) => { o.hc += head ? 1 : 0; o.sc += sc * f; o.so += sourced ? 1 : 0; o.ns += (head && !sc) ? 1 : 0;   // #176c
+        if (w && w.candidate) (o.who || (o.who = [])).push(w); };
       bump(mRec[name] || (mRec[name] = { hc: 0, sc: 0, so: 0, ns: 0 }));
       if (mJob) { const k = name + '|' + (job8 || ''); bump(mJob[k] || (mJob[k] = { hc: 0, sc: 0, so: 0, ns: 0 })); }
       if (mOpen && open8) { const k = name + '|' + (job8 || '') + '|' + open8;
@@ -1685,7 +1691,8 @@ export function initRecruiterFilters(baseData) {
         // #11: a sourcer carries their share of the bad news as well as the good ("split is everywhere").
         // ⚠ Drops found via stage history have their sourcer recovered from appMap in the pipeline, so a few
         // older archived rows can still be null — they then fall through as recruiter-only, which is correct.
-        addCredit(dropByRec, dropByRecJob, e.jobId8, rec, e.sourcer, e.department, sc);
+        addCredit(dropByRec, dropByRecJob, e.jobId8, rec, e.sourcer, e.department, sc, null, null,
+                  e.candidate ? { candidate: e.candidate, day: e.day || null } : null);   // #252c
       });
       const dropOf = (rec) => dropByRec[rec] || { hc: 0, sc: 0, so: 0, ns: 0 };
       const dropOfJob = (rec, jid) => dropByRecJob[rec + '|' + (jid || '').slice(0, 8)] || { hc: 0, sc: 0, so: 0, ns: 0 };
@@ -1858,9 +1865,11 @@ export function initRecruiterFilters(baseData) {
       const peopleCells = (v) => {
         const pri = priorityReadCell(v);
         if (v.rollup) return sumCell(v.joN != null ? v.joN : v.xHC, v.rollup)
-                           + sumCell(v.jpN != null ? v.jpN : (v.jp && v.jp.t ? v.jp.t.hc : 0), v.rollup) + pri;
+                           + sumCell(v.jpN != null ? v.jpN : (v.jp && v.jp.t ? v.jp.t.hc : 0), v.rollup)
+                           + sumCell(v.dHC || 0, v.rollup) + pri;   // #252c: the rollup branch needs it too
         return jnWhoCell(v, { list: v.joWho || [], dateOf: (x) => x.startDate, tagOf: srcTag, groupByDate: true, under: v.joUnder })
              + jnWhoCell(v, { tagOf: srcTag, under: v.jpUnder })   // defaults to v.jpWho, dated by the joining date
+             + jnWhoCell(v, { list: v.drWho || [], dateOf: (x) => x.day, tagOf: srcTag })   // #252c
              + pri;
       };
 
@@ -1908,7 +1917,7 @@ export function initRecruiterFilters(baseData) {
         //    of 0, so the job rows summed to 4 against a parent of 0. Unclamped, they close (Rule 3).
         // 🚨 Do NOT re-add the clamp. CLAUDE.md Rule 1 was written the other way round and was REVERSED
         //    here by Jerin on 25 Sep 2026.
-        return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, jp,
+        return { aHC, aSc, capSc, xHC, xSc, uHC, uSc, dHC: dr.hc, dSc: dr.sc, drWho: dr.who || [], jp,   // #252c
                  jx: isSales ? jxOf(r.name) : null,   // #39
                  gHC: aHC - uHC, gSc: aSc - uSc,
                  // #182c: the people behind xHC and jp.t.hc on THIS row. Sales and non-Sales read different
@@ -1932,7 +1941,7 @@ export function initRecruiterFilters(baseData) {
 
       let html = '';
       gs.forEach((G, pi) => {
-        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, gHC: 0, gSc: 0, aNoCx: 0,
+        const podAgg = { aHC: 0, aSc: 0, capSc: 0, xHC: 0, xSc: 0, uHC: 0, uSc: 0, dHC: 0, dSc: 0, drWho: [], gHC: 0, gSc: 0, aNoCx: 0,   // #252c
                          joN: 0, jpN: 0,   // #193c: how many people are NAMED below, heads or sourced
                          aSo: 0, xSo: 0, uSo: 0, dSo: 0, gSo: 0,   // #108
                          jp: { t: { hc: 0, sc: 0, so: 0, ns: 0 }, a: { hc: 0, sc: 0, so: 0, ns: 0 }, b: { hc: 0, sc: 0, so: 0, ns: 0 } },
@@ -2023,7 +2032,7 @@ export function initRecruiterFilters(baseData) {
               const jaSo = jg.so || 0, jxSo = jx0.so || 0;
               const juSo = (isSales ? jxSo : jxSo + (jjp.t.so || 0)) + (subDrop ? (jd2.so || 0) : 0);
               const jv = { aHC: jg.hc, aSc: jg.sc, capSc: null, aNoCx: jg.noCx || 0, xHC: jxHC, xSc: jxSc, uHC: juHC, uSc: juSc,
-                           dHC: jd2.hc, dSc: jd2.sc, jp: jjp,
+                           dHC: jd2.hc, dSc: jd2.sc, drWho: jd2.who || [], jp: jjp,   // #252c
                            jx: isSales ? jxOfJob(r.name, bj.jobId) : null,   // #39
                            // #179: unclamped here too — this is the level where the clamp broke the sums.
                            gHC: jg.hc - juHC, gSc: jg.sc - juSc,

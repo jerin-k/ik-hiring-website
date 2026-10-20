@@ -387,17 +387,23 @@ export function renderHmReport(data) {
       .hm-report .hm-summary td:not(:first-child) { white-space:nowrap; text-align:center; }
       .hm-report .hm-summary td:nth-child(7),
       .hm-report .hm-summary td:nth-child(8),
-      /* 🚨 #252f: Remarks moved 9 ➔ 10 when the Pri column went in before it. These rules are POSITIONAL, so
-         inserting a column silently re-points every one of them — the widths below shifted in the same edit.
-         Column 9 is Pri and is CENTRED, so it is deliberately not in this left-align list. */
-      .hm-report .hm-summary td:nth-child(10) { text-align:left; white-space:normal; }
+      .hm-report .hm-summary td:nth-child(9),
+      /* 🚨 #252f: Remarks moved 9 ➔ 10 when the Pri column went in before it. #252c moved it 10 ➔ 11 for the
+         same reason — "Who dropped" went in at 9. These rules are POSITIONAL, so inserting a column silently
+         re-points EVERY one of them, and it has now happened twice in one day. Column 10 is Pri and is
+         CENTRED, so it is deliberately not in this left-align list. */
+      .hm-report .hm-summary td:nth-child(11) { text-align:left; white-space:normal; }
       .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:5rem; }      /* Dropped */
       /* Delta floor is 7rem: bar 4 + gap 0.5 + number 1.125 = 5.6rem of content before the cell padding. */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:7rem; }
-      .hm-report .hm-summary th:nth-child(7), .hm-report .hm-summary td:nth-child(7) { width:12.5rem; }   /* Who has joined */
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; }     /* Who is joining */
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:3.5rem; }     /* #252f Pri — lean, as asked */
-      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:12.5rem; }  /* Remarks */
+      /* #252c: FOUR text columns share what three had. 📏 At the 87.4rem panel: name 14 + three numbers at
+         4.5 + Offer drop 5 + Delta 7 + Pri 3.5 = 43rem, leaving 44.4 for four columns — 11rem each, which
+         totals 87 and fits. ⚠ Re-derive if a column is added; these are positions, not names. */
+      .hm-report .hm-summary th:nth-child(7), .hm-report .hm-summary td:nth-child(7) { width:11rem; }   /* Who has joined */
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:11rem; }   /* Who is joining */
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:11rem; }   /* #252c Who dropped */
+      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:3.5rem; } /* #252f Pri — lean, as asked */
+      .hm-report .hm-summary th:nth-child(11), .hm-report .hm-summary td:nth-child(11) { width:11rem; }  /* Remarks */
 
       /* ===== #182b — BOTH HALVES PAINTED (option F), now class-based (#182c) =====
          🗣 "For the amt of content, i'd take F" · 🚫 no hard rule between them: "dont need this datk seperator".
@@ -453,7 +459,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary painted-halves">
-        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total positions</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total positions</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Who dropped</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -781,6 +787,17 @@ export function initHmFilters(data) {
       const rb = recBucket(row, attr || who);
       rb[field] += 1;
       if (who) { (row.jpWho || (row.jpWho = [])).push(who); (G.jpWho || (G.jpWho = [])).push(who); rb.jpWho.push(who); }
+      // #252c (Jerin, 19 Oct 2026): the dropped person's name, pushed in the SAME call that increments the
+      // figure beside it, so the list and the count can never disagree (Rule 3: the table computes).
+      // `attr` is the dropEvent itself; the pipeline puts `candidate` on it from the offer it was built from.
+      // ⚠ Only the 112 offer-sourced drops reach here — `dropRows` filters to those (#183c) — and every
+      //   one carries a name, so a MISSING name means the data predates the 20 Oct pipeline change.
+      if (field === 'drop' && attr && attr.candidate) {
+        const d = { candidate: attr.candidate, day: attr.day || null };
+        (row.drWho || (row.drWho = [])).push(d);
+        (G.drWho || (G.drWho = [])).push(d);
+        (rb.drWho || (rb.drWho = [])).push(d);
+      }
     }
     // ===== #182a (Jerin, 26 Sep 2026): "Left to Who is joining, add a 'Who has joined?'." =====
     // 🚨 IT COUNTS NOTHING. The Joined column beside it counts POSITIONS, from openingBuckets; this is a list of
@@ -790,6 +807,9 @@ export function initHmFilters(data) {
     //    Said on screen in the definitions block, or the column reads as a fault.
     // The test is the SAME one every people-based Joined on this site uses, and the same one renderJoiners() uses,
     // so the names here and the names on the Joiners sub-tab are one population.
+    // #252c: the fourth people column. ONE helper, because this tab draws its rows in six places and a
+    // hand-written cell at each is how a column goes missing from one row type (#262's fault in miniature).
+    const dropCell = (o) => jnWhoCell(o || {}, { list: (o && o.drWho) || [], dateOf: (c) => c.day });
     function addJoiner(dept, title, who, job8) {
       if (!okRec(recruiterOfPerson(who))) return;   // #196
       const { G, row } = rowFor(dept, title, job8, who);
@@ -912,7 +932,8 @@ export function initHmFilters(data) {
         // Joining pipeline count, because splitWho() places those people — that path is untouched.
         + `<td style="font-weight:600">${t.total}</td><td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
         + DASH + DASH + DASH + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
-        + jnWhoCell({ jpWho: [] }) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+        + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`   // #252c: a topic cannot claim a drop
+        + jnWhoCell({ jpWho: [] }) + dropCell(t) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
     }).join('');
 
     let html = '';
@@ -928,6 +949,9 @@ export function initHmFilters(data) {
         <td style="font-weight:600">${deptOpens ? CARET : ''}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
         + `<td class="jn-cell jn-sum">${(D.joWho || []).length ? `${D.joWho.length} joined` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
+        // #252c: a department row carries a COUNT, not a list — naming them here would repeat every name
+        // again on the job rows beneath it, which is the rule the two columns above already follow.
+        + `<td class="jn-cell jn-sum">${D.drop ? `${D.drop} dropped` : '<span class="zero">—</span>'}</td>`
         + `<td class="pri-cell"><span class="zero">&mdash;</span></td>`
         + `<td class="jn-cell jn-sum">${withNote ? `${withNote} of ${jobs2.length} written` : '<span class="zero">—</span>'}</td></tr>`;
       // ===== #188: with Job switched OFF the department opens straight to its recruiters (or its topics),
@@ -945,7 +969,7 @@ export function initHmFilters(data) {
               + (r.total ? '' : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
               + recMetrics(r, { jpP: r.pending, drop: r.drop }, gapP)
               + jnWhoCell(r, { list: r.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
-              + jnWhoCell({ jpWho: r.jpWho || [] })
+              + jnWhoCell({ jpWho: r.jpWho || [] }) + dropCell(r)
               + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
             if (LV.top && deptHasTopics(D.dept)) html += emitTopics(Object.entries(r.topics || {}).map(([t, v]) => Object.assign({ topic: t }, v)), gi, null, '3.25rem');
           });
@@ -982,7 +1006,7 @@ export function initHmFilters(data) {
         const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true });
         const opens = hasRecs || topics;
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-lvl="2" data-g="${gi}"${opens ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${priorityCell({ ...o, roleRow: true })}${remarkCell(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${dropCell(o)}${priorityCell({ ...o, roleRow: true })}${remarkCell(o)}</tr>`;
         if (!opens) return;
         // With no recruiter level the topics hang off the job exactly as they did before #187.
         const under = hasRecs ? recs : [{ recruiter: null, openings: null }];
@@ -996,7 +1020,7 @@ export function initHmFilters(data) {
               + (r.total ? '' : `<span class="noseat-tag">no position of their own</span>`) + `</td>`
               + recMetrics(r, rb, gapP)
               + jnWhoCell(rb, { list: rb.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
-              + jnWhoCell({ jpWho: rb.jpWho || [] })
+              + jnWhoCell({ jpWho: rb.jpWho || [] }) + dropCell(rb)
               + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
           }
           // the topic rows now hang off the RECRUITER when there is one, so the tree reads
@@ -1015,7 +1039,7 @@ export function initHmFilters(data) {
               // Recruiter tab and has its own "(not tied to a topic)" remainder rule; a half-done split here would
               // silently under-count. A dash says "not worked out at this level", which is true. Never a number.
               + topicMetrics(t, tw.length) + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
-              + jnWhoCell({ jpWho: tw }) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+              + jnWhoCell({ jpWho: tw }) + '<td class="jn-cell"><span class="zero">&mdash;</span></td>' + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
           });
         });
       });
@@ -1024,7 +1048,8 @@ export function initHmFilters(data) {
     const joinedAll = Object.values(groups).reduce((a, G) => a + ((G.joWho || []).length), 0);
     html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}`
       + `<td class="jn-cell jn-sum">${joinedAll ? `${joinedAll} joined` : '<span class="zero">—</span>'}</td>`
-      + `<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
+      + `<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td>`
+      + `<td class="jn-cell jn-sum">${totals.drop ? `${totals.drop} dropped` : '<span class="zero">—</span>'}</td><td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
     wireTree(body, true);   // #189d: the level chooser IS the expand control on this table (#188)
