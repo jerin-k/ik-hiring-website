@@ -1,7 +1,8 @@
 import { levelChooser, levelsOn, wireLevels, syncLevels, expandAllOn, showLevels } from '../tree-levels.js';   // #189e: the same control as the other two tabs
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, capacityIsSet, currentQuarter, qKey, podDefOf } from '../recruiter-pods.js';   // #205: what a pod measures, per quarter
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
-import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with the other tabs · #193a: isMoreClick
+import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';
+import { priorityReadCell } from '../remark-cell.js';   // #267: the priority, shown not edited   // #182c: ONE people-cell renderer, shared with the other tabs · #193a: isMoreClick
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { defsBlock, HYGIENE_LISTS } from '../definitions.js';
 import { tdCandidate, tdDept, tdJob, tdQuarter, tdMonth, tdDoj, tdStage, tdSourcer, avatar, countTag, pointsCaption } from '../people-cells.js';   // #137 · #176b · #194: tdSourcer
@@ -77,7 +78,9 @@ const FULFIL_TABLES = [
 const tableFor = (T, q) => { const d = podDefOf(T.pod, q);
   return { ...T, count: d.measuredOn, drop: d.dropInDelta, dropPts: d.dropPts, capUnit: d.capUnit, goalUnit: d.goalUnit }; };
 
-const FULFIL_NCOL = 10;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns
+const FULFIL_NCOL = 11;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns · #267: +1 Pri
+// 🚨 THIS IS THE COLUMN COUNT THE EMPTY-STATE ROWS REPEAT OFF (`repeat(ncol - 1)`). Change the header builder
+// and this together, or a 'No jobs attributed' row runs short against its own heading — exactly #262's fault.
 // #252g (Jerin, 20 Oct 2026): ONE row, ONE column per metric — the score is tucked under the heads count in
 // the body, so the Heads/Score sub-row has nothing left to label. It said "Heads", not "HC" like the Overall
 // Efficiency one, and both are gone.
@@ -96,7 +99,8 @@ const fulfilHeadHtml = (T) => `
       <th class="stage-hdr c-num">Offer drop</th>
       <th class="stage-hdr">Delta</th>
       <th class="stage-hdr jn-th">Who has joined</th>
-      <th class="stage-hdr jn-th">Who is joining</th></tr>`;
+      <th class="stage-hdr jn-th">Who is joining</th>
+      <th class="stage-hdr pri-th c-num">Pri</th></tr>`;
 // #179e: the chart sits INSIDE its own block, under the table's heading — one chart per table, each reading
 // only the recruiters that table rendered. 🚨 Rule 3 still holds: THE TABLE COMPUTES, THE CHART READS.
 const fulfilBlockHtml = (T, i) => `
@@ -1846,11 +1850,18 @@ export function initRecruiterFilters(baseData) {
       // below" over NINE names, and printed a dash over the one person in her closing list. A roll-up that
       // disagrees with what opening the row shows is the same fault in miniature as a chart disagreeing with
       // its table (Rule 3). `joN`/`jpN` are the list lengths, carried up from the same lists the rows draw.
+      // #267: the Priority rides along HERE, not at each call site. This one function ends every row on all
+      // five tables — role rows, recruiter rows, pod rows, topic rows and the leftovers row — so appending it
+      // once means the cell count cannot drift between them. 🚨 This table's cell count HAS drifted before.
+      // Only a ROLE row carries a value; everything else gets a dash, which `priorityReadCell` decides from
+      // the `roleRow` flag the job row sets on its own object.
       const peopleCells = (v) => {
+        const pri = priorityReadCell(v);
         if (v.rollup) return sumCell(v.joN != null ? v.joN : v.xHC, v.rollup)
-                           + sumCell(v.jpN != null ? v.jpN : (v.jp && v.jp.t ? v.jp.t.hc : 0), v.rollup);
+                           + sumCell(v.jpN != null ? v.jpN : (v.jp && v.jp.t ? v.jp.t.hc : 0), v.rollup) + pri;
         return jnWhoCell(v, { list: v.joWho || [], dateOf: (x) => x.startDate, tagOf: srcTag, groupByDate: true, under: v.joUnder })
-             + jnWhoCell(v, { tagOf: srcTag, under: v.jpUnder });   // defaults to v.jpWho, dated by the joining date
+             + jnWhoCell(v, { tagOf: srcTag, under: v.jpUnder })   // defaults to v.jpWho, dated by the joining date
+             + pri;
       };
 
       const recFulfil = (r) => {
@@ -2081,6 +2092,7 @@ export function initRecruiterFilters(baseData) {
                 jv.joUnder = belowJo.size; jv.joWho = (jv.joWho || []).filter(x => !belowJo.has(x));
                 jv.jpUnder = belowJp.size; jv.jpWho = (jv.jpWho || []).filter(x => !belowJp.has(x));
               }
+              jv.roleRow = true; jv.job8 = j8t;   // #267: this is the one row level a priority belongs to
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
                 <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${jobScoreCaption(jobScoreSpread(j8t, m, q, openingScores(data)), m.level, `${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}`)}</span></td>${cells(jv, false)}</tr>`;
               (tops || []).forEach(t => {

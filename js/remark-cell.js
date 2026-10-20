@@ -132,6 +132,23 @@ export function priorityCell(o) {
     + `<select class="prisel" data-jn-pri="1" aria-label="Priority for this role" title="Priority — P0 is most urgent">${opts}</select></td>`;
 }
 
+// #267 (Jerin, 20 Oct 2026): 🗣 "Need Priority column added to Recruiter efficiency as well; neednt be
+// editable though." The SAME value, shown and not editable — Recruiter Efficiency is where you read what a
+// role's priority IS while working a pod; it is SET on Hiring Manager or Overall Efficiency.
+// 🔑 It reads through `priorityOf`, the one reader the editable cell uses, so the two can never disagree —
+//    an unconfirmed choice shows here as unsaved too, because it is the same draft.
+// 🚨 The same `roleRow` guard as the editable cell, for the same reason: a RECRUITER row carries its job's
+//    id as well, so testing "has a job8" would put a priority on every recruiter (measured 20 Oct, #252f).
+export function priorityReadCell(o) {
+  const job8 = (o && o.roleRow && o.job8) ? String(o.job8).slice(0, 8) : '';
+  const dash = '<td class="pri-cell"><span class="zero">\u2014</span></td>';
+  if (!job8) return dash;
+  const p = priorityOf(job8);
+  const cur = p ? (p.pri || '') : '';
+  if (!cur) return dash;
+  return `<td class="pri-cell${p.unsaved ? ' jn-unsaved' : ''}">${esc(cur)}</td>`;
+}
+
 // Wire a tbody once. The <select> saves on change, through the same confirm-by-read as a remark.
 // ⚠ `change` does not bubble from a <select> in every engine the same way `click` does — it DOES bubble, but
 //   the listener is registered on the body deliberately so a re-render never leaves a dead control behind.

@@ -40,12 +40,16 @@ export function deltaPill(n, label) {
   // which is neither > 0 nor < 0, so half a position of SURPLUS used to read "met". Identical for whole
   // numbers, which is every caller except the Recruiter tab.
   const state = raw > 0 ? 'short' : (raw < 0 ? 'over' : 'met');
-  // A plus is never drawn; a minus comes free with the number. "met" says in a word what a bare 0 does not.
-  // ⚠ Zero keeps the house wording even when a label is passed, so both tabs say the same thing at zero.
-  const shown = v === 0 ? '0 met' : (label != null ? String(label) : String(v));
+  // A plus is never drawn; a minus comes free with the number.
+  // #268 (Jerin, 20 Oct 2026): 🗣 "Just skip the met." Zero now reads as a plain 0, like every other value
+  // in the column. The word was doing the job the COLOUR already does — grey is the settled state — and it
+  // was the only cell on the site that put a word inside a number column.
+  // ⚠ The `met` STATE name below is an internal identifier and keeps its name, as `gapCell` and `.gapcell`
+  // do: it is what picks the grey, and renaming it would move no number (CLAUDE.md Rule 2).
+  const shown = label != null ? String(label) : String(v);
   const title = v > 0 ? `${v} still to fill`
     : v < 0 ? `${-v} more ${-v === 1 ? 'person' : 'people'} in closing than positions opened`
-    : 'Met exactly — nothing outstanding';
+    : 'Nothing outstanding';
   return `<span class="deltacell"><span class="dpill ${state}" title="${esc(title)}">${shown}</span></span>`;
 }
 
