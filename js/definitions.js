@@ -280,12 +280,12 @@ export const DEFINITIONS = {
   'rec-joiningpending': {
     summary: 'How this list is worked out',
     intro: 'Every person in closing &mdash; <em>Ref Check</em>, <em>Documentation</em> or <em>Offer</em> &mdash; one row each, grouped <strong>Pod &rarr; Recruiter &rarr; Candidate</strong>. A <strong>live</strong> list: each person sits in their recruiter&rsquo;s pod for the quarter we are in today. On this sub-tab Year, Quarter, From and To give way to <strong>DOJ Month</strong>, <strong>DOJ From</strong> and <strong>DOJ To</strong>, and <em>Expand all</em> opens every pod and recruiter.',
-    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 24 Aug 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. Renamed Joining Pending to Joining Pipeline &middot; 27 Sep 2026. Table fitted to the page, full text on hover &middot; 9 Oct 2026. A Pod, Recruiter or Job filter now hides the untagged group &middot; 20 Oct 2026.',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter&rsquo;s pod, earliest joining date first, with a count beside each pod and recruiter. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears under <em>No recruiter in this view</em> with the reason beside their name &mdash; so the list accounts for everybody.'],
+          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter&rsquo;s pod, earliest joining date first, with a count beside each pod and recruiter. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears under <em>No recruiter in this view</em> with the reason beside their name &mdash; so with no Pod, Recruiter or Job filter set the list accounts for everybody. &#128681; <strong>Pick a Pod, a Recruiter or a Job and that group goes away</strong>, because nobody in it answers to the person or role you asked for &mdash; keeping it would add strangers to your total.'],
           ['Month and DOJ', 'The joining date and its month. It turns <strong>rose</strong> once the date has passed and they are still not moved to Hired. <em>Not set</em> when there is no DOJ yet.'],
           ['Sourcer', 'Who <strong>sourced</strong> the candidate, when that was somebody other than the recruiter working the role. &#128681; <strong>A dash is the normal case, not a gap</strong> &mdash; almost every hire is sourced by the recruiter who worked it, and Ashby only holds this field when someone else did it. The head always stays with the recruiter (#108), so a name here never changes a count.'],
           ['Sub-stage', 'Which of Ref Check, Documentation or Offer they are in now. The badge <strong>darkens</strong> one step at a time, so the colour says how close they are to joining.'],
@@ -306,12 +306,12 @@ export const DEFINITIONS = {
   'rec-joiners': {
     summary: 'How this list is worked out',
     intro: 'Everyone who joined &mdash; moved to the <em>Hired</em> stage (an accepted offer alone does not count), with a <strong>start date</strong> between <strong>From</strong> and <strong>To</strong> &mdash; one row each, grouped <strong>Pod &rarr; Recruiter &rarr; Candidate</strong>.',
-    confirmed: 'Added with Jerin &middot; 15 Sep 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026.',
+    confirmed: 'Added with Jerin &middot; 15 Sep 2026. Latest: Opening and Topic as two columns, the opening by its full name &middot; 23 Sep 2026. A Pod, Recruiter or Job filter now hides the untagged group &middot; 20 Oct 2026.',
     groups: [
       {
         heading: 'Reading it',
         items: [
-          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter&rsquo;s pod for the selected quarter, most recent joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears under <em>No recruiter in this view</em> with the reason beside their name.'],
+          ['Pod / Recruiter / Candidate', 'Each person sits under their <strong>Recruiter</strong> in Ashby, inside that recruiter&rsquo;s pod for the selected quarter, most recent joining date first. Anyone with no recruiter tagged, or whose recruiter this tab does not show, appears under <em>No recruiter in this view</em> with the reason beside their name. &#128681; <strong>Pick a Pod, a Recruiter or a Job and that group goes away</strong>, because nobody in it answers to the person or role you asked for &mdash; keeping it would add strangers to your count.'],
           ['Month and DOJ', 'The day they started, and its month.'],
           ['Sourcer', 'Who <strong>sourced</strong> the candidate, when that was somebody other than the recruiter working the role. &#128681; <strong>A dash is the normal case, not a gap</strong> &mdash; almost every hire is sourced by the recruiter who worked it, and Ashby only holds this field when someone else did it. The head always stays with the recruiter (#108), so a name here never changes a count.'],
           ['Opening', 'The <strong>position</strong> they are tied to, by its full name, or why it cannot be shown: <em>no opening on the offer</em> or <em>not in this period</em>.'],

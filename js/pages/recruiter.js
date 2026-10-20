@@ -965,7 +965,9 @@ export function initRecruiterFilters(baseData) {
   // "If there is a filter applied, data needs to change as well." The range always sits inside the one quarter picked (#127b). A range
   // covering the whole quarter reads the quarter figures exactly as before; a narrower one reads the pipeline's day fields, whose days
   // add up to those quarter figures. Job lists stay on the quarter (#125), Joining Pending stays live, Data Hygiene is unchanged.
-  function selRange() { return rangeOf(document.getElementById('recVelFrom'), document.getElementById('recVelTo'), [selQuarter()]); }
+  // #261: clamped to the period ACTUALLY IN FORCE (selQuarters), not to the single dropdown — which is
+  // hidden wherever the Quarters chip is shown, and whose disagreement collapsed this to one day.
+  function selRange() { return rangeOf(document.getElementById('recVelFrom'), document.getElementById('recVelTo'), selQuarters()); }
   const wholeQuarter = () => coversQuarters(selRange(), [selQuarter()]);
   // Capacity is set for a whole quarter, so a range covering part of it gets that share of the days (Jerin: 1A).
   const capacityFor = (name, qq) => {
@@ -1166,11 +1168,29 @@ export function initRecruiterFilters(baseData) {
     const first = sel ? [...sel.options].map(o => o.value).filter(Boolean)[0] : '';
     return first || String(new Date().getFullYear());
   }
+  // ===== #261 (20 Oct 2026): the Quarters chip governs ONLY the sub-tabs it is SHOWN on =====
+  // This is #243, on the one tab #243 never reached — see efficiency.js, which carries the same note.
+  // The chip's handler resets From / To to the chip's span, but selRange() clamped those dates against
+  // selQuarter(), which read the single Year/Quarter dropdown — HIDDEN on every sub-tab the chip governs.
+  // Chip on Q4 over a hidden Q3 box: the boxes correctly read 1 Oct – 31 Dec, rangeOf() clamped `to` back
+  // to 30 Sep, and `if (from > to) from = to` collapsed the window to the single day 30 SEP. Every panel on
+  // this tab reads selRange(), so Joiners, Screening, Sourcing and Time in Process all printed
+  // "30 Sep – 30 Sep 2026" under date boxes reading 1 Oct, and the two people who started on 30 Sep leaked
+  // into a Q4 list. Measured 20 Oct 2026. 🔑 ONE predicate now decides both whether the chip is DRAWN and
+  // whether it is OBEYED, so its visibility and its authority cannot drift apart again (Rule 13's mirror:
+  // a hidden filter that moves every number).
+  // ⚠ Position Fulfilment, Joining Pipeline and Data Hygiene keep the single Year + Quarter boxes: pods,
+  // capacity and the scoring grid are per-quarter configuration, so Goal and Delta have no value across two.
+  const chipGoverns = (name) => name !== 'fulfilment' && name !== 'joiningpending' && name !== 'hygiene';
   // ONE quarter — for the things that only exist per quarter: pod membership, capacity, the Fulfilment goal.
   // 🚨 This used to fall through to TODAY's quarter whenever EITHER dropdown read "All", so picking Q1 with
   // Year on All showed Q3 numbers under a Q1 heading. Resolve the year instead, and fall back to the current
   // quarter only when no quarter is picked at all.
+  // 🚨 #261: it is DERIVED from the period in force, never read straight off the hidden dropdown. Several
+  // quarters ticked ⇒ the period's LAST one, exactly as Overall Efficiency's scoreQOf() has always done.
   function selQuarter() {
+    const per = selQuarters();
+    if (per && per.length) return per[per.length - 1];
     const q = document.getElementById('recVelQuarter')?.value;
     return q ? qKey(selYear(), q) : currentQuarter();
   }
@@ -1183,7 +1203,7 @@ export function initRecruiterFilters(baseData) {
   // capacity and the scoring grid are per-quarter with copy-forward, so Goal and Delta have no defined value
   // across two of them. Ticking nothing falls back to Year/Quarter, so the default is exactly as before.
   function selQuarters() {
-    const multi = msRecQuarters ? msRecQuarters.getSelected() : [];
+    const multi = (msRecQuarters && chipGoverns(activeTab)) ? msRecQuarters.getSelected() : [];   // #261: only where it is shown
     if (multi.length) return multi.slice().sort();
     return periodQuarters(document.getElementById('recVelYear')?.value || '', document.getElementById('recVelQuarter')?.value || '');
   }
@@ -1236,6 +1256,17 @@ export function initRecruiterFilters(baseData) {
   // opposed to the ones this tab ALWAYS hides (recruiters not here this quarter, no pod set).
   // The JP Cases table needs the difference: a default exclusion still has to be accounted for somewhere,
   // an explicit one must not be quietly re-added under an "unassigned" label.
+  // ===== #261 (Jerin, 20 Oct 2026): an explicit Pod / Recruiter / Job choice hides the UNTAGGED group too =====
+  // explicitlyFiltered() below keeps filtered-out RECRUITERS out of the orphan group, for the reason its own
+  // comment gives — re-adding them under an "unassigned" label would be a lie. It can never fire for someone
+  // with NO recruiter at all, because there is no name to test, so those people showed under every recruiter
+  // filter: measured 20 Oct on a consistent Q3, Recruiter All gave 165 joined / 26 untagged and Recruiter
+  // V Pooja gave 34 joined / **still 26** — so the filter moved the named rows and not that group, and the
+  // headline was 8 of hers plus 26 strangers. 🗣 His call: hide it, the way Interview Traction already hides
+  // its unattributed rows the moment Pod or Recruiter is used (Rule 13).
+  // 🔑 ONE flag drives the rows, the group's count AND the headline, so the three cannot disagree (Rule 3).
+  const anyPeopleFilter = () => !!((msPod && msPod.getSelected().length) || (msRec && msRec.getSelected().length) || narrowed());
+
   function explicitlyFiltered(name, q) {
     const pods = msPod ? msPod.getSelected() : [];
     const names = msRec ? msRec.getSelected() : [];
@@ -2153,13 +2184,14 @@ export function initRecruiterFilters(baseData) {
       });
       const oi = inGroups.length;
       const orphanNames = Object.keys(orphanBy).sort();
-      const orphanCount = noRec.length + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
+      const showNoRec = !anyPeopleFilter();   // #261
+      const orphanCount = (showNoRec ? noRec.length : 0) + orphanNames.reduce((n, k) => n + orphanBy[k].length, 0);
       if (orphanCount) {
         html += `<tr data-path="${oi}" data-haschild data-exp="0" style="cursor:pointer;background:var(--border-light)">
           <td style="font-weight:600">${CARET}No recruiter in this view${cnt(orphanCount)}</td>
           <td colspan="${rest}"></td></tr>`;
         let ri = 0;
-        if (noRec.length) {
+        if (showNoRec && noRec.length) {   // #261
           html += `<tr data-path="${oi}-${ri}" data-haschild data-exp="0" style="display:none;cursor:pointer">
             <td style="padding-left:1.625rem;font-weight:500">${CARET}No recruiter tagged${cnt(noRec.length)}</td><td colspan="${rest}" style="color:var(--orange);font-size:0.6875rem">Fix in Ashby: tag a Recruiter on the hiring team.</td></tr>`;
           noRec.slice().sort(sortBy).forEach((c, ci) => { html += candRow(c, `${oi}-${ri}-${ci}`); });
@@ -2236,7 +2268,7 @@ export function initRecruiterFilters(baseData) {
       wireTreePath(joinersBody);
       const capJ = document.getElementById('recJoinersCaption');
       if (capJ) capJ.innerHTML = jn.shown
-        ? `<strong>${jn.shown}</strong> joined, ${rangeText(rgJ, [selQuarter()])}.`
+        ? `<strong>${jn.shown}</strong> joined, ${rangeText(rgJ, selQuarters())}.`
           + (jn.orphanCount ? ` <strong>${jn.orphanCount}</strong> sit in the last group.` : '')
           + (jn.unlinked ? ` <strong>${jn.unlinked}</strong> have no opening attached.` : '')
         : '';
@@ -3993,7 +4025,7 @@ export function initRecruiterFilters(baseData) {
     // every other sub-tab gets the plain Expand all tick. The same rule as the other two tabs (#189d).
     // #227: ONE period control at a time - see the note on selQuarters(). Data Hygiene keeps the single
     // Quarter (its lists are per quarter); Joining Pipeline is live and swaps to the DOJ boxes (#133).
-    const multiQ = name !== 'fulfilment' && name !== 'joiningpending' && name !== 'hygiene';
+    const multiQ = chipGoverns(name);   // #261: ONE predicate - shown exactly where it is obeyed
     showControl(document.getElementById('recQuartersWrap'), multiQ);
     showControl(document.getElementById('recVelYear')?.closest('.fchip'), !multiQ);
     showControl(document.getElementById('recVelQuarter')?.closest('.fchip'), !multiQ);
