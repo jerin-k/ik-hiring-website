@@ -431,3 +431,44 @@ function probe241Links() {
   }
   Logger.log("#241 done - nothing was written.");
 }
+
+/**
+ * #269a PROBE - 20 Oct 2026. READ ONLY: no writes, no triggers, no properties touched.
+ * Settles three things before any pipeline change for #269:
+ *   1. the EXACT custom-field titles that sit on an opening;
+ *   2. how many openings actually CARRY Role Type / Employment Type / Budget;
+ *   3. the SHAPE of the Currency budget value, so the aggregation can parse it.
+ * Money is never logged as a figure - every digit is masked to #.
+ */
+function probe269Fields() {
+  var ops = fetchOpenings_();
+  var titles = {}, shapes = {}, n = 0;
+  var cnt = { roleType: 0, empType: 0, budget: 0 };
+  ops.forEach(function (o) {
+    n++;
+    var cfs = (o.latestVersion && o.latestVersion.customFields) || [];
+    cfs.forEach(function (f) {
+      var t = f.title || f.name || "(untitled)";
+      titles[t] = (titles[t] || 0) + 1;
+    });
+    if (openingCustomFieldByTitle_(o, /role type/i)) cnt.roleType++;
+    if (openingCustomFieldByTitle_(o, /employment type/i)) cnt.empType++;
+    var bd = openingCustomFieldByTitle_(o, /budget/i);
+    if (bd) {
+      cnt.budget++;
+      var masked = String(bd).replace(/[0-9]/g, "#");
+      shapes[masked] = (shapes[masked] || 0) + 1;
+    }
+  });
+  Logger.log("#269a PROBE - READ ONLY - " + n + " openings seen");
+  Logger.log("  carries Role Type       : " + cnt.roleType);
+  Logger.log("  carries Employment Type : " + cnt.empType);
+  Logger.log("  carries a Budget value  : " + cnt.budget);
+  var keys = Object.keys(titles).sort();
+  Logger.log("  DISTINCT custom-field titles on openings (" + keys.length + "):");
+  keys.forEach(function (k) { Logger.log("    \"" + k + "\"  on " + titles[k] + " openings"); });
+  var sk = Object.keys(shapes);
+  Logger.log("  budget value SHAPES, digits masked (" + sk.length + " distinct):");
+  sk.forEach(function (k) { Logger.log("    " + k + "   x" + shapes[k]); });
+  return cnt;
+}
