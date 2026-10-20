@@ -1,7 +1,7 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
 import { jnWhoCell, wireMoreCells, isMoreClick, markRemarkOverflow } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick
-import { remarkCell, wireRemarks } from '../remark-cell.js';   // #252e: the remark cell + editor, shared with the Hiring Manager tab
+import { remarkCell, wireRemarks, priorityCell, wirePriority, byPriorityThen } from '../remark-cell.js';   // #252e remark cell + editor · #252f priority, both shared with the Hiring Manager tab
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { loadNotes } from '../job-notes.js';   // #252e: Remarks are EDITABLE here now - the cell and its editor are in remark-cell.js
 import { defsBlock } from '../definitions.js';
@@ -110,7 +110,10 @@ const topicCells = (x, noPending, peopleHtml) =>
   //    against the header's 14 - caught by counting cells per row, not by looking at the page. Since #252g it
   //    is ONE cell, because a metric is one column; the two uses above cover Offer drop and Delta.
   // ⚠ The THIRD cell is Remarks and stays a dash: a remark belongs to the role, never to a topic.
-  + (peopleHtml || EFF_ONE + EFF_ONE) + EFF_ONE
+  // 🚨 #252f: the Pri cell goes here too. This is the SECOND builder for this table and it is exactly the
+  //    one that was missed when #252g merged the columns — 26 rows ran a cell short. A remark and a priority
+  //    both belong to a ROLE, never to a topic, so this one is always a dash.
+  + (peopleHtml || EFF_ONE + EFF_ONE) + '<td class="pri-cell"><span class="zero">&mdash;</span></td>' + EFF_ONE
 ;   // #182d: the Missed pair is gone - Delta already says what was not filled, live
 
 function wireTreePath(tbody, expandAll) {
@@ -267,7 +270,7 @@ export function renderEfficiency(data) {
                and Remarks fell 173 ➔ 143. An explicit family on the heading always wins, so this says plainly
                that they are numbers. Measured 20 Oct 2026, on the real table at the real 1210px panel.
                ⚠ Delta is deliberately left to infer: its pill makes it c-bar (9.5rem), which is what it needs. -->
-          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr jn-th">Remarks</th></tr>
+          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr pri-th c-num">Pri</th><th class="stage-hdr jn-th">Remarks</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
@@ -903,7 +906,8 @@ export function initEfficiencyFilters(data) {
         // in closing there (45 of SME - India's 46), and would hide them here too.
         const js = jobs.map(j => { seen[dept + '|' + (j.title || '')] = 1; return { j, sp: jobSplit(j, per, dept, PM) }; })
           .filter(x => x.sp.total > 0 || x.sp.pending > 0 || x.sp.drop > 0 || x.sp.missed > 0);
-        js.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
+        // #252f: P0 to the top WITHIN this department; size order is kept as the tie-break.
+        js.sort(byPriorityThen((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending), (o) => o && o.sp && o.sp.job8));
         return { dept, jobs: js, sum: sumSplits(js.map(x => x.sp)) };
       })
       .filter(d => d.jobs.length);
@@ -954,7 +958,8 @@ export function initEfficiencyFilters(data) {
         j.scoreable = isScoreable(j);
         grp.jobs.push({ j, sp: jobSplit(j, per, dept, PM) });
       });
-      grp.jobs.sort((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending));
+      // #252f: the same rule on the recruiter-grouped build — both paths or the order differs by level.
+      grp.jobs.sort(byPriorityThen((a, b) => (b.sp.total - a.sp.total) || (b.sp.pending - a.sp.pending), (o) => o && o.sp && o.sp.job8));
       grp.sum = sumSplits(grp.jobs.map(x => x.sp));
     });
     return out.filter(d => d.jobs.length).sort((a, b) => b.sum.total - a.sum.total);
@@ -1016,6 +1021,7 @@ export function initEfficiencyFilters(data) {
       : '<td class="jn-cell"><span class="zero">&mdash;</span></td>');
     const peopleCells = (x) => {
       if (x.rollup) return sumCell((x.joWho || []).length, x.rollup) + sumCell(x.pending || 0, x.rollup)
+                          + '<td class="pri-cell"><span class="zero">&mdash;</span></td>'
                           + '<td class="jn-cell"><span class="zero">&mdash;</span></td>';
       return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true, under: x.joUnder })
            + jnWhoCell(x, { under: x.jpUnder })
@@ -1024,6 +1030,7 @@ export function initEfficiencyFilters(data) {
            // Efficiency too". It carries its own cut and "more" (#252b) because the cell is one piece of code.
            // ⚠ A remark belongs to a JOB: `remarkCell` dashes any row with no job8, which is every
            //   department, recruiter and topic row here. That is the same rule as the Hiring Manager tab.
+           + priorityCell(x)   // #252f: job rows only — priorityCell dashes a row with no job8
            + remarkCell(x);
     };
     const rows = fulfilRows(per);
@@ -1117,7 +1124,7 @@ export function initEfficiencyFilters(data) {
         html += `<tr data-path="${di}-${ji}" data-lvl="2"${opensJob ? ' data-haschild data-exp="0" style="display:none;cursor:pointer"' : ' style="display:none"'}>`
           + `<td style="padding-left:1.875rem;color:var(--muted)">${opensJob ? CARET : ''}${j.title}${meta}`
           + `${recs.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${recs.length} recruiters</span>`
-              : (tops && tops.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tops.length} topics</span>` : '')}</td>${cells(sp, false)}</tr>`;
+              : (tops && tops.length > 1 ? `<span style="color:var(--muted);font-weight:400;font-size:0.6875rem;margin-left:0.375rem">${tops.length} topics</span>` : '')}</td>${cells({ ...sp, roleRow: true }, false)}</tr>`;
         if (!opensJob) return;
         // Each opening is priced at the points of ITS OWN quarter, exactly as jobSplit() prices the buckets -
         // so the topic rows close the job row in BOTH halves, heads and score (Rule 3).
@@ -1182,15 +1189,17 @@ export function initEfficiencyFilters(data) {
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
     html += `<tr class="totals-row" style="font-weight:700"><td>All departments</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
-    // ⚠ 9 = 1 name + 5 number columns + 3 people columns. It was 14 while each metric had an HC/Score PAIR;
+    // ⚠ 10 = 1 name + 5 number columns + Who has joined + Who is joining + Pri (#252f) + Remarks. It was 9
+    //   before the Pri column, and 14 while each metric had an HC/Score PAIR;
     //   #252g merged them. It read 13 even before #182c - stale since #182e took the Missed pair off - so an
     //   empty table stretched its message across the wrong number of columns. 🔑 This number is invisible
     //   unless the table is EMPTY, which is why it has gone stale twice: change it WITH the header.
-    body.innerHTML = html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
+    body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
     wireMoreCells(body);   // #182c: the "+N more" toggle — registered FIRST, so it is asked before the editor
     wireRemarks(body);      // #252e: the same editor the Hiring Manager tab uses. No dept count here, so no callback
     markRemarkOverflow(body);   // #252b: show a remark's "more" only where the text is really clipped
+    wirePriority(body);         // #252f: the P0/P1/P2 select saves through the same store
   }
 
   // Candidate-level joining-pending list, same source as the Hiring Manager tab (joiningPendingCases),

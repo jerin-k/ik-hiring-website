@@ -10,7 +10,7 @@ import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../pe
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf } from '../job-notes.js';   // #150 · #252e: the writer and its guard moved to remark-cell.js
 import { markRemarkOverflow } from '../people-list-cell.js';   // #252b: only a genuinely clipped remark gets a "more"
-import { remarkCell, wireRemarks } from '../remark-cell.js';   // #252e: the remark cell + editor, shared with Overall Efficiency
+import { remarkCell, wireRemarks, priorityCell, wirePriority, byPriorityThen } from '../remark-cell.js';   // #252e remark cell + editor · #252f priority, both shared with Overall Efficiency
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
@@ -387,13 +387,17 @@ export function renderHmReport(data) {
       .hm-report .hm-summary td:not(:first-child) { white-space:nowrap; text-align:center; }
       .hm-report .hm-summary td:nth-child(7),
       .hm-report .hm-summary td:nth-child(8),
-      .hm-report .hm-summary td:nth-child(9) { text-align:left; white-space:normal; }
+      /* 🚨 #252f: Remarks moved 9 ➔ 10 when the Pri column went in before it. These rules are POSITIONAL, so
+         inserting a column silently re-points every one of them — the widths below shifted in the same edit.
+         Column 9 is Pri and is CENTRED, so it is deliberately not in this left-align list. */
+      .hm-report .hm-summary td:nth-child(10) { text-align:left; white-space:normal; }
       .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:5rem; }      /* Dropped */
       /* Delta floor is 7rem: bar 4 + gap 0.5 + number 1.125 = 5.6rem of content before the cell padding. */
       .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:7rem; }
       .hm-report .hm-summary th:nth-child(7), .hm-report .hm-summary td:nth-child(7) { width:12.5rem; }   /* Who has joined */
       .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:14rem; }     /* Who is joining */
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:12.5rem; }   /* Remarks */
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:3.5rem; }     /* #252f Pri — lean, as asked */
+      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:12.5rem; }  /* Remarks */
 
       /* ===== #182b — BOTH HALVES PAINTED (option F), now class-based (#182c) =====
          🗣 "For the amt of content, i'd take F" · 🚫 no hard rule between them: "dont need this datk seperator".
@@ -449,7 +453,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary painted-halves">
-        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total openings</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total openings</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -908,12 +912,13 @@ export function initHmFilters(data) {
         // Joining pipeline count, because splitWho() places those people — that path is untouched.
         + `<td style="font-weight:600">${t.total}</td><td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
         + DASH + DASH + DASH + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
-        + jnWhoCell({ jpWho: [] }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+        + jnWhoCell({ jpWho: [] }) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
     }).join('');
 
     let html = '';
     deptArr.forEach((D, gi) => {
-      const jobs2 = [...D.jobs].sort((a, b) => a.title.localeCompare(b.title));
+      // #252f: P0 to the top WITHIN this department; title order is kept as the tie-break.
+      const jobs2 = [...D.jobs].sort(byPriorityThen((a, b) => a.title.localeCompare(b.title)));
       const withNote = jobs2.filter(j => (noteOf(j.job8) || {}).text).length;
       // #188 / #157: a department only LOOKS clickable when the chosen levels actually give it children. With
       // Job and Recruiter both off, a department with no topic level has nothing under it — a caret there would
@@ -923,6 +928,7 @@ export function initHmFilters(data) {
         <td style="font-weight:600">${deptOpens ? CARET : ''}${D.dept}${cnt(jobs2.length)}</td>${metrics(D)}`
         + `<td class="jn-cell jn-sum">${(D.joWho || []).length ? `${D.joWho.length} joined` : '<span class="zero">—</span>'}</td>`
         + `<td class="jn-cell jn-sum">${D.jpP ? `${D.jpP} across ${jobs2.length} role${jobs2.length === 1 ? '' : 's'}` : '<span class="zero">—</span>'}</td>`
+        + `<td class="pri-cell"><span class="zero">&mdash;</span></td>`
         + `<td class="jn-cell jn-sum">${withNote ? `${withNote} of ${jobs2.length} written` : '<span class="zero">—</span>'}</td></tr>`;
       // ===== #188: with Job switched OFF the department opens straight to its recruiters (or its topics),
       // and the per-job splits are merged so those rows still add up to the department above them. =====
@@ -940,7 +946,7 @@ export function initHmFilters(data) {
               + recMetrics(r, { jpP: r.pending, drop: r.drop }, gapP)
               + jnWhoCell(r, { list: r.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
               + jnWhoCell({ jpWho: r.jpWho || [] })
-              + `<td class="jn-cell"></td></tr>`;
+              + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
             if (LV.top && deptHasTopics(D.dept)) html += emitTopics(Object.entries(r.topics || {}).map(([t, v]) => Object.assign({ topic: t }, v)), gi, null, '3.25rem');
           });
         } else if (LV.top && deptHasTopics(D.dept)) {
@@ -976,7 +982,7 @@ export function initHmFilters(data) {
         const joined = jnWhoCell(o, { list: o.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true });
         const opens = hasRecs || topics;
         html += `<tr class="leaf${topics ? ' has-topics' : ''}" data-lvl="2" data-g="${gi}"${opens ? ` data-job8="${esc(o.job8)}" data-texp="0" style="display:none;cursor:pointer"` : ' style="display:none"'}>
-          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${remarkCell(o)}</tr>`;
+          <td style="padding-left:1.875rem;font-weight:500;max-width:22.5rem">${opens ? TCARET : ''}${o.title}${hasRecs ? cnt(`${recs.length} recruiter${recs.length === 1 ? '' : 's'}`) : (topics && topics.length > 1 ? cnt(`${topics.length} topics`) : '')}</td>${metrics(o)}${joined}${who}${priorityCell({ ...o, roleRow: true })}${remarkCell(o)}</tr>`;
         if (!opens) return;
         // With no recruiter level the topics hang off the job exactly as they did before #187.
         const under = hasRecs ? recs : [{ recruiter: null, openings: null }];
@@ -991,7 +997,7 @@ export function initHmFilters(data) {
               + recMetrics(r, rb, gapP)
               + jnWhoCell(rb, { list: rb.joWho || [], dateOf: c => c.startDate, tagOf: joinTag, groupByDate: true })
               + jnWhoCell({ jpWho: rb.jpWho || [] })
-              + `<td class="jn-cell"></td></tr>`;
+              + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
           }
           // the topic rows now hang off the RECRUITER when there is one, so the tree reads
           // Department ➔ Job ➔ Recruiter ➔ Specialisation.
@@ -1009,7 +1015,7 @@ export function initHmFilters(data) {
               // Recruiter tab and has its own "(not tied to a topic)" remainder rule; a half-done split here would
               // silently under-count. A dash says "not worked out at this level", which is true. Never a number.
               + topicMetrics(t, tw.length) + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
-              + jnWhoCell({ jpWho: tw }) + `<td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
+              + jnWhoCell({ jpWho: tw }) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
           });
         });
       });
@@ -1018,12 +1024,13 @@ export function initHmFilters(data) {
     const joinedAll = Object.values(groups).reduce((a, G) => a + ((G.joWho || []).length), 0);
     html += `<tr class="totals-row"><td>Total</td>${metrics(totals)}`
       + `<td class="jn-cell jn-sum">${joinedAll ? `${joinedAll} joined` : '<span class="zero">—</span>'}</td>`
-      + `<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="jn-cell"></td></tr>`;
+      + `<td class="jn-cell jn-sum">${totals.jpP || '<span class="zero">—</span>'}</td><td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
     wireTree(body, true);   // #189d: the level chooser IS the expand control on this table (#188)
     wireJobNotes(body);   // #150
     markRemarkOverflow(body);   // #252b: only a genuinely clipped remark gets a "more"
+    wirePriority(body);         // #252f: the P0/P1/P2 select saves through the same store
 
     // Chart: one bar per department, stacked Joined / Joining Pending / Delta — and Joined and Joining Pending
     // split again into the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29).

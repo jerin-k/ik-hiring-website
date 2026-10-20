@@ -21,6 +21,7 @@ const LOCAL_URL = '/data/job_notes.json';
 const CONFIRM_URL = 'https://api.github.com/repos/jerin-k/ik-hiring-website/contents/data/job_notes.json?ref=main';
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 const DRAFT_LS = 'ik_job_notes_draft';   // {job8: text} — notes this browser has typed but not confirmed saved
+const PRI_DRAFT_LS = 'ik_job_pri_draft';   // #252f: {job8: 'P0'|'P1'|'P2'|''} — the same idea, for priorities
 
 import { getStoredUser } from './auth.js';   // #152a — who the DASHBOARD thinks is signed in
 
@@ -29,12 +30,23 @@ export const NOTE_MAX = 600;
 let published = {};     // job8 -> { text, by, at }   as the server has it
 let drafts = {};        // job8 -> text               unconfirmed, this browser only
 let loadedAt = null;
+// ===== #252f (Jerin, 20 Oct 2026): the P0/P1/P2 priority on a job =====
+// 🔑 It is a SEPARATE top-level key in the same file, never a field on the note — the note record is DELETED
+//    when its text goes empty (that is how a clear is confirmed), which would take the priority with it, and
+//    a job can carry a priority with no remark at all.
+let pubPri = {};        // job8 -> { pri, by, at }    as the server has it
+let priDrafts = {};     // job8 -> 'P0'|'P1'|'P2'|''  unconfirmed, this browser only
+export const PRIORITIES = ['P0', 'P1', 'P2'];
 
 function readDrafts() {
   try { drafts = JSON.parse(localStorage.getItem(DRAFT_LS) || '{}') || {}; } catch (e) { drafts = {}; }
+  try { priDrafts = JSON.parse(localStorage.getItem(PRI_DRAFT_LS) || '{}') || {}; } catch (e) { priDrafts = {}; }
 }
 function writeDrafts() {
   try { localStorage.setItem(DRAFT_LS, JSON.stringify(drafts)); } catch (e) { /* private window — the note still shows until reload */ }
+}
+function writePriDrafts() {
+  try { localStorage.setItem(PRI_DRAFT_LS, JSON.stringify(priDrafts)); } catch (e) { /* as above */ }
 }
 
 // #152: a draft whose confirm timed out used to sit here for ever. noteOf() always prefers a draft over the
@@ -52,6 +64,15 @@ function healDrafts() {
     if (p ? String(p.text || '').trim() === d : d === '') { delete drafts[k]; changed = true; }
   }
   if (changed) writeDrafts();
+  // #252f: the same healing for priorities. A CLEARED priority is an empty draft and the server deletes the
+  // key, so "no record on the server" is the confirmation that a clear went through — exactly as above.
+  let pchanged = false;
+  for (const k of Object.keys(priDrafts)) {
+    const d = String(priDrafts[k] || '').trim();
+    const p = pubPri[k];
+    if (p ? String(p.pri || '').trim() === d : d === '') { delete priDrafts[k]; pchanged = true; }
+  }
+  if (pchanged) writePriDrafts();
 }
 
 // The published file first, the copy in this deployment as the fallback — the same order data.js uses, so a
@@ -65,6 +86,7 @@ export async function loadNotes() {
     const live = await fetchFresh();
     if (live) {
       published = (live && live.notes) || {};
+      pubPri = (live && live.priorities) || {};   // #252f
       loadedAt = (live && live.updatedAt) || null;
       healDrafts();
       return true;
@@ -76,13 +98,26 @@ export async function loadNotes() {
       if (!r.ok) continue;
       const j = await r.json();
       published = (j && j.notes) || {};
+      pubPri = (j && j.priorities) || {};   // #252f
       loadedAt = (j && j.updatedAt) || null;
       healDrafts();
       return true;
     } catch (e) { /* try the next one */ }
   }
-  published = {};
+  published = {}; pubPri = {};
   return false;
+}
+
+// #252f: what to show in the Priority cell — an unconfirmed draft wins over the server's copy, so the person
+// who set it always sees their own choice, marked unsaved rather than passed off as saved. Same rule as noteOf.
+export function priorityOf(job8) {
+  const k = String(job8 || '').slice(0, 8);
+  if (!k) return null;
+  const p = pubPri[k] || null;
+  if (Object.prototype.hasOwnProperty.call(priDrafts, k)) {
+    return { pri: priDrafts[k] || '', by: p ? p.by : null, at: p ? p.at : null, unsaved: true };
+  }
+  return p ? { pri: p.pri || '', by: p.by || null, at: p.at || null, unsaved: false } : null;
 }
 
 // What to show in the cell: an unconfirmed draft wins over the server's copy, so the writer always sees their
@@ -181,6 +216,47 @@ async function fetchFresh() {
 
 // Save one note. Returns { ok, reason }. The draft is kept until the SERVER says the note is there, so a
 // failed save never silently loses what somebody typed — and never claims success it cannot see.
+// #252f: save one PRIORITY. Same shape as publishNote below, and deliberately so — same popup (a background
+// fetch or cross-site POST is stripped of the Google login, #150), same confirm-by-read, same draft kept until
+// the SERVER says it is there. `val` is 'P0' | 'P1' | 'P2', or '' to clear.
+// 🚨 The whitelist is the guard: the server refuses anything else, and so does this, so nothing free-typed can
+//    reach a PUBLIC file. That is why there is no guardProblem() here — there is no free text to guard.
+export async function publishPriority(job8, val) {
+  const k = String(job8 || '').slice(0, 8);
+  if (!k) return { ok: false, reason: 'This role has no job id, so a priority cannot be filed against it.' };
+  const clean = String(val || '').trim().toUpperCase();
+  if (clean && PRIORITIES.indexOf(clean) < 0) return { ok: false, reason: 'A priority is P0, P1 or P2.' };
+
+  priDrafts[k] = clean; writePriDrafts();   // keep it before anything can go wrong
+
+  const w = window.open('', 'jnPublish', 'popup=yes,width=440,height=420');
+  if (!w) return { ok: false, reason: 'Pop-ups are blocked for this site. Allow them and choose again — your change is kept here meanwhile.' };
+  const url = WEBAPP_URL + '?page=doPublishPri&jpjob=' + encodeURIComponent(k)
+    + '&jpsid=jp' + Date.now().toString(36)
+    + '&jpval=' + encodeURIComponent(clean);
+  try { w.location = url; } catch (e) { /* the popup reports its own errors on screen */ }
+
+  const WAITS = [1200, 1500, 1500, 2000, 2500, 3000, 3000, 4000, 4000, 5000];
+  for (const wait of WAITS) {
+    await new Promise(r => setTimeout(r, wait));
+    const live = await fetchFresh();
+    if (!live) continue;
+    // 🚨 CLEARING sends '' and the server DELETES the key, so absent and empty are the same answer — the same
+    //    trap that made every remark clear time out before #152 fixed it.
+    const got = (live.priorities || {})[k];
+    if ((got ? String(got.pri || '').trim() : '') === clean) {
+      pubPri = live.priorities || {};
+      published = live.notes || published;
+      loadedAt = live.updatedAt || loadedAt;
+      delete priDrafts[k]; writePriDrafts();
+      try { w.close(); } catch (e) { }
+      const warn = clean ? bylineWarning(got && got.by) : null;
+      return warn ? { ok: true, warn } : { ok: true };
+    }
+  }
+  return { ok: false, reason: 'Your change is safe here, but the server has not confirmed it yet. Look at the small window for a sign-in or permission message. If it said Saved, reload in a minute and the amber mark clears itself.' };
+}
+
 export async function publishNote(job8, text) {
   const k = String(job8 || '').slice(0, 8);
   if (!k) return { ok: false, reason: 'This role has no job id, so a note cannot be filed against it.' };
