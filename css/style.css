@@ -1743,6 +1743,21 @@ td.tis .tis-wait + .tis-wait { opacity: 0.85; }
 /* The edge the days scroll against, drawn as a SHADOW so it travels with the cell and costs no width
    (#197d). The grid below marks the same boundary with a 2px rule on its own second column. */
 .heat-row > .heat-tot { left:var(--heat-c2, 13.125rem); box-shadow:2px 0 0 var(--border); }
+/* 🚨 #247b (Jerin, 20 Oct 2026): 🗣 "When you scroll, the fozen section is transparent - which is odd."
+   HE WAS RIGHT, AND "the cell is opaque" WAS THE WRONG THING TO CHECK. These two cells are plain blocks in a
+   flex row, so they were only as tall as their one line of text — 19px and 20px inside a 31px row — while the
+   day cells beside them are a fixed 2.125rem. That left a ~6px band ABOVE AND BELOW each frozen cell with
+   nothing covering it, and a coloured day cell sliding underneath showed straight through it. The header row
+   never showed the fault because .heat-hd gives those cells a height of their own.
+   🔑 `align-self:stretch` makes each one exactly its row's height whatever that is — data, total or header —
+   so the gap cannot come back if a height changes later; the line-heights only centre the text, and a drift
+   there would be cosmetic rather than this bug returning.
+   ⚠ MY OWN CHECK MISSED IT because I measured the cell's background colour and captured at scroll 0, where
+   nothing is passing underneath. The honest test is to scroll until coloured cells are under the frozen band
+   and assert what paints at the TOP and BOTTOM edge of each row, not just its middle. */
+.heat-row > .heat-name, .heat-row > .heat-tot { align-self:stretch; line-height:2.125rem; }
+.heat-foot > .heat-name, .heat-foot > .heat-tot { line-height:1.5rem; }
+.heat-row > .heat-name.heat-hd, .heat-row > .heat-tot.heat-hd { line-height:1.05; }
 /* Two-line column header: the day, then its month underneath, so no column is ambiguous when a 30-day
    window spans two months (Jerin, 2026-08-31). */
 .heat-hd { font-size:0.71875rem; color:var(--muted); height:1.875rem; background:none !important;
