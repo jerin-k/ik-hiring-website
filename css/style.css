@@ -2351,6 +2351,24 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    this did nothing because it sat 1,400 lines earlier (Rule 12). */
 .wide-table table.metrics.eff-fulfil th.jn-th:last-child,
 .wide-table table.metrics.eff-fulfil td.jn-cell:last-child { width: auto; min-width: 12rem; max-width: none; }
+/* ===== #266 (Jerin, 20 Oct 2026) — RE-DERIVED, because #266 changed the arithmetic above =====
+   🗣 "These 2 still look different, I like HM."
+   The 8rem pin and the "let the last one absorb the slack" rule above were both sized when every number
+   column carried a score under it. Taking the score off freed most of that width, and the absorb rule then
+   handed ALL of it to Remarks: measured at a 1258px panel, Remarks came out at 388px, mostly empty, while
+   the two people columns stayed squeezed at 115px each.
+   🔑 These are Hiring Manager's own figures, from its block in hm-report.js — 12.5rem / 14rem / 12.5rem —
+   so the two tables now divide the row the same way he picked there.
+   📏 THE ARITHMETIC, re-derived at the 1260px container: name 17rem (245) + four numbers at 3.5rem (200)
+   + Delta 9.5rem (137) + Pri 3.5rem (50) = 632, leaving 628 for the three text columns. They take 562, and
+   the 66px spare goes to the name column, which `table.cols-sized > * > tr > :first-child` already hands it.
+   ⚠ Re-derive again if a column is added or removed — that is what went stale here. */
+.wide-table table.metrics.eff-fulfil th.jn-th,
+.wide-table table.metrics.eff-fulfil td.jn-cell { width: 12.5rem; min-width: 12.5rem; max-width: 12.5rem; }
+.wide-table table.metrics.eff-fulfil th.jn-th:nth-child(8),
+.wide-table table.metrics.eff-fulfil td.jn-cell:nth-child(8) { width: 14rem; min-width: 14rem; max-width: 14rem; }
+.wide-table table.metrics.eff-fulfil th.jn-th:last-child,
+.wide-table table.metrics.eff-fulfil td.jn-cell:last-child { width: 12.5rem; min-width: 12.5rem; max-width: 12.5rem; }
 /* A remark shown read-only: the same quiet size as a name, wrapping rather than clipping. It is WRITTEN on the
    Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
 .jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }
