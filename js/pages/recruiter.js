@@ -78,7 +78,7 @@ const FULFIL_TABLES = [
 const tableFor = (T, q) => { const d = podDefOf(T.pod, q);
   return { ...T, count: d.measuredOn, drop: d.dropInDelta, dropPts: d.dropPts, capUnit: d.capUnit, goalUnit: d.goalUnit }; };
 
-const FULFIL_NCOL = 12;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns · #267: +1 Pri
+const FULFIL_NCOL = 13;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns · #267: +1 Pri · #270: +1 Achieved
 // 🚨 THIS IS THE COLUMN COUNT THE EMPTY-STATE ROWS REPEAT OFF (`repeat(ncol - 1)`). Change the header builder
 // and this together, or a 'No jobs attributed' row runs short against its own heading — exactly #262's fault.
 // #252g (Jerin, 20 Oct 2026): ONE row, ONE column per metric — the score is tucked under the heads count in
@@ -97,6 +97,7 @@ const fulfilHeadHtml = (T) => `
       <th class="stage-hdr c-num">Joined</th>
       <th class="stage-hdr c-num">Joining pipeline</th>
       <th class="stage-hdr c-num">Offer drop</th>
+      <th class="stage-hdr c-num ach-hdr">Achieved</th>
       <th class="stage-hdr">Delta</th>
       <th class="stage-hdr jn-th">Who has joined</th>
       <th class="stage-hdr jn-th">Who is joining</th>
@@ -180,7 +181,9 @@ const recTopicCells = (t, ncol, jpHtml, joinedHtml, peopleHtml) => {
   return d + d + numSc(t.hc, t.sc)          // Capacity, Capacity used, Goal (heads + score in ONE cell)
     + (joinedHtml || d)                     // Joined (#166) - one cell since #252g
     + jpHtml                                // Joining Pending (#177: the total only)
-    + d + d                                 // Drop(1), Delta(1)
+    // #270: THREE dashes - Drop, Achieved, Delta. A topic row carries no goal to be measured against, so
+    // Achieved is dashed exactly as Delta already is. Never a number in a dashed cell.
+    + d + d + d                             // Drop(1), Achieved(1), Delta(1)
     // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE. It used to read: "a topic row does NOT name people...
     // repeating them here would list the same person twice in one open tree." 🗣 *"Not seeing joiner & joining
     // pipeline names against topics"*. The double-listing that worried #182c is answered by option (b), his
@@ -1822,6 +1825,17 @@ export function initRecruiterFilters(baseData) {
           // #252i: the pill carries the COUNT, as on Overall Efficiency; the score sits under it. The count is
           // passed BOTH ways on purpose — as the number, so the colour and tooltip are right, and as the text,
           // so a fractional half-position prints as 0.5 instead of being rounded to 1.
+          // ===== #270 (Jerin, 20 Oct 2026) — Achieved =====
+          // 🔑 ONE numerator, TWO denominators — his framing. `uHC`/`uSc` are ALREADY computed and ALREADY
+          //    feed both the Delta beside this cell (gHC = aHC − uHC) and "Capacity used" (uSc ÷ capSc), so
+          //    showing them here moves NO existing number. The only new sum is the bracket: GOAL achievement.
+          // 🔑 Capacity utilisation keeps its own column, against Capacity. This one is against GOAL.
+          // ⚠ The pod's own setting decides what is inside uHC/uSc — Joined, plus Joining pipeline unless the
+          //   pod is measured on hires, plus drops where the pod includes them. Never hard-code a pod here.
+          + `<td${w} class="gapcell ach-cell">${v.uHC == null ? DASH : c(seatFmt(v.uHC))}`
+            + `${(v.uHC != null && v.aHC > 0) ? `<span class="achpct">(${Math.round((v.uHC / v.aHC) * 100)}%)</span>` : ''}`
+            + `<span class="sublab">${c(Math.round(v.uSc || 0))}`
+            + `${v.aSc > 0 ? `<span class="achpct">(${Math.round(((v.uSc || 0) / v.aSc) * 100)}%)</span>` : ''}</span></td>`
           + `<td${w} class="gapcell">${v.gHC == null ? DASH : deltaPill(v.gHC, seatFmt(v.gHC))}${gapScoreSub(v)}${srcSub(v.gSo)}</td>`
           + peopleCells(v);                                                     // #182c: Who has joined · Who is joining
       };

@@ -103,7 +103,9 @@ const topicCells = (x, noPending, peopleHtml) =>
   + (noPending ? EFF_DASH
     : `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}`
       + `<span class="sublab">${x.pS > 0 ? x.pS : '<span class="zero">0</span>'}</span></td>`)
-  + EFF_DASH + EFF_DASH
+  // #270: THREE dashes now - Offer drop, Achieved, Delta. Achieved is a dash here for the same reason the
+  // Delta beside it is: at topic depth the people are not split, so a number would not subtract against it.
+  + EFF_DASH + EFF_DASH + EFF_DASH
   // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE — it used to read "a topic row names nobody... repeating
   // them would show the same person twice in one open tree." 🗣 *"Not seeing joiner & joining pipeline names
   // against topics"*. Under his option (b) the ROLE row above now says "N under their topics" instead of
@@ -293,7 +295,7 @@ export function renderEfficiency(data) {
                and Remarks fell 173 ➔ 143. An explicit family on the heading always wins, so this says plainly
                that they are numbers. Measured 20 Oct 2026, on the real table at the real 1210px panel.
                ⚠ Delta is deliberately left to infer: its pill makes it c-bar (9.5rem), which is what it needs. -->
-          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr jn-th">Who dropped</th><th class="stage-hdr pri-th c-num">Pri</th><th class="stage-hdr jn-th">Remarks</th></tr>
+          <tr><th style="min-width:17rem">Department / Job / Recruiter / Topic</th><th class="stage-hdr c-num">Total positions</th><th class="stage-hdr c-num">Joined</th><th class="stage-hdr c-num">Joining pipeline</th><th class="stage-hdr c-num">Offer drop</th><th class="stage-hdr c-num ach-hdr">Achieved</th><th class="stage-hdr">Delta</th><th class="stage-hdr jn-th">Who has joined</th><th class="stage-hdr jn-th">Who is joining</th><th class="stage-hdr jn-th">Who dropped</th><th class="stage-hdr pri-th c-num">Pri</th><th class="stage-hdr jn-th">Remarks</th></tr>
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
@@ -1022,6 +1024,15 @@ export function initEfficiencyFilters(data) {
     const gapCell = (x) => `<td class="gapcell">${deltaPill(x.gap)}<span class="sublab">${x.gS}</span></td>`;
     // Column order mirrors HM → Department Summary exactly:
     // Total Positions · Joined · Joining Pending · Drop · Gap · Missed. Each carries its Score alongside.
+    // #270: the Achieved cell. Heads on top with its share of Total positions; score underneath with its
+    // own share of the score target — each percentage in brackets beside its own figure.
+    const achPct = (a, b) => (b > 0 ? `<span class="achpct">(${Math.round((a / b) * 100)}%)</span>` : '');
+    const achCell = (x) => {
+      const a = (x.joined || 0) + (x.pending || 0);
+      const aS = (x.jS || 0) + (x.pS || 0);
+      return `<td class="gapcell ach-cell">${a > 0 ? z(a) : '<span class="zero">0</span>'}${achPct(a, x.total)}`
+        + `<span class="sublab">${z(aS)}${achPct(aS, x.tS)}</span></td>`;
+    };
     const cells = (x, bold) => {
       const w = bold ? ' style="font-weight:600"' : '';
       // .score marks the secondary half of each HC/Score pair so headcount reads first.
@@ -1048,6 +1059,13 @@ export function initEfficiencyFilters(data) {
         + `<td>${x.pending > 0 ? `<span style="color:var(--orange);font-weight:600">${x.pending}</span>` : '<span class="zero">0</span>'}${sc(z(x.pS))}</td>`
         + `<td class="${x.drop > 0 ? 'bad' : ''}">${x.drop > 0 ? x.drop : '<span class="zero">0</span>'}${sc(z(x.dS))}`
         + `${x.drop > 0 && dropPct != null ? `<span class="sublab">${dropPct}%</span>` : ''}</td>`
+        // ===== #270 (Jerin, 20 Oct 2026) — Achieved =====
+        // What has already been landed against the target, so the row reads Total − Achieved = Delta
+        // straight across. 🔑 It reads the SAME fields the Delta beside it is built from, so the two cannot
+        // disagree (Rule 3). 🚨 Offer drops are NOT in it — the Delta here has never subtracted them.
+        // 🗣 "In the bracket than below, cz i need achievemt for score as well in Overall Efficiency."
+        // So the percentage is in BRACKETS on each line: the slot UNDER the count is already the score (#266).
+        + achCell(x)
         + gapCell(x)
  + peopleCells(x);   // #182c: Who has joined · Who is joining · Remarks
     };
@@ -1238,12 +1256,14 @@ export function initEfficiencyFilters(data) {
     });
     const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
     html += `<tr class="totals-row" style="font-weight:700"><td>Total</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
-    // ⚠ 10 = 1 name + 5 number columns + Who has joined + Who is joining + Pri (#252f) + Remarks. It was 9
-    //   before the Pri column, and 14 while each metric had an HC/Score PAIR;
-    //   #252g merged them. It read 13 even before #182c - stale since #182e took the Missed pair off - so an
-    //   empty table stretched its message across the wrong number of columns. 🔑 This number is invisible
-    //   unless the table is EMPTY, which is why it has gone stale twice: change it WITH the header.
-    body.innerHTML = html || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
+    // ⚠ 12 = 1 name + 6 number columns (Total · Joined · Joining pipeline · Offer drop · Achieved · Delta)
+    //   + Who has joined + Who is joining + Who dropped + Pri + Remarks.
+    //   🚨 #270 FOUND IT STALE AGAIN, AND BY ONE ALREADY: it read 10, which counts everything EXCEPT
+    //   "Who dropped" — that column went in with #252c and this was not moved with it. So the count was
+    //   wrong before Achieved was ever added. It was 9 before Pri, and 14 while each metric was an HC/Score
+    //   PAIR. 🔑 This number is invisible unless the table is EMPTY, which is why it keeps going stale:
+    //   change it WITH the header, and COUNT the header rather than trusting the arithmetic in this comment.
+    body.innerHTML = html || `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
     wireMoreCells(body);   // #182c: the "+N more" toggle — registered FIRST, so it is asked before the editor
     wireRemarks(body);      // #252e: the same editor the Hiring Manager tab uses. No dept count here, so no callback

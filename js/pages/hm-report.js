@@ -59,7 +59,10 @@ const topicMetrics = (t, jp) =>
   `<td style="font-weight:600">${t.total}</td>`
   + `<td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
   + `<td style="color:var(--orange)">${jp || '<span class="zero">0</span>'}</td>`
-  + DASH + DASH;
+  // #270: THREE dashes now - Offer drop, Achieved, Delta. Achieved is a DASH here on purpose, matching the
+  // Delta beside it: at topic depth the people are not fully split, so a number would invite "why don't
+  // these subtract?" against a dashed Delta. A dash says "not worked out at this level", which is true.
+  + DASH + DASH + DASH;
 
 // #187: the five counting cells for a RECRUITER row. Positions come from the opening's owner, people from the
 // recruiter who WORKED them (#192, 28 Sep 2026 - the position never decides who a person belongs to);
@@ -72,6 +75,11 @@ const recMetrics = (r, rb, gap) =>
   + `<td class="${r.joined ? 'good' : 'zero'}">${r.joined || '&mdash;'}</td>`
   + `<td style="color:var(--orange)">${rb.jpP || '<span class="zero">&mdash;</span>'}</td>`
   + `<td class="gapcell">${rb.drop ? `<span style="color:var(--red);font-weight:600">${rb.drop}</span>` : '<span class="zero">&mdash;</span>'}</td>`
+  // #270: Achieved here too. 🚨 A recruiter row does NOT go through metrics(), which is exactly how #262
+  // shipped a row two columns short of its own heading. Both builders move together or neither does.
+  + `<td class="gapcell">${((r.joined || 0) + (rb.jpP || 0))
+      ? `${(r.joined || 0) + (rb.jpP || 0)}${r.total ? `<span class="achpct">(${Math.round((((r.joined || 0) + (rb.jpP || 0)) / r.total) * 100)}%)</span>` : ''}`
+      : '<span class="zero">&mdash;</span>'}</td>`
   + `<td class="gapcell">${deltaPill(gap)}</td>`;   // #218: the same pill as every other Delta on the site
 
 // #187: the topics belonging to ONE recruiter's openings. Same rows, narrowed and re-counted from that
@@ -386,25 +394,31 @@ export function renderHmReport(data) {
       .hm-report .hm-summary th:not(:first-child), .hm-report .hm-summary td:not(:first-child) {
         width:4.5rem; font-variant-numeric:tabular-nums; }
       .hm-report .hm-summary td:not(:first-child) { white-space:nowrap; text-align:center; }
-      .hm-report .hm-summary td:nth-child(7),
       .hm-report .hm-summary td:nth-child(8),
       .hm-report .hm-summary td:nth-child(9),
-      /* 🚨 #252f: Remarks moved 9 ➔ 10 when the Pri column went in before it. #252c moved it 10 ➔ 11 for the
-         same reason — "Who dropped" went in at 9. These rules are POSITIONAL, so inserting a column silently
-         re-points EVERY one of them, and it has now happened twice in one day. Column 10 is Pri and is
-         CENTRED, so it is deliberately not in this left-align list. */
-      .hm-report .hm-summary td:nth-child(11) { text-align:left; white-space:normal; }
-      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:5rem; }      /* Dropped */
+      .hm-report .hm-summary td:nth-child(10),
+      /* 🚨 #270 (20 Oct 2026): "Achieved" went in at 6, so EVERY position below moved one to the right. This
+         whole block is RE-DERIVED rather than edited in place, exactly as the note here has asked twice —
+         a half-shifted set silently puts a column in BOTH groups. Column 11 is Pri and is CENTRED, so it is
+         deliberately not in this left-align list.
+         COLUMNS NOW: 1 Department · 2 Total positions · 3 Joined · 4 Joining pipeline · 5 Offer drop ·
+                      6 Achieved · 7 Delta · 8 Who has joined · 9 Who is joining · 10 Who dropped ·
+                      11 Pri · 12 Remarks. */
+      .hm-report .hm-summary td:nth-child(12) { text-align:left; white-space:normal; }
+      /* 📏 #270 WIDTHS, and the table stays EXACTLY 87rem so it does not scroll any sooner than it did
+         (Jerin: "no scrolling"). He asked for the room to come from the number columns; MEASURED, they can
+         only spare 0.25rem — Delta's own floor below is 7rem and 4.5 is what a three-digit figure needs — so
+         Offer drop gives 0.25 and the three people columns give 1.5 each.
+         14 + 4.5×3 + 4.75 + 4.75 + 7 + 9.5×3 + 3.5 + 11 = 87rem, unchanged. */
+      .hm-report .hm-summary th:nth-child(5), .hm-report .hm-summary td:nth-child(5) { width:4.75rem; }   /* Offer drop */
+      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:4.75rem; }   /* #270 Achieved */
       /* Delta floor is 7rem: bar 4 + gap 0.5 + number 1.125 = 5.6rem of content before the cell padding. */
-      .hm-report .hm-summary th:nth-child(6), .hm-report .hm-summary td:nth-child(6) { width:7rem; }
-      /* #252c: FOUR text columns share what three had. 📏 At the 87.4rem panel: name 14 + three numbers at
-         4.5 + Offer drop 5 + Delta 7 + Pri 3.5 = 43rem, leaving 44.4 for four columns — 11rem each, which
-         totals 87 and fits. ⚠ Re-derive if a column is added; these are positions, not names. */
-      .hm-report .hm-summary th:nth-child(7), .hm-report .hm-summary td:nth-child(7) { width:11rem; }   /* Who has joined */
-      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:11rem; }   /* Who is joining */
-      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:11rem; }   /* #252c Who dropped */
-      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:3.5rem; } /* #252f Pri — lean, as asked */
-      .hm-report .hm-summary th:nth-child(11), .hm-report .hm-summary td:nth-child(11) { width:11rem; }  /* Remarks */
+      .hm-report .hm-summary th:nth-child(7), .hm-report .hm-summary td:nth-child(7) { width:7rem; }
+      .hm-report .hm-summary th:nth-child(8), .hm-report .hm-summary td:nth-child(8) { width:9.5rem; }   /* Who has joined */
+      .hm-report .hm-summary th:nth-child(9), .hm-report .hm-summary td:nth-child(9) { width:9.5rem; }   /* Who is joining */
+      .hm-report .hm-summary th:nth-child(10), .hm-report .hm-summary td:nth-child(10) { width:9.5rem; }  /* Who dropped */
+      .hm-report .hm-summary th:nth-child(11), .hm-report .hm-summary td:nth-child(11) { width:3.5rem; }  /* Pri */
+      .hm-report .hm-summary th:nth-child(12), .hm-report .hm-summary td:nth-child(12) { width:11rem; }   /* Remarks */
 
       /* ===== #182b — BOTH HALVES PAINTED (option F), now class-based (#182c) =====
          🗣 "For the amt of content, i'd take F" · 🚫 no hard rule between them: "dont need this datk seperator".
@@ -463,7 +477,7 @@ export function renderHmReport(data) {
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
       <div class="scroll-table"><table class="hm-summary painted-halves">
-        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total positions</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Who dropped</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
+        <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total positions</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Achieved</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Who dropped</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
       ${defsBlock('hm-positions')}
@@ -884,7 +898,13 @@ export function initHmFilters(data) {
     // row types, and again inside the chart, which even carried a comment saying it was "worded exactly as
     // metrics() words it". Four copies of one sum is how a chart and its table drift apart (Rule 3); Overall
     // Efficiency already does it this way, computing `gap` once in fulfilRows and letting both read it.
-    const deltaOf = (v) => (v.total || 0) - (v.joined || 0) - (v.jpP || 0);
+    // #270 (Jerin, 20 Oct 2026): Achieved - what has already been landed against the target, so the row
+    // reads Total - Achieved = Delta straight across instead of making the reader do the subtraction.
+    // 🔑 Delta is DERIVED from it, so the pair is one calculation and cannot drift (Rule 3).
+    // 🚨 Offer drops are NOT in it. PROVED on a live Q3 row: 17 total, 17 joined, 0 in pipeline, 2 drops,
+    //    Delta 0 - subtracting the drops would have shown -2.
+    const achievedOf = (v) => (v.joined || 0) + (v.jpP || 0);
+    const deltaOf = (v) => (v.total || 0) - achievedOf(v);
     const metrics = (v) => {
       const delta = deltaOf(v);
       // #218 (9 Oct 2026): the bar is GONE from Delta — `deltaPill` is the one home for this cell now. The
@@ -903,9 +923,15 @@ export function initHmFilters(data) {
         ? `<span style="color:var(--red);font-weight:600">${v.drop}</span>`
           + (dpct !== null ? `<span class="sublab">${dpct}%</span>` : '')   // #153: "of outcomes" dropped; the definitions block says what it is a share of
         : `<span class="zero">0</span>`;
+      // #270: the % sits in BRACKETS on the same line, never underneath - on Overall Efficiency the slot
+      // under every count is already the score (#266), so a sublab here would collide with it.
+      const ach = achievedOf(v);
+      const apct = v.total > 0 ? Math.round((ach / v.total) * 100) : null;
       return `<td style="font-weight:600">${v.total}</td><td class="good">${v.joined}</td>`
         + `<td style="color:var(--orange)">${v.jpP || `<span class="zero">0</span>`}</td>`
         + `<td class="gapcell">${dropCell}</td>`
+        + `<td class="gapcell">${ach || `<span class="zero">0</span>`}`
+          + `${apct !== null ? `<span class="achpct">(${apct}%)</span>` : ''}</td>`
         + `<td class="gapcell">${deltaPill(delta)}</td>`;
     };
     // #188: attach the PEOPLE to the position-derived recruiter splits, so the merged rows carry both halves.
@@ -942,7 +968,9 @@ export function initHmFilters(data) {
         // would read as "nobody", which is a different claim. Under a JOB the topic rows DO carry a real
         // Joining pipeline count, because splitWho() places those people — that path is untouched.
         + `<td style="font-weight:600">${t.total}</td><td class="${t.joined ? 'good' : 'zero'}">${t.joined}</td>`
-        + DASH + DASH + DASH + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
+        // #270: a FOURTH dash - Achieved. A topic row cannot claim one, because the people behind it are not
+        // split by topic at this depth (#182a's rule), and a 0 would read as "nobody", a different claim.
+        + DASH + DASH + DASH + DASH + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`
         + `<td class="jn-cell"><span class="zero">&mdash;</span></td>`   // #252c: a topic cannot claim a drop
         + jnWhoCell({ jpWho: [] }) + dropCell(t) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
     }).join('');

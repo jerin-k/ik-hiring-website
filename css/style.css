@@ -2570,3 +2570,25 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 /* An unconfirmed figure is LIVE STATE, the same as an unsaved remark: it says so rather than being passed off
    as saved. Same amber `.jn-unsaved` carries elsewhere, so this reads as the same thing. */
 .tb-set.tb-unsaved { border-color: var(--orange); color: var(--orange); }
+
+/* #270 (Jerin, 20 Oct 2026) — the percentage beside Achieved.
+   🗣 "In the bracket than below, cz i need achievemt for score as well in Overall Efficiency."
+   🔑 IN BRACKETS, ON THE SAME LINE — never a `.sublab`. On Overall Efficiency the slot under every count is
+   already the score (#266), so a percentage underneath would land on top of it. Shared by all three tabs. */
+.achpct { font-size: 0.625rem; font-weight: 500; color: var(--muted); margin-left: 0.25rem; white-space: nowrap; }
+.sublab .achpct { font-size: 0.5625rem; margin-left: 0.1875rem; }
+
+/* #270 — Overall Efficiency's Fulfilment table is `table-layout: auto`, so a new column does not simply add
+   its own width: the browser re-solves every column and the table jumped 87.4rem ➔ 106rem, which would have
+   made it scroll (🗣 "no scrolling"). MEASURED at a 1440px window, with a control that removed the column
+   again. So Achieved is pinned, and the room comes off the three people columns. */
+table.metrics.eff-fulfil th.ach-hdr, table.metrics.eff-fulfil td.ach-cell {
+  width: 5.25rem; min-width: 5.25rem; max-width: 5.25rem;
+}
+/* 🚨 BOTH th AND td. This table is `table-layout: auto`, so the column resolves to the WIDER of the two —
+   setting only `td.jn-cell` left the heading at 10.3rem and moved nothing. Measured, not assumed.
+   `:not(:last-child)` keeps Remarks out of it; that column has its own rule above. */
+.wide-table table.metrics.eff-fulfil th.jn-th:not(:last-child),
+.wide-table table.metrics.eff-fulfil td.jn-cell:not(:last-child) {
+  width: 8.4rem; min-width: 8.4rem; max-width: 8.4rem;
+}
