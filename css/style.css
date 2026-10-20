@@ -956,7 +956,11 @@ table.metrics thead th[rowspan="2"] { box-shadow: inset -1px 0 0 var(--navy-line
    on the header's own bottom edge and takes the 2px rule, which is exactly what the rowspan rule above says;
    this says it for a header that needs no rowspan to be true. Specificity (0,3,1) beats `.stage-hdr`'s
    (0,1,0) box-shadow, so source order does not decide it (Rule 12). */
-table.metrics.eff-fulfil thead th { box-shadow: inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }
+table.metrics.eff-fulfil thead th,
+table.metrics.wide-fulfil thead th { box-shadow: inset -1px 0 0 var(--navy-line), inset 0 -2px 0 #16243a; }
+/* #252g: the Delta cell holds its heads count with the pill under it, so the pill needs a line of its own.
+   `.deltacell` is inline-flex, which would otherwise sit it beside the number. */
+.gap-sub { display: block; margin-top: 0.1875rem; }
 table.metrics tbody tr { background: var(--card); }
 table.metrics tbody tr:hover { background: #f8fafc; }
 /* The sticky column needs an edge of its own, or text scrolls under it with nothing to stop the eye. */

@@ -65,10 +65,11 @@ const FULFIL_TABLES = [
   { key: 'others',   pod: 'Others',    count: 'hire',  drop: false, dropPts: true,  capUnit: 'NA',      goalUnit: 'Joiners', lblWidth: '12.5rem' },
 ];
 
-// 🚨 COLUMN ARITHMETIC, in one place now: label(1) + Capacity(1) + Capacity used(1) + Goal(2) + Joined(2)
-//    + Joining pending(2) + Drop(2) + Delta(1) + Delta bar(1) + Who has joined(1) + Who is joining(1)
-//    = 15 on EVERY table since #182c. cells() and jpCells()
-//    still have to match it, but the five header rows can no longer disagree with each other.
+// 🚨 COLUMN ARITHMETIC, in one place now: label(1) + Capacity(1) + Capacity used(1) + Goal(1) + Joined(1)
+//    + Joining pending(1) + Drop(1) + Delta(1) + Who has joined(1) + Who is joining(1)
+//    = 10 on EVERY table since #252g merged each Heads/Score PAIR into one column. It was 15 while they were
+//    pairs. cells(), jpCells(), dropCells() and joinTopicCells() all still have to match it, but the five
+//    header rows can no longer disagree with each other.
 // #205 (7 Oct 2026): a table's counting rule is no longer fixed in this file — it is the POD DEFINITION in force
 // for the selected quarter. With nothing configured `podDefOf` returns the built-in defaults, which ARE the values
 // in FULFIL_TABLES above, so this is a no-op until a definition is set. 🚨 Everything downstream must use the
@@ -76,19 +77,26 @@ const FULFIL_TABLES = [
 const tableFor = (T, q) => { const d = podDefOf(T.pod, q);
   return { ...T, count: d.measuredOn, drop: d.dropInDelta, dropPts: d.dropPts, capUnit: d.capUnit, goalUnit: d.goalUnit }; };
 
-const FULFIL_NCOL = 15;   // #182c: +2 people columns
+const FULFIL_NCOL = 10;   // #182c: +2 people columns · #252g: five Heads/Score pairs became five columns
+// #252g (Jerin, 20 Oct 2026): ONE row, ONE column per metric — the score is tucked under the heads count in
+// the body, so the Heads/Score sub-row has nothing left to label. It said "Heads", not "HC" like the Overall
+// Efficiency one, and both are gone.
+// ⚠ The sub-row's first cell of each pair carried `grp-open`, which drew the heavier group boundary. Nothing
+//   is lost: with one column per metric every column IS a group, and `.stage-hdr` already draws that left edge
+//   itself (inset 1px 0 0 #0f1c2e). Checked in the stylesheet, not assumed.
+// ⚠ No rowspan anywhere now, so the thead th[rowspan=2] rule's 2px bottom rule no longer applies; the
+//   "table.metrics.eff-fulfil, table.metrics.wide-fulfil thead th" rule in style.css restates it for both.
 const fulfilHeadHtml = (T) => `
-  <tr><th rowspan="2" style="min-width:${T.lblWidth}">Pod / Recruiter / Job / Topic</th>
-      <th rowspan="2" class="stage-hdr" data-unit="cap-${T.key}">Capacity (${T.capUnit})</th>
-      <th rowspan="2" class="stage-hdr">Capacity used</th>
-      <th colspan="2" class="stage-hdr" data-unit="goal-${T.key}">Goal (${T.goalUnit})</th>
-      <th colspan="2" class="stage-hdr">Joined</th>
-      <th colspan="2" class="stage-hdr">Joining pipeline</th>
-      <th colspan="2" class="stage-hdr">Offer drop</th>
-      <th colspan="2" class="stage-hdr">Delta</th>
-      <th rowspan="2" class="stage-hdr jn-th">Who has joined</th>
-      <th rowspan="2" class="stage-hdr jn-th">Who is joining</th></tr>
-  <tr>${'<th class="stage-sub grp-open">Heads</th><th class="stage-sub">Score</th>'.repeat(5)}</tr>`;
+  <tr><th style="min-width:${T.lblWidth}">Pod / Recruiter / Job / Topic</th>
+      <th class="stage-hdr" data-unit="cap-${T.key}">Capacity (${T.capUnit})</th>
+      <th class="stage-hdr">Capacity used</th>
+      <th class="stage-hdr c-num" data-unit="goal-${T.key}">Goal (${T.goalUnit})</th>
+      <th class="stage-hdr c-num">Joined</th>
+      <th class="stage-hdr c-num">Joining pipeline</th>
+      <th class="stage-hdr c-num">Offer drop</th>
+      <th class="stage-hdr">Delta</th>
+      <th class="stage-hdr jn-th">Who has joined</th>
+      <th class="stage-hdr jn-th">Who is joining</th></tr>`;
 // #179e: the chart sits INSIDE its own block, under the table's heading — one chart per table, each reading
 // only the recruiters that table rendered. 🚨 Rule 3 still holds: THE TABLE COMPUTES, THE CHART READS.
 const fulfilBlockHtml = (T, i) => `
@@ -160,11 +168,14 @@ const DASH = '<span class="zero">—</span>';
 const recTopicCells = (t, ncol, jpHtml, joinedHtml, peopleHtml) => {
   const d = `<td class="nosplit">${DASH}</td>`;
   const num = (v) => `<td>${Math.round(v * 100) / 100}</td>`;
-  const nJoin = 2;   // #177: Joined is ONE pair on both tables now
-  return d + d + num(t.hc) + num(t.sc)      // Capacity, Capacity used, Goal heads + score
-    + (joinedHtml || d.repeat(nJoin))       // Joined (#166) - one pair on both tables since #177
+  // 🚨 #252g: THE TOPIC ROWS ARE A SECOND BUILDER FOR THESE TABLES and had to be merged in the same change.
+  //    On Overall Efficiency its twin was missed on the first pass and 26 rows ran 14 cells against a
+  //    9-column header. Count cells per row after any change here; the page looks fine either way.
+  const numSc = (hc, sc) => `<td>${Math.round(hc * 100) / 100}<span class="sublab">${Math.round(sc * 100) / 100}</span></td>`;
+  return d + d + numSc(t.hc, t.sc)          // Capacity, Capacity used, Goal (heads + score in ONE cell)
+    + (joinedHtml || d)                     // Joined (#166) - one cell since #252g
     + jpHtml                                // Joining Pending (#177: the total only)
-    + d.repeat(4)                           // Drop(2), Delta(1), the Delta bar(1)
+    + d + d                                 // Drop(1), Delta(1)
     // 🚨 #193b (Jerin, 28 Sep 2026) REVERSED #182c HERE. It used to read: "a topic row does NOT name people...
     // repeating them here would list the same person twice in one open tree." 🗣 *"Not seeing joiner & joining
     // pipeline names against topics"*. The double-listing that worried #182c is answered by option (b), his
@@ -1685,7 +1696,13 @@ export function initRecruiterFilters(baseData) {
         // track from BOTH, for the same reason and in the same place: `deltaPill` in js/delta-cell.js. The
         // two tabs are near-mirrors and this cell must never differ between them (Rule 3).
         // 🚨 Still never clamped — a recruiter who beat their goal shows a teal minus (Jerin, 25 Sep: #179).
-        return `<td class="score gapcell">${deltaPill(v.gSc)}</td>`;
+        // #252g: the inner pill only — the Delta cell is now ONE cell carrying the heads count with this
+        // under it, like every other metric here. `.deltacell` is inline-flex, so it sits on its own line.
+        // 🚩 WORTH HIS DECISION, NOT MINE: on THIS tab the pill wraps the SCORE (v.gSc) and the plain number
+        //    is heads; on Overall Efficiency it wraps the HEADCOUNT and the score is the plain one. They have
+        //    always differed that way and #252g did not change it — but the two tabs now sit side by side in
+        //    the same shape, so it reads as an inconsistency. Raised with him; do not "tidy" it unasked.
+        return `<span class="gap-sub">${deltaPill(v.gSc)}</span>`;
       };
       // Utilisation: never divide by zero - no capacity set renders as a dash, not Infinity.
       const utilCell = (v) => {
@@ -1712,7 +1729,10 @@ export function initRecruiterFilters(baseData) {
       //    sum() in jpMaps (which builds `total` from the two buckets by NAMING each field), the podAgg roll-up,
       //    and here. The first build of this missed sum() and rendered nothing, with a clean console.
       // 🚨 JP total ONLY (Jerin: "This works") — never on the two JP sub-columns, and never on the HM tab.
-      const nsSub = (n) => (n > 0 ? `<span class="sublab warn">${n} no score</span>` : '');
+      // 🗑 #252g: `nsSub` is GONE — it rendered the "N no score" caption on the Joining pipeline Score, and
+      //    that column no longer exists as its own cell. It is not merely unused: the caption itself was
+      //    retired, because the Joining Pipeline sub-tab names every one of those people individually. The
+      //    #176c history above is kept, since it is the reasoning that also governs `cxSub` below.
       const cxSub = (n) => (n > 0 ? `<span class="sublab warn">${seatFmt(n)} opening${n === 1 ? '' : 's'} with no complexity</span>` : '');
 
       // #166: the topic row's Joined pair. Built HERE, inside the render, so it uses the very same srcSub as
@@ -1725,7 +1745,7 @@ export function initRecruiterFilters(baseData) {
       const joinTopicCells = (jx) => {
         if (!jx) return null;
         const r2 = (v) => Math.round(v * 100) / 100;
-        return `<td>${r2(jx.hc)}${srcSub(jx.so)}</td><td class="score">${r2(jx.sc)}</td>`;
+        return `<td>${r2(jx.hc)}<span class="sublab">${r2(jx.sc)}</span>${srcSub(jx.so)}</td>`;   // #252g: one cell
       };
 
       // Joining Pending: the total, then the two buckets defined relative to the selected quarter.
@@ -1736,8 +1756,13 @@ export function initRecruiterFilters(baseData) {
         // omission, not a decision: the score was already in the data (`j.t.sc`) and simply had no cell drawn,
         // while BOTH sub-columns showed Heads and Score, and Overall Efficiency already showed both. It equals
         // the two sub-column Scores added - no new arithmetic, which is why it can never disagree with them.
-        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}${srcSub(j.t.so)}</td>`
-          + `<td class="score" style="font-weight:600">${j.t.sc ? Math.round(j.t.sc) : `<span class="zero">0</span>`}${nsSub(j.t.ns)}</td>`   // #176c
+        // 🗑 #252g: ONE cell, and the `N no score` caption came off with the merge — HIS catch that it was
+        //    redundant: the Joining Pipeline sub-tab already flags every one of those people individually
+        //    under their own name AND totals them. What it also warned — that this score is understated —
+        //    now lives in words in definitions.js under `rec-fulfilment` (Rule 6). `j.t.ns` is still computed
+        //    and still correct; nothing renders it. Do not restore it without re-reading that definition.
+        return `<td style="font-weight:600">${j.t.hc || `<span class="zero">0</span>`}`
+          + `<span class="sublab">${j.t.sc ? Math.round(j.t.sc) : `<span class="zero">0</span>`}</span>${srcSub(j.t.so)}</td>`;
       };
       // Drop carries its rate as a caption: of everything that reached a conclusion or is about to, what
       // share fell out. Denominator includes Drop itself, per Jerin 2026-08-22.
@@ -1748,8 +1773,9 @@ export function initRecruiterFilters(baseData) {
         // #153 (Jerin, 19 Sep 2026): "of outcomes" is gone — the percentage on its own is enough. What it is a
         // percentage OF is spelled out in the definitions block under the panel.
         const sub = v.dHC > 0 && pct != null ? `<span class="sublab">${pct}%</span>` : '';
-        return `<td class="${v.dHC > 0 ? 'bad' : ''}">${v.dHC ? v.dHC : `<span class="zero">0</span>`}${srcSub(v.dSo)}${sub}</td>`
-          + `<td class="score">${v.dSc ? Math.round(v.dSc) : `<span class="zero">0</span>`}</td>`;
+        // #252g: one cell — heads, then the score, then the rate and the sourced line.
+        return `<td class="${v.dHC > 0 ? 'bad' : ''}">${v.dHC ? v.dHC : `<span class="zero">0</span>`}`
+          + `<span class="sublab">${v.dSc ? Math.round(v.dSc) : `<span class="zero">0</span>`}</span>${srcSub(v.dSo)}${sub}</td>`;
       };
 
       // #24 (Jerin, asked twice): the Offered column is GONE from Non-Sales. Both tables now show Joined as
@@ -1763,14 +1789,19 @@ export function initRecruiterFilters(baseData) {
         // number one column sideways.
         return (narrowed() ? `<td class="score" title="${NARROW_CAP_NOTE}">${DASH}</td>` : `<td class="score">${c(v.capSc)}</td>`)   // Capacity
           + utilCell(v)                                                           // Capacity used
-          + `<td${w}>${c(seatFmt(v.aHC))}${srcSub(v.aSo)}</td><td class="score">${c(Math.round(v.aSc))}${cxSub(v.aNoCx)}</td>`      // Goal heads / score + #165e caption
+          // #252g: Goal is one cell — heads, score, then the sourced line and #165e's complexity caption.
+          // ⚠ `cxSub` STAYS. Tested against the same question that retired `nsSub`: Data Hygiene's "Roles
+          //   Missing Score Inputs" lists ROLES that score zero, while this counts OPENINGS with no
+          //   complexity — a role can score perfectly well while two of its openings carry none, so it is a
+          //   different population and nothing else names it. Flagged to him rather than removed quietly.
+          + `<td${w}>${c(seatFmt(v.aHC))}<span class="sublab">${c(Math.round(v.aSc))}</span>${srcSub(v.aSo)}${cxSub(v.aNoCx)}</td>`
           // #177 (Jerin, 25 Sep 2026): ONE Joined pair on BOTH tables. Sales used to show a heads-only
           // "Joined total" with the Score living in the two #39 sub-columns; those are gone, so its Score comes
           // from the same `v.xSc` that Achieved and Delta already use — the row cannot disagree with itself.
-          + `<td${w}>${c(v.xHC)}${srcSub(v.xSo)}</td><td class="score">${c(v.xSc)}</td>`
+          + `<td${w}>${c(v.xHC)}<span class="sublab">${c(v.xSc)}</span>${srcSub(v.xSo)}</td>`   // #252g: one cell
           + jpCells(v)                                                          // Joining Pending (#177: total only)
           + dropCells(v)                                                        // Drop HC / Score + % subtext
-          + `<td${w}>${c(seatFmt(v.gHC))}${srcSub(v.gSo)}</td>` + gapCell(v)                     // Delta heads / score + bar
+          + `<td${w} class="gapcell">${c(seatFmt(v.gHC))}${gapCell(v)}${srcSub(v.gSo)}</td>`   // #252g: Delta in one cell
           + peopleCells(v);                                                     // #182c: Who has joined · Who is joining
       };
 
