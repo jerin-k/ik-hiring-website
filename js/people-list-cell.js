@@ -18,7 +18,43 @@
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export const SHOW_FIRST = 3;   // names visible before "+N more"
+// #252b (Jerin, 20 Oct 2026): TWO names before "+N more", not three. 🗣 "Show two names ... rest behind more".
+// 🔑 ONE constant, so all three tabs move together — he approved that explicitly rather than per-tab numbers.
+// ⚠ It only earns its keep now: #252g made every number cell two lines tall, so a three-name list is what
+//   sets the row height. Width does not fix height (#252a did the width).
+export const SHOW_FIRST = 2;   // names visible before "+N more"
+
+// ===== #252b: a long REMARK is cut to the same height, with its own "more" =====
+// 🔑 It lives HERE, beside the names cell, for the reason the file header already gives: two cells meant to
+//    stand the same height drift apart the moment there are two copies. The Hiring Manager tab draws the
+//    remark as an editable button and Overall Efficiency as read-only text; BOTH call this.
+// ⚠ The cut itself is CSS (`.jn-rem`/`.jn-note-ro` are line-clamped) — this only decides whether the control
+//    is worth drawing, so nothing is hidden without a way to open it. The Recruiter tables have no Remarks
+//    column at all, which is why this reaches two tabs and the names cap reaches three.
+// 🚨 THE CONTROL IS DECIDED BY REAL OVERFLOW, NOT BY A CHARACTER COUNT, and the first build got this wrong.
+//    A count was tried first (90 characters, the figure the mock used) and measured WRONG on the real table:
+//    #252a and #252g took Remarks from 115px to 438px, so 155 characters now fits inside the clamp with room
+//    to spare — the control appeared on a remark that was not cut, revealed nothing, and added a line, making
+//    the row 78px ➔ 80px. A control that hides nothing is worse than no control.
+//    🔑 So the button is always DRAWN and only SHOWN on a cell `markRemarkOverflow` has found to be clipped.
+//    [[feedback_self-consistency-is-not-proof]] — the mock's 90 agreed with the mock's own column width.
+export function remarkMore() {
+  return `<button type="button" class="jn-more jn-rmore" data-jn-more="1">more</button>`;
+}
+
+// Call after a render: flags the remark cells whose text is ACTUALLY clipped, so only those show "more".
+// ⚠ Must run after layout — a cell measures 0 while its row is display:none, so a hidden tree row would be
+//   read as "not clipped". Rows opened later are re-checked by calling this again.
+export function markRemarkOverflow(root) {
+  if (!root) return;
+  root.querySelectorAll('td.jn-rem').forEach(cell => {
+    const txt = cell.querySelector('.jn-text, .jn-note-ro');
+    if (!txt) return;
+    if (cell.offsetParent === null) return;              // hidden row: leave it for the next pass
+    const clipped = txt.scrollHeight > txt.clientHeight + 1;
+    cell.classList.toggle('jn-rtrunc', clipped);
+  });
+}
 
 export function dayLabel(iso) {
   if (!iso || iso.length < 10) return '';
@@ -46,7 +82,10 @@ export function moreClick(ev) {
   ev.stopPropagation();
   const cell = btn.closest('td');
   const open = cell.classList.toggle('jn-open');
-  btn.textContent = open ? 'Show fewer' : `+${cell.querySelectorAll('.jn-p.jn-extra').length} more`;
+  // #252b: a REMARK's control says more/less — counting `.jn-p.jn-extra` in a remark cell would read "+0 more".
+  btn.textContent = btn.classList.contains('jn-rmore')
+    ? (open ? 'less' : 'more')
+    : (open ? 'Show fewer' : `+${cell.querySelectorAll('.jn-p.jn-extra').length} more`);
   return true;
 }
 
@@ -56,6 +95,9 @@ export function wireMoreCells(body) {
   if (!body || body.dataset.jnMoreWired === '1') return;
   body.dataset.jnMoreWired = '1';
   body.addEventListener('click', moreClick);
+  // #252b: opening a tree row reveals remark cells that measured 0 while their row was hidden, so re-check
+  // after the click has been applied. One frame later, or the row is still mid-toggle and measures nothing.
+  body.addEventListener('click', () => requestAnimationFrame(() => markRemarkOverflow(body)));
 }
 
 export function jnWhoCell(o, opt = {}) {

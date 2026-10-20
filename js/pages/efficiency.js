@@ -1,6 +1,6 @@
 import { podOf, POD_OPTIONS, isSalesPod, capacityOf, currentQuarter, qKey } from '../recruiter-pods.js';
 import { uiPx } from '../ui-scale.js';   // #140: canvas text + pixel constants
-import { jnWhoCell, wireMoreCells, isMoreClick } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick
+import { jnWhoCell, wireMoreCells, isMoreClick, remarkMore, markRemarkOverflow } from '../people-list-cell.js';   // #182c: ONE people-cell renderer, shared with HM and Recruiter · #193a: isMoreClick · #252b: remarkMore
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { loadNotes, noteOf } from '../job-notes.js';   // #182c: Remarks, READ-ONLY here - written on the Hiring Manager tab
 import { defsBlock } from '../definitions.js';
@@ -1034,7 +1034,8 @@ export function initEfficiencyFilters(data) {
       const note = x.job8 ? (noteOf(x.job8) || {}).text : '';
       return jnWhoCell(x, { list: x.joWho || [], dateOf: (c) => c.startDate, groupByDate: true, under: x.joUnder })
            + jnWhoCell(x, { under: x.jpUnder })
-           + `<td class="jn-cell">${note ? `<span class="jn-note-ro">${String(note).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))}</span>` : '<span class="zero">&mdash;</span>'}</td>`;
+           // #252b: the same cut and the same control as the Hiring Manager tab — `remarkMore` is the one home.
+           + `<td class="jn-cell jn-rem">${note ? `<span class="jn-note-ro">${String(note).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))}</span>${remarkMore(note)}` : '<span class="zero">&mdash;</span>'}</td>`;
     };
     const rows = fulfilRows(per);
     // #157: same window as the job rows above - whole quarters when the range covers them, India-time days
@@ -1199,6 +1200,7 @@ export function initEfficiencyFilters(data) {
     body.innerHTML = html || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
     wireTreePath(body, expandAll());
     wireMoreCells(body);   // #182c: the "+N more" toggle
+    markRemarkOverflow(body);   // #252b: show a remark's "more" only where the text is really clipped
   }
 
   // Candidate-level joining-pending list, same source as the Hiring Manager tab (joiningPendingCases),

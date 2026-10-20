@@ -9,6 +9,7 @@ import { tdTopic, tdOpening, topicLookup, realTopic } from '../people-cells.js';
 import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
 import { shadePipeline } from '../grid-shade.js';   // #137c
 import { loadNotes, noteOf, publishNote, guardProblem, NOTE_MAX, firstNameOf } from '../job-notes.js';   // #150 · #180 firstNameOf
+import { remarkMore, markRemarkOverflow } from '../people-list-cell.js';   // #252b: one home for the remark's "more"
 import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-topics.js';   // #157
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
@@ -152,6 +153,7 @@ function jnRemarkCell(o) {
   //    the single thing the writer has to be told. CLAUDE.md: above a table there is LIVE STATE ONLY.
   return `<td class="jn-cell jn-rem${n.unsaved ? ' jn-unsaved' : ''}" data-job8="${esc(o.job8)}">`
     + `<button type="button" class="jn-text" data-jn-edit="1" title="Edit this remark">${esc(n.text)}</button>`
+    + remarkMore(n.text)   // #252b: cut to the same height as the capped people lists, with its own more
     + (n.unsaved ? `<span class="jn-by">Unsaved — in this browser only</span>` : '') + `</td>`;
 }
 // ONE delegated listener for the life of the table: expand a long list, open an editor, save or cancel it.
@@ -162,9 +164,11 @@ function wireJobNotes(body) {
   body.dataset.jnWired = '1';
   body.addEventListener('click', async (ev) => {
     // #182c: the toggle lives in people-list-cell.js now, so all three tabs share one copy (and one bug fix).
-    if (moreClick(ev)) return;
+    if (moreClick(ev)) { requestAnimationFrame(() => markRemarkOverflow(body)); return; }
     const edit = ev.target.closest('[data-jn-edit]');
     if (edit) { ev.stopPropagation(); openEditor(edit.closest('td')); return; }
+    // #252b: a tree row that just opened reveals remark cells that measured 0 while hidden.
+    requestAnimationFrame(() => markRemarkOverflow(body));
   });
 }
 // Close the editor by redrawing THIS CELL only — a full re-render would throw away which departments the
@@ -1085,6 +1089,7 @@ export function initHmFilters(data) {
     body.innerHTML = html;
     wireTree(body, true);   // #189d: the level chooser IS the expand control on this table (#188)
     wireJobNotes(body);   // #150
+    markRemarkOverflow(body);   // #252b: only a genuinely clipped remark gets a "more"
 
     // Chart: one bar per department, stacked Joined / Joining Pending / Delta — and Joined and Joining Pending
     // split again into the ROLES inside the department, in shades of the metric colour (Jerin, 2026-08-29).

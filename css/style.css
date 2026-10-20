@@ -2259,6 +2259,23 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    Hiring Manager tab - one note per job, read by both tabs, so this is one note shown twice. */
 .jn-note-ro { display: block; font-size: 0.625rem; color: var(--text-secondary); }
 
+/* ===== #252b (Jerin, 20 Oct 2026) — a long remark is cut to the height of the capped people lists ===== */
+/* 🗣 "cut the remark to fit the same height". The people columns stop at TWO names and offer "+N more";
+   without this the remark alone sets the row height and the cap next to it buys nothing.
+   🔑 The cut is three lines, which is what two names come to — measured, then tuned to match, not guessed.
+   🔑 `-webkit-line-clamp` needs `display:-webkit-box`, and it is the one clamp that works on a BUTTON, which
+      is what the Hiring Manager remark is (clicking it opens the editor).
+   ⚠ Nothing is hidden without a way back: `remarkMore()` in js/people-list-cell.js draws the control, and
+      `.jn-open` — the same class the people lists use — releases the clamp. One toggle for both. */
+.jn-rem .jn-text, .jn-rem .jn-note-ro {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.jn-rem.jn-open .jn-text, .jn-rem.jn-open .jn-note-ro { -webkit-line-clamp: unset; overflow: visible; }
+/* The remark's control sits under the text, like the "+N more" under a people list — and ONLY on a cell that
+   `markRemarkOverflow()` has found to be genuinely clipped. Drawn always, shown only when it reveals something. */
+.jn-more.jn-rmore { display: none; margin-top: 0.125rem; }
+.jn-rem.jn-rtrunc .jn-more.jn-rmore { display: block; }
+
 
 /* ===== Interview Traction (#206, 7 Oct 2026) — Hiring Manager + Overall Efficiency =====
    Four outcome colours, taken from the existing chart palette rather than invented: Blue Munsell for
