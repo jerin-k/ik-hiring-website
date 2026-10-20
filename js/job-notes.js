@@ -47,7 +47,13 @@ export const PRIORITIES = ['P0', 'P1', 'P2'];
 // 🚨 job_notes.json is PUBLIC. The value is DIGITS ONLY, here and on the server, so nothing free-typed can
 //    reach it — the same reasoning that makes a priority need no guardProblem().
 let pubBud = {};        // '<dept>|<quarter>' -> { amount, by, at }   as the server has it
-let budDrafts = {};     // '<dept>|<quarter>' -> '<digits>'           unconfirmed, this browser only
+// 🚨 #269d FIX (20 Oct 2026, Jerin: "Didnt land in Front"). A draft is `{ v, ok }`, NOT a bare string,
+//    and it is KEPT after the server confirms rather than deleted. Why: `loadNotes()` reads the CDN copy,
+//    which is cached for 300s and ignores ?cb (#152 knew this and fixed only confirm-by-read). Deleting
+//    the draft on confirm left a window with no draft AND a stale published copy, so a figure that had
+//    saved perfectly rendered BLANK for up to five minutes. `ok` says the server has it, so the cell
+//    shows the number WITHOUT the amber unsaved mark; healBudDrafts() drops it once the public copy agrees.
+let budDrafts = {};     // '<dept>|<quarter>' -> { v: '<digits>', ok: bool }   this browser only
 export const BUDGET_MAX_DIGITS = 12;
 export const budgetKey = (dept, quarter) => String(dept || '').trim() + '|' + String(quarter || '').trim().toUpperCase();
 
@@ -99,7 +105,9 @@ export async function loadNotes() {
   // #152: holding an unconfirmed draft, read the AUTHORITATIVE copy instead of the CDN's five-minute-old one —
   // otherwise a note that saved fine keeps showing amber until the cache happens to turn over. With no drafts
   // there is nothing to heal, so the cheap cached read is right (and leaves the API's hourly budget alone).
-  if (Object.keys(drafts).length) {
+  // #269d: a BUDGET draft needs the authoritative copy for exactly the same reason a note draft does —
+  // the CDN is five minutes behind, so a figure saved a moment ago would not be found to heal against.
+  if (Object.keys(drafts).length || Object.keys(budDrafts).length) {
     const live = await fetchFresh();
     if (live) {
       published = (live && live.notes) || {};
@@ -107,6 +115,7 @@ export async function loadNotes() {
       pubBud = (live && live.budgets) || {};      // #269d
       loadedAt = (live && live.updatedAt) || null;
       healDrafts();
+      healBudDrafts();   // #269d
       return true;
     }
   }
@@ -120,6 +129,7 @@ export async function loadNotes() {
       pubBud = (j && j.budgets) || {};      // #269d
       loadedAt = (j && j.updatedAt) || null;
       healDrafts();
+      healBudDrafts();   // #269d
       return true;
     } catch (e) { /* try the next one */ }
   }
@@ -145,9 +155,26 @@ export function budgetOf(dept, quarter) {
   const k = budgetKey(dept, quarter);
   const p = pubBud[k] || null;
   if (Object.prototype.hasOwnProperty.call(budDrafts, k)) {
-    return { amount: budDrafts[k] || '', by: p ? p.by : null, at: p ? p.at : null, unsaved: true };
+    const d = budDrafts[k];
+    // tolerate the pre-fix shape, where a draft was a bare string
+    const v = (d && typeof d === 'object') ? String(d.v || '') : String(d || '');
+    const ok = !!(d && typeof d === 'object' && d.ok);
+    return { amount: v, by: p ? p.by : null, at: p ? p.at : null, unsaved: !ok };
   }
   return p ? { amount: String(p.amount == null ? '' : p.amount), by: p.by || null, at: p.at || null, unsaved: false } : null;
+}
+
+// #269d: a kept draft has done its job once the PUBLISHED copy says the same thing. Same idea as
+// healDrafts() for notes — without it a confirmed figure would keep showing from localStorage for ever.
+function healBudDrafts() {
+  let changed = false;
+  for (const k of Object.keys(budDrafts)) {
+    const d = budDrafts[k];
+    const v = (d && typeof d === 'object') ? String(d.v || '') : String(d || '');
+    const pub = pubBud[k] ? String(pubBud[k].amount == null ? '' : pubBud[k].amount) : '';
+    if (pub === v) { delete budDrafts[k]; changed = true; }
+  }
+  if (changed) writeBudDrafts();
 }
 
 // #269d: save one department's starting budget for one quarter. Same shape as publishPriority above, and
@@ -163,7 +190,7 @@ export async function publishBudget(dept, quarter, amount) {
   if (clean.length > BUDGET_MAX_DIGITS) return { ok: false, reason: 'That figure is too long.' };
 
   const k = budgetKey(d, q);
-  budDrafts[k] = clean; writeBudDrafts();   // keep it before anything can go wrong
+  budDrafts[k] = { v: clean, ok: false }; writeBudDrafts();   // keep it before anything can go wrong
 
   const w = window.open('', 'jnPublish', 'popup=yes,width=440,height=420');
   if (!w) return { ok: false, reason: 'Pop-ups are blocked for this site. Allow them and type it again — your figure is kept here meanwhile.' };
@@ -186,7 +213,12 @@ export async function publishBudget(dept, quarter, amount) {
       pubPri = live.priorities || pubPri;
       published = live.notes || published;
       loadedAt = live.updatedAt || loadedAt;
-      delete budDrafts[k]; writeBudDrafts();
+      // 🚨 KEEP the draft, marked confirmed. Deleting it here is what made a saved figure render blank:
+      //    the next page load reads the CDN, which is up to five minutes behind this moment.
+      //    healBudDrafts() removes it as soon as the published copy agrees.
+      if (clean) budDrafts[k] = { v: clean, ok: true };
+      else delete budDrafts[k];
+      writeBudDrafts();
       try { w.close(); } catch (e) { }
       return { ok: true };
     }
