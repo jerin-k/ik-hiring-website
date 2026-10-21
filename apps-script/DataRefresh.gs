@@ -1060,7 +1060,23 @@ function refreshDashboardData() {
       lateEntryAt: e.lateEntryAt || null, attrQuarter: null }; });
   // ---- #53 BROAD Joining-Pending cases: Ref Check / Documentation / Offer ----
   var OFFER_SUBSTAGE_ = { 'WaitingOnApprovalStart':'Offer Created', 'WaitingOnApprovalDefinition':'Offer Created', 'WaitingOnOfferApproval':'Offer Created', 'WaitingOnCandidateResponse':'Offer Sent', 'CandidateAccepted':'Offer Accepted' };
-  var PRE_OFFER_SUBSTAGE_ = { 'Reference Check':'Ref Check', 'Document Submission':'Documentation' };
+  // ===== #276 (Jerin, 21 Oct 2026) - THE OFFER STAGE COUNTS AS IN-CLOSING =====
+  // 🗣 "there are a lot more candidates in US business in Offer stage" - and he was right.
+  // WHAT WAS WRONG. This map is the SECOND pass of the Joining Pipeline list: the first pass adds everyone with
+  // an OFFER RECORD (which is where 'Offer Created / Sent / Accepted' come from), and this pass adds anyone not
+  // already there whose STAGE is listed here. 'Offer' was missing, so a candidate parked in Ashby's Offer stage
+  // with NO offer raised yet matched neither pass and was invisible.
+  // 📏 MEASURED on Program Advisor - US (AI Programs) alone: Ashby's Offer column held 13 - six 'Needs Offer'
+  //    and five 'Candidate Accepted'. All five accepted ones were on the list; FIVE of the six 'Needs Offer'
+  //    were not. 'Needs Offer' means the offer has not been created, so the people most in need of chasing were
+  //    exactly the ones being dropped.
+  // 🔑 This makes the code MATCH ITS OWN DEFINITION at last: every definitions block says the population is
+  //    Ref Check + Documentation + OFFER. It was delivering Ref Check + Documentation + offer records.
+  // ⚠ These rows carry no offer, so they come through with doj/openingQuarter null and linked:false - they land
+  //    in the 'Date not set' group and read 'Not linked', exactly as the Ref Check and Documentation rows do.
+  // 🚨 It RAISES Joining Pipeline wherever it is read: the HM card and column, Overall Efficiency, the Recruiter
+  //    JP total, Joining Conversion, and Achieved on two of the three Fulfilment tables (#270).
+  var PRE_OFFER_SUBSTAGE_ = { 'Reference Check':'Ref Check', 'Document Submission':'Documentation', 'Offer':'Offer' };
   var openQuarterOf_ = function(opid) {
     var oo = opid ? openingById_[opid] : null; if (!oo) return null;
     var iso = oo.openedAt || (oo.latestVersion && oo.latestVersion.createdAt) || oo.createdAt; if (!iso) return null;
