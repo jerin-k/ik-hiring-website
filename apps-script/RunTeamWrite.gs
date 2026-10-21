@@ -18,11 +18,18 @@
 // application id or the user id cannot create anything, so the probe is safe against real ids.
 // ============================================================================================
 
-// RIGHT NOW: the OPENING/STATUS endpoint probe. Writes NOTHING - empty bodies only.
+// RIGHT NOW: #275 - restoring 108 per-candidate Recruiters wiped by two Ashby job clean-ups.
+// #275 COMPLETE: 107 recruiters + 4 sourcers written 21 Oct 2026, 0 failed, 1 skipped (ambiguous).
+// PARKED ON DRY. Do not re-run the writes.
 // The 222 recruiter writes and the 2 source writes are COMPLETE.
 // The 222 recruiter writes are COMPLETE (222 done, 0 failed, verified by read-back).
 function runRetagWriteStep() {
-  retagTestFullFlow_();
+  // ===== #275 IS COMPLETE AND PARKED =====
+  // 107 recruiters + 4 sourcers written on 21 Oct 2026, 0 failed. 1 row skipped: Karuna Tomar has TWO
+  // applications on Program Advisor - US (AI Programs), so it was never guessed. DO NOT RE-RUN THE WRITES:
+  // every row is now populated, so a second pass would try to add a member that is already there.
+  // Left on DRY, which writes nothing and just reports what the plan resolves to.
+  r275Apply_('dry', 0);
 }
 
 var RETAG_TAB_W = 'Recruiter Re-tag Plan';
@@ -750,4 +757,147 @@ function retagTestFullFlow_() {
              '   (empty means the recruiter tag must be done in the UI)');
   Logger.log('flow | open this to set the date + check Copy:');
   Logger.log('flow | https://app.ashbyhq.com/jobs/' + job.id + '/openings/' + o.id);
+}
+
+
+// ===== #275 (Jerin, 21 Oct 2026) - PUT BACK THE RECRUITERS LOST IN TWO ASHBY JOB CLEAN-UPS =====
+// He said: "Is all the 108 are blank today, find the last recorded recruiter against the candidate and lets write."
+//
+// WHAT HAPPENED. Two clean-ups wiped the per-candidate Recruiter off 108 applications: 73 on 15 Oct (all on
+// Part Time Instructor - Agentic AI (US)) and 31 on 31 Aug (mostly the Program Advisor roles), plus 4 one-offs.
+// The names were recovered from OUR OWN dashboard.json history - 259 saved versions back to 4 Aug - by taking
+// the LAST non-empty recruiter recorded against each person+job. Ashby itself no longer holds them.
+//
+// WHY THIS ENDPOINT: DataRefresh.gs reads a candidate's recruiter from app.hiringTeam[] where role ===
+// 'Recruiter' (getHiringTeamRoles_), and application.addHiringTeamMember writes exactly that. Run22g's own
+// routing table already maps 'Recruiter (Candidate)' to this endpoint; it is the write that landed 222 times.
+//
+// EVERY ROW WAS BLANK IN ASHBY when the plan was built - asserted against the live data, 0 of 108 would
+// overwrite a name. This only ADDS. Nothing is ever removed here.
+// NINE of the 108 showed TWO recruiters alternating in our history (Aditya Singh / Ritika Bhasin, flipping
+// within hours - almost certainly both tagged, with the pipeline picking one per run). Jerin saw that list,
+// had nothing to check it against, and chose the last recorded name for those too.
+// APPLICATION IDS come from offer_contacts.json (Drive-only, holds the emails) - built from the same
+// offerEvents array, so every row resolves without crawling application.list. Matched on candidate + job
+// title; a candidate+job resolving to MORE than one application is SKIPPED, never guessed.
+var R275_REC_ROLE_ = '22db8dc8-83f4-40de-8376-87efff4a6eb6';
+var R275_SRC_ROLE_ = '952a945b-4f74-44cd-be85-2acba0248822';
+var R275_SRC_NAME_ = 'V Pooja';
+var R275_JOBS_ = ["Associate Product Manager","Executive Assistant","Manager, Career Transformation","Part Time Instructor - Agentic AI (US)","Part Time Instructor - Cyber Security Engineering (US)","Program Advisor - India","Program Advisor - US (AI Programs)","Software Engineer 2, Machine Learning"];
+var R275_RECS_ = ["Aditya Singh","Alokita Dhumne","Deepti Leslie","G Darshan","Kaashvika Kashyap","Mahima Agarwal","Oshin Verma","Rijo John","Ritika Bhasin","Satinder Kaur","Smriti Das","Tabitha Anceline E"];
+// candidate~jobIndex~recruiterIndex[~S for the four that also lost a sourcer]
+var R275_PLAN_ = 'Aarthi Srinivasan~3~0|Abdul Mannan Khan~3~8|Abu Marcose~3~8|Aditi Desai~3~8|Ajay Soni~3~0|Alex Games~3~0|Alireza Dirafzoon~3~8|Alisson Sol~3~0|Allen Mohammadi~3~8|Amrish Thakkar~3~8|Andrea Jessee~3~0|Andrew Temlyakov~3~8|Anil K~3~0~S|Anupam Awal~3~8|Avtar Singh~3~0~S|Beshoy Louka~3~0|Chacko Daniel~3~0|Chandra Yarlagadda~3~0|Chirag Mandaviya ~3~0|David Lee~3~8|Deepika Ramamoorthi~3~0~S|Devendra Marwaha~3~8|Dinakar Dhurjati~3~0|Edward Chen~3~8|Faizan Ahmed~3~8|Fredrik Tunvall~3~8|Jamie Yang~3~0|Jason X~3~0|Jaswanthi P Meganathan~3~8|Jayant Gupchup~3~0|Jianbo Zhao~3~0|Jiju John~3~0|Joy Chakraborty~3~0|Kevin Shen~3~8|Kiran Lakkaraju~3~0|Krishna Anumalasetty~3~8|Leon Yen~3~0|M Huiting~3~0|M Mousom~3~0|Meena Raman~3~0|Meryem Khribech~3~8|Michael Ariaga~3~8|Mike Conti~3~0|Mike Emonts~3~8|Min Chen~3~0|Nicole Stein~3~0|Omar Bazavilvazo~3~0|Perraju T~3~0|Prashant Verma~3~8|Pratap Ramamurthy~3~0|Priya Poolavari~3~0|Priyajeev Kumar~3~8|Raghavan Muthuregunathan~3~8|Rolly Seth~3~0|Ross Y~3~0|Sachin Thakur~3~8|Sai Kumar GV~3~8|Saravanan Alagu~3~0|Saswata Ghose~3~0|Satish Nandi~3~0|Shakir James~3~0|Sitaram Baldwa~3~8|Siva Murugesan~3~0|Smita Guttigoli~3~0|Sourish Deb~3~0|Sunil Somanna~3~8|Tanmay Bhagwat~3~8|Tunde Aderinwale~3~0|Tyler Wolfe~3~0|Varden W~3~0|Varun Khatri~3~0~S|William W. W~3~8|Yogesh Jhamb~3~0|Nidhaan Ranjan Srivastava~0~2|Kamal Sonia Bangar~1~9|Narinder Kaur~2~9|Sadaf Tahir~2~6|H Matthew~4~0|Tiffany Lewis~4~0|Balendra Dageendran~5~7|Deepak Jain~5~11|Deepak Rai~5~5|Ishaan Ishitawa~5~7|Lalit .~5~1|Nikhil Koushik Yerramilli~5~10|Nitish .~5~5|Pallavi Rath~5~10|Sakthi Priya. R~5~1|Satyendra Mishra~5~1|Shivangi Mishra~5~5|Siddharth Arora~5~11|Simran Kedia~5~1|Simron Hussain~5~11|Subhankar Roy~5~11|Upasana Bhardwaj~5~11|Vishali Soni~5~10|Aman Anand~6~5|B Kavya~6~4|Chakravaram Venkat Raju~6~7|Karuna Tomar~6~5|Lavanya Ambrish~6~3|Nida Shahid~6~3|Payal Dubey~6~3|Ritika Srivastava~6~5|Shvetank Hasal~6~3|Suhas Arora~6~5|Vinil Suresh Vamanjoor~6~5|Gummadipudi Venkata Ranjith Rayalu~7~2';
+
+function r275Resolve_() {
+  var it = DriveApp.getFilesByName('offer_contacts.json');
+  if (!it.hasNext()) throw new Error('offer_contacts.json not found in Drive - run refreshDashboardData first');
+  var oc = JSON.parse(it.next().getBlob().getDataAsString()).rows || [], byKey = {}, i;
+  for (i = 0; i < oc.length; i++) {
+    var k = String(oc[i].candidate || '').trim().toLowerCase() + '|' + String(oc[i].jobTitle || '').trim().toLowerCase();
+    (byKey[k] = byKey[k] || []).push(oc[i]);
+  }
+  // includeDeactivated: a recruiter who has since left still owns the work they did.
+  var users = ashbyListAll_('/user.list', { includeDeactivated: true }), uidByName = {};
+  for (i = 0; i < users.length; i++) {
+    var nm = users[i].name || ((users[i].firstName || '') + ' ' + (users[i].lastName || '')).trim();
+    if (nm) uidByName[nm.trim().toLowerCase()] = users[i].id;
+  }
+  var rows = R275_PLAN_.split('|'), plan = [], bad = [];
+  for (i = 0; i < rows.length; i++) {
+    if (!rows[i]) continue;
+    var p = rows[i].split('~'), cand = p[0], job = R275_JOBS_[+p[1]], rec = R275_RECS_[+p[2]];
+    var src = (p[3] === 'S') ? R275_SRC_NAME_ : '';
+    if (!job || !rec) { bad.push([cand, 'BAD INDEX in the plan row: ' + rows[i]]); continue; }
+    var hits = byKey[cand.trim().toLowerCase() + '|' + job.trim().toLowerCase()] || [], ids = {}, h;
+    for (h = 0; h < hits.length; h++) if (hits[h].applicationId) ids[hits[h].applicationId] = 1;
+    var idList = Object.keys(ids);
+    var uid = uidByName[rec.trim().toLowerCase()], sid = src ? uidByName[src.trim().toLowerCase()] : '';
+    if (!idList.length)    { bad.push([cand, job, 'no application id in offer_contacts.json']); continue; }
+    if (idList.length > 1) { bad.push([cand, job, idList.length + ' application ids - AMBIGUOUS, skipped']); continue; }
+    if (!uid)              { bad.push([cand, job, 'recruiter not in user.list: ' + rec]); continue; }
+    if (src && !sid)       { bad.push([cand, job, 'sourcer not in user.list: ' + src]); continue; }
+    plan.push({ cand: cand, job: job, appId: idList[0], rec: rec, uid: uid, src: src, sid: sid });
+  }
+  return { plan: plan, bad: bad };
+}
+
+// mode 'dry' writes NOTHING. mode 'run' writes, and limit caps the batch so the sequence can go
+// dry -> 1 -> 10 -> the rest, as the header of this file requires.
+// `from` is the 0-based row to resume at, so each rung continues where the last stopped instead of
+// re-adding a member that is already on the application (rung 2 wrote row 0).
+function r275Apply_(mode, limit, from) {
+  var R = r275Resolve_(), i;
+  Logger.log('#275 resolve: ' + R.plan.length + ' ready, ' + R.bad.length + ' NOT resolvable, of ' + (R.plan.length + R.bad.length) + ' rows');
+  for (i = 0; i < R.bad.length; i++) Logger.log('   SKIP | ' + R.bad[i].join(' | '));
+  var byRec = {}, srcN = 0;
+  for (i = 0; i < R.plan.length; i++) { byRec[R.plan[i].rec] = (byRec[R.plan[i].rec] || 0) + 1; if (R.plan[i].sid) srcN++; }
+  Logger.log('#275 recruiters queued: ' + JSON.stringify(byRec));
+  Logger.log('#275 sourcer writes queued: ' + srcN);
+  if (mode !== 'run') {
+    Logger.log('#275 DRY RUN - nothing written. Sample:');
+    for (i = 0; i < Math.min(5, R.plan.length); i++) Logger.log('   ' + R.plan[i].cand + ' | app ' + R.plan[i].appId.substring(0, 8) + ' | ' + R.plan[i].rec + (R.plan[i].src ? ' | sourcer ' + R.plan[i].src : ''));
+    return;
+  }
+  var start = from && from > 0 ? from : 0;
+  var n = (limit && limit > 0) ? Math.min(start + limit, R.plan.length) : R.plan.length;
+  var done = 0, failed = 0, sdone = 0, sfailed = 0;
+  Logger.log('#275 writing rows ' + start + ' to ' + (n - 1) + ' of ' + R.plan.length);
+  for (i = start; i < n; i++) {
+    var y = R.plan[i];
+    var res = ashbyWrite_('/application.addHiringTeamMember', { applicationId: y.appId, teamMemberId: y.uid, roleId: R275_REC_ROLE_ });
+    if (res.ok) done++; else { failed++; Logger.log('   FAIL ' + y.cand + ' -> ' + String(res.text).substring(0, 180)); }
+    if (y.sid) {
+      var r2 = ashbyWrite_('/application.addHiringTeamMember', { applicationId: y.appId, teamMemberId: y.sid, roleId: R275_SRC_ROLE_ });
+      if (r2.ok) sdone++; else { sfailed++; Logger.log('   FAIL(sourcer) ' + y.cand + ' -> ' + String(r2.text).substring(0, 180)); }
+    }
+  }
+  Logger.log('#275 WROTE ' + done + ' recruiters (' + failed + ' failed) and ' + sdone + ' sourcers (' + sfailed + ' failed), of ' + (n - start) + ' rows attempted');
+}
+
+
+// #275: the V9 - Work log entry. Reads the tab's own header so the row cannot land in the wrong
+// columns, appends ONE row, and logs exactly what it wrote. Safe to read; appends only when called.
+function r275LogV9_() {
+  var sh = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName('V9 - Work log');
+  if (!sh) throw new Error('V9 - Work log tab not found');
+  var vals = sh.getDataRange().getValues(), hdr = vals[0];
+  Logger.log('V9 header: ' + JSON.stringify(hdr));
+  Logger.log('V9 last row (' + vals.length + '): ' + JSON.stringify(vals[vals.length - 1]));
+  var row = [];
+  for (var c = 0; c < hdr.length; c++) {
+    var h = String(hdr[c]).trim().toLowerCase(), val = '';
+    if (/date/.test(h)) val = '2026-10-21';
+    else if (/task|ref|id/.test(h)) val = '#275';
+    else if (/what|change|description|action|fix/.test(h)) val = 'Restored the per-candidate Recruiter on applications wiped by two Ashby job clean-ups (73 on 15 Oct, 31 on 31 Aug, 4 one-offs). Also restored 4 Sourcers (V Pooja).';
+    else if (/count|number|qty|rows/.test(h)) val = '107 recruiters + 4 sourcers';
+    else if (/method|how/.test(h)) val = 'application.addHiringTeamMember via RunTeamWrite.gs r275Apply_, in rungs of 1 / 10 / 96. Values recovered from our own dashboard.json git history (259 versions back to 4 Aug) - the LAST non-empty recruiter per candidate+job. Application ids from offer_contacts.json.';
+    else if (/verif/.test(h)) val = 'Ashby UI, 3 spot-checks across 2 jobs, 3 recruiters, Hired + Archived, both loss events: each reads Hiring Team > Recruiter > the expected name (never "No Roles"). 0 failed of 107. 1 row skipped: Karuna Tomar has 2 applications on Program Advisor - US (AI Programs), never guessed.';
+    else if (/who|by/.test(h)) val = 'Claude, on Jerin instruction';
+    row.push(val);
+  }
+  sh.appendRow(row);
+  Logger.log('V9 appended at row ' + (vals.length + 1) + ': ' + JSON.stringify(row));
+}
+
+
+// #275 FIX: my first V9 row put the METHOD text into "Verified how" and left Status blank - the column
+// matcher tested /method|how/ BEFORE /verif/, and the header is "Verified how", which contains "how".
+// Sets just those two cells on the row it wrote. Run once.
+function r275FixV9_() {
+  var sh = SpreadsheetApp.openById(AUDIT_SHEET_ID).getSheetByName('V9 - Work log');
+  var vals = sh.getDataRange().getValues(), hdr = vals[0];
+  var rowIx = -1;
+  for (var r = vals.length - 1; r >= 1; r--) { if (String(vals[r][1]).trim() === '#275') { rowIx = r; break; } }
+  if (rowIx < 0) throw new Error('no #275 row found');
+  var cVer = -1, cSt = -1;
+  for (var c = 0; c < hdr.length; c++) {
+    var h = String(hdr[c]).trim().toLowerCase();
+    if (h === 'verified how') cVer = c;
+    if (h === 'status') cSt = c;
+  }
+  if (cVer < 0 || cSt < 0) throw new Error('columns not found: ' + JSON.stringify(hdr));
+  sh.getRange(rowIx + 1, cVer + 1).setValue('Ashby UI, 3 spot-checks across 2 jobs, 3 recruiters, Hired + Archived, and both loss events: each reads Hiring Team > Recruiter > the expected name, never "No Roles". WROTE 107, FAILED 0. 1 row skipped: Karuna Tomar has 2 applications on Program Advisor - US (AI Programs), so it was never guessed.');
+  sh.getRange(rowIx + 1, cSt + 1).setValue('Done');
+  var back = sh.getRange(rowIx + 1, 1, 1, hdr.length).getValues()[0];
+  Logger.log('V9 row ' + (rowIx + 1) + ' now: Verified how = ' + String(back[cVer]).substring(0, 70) + ' ... | Status = ' + back[cSt]);
 }
