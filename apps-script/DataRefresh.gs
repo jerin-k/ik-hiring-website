@@ -1374,7 +1374,7 @@ function refreshDashboardData() {
   };
   assertDashboardComplete_(dashboard, existing);
   saveDashboardJson_(dashboard);
-  Logger.log('=== Refresh v4 done: ' + appResult.funnel.applied + ' apps, ' + jobsList.length + ' jobs, ' + recruitersList.length + ' recruiters, ' + offerResult.count + ' offers, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
+  Logger.log('=== Refresh v4 done: ' + appResult.funnel.applied + ' apps, ' + jobsList.length + ' jobs, ' + recruitersList.length + ' recruiters, ' + offerResult.count + ' offers, ' + Math.round((Date.now() - startTime) / 1000) + 's ===' + driveBackupNote_());
   // Mirror this project into the repo so the checked-in copy tracks what is actually running.
   // Wrapped: a sync failure must never take down the data refresh.
   try { pushSourceToGitHub(); } catch (e) { Logger.log("source sync error: " + e.message); }
@@ -1397,11 +1397,13 @@ function loadExistingDashboard_() {
   return null;
 }
 function saveDashboardJson_(data) {
-  var folder = DriveApp.getFolderById(DASHBOARD_FOLDER_ID);
+  // #271b: dashboard.json is THE file the whole site reads, and its Drive backup used to be written here with
+  // no guard, one line above the push. A Drive blip during any scheduled refresh would have killed the push
+  // for the entire dashboard - the same bug as #271, on the main file. It was invisible to a search for
+  // unguarded saveDriveJson_ calls because this function hand-rolls its own copy of that logic.
   var jsonStr = JSON.stringify(data, null, 2);
-  var files = folder.getFilesByName('dashboard.json');
-  if (files.hasNext()) files.next().setContent(jsonStr); else folder.createFile('dashboard.json', jsonStr, 'application/json');
-  pushToGitHub_(jsonStr);
+  saveDriveBackup_('dashboard.json', jsonStr);
+  pushToGitHub_(jsonStr);   // ALWAYS runs, whatever Drive did
 }
 
 // ===== WIPE (clean rebuild) — deletes any residual state + the Drive dashboard.json =====
@@ -1433,6 +1435,50 @@ function pushCurrentDataToGitHub() { var d = loadExistingDashboard_(); if (!d) {
 
 // ===== DRIVE JSON HELPERS =====
 
+// ===== #271b (Jerin, 20 Oct 2026) - A BACKUP WRITE MUST NEVER STOP THE LIVE PUSH =====
+// 🗣 "guard the remaining saveDriveJson_ calls, starting with the rollups save in refreshStageHistory."
+// WHY. #271: an unguarded Drive write threw on a transient 'Service error: Drive' and took the
+// pushFileToGitHub_ on the NEXT LINE with it. The Drive copy is only a BACKUP; the GitHub file is what the
+// site reads. So the run reported Completed while the public file was never written.
+//
+// 🚨 THIS IS DELIBERATELY NOT APPLIED TO EVERY saveDriveJson_ CALL, and saveDriveJson_ STILL THROWS.
+//    Two kinds of write share that one function and they need OPPOSITE behaviour:
+//    1. BACKUPS, with a live GitHub push on the next line - dashboard.json, stage_rollups.json,
+//       interview_traction.json. A Drive blip must cost the backup and nothing else. Those use THIS.
+//    2. Code.gs's Admin -> Publish writes (access.json, metric_config.json, access_invites.json,
+//       job_notes.json). There Drive is the SOURCE OF TRUTH - the publish guard compares against it - and
+//       the throw is the only thing stopping the page printing "Published" over a write that never landed.
+//       Guarding those would turn a loud failure into a silent lie. THEY KEEP saveDriveJson_.
+//    3. Internal state and caches (scoped_apps, stage_events, cursors, shards). Nothing downstream reads
+//       them in the same run; if one fails, dying loudly leaves the state untouched and the next run
+//       retries. Swallowing would let a cursor silently not advance. THEY KEEP saveDriveJson_ too.
+// 🔑 The general rule, worth keeping: when a backup write and a live write sit side by side, the backup must
+//    never be able to stop the live one - and a swallowed failure needs its own alarm, because an execution
+//    that says Completed is not the same as an execution that did the work.
+var DRIVE_BACKUP_FAILURES_ = [];
+function saveDriveBackup_(name, obj) { return saveDriveBackupTo_(DASHBOARD_FOLDER_ID, name, obj); }
+// The folder id is a parameter ONLY so the catch path can be tested for real: probe271Guard in Probe.gs
+// calls this with a bogus id and asserts it returns false. #271's fix shipped with that path unexercised.
+function saveDriveBackupTo_(folderId, name, obj) {
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var str = (typeof obj === 'string') ? obj : JSON.stringify(obj);
+    var f = folder.getFilesByName(name);
+    if (f.hasNext()) f.next().setContent(str); else folder.createFile(name, str, 'application/json');
+    return true;
+  } catch (e) {
+    DRIVE_BACKUP_FAILURES_.push(name);
+    Logger.log('DRIVE BACKUP FAILED - ' + name + ' - ' + e.message + ' - the GitHub push still runs, so the site is unaffected; only the Drive copy is behind');
+    return false;
+  }
+}
+// Appended to each job's final summary line, so the one line a human actually reads cannot say a clean
+// "done" while a backup quietly failed.
+function driveBackupNote_() {
+  return DRIVE_BACKUP_FAILURES_.length
+    ? ' | DRIVE BACKUP FAILED for ' + DRIVE_BACKUP_FAILURES_.length + ': ' + DRIVE_BACKUP_FAILURES_.join(', ')
+    : '';
+}
 function saveDriveJson_(name, obj) {
   var folder = DriveApp.getFolderById(DASHBOARD_FOLDER_ID);
   var str = JSON.stringify(obj);
@@ -1737,7 +1783,7 @@ function refreshStageHistory() {
     var assessed = computeAssessedRollups_(events);
     for (var ak in assessed) rollups[ak] = assessed[ak];
   } catch (eA) { Logger.log('ASSESSED pass FAILED (rollups still written without it): ' + eA.message); }
-  saveDriveJson_('stage_rollups.json', rollups);
+  saveDriveBackup_('stage_rollups.json', rollups);   // #271b: a Drive blip must not kill the push below
   pushFileToGitHub_('data/stage_rollups.json', JSON.stringify(rollups), 'Update stage rollups');
   saveDriveJson_('stage_history_state.json', { cursor: 0, scopedCount: scoped.length });   // reset -> re-pull next cycle
   // #206 Interview Traction. Hangs off THIS job, not refreshDashboardData, which is already at the
@@ -1746,7 +1792,7 @@ function refreshStageHistory() {
   // one file, never the rollups that were already written above.
   try { refreshInterviewTraction(); }
   catch (eIT) { Logger.log('INTERVIEW TRACTION pass FAILED (rollups still written): ' + eIT.message); }
-  Logger.log('=== stage-history done: ' + Object.keys(events).length + ' apps, ' + Math.round((Date.now() - startTime) / 1000) + 's ===');
+  Logger.log('=== stage-history done: ' + Object.keys(events).length + ' apps, ' + Math.round((Date.now() - startTime) / 1000) + 's ===' + driveBackupNote_());
   return rollups;
 }
 
@@ -1848,7 +1894,7 @@ function rebuildStageRollupsNow() {
   catch (eT) { Logger.log('rebuildStageRollupsNow STOPPED, nothing published - ToFU pass failed: ' + eT.message); return; }
   try { var assessed = computeAssessedRollups_(events); for (var ak in assessed) rollups[ak] = assessed[ak]; }
   catch (eA) { Logger.log('rebuildStageRollupsNow STOPPED, nothing published - assessed pass failed: ' + eA.message); return; }
-  saveDriveJson_('stage_rollups.json', rollups);
+  saveDriveBackup_('stage_rollups.json', rollups);   // #271b: a Drive blip must not kill the push below
   pushFileToGitHub_('data/stage_rollups.json', JSON.stringify(rollups), 'Update stage rollups');
   Logger.log('=== rollups rebuilt from ' + Object.keys(events).length + ' stored applications ===');
 }
