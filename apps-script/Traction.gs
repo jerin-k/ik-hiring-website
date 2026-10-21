@@ -216,7 +216,15 @@ function refreshInterviewTraction() {
               noRecruiter: noRec },
     skippedStages: unmapped
   };
-  saveDriveJson_('interview_traction.json', out);
+  // #271 (20 Oct 2026). The Drive copy is only a BACKUP - the GitHub file is what the site reads. This save
+  // was UNGUARDED, so when Drive threw 'Service error: Drive' at 19:54 IST on 20 Oct it took the push below
+  // with it: interview_traction.json stayed twelve hours stale while the run still reported Completed, because
+  // the caller's own try/catch logged the failure and carried on. A Drive outage must cost the backup, never
+  // the live file - so the backup gets its own catch and the push always runs.
+  // #271b: was #271's own inline try/catch. It now goes through the SHARED saveDriveBackup_ in
+  // DataRefresh.gs, so every guarded backup logs the same way and lands in the same failure tally that the
+  // job's final summary line reports. One mechanism, not one per file.
+  saveDriveBackup_('interview_traction.json', out);
   pushFileToGitHub_('data/interview_traction.json', JSON.stringify(out), 'Update interview traction');
   // #228a: coverage decides whether the recruiter panel is usable, so it is MEASURED every run, never
   // assumed. A booking with no recruiter is counted here and shown on the page - never silently dropped.
