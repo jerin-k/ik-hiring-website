@@ -472,3 +472,27 @@ function probe269Fields() {
   sk.forEach(function (k) { Logger.log("    " + k + "   x" + shapes[k]); });
   return cnt;
 }
+
+
+// ===== #271b - PROVE THE GUARD ACTUALLY CATCHES (20 Oct 2026) =====
+// #271 shipped with its catch path UNEXERCISED: Drive behaved on the verifying run, and an outage cannot be
+// summoned. That is why saveDriveBackupTo_ takes the folder id as a parameter - a bogus id reaches the SAME
+// catch a real Drive failure would, in the REAL function, not a copy of it.
+// READ-ONLY apart from one test file in the dashboard folder, which it trashes again at the end.
+function probe271Guard() {
+  // CONTROL FIRST: if the happy path does not work, a false from the bogus id proves nothing.
+  var ok = saveDriveBackupTo_(DASHBOARD_FOLDER_ID, 'probe271_guard_test.json', { probe: '271b', at: new Date().toISOString() });
+  var n0 = DRIVE_BACKUP_FAILURES_.length;
+  var bad = saveDriveBackupTo_('this-folder-id-does-not-exist-271b', 'probe271_should_never_be_written.json', { x: 1 });
+  var n1 = DRIVE_BACKUP_FAILURES_.length;
+  Logger.log('probe271Guard: CONTROL happy path returned ' + ok + ' (expect true)');
+  Logger.log('probe271Guard: bogus folder returned ' + bad + ' (expect false) AND DID NOT THROW');
+  Logger.log('probe271Guard: failure tally ' + n0 + ' -> ' + n1 + ' (expect +1)');
+  Logger.log('probe271Guard: the summary note a human would see reads ->' + driveBackupNote_());
+  Logger.log(ok === true && bad === false && n1 === n0 + 1 ? 'probe271Guard: PASS' : 'probe271Guard: FAIL');
+  try {
+    var fo = DriveApp.getFolderById(DASHBOARD_FOLDER_ID), fs = fo.getFilesByName('probe271_guard_test.json');
+    while (fs.hasNext()) { fs.next().setTrashed(true); }
+    Logger.log('probe271Guard: test file trashed');
+  } catch (e) { Logger.log('probe271Guard: cleanup FAILED - ' + e.message + ' - trash probe271_guard_test.json by hand'); }
+}
