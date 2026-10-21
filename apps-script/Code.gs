@@ -156,6 +156,7 @@ function doGet(e) {
   // #252f (20 Oct 2026): the P0/P1/P2 priority on a job. Stored in the SAME file as the remarks but under
   // its own `priorities` key, so it never tangles with the note record's delete-on-empty rule.
   if (page === 'doPublishPri') { return publishPriPage_(e, userEmail); }
+  if (page === 'doPublishBudget') { return publishBudgetPage_(e, userEmail); }   // #269d
 
   if (page === 'admin') {
     var access = getUserAccess(userEmail);
@@ -830,6 +831,42 @@ function publishPriPage_(e, userEmail) {
     saveDriveJson_('job_notes.json', doc);
     pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Priority on job ' + job8 + ' by ' + firstNameOf_(userEmail));
     return page('<h2 style="color:#0f766e">Saved</h2><p>' + (val ? 'Priority ' + val + ' saved' : 'Priority cleared') + ' by ' + userEmail + '. You can close this window.</p>');
+  } catch (err) {
+    return page('<h2 style="color:#be123c">Not saved</h2><p>' + String(err) + '</p>');
+  }
+}
+
+// ===== #269d (Jerin, 20 Oct 2026) - the STARTING POINT budget a department begins a quarter with =====
+// 🗣 "Build regardless" - he wants the ledger even though Ashby holds no budget figure anywhere (measured
+// 20 Oct: 0 of 2,683 openings). This is the ONE cell in it that can hold a number, so it is typed here.
+// Same shape as publishPriPage_ above, deliberately: same auth check, same Drive file, same GitHub push,
+// same confirm-by-read from the caller. A SEPARATE top-level key `budgets`, never a field on a note.
+// 🚨 job_notes.json is PUBLIC (Rule 9). The guard is the whole defence and it is three-part:
+//    the department may hold only plain name characters, the quarter must be YYYY-QN, and the amount is
+//    DIGITS ONLY - so no email, no free text and no candidate data can ever reach the file through here.
+function publishBudgetPage_(e, userEmail) {
+  var head = '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,system-ui,sans-serif;padding:36px 28px;text-align:center;color:#0f172a;line-height:1.5}h2{margin:0 0 8px}p{color:#475569;font-size:14px}</style>';
+  var page = function (h) { return HtmlService.createHtmlOutput(head + h).setTitle('Save budget'); };
+  var role = publishedRole_(userEmail);
+  if (!role || role === 'none') return page('<h2 style="color:#be123c">Not authorized</h2><p>' + userEmail + ' is not on the published access list, so a budget cannot be saved from this account.</p>');
+  try {
+    var dept = String(e.parameter.bddept || '').trim();
+    var q = String(e.parameter.bdq || '').trim().toUpperCase();
+    if (!/^[A-Za-z0-9 .\-&()\/]{1,60}$/.test(dept)) return page('<h2 style="color:#be123c">Not saved</h2><p>That is not a department name.</p>');
+    if (!/^[0-9]{4}-Q[1-4]$/.test(q)) return page('<h2 style="color:#be123c">Not saved</h2><p>That is not a quarter.</p>');
+    var val = String(e.parameter.bdval || '').replace(/[^0-9]/g, '');
+    if (val.length > 12) return page('<h2 style="color:#be123c">Not saved</h2><p>That figure is too long.</p>');
+    var key = dept + '|' + q;
+    var doc = null;
+    try { doc = loadDriveJson_('job_notes.json'); } catch (eR) { doc = null; }
+    if (!doc || typeof doc !== 'object' || !doc.notes) doc = { schema: 1, updatedAt: null, notes: {} };
+    if (!doc.budgets) doc.budgets = {};
+    if (val) doc.budgets[key] = { amount: Number(val), by: firstNameOf_(userEmail), at: new Date().toISOString() };
+    else delete doc.budgets[key];
+    doc.updatedAt = new Date().toISOString();
+    saveDriveJson_('job_notes.json', doc);
+    pushFileToGitHub_('data/job_notes.json', JSON.stringify(doc, null, 2), 'Budget for ' + key + ' by ' + firstNameOf_(userEmail));
+    return page('<h2 style="color:#0f766e">Saved</h2><p>' + (val ? 'Starting budget saved' : 'Starting budget cleared') + ' for ' + dept + ', ' + q + ', by ' + userEmail + '. You can close this window.</p>');
   } catch (err) {
     return page('<h2 style="color:#be123c">Not saved</h2><p>' + String(err) + '</p>');
   }
