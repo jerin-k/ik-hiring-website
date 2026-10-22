@@ -40,13 +40,21 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   const labelText = () => (selected.size === 0 || everythingTicked()) ? `${label}: All`
     : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
   container.classList.add('ms');
-  container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-    + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">${allByDefault ? 'Select all' : 'Clear'}</button></div>` : '')
+  // #279b (Jerin, 22 Oct 2026) — BOTH buttons where everything starts ticked. 🗣 "The 'Clear All' makes more
+  // sense. or may be give me both." Select all gets you back; Clear all empties it so you can tick one or two
+  // without unticking thirteen. A filter that seeds its own pick keeps its single Clear, unchanged.
+  // The panel widens for the pair, or the search box gets squeezed to nothing (.ms-panel is min-width 13.75rem).
+  container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel${allByDefault ? ' ms-panel-pair' : ''}" style="display:none">`
+    + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter...">`
+        + (allByDefault ? `<button type="button" class="ms-clear ms-all">Select all</button>` : '')
+        + `<button type="button" class="ms-clear">${allByDefault ? 'Clear all' : 'Clear'}</button></div>` : '')
     + `<div class="ms-list">`
     + (norm.map(o => `<label class="ms-opt" data-v="${esc(o.v)}"><input type="checkbox" value="${esc(o.v)}"> ${esc(o.t)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
     + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
   const btn = container.querySelector('.ms-btn'), panel = container.querySelector('.ms-panel');
-  const search = container.querySelector('.ms-search'), clearBtn = container.querySelector('.ms-clear');
+  const search = container.querySelector('.ms-search');
+  const clearBtn = container.querySelector('.ms-clear:not(.ms-all)');   // empties it
+  const allBtn = container.querySelector('.ms-all');                    // puts everything back
   const opts = [...container.querySelectorAll('.ms-opt')];
   const emptyMsg = container.querySelector('.ms-empty');
   // #238: an optional STARTING selection. Seeded silently — onChange is deliberately NOT fired, because the page
@@ -92,18 +100,19 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   });
   panel.addEventListener('click', e => e.stopPropagation());
   if (search) search.addEventListener('input', () => applyFilter(search.value));
+  if (allBtn) allBtn.addEventListener('click', () => {
+    // Put every option that is on offer back. A withheld option (#240d E) stays out.
+    if (everythingTicked()) return;
+    selected.clear();
+    norm.forEach(o => { if (!hidden.has(o.v)) selected.add(o.v); });
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = selected.has(cb.value); });
+    paint();
+    onChange();
+  });
   if (clearBtn) clearBtn.addEventListener('click', () => {
-    if (allByDefault) {
-      // "Select all" — put every option that is on offer back. A withheld option (#240d E) stays out.
-      if (everythingTicked()) return;
-      selected.clear();
-      norm.forEach(o => { if (!hidden.has(o.v)) selected.add(o.v); });
-      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = selected.has(cb.value); });
-    } else {
-      if (selected.size === 0) return;
-      selected.clear();
-      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
-    }
+    if (selected.size === 0) return;
+    selected.clear();
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
     paint();
     onChange();
   });
