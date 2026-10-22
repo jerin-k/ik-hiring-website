@@ -496,3 +496,361 @@ function probe271Guard() {
     Logger.log('probe271Guard: test file trashed');
   } catch (e) { Logger.log('probe271Guard: cleanup FAILED - ' + e.message + ' - trash probe271_guard_test.json by hand'); }
 }
+
+// ===== #277 — CAN WE CREATE CANDIDATES AT ALL? Read-only + validation-only. =====
+// Writes NOTHING. Every write-shaped call is built so that success is IMPOSSIBLE:
+//   candidate.create    -> objects where strings are required
+//   application.create  -> a candidateId of all zeroes, which cannot exist
+// Both are paired with an INVENTED control endpoint, because a 403 and a 404 are
+// only readable against one [[project_ashby-write-api-map]]. The controls are
+// logged even when they looking boring - a dropped control is what made an earlier
+// probe meaningless [[feedback_assert-what-you-remove]].
+function probe277Feasibility() {
+  var ZERO = '00000000-0000-0000-0000-000000000000';
+  var L = [];
+  function say(s) { L.push(s); Logger.log(s); }
+
+  function call(ep, body) {
+    try {
+      var r = ashbyWrite_('/' + ep, body) || {};
+      return { code: r.code, success: (r.json ? r.json.success : undefined),
+               errors: (r.json && r.json.errors) ? JSON.stringify(r.json.errors).slice(0, 120) : '',
+               text: String(r.text == null ? '' : r.text).slice(0, 160),
+               json: r.json, threw: '' };
+    } catch (e) {
+      return { code: 'threw', success: undefined, errors: '', text: '', json: null,
+               threw: String(e && e.message || e).slice(0, 120) };
+    }
+  }
+
+  say('=== #277 feasibility probe, ' + new Date().toISOString() + ' ===');
+
+  // ---- 1. the SOURCE he added ~10 minutes ago. Ids are NEVER logged (DLP masks
+  //         uuid+title pairs, and the writer resolves the id by name anyway).
+  var sres = call('source.list', {});
+  var srcs = (sres.json && sres.json.results) || [];
+  say('source.list http=' + sres.code + ' success=' + (sres.json && sres.json.success) +
+      ' count=' + srcs.length);
+  var smeKeys = [];
+  for (var i = 0; i < srcs.length; i++) {
+    var s = srcs[i];
+    var key = ((s.sourceType && s.sourceType.title) || '?') + ': ' + (s.title || '?');
+    if (/sme/i.test(key)) smeKeys.push(key + (s.isArchived ? '  [ARCHIVED]' : ''));
+  }
+  say('sources whose name mentions SME: ' + smeKeys.length);
+  for (var k = 0; k < smeKeys.length; k++) say('   ' + smeKeys[k]);
+
+  // ---- 2. the Kong job and the stage a new application would land in
+  var jres = call('job.list', { status: 'Open' });
+  var jobs = (jres.json && jres.json.results) || [];
+  var kong = null;
+  for (var j = 0; j < jobs.length; j++) {
+    if ((jobs[j].title || '').indexOf('Forward Deployed Engineer - Kong') === 0) kong = jobs[j];
+  }
+  say('job.list http=' + jres.code + ' open jobs=' + jobs.length +
+      ' kong found=' + (!!kong) + (kong ? ' status=' + kong.status : ''));
+
+  var stageTitles = [];
+  if (kong) {
+    var pres = call('interviewPlan.list', {});
+    var plans = (pres.json && pres.json.results) || [];
+    say('interviewPlan.list http=' + pres.code + ' plans=' + plans.length);
+    var sres2 = call('interviewStage.list', { interviewPlanId: kong.interviewPlanIds && kong.interviewPlanIds[0] });
+    var stages = (sres2.json && sres2.json.results) || [];
+    for (var t = 0; t < stages.length; t++) {
+      stageTitles.push((stages[t].orderInInterviewPlan != null ? stages[t].orderInInterviewPlan : '?') +
+                       ' ' + stages[t].title + ' [' + (stages[t].type || '?') + ']');
+    }
+    say('interviewStage.list http=' + sres2.code + ' stages=' + stages.length);
+    for (var u = 0; u < stageTitles.length; u++) say('   ' + stageTitles[u]);
+  }
+
+  // ---- 3. does the key say what it may do? (free if it exists, a 404 if not)
+  var ares = call('apiKey.info', {});
+  say('apiKey.info http=' + ares.code + ' body=' + ares.text + (ares.threw ? ' THREW=' + ares.threw : ''));
+
+  // ---- 4. THE CONTROLS and the two permission probes, interleaved so the pair
+  //         is always read together.
+  var probes = [
+    ['zzzProbeNotARealEndpoint.list', {},                              'CONTROL A - nothing of this name exists'],
+    ['candidate.create',              { name: {}, email: {} },         'candidate.create, un-coercible payload'],
+    ['candidate.createZZZPROBE',      { name: {}, email: {} },         'CONTROL B - same payload, invented name'],
+    ['application.create',            { candidateId: ZERO, jobId: ZERO }, 'application.create, impossible ids'],
+    ['application.createZZZPROBE',    { candidateId: ZERO, jobId: ZERO }, 'CONTROL C - same payload, invented name'],
+    ['candidate.search',              { email: 'nobody.probe277@example.invalid' }, 'candidate.search (read)']
+  ];
+  for (var p = 0; p < probes.length; p++) {
+    var r = call(probes[p][0], probes[p][1]);
+    var errs = r.errors;
+    say(probes[p][0] + '  http=' + r.code +
+        ' success=' + (r.json ? r.json.success : '?') +
+        ' errors=' + errs + (r.threw ? ' THREW=' + r.threw : '') +
+        '   <- ' + probes[p][2]);
+  }
+
+  say('=== probe done. NOTHING WAS CREATED: every write-shaped call above was ' +
+      'built to fail validation. ===');
+  return L.join('\n');
+}
+
+
+// ===== #277b — the two things the first probe could not answer. Read-only. =====
+// 1. invalid_input proves the ENDPOINT is reachable, NOT that the key may write:
+//    Ashby validates the payload before it checks the scope. The scopes list is
+//    the only honest answer, so read it and print it.
+// 2. job.list {status:'Open'} returned ZERO jobs - a wrong filter value, not an
+//    empty workspace. Page it properly and find the Kong job and its stages.
+function probe277bScopes() {
+  function say(s) { Logger.log(s); }
+  function call(ep, body) {
+    try { var r = ashbyWrite_('/' + ep, body) || {};
+          return { code: r.code, json: r.json, threw: '' }; }
+    catch (e) { return { code: 'threw', json: null, threw: String(e && e.message || e).slice(0, 120) }; }
+  }
+
+  say('=== #277b, ' + new Date().toISOString() + ' ===');
+
+  // ---- 1. WHAT MAY THIS KEY DO? Scopes are short words, safe to print whole.
+  var a = call('apiKey.info', {});
+  var sc = (a.json && a.json.results && a.json.results.scopes) || [];
+  say('apiKey.info http=' + a.code + ' scopes=' + sc.length);
+  var writes = [];
+  for (var i = 0; i < sc.length; i++) if (String(sc[i]).indexOf('write') >= 0) writes.push(sc[i]);
+  say('WRITE scopes (' + writes.length + '): ' + writes.join(' '));
+  say('ALL scopes: ' + sc.join(' '));
+  // the two that decide #277, named explicitly so the answer cannot be misread
+  say('candidates:write present? ' + (sc.indexOf('candidates:write') >= 0));
+  say('applications:write present? ' + (sc.indexOf('applications:write') >= 0));
+
+  // ---- 2. the Kong job. No status filter - page the lot and match on title.
+  var all = [], cursor = null, pages = 0, kong = null;
+  do {
+    var body = { limit: 100 };
+    if (cursor) body.cursor = cursor;
+    var r = call('job.list', body);
+    var res = (r.json && r.json.results) || [];
+    if (r.code !== 200) { say('job.list http=' + r.code + ' threw=' + r.threw); break; }
+    for (var j = 0; j < res.length; j++) {
+      all.push(res[j]);
+      if ((res[j].title || '').indexOf('Forward Deployed Engineer - Kong') === 0) kong = res[j];
+    }
+    cursor = (r.json && r.json.moreDataAvailable) ? r.json.nextCursor : null;
+    pages++;
+  } while (cursor && pages < 30);
+  say('job.list pages=' + pages + ' jobs=' + all.length + ' kong found=' + (!!kong) +
+      (kong ? ' status=' + kong.status + ' plans=' +
+              ((kong.interviewPlanIds && kong.interviewPlanIds.length) || 0) : ''));
+
+  // ---- 3. the stages on that job, so we know what "Lead" actually is here
+  if (kong && kong.interviewPlanIds && kong.interviewPlanIds.length) {
+    var s = call('interviewStage.list', { interviewPlanId: kong.interviewPlanIds[0] });
+    var stages = (s.json && s.json.results) || [];
+    say('interviewStage.list http=' + s.code + ' stages=' + stages.length);
+    for (var t = 0; t < stages.length; t++) {
+      say('   ' + (stages[t].orderInInterviewPlan != null ? stages[t].orderInInterviewPlan : '?') +
+          '  ' + stages[t].title + '   [type ' + (stages[t].type || '?') + ']');
+    }
+  }
+  say('=== #277b done. Read-only: no create, update or delete was called. ===');
+}
+
+
+// ===== #277 — the 42 Kong FDE candidates. DRY BY DEFAULT; only 'run' writes. =====
+// 🚨 THE CANDIDATE DATA IS NOT IN THIS FILE AND MUST NEVER BE PUT IN IT.
+// Every .gs here is mirrored to the PUBLIC repo jerin-k/ik-hiring-website by
+// pushSourceToGitHub on each refresh, so names, emails and phone numbers live in
+// the SCRIPT PROPERTY K277_ROWS instead, which is never pushed. CLAUDE.md rule 9.
+// Delete that property once the upload is confirmed.
+var RUN277_MODE = 'dry';            // 'dry' = resolve and print, write nothing
+var RUN277_LIMIT = 0;
+var RUN277_START = 1;   // row 1 (Sujit Khasnis) is already written and verified - do not repeat it               // 0 = all rows; 1 = just the first, for the UI check
+
+function run277Upload() {
+  var MODE = RUN277_MODE;
+  var props = PropertiesService.getScriptProperties();
+  function say(s) { Logger.log(s); }
+  function call(ep, body) {
+    try { var r = ashbyWrite_('/' + ep, body) || {};
+          return { code: r.code, ok: !!(r.json && r.json.success), json: r.json,
+                   err: (r.json && r.json.errors) ? JSON.stringify(r.json.errors).slice(0,160) : '' }; }
+    catch (e) { return { code:'threw', ok:false, json:null, err:String(e && e.message || e).slice(0,160) }; }
+  }
+  function abort(why) { say('ABORT: ' + why); throw new Error('#277 aborted: ' + why); }
+
+  say('=== #277 upload, MODE=' + MODE + ', ' + new Date().toISOString() + ' ===');
+
+  // ---- 0. a second real run would duplicate all 42. Refuse unless cleared.
+  if (MODE === 'run' && props.getProperty('K277_DONE')) {
+    abort('K277_DONE is already set (' + props.getProperty('K277_DONE') +
+          '). Clear that property deliberately before running again.');
+  }
+
+  // ---- 1. the rows
+  var raw = props.getProperty('K277_ROWS');
+  if (!raw) abort('script property K277_ROWS is missing');
+  var rows = JSON.parse(raw);
+  if (rows.length !== 42) abort('expected 42 rows, got ' + rows.length);
+  say('rows=' + rows.length + '  with phone=' +
+      rows.filter(function(r){ return !!r.p; }).length);
+
+  // ---- 2. the source he added: sourceType "IK SME", title "SME US"
+  var sr = call('source.list', {});
+  if (!sr.ok) abort('source.list ' + sr.code + ' ' + sr.err);
+  var srcMatches = (sr.json.results || []).filter(function (s) {
+    return ((s.sourceType && s.sourceType.title) || '') === 'IK SME' &&
+           (s.title || '') === 'SME US' && !s.isArchived;
+  });
+  if (srcMatches.length !== 1) abort('expected exactly 1 live "IK SME: SME US" source, found ' + srcMatches.length);
+  var sourceId = srcMatches[0].id;
+  say('source resolved: IK SME: SME US  (one match, not archived)');
+
+  // ---- 3. the Kong job
+  var jobs = [], cur = null, pg = 0;
+  do {
+    var b = { limit: 100 }; if (cur) b.cursor = cur;
+    var jr = call('job.list', b);
+    if (!jr.ok) abort('job.list ' + jr.code + ' ' + jr.err);
+    jobs = jobs.concat(jr.json.results || []);
+    cur = jr.json.moreDataAvailable ? jr.json.nextCursor : null; pg++;
+  } while (cur && pg < 30);
+  var kongs = jobs.filter(function (j) { return (j.title || '') === 'Forward Deployed Engineer - Kong'; });
+  if (kongs.length !== 1) abort('expected exactly 1 Kong job, found ' + kongs.length);
+  var kong = kongs[0];
+  if (kong.status !== 'Open') abort('the Kong job is ' + kong.status + ', not Open');
+  say('job resolved: ' + kong.title + '  status=' + kong.status);
+
+  // ---- 4. the stage he asked for: a LEAD stage, the first one
+  var st = call('interviewStage.list', { interviewPlanId: kong.interviewPlanIds[0] });
+  if (!st.ok) abort('interviewStage.list ' + st.code + ' ' + st.err);
+  var leads = (st.json.results || []).filter(function (s) {
+    return (s.title || '') === 'New Lead' && (s.type || '') === 'Lead'; });
+  if (leads.length !== 1) abort('expected exactly 1 "New Lead" stage of type Lead, found ' + leads.length);
+  var stageId = leads[0].id;
+  say('stage resolved: New Lead  [type Lead, order ' + leads[0].orderInInterviewPlan + ']');
+
+  // ---- 5. Ritika, by email. user.list hides deactivated users unless asked.
+  var ur = call('user.list', { includeDeactivated: true });
+  if (!ur.ok) abort('user.list ' + ur.code + ' ' + ur.err);
+  var rit = (ur.json.results || []).filter(function (u) {
+    return String(u.email || '').toLowerCase() === 'ritika.bhasin@interviewkickstart.com'; });
+  if (rit.length !== 1) abort('expected exactly 1 user for Ritika, found ' + rit.length);
+  if (rit[0].isEnabled === false) abort('Ritika\'s Ashby account is disabled');
+  var ritikaId = rit[0].id;
+  say('credited-to / recruiter resolved: ' + (rit[0].firstName || '') + ' ' + (rit[0].lastName || ''));
+
+  var RECRUITER_ROLE = '22db8dc8-83f4-40de-8376-87efff4a6eb6';   // Ashby "Recruiter"
+
+  // ---- 6. what row 1 would send, printed in full so it can be checked before a run
+  var r0 = rows[0];
+  say('--- row 1 payloads ---');
+  say('  candidate.create   name=' + r0.n + '  email=' + r0.e +
+      '  phoneNumber=' + (r0.p || '(none)') + '  linkedInUrl=' + (r0.l ? 'yes' : 'no') +
+      '  sourceId=set  creditedToUserId=set');
+  say('  application.create candidateId=<new>  jobId=<kong>  interviewStageId=<New Lead>' +
+      '  sourceId=set  creditedToUserId=set');
+  say('  application.addHiringTeamMember  applicationId=<new>  teamMemberId=<ritika>  roleId=<Recruiter>');
+
+  if (MODE !== 'run') {
+    say('=== DRY RUN COMPLETE. Everything resolved; NOTHING was written. ===');
+    return;
+  }
+
+  // ---- 7. the real thing
+  var n = RUN277_LIMIT > 0 ? Math.min(RUN277_LIMIT, rows.length) : rows.length;
+  var made = [], failed = [];
+  for (var i = RUN277_START; i < n; i++) {
+    var row = rows[i];
+    var cBody = { name: row.n, email: row.e, sourceId: sourceId, creditedToUserId: ritikaId };
+    if (row.p) cBody.phoneNumber = row.p;
+    if (row.l) cBody.linkedInUrl = row.l;
+    var c = call('candidate.create', cBody);
+    if (!c.ok || !c.json.results || !c.json.results.id) {
+      failed.push(row.n + ' candidate.create ' + c.code + ' ' + c.err); continue;
+    }
+    var candId = c.json.results.id;
+
+    var a = call('application.create', { candidateId: candId, jobId: kong.id,
+                                         interviewStageId: stageId, sourceId: sourceId,
+                                         creditedToUserId: ritikaId });
+    if (!a.ok || !a.json.results || !a.json.results.id) {
+      failed.push(row.n + ' application.create ' + a.code + ' ' + a.err + ' (candidate WAS created)');
+      continue;
+    }
+    var appId = a.json.results.id;
+
+    var h = call('application.addHiringTeamMember',
+                 { applicationId: appId, teamMemberId: ritikaId, roleId: RECRUITER_ROLE });
+    made.push(row.n + (h.ok ? '' : '  [hiring team FAILED ' + h.code + ' ' + h.err + ']'));
+    if (i === 0) say('row 1 done: candidate ok, application ok, hiring team ' + (h.ok ? 'ok' : 'FAILED ' + h.err));
+  }
+
+  say('--- RESULT: created ' + made.length + ' of ' + (n - RUN277_START) + ', failed ' + failed.length + ' ---');
+  for (var f = 0; f < failed.length; f++) say('  FAILED  ' + failed[f]);
+  var teamFails = made.filter(function (m) { return m.indexOf('hiring team FAILED') >= 0; });
+  say('hiring-team failures: ' + teamFails.length);
+  if (RUN277_LIMIT === 0 && failed.length === 0) {
+    props.setProperty('K277_DONE', new Date().toISOString());
+    say('K277_DONE set - a second run will now refuse.');
+  }
+  say('=== #277 run complete. VERIFY IN THE ASHBY UI before calling this done. ===');
+}
+
+
+// ===== #277 — the V9 work-log row. Reads the header, matches it EXACTLY, appends once. =====
+// The #275 row landed two columns wrong because the matcher tried /method|how/ before
+// /verif/ and the header is "Verified how". So: EXACT match only, and any header this
+// does not recognise is left BLANK rather than guessed at. [[feedback_audit-result-column]]
+function log277V9() {
+  var SHEET_ID = '1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA';
+  var TAB = 'V9 - Work log';
+  function say(s) { Logger.log(s); }
+
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB);
+  if (!sh) { say('ABORT: no tab named ' + TAB); return; }
+  var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  say('tab=' + TAB + '  rows=' + lastRow + '  cols=' + lastCol);
+  say('HEADERS: ' + headers.map(function (h, i) { return i + ':' + h; }).join(' | '));
+  var prev = sh.getRange(lastRow, 1, 1, lastCol).getValues()[0];
+  say('LAST ROW (' + lastRow + '): ' + prev.map(function (v) {
+    return String(v).slice(0, 28); }).join(' | '));
+
+  if (PropertiesService.getScriptProperties().getProperty('K277_V9_ROW')) {
+    say('ABORT: already logged at row ' +
+        PropertiesService.getScriptProperties().getProperty('K277_V9_ROW'));
+    return;
+  }
+
+  // exact header -> value. Anything not named here stays blank on purpose.
+  var vals = {
+    'Date': new Date(),
+    'Task': '#277',
+    'Task ID': '#277',
+    'What': 'Uploaded 42 Kong FDE shortlist mentors to Ashby as new candidates',
+    'What was done': 'Uploaded 42 Kong FDE shortlist mentors to Ashby as new candidates',
+    'Description': 'Created 42 NEW candidate records and 42 applications on "Forward Deployed Engineer - Kong", each in the New Lead stage, source "IK SME: SME US", credited to Ritika Bhasin, with Ritika added as Recruiter on the application hiring team. Fresh records were requested even where the person already existed in Ashby (7 known duplicates). 38 of 42 carry a phone number; 4 were left blank because the only numbers available came from a tab whose phone column is misaligned against its own names.',
+    'Count': 42,
+    'Records': 42,
+    'Method': 'Apps Script run277Upload (Probe.gs): candidate.create -> application.create -> application.addHiringTeamMember, one row at a time. Candidate data was held in the script property K277_ROWS, never in a .gs file, because every .gs is mirrored to a PUBLIC repo. Property deleted afterwards.',
+    'Verified how': 'Ashby UI: job pipeline shows Leads = 42 and Application Review unchanged at 376. Sujit Khasnis opened individually - source "IK SME: SME US", Credited To Ritika Bhasin, Hiring Team shows Recruiter = Ritika Bhasin (NOT "No Roles"), phone and LinkedIn present. Qian Wang confirmed as a single new record in New Lead.',
+    'Status': 'Done',
+    'Failed': 0,
+    'Skipped': 0,
+    'By': 'Claude (jerin@interviewkickstart.com)'
+  };
+
+  var row = [], filled = [];
+  for (var c = 0; c < lastCol; c++) {
+    var h = String(headers[c]).trim();
+    if (Object.prototype.hasOwnProperty.call(vals, h)) { row.push(vals[h]); filled.push(h); }
+    else row.push('');
+  }
+  if (!filled.length) { say('ABORT: no header matched exactly - nothing written'); return; }
+
+  sh.appendRow(row);
+  var newRow = sh.getLastRow();
+  PropertiesService.getScriptProperties().setProperty('K277_V9_ROW', String(newRow));
+  say('APPENDED at row ' + newRow + '; columns filled by exact header match: ' + filled.join(', '));
+  var back = sh.getRange(newRow, 1, 1, lastCol).getValues()[0];
+  say('READ BACK: ' + back.map(function (v) { return String(v).slice(0, 28); }).join(' | '));
+}
