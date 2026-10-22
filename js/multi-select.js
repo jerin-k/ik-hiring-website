@@ -25,11 +25,23 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   const norm = (options || []).map(o => (o && typeof o === 'object')
     ? { v: String(o.v), t: String(o.t) } : { v: String(o), t: String(o) });
   const textOf = {}; norm.forEach(o => { textOf[o.v] = o.t; });
-  const labelText = () => selected.size === 0 ? `${label}: All`
+  // #279 (Jerin, 22 Oct 2026) — A FILTER THAT SHOWS EVERYTHING NOW LOOKS LIKE IT.
+  // 🗣 "if i have to avoid one Department - i can just untick that department."
+  // Which filters change is decided by EXISTING LOGIC, not a hand-kept list: a caller that seeds its own
+  // starting pick (`initial`) keeps it; one that does not used to open empty, meaning "no restriction", and
+  // now opens with every box ticked instead. That is the 23-vs-3 split with no call site touched.
+  const allByDefault = !(initial && initial.length);
+  // How many options can actually be picked right now. setHidden() withholds some (#240d E), so this is NOT
+  // always norm.length — and getting that wrong is what would turn "all ticked" into a real filter.
+  let selectableTotal = norm.length;
+  // 🔑 THE GUARANTEE: every box ticked means NO RESTRICTION, exactly as an empty box list did before. The 12
+  // predicates in the pages still read `!sel.length || sel.includes(x)`, so not one figure moves.
+  const everythingTicked = () => allByDefault && selectableTotal > 0 && selected.size === selectableTotal;
+  const labelText = () => (selected.size === 0 || everythingTicked()) ? `${label}: All`
     : (selected.size === 1 ? `${label}: ${textOf[[...selected][0]] || [...selected][0]}` : `${label}: ${selected.size} selected`);
   container.classList.add('ms');
   container.innerHTML = `<button type="button" class="ms-btn"></button><div class="ms-panel" style="display:none">`
-    + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">Clear</button></div>` : '')
+    + (norm.length ? `<div class="ms-tools"><input type="text" class="ms-search" placeholder="Type to filter..."><button type="button" class="ms-clear">${allByDefault ? 'Select all' : 'Clear'}</button></div>` : '')
     + `<div class="ms-list">`
     + (norm.map(o => `<label class="ms-opt" data-v="${esc(o.v)}"><input type="checkbox" value="${esc(o.v)}"> ${esc(o.t)}</label>`).join('') || '<span style="font-size:0.6875rem;color:var(--muted);padding:0.25rem 0.5rem">No options yet</span>')
     + `</div><div class="ms-empty" style="display:none">No matches</div></div>`;
@@ -40,6 +52,10 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   // #238: an optional STARTING selection. Seeded silently — onChange is deliberately NOT fired, because the page
   // is still being assembled here and a render would run before its data is ready. A value that is not on offer
   // is ignored rather than ticked blind, so a stale default can never select nothing and look like "All".
+  if (allByDefault) {
+    norm.forEach(o => selected.add(o.v));
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+  }
   (initial || []).forEach(v => {
     const key = String(v);
     if (!Object.prototype.hasOwnProperty.call(textOf, key)) return;
@@ -77,9 +93,17 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   panel.addEventListener('click', e => e.stopPropagation());
   if (search) search.addEventListener('input', () => applyFilter(search.value));
   if (clearBtn) clearBtn.addEventListener('click', () => {
-    if (selected.size === 0) return;
-    selected.clear();
-    container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    if (allByDefault) {
+      // "Select all" — put every option that is on offer back. A withheld option (#240d E) stays out.
+      if (everythingTicked()) return;
+      selected.clear();
+      norm.forEach(o => { if (!hidden.has(o.v)) selected.add(o.v); });
+      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = selected.has(cb.value); });
+    } else {
+      if (selected.size === 0) return;
+      selected.clear();
+      container.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    }
     paint();
     onChange();
   });
@@ -112,9 +136,12 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
       const box = opts.map(o => o.querySelector('input')).find(i => i && i.value === v);
       if (box) box.checked = false;
     });
+    selectableTotal = norm.length - hidden.size;
     if (!same || cleared) { applyFilter(search ? search.value : ''); paint(); }
     return cleared;
   }
 
-  return { getSelected: () => [...selected], setHidden };
+  // 🚨 ALL TICKED READS AS AN EMPTY SELECTION ON PURPOSE. That is what keeps every figure identical to
+  // before: the pages' own test is `!sel.length || sel.includes(x)`, so [] means "do not filter".
+  return { getSelected: () => (everythingTicked() ? [] : [...selected]), setHidden };
 }
