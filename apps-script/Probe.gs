@@ -854,3 +854,247 @@ function log277V9() {
   var back = sh.getRange(newRow, 1, 1, lastCol).getValues()[0];
   say('READ BACK: ' + back.map(function (v) { return String(v).slice(0, 28); }).join(' | '));
 }
+
+
+// ===== #281 — can we TAG a candidate through the API, and is "Alumni US" a real source? Read-only. =====
+// Tags were never written by this project. Every write-shaped call below is paired with an INVENTED control
+// endpoint, because a 403 and a 404 are only readable against one [[project_ashby-write-api-map]].
+function probe281Tags() {
+  var L = [];
+  function say(s) { L.push(s); Logger.log(s); }
+  function call(ep, body) {
+    try { var r = ashbyWrite_('/' + ep, body) || {};
+      return { code: r.code, ok: !!(r.json && r.json.success), json: r.json,
+               err: (r.json && r.json.errors) ? JSON.stringify(r.json.errors).slice(0,140) : '' }; }
+    catch (e) { return { code: 'threw', ok: false, json: null, err: String(e && e.message || e).slice(0,140) }; }
+  }
+  say('=== #281 probe, ' + new Date().toISOString() + ' ===');
+
+  // ---- 1. the SOURCE he named. Ids are never logged; the writer resolves by name.
+  var sr = call('source.list', {});
+  var srcs = (sr.json && sr.json.results) || [];
+  say('source.list http=' + sr.code + ' count=' + srcs.length);
+  for (var i = 0; i < srcs.length; i++) {
+    var s = srcs[i];
+    var key = ((s.sourceType && s.sourceType.title) || '?') + ': ' + (s.title || '?');
+    if (/alumni/i.test(key)) say('   ALUMNI SOURCE: ' + key + (s.isArchived ? '  [ARCHIVED]' : ''));
+  }
+
+  // ---- 2. what tags already exist?
+  var tl = call('candidateTag.list', {});
+  var tags = (tl.json && tl.json.results) || [];
+  say('candidateTag.list http=' + tl.code + ' ok=' + tl.ok + ' count=' + tags.length + ' err=' + tl.err);
+  var want = { pedigreefit: 1, bestfit: 1, potentialfit: 1 };
+  for (var t = 0; t < tags.length; t++) {
+    var ttl = String(tags[t].title || '');
+    if (want[ttl.toLowerCase().replace(/[^a-z]/g, '')]) say('   ALREADY EXISTS: "' + ttl + '"');
+  }
+  say('first few existing tags: ' + tags.slice(0, 8).map(function (x) { return x.title; }).join(' | '));
+
+  // ---- 3. the write-shaped probes. Impossible ids, so nothing can be created.
+  var ZERO = '00000000-0000-0000-0000-000000000000';
+  var probes = [
+    ['zzzNotARealEndpoint.list',     {},                                   'CONTROL A - nothing of this name'],
+    ['candidateTag.create',          { title: {} },                        'create a tag, un-coercible payload'],
+    ['candidateTag.createZZZPROBE',  { title: {} },                        'CONTROL B'],
+    ['candidate.addTag',             { candidateId: ZERO, tagId: ZERO },   'add a tag, impossible ids'],
+    ['candidate.addTagZZZPROBE',     { candidateId: ZERO, tagId: ZERO },   'CONTROL C'],
+    ['candidate.update',             { candidateId: ZERO },                'does candidate.update exist?']
+  ];
+  for (var p = 0; p < probes.length; p++) {
+    var r = call(probes[p][0], probes[p][1]);
+    say(probes[p][0] + '  http=' + r.code + ' success=' + (r.json ? r.json.success : '?') +
+        ' errors=' + r.err + '   <- ' + probes[p][2]);
+  }
+  say('=== done. NOTHING was created: every write-shaped call was built to fail validation. ===');
+}
+
+
+// ===== #281b — what the tag fix and the recruiter pass need. Read-only. =====
+// The combined tag itself says what each person needs, so no candidate data has to be carried:
+//   "Pedigreefit; potentialfit" -> add Pedigreefit + potentialfit, remove the combined one.
+// Questions: can we REMOVE a tag; can we LIST candidates by tag; can we list today's new applications.
+function probe281bFix() {
+  function say(s) { Logger.log(s); }
+  function call(ep, body) {
+    try { var r = ashbyWrite_('/' + ep, body) || {};
+      return { code: r.code, ok: !!(r.json && r.json.success), json: r.json,
+               err: (r.json && r.json.errors) ? JSON.stringify(r.json.errors).slice(0,140) : '' }; }
+    catch (e) { return { code:'threw', ok:false, json:null, err:String(e && e.message || e).slice(0,140) }; }
+  }
+  var ZERO = '00000000-0000-0000-0000-000000000000';
+  say('=== #281b, ' + new Date().toISOString() + ' ===');
+
+  // 1. the tags, and which are the combined ones
+  var tl = call('candidateTag.list', {});
+  var tags = (tl.json && tl.json.results) || [];
+  say('candidateTag.list http=' + tl.code + ' count=' + tags.length);
+  for (var i = 0; i < tags.length; i++) {
+    var ti = String(tags[i].title || '');
+    if (/fit/i.test(ti)) say('   TAG "' + ti + '"' + (ti.indexOf(';') >= 0 ? '   <- COMBINED, needs splitting' : ''));
+  }
+
+  // 2. can a tag be removed? control-paired, impossible ids so nothing changes
+  var probes = [
+    ['zzzNotARealEndpoint.list',   {},                                 'CONTROL A'],
+    ['candidate.removeTag',        { candidateId: ZERO, tagId: ZERO }, 'remove a tag'],
+    ['candidate.removeTagZZZ',     { candidateId: ZERO, tagId: ZERO }, 'CONTROL B'],
+    ['candidateTag.archive',       { candidateTagId: ZERO },           'archive a tag'],
+    ['candidateTag.archiveZZZ',    { candidateTagId: ZERO },           'CONTROL C']
+  ];
+  for (var p = 0; p < probes.length; p++) {
+    var r = call(probes[p][0], probes[p][1]);
+    say(probes[p][0] + '  http=' + r.code + ' success=' + (r.json ? r.json.success : '?') +
+        ' errors=' + r.err + '   <- ' + probes[p][2]);
+  }
+
+  // 3. can candidates be listed BY TAG? try the documented shapes
+  var byTag = call('candidate.list', { limit: 5 });
+  say('candidate.list http=' + byTag.code + ' ok=' + byTag.ok +
+      ' got=' + (((byTag.json || {}).results || []).length) +
+      ' more=' + ((byTag.json || {}).moreDataAvailable));
+  var first = ((byTag.json || {}).results || [])[0] || {};
+  say('   a candidate record carries: ' + Object.keys(first).slice(0, 18).join(', '));
+  say('   does it include tags? ' + (first.tags ? 'YES (' + (first.tags.length) + ' on this one)' : 'no'));
+
+  // 4. today's new applications - the recruiter pass needs their ids
+  var since = new Date().getTime() - 6 * 60 * 60 * 1000;   // last 6 hours, in MILLISECONDS (#167)
+  var ar = call('application.list', { createdAfter: since, limit: 100 });
+  var apps = (ar.json && ar.json.results) || [];
+  say('application.list createdAfter=last 6h  http=' + ar.code + ' ok=' + ar.ok +
+      ' got=' + apps.length + ' more=' + ((ar.json || {}).moreDataAvailable));
+  var a0 = apps[0] || {};
+  say('   an application record carries: ' + Object.keys(a0).slice(0, 16).join(', '));
+  var kong = 0;
+  for (var k = 0; k < apps.length; k++) {
+    var jt = (apps[k].job && apps[k].job.title) || '';
+    if (jt.indexOf('Forward Deployed Engineer - Kong') === 0) kong++;
+  }
+  say('   of this first page, on the Kong job: ' + kong);
+  say('=== #281b done. Read-only. ===');
+}
+
+
+// ===== #281 fix — split the combined tags and put Ritika on each application. =====
+// 🔑 NO CANDIDATE DATA IS CARRIED. The combined tag itself says what to do, and the applications are found by
+//    application.list {createdAfter}, so nothing personal goes in this file (it is mirrored to a PUBLIC repo).
+// ⏱ A run stops at the time budget and saves its place; run it again to continue. The editor kills a run at 6 min.
+var RUN281_MODE = 'dry';           // 'dry' = report only. 'run' writes.
+var RUN281_BUDGET_MS = 4.5 * 60 * 1000;
+function run281Fix() {
+  var MODE = RUN281_MODE, t0 = new Date().getTime();
+  var P = PropertiesService.getScriptProperties();
+  function say(s) { Logger.log(s); }
+  function call(ep, body) {
+    try { var r = ashbyWrite_('/' + ep, body) || {};
+      return { code: r.code, ok: !!(r.json && r.json.success), json: r.json,
+               err: (r.json && r.json.errors) ? JSON.stringify(r.json.errors).slice(0,120) : '' }; }
+    catch (e) { return { code:'threw', ok:false, json:null, err:String(e && e.message || e).slice(0,120) }; }
+  }
+  function abort(w) { say('ABORT: ' + w); throw new Error('#281 fix: ' + w); }
+
+  say('=== #281 fix, MODE=' + MODE + ', ' + new Date().toISOString() + ' ===');
+
+  // ---- the tags. The three singles already exist; the two combined ones are the ones to undo.
+  var tl = call('candidateTag.list', {});
+  if (!tl.ok) abort('candidateTag.list ' + tl.code);
+  var byTitle = {};
+  (tl.json.results || []).forEach(function (t) { byTitle[String(t.title)] = t.id; });
+  var NEED = ['Pedigreefit', 'bestfit', 'potentialfit', 'Pedigreefit; potentialfit', 'Pedigreefit; bestfit'];
+  for (var n = 0; n < NEED.length; n++) if (!byTitle[NEED[n]]) abort('tag missing: "' + NEED[n] + '"');
+  var SPLIT = {};
+  SPLIT[byTitle['Pedigreefit; potentialfit']] = ['Pedigreefit', 'potentialfit'];
+  SPLIT[byTitle['Pedigreefit; bestfit']]      = ['Pedigreefit', 'bestfit'];
+  say('tags resolved: 3 singles + 2 combined');
+
+  // ---- Ritika, by email, and the Recruiter role
+  var ur = call('user.list', { includeDeactivated: true });
+  if (!ur.ok) abort('user.list ' + ur.code);
+  var rit = (ur.json.results || []).filter(function (u) {
+    return String(u.email || '').toLowerCase() === 'ritika.bhasin@interviewkickstart.com'; });
+  if (rit.length !== 1) abort('expected 1 Ritika, found ' + rit.length);
+  var RITIKA = rit[0].id, RECRUITER = '22db8dc8-83f4-40de-8376-87efff4a6eb6';
+  say('recruiter resolved: ' + (rit[0].firstName || '') + ' ' + (rit[0].lastName || ''));
+
+  // ---- the window is fixed ONCE so paging is the same on every run
+  var since = P.getProperty('K281F_SINCE');
+  if (!since) { since = String(new Date().getTime() - 8 * 60 * 60 * 1000); P.setProperty('K281F_SINCE', since); }
+
+  // ---- collect this batch's Kong applications (a few pages, cheap)
+  var apps = [], cur = null, pages = 0;
+  do {
+    var b = { createdAfter: Number(since), limit: 100 };
+    if (cur) b.cursor = cur;
+    var ar = call('application.list', b);
+    if (!ar.ok) abort('application.list ' + ar.code + ' ' + ar.err);
+    (ar.json.results || []).forEach(function (a) {
+      var jt = (a.job && a.job.title) || '';
+      if (jt.indexOf('Forward Deployed Engineer - Kong') === 0) apps.push(a);
+    });
+    cur = ar.json.moreDataAvailable ? ar.json.nextCursor : null;
+    pages++;
+  } while (cur && pages < 30);
+  say('Kong applications created since the window opened: ' + apps.length + ' (' + pages + ' pages)');
+
+  var idx = Number(P.getProperty('K281F_IDX') || '0');
+  say('starting at index ' + idx);
+  if (MODE !== 'run') {
+    var needTag = 0, needRec = 0;
+    for (var d = 0; d < Math.min(apps.length, 25); d++) {   // a sample - a full count would cost 452 reads
+      var c = apps[d].candidate || {};
+      var ciD = call('candidate.info', { id: c.id });
+      if (!ciD.ok) ciD = call('candidate.info', { candidateId: c.id });
+      var tg = (ciD.ok && ciD.json.results && ciD.json.results.tags) || [];
+      for (var q = 0; q < tg.length; q++) if (SPLIT[tg[q].id]) { needTag++; break; }
+      var ht = apps[d].hiringTeam || [];
+      var has = false;
+      for (var h = 0; h < ht.length; h++) if (String(ht[h].userId || ht[h].id) === RITIKA) has = true;
+      if (!has) needRec++;
+    }
+    say('WOULD FIX (first 25 sampled): ' + needTag + ' with a combined tag; ' + needRec + ' of 25 need the recruiter');
+    say('=== DRY RUN. Nothing written. ===');
+    return;
+  }
+
+  var tagFixed = 0, recAdded = 0, fails = [];
+  for (var i = idx; i < apps.length; i++) {
+    if (new Date().getTime() - t0 > RUN281_BUDGET_MS) { say('time budget reached at index ' + i); break; }
+    var a = apps[i], cand = a.candidate || {};
+
+    // 1. the recruiter, if not already there
+    var team = a.hiringTeam || [], hasR = false;
+    for (var z = 0; z < team.length; z++) if (String(team[z].userId || team[z].id) === RITIKA) hasR = true;
+    if (!hasR) {
+      var hr = call('application.addHiringTeamMember',
+                    { applicationId: a.id, teamMemberId: RITIKA, roleId: RECRUITER });
+      if (hr.ok) recAdded++; else fails.push('recruiter ' + (cand.name || a.id) + ' ' + hr.code + ' ' + hr.err);
+    }
+
+    // 2. the combined tag, if present.
+    // \u26a0 application.list's embedded candidate does NOT carry tags (measured: the dry run saw 0 of 246).
+    // Read them from the candidate itself; try both documented parameter names.
+    var ci = call('candidate.info', { id: cand.id });
+    if (!ci.ok) ci = call('candidate.info', { candidateId: cand.id });
+    var tags = (ci.ok && ci.json.results && ci.json.results.tags) || [];
+    for (var y = 0; y < tags.length; y++) {
+      var want = SPLIT[tags[y].id];
+      if (!want) continue;
+      var okAll = true;
+      for (var w = 0; w < want.length; w++) {
+        var ad = call('candidate.addTag', { candidateId: cand.id, tagId: byTitle[want[w]] });
+        if (!ad.ok) { okAll = false; fails.push('addTag ' + want[w] + ' ' + (cand.name || cand.id) + ' ' + ad.err); }
+      }
+      // only drop the combined one once BOTH real tags are on, so nobody is left untagged
+      if (okAll) {
+        var rm = call('candidate.removeTag', { candidateId: cand.id, tagId: tags[y].id });
+        if (rm.ok) tagFixed++; else fails.push('removeTag ' + (cand.name || cand.id) + ' ' + rm.err);
+      }
+    }
+    P.setProperty('K281F_IDX', String(i + 1));
+  }
+  var done = Number(P.getProperty('K281F_IDX') || '0');
+  say('--- this run: recruiter added ' + recAdded + ', combined tags split ' + tagFixed +
+      ', failures ' + fails.length + ' ---');
+  for (var f = 0; f < Math.min(fails.length, 8); f++) say('  FAILED  ' + fails[f]);
+  say('progress: ' + done + ' of ' + apps.length + (done >= apps.length ? '  <- COMPLETE' : '  <- run again to continue'));
+}
