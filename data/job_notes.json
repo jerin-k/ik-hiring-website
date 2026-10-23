@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-22T12:50:49.088Z",
+  "updatedAt": "2026-10-23T05:46:26.522Z",
   "notes": {
     "19982198": {
       "text": "HE : 5 \nR1 : 1",
@@ -131,6 +131,11 @@
       "text": "R2 - Pradeepthi (On hold)\n\n16 profiles pending for review",
       "by": "Tina",
       "at": "2026-10-22T10:49:31.103Z"
+    },
+    "f5bdec33": {
+      "text": "HE : 5 , R1: 5 , R2 : 2 ( 1 from this TBS)",
+      "by": "Deepti",
+      "at": "2026-10-23T05:46:26.522Z"
     }
   },
   "priorities": {
