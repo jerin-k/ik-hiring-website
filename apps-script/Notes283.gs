@@ -337,7 +337,7 @@ function run283AmbiguousReset() {
 var N283_VER_BATCH = 240;
 var N283_VER_IDX   = 'N283_VER_IDX';
 var N283_VER_HITS  = 'N283_VER_HITS';
-var N283_VER_FIX   = true;           // true = write a note to anyone found missing one
+var N283_VER_FIX   = false;          // true = write a note to anyone found missing one
 var N283_VER_MARK  = 'Fitment rationale:';
 
 /** Does this candidate already carry a #283 note? Null means "could not tell". */
@@ -439,4 +439,303 @@ function run283VerifyReset() {
   props.deleteProperty(N283_VER_IDX);
   props.deleteProperty(N283_VER_HITS);
   Logger.log('#283c census cursor and tally cleared.');
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  #283d - WHO are the SMEs credited to, and who is their Recruiter?
+ *  Read-only. Answers two separate questions that are easy to confuse:
+ *    Credited To  = Ashby's own sourcing credit, stamped when the
+ *                   candidate RECORD IS FIRST CREATED.
+ *    Recruiter    = a hiring-team role on the application - the thing
+ *                   the import was actually asked to set.
+ * ------------------------------------------------------------------ */
+
+function run283CreditedTo() {
+  var started = new Date().getTime();
+  var N283D_GROUP = 'learners';                       // 'smes' | 'learners'
+  var props = PropertiesService.getScriptProperties();
+  var people = n283People_(n283ReadPayload_()).filter(function (p) { return p.group === N283D_GROUP; });
+  var idx = parseInt(props.getProperty('N283D_IDX') || '0', 10);
+  if (isNaN(idx) || idx < 0) idx = 0;
+  var tal = JSON.parse(props.getProperty('N283D_TAL') || '{}');
+  Logger.log('#283d ' + N283D_GROUP + ': ' + people.length + ' people, from index ' + idx);
+
+  var credited = {}, appCredited = {}, recruiter = {}, seen = 0, skipped = 0;
+
+  credited = tal.credited || {}; appCredited = tal.appCredited || {}; recruiter = tal.recruiter || {};
+  seen = tal.seen || 0; skipped = tal.skipped || 0;
+  for (var i = idx; i < people.length; i++) {
+    if (new Date().getTime() - started > N283_MAX_MS) {
+      Logger.log('#283d stopped on the clock at index ' + i); break;
+    }
+    props.setProperty('N283D_IDX', String(i + 1));
+    props.setProperty('N283D_TAL', JSON.stringify({credited:credited, appCredited:appCredited, recruiter:recruiter, seen:seen, skipped:skipped}));
+    var ids = n283AllIdsByEmail_(people[i].email);
+    if (!ids || ids.length === 0) { skipped++; continue; }
+    var id = ids[0];
+    if (ids.length > 1) {
+      var onJob = [];
+      for (var k = 0; k < ids.length; k++) if (n283OnJob_(ids[k], false)) onJob.push(ids[k]);
+      if (onJob.length !== 1) { skipped++; continue; }
+      id = onJob[0];
+    }
+    var info = n283Call_('candidate.info', { id: id });
+    if (info.code !== 200 || !info.json || !info.json.results) { skipped++; continue; }
+    var res = info.json.results;
+
+    var c = res.creditedToUser;
+    var cName = c ? (((c.firstName || '') + ' ' + (c.lastName || '')).trim() || c.email || 'set, name not given') : '(nobody)';
+    credited[cName] = (credited[cName] || 0) + 1;
+
+    // the hiring-team Recruiter sits on the APPLICATION, not the candidate
+    var rName = '(no application on the job)';
+    var appIds = res.applicationIds || [];
+    for (var a = 0; a < appIds.length; a++) {
+      var app = n283Call_('application.info', { applicationId: appIds[a] });
+      var r = app.json && app.json.results;
+      if (!r || !r.job || r.job.id !== N283_JOB_ID) continue;
+      rName = '(none on the hiring team)';
+      // the APPLICATION carries its OWN creditedToUser - this is the one that belongs to THIS job
+      var ac = r.creditedToUser;
+      var acName = ac ? (((ac.firstName || '') + ' ' + (ac.lastName || '')).trim() || ac.email || 'set, name not given') : '(nobody)';
+      appCredited[acName] = (appCredited[acName] || 0) + 1;
+      var team = r.hiringTeam || [];
+      for (var h = 0; h < team.length; h++) {
+        var role = String(team[h].role || team[h].roleName || '');
+        if (role.toLowerCase().indexOf('recruiter') !== -1) {
+          rName = ((team[h].firstName || '') + ' ' + (team[h].lastName || '')).trim() || team[h].email || role;
+        }
+      }
+      break;
+    }
+    recruiter[rName] = (recruiter[rName] || 0) + 1;
+    seen++;
+  }
+
+  props.setProperty('N283D_TAL', JSON.stringify({credited:credited, appCredited:appCredited, recruiter:recruiter, seen:seen, skipped:skipped}));
+  var cur = parseInt(props.getProperty('N283D_IDX') || '0', 10);
+  Logger.log('#283d READ ' + seen + ' of ' + people.length + ' (skipped ' + skipped + ') | cursor ' + cur);
+  if (cur >= people.length) Logger.log('#283d ALL ' + people.length + ' ' + N283D_GROUP + ' CHECKED.');
+  Logger.log('#283d CREDITED TO - on the CANDIDATE record (can predate this job):');
+  Object.keys(credited).sort(function (a, b) { return credited[b] - credited[a]; })
+    .forEach(function (k) { Logger.log('   ' + credited[k] + '  ' + k); });
+  Logger.log('#283d CREDITED TO - on the WONDERFUL.AI APPLICATION itself:');
+  Object.keys(appCredited).sort(function (x, y) { return appCredited[y] - appCredited[x]; })
+    .forEach(function (k) { Logger.log('   ' + appCredited[k] + '  ' + k); });
+  Logger.log('#283d HIRING-TEAM RECRUITER on the Wonderful.ai application:');
+  Object.keys(recruiter).sort(function (a, b) { return recruiter[b] - recruiter[a]; })
+    .forEach(function (k) { Logger.log('   ' + recruiter[k] + '  ' + k); });
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  #283e - WHAT are the addresses that email-alone cannot resolve?
+ *  Jerin: "Can t you do a email + job (Wonderful.ai) check?" - that is
+ *  already the rule. This asks what is left when it still fails, which
+ *  is the interesting part:
+ *     2+ records share the address and EXACTLY ONE is on the job -> fine
+ *     2+ share it and TWO OR MORE are on the job -> the SAME PERSON IS
+ *        ON THE JOB TWICE, a real data problem worth seeing
+ *     2+ share it and NONE is on the job -> matched the wrong person
+ *  Read-only. Costs ONE call for everyone who is not duplicated.
+ * ------------------------------------------------------------------ */
+
+function run283Dupes() {
+  var started = new Date().getTime();
+  var props = PropertiesService.getScriptProperties();
+  var people = n283People_(n283ReadPayload_());
+  var idx = parseInt(props.getProperty('N283E_IDX') || '0', 10);
+  if (isNaN(idx) || idx < 0) idx = 0;
+  var t = JSON.parse(props.getProperty('N283E_TAL')
+    || '{"scanned":0,"dup":0,"oneOnJob":0,"manyOnJob":0,"noneOnJob":0,"noRecord":0,"rows":[]}');
+
+  Logger.log('#283e from index ' + idx + ' of ' + people.length);
+
+  for (var i = idx; i < people.length; i++) {
+    if (new Date().getTime() - started > N283_MAX_MS) { Logger.log('#283e stopped on the clock at ' + i); break; }
+    var ids = n283AllIdsByEmail_(people[i].email);
+    t.scanned++;
+    if (!ids || ids.length === 0) { t.noRecord++; }
+    else if (ids.length > 1) {
+      t.dup++;
+      var onJob = 0;
+      for (var k = 0; k < ids.length; k++) if (n283OnJob_(ids[k], false)) onJob++;
+      if (onJob === 1) t.oneOnJob++;
+      else if (onJob > 1) { t.manyOnJob++; t.rows.push(people[i].group + ' | ' + ids.length + ' records | ' + onJob + ' of them ON THE JOB'); }
+      else { t.noneOnJob++; t.rows.push(people[i].group + ' | ' + ids.length + ' records | NONE on the job'); }
+    }
+    props.setProperty('N283E_IDX', String(i + 1));
+    if (t.scanned % 25 === 0) props.setProperty('N283E_TAL', JSON.stringify(t));
+  }
+  props.setProperty('N283E_TAL', JSON.stringify(t));
+  var cur = parseInt(props.getProperty('N283E_IDX') || '0', 10);
+
+  Logger.log('#283e scanned ' + t.scanned + ' | cursor ' + cur + ' of ' + people.length);
+  Logger.log('#283e   addresses on ONE record only ... ' + (t.scanned - t.dup - t.noRecord));
+  Logger.log('#283e   addresses on SEVERAL records .. ' + t.dup);
+  Logger.log('#283e       of those, exactly 1 on job  ' + t.oneOnJob + '   (resolved cleanly)');
+  Logger.log('#283e       of those, 2+ ON THE JOB ... ' + t.manyOnJob + '   (SAME PERSON TWICE ON THE JOB)');
+  Logger.log('#283e       of those, none on the job . ' + t.noneOnJob);
+  Logger.log('#283e   address on NO record .......... ' + t.noRecord);
+  t.rows.forEach(function (r) { Logger.log('   ' + r); });
+  if (cur >= people.length) Logger.log('#283e ALL ' + people.length + ' CHECKED.');
+}
+
+function run283DupesReset() {
+  var props = PropertiesService.getScriptProperties();
+  props.deleteProperty('N283E_IDX'); props.deleteProperty('N283E_TAL');
+  Logger.log('#283e cursor cleared.');
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  #283f - URGENT: who did the upload drag BACKWARDS into New Lead?
+ *  Jerin, 26 Oct: "looks like you moved 5 candidates from TA screen to
+ *  Lead Stage as part of candidate upload to Wonderful."
+ *  Reads applicationHistory on the Wonderful.ai application and reports
+ *  anyone who was at a LATER stage before and is at New Lead now.
+ *  READ-ONLY. It names candidate ids so they can be put back by hand.
+ * ------------------------------------------------------------------ */
+
+var N283F_LATER = ['TA Screen','HM Review','R0 - Online Assessment','R1','R2','R3','R4','R5',
+                   'Reference Check','Document Submission','Offer','Hello Christy'];
+
+function run283MovedBack() {
+  var started = new Date().getTime();
+  var props = PropertiesService.getScriptProperties();
+  var people = n283People_(n283ReadPayload_());
+  var idx = parseInt(props.getProperty('N283F_IDX') || '0', 10);
+  if (isNaN(idx) || idx < 0) idx = 0;
+  var hits = JSON.parse(props.getProperty('N283F_HITS') || '[]');
+  var probed = false;
+
+  Logger.log('#283f from index ' + idx + ' of ' + people.length + ' | looking for backwards moves');
+
+  for (var i = idx; i < people.length; i++) {
+    if (new Date().getTime() - started > N283_MAX_MS) { Logger.log('#283f stopped on the clock at ' + i); break; }
+    props.setProperty('N283F_IDX', String(i + 1));
+    var ids = n283AllIdsByEmail_(people[i].email);
+    if (!ids || !ids.length) continue;
+
+    for (var k = 0; k < ids.length; k++) {
+      var info = n283Call_('candidate.info', { id: ids[k] });
+      var res = info.json && info.json.results;
+      if (!res) continue;
+      var appIds = res.applicationIds || [];
+      for (var a = 0; a < appIds.length; a++) {
+        var app = n283Call_('application.info', { applicationId: appIds[a] });
+        var r = app.json && app.json.results;
+        if (!r || !r.job || r.job.id !== N283_JOB_ID) continue;
+
+        var hist = r.applicationHistory || [];
+        if (!probed) {
+          probed = true;
+          Logger.log('#283f PROBE history rows: ' + hist.length
+            + ' | keys: ' + (hist[0] ? Object.keys(hist[0]).join(', ') : 'none'));
+        }
+        // every stage title this application has EVER sat in
+        var everAt = [];
+        for (var h = 0; h < hist.length; h++) {
+          var ttl = hist[h].stage && (hist[h].stage.title || hist[h].stage.name) || hist[h].title || hist[h].stageName || '';
+          if (ttl && everAt.indexOf(ttl) === -1) everAt.push(String(ttl));
+        }
+        var nowAt = (r.currentInterviewStage && (r.currentInterviewStage.title || r.currentInterviewStage.name)) || '';
+        var wentBack = [];
+        for (var z = 0; z < everAt.length; z++) if (N283F_LATER.indexOf(everAt[z]) !== -1) wentBack.push(everAt[z]);
+
+        if (wentBack.length && String(nowAt).indexOf('Lead') !== -1) {
+          var row = people[i].group + ' | candidate ' + ids[k] + ' | now ' + nowAt + ' | had reached: ' + wentBack.join(' > ');
+          hits.push(row);
+          Logger.log('#283f  >>> MOVED BACK: ' + row);
+          props.setProperty('N283F_HITS', JSON.stringify(hits));
+        }
+      }
+    }
+  }
+  var cur = parseInt(props.getProperty('N283F_IDX') || '0', 10);
+  Logger.log('#283f cursor ' + cur + ' of ' + people.length + ' | moved-back found so far: ' + hits.length);
+  hits.forEach(function (h) { Logger.log('   ' + h); });
+  if (cur >= people.length) Logger.log('#283f ALL CHECKED - total moved back: ' + hits.length);
+}
+
+function run283MovedBackReset() {
+  var props = PropertiesService.getScriptProperties();
+  props.deleteProperty('N283F_IDX'); props.deleteProperty('N283F_HITS');
+  Logger.log('#283f cursor cleared.');
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  #283g - PUT BACK the 6 learners the upload dragged out of TA Screen.
+ *  Jerin asked for this directly on 26 Oct.
+ *  It does NOT pick a stage: for each person it reads THEIR OWN history
+ *  row titled 'TA Screen' and uses that row's stageId, so everyone goes
+ *  back exactly where they were. It refuses to touch anyone who is not
+ *  currently sitting in a Lead stage.
+ * ------------------------------------------------------------------ */
+
+var N283G_MODE = 'dry';   // done 26 Oct: 6 learners restored to TA Screen                 // 'dry' | 'run'
+var N283G_BACK_TO = 'TA Screen';
+var N283G_IDS = [
+  'bfe5707b-7986-4bec-af9a-1c9fd804184b',
+  '85f555a4-9c71-48d3-bf23-9e43f5f6899b',
+  'c0a8eb85-be04-4206-9eb2-d9d24230c8db',
+  '716e4ad3-3204-4d73-9e32-cad15dca274a',
+  'f3ccb99c-dfcf-40ec-bc01-1b2cb482bcd6',
+  'eb953546-140b-4115-bb26-4b751fb1398a'
+];
+
+function run283PutBack() {
+  var mode = N283G_MODE === 'run' ? 'run' : 'dry';
+  Logger.log('#283g MODE=' + mode.toUpperCase() + ' | ' + N283G_IDS.length + ' people to put back to ' + N283G_BACK_TO);
+  var done = 0, refused = 0;
+
+  for (var i = 0; i < N283G_IDS.length; i++) {
+    var cid = N283G_IDS[i];
+    var info = n283Call_('candidate.info', { id: cid });
+    var res = info.json && info.json.results;
+    if (!res) { Logger.log('#283g ' + cid + ' -> cannot read candidate'); refused++; continue; }
+
+    var appIds = res.applicationIds || [];
+    var handled = false;
+    for (var a = 0; a < appIds.length; a++) {
+      var app = n283Call_('application.info', { applicationId: appIds[a] });
+      var r = app.json && app.json.results;
+      if (!r || !r.job || r.job.id !== N283_JOB_ID) continue;
+      handled = true;
+
+      var nowAt = (r.currentInterviewStage && (r.currentInterviewStage.title || r.currentInterviewStage.name)) || '';
+      if (String(nowAt).indexOf('Lead') === -1) {
+        Logger.log('#283g ' + cid + ' -> SKIPPED, already at "' + nowAt + '", not a Lead stage');
+        refused++; break;
+      }
+      // their OWN history row for the stage we are restoring
+      var hist = r.applicationHistory || [], stageId = null;
+      for (var h = 0; h < hist.length; h++) {
+        var ttl = String(hist[h].title || (hist[h].stage && hist[h].stage.title) || '');
+        if (ttl === N283G_BACK_TO) stageId = hist[h].stageId || (hist[h].stage && hist[h].stage.id);
+      }
+      if (!stageId) { Logger.log('#283g ' + cid + ' -> SKIPPED, no "' + N283G_BACK_TO + '" row in their own history'); refused++; break; }
+
+      if (mode === 'dry') {
+        Logger.log('#283g WOULD MOVE ' + cid + ' from "' + nowAt + '" back to "' + N283G_BACK_TO + '"');
+        done++; break;
+      }
+      var w = n283Call_('application.changeStage', { applicationId: appIds[a], interviewStageId: stageId });
+      if (w.code === 200 && w.json && w.json.success === true) {
+        var back = n283Call_('application.info', { applicationId: appIds[a] });
+        var nb = back.json && back.json.results && back.json.results.currentInterviewStage;
+        Logger.log('#283g MOVED ' + cid + ' -> reads back as "' + ((nb && (nb.title || nb.name)) || '?') + '"');
+        done++;
+      } else {
+        Logger.log('#283g FAILED ' + cid + ' -> HTTP ' + w.code + ' ' + String(w.text).substring(0, 200));
+        refused++;
+      }
+      Utilities.sleep(200);
+      break;
+    }
+    if (!handled) { Logger.log('#283g ' + cid + ' -> no application on this job'); refused++; }
+  }
+  Logger.log('#283g ' + (mode === 'run' ? 'moved ' : 'would move ') + done + ' | not touched ' + refused);
 }
