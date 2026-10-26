@@ -1727,7 +1727,9 @@ export function initHmFilters(data) {
     }
     // #189d: only Position Fulfilment has the job/recruiter/topic levels, so only it gets the chooser. Throughput,
     // Interview Pipeline and Panelists get the plain Expand all tick back - the rule the date boxes already follow.
-    showLevels('hmLevels', name === 'positions');
+    // #280: Type & Budget has its own levels (Job, Type) and asks for them from inside the module, as its
+    // internal rail switches — the Budget panel has no Type level, so it must not offer the tick.
+    showLevels('hmLevels', name === 'positions' ? ['job', 'rec', 'top'] : false);
     // #141d (Jerin, 17 Sep): Pipeline counts are live (#129) and its roles follow Year and Quarter, so From and To would move
     // nothing there — they hide (Rule 13).
     ['hmDateFrom', 'hmDateTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
@@ -1793,6 +1795,7 @@ export function initHmFilters(data) {
     const ji = data.jobIndex || {};
     return {
       sel: { wholeWin: coversQuarters(rg, winQs), winQs, dayOK: hasDayData(data), inDay: (d) => inRange(d, rg) },
+      levelsId: 'hmLevels',   // #280: the module reads the Job / Type ticks off this tab's own control
       jobOk: (j8) => {
         if (jsel.length && !jsel.some(id => String(id).slice(0, 8) === j8)) return false;
         if (dsel.length) { const meta = ji[j8]; if (!meta || dsel.indexOf(meta.department) < 0) return false; }

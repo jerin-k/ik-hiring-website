@@ -19,6 +19,9 @@ export const LEVELS = [
   { key: 'job', label: 'Job' },
   { key: 'rec', label: 'Recruiter' },
   { key: 'top', label: 'Topic' },
+  // #280 (26 Oct 2026): Type & Budget runs Department ➔ Job ➔ Type, so it needs a level the Fulfilment tables
+  // do not have. It is offered ONLY where it moves something — `showLevels` now takes the keys (see below).
+  { key: 'type', label: 'Type' },
 ];
 
 const state = {};   // { [id]: {job,rec,top} } — per tab, for the life of the page
@@ -70,20 +73,30 @@ export function levelChooser(id, keys) {
   const lv = keys ? LEVELS.filter((l) => keys.includes(l.key)) : LEVELS;
   return `<span class="lvl-pick" id="${id}">`
     + `<span class="lvl-lbl" data-part="lvl">Show levels</span>`
-    + lv.map(l => `<label class="lvl-opt" data-part="lvl"><input type="checkbox" data-lv="${l.key}"${on[l.key] ? ' checked' : ''}> ${l.label}</label>`).join('')
+    + lv.map(l => `<label class="lvl-opt" data-part="lvl" data-lv-opt="${l.key}"><input type="checkbox" data-lv="${l.key}"${on[l.key] ? ' checked' : ''}> ${l.label}</label>`).join('')
     + `<label class="lvl-opt" data-part="xa"><input type="checkbox" data-xa${expandAllOn(id) ? ' checked' : ''}> Expand all</label>`
     + `</span>`;
 }
 
 /**
- * Which of the two controls this panel gets. `wantLevels` is true only where the level chooser actually
- * changes the table — today the two Position Fulfilment tables.
+ * Which of the two controls this panel gets, and — since #280 — WHICH LEVELS it offers.
+ *
+ * `want` is `false` on a panel with no levels at all (it gets the plain Expand all tick back, #189d), `true`
+ * for every level this control rendered, or an ARRAY OF LEVEL KEYS for a panel that has only some of them.
+ * 🔑 That array is what lets ONE control serve two shapes on one tab: Position Fulfilment offers Job,
+ * Recruiter and Topic, Type & Budget offers Job and Type, and neither ever shows a tick that moves nothing
+ * [[feedback_filters-must-change-data]]. The "Show levels" label itself carries no key, so it follows the group.
  */
-export function showLevels(id, wantLevels) {
+export function showLevels(id, want) {
   const box = document.getElementById(id);
   if (!box) return;
-  box.querySelectorAll('[data-part="lvl"]').forEach((e) => { e.style.display = wantLevels ? '' : 'none'; });
-  box.querySelectorAll('[data-part="xa"]').forEach((e) => { e.style.display = wantLevels ? 'none' : ''; });
+  const keys = Array.isArray(want) ? want : null;
+  const on = !!want && (!keys || keys.length > 0);
+  box.querySelectorAll('[data-part="lvl"]').forEach((e) => {
+    const k = e.dataset.lvOpt;
+    e.style.display = (on && (!keys || !k || keys.indexOf(k) >= 0)) ? '' : 'none';
+  });
+  box.querySelectorAll('[data-part="xa"]').forEach((e) => { e.style.display = on ? 'none' : ''; });
 }
 
 /**

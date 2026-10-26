@@ -2503,7 +2503,8 @@ export function initEfficiencyFilters(data) {
     showControl(document.getElementById('effExpandWrap'), name !== 'joiningpending' && name !== 'joiners');
     // #189d: only Position Fulfilment has the job/recruiter/topic levels, so only it gets the chooser. Every other
     // tree gets the plain Expand all tick — the same rule the date boxes already follow two lines below.
-    showLevels('effLevels', name === 'fulfilment');
+    // #280: Type & Budget asks for its own levels from inside the module (see hm-report.js for the same wiring).
+    showLevels('effLevels', name === 'fulfilment' ? ['job', 'rec', 'top'] : false);
     // #145a: Pipeline counts are live, and its roles follow Year and Quarter, so From and To would move nothing
     // there — they hide, exactly as on the Hiring Manager tab (#141d, Rule 13).
     ['effVelFrom', 'effVelTo'].forEach(id => showControl(document.getElementById(id)?.closest('.fchip'), name !== 'pipeline'));
@@ -2593,6 +2594,7 @@ export function initEfficiencyFilters(data) {
     const ji = data.jobIndex || {};
     return {
       sel: { wholeWin: PM.whole, winQs: per, dayOK: PM.dayOK, inDay: (d) => inRange(d, PM.rg) },
+      levelsId: 'effLevels',   // #280: the module reads the Job / Type ticks off this tab's own control
       jobOk: (j8) => {
         if (jsel.length && !jsel.some(id => String(id).slice(0, 8) === j8)) return false;
         if (dsel.length) { const meta = ji[j8]; if (!meta || dsel.indexOf(meta.department) < 0) return false; }
