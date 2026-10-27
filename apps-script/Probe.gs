@@ -1098,3 +1098,454 @@ function run281Fix() {
   for (var f = 0; f < Math.min(fails.length, 8); f++) say('  FAILED  ' + fails[f]);
   say('progress: ' + done + ' of ' + apps.length + (done >= apps.length ? '  <- COMPLETE' : '  <- run again to continue'));
 }
+
+
+/* ===== #283b (27 Oct 2026) — the Wonderful.ai tag came from the WRONG COLUMN =====
+ * Jerin: the tag must be the Fitment type (Learners tab, column I), not the Fit band (column K).
+ * READ ONLY. Lists the live candidate tags BY NAME, so the fix matches real strings and never a guess.
+ * 🔒 Ids are never logged — the writer resolves by name, exactly as #281 did. */
+function probe283bTags() {
+  var r = ashbyWrite_('/candidateTag.list', { includeArchived: true });
+  Logger.log('HTTP ' + r.code + '  ok=' + r.ok);
+  var rows = (r.json && (r.json.results || r.json.data)) || [];
+  Logger.log('TAGS ' + rows.length);
+  rows.map(function (t) { return (t.title || t.name || '?') + (t.isArchived ? '  [archived]' : ''); })
+      .sort()
+      .forEach(function (n) { Logger.log('TAG | ' + n); });
+  return rows.length;
+}
+
+
+/* ===== #283b (27 Oct 2026) — the tag must be the FITMENT TYPE; the Fit band must be WIPED =====
+ * Jerin: "The fitment type is what i want in the tag. And yes, teh existing tag needs to be wiped as well."
+ * 🔒 THE MAPPING IS NOT IN THIS FILE. Every .gs here is mirrored to a PUBLIC repo and the key is an EMAIL.
+ *    It is read from the DRIVE-ONLY wonderful_notes_*.json that #283 already wrote, which carries
+ *    "Fitment type: <value>" per person. No email and no id is ever logged — only counts and tag names.
+ * ⚠ The live band tag is "Potential fit - gaps (45-64)" with a HYPHEN; the spreadsheet has a COMMA.
+ *    "Potential fit" and "gaps (45-64)" are the comma-split junk from #283's probe and come off too. */
+var R283B_FOLDER = '1z6tU6QhZQ_50V7oyqlprwpl8kpS4LHmI';
+var R283B_BAND_TAGS = ['Potential fit - gaps (45-64)', 'Below cutoff (<45)', 'Possible fit (65-79)',
+                       'Strong fit (80+)', 'Potential fit', 'gaps (45-64)'];
+
+/** email -> fitment type, read from the Drive-only notes payload. Nothing from it is ever logged. */
+function r283bMapping_() {
+  var it = DriveApp.getFolderById(R283B_FOLDER).getFiles();
+  var map = {}, files = 0;
+  while (it.hasNext()) {
+    var f = it.next();
+    if (!/^wonderful_notes_.*\.json$/i.test(f.getName())) continue;
+    files++;
+    var j = JSON.parse(f.getBlob().getDataAsString());
+    var groups = (j.learners || j.smes) ? [j.learners || {}, j.smes || {}] : [j];
+    groups.forEach(function (g) {
+      Object.keys(g || {}).forEach(function (email) {
+        var mm = String(g[email]).match(/Fitment type:\s*([^\n\r]+)/);
+        if (mm) map[String(email).toLowerCase().trim()] = mm[1].trim();
+      });
+    });
+  }
+  return { map: map, files: files, n: Object.keys(map).length };
+}
+
+/** READ ONLY. What the fix would do, and whether the four tags exist yet. */
+function run283bPlan() {
+  var mp = r283bMapping_();
+  Logger.log('Drive files read: ' + mp.files + '   people carrying a Fitment type: ' + mp.n);
+  var byType = {};
+  Object.keys(mp.map).forEach(function (e) { byType[mp.map[e]] = (byType[mp.map[e]] || 0) + 1; });
+  var tr = ashbyWrite_('/candidateTag.list', { includeArchived: false });
+  var live = {};
+  (((tr.json || {}).results) || []).forEach(function (t) { live[t.title] = true; });
+  Object.keys(byType).sort().forEach(function (t) {
+    Logger.log('WANT | ' + byType[t] + ' | ' + t + ' | ' + (live[t] ? 'tag exists' : 'TAG MUST BE CREATED'));
+  });
+  R283B_BAND_TAGS.forEach(function (t) {
+    Logger.log('WIPE | ' + t + ' | ' + (live[t] ? 'present, will be removed' : 'absent already'));
+  });
+  return mp.n;
+}
+
+
+/* ===== #283b — THE WRITER. 'dry' by default; only 'run' writes. =====
+ * Order per person: ADD the fitment type FIRST, then REMOVE the band. If a run dies half way a person is
+ * left holding both tags, never none. Idempotent: a person already correct costs one read and no write. */
+var R283B_MODE = 'dry';          // 'dry' | 'run'
+var R283B_JOB_NAME = 'FDE - Wonderful.ai';
+var R283B_BATCH = 800;           // people per run — 3 calls each, well inside the 6-minute editor limit
+var R283B_CURSOR = 'r283b_cursor';
+
+/** The job's applications -> { emailLower: candidateId }. Logs counts only. */
+function r283bRoster_() {
+  // job.list PAGINATES — the job is not on page one, which is why the first dry run could not find it.
+  var job = null, jc = null, jpages = 0, jseen = 0;
+  do {
+    var jb = { includeArchived: true, limit: 100 };
+    if (jc) jb.cursor = jc;
+    var jr = ashbyWrite_('/job.list', jb);
+    var jj = jr.json || {};
+    (jj.results || []).forEach(function (j) { jseen++; if ((j.title || '') === R283B_JOB_NAME) job = j; });
+    jc = jj.moreDataAvailable ? jj.nextCursor : null;
+    jpages++;
+  } while (jc && !job && jpages < 20);
+  Logger.log('job.list: ' + jpages + ' pages, ' + jseen + ' jobs seen, match=' + (job ? 'yes' : 'NO'));
+  if (!job) throw new Error('job not found: ' + R283B_JOB_NAME);
+  var roster = {}, cursor = null, pages = 0, apps = 0;
+  do {
+    var body = { jobId: job.id, limit: 100 };
+    if (cursor) body.cursor = cursor;
+    var ar = ashbyWrite_('/application.list', body);
+    var j = ar.json || {};
+    (j.results || []).forEach(function (a) {
+      apps++;
+      var c = a.candidate || {};
+      var emails = c.emailAddresses || (c.primaryEmailAddress ? [c.primaryEmailAddress] : []);
+      emails.forEach(function (e) {
+        var v = (e && (e.value || e)) || '';
+        if (v) roster[String(v).toLowerCase().trim()] = c.id;
+      });
+    });
+    cursor = j.moreDataAvailable ? j.nextCursor : null;
+    pages++;
+  } while (cursor && pages < 20);
+  Logger.log('roster: ' + pages + ' pages, ' + apps + ' applications, ' + Object.keys(roster).length + ' e-mail keys');
+  return roster;
+}
+
+/** Tag name -> id, creating any of the wanted ones that do not exist yet. */
+function r283bTags_(wanted, write) {
+  var tr = ashbyWrite_('/candidateTag.list', { includeArchived: false });
+  var byName = {};
+  (((tr.json || {}).results) || []).forEach(function (t) { byName[t.title] = t.id; });
+  wanted.forEach(function (name) {
+    if (byName[name]) return;
+    if (!write) { Logger.log('WOULD CREATE TAG | ' + name); return; }
+    var cr = ashbyWrite_('/candidateTag.create', { title: name });
+    var id = ((cr.json || {}).results || {}).id;
+    if (!id) throw new Error('could not create tag: ' + name + ' | ' + (cr.text || '').slice(0, 120));
+    byName[name] = id;
+    Logger.log('CREATED TAG | ' + name);
+  });
+  return byName;
+}
+
+function run283bApply() {
+  var write = (R283B_MODE === 'run');
+  Logger.log('#283b ' + (write ? '*** WRITING ***' : 'dry run') + '  batch=' + R283B_BATCH);
+  var mp = r283bMapping_();
+  var emails = Object.keys(mp.map).sort();
+  var props = PropertiesService.getScriptProperties();
+  var start = write ? parseInt(props.getProperty(R283B_CURSOR) || '0', 10) : 0;   // a dry pass always re-reads from the top, so it verifies
+  Logger.log('people in the mapping: ' + emails.length + '   cursor at: ' + start);
+  if (start >= emails.length) { Logger.log('NOTHING LEFT TO DO — cursor is past the end.'); return 0; }
+
+  var wanted = {};
+  emails.forEach(function (e) { wanted[mp.map[e]] = 1; });
+  var tagId = r283bTags_(Object.keys(wanted), write);
+  var bandId = {};
+  R283B_BAND_TAGS.forEach(function (n) { if (tagId[n]) bandId[n] = tagId[n]; });
+
+  var roster = r283bRoster_();
+  var end = Math.min(start + R283B_BATCH, emails.length);
+  var n = { seen: 0, notOnJob: 0, alreadyRight: 0, added: 0, removed: 0, failed: 0, shape: '' };
+
+  for (var k = start; k < end; k++) {
+    var email = emails[k], cid = roster[email];
+    n.seen++;
+    if (!cid) { n.notOnJob++; continue; }
+    var ir = ashbyWrite_('/candidate.info', { id: cid });
+    var cand = ((ir.json || {}).results) || null;
+    if (!cand) { n.failed++; continue; }
+    if (!n.shape) { n.shape = Object.keys(cand).join(','); }
+    var have = {};
+    (cand.tags || []).forEach(function (t) { have[t.title || t.name] = t.id; });
+    var want = mp.map[email];
+
+    if (!have[want]) {
+      if (write) {
+        var ar = ashbyWrite_('/candidate.addTag', { candidateId: cid, tagId: tagId[want] });
+        if (!ar.ok) { n.failed++; continue; }
+      }
+      n.added++;
+    } else { n.alreadyRight++; }
+
+    for (var b = 0; b < R283B_BAND_TAGS.length; b++) {
+      var bn = R283B_BAND_TAGS[b];
+      if (!have[bn]) continue;
+      if (write) {
+        var rr = ashbyWrite_('/candidate.removeTag', { candidateId: cid, tagId: have[bn] });
+        if (!rr.ok) { n.failed++; continue; }
+      }
+      n.removed++;
+    }
+  }
+  if (write) props.setProperty(R283B_CURSOR, String(end));
+  Logger.log('candidate.info fields: ' + n.shape);
+  Logger.log('seen ' + n.seen + ' | not on the job ' + n.notOnJob + ' | already right ' + n.alreadyRight +
+             ' | tags added ' + n.added + ' | band tags removed ' + n.removed + ' | failed ' + n.failed);
+  Logger.log('cursor now ' + (write ? end : start) + ' of ' + emails.length);
+  return n.added;
+}
+
+
+/** #283b — the `V9 - Work log` row. Same shape as log277V9: EXACT header match only, anything unmatched is
+ *  left blank on purpose, and the appended row is read straight back. Guarded so it cannot log twice. */
+function log283bV9() {
+  var SHEET_ID = '1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA';
+  var TAB = 'V9 - Work log';
+  function say(s) { Logger.log(s); }
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB);
+  if (!sh) { say('ABORT: no tab named ' + TAB); return; }
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('K283B_V9_ROW')) { say('ABORT: already logged at row ' + props.getProperty('K283B_V9_ROW')); return; }
+  var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  say('tab=' + TAB + ' rows=' + lastRow + ' cols=' + lastCol);
+  say('HEADERS: ' + headers.map(function (h, c) { return c + ':' + h; }).join(' | '));
+  var prev = sh.getRange(lastRow, 1, 1, lastCol).getValues()[0];
+  say('LAST ROW (' + lastRow + '): ' + prev.map(function (v) { return String(v).slice(0, 28); }).join(' | '));
+
+  var WHAT = 'FDE - Wonderful.ai: the candidate tag now carries the FITMENT TYPE (Learners tab column I), not the '
+    + 'Fit band (column K) that was used by mistake in #283. 488 fitment-type tags added and 488 Fit band tags '
+    + 'removed across the 492 learners; the 249 SMEs already held their fitment type and were left alone. Four '
+    + 'tags created: Pedigree + AI title (161), AI title no pedigree (140), Pedigree + AI experience (108), '
+    + 'AI experience no pedigree (83). The six old band tags are off every person (two of them the comma-split '
+    + 'junk from the #283 probe); their empty definitions are still in the picker.';
+  var METHOD = 'Apps Script run283bApply (Probe.gs) over the Ashby API - candidateTag.create, candidate.info, '
+    + 'candidate.addTag, candidate.removeTag - in four cursored batches of 200, adding the new tag BEFORE removing '
+    + 'the old so a failed run leaves a person with both rather than neither. NOT the CSV importer: two of the four '
+    + 'tag names contain a comma and the importer splits on one. The e-mail to fitment-type mapping was read from '
+    + 'the Drive-only wonderful_notes_*.json, so no candidate e-mail entered any .gs file (they are public).';
+  var VERIFIED = 'Read-only pass over ALL 741 afterwards, re-reading every candidate.info from Ashby: 737 hold the '
+    + 'correct fitment type with no band tag, 4 are not on this job, 0 to add, 0 to remove, 0 failed. The four '
+    + 'batch runs themselves reported 0 failures.';
+
+  var vals = {
+    'Date': new Date(), 'Task': '#283b', 'Task ID': '#283b',
+    'What': WHAT, 'What was done': WHAT,
+    'Count': 488, 'Method': METHOD, 'How': METHOD,
+    'Verified how': VERIFIED, 'Verification': VERIFIED,
+    'Status': 'Done', 'Failed': 0, 'Skipped': 4,
+    'By': 'Claude (jerin@interviewkickstart.com)'
+  };
+  var row = [], filled = [];
+  for (var c = 0; c < lastCol; c++) {
+    var h = String(headers[c]).trim();
+    if (Object.prototype.hasOwnProperty.call(vals, h)) { row.push(vals[h]); filled.push(h); }
+    else row.push('');
+  }
+  if (!filled.length) { say('ABORT: no header matched exactly - nothing written'); return; }
+  sh.appendRow(row);
+  var newRow = sh.getLastRow();
+  props.setProperty('K283B_V9_ROW', String(newRow));
+  say('APPENDED at row ' + newRow + '; columns filled by exact header match: ' + filled.join(', '));
+  var back = sh.getRange(newRow, 1, 1, lastCol).getValues()[0];
+  say('READ BACK: ' + back.map(function (v) { return String(v).slice(0, 34); }).join(' | '));
+}
+
+
+/* ===== #283c — can a candidate tag be ARCHIVED by API? READ-ONLY PROBE. =====
+ * Nothing here writes: every call carries an EMPTY body, which Ashby rejects before it does anything.
+ * 🔑 THE 403-vs-404 TEST: the invented control endpoint goes first. A 404 that matches the control is proof
+ * the endpoint does NOT exist; a 200 with invalid_input is a SEMANTIC refusal, so the endpoint is real. */
+function probe283cArchive() {
+  function call(ep) {
+    var r = ashbyWrite_(ep, {});
+    var j = r.json || {};
+    var errs = j.errors ? JSON.stringify(j.errors).slice(0, 160) : '';
+    Logger.log(ep + '  ->  HTTP ' + r.code + '  success=' + j.success + '  ' + errs + (j.errors ? '' : (r.text || '').slice(0, 90)));
+  }
+  call('/candidateTag.doesNotExist283c');   // the control — everything else is read against this
+  call('/candidateTag.archive');
+  call('/candidateTag.update');
+  call('/candidateTag.delete');
+  call('/candidateTag.setArchived');
+
+  // and what the six look like right now
+  var tr = ashbyWrite_('/candidateTag.list', { includeArchived: true });
+  var rows = (((tr.json || {}).results) || []);
+  var want = {};
+  R283B_BAND_TAGS.forEach(function (n) { want[n] = 1; });
+  rows.forEach(function (t) {
+    if (want[t.title]) Logger.log('BAND TAG | ' + t.title + ' | archived=' + !!t.isArchived);
+  });
+  Logger.log('tags in the workspace: ' + rows.length);
+}
+
+
+/* ===== #283d — HE SAYS THE TAGS ARE NOT THERE. Find out, from a DIFFERENT angle. =====
+ * 🚨 My verification read candidate.info — the SAME API that wrote. The standing rule says confirm an Ashby
+ * write in the UI the team uses, never only by reading it back through the same API. So this logs real NAMES
+ * (names are not the PII line here; e-mails are) with their tags, so a human can open them and look. */
+function probe283dCheck() {
+  var NEW_TAGS = ['Pedigree + AI title', 'AI title, no pedigree', 'Pedigree + AI experience',
+                  'AI experience, no pedigree', 'AI engineer (current title)',
+                  'Engineer with AI experience (no AI title)'];
+  var isNew = {}; NEW_TAGS.forEach(function (t) { isNew[t] = 1; });
+
+  // 1. the tag ids as the workspace holds them now
+  var tr = ashbyWrite_('/candidateTag.list', { includeArchived: true });
+  var rows = (((tr.json || {}).results) || []);
+  Logger.log('tags in workspace: ' + rows.length);
+  rows.forEach(function (t) {
+    if (isNew[t.title]) Logger.log('NEW TAG | ' + t.title + ' | archived=' + !!t.isArchived + ' | id ends ' + String(t.id).slice(-6));
+  });
+
+  // 2. walk the job and count, per tag, how many candidates carry it — one candidate.info each
+  var job = null, jc = null, jp = 0;
+  do {
+    var jb = { includeArchived: true, limit: 100 }; if (jc) jb.cursor = jc;
+    var jr = ashbyWrite_('/job.list', jb); var jj = jr.json || {};
+    (jj.results || []).forEach(function (j) { if ((j.title || '') === R283B_JOB_NAME) job = j; });
+    jc = jj.moreDataAvailable ? jj.nextCursor : null; jp++;
+  } while (jc && !job && jp < 20);
+  if (!job) { Logger.log('ABORT: job not found'); return; }
+
+  var ids = [], cur2 = null, p = 0;
+  do {
+    var b = { jobId: job.id, limit: 100 }; if (cur2) b.cursor = cur2;
+    var ar = ashbyWrite_('/application.list', b); var aj = ar.json || {};
+    (aj.results || []).forEach(function (a) { if (a.candidate && a.candidate.id) ids.push(a.candidate.id); });
+    cur2 = aj.moreDataAvailable ? aj.nextCursor : null; p++;
+  } while (cur2 && p < 20);
+  Logger.log('candidates on the job: ' + ids.length);
+
+  var counts = {}, none = 0, shown = 0;
+  for (var k = 0; k < ids.length; k++) {
+    var ir = ashbyWrite_('/candidate.info', { id: ids[k] });
+    var c = ((ir.json || {}).results) || null;
+    if (!c) continue;
+    var titles = (c.tags || []).map(function (t) { return t.title || t.name; });
+    var mine = titles.filter(function (t) { return isNew[t]; });
+    mine.forEach(function (t) { counts[t] = (counts[t] || 0) + 1; });
+    if (!mine.length) none++;
+    if (shown < 6) { Logger.log('PERSON | ' + c.name + ' | tags: ' + (titles.join(' / ') || '(none)')); shown++; }
+  }
+  Logger.log('--- how many candidates on the job carry each tag, counted one by one ---');
+  Object.keys(counts).sort().forEach(function (t) { Logger.log('HOLDERS | ' + counts[t] + ' | ' + t); });
+  Logger.log('candidates with NONE of the six: ' + none);
+}
+
+
+/* ===== #283c — archive the six now-empty band tags. Jerin: "Go ahead & archive the unsused tags now." =====
+ * 🔒 IT CAN ONLY EVER TOUCH THE SIX NAMES IN R283B_BAND_TAGS. Anything else in the workspace is skipped.
+ * The field name is DISCOVERED, not guessed: each candidate name is tried with an IMPOSSIBLE id first, and a
+ * SEMANTIC refusal (not "invalid_input") is what proves the field was accepted. */
+function run283cArchiveBands() {
+  var FAKE = '00000000-0000-4000-8000-000000000000';
+  var shapes = ['candidateTagId', 'id', 'tagId'];
+  var field = null;
+  for (var s = 0; s < shapes.length; s++) {
+    var probe = {}; probe[shapes[s]] = FAKE;
+    var pr = ashbyWrite_('/candidateTag.archive', probe);
+    var pe = ((pr.json || {}).errors) ? JSON.stringify(pr.json.errors) : '';
+    Logger.log('SHAPE ' + shapes[s] + '  ->  HTTP ' + pr.code + '  success=' + ((pr.json || {}).success) + '  ' + pe.slice(0, 120));
+    if (pe && pe.indexOf('invalid_input') < 0 && !field) field = shapes[s];
+  }
+  if (!field) { Logger.log('ABORT: cannot tell which field candidateTag.archive wants - NOTHING ARCHIVED.'); return; }
+  Logger.log('FIELD IS: ' + field);
+
+  var want = {}; R283B_BAND_TAGS.forEach(function (n) { want[n] = 1; });
+  var tr = ashbyWrite_('/candidateTag.list', { includeArchived: true });
+  var rows = (((tr.json || {}).results) || []);
+  var done = 0, already = 0, failed = 0;
+  rows.forEach(function (t) {
+    if (!want[t.title]) return;                       // the guard: only the six, never anything else
+    if (t.isArchived) { Logger.log('ALREADY ARCHIVED | ' + t.title); already++; return; }
+    var b = {}; b[field] = t.id;
+    var r = ashbyWrite_('/candidateTag.archive', b);
+    if (r.ok) { Logger.log('ARCHIVED | ' + t.title); done++; }
+    else { Logger.log('FAILED | ' + t.title + ' | HTTP ' + r.code + ' ' + JSON.stringify(((r.json || {}).errors) || '').slice(0, 120)); failed++; }
+  });
+
+  // read it straight back, which is the only thing that counts
+  var back = ashbyWrite_('/candidateTag.list', { includeArchived: true });
+  (((back.json || {}).results) || []).forEach(function (t) {
+    if (want[t.title]) Logger.log('READ BACK | ' + t.title + ' | archived=' + !!t.isArchived);
+  });
+  Logger.log('archived ' + done + ' | already archived ' + already + ' | failed ' + failed);
+}
+
+
+/** #283c — its own `V9 - Work log` row. Same exact-header pattern as log283bV9, guarded against a double log. */
+function log283cV9() {
+  var sh = SpreadsheetApp.openById('1U6Wi5uXLZ8hOhGKP2tyH--jHcEbUEvXgAPxbkUofTNA').getSheetByName('V9 - Work log');
+  if (!sh) { Logger.log('ABORT: no tab'); return; }
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('K283C_V9_ROW')) { Logger.log('ABORT: already logged at row ' + props.getProperty('K283C_V9_ROW')); return; }
+  var lastCol = sh.getLastColumn();
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  var WHAT = 'Archived the six now-unused candidate tags left over from the #283 upload: the four fit bands '
+    + '(Strong fit (80+), Possible fit (65-79), Potential fit - gaps (45-64), Below cutoff (<45)) and the two '
+    + 'comma-split fragments the original CSV import invented (Potential fit, gaps (45-64)). Nobody held any of '
+    + 'them once #283b moved everyone onto the Fitment type. They are out of the tag picker, not deleted.';
+  var METHOD = 'Apps Script run283cArchiveBands (Probe.gs) -> candidateTag.archive. The field name was DISCOVERED, '
+    + 'not guessed: candidateTagId and id both returned invalid_input, tagId returned candidate_tag_not_found on an '
+    + 'impossible id - a semantic refusal, so tagId is the field. candidateTag.update, .delete and .setArchived all '
+    + '404 exactly like an invented control endpoint, so they do not exist. The run can only touch those six names.';
+  var VERIFIED = 'candidateTag.list re-read straight afterwards: all six come back archived=true. 6 archived, '
+    + '0 already archived, 0 failed.';
+  var vals = { 'Date': new Date(), 'Task': '#283c', 'What': WHAT, 'Count': 6,
+               'Method': METHOD, 'Verified how': VERIFIED, 'Status': 'Done' };
+  var row = [], filled = [];
+  for (var c = 0; c < lastCol; c++) {
+    var h = String(headers[c]).trim();
+    if (Object.prototype.hasOwnProperty.call(vals, h)) { row.push(vals[h]); filled.push(h); } else row.push('');
+  }
+  if (!filled.length) { Logger.log('ABORT: no header matched exactly'); return; }
+  sh.appendRow(row);
+  var n = sh.getLastRow();
+  props.setProperty('K283C_V9_ROW', String(n));
+  Logger.log('APPENDED at row ' + n + '; filled: ' + filled.join(', '));
+  Logger.log('READ BACK: ' + sh.getRange(n, 1, 1, lastCol).getValues()[0].map(function (v) { return String(v).slice(0, 30); }).join(' | '));
+}
+
+
+/* ===== #284 — READ ONLY. The three things to settle before the next FDE upload. =====
+ * 1. which job is "the FDE generic job", by its exact title
+ * 2. the exact Source string for "Alumni US"
+ * 3. WHO IS ALREADY ON THAT JOB AND AT WHAT STAGE — because the importer's stage column drags people
+ *    BACKWARDS if they already sit further along (lessons 34 and 36; it bit #283 twice).
+ * 🔒 No e-mail is in this file or in its output: this logs NAMES and stages only, and the matching against
+ *    the spreadsheet happens outside Ashby. */
+function probe284Setup() {
+  // 1. every Forward Deployed job
+  var jobs = [], jc = null, p = 0;
+  do {
+    var jb = { includeArchived: true, limit: 100 }; if (jc) jb.cursor = jc;
+    var jr = ashbyWrite_('/job.list', jb); var jj = jr.json || {};
+    (jj.results || []).forEach(function (j) {
+      if (/forward deployed|FDE/i.test(j.title || '')) jobs.push(j);
+    });
+    jc = jj.moreDataAvailable ? jj.nextCursor : null; p++;
+  } while (jc && p < 20);
+  Logger.log('--- Forward Deployed jobs ---');
+  jobs.forEach(function (j) { Logger.log('JOB | "' + j.title + '" | status=' + j.status); });
+
+  // 2. the Alumni sources, by their exact strings
+  var sr = ashbyWrite_('/source.list', {});
+  var srcs = (((sr.json || {}).results) || []);
+  Logger.log('--- sources matching Alumni ---');
+  srcs.forEach(function (s) {
+    var title = s.title || s.name || '';
+    var parent = (s.sourceType && (s.sourceType.title || s.sourceType.name)) || '';
+    if (/alumni/i.test(title) || /alumni/i.test(parent)) Logger.log('SOURCE | "' + parent + '" : "' + title + '"');
+  });
+
+  // 3. who is already on the GENERAL FDE job, and where
+  var target = null;
+  jobs.forEach(function (j) { if (/general|generic/i.test(j.title || '')) target = j; });
+  if (!target) { Logger.log('No job whose title says General/Generic — pick from the list above.'); return; }
+  Logger.log('--- current population of "' + target.title + '" ---');
+  var cur2 = null, q = 0, n = 0;
+  do {
+    var b = { jobId: target.id, limit: 100 }; if (cur2) b.cursor = cur2;
+    var ar = ashbyWrite_('/application.list', b); var aj = ar.json || {};
+    (aj.results || []).forEach(function (a) {
+      n++;
+      var st = (a.currentInterviewStage && (a.currentInterviewStage.title || a.currentInterviewStage.name)) || a.status || '?';
+      Logger.log('ON JOB | ' + ((a.candidate && a.candidate.name) || '?') + ' | ' + st);
+    });
+    cur2 = aj.moreDataAvailable ? aj.nextCursor : null; q++;
+  } while (cur2 && q < 20);
+  Logger.log('people already on that job: ' + n);
+}
