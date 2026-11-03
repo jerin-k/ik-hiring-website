@@ -52,8 +52,15 @@ function buildEffectiveConfig(data) {
 export function renderAdmin(accessConfig, data, viewer) {
   // #198 (Jerin, 1 Oct 2026): a Full Access viewer gets Access Management ONLY, and only to read it.
   const ro = !!(viewer && viewer.adminReadOnly);
-  const deptNames = Object.keys(DEPT_TREE).sort();
-  const teamCount = Object.values(DEPT_TREE).reduce((s, t) => s + t.length, 0);
+  // #285a (3 Nov 2026): this panel now reads the tree the PIPELINE builds from Ashby's own /department.list
+  // on every refresh (data.deptTree). The hand-typed tree in dept-map.js stays only as the fallback for a
+  // cached dashboard.json written before #285a - it was three months stale when this was found, missing both
+  // Acceler departments and five Engineering teams. The strip above says WHICH source is in force, so the words
+  // are true before the first rebuild as well as after.
+  const deptLive = !!(data && data.deptTree && Object.keys(data.deptTree).length);
+  const DEPT_SRC = deptLive ? data.deptTree : DEPT_TREE;
+  const deptNames = Object.keys(DEPT_SRC).sort();
+  const teamCount = Object.values(DEPT_SRC).reduce((s, t) => s + t.length, 0);
   // #137b (Jerin, 15 Sep 2026 — option A of mock-up 2, with #138): four sub-tabs instead of two, and each opens on ONE slim strip — the
   // sync state, who published last, the page's one setting, Publish / Download — in place of the old stack of boxes. Pod & Capacity and
   // Scoring share the team-config strip (#mcStrip): they are one config file, so either Publish sends both. Quarter shows only where it
@@ -418,10 +425,10 @@ export function renderAdmin(accessConfig, data, viewer) {
       <div class="adm-card">
         <div class="adm-toolbar">
           <span class="adm-title">Departments &amp; Teams</span>
-          <span class="adm-count">${deptNames.length} departments · ${teamCount} teams · a read-only copy of Ashby's tree</span>
+          <span class="adm-count">${deptNames.length} departments · ${teamCount} teams · ${deptLive ? "straight from Ashby, with this page's data" : 'stored copy — rebuilds from Ashby on the next data refresh'}</span>
         </div>
         <div class="adm-dgrid">
-          ${deptNames.map(dept => { const t = DEPT_TREE[dept]; return `<article class="adm-dcard${t.length ? '' : ' is-empty'}">
+          ${deptNames.map(dept => { const t = DEPT_SRC[dept] || []; return `<article class="adm-dcard${t.length ? '' : ' is-empty'}">
             <header><b>${dept}</b><span>${t.length ? t.length + (t.length === 1 ? ' team' : ' teams') : 'No teams'}</span></header>
             ${t.length ? `<div class="adm-teams">${t.map(x => `<span class="adm-team">${x}</span>`).join('')}</div>` : ''}
           </article>`; }).join('')}

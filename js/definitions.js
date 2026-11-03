@@ -1051,8 +1051,9 @@ export const DEFINITIONS = {
       {
         heading: 'Reading it',
         items: [
-          ['Where reports get departments', 'From each job in Ashby, which already carries its department and team. This copy is only a fallback for older data files, so changing it moves no current number.'],
-          ['Keeping it current', 'It does not update itself. Edit <code>site/js/dept-map.js</code> when Ashby’s departments or teams change.'],
+          ['Where reports get departments', 'From each job in Ashby, which already carries its department and team. This list drives no figure anywhere, so what it shows moves no number.'],
+          ['Keeping it current', 'It keeps itself current. The list is rebuilt from Ashby every time the data refreshes, so a department or team added in Ashby appears here on the next rebuild — nothing is typed in by hand.'],
+          ['What it leaves out', 'Archived teams, and the Test department, which is a sandbox left out everywhere else on the site. A real department with no open jobs is still listed, because this is the org chart rather than a list of where we are hiring.'],
           ['Access Management', 'Does not use this copy. Its Depts picker lists the departments the jobs carry in Ashby, which is what a restriction is matched against.'],
         ]
       },
