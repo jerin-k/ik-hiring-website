@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-03T11:29:34.823Z",
+  "updatedAt": "2026-11-03T11:32:06.274Z",
   "notes": {
     "19982198": {
       "text": "HE : 0 , R1 - 1",
@@ -141,6 +141,11 @@
       "text": "Expecting a few demos by end of week \nNone scheduled",
       "by": "Deepti",
       "at": "2026-11-03T11:29:34.823Z"
+    },
+    "5a5f471f": {
+      "text": "5 responses so far , awaiting slot confirmation from candidates to schedule demos",
+      "by": "Deepti",
+      "at": "2026-11-03T11:32:06.273Z"
     }
   },
   "priorities": {
