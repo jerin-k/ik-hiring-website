@@ -221,9 +221,45 @@ function ashbyListAll_(endpoint, extraParams) {
 function fetchDepartmentMap_() {
   var depts = ashbyListAll_('/department.list');
   var map = {};
-  depts.forEach(function(d) { map[d.id] = { name: d.name, parentId: d.parentId || null }; });
+  depts.forEach(function(d) { map[d.id] = { name: d.name, parentId: d.parentId || null, archived: !!d.isArchived }; });
   return map;
 }
+// #285a (3 Nov 2026): the Admin tab's "Departments & Teams" panel used to read a tree typed in by hand on
+// 5 Aug 2026 (site/js/dept-map.js). It went stale silently: by 3 Nov it was missing both Acceler departments
+// (Acceler - Engineering and Acceler - External) and five Engineering teams (Applied AI,
+// Backend, Frontend, Fullstack, Software Testing). deptMap already holds EVERY department from
+// /department.list - a team is just a department with a parentId - so the tree is emitted from it and
+// nothing is hand-maintained any more.
+// Jerin chose this (3 Nov) over deriving it from the jobs: the panel is an ORG CHART, so a department with
+// no jobs - Curriculum, B2B, IT - must still appear.
+// EXCLUDED_DEPTS is honoured: 'Test' is the #37 sandbox, dropped everywhere else, so it is dropped here too;
+// a panel showing it would contradict every count on the site.
+// Archived entries are left out. Names are TRIMMED - Ashby really holds 'Acceler - Engineering ' with a
+// trailing space and ' B2B Operations' with a leading one.
+// A deeper level is flattened onto its TOP department, the same walk topDept() does, so
+// 'Engineering | Software Testing | Fullstack' puts both Software Testing and Fullstack under Engineering.
+function buildDeptTree_(deptMap, excluded) {
+  function top(id) {
+    var d = deptMap[id], g = 0;
+    while (d && d.parentId && deptMap[d.parentId] && g++ < 8) d = deptMap[d.parentId];
+    return d ? String(d.name || '').trim() : '';
+  }
+  var tree = {};
+  Object.keys(deptMap).forEach(function (id) {
+    var d = deptMap[id];
+    if (!d || d.archived) return;
+    var name = String(d.name || '').trim();
+    if (!name) return;
+    var parent = top(id);
+    if (!parent) return;
+    if (excluded && (excluded[parent] || excluded[name])) return;
+    if (!tree[parent]) tree[parent] = [];
+    if (name !== parent && tree[parent].indexOf(name) < 0) tree[parent].push(name);
+  });
+  Object.keys(tree).forEach(function (k) { tree[k].sort(function (a, b) { return a.localeCompare(b); }); });
+  return tree;
+}
+
 function fetchJobs_() { return ashbyListAll_('/job.list'); }
 function fetchOpenings_() { return ashbyListAll_('/opening.list'); }
 
@@ -1367,6 +1403,7 @@ function refreshDashboardData() {
   var dashboard = {
     stagePlans: safeStagePlans_(livePlanJobs_),   // #240c: the Admin Stage Mapping screen reads this
     stageLists: smPublish(),   // #240b: the site reads its stage lists from here, so there is one source
+    deptTree: buildDeptTree_(deptMap, EXCLUDED_DEPTS),   // #285a: the Admin org chart, straight from Ashby
     hireLinkResolution: hl241_.resolution,   // #241: one answer for which opening a joiner filled; null = not resolved this run
     lastUpdated: new Date().toISOString(), schemaVersion: 5, probe167: PROBE_167_, openingRows: openingRows, openingRowsFrom: OPENING_ROWS_FROM, openingTopicStats: openingTopicStats, ownedSeatsByRecruiterQ: computeOwnedSeatsByRecruiterQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})()), ownedSeatsBySourcerQ: computeOwnedSeatsBySourcerQ_(allOpenings, userNameById), ownedSeatsPairQ: computeOwnedSeatsPairQ_(allOpenings, (function(){var m={};recruitersList.forEach(function(r){if(r.userId)m[r.userId]=r.name;});return m;})(), userNameById), externalUsers: (function(){ var o=[]; for (var _u in roleById) if (roleById[_u] === 'External Recruiter' && userNameById[_u]) o.push(userNameById[_u]); return o.sort(); })(), scopeYear: SCOPE_YEAR, velocityDays: VELOCITY_DAYS,
     funnel: appResult.funnel,
