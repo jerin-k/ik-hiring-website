@@ -78,13 +78,22 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
   // #240d E: options withheld because they cannot change a number right now. Kept as a Set rather than
   // removed from the DOM, because what is offered changes with the period and has to come back.
   const hidden = new Set();
+  // #290a (Jerin, 4 Nov 2026): typing "Manager Sales" found NOTHING, because the job is written
+  // "Manager - Sales (US)" and this matched the typed text as ONE LITERAL RUN of characters. Worse, a
+  // DIFFERENT job is called exactly "Manager Sales" (Business - India, closed), so his own spelling
+  // returned one confident-looking wrong answer and the real job looked deleted.
+  // ✅ Both sides are now flattened to words — every run of punctuation becomes a space — and EVERY
+  // typed word must appear, in any order. So "manager sales", "sales manager" and "manager - sales (us)"
+  // all reach it. 🚨 This is the search behind EVERY dropdown on the site, not only Job.
+  const searchKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   function applyFilter(q) {
-    const needle = q.trim().toLowerCase();
+    const terms = searchKey(q).split(' ').filter(Boolean);
     let shown = 0;
     opts.forEach(o => {
       // \u26a0 HIDDEN WINS OVER THE SEARCH. Without this, typing in the filter box would put a withheld
       // option back on screen — the one place the two mechanisms can fight.
-      const hit = !hidden.has(o.dataset.v) && (!needle || o.textContent.toLowerCase().indexOf(needle) >= 0);
+      const hay = searchKey(o.textContent);
+      const hit = !hidden.has(o.dataset.v) && (!terms.length || terms.every(t => hay.indexOf(t) >= 0));
       o.style.display = hit ? '' : 'none';
       if (hit) shown++;
     });

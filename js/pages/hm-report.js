@@ -1682,7 +1682,47 @@ export function initHmFilters(data) {
   // Charts are built only when their panel is visible (Chart.js needs real dimensions),
   // so we (re)render the active panel on tab switch and on any global filter change.
   let activeTab = 'positions';
+  // #290b (Jerin, 4 Nov 2026): "show anything with an active opening in th eperiod - regardless of whether
+  // there is interview scheduled or now." 📏 MEASURED BEFORE BUILDING: that rule ALONE took the Job list
+  // 135 ➜ 56 but withheld NINE jobs whose interviews are drawn on this very chart (104 bookings), so a bar
+  // on screen would have had no entry to filter to — #290a again, from the other side. He settled it at 65:
+  // openings opened in the period, PLUS any job with an interview in it. 🗣 "Oh yes, 65 is correct."
+  // 🚨 ONLY WHILE INTERVIEW TRACTION IS ACTIVE. This ONE dropdown serves all eight sub-tabs, and measured
+  // against their own data the same rule would withhold 55 jobs that Panelists and Offer drop can still show.
+  // Scoping the other seven is #289's job, one sub-tab at a time, each against its own panel's data.
+  function tractionJobScope() {
+    const rg = rangeOf(document.getElementById('hmDateFrom'), document.getElementById('hmDateTo'),
+                       tractionQs.length ? tractionQs : hmQuarters());
+    const keep = new Set();
+    (data.openingRows || []).forEach(r => {
+      if (r && r.jobId8 && inRange(r.day, rg)) keep.add(String(r.jobId8).slice(0, 8));
+    });
+    const byJob = (data.interviewTraction || {}).byJobRoundDay || {};
+    for (const j8 in byJob) {
+      const id = String(j8).slice(0, 8);
+      if (keep.has(id)) continue;
+      const rounds = byJob[j8] || {};
+      let hit = false;
+      for (const r in rounds) {
+        for (const d in (rounds[r] || {})) if (inRange(d, rg)) { hit = true; break; }
+        if (hit) break;
+      }
+      if (hit) keep.add(id);
+    }
+    return keep;
+  }
+  // ⚠ setHidden can UNTICK a withheld option, so this runs BEFORE any panel reads getSelected().
+  function syncJobOptions() {
+    if (!msHmJob) return;
+    if (activeTab !== 'traction') { msHmJob.setHidden([]); return; }
+    const keep = tractionJobScope();
+    // 🚨 An option's value can be several ids comma-joined (two jobs sharing a name AND a department), so
+    // the entry survives if ANY of them is in scope — otherwise a job that IS in scope loses its only entry.
+    msHmJob.setHidden(jobOptions.filter(o => !String(o.v).split(',').some(id => keep.has(id))).map(o => o.v));
+  }
+
   function renderActive() {
+    syncJobOptions();   // #290b — before anything reads the Job pick
     if (activeTab === 'positions') renderSection1();
     else if (activeTab === 'joiningpending') { renderJoiningPending(); renderJPDrops(); }   // #130b · #273
     else if (activeTab === 'joiners') renderJoiners();                 // #130c

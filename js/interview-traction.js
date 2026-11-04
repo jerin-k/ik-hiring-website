@@ -233,14 +233,21 @@ function chartSvg(slots) {
     const bw = Math.min(26, Math.max(5, iw * 0.56)), bx = x0 + (iw - bw) / 2;
     if (sl.quiet && tot === 0) s += `<rect x="${x0}" y="${padT}" width="${iw}" height="${plotH}" fill="var(--it-quiet)"/>`;
     if (tot === 0) {
-      s += `<rect x="${bx}" y="${base - 2}" width="${bw}" height="2" fill="var(--it-zero)"/>`
+      s += `<rect x="${bx}" y="${base - 2}" width="${bw}" height="2" fill="var(--it-zero)"><title>${esc(sl.lab + ' ' + sl.sub + ' · 0 booked')}</title></rect>`
          + `<text x="${bx + bw / 2}" y="${base - 6}" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-weight="600">0</text>`;
     } else {
+      // #291 (Jerin, 4 Nov 2026): "show the split of the count in a chart bar - when we hover over it".
+      // The per-slice numbers were already printed, but a bare number never said WHICH outcome it was — you
+      // had to match its colour against the legend by eye. Every slice now carries the WHOLE split, so one
+      // hover anywhere on the bar answers it, and you no longer have to find the right slice first.
+      // ⚠ This REPLACES the old one-line title ("Select: 10") on purpose. Native <title>: no tooltip code.
+      const tip = `${sl.lab} ${sl.sub} · ${tot} booked\n`
+        + SERIES.map((se, i) => (sl.v[i] > 0 ? `${se.key}: ${sl.v[i]}` : null)).filter(Boolean).join('\n');
       let acc = 0; const outside = [];
       for (let i = 0; i < NSLOT; i++) {
         const v = sl.v[i]; if (v <= 0) continue;
         const hh = (v / max) * plotH, yy = y(acc + v);
-        s += `<rect x="${bx}" y="${yy}" width="${bw}" height="${hh}" fill="${SERIES[i].col}"><title>${SERIES[i].key}: ${v}</title></rect>`;
+        s += `<rect x="${bx}" y="${yy}" width="${bw}" height="${hh}" fill="${SERIES[i].col}"><title>${esc(tip)}</title></rect>`;
         if (hh >= 11) s += `<text x="${bx + bw / 2}" y="${yy + hh / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#fff" font-weight="600">${v}</text>`;
         else outside.push({ y: yy + hh / 2, y0: yy + hh / 2, v, col: SERIES[i].col });
         acc += v;
