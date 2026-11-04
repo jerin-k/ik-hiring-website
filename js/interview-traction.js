@@ -11,6 +11,7 @@
 // the four buckets; this file only ADDS UP and DRAWS. The chart computes nothing of its own.
 import { defsBlock } from './definitions.js';
 import { scrollToLatest } from './grid-shade.js';   // #231b
+import { jobLookup } from './job-filter.js';   // #291c: the role names behind a bar
 
 const SERIES = [
   { key: 'Select',                  col: 'var(--it-sel)' },
@@ -95,13 +96,25 @@ function dayStart(scope) {
 // recruiter -> role -> round -> day store instead, so its Recruiter and Role chips both bite.
 // 🔑 ONE function, deliberately. Hiring Manager and Overall Efficiency pass neither flag and are
 // byte-for-byte unaffected — copying this into the Recruiter page is exactly the drift Rule 3 forbids.
-function daysForRound(tr, round, scope) {
+function daysForRound(tr, round, scope, jobOut) {
   const out = {};
-  const take = (days) => {
+  const take = (days, j8) => {
     if (!days) return;
     for (const d in days) {
       if (d < scope.from || d > scope.to) continue;
       const v = days[d], c = out[d] || (out[d] = zeroSlots());
+      // #291c (Jerin, 4 Nov 2026): "i want to know which role the count comes from". The tally is filled in
+      // THIS loop, under the same window and the same scope tests - not in a second pass that could drift.
+      // 🔑 That is what makes the role lines add up to the bar's own total by construction: the chart
+      // already skips '(no job)' and anything the Job pick excludes, so there is no residue to explain.
+      if (jobOut) {
+        const jm = jobOut[d] || (jobOut[d] = {});
+        const jc = jm[j8] || (jm[j8] = zeroSlots());
+        // 🔑 THE SAME future-day rule as the bar, two lines up. The role tally is per OUTCOME, so it has to
+        // split exactly where the bar splits, or a slice would name roles that are not in it.
+        if (d > todayKey()) jc[NSLOT - 1] += (v[0] || 0) + (v[1] || 0) + (v[2] || 0) + (v[3] || 0);
+        else addInto(jc, v);
+      }
       // #245: THE WHOLE of a future day goes to "booked, not yet held" - not just its awaiting count.
       // Nothing dated after today has happened, so no part of it is an outcome. Measured 19 Oct 2026: all
       // 55 future bookings were already awaiting-only, so this moves no number today; it is here so that a
@@ -120,7 +133,7 @@ function daysForRound(tr, round, scope) {
       for (const j8 in jobs) {
         if (!j8 || j8 === '(no job)') continue;
         if (scope.jobOk && !scope.jobOk(j8)) continue;
-        take(jobs[j8][round]);
+        take(jobs[j8][round], j8);
       }
     }
     return out;
@@ -132,7 +145,7 @@ function daysForRound(tr, round, scope) {
     // drops by design (#37). Test interviews must never reach a business number.
     if (!j8 || j8 === '(no job)') continue;
     if (scope.jobOk && !scope.jobOk(j8)) continue;
-    take(byJob[j8][round]);
+    take(byJob[j8][round], j8);
   }
   return out;
 }
@@ -164,7 +177,10 @@ function gapNote(tr, picked, scope) {
 
 // Turn those days into the slots the chart draws. EVERY slot in the window is present, including the empty
 // ones — Jerin, 7 Oct: "for the Zero days, give me a Zero bar". A missing day and a quiet day look different.
-function slotsFor(dayMap, view, scope) {
+// #291c: `jobMap` ({day: {job8: n}}) rides alongside and is folded up the SAME way as the bar values, so a
+// week bar's roles are the roles of exactly the days that bar draws.
+const mergeJobs = (target, src) => { for (const j in (src || {})) addInto(target[j] || (target[j] = zeroSlots()), src[j]); };
+function slotsFor(dayMap, view, scope, jobMap) {
   const slots = [];
   if (view === 'day') {
     const start = dayStart(scope);
@@ -172,32 +188,35 @@ function slotsFor(dayMap, view, scope) {
       const v = dayMap[d] || zeroSlots();
       const dow = new Date(d + 'T00:00:00Z').getUTCDay();
       slots.push({ lab: d.slice(8), sub: MON[Number(d.slice(5, 7)) - 1], v, quiet: dow === 0 || dow === 6,
+                   jobs: (jobMap && jobMap[d]) || {},
                    ahead: d > todayKey() });   // #245: for the today divider below
     }
     return slots;
   }
   if (view === 'month') {
-    const byMon = {};
+    const byMon = {}, jMon = {};
     for (const d in dayMap) {
       const k = d.slice(0, 7), c = byMon[k] || (byMon[k] = zeroSlots());
       addInto(c, dayMap[d]);
+      mergeJobs(jMon[k] || (jMon[k] = {}), jobMap && jobMap[d]);
     }
     // Every month across the range, so a silent month is a visible gap rather than a missing column.
     let cur = scope.from.slice(0, 7);
     const last = scope.to.slice(0, 7);
     while (cur <= last) {
       slots.push({ lab: MON[Number(cur.slice(5, 7)) - 1], sub: cur.slice(0, 4),
-                   v: byMon[cur] || zeroSlots(), quiet: false });
+                   v: byMon[cur] || zeroSlots(), jobs: jMon[cur] || {}, quiet: false });
       let yy = Number(cur.slice(0, 4)), mm = Number(cur.slice(5, 7)) + 1;
       if (mm > 12) { mm = 1; yy++; }
       cur = yy + '-' + pad2(mm);
     }
     return slots;
   }
-  const byWeek = {};
+  const byWeek = {}, jWeek = {};
   for (const d in dayMap) {
     const k = isoWeek(d), c = byWeek[k] || (byWeek[k] = zeroSlots());
     addInto(c, dayMap[d]);
+    mergeJobs(jWeek[k] || (jWeek[k] = {}), jobMap && jobMap[d]);
   }
   const ks = Object.keys(byWeek).map(Number);
   if (!ks.length) return [];
@@ -207,12 +226,41 @@ function slotsFor(dayMap, view, scope) {
   // the bar - printing it twice told you nothing and cost the one line that could carry the calendar.
   for (let w = Math.min(...ks); w <= Math.max(...ks); w++) {
     slots.push({ lab: 'W' + w, sub: MON[isoWeekThursday(yr, w).getUTCMonth()],
-                 v: byWeek[w] || zeroSlots(), quiet: false });
+                 v: byWeek[w] || zeroSlots(), jobs: jWeek[w] || {}, quiet: false });
   }
   return slots;
 }
 
-function chartSvg(slots) {
+// #291c (Jerin, 4 Nov 2026) — WHICH ROLES ARE BEHIND THIS SLICE.
+// 🗣 *"Hover over it & i want to know which role the count comes from?"*, then, on being offered an outcome
+//    summary line: *"Outcome ins tnecssary cz the hover should work on the posrtion of the bar, not for the
+//    whole bar dude."*
+// 🔑 THE DESIGN THAT ANSWERS BOTH: every SLICE carries its own tooltip — which outcome it is, how many,
+//    and the roles behind THAT number. The outcome never has to be listed, because the slice you are
+//    pointing at IS the outcome. #291's whole-bar split and the summary line both fall away.
+// ⚠ He named the limit himself: *"If we filter it by job, this feature may not make sense. But more often
+//    than not, it'll help."* With one job picked every line is that role; harmless, just redundant.
+// 🔑 WHY IT IS CAPPED, measured on the live file 4 Nov 2026 (Jul-Dec, R1 + TA Screen), per BAR — a slice
+//    can only be shorter, so this is the worst case:
+//      day view   — median 3 roles a bar, max 13; only 18% carry more than six
+//      week view  — median 4, max 24; 46% carry more than six
+//      month view — median 11, max 33
+//    Day view is where this is read and it is short there. Month view would otherwise print 33 lines into a
+//    tooltip, so the list stops at six BY SIZE and says how many it did not name - never a silent truncation.
+const TIP_ROLES = 6;
+function roleLines(sl, i, nameOf) {
+  const rows = Object.keys(sl.jobs || {})
+    .filter(j => ((sl.jobs[j] || [])[i] || 0) > 0)
+    .map(j => [nameOf ? nameOf(j) : j, sl.jobs[j][i]])
+    .sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+  if (!rows.length) return '(role not recorded)';
+  const out = rows.slice(0, TIP_ROLES).map(([t, n]) => `${t}: ${n}`);
+  const rest = rows.length - TIP_ROLES;
+  if (rest > 0) out.push(`+${rest} more role${rest === 1 ? '' : 's'}`);
+  return out.join('\n');
+}
+
+function chartSvg(slots, nameOf) {
   const W = 1120, H = 186, padL = 34, padR = 8, padT = 18, padB = 32;
   const n = slots.length || 1, iw = (W - padL - padR) / n;
   let max = 0;
@@ -241,12 +289,14 @@ function chartSvg(slots) {
       // had to match its colour against the legend by eye. Every slice now carries the WHOLE split, so one
       // hover anywhere on the bar answers it, and you no longer have to find the right slice first.
       // ⚠ This REPLACES the old one-line title ("Select: 10") on purpose. Native <title>: no tooltip code.
-      const tip = `${sl.lab} ${sl.sub} · ${tot} booked\n`
-        + SERIES.map((se, i) => (sl.v[i] > 0 ? `${se.key}: ${sl.v[i]}` : null)).filter(Boolean).join('\n');
       let acc = 0; const outside = [];
       for (let i = 0; i < NSLOT; i++) {
         const v = sl.v[i]; if (v <= 0) continue;
         const hh = (v / max) * plotH, yy = y(acc + v);
+        // 🗣 Jerin, 4 Nov 2026: *"the hover should work on the posrtion of the bar, not for the whole bar"*.
+        // So each SLICE answers for itself - which outcome it is, how many, and the roles behind THAT number.
+        // 🔑 That is also why no outcome summary is needed: the slice you are pointing at IS the outcome.
+        const tip = `${sl.lab} ${sl.sub} · ${SERIES[i].key}: ${v}\n` + roleLines(sl, i, nameOf);
         s += `<rect x="${bx}" y="${yy}" width="${bw}" height="${hh}" fill="${SERIES[i].col}"><title>${esc(tip)}</title></rect>`;
         if (hh >= 11) s += `<text x="${bx + bw / 2}" y="${yy + hh / 2 + 3}" text-anchor="middle" font-size="8.5" fill="#fff" font-weight="600">${v}</text>`;
         else outside.push({ y: yy + hh / 2, y0: yy + hh / 2, v, col: SERIES[i].col });
@@ -336,6 +386,10 @@ function chartSvg(slots) {
 // `opts.onQuarters(qs)` lets the page re-bound its date inputs to whatever is ticked here. Nothing else on
 // the tab is touched: the page hides its own Quarter chip while this sub-tab is open.
 export function mountInterviewTraction(host, data, getScope, opts) {
+  // #291c: the SAME name the Job dropdown shows, from the one lookup in job-filter.js - a role must not read
+  // one way in the filter and another in the tooltip. An id with no entry keeps a readable fallback.
+  const jobNames = jobLookup(data);
+  const roleName = (j8) => (jobNames[String(j8).slice(0, 8)] || {}).title || `Unknown role (${String(j8).slice(0, 8)})`;
   if (!host) return () => {};
   const tr = data && data.interviewTraction;
   if (!tr || !tr.byJobRoundDay) {
@@ -476,7 +530,8 @@ export function mountInterviewTraction(host, data, getScope, opts) {
     if (aheadKey) aheadKey.hidden = !(scope.to > today);
     let html = gapNote(tr, picked, scope), hidden = 0;
     const blocks = picked.map(r => {
-      const slots = slotsFor(daysForRound(tr, r, scope), state.view, scope);
+      const jobMap = {};   // #291c: filled by the same traversal that builds the bars
+      const slots = slotsFor(daysForRound(tr, r, scope, jobMap), state.view, scope, jobMap);
       let tot = 0;
       slots.forEach(s => { tot += slotSum(s.v); });
       return { r, slots, tot };
@@ -489,7 +544,7 @@ export function mountInterviewTraction(host, data, getScope, opts) {
       // 22% on the Throughput tab, and a number two panels disagree about should not be stated as fact on
       // either of them. The bars still show the split; nothing is hidden, it is just not asserted as a rate.
       html += `<p class="it-meta">${b.tot} booked</p>`
-            + `<div class="it-scroller">${chartSvg(b.slots)}</div></div>`;
+            + `<div class="it-scroller">${chartSvg(b.slots, roleName)}</div></div>`;
     });
     if (hidden) html += `<p class="it-empty">${hidden} round${hidden === 1 ? '' : 's'} with no interviews in this period ${hidden === 1 ? 'is' : 'are'} hidden.</p>`;
     chartsEl.innerHTML = html;
