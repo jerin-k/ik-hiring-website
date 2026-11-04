@@ -1397,7 +1397,7 @@ function orDecide_(id, decision, note, edit) {
 function orQueue() {
   var me = orUser_();
   if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can read the queue' };
-  var rows = orReadAll_(), out = [], highest = 0;
+  var rows = orReadAll_(), out = [], highest = 0, qmeta = [];   // #288: qmeta stays SERVER-SIDE
   rows.forEach(function (rq) {
     (rq.openings || []).forEach(function (o) {
       var m = /^IK-(\d+)/.exec(String(o.name || ''));
@@ -1416,6 +1416,7 @@ function orQueue() {
         // There is no read-back either (orCreated with an empty array is refused), and two requests can share a job,
         // open date and role type, so the remainder cannot be worked out by looking at Ashby. These three fields are
         // what let a run resume a half-finished request instead of duplicating it.
+        qmeta.push({ id: rq.id, slackTs: rq.slackTs || '' });   // #288: the thread to speak in, never sent to the bot
         out.push({ id: rq.id, name: rq.name, rows: rws,
           created: made, createdCount: made.length, remaining: Math.max(0, rws.length - made.length),
           count: rq.count, mix: rq.mix, recruiter: rq.recruiter, sourcer: rq.sourcer,
@@ -1425,6 +1426,9 @@ function orQueue() {
           jobId: rq.jobId, jobTitle: rq.jobTitle, department: rq.department,
           decidedBy: rq.decidedBy, decidedAt: rq.decidedAt, requesterName: rq.requesterName });
       });
+  // #288: EVERY run asks for the queue first, idle ones included, so this is the one place that hears from
+  // the bot on every single run - and it costs the bot nothing. It can never throw into this response.
+  orBotHeartbeat_(out, qmeta);
   return { ok: true, queue: out, nextNumber: highest ? highest + 1 : null };
 }
 
@@ -1696,6 +1700,201 @@ function orSlackNew_(rq) {
     return ts;
   } catch (e) { Logger.log('#112 Slack failed: ' + e.message); return ''; }
 }
+// ===== #288 (Jerin, 4 Nov 2026) — THE BOT'S HEARTBEAT, AND THE TWO SILENCES IT HAS TO BREAK =====
+//
+// 🗣 *"the oopening request schedule was stuck since 28th & no intimation whatsover. How do we avoid such
+//    instances."* Then, on where it should speak: *"May be msg in the same OL aproval thread - yea, that will
+//    be perfect."*
+//
+// 🚨 TWO DIFFERENT FAILURES, and the LOUD one was never the problem. Measured from the task's own run history:
+//    1. SILENCE — a run began 28 Oct 21:28 IST and simply sat there until 3 Nov 18:48. Status "running", no
+//       error, nothing to see. Six days. A watchdog that only looks for failures would sail straight past it.
+//       (The run that genuinely FAILED, an hour earlier, was visible in the history all along.)
+//    2. A REQUEST GOING NOWHERE — on 4 Nov OR-053 was offered to the bot four runs running and put down each
+//       time, correctly and for a good reason, but silently. The bot was perfectly healthy; the request just
+//       sat there.
+//
+// 🔑 WHY THE HEARTBEAT IS FREE. Step 1 of every run — idle runs included — asks this web app for the queue.
+//    So the server already hears from the bot every hour and NOTHING IN THE BOT CHANGES.
+// 🔑 WHY THE TWO ALARMS LIVE IN DIFFERENT PLACES. A skipped request means the bot is ALIVE, so the server
+//    hears from it and can speak up on the spot, here. Silence means it is NOT alive, so only something on
+//    Google's own clock can notice — that half rides on the scheduled refresh, which runs whether or not the
+//    Mac is even switched on. A watcher inside the Claude app could never report the app being shut.
+// ⚠ A stall only HURTS when something is waiting, and when something is waiting there is always a thread to
+//    say so in. Nothing waiting ⇒ e-mail only, no Slack: an empty queue going quiet harms nobody.
+// 🚨 Never let any of this break the thing it is watching: every alarm is wrapped, and a failure is logged.
+
+var OR_BOT_STATE_KEY = 'OR_BOT_STATE';
+var OR_STALL_WORK_MINUTES = 180;   // 3 hours of the bot's OWN working day (Jerin, 4 Nov 2026)
+var OR_SKIP_RUNS = 3;              // offered this many times running with nothing new created
+var OR_DAY_START_H = 8, OR_DAY_END_H = 21;   // the bot's cron is 0 8-21, every day (#254)
+
+function orBotState_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(OR_BOT_STATE_KEY) || '{}') || {}; }
+  catch (e) { Logger.log('#288 state unreadable, starting clean: ' + e); return {}; }
+}
+function orBotSaveState_(st) {
+  try { PropertiesService.getScriptProperties().setProperty(OR_BOT_STATE_KEY, JSON.stringify(st)); }
+  catch (e) { Logger.log('#288 state NOT saved: ' + e); }
+}
+
+// Minutes between two instants that fall inside the bot's working window, in India time. Overnight does not
+// count, which is the whole point: 21:00 to 08:00 is silence by design, not a fault.
+// ⚠ Walks in 15-minute steps rather than doing calendar arithmetic, because the arithmetic is what gets the
+//   DST-free-but-half-hour-offset India zone wrong. Capped so a never-set or absurd stamp cannot spin.
+function orWorkMinutes_(from, to) {
+  var tz = 'Asia/Calcutta', mins = 0, steps = 0;
+  var cur = from.getTime(), end = to.getTime();
+  while (cur < end && steps < 4000) {          // 4000 steps = ~41 days, far past anything meaningful
+    var h = Number(Utilities.formatDate(new Date(cur), tz, 'H'));
+    if (h >= OR_DAY_START_H && h < OR_DAY_END_H) mins += 15;
+    cur += 15 * 60000; steps++;
+  }
+  return steps >= 4000 ? 99999 : mins;
+}
+
+// The admins who get told. #163 builds this same list from the PUBLISHED access.json; both must stay in step —
+// there is deliberately no second list of names to maintain.
+function orBotAdmins_() {
+  try {
+    var access = loadDriveJson_('access.json');
+    return (((access && access.users) || []).filter(function (u) {
+      return u && u.email && String(u.role || '').toLowerCase() === 'admin';
+    }).map(function (u) { return u.email; }));
+  } catch (e) { Logger.log('#288 no admins: ' + e); return []; }
+}
+function orBotEmail_(subject, html) {
+  try {
+    var to = orBotAdmins_();
+    if (!to.length) { Logger.log('#288 NO EMAIL: no admin in access.json'); return; }
+    MailApp.sendEmail({ to: to.join(','), subject: subject, htmlBody: html, name: 'IK Hiring Dashboard' });
+    Logger.log('#288 email sent to ' + to.length + ' admin(s)');
+  } catch (e) { Logger.log('#288 email FAILED: ' + e); }
+}
+function orBotHours_(mins) {
+  var h = Math.floor(mins / 60);
+  return h < 1 ? mins + ' minutes' : (h + ' hour' + (h === 1 ? '' : 's'));
+}
+
+// ---- Called by orQueue() on EVERY run, idle ones included. This is the heartbeat. ----
+// The 'queue' arg is what the bot is being handed; 'meta' carries the thread id for each, which never leaves the server.
+function orBotHeartbeat_(queue, meta) {
+  try {
+    var st = orBotState_(), now = new Date();
+    var threadOf = {};
+    (meta || []).forEach(function (m) { threadOf[m.id] = m.slackTs || ''; });
+
+    st.seen = now.toISOString();
+    st.waiting = queue.length;
+    // The OLDEST waiting request is the one a stall is actually hurting, and it carries the thread to say so in.
+    st.oldest = queue.length ? { id: queue[0].id, name: queue[0].name || '', ts: threadOf[queue[0].id] || '' } : null;
+
+    // ---- silence #2: a request offered again and again with nothing new created ----
+    var skips = st.skips || (st.skips = {}), live = {};
+    queue.forEach(function (q) {
+      live[q.id] = 1;
+      var s = skips[q.id] || (skips[q.id] = { n: 0, made: -1, told: false });
+      // Real progress resets everything - a big request worked over several runs is not stuck.
+      if (s.made !== q.createdCount) { s.n = 0; s.made = q.createdCount; s.told = false; }
+      s.n += 1;
+    });
+    // Off the queue means done, cancelled or sent back. Forget it, so the record cannot grow for ever.
+    Object.keys(skips).forEach(function (id) { if (!live[id]) delete skips[id]; });
+
+    // The bot is plainly alive - it is talking to us right now - so this alarm can speak on the spot.
+    queue.forEach(function (q) {
+      var s = skips[q.id];
+      if (!s || s.told || s.n < OR_SKIP_RUNS) return;
+      if (orBotSayStuck_(q, s.n, threadOf[q.id] || '')) s.told = true;
+    });
+
+    // #288c: the bot is talking to us right now, so let ITS hourly run be what switches the watchdog on -
+    // the install must not have to wait for a refresh. No-ops once the trigger exists.
+    try { ensureBotWatchClock_(); } catch (eC) { Logger.log('#288c clock ensure failed: ' + eC); }
+    // Coming back to life closes a stall on its own, without waiting for the next refresh.
+    if (st.alarm && st.alarm.since) { orBotSayBack_(st); st.alarm = {}; }
+    orBotSaveState_(st);
+  } catch (e) { Logger.log('#288 heartbeat failed (the queue is unaffected): ' + e); }
+}
+
+function orBotSayStuck_(q, n, ts) {
+  var waited = n + ' runs';
+  var left = (q.remaining == null) ? '' : (' ' + q.remaining + ' of ' + (q.rows ? q.rows.length : q.count) + ' still to create.');
+  var msg = ':warning: *' + q.id + '* has been picked up ' + waited + ' running and put down each time, so nothing new has been created.'
+    + left + '\nIt may be waiting on something only a person can settle. <' + OR_ASSETS + '/requests?id=' + q.id + '|Open the request>';
+  try {
+    if (ts) { orSlackPost_(msg, ts); }   // in its OWN approval thread (Jerin, 4 Nov) - no thread, no post
+    orBotEmail_('Opening requests: ' + q.id + ' is not getting made',
+      '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">'
+      + '<p style="margin:0 0 12px"><strong>' + q.id + '</strong> has been offered to the opening-request routine ' + waited
+      + ' running, and each run stopped without creating anything.' + left + '</p>'
+      + '<p style="margin:0 0 12px;color:#6b7391">The routine itself is running normally. This is the request, not the job.</p>'
+      + '<p style="margin:0"><a href="' + OR_ASSETS + '/requests?id=' + q.id + '" style="color:#4E6BA6">Open the request</a></p></div>');
+    return true;
+  } catch (e) { Logger.log('#288 stuck notice failed for ' + q.id + ': ' + e); return false; }
+}
+
+// ---- Called by the SCHEDULED REFRESH. This half runs on Google's clock, so it works when the Mac is off. ----
+// 🚨 Wire this in LAST: a saved call site is live code, and with no heartbeat recorded yet there is nothing to
+//    compare against (which is why a missing stamp says nothing at all rather than crying wolf).
+function orBotWatch_() {
+  try {
+    var st = orBotState_();
+    if (!st.seen) { Logger.log('#288 no heartbeat recorded yet - saying nothing'); return; }
+    var now = new Date(), gap = orWorkMinutes_(new Date(st.seen), now);
+    var al = st.alarm || (st.alarm = {});
+    var tz = 'Asia/Calcutta';
+    var lastSeen = Utilities.formatDate(new Date(st.seen), tz, 'd MMM, h:mm a');
+
+    if (gap < OR_STALL_WORK_MINUTES) {
+      if (al.since) { orBotSayBack_(st); st.alarm = {}; orBotSaveState_(st); }
+      return;
+    }
+    // Still down. Speak ONCE when it goes quiet, then at most once a day - his condition was no noise nobody reads.
+    var toldAt = al.lastTold ? new Date(al.lastTold).getTime() : 0;
+    if (al.since && (now.getTime() - toldAt) < 20 * 3600 * 1000) return;
+    var first = !al.since;
+    al.since = al.since || now.toISOString();
+    al.lastTold = now.toISOString();
+
+    var waiting = st.waiting || 0;
+    var head = 'The opening-request routine has not checked in for ' + orBotHours_(gap) + ' of its working day.';
+    var lead = waiting
+      ? head + ' ' + waiting + ' approved request' + (waiting === 1 ? ' is' : 's are') + ' waiting for it.'
+      : head + ' Nothing is waiting, so nothing is being held up - but a request raised now would not be picked up.';
+    // Only speak in Slack when something is actually waiting, and then in THAT request's own thread.
+    if (waiting && st.oldest && st.oldest.ts) {
+      al.ts = st.oldest.ts;
+      try {
+        orSlackPost_(':rotating_light: *The opening-request routine has gone quiet.* Last heard from it ' + lastSeen
+          + ' IST, ' + orBotHours_(gap) + ' of working time ago.\nThis request is approved and still waiting. '
+          + '<' + OR_ASSETS + '/requests?id=' + st.oldest.id + '|Open the request>', st.oldest.ts);
+      } catch (e) { Logger.log('#288 Slack stall notice failed: ' + e); }
+    }
+    orBotEmail_((first ? 'Opening requests: the routine has gone quiet' : 'Opening requests: still quiet'),
+      '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">'
+      + '<p style="margin:0 0 12px">' + lead + '</p>'
+      + '<p style="margin:0 0 12px;color:#6b7391">Last heard from it ' + lastSeen + ' IST. It runs hourly between 8 AM and 9 PM, '
+      + 'and only while the Claude desktop app is open - so the usual cause is the app being closed or the Mac asleep.</p>'
+      + '<p style="margin:0"><a href="' + OR_ASSETS + '/requests" style="color:#4E6BA6">Open the requests page</a></p></div>');
+    orBotSaveState_(st);
+  } catch (e) { Logger.log('#288 watch failed (the refresh is unaffected): ' + e); }
+}
+
+function orBotSayBack_(st) {
+  try {
+    var al = st.alarm || {};
+    if (!al.since) return;
+    var tz = 'Asia/Calcutta';
+    var downFrom = Utilities.formatDate(new Date(al.since), tz, 'd MMM, h:mm a');
+    if (al.ts) orSlackPost_(':white_check_mark: The opening-request routine is running again.', al.ts);
+    orBotEmail_('Opening requests: the routine is running again',
+      '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">'
+      + '<p style="margin:0 0 12px">The opening-request routine has checked in again. It was reported quiet from '
+      + downFrom + ' IST.</p></div>');
+  } catch (e) { Logger.log('#288 recovery notice failed: ' + e); }
+}
+
 function orSlackPost_(text, threadTs) {
   var body = { channel: OR_SLACK_CHANNEL, text: text, unfurl_links: false };
   if (threadTs) body.thread_ts = threadTs;
