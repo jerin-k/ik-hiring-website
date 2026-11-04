@@ -146,6 +146,13 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
     const next = new Set((values || []).map(String));
     let same = next.size === hidden.size;
     if (same) for (const v of next) if (!hidden.has(v)) { same = false; break; }
+    // 🚨 #290f (measured 4 Nov 2026) — WAS THIS CONTROL SAYING "ALL" BEFORE THE SCOPE MOVED?
+    // This function only ever DELETED ticks. That is right when the list NARROWS and wrong when it WIDENS: a
+    // sub-tab offering 42 jobs left `selected` holding 42, and the next sub-tab offering 135 then read those
+    // 42 as a REAL filter. Nothing threw and nothing was logged — the label was the only tell, "Job: 42
+    // selected" where it had said "Job: All". The #279 guarantee is that every box ticked means NO
+    // RESTRICTION, so it has to be re-established against the options now ON OFFER, not the earlier set.
+    const wasAll = everythingTicked();
     let cleared = false;
     hidden.clear(); next.forEach(v => hidden.add(v));
     hidden.forEach(v => {
@@ -155,6 +162,14 @@ export function makeMultiSelect(container, label, options, onChange, initial) {
       if (box) box.checked = false;
     });
     selectableTotal = norm.length - hidden.size;
+    if (wasAll) {
+      // Re-tick everything on offer, the same way the Select all button does — it respects `hidden` too.
+      // ⚠ ONLY when it meant All before. A real pick of three jobs keeps its three, minus any that have
+      // gone out of scope; re-ticking there would silently widen what the user actually chose.
+      norm.forEach(o => { if (!hidden.has(o.v)) selected.add(o.v); });
+      opts.forEach(o => { const i = o.querySelector('input'); if (i) i.checked = selected.has(i.value); });
+      cleared = false;   // it said All before and says All now, so nothing was taken away from the user
+    }
     if (!same || cleared) { applyFilter(search ? search.value : ''); paint(); }
     return cleared;
   }

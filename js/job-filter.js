@@ -1,3 +1,4 @@
+import { inRange, REPORTING_START } from './period.js';   // #290d: peopleJobIds dates the people it admits
 // ===== #172c (25 Sep 2026) — the Job filter, keyed by JOB ID =====
 //
 // 🚨 WHY THIS EXISTS. Every Job dropdown used to be a de-duplicated list of job NAMES, and every panel then
@@ -109,4 +110,74 @@ export function matchesJobRow(sel, data, jid, dept, title) {
   if (!sel || !sel.length) return true;
   if (jid) return matchesJob(sel, jid);
   return matchesJobDeptTitle(sel, data, dept, title);
+}
+
+// ===== #290d (Jerin, 3 Nov 2026) — THE JOBS A SUB-TAB CAN OFFER =====
+//
+// 🚨 WHY THIS EXISTS. Every Job dropdown was built ONCE, from every job with an application in the
+// current-year slice, while the panels under it follow #125 and list only jobs with an opening OPENED in the
+// period. Two rules over one control: on Q4 2026 the list offered 135 jobs where Momentum could draw 42, so
+// long-closed roles crowded the search and the role you wanted was hard to find.
+// 🗣 Jerin, 3 Nov 2026: "show anything with an active opening in th eperiod - regardless of whether there
+//    is interview scheduled or now", on every sub-tab except Interview Traction and Joining Pipeline.
+//
+// ⚠ RULE 13'S MIRROR — A ROW NOBODY CAN FILTER TO. Withholding an option while the panel beside it still
+//   DRAWS that job is the same defect the other way round, and three families of panel are deliberately NOT
+//   #125-scoped. Each says so in its own words:
+//     · Position Fulfilment ADDS a row for a role with people against it and no opening in the period —
+//       "restricting to openings showed 88 of 166 pending people and hid 45 of SME - India's 46"
+//       (hm-report.js, whose inScope() tests department and the Job pick, never the #125 set).
+//     · Joiners and Joining Pipeline read offerEvents / joiningPendingCases straight, with no subtraction.
+//     · Joining Conversion counts an earlier-quarter opening and Sourcing Mix counts EVERY joiner by settled
+//       rule — both call deptJobs() WITHOUT its openedInPeriod flag, as that function's own comment records.
+//   So those panels get the #125 set PLUS the jobs their own people bring inside the window.
+//
+// 🚨 AND THE PEOPLE MUST BE DATED. Measured on the live data, Q4 2026, 4 Nov 2026:
+//      every job with an application this year ..... 135   ← what the dropdown used to offer
+//      #125 openings in the period ................. 42    ← the activity panels
+//      + people DATED to the window ................ 44    ← the position / people panels
+//      + the same people with the dates taken out .. 113   ← hands the whole problem back
+//   Two extra options, and both of them draw rows. An undated union is not a safer version of this rule: it
+//   is the bug wearing the rule's clothes.
+export function peopleJobIds(data, rg, per) {
+  const out = new Set();
+  const add = (id) => { if (id) out.add(String(id).slice(0, 8)); };
+  const inQ = (q) => !!q && (!per || per.indexOf(q) >= 0);
+  const day = (s) => (s ? String(s).slice(0, 10) : '');
+  // An offer reaches a panel by the START date (Joiners, Sourcing Mix, the joiner list inside Fulfilment), by
+  // the quarter it is attributed to (Joining Conversion's Offered) or by its OPENING's quarter (#203). Any one
+  // of the three puts that job on screen, so any one of them has to keep its entry in the list.
+  ((data && data.offerEvents) || []).forEach(e => {
+    if (inRange(day(e.startDate), rg) || inRange(day(e.offerCreatedAt), rg)
+      || inQ(e.attrQuarter) || inQ(e.openingQuarter)) add(e.jobId8);
+  });
+  // 🚨 Joining Pipeline is LIVE (#237) and ignores the date filter, so EVERY case counts whatever its DOJ.
+  // openingQuarter is absent on most of them in any case, so there is nothing to date them by.
+  ((data && data.joiningPendingCases) || []).forEach(c => add(c.jobId8));
+  ((data && data.dropEvents) || []).forEach(e => { if (inRange(day(e.day), rg) || inQ(e.quarter)) add(e.jobId8); });
+  return out;
+}
+
+// The sub-tabs whose panels can show a job with no opening in the period — the three families above. The tab
+// KEYS differ by page (Hiring Manager calls its first tab `positions`, the other two `fulfilment`), so one set
+// covers all three. Anything NOT in here gets the strict #125 set, which is the rule Jerin asked for.
+export const PEOPLE_TABS = new Set(['positions', 'fulfilment', 'joiners', 'joiningpending', 'joining', 'sourcing']);
+
+// ===== Joining Pipeline — HIS SECOND EXCEPTION, and the reason it needs one =====
+// 🚨 BOTH of that sub-tab's tables are LIVE, so neither follows the period:
+//   · the list above is everyone in closing whatever their DOJ (#237), and openingQuarter is absent on most
+//     cases, so there is nothing to date them by even in principle;
+//   · the drops table under it (#273) reads the DOJ boxes alone, floored at the reporting start (#127) —
+//     `.filter(e => !e.quarter || e.quarter >= REPORTING_START)`, keeping a row with NO quarter rather than
+//     cutting it. With those boxes empty it lists every offer drop since 2026-Q3.
+// So this tab admits every job either table can name, UNDATED. Measured Q4 2026, 4 Nov: 42 strict ➔ 47 here
+// (13 jobs with a case, 16 with a floored drop). This is what the dated union got wrong — it hid
+// "Part Time Instructor - Data Analyst / Business Analyst", whose only records are Q2/Q3, while the drops
+// table went on printing it.
+export function livePeopleJobIds(data) {
+  const out = new Set();
+  const add = (id) => { if (id) out.add(String(id).slice(0, 8)); };
+  ((data && data.joiningPendingCases) || []).forEach(c => add(c.jobId8));
+  ((data && data.dropEvents) || []).forEach(e => { if (!e.quarter || e.quarter >= REPORTING_START) add(e.jobId8); });
+  return out;
 }

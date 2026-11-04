@@ -15,7 +15,7 @@ import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-t
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
-import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup } from '../job-filter.js';   // #172c
+import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup, peopleJobIds, livePeopleJobIds, PEOPLE_TABS } from '../job-filter.js';   // #172c · #290d
 import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
          dojFilterHtml, dojFilterOf, inDojFilter, dojFilterText, toggleJpFilters, showControl, currentReportingQuarter,
@@ -1723,14 +1723,16 @@ export function initHmFilters(data) {
     }
     const base = openJobIds();          // #125 — null = no date filter, so nothing is narrowed
     if (!base) return null;
-    const keep = new Set(base);
-    const add = (id) => { if (id) keep.add(String(id).slice(0, 8)); };
-    if (tab === 'joiningpending') (data.joiningPendingCases || []).forEach(c => add(c.jobId8));
-    else if (tab === 'joiners') {
-      const rg = hmRange();
-      (data.offerEvents || []).forEach(e => { if (inRange((e.startDate || '').slice(0, 10), rg)) add(e.jobId8); });
-    }
-    return keep;
+    if (!PEOPLE_TABS.has(tab)) return base;
+    // 🚨 #290e: Position Fulfilment belongs HERE, not on the strict set. It bumps a row from
+    // joiningPendingCases / dropRows / offerEvents through inScope(), which tests the department and the Job
+    // pick and NEVER openJobIds() — its own comment records what restricting it costs: "88 of 166 pending
+    // people and hid 45 of SME - India's 46". Left strict, a row drew with no way to filter to it. The first
+    // check missed it because this tree renders COLLAPSED, so the DOM showed no job names to compare.
+    // 🚨 Joining Pipeline takes NO period: both of its tables are live and the drops table under the
+    // list is floored at the reporting start, not the window — see livePeopleJobIds in job-filter.js.
+    return new Set([...base, ...peopleJobIds(data, hmRange(), windowQuarters()),
+      ...(tab === 'joiningpending' ? livePeopleJobIds(data) : [])]);
   }
   function syncJobOptions() {
     if (!msHmJob) return;

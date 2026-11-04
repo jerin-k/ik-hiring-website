@@ -26,7 +26,7 @@ import { REPORTING_START, reportingYears, selectionQuarters, periodText, fillQua
          reportingQuarters, currentReportingQuarter} from '../period.js';   // #127 · #129 · #133 · #227
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, metricLegend,
          darken, SEP_DARKEN, buildDumbbell, roleSectionTooltip, buildDayHeat } from '../chart-style.js';
-import { jobFilterOptions, matchesJob } from '../job-filter.js';   // #172c
+import { jobFilterOptions, matchesJob, peopleJobIds, livePeopleJobIds, PEOPLE_TABS } from '../job-filter.js';   // #172c · #290d
 import { mountInterviewTraction } from '../interview-traction.js';   // #228a: the SAME module HM and Overall Efficiency mount
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 
@@ -1407,7 +1407,62 @@ export function initRecruiterFilters(baseData) {
     });
   }
 
+  // ===== #290d (Jerin, 3 Nov 2026) — the Job dropdown offers only what the active sub-tab can show =====
+  // The rule, the measurement and Rule 13's mirror live in job-filter.js, beside peopleJobIds().
+  // 🚨 THIS TAB IS NOT LIKE THE OTHER TWO. A Job pick HERE re-scopes the whole dataset (onJobChange ➜
+  // scopeData); it does not merely filter rows. So when withholding an option drops a tick, every figure on
+  // screen is still scoped to the pick that has just gone, and the data has to be rebuilt before anything is
+  // drawn. setHidden() tells us: it returns true exactly when it cleared one, and its own doc comment says a
+  // caller that has already read getSelected() must read it again.
+  let jobSyncing = false;   // onJobChange ➜ renderAll ➜ here would recurse; one pass settles it
+  function recJobScope() {
+    // #141b: Data Hygiene hides the Job chip, and its whole purpose is listing jobs WITHOUT an opening —
+    // scoping it to jobs that have one would empty the lists it exists to show.
+    if (activeTab === 'hygiene') return null;
+    if (activeTab === 'traction') {
+      const rg = rangeOf(document.getElementById('recVelFrom'), document.getElementById('recVelTo'), selQuarters());
+      const keep = new Set();
+      (baseData.openingRows || []).forEach(r => { if (r && r.jobId8 && inRange(r.day, rg)) keep.add(String(r.jobId8).slice(0, 8)); });
+      const byJob = (baseData.interviewTraction || {}).byJobRoundDay || {};
+      for (const j8 in byJob) {
+        const id = String(j8).slice(0, 8);
+        if (keep.has(id)) continue;
+        const rounds = byJob[j8] || {};
+        let hit = false;
+        for (const r in rounds) {
+          for (const d in (rounds[r] || {})) if (inRange(d, rg)) { hit = true; break; }
+          if (hit) break;
+        }
+        if (hit) keep.add(id);
+      }
+      return keep;
+    }
+    const per = selQuarters();
+    if (!per || !per.length) return null;
+    // 🔑 baseData, never the scoped `data` — reading the narrowed copy would shrink the list to the job
+    // already picked, and there would be no way back to the others.
+    const base = jobsWithOpeningIn(baseData, qq => per.includes(qq));   // #125 — the panels' own call
+    if (!PEOPLE_TABS.has(activeTab)) return base;
+    // 🚨 Joining Pipeline takes NO period: both of its tables are live and the drops table under the
+    // list is floored at the reporting start, not the window — see livePeopleJobIds in job-filter.js.
+    return new Set([...base, ...peopleJobIds(baseData, selRange(), per),
+      ...(activeTab === 'joiningpending' ? livePeopleJobIds(baseData) : [])]);
+  }
+  function syncRecJobOptions() {
+    if (!msJob || jobSyncing) return;
+    jobSyncing = true;
+    try {
+      const keep = recJobScope();
+      const before = (msJob.getSelected() || []).join('|');
+      // An option's value can be several ids comma-joined (two jobs sharing a name AND a department), so the
+      // entry survives if ANY of them is in scope.
+      msJob.setHidden(keep ? jobOptions.filter(o => !String(o.v).split(',').some(id => keep.has(id))).map(o => o.v) : []);
+      if ((msJob.getSelected() || []).join('|') !== before) onJobChange();   // rebuild the scoped data, then render
+    } finally { jobSyncing = false; }
+  }
+
   function renderAll() {
+    syncRecJobOptions();   // #290d — before anything reads the Job pick
     const recs = getFilteredRecs();
     const groups = groupByPod(recs, selQuarter());
 
@@ -4267,6 +4322,7 @@ export function initRecruiterFilters(baseData) {
     showLevels('recLevels', name === 'fulfilment');
     document.querySelectorAll('.rec-subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.rec-panel').forEach(p => { p.style.display = p.dataset.panel === name ? '' : 'none'; });
+    syncRecJobOptions();   // #290d — this tab's own job scope; a dropped tick re-renders through onJobChange
     renderActiveChart();
   }
   document.querySelectorAll('.rec-subtab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));

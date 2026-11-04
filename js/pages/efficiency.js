@@ -5,7 +5,7 @@ import { remarkCell, wireRemarks, priorityCell, wirePriority, byPriorityThen } f
 import { makeMultiSelect } from '../multi-select.js';   // #196: ONE multi-select, folded from four copies
 import { loadNotes } from '../job-notes.js';   // #252e: Remarks are EDITABLE here now - the cell and its editor are in remark-cell.js
 import { defsBlock } from '../definitions.js';
-import { jobFilterOptions, matchesJob as matchesJobBase, matchesJobRow as matchesJobRowBase } from '../job-filter.js';   // #172c
+import { jobFilterOptions, matchesJob as matchesJobBase, matchesJobRow as matchesJobRowBase, peopleJobIds, livePeopleJobIds, PEOPLE_TABS } from '../job-filter.js';   // #172c · #290d
 import { tdCandidate, tdDept, tdJob, tdDoj, tdStage, tdRecruiter, tdQuarter, tdSourcer, pointsCaption } from '../people-cells.js';   // #137 · #176b · #195: tdQuarter replaces tdLinked · #194: tdSourcer
 import { tdTopic, tdOpening, topicLookup, realTopic } from '../people-cells.js';   // #168/#169: the opening and the topic · #213: realTopic
 import { monthTreeRows, deptTreeRows, pinMonthHeadings, stageSplit } from '../people-tree.js';   // #149: month ➔ date ➔ people
@@ -2449,7 +2449,55 @@ export function initEfficiencyFilters(data) {
   // #207: the quarters ticked on Interview Traction's OWN Quarter chip - read by that panel alone.
   let tractionQs = [];
   let tractionBounds = false;   // #207
+
+  // ===== #290d (Jerin, 3 Nov 2026) — the Job dropdown offers only what the sub-tab can show =====
+  // The rule, the measurement and Rule 13's mirror live in job-filter.js, beside peopleJobIds().
+  // 🔑 THE BASE IS BUILT WITH THE PANELS' OWN CALL. deptJobs() derives its #125 set exactly this way, so
+  // the control cannot drift from the tables beneath it — Rule 3's durable form: the panel decides, the
+  // dropdown reads. A second copy of the period rule here is what would rot.
+  function jobScopeFor(tab) {
+    if (tab === 'traction') {
+      // #207: this panel's period comes from its OWN Quarter chip, so the page's period would scope it to the
+      // wrong window. A job belongs here if an opening of its own was live in that window, or an interview was.
+      const tq = tractionQs.length ? tractionQs : tisPeriod();
+      const rg = rangeOf(document.getElementById('effVelFrom'), document.getElementById('effVelTo'), tq);
+      const keep = new Set();
+      (data.openingRows || []).forEach(r => { if (r && r.jobId8 && inRange(r.day, rg)) keep.add(String(r.jobId8).slice(0, 8)); });
+      const byJob = (data.interviewTraction || {}).byJobRoundDay || {};
+      for (const j8 in byJob) {
+        const id = String(j8).slice(0, 8);
+        if (keep.has(id)) continue;
+        const rounds = byJob[j8] || {};
+        let hit = false;
+        for (const r in rounds) {
+          for (const d in (rounds[r] || {})) if (inRange(d, rg)) { hit = true; break; }
+          if (hit) break;
+        }
+        if (hit) keep.add(id);
+      }
+      return keep;
+    }
+    const per = tisPeriod();
+    if (!per) return null;        // Year and Quarter both on All ⇒ every job, exactly as deptJobs() reads it
+    const base = jobsWithOpeningIn(data, qq => per.includes(qq));   // #125 — the same call deptJobs() makes
+    if (!PEOPLE_TABS.has(tab)) return base;
+    // 🚨 Joining Pipeline takes NO period: both of its tables are live and the drops table under the
+    // list is floored at the reporting start, not the window — see livePeopleJobIds in job-filter.js.
+    return new Set([...base, ...peopleJobIds(data, effRange(), per),
+      ...(tab === 'joiningpending' ? livePeopleJobIds(data) : [])]);
+  }
+  function syncEffJobOptions() {
+    if (!msJob) return;
+    const keep = jobScopeFor(activeTab);
+    // 🚨 setHidden() unticks a withheld option, so it must run BEFORE anything reads the pick. It
+    // deliberately does NOT fire onChange, so there is no loop. An option's value can be several ids comma-joined
+    // (two jobs sharing a name AND a department) — the entry survives if ANY of them is in scope, or a job that
+    // IS in scope would lose its only way of being chosen.
+    msJob.setHidden(keep ? jobOptions.filter(o => !String(o.v).split(',').some(id => keep.has(id))).map(o => o.v) : []);
+  }
+
   function renderActive() {
+    syncEffJobOptions();   // #290d — before anything reads the Job pick
     if (activeTab === 'fulfilment') renderFulfilment();
     else if (activeTab === 'joiningpending') { renderFulfilJP(); renderJPDrops(); }   // #130b · #273
     else if (activeTab === 'joiners') renderJoiners();           // #130c
