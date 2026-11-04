@@ -2448,6 +2448,13 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   letter-spacing: 0.04em; color: var(--text-secondary); }
 .it-meta { font-size: 0.6875rem; color: var(--muted); margin: 0 0 0.35rem;
   font-variant-numeric: tabular-nums; }
+/* 🚨 #291b (Jerin, 4 Nov 2026: "It doesnt do anything") — THE LABELS MUST NOT SWALLOW THE HOVER.
+   Every slice carries its whole split in a native SVG <title> (#291), but the white number printed INSIDE a
+   slice is a <text> drawn AFTER the rect, and a <text> has no title of its own. So hovering the MIDDLE of a
+   bar — which is exactly where anyone aims — hit the number and produced nothing at all, while the edges
+   worked. Measured on the real page: 11% of a bar's area was dead, and it was the centre of every slice.
+   🔑 A label, a gridline and a leader line are DECORATION. Only the slice is a hover target. */
+.it-charts svg text, .it-charts svg line { pointer-events: none; }
 /* The PAGE scrolls, not the panel (#155) - but a 1120-unit chart still needs its own sideways scroll on a
    narrow screen, which is the one exception that rule allows for a chart. */
 .it-scroller { overflow-x: auto; }
