@@ -1436,6 +1436,12 @@ function refreshDashboardData() {
   // never go through that wrapper. Sending from here covers every refresh there is, which is what he asked for.
   try { notifyAdminsRefreshDone_(new Date(startTime), true, '', REFRESH_KIND_); }
   catch (e) { Logger.log('163 notify failed: ' + e); }
+  // #288 (Jerin, 4 Nov 2026): the OTHER half of the bot's watchdog, and it lives here on purpose - this
+  // function runs on GOOGLE'S clock (6 AM / 1 PM / 6 PM IST), so it notices the opening-request routine
+  // going quiet even when the Mac is off, which is the very case that cost six days on 28 Oct. A watcher
+  // inside the Claude app could never report the app being shut. Wrapped, because a watchdog must never be
+  // able to take down the thing it is watching.
+  try { orBotWatch_(); } catch (e) { Logger.log('288 bot watch failed: ' + e); }
   // #175: last thing, AFTER the data is safely written - re-installing triggers deletes the one that is
   // currently running, so it must never sit in front of the work.
   ensureTriggerPlan_();
@@ -2029,18 +2035,49 @@ function notifyAdminsRefreshDone_(startedAt, ok, err, kind) {
 function serveJsonData() { var d = loadExistingDashboard_(); return ContentService.createTextOutput(JSON.stringify(d || { error: 'No data' })).setMimeType(ContentService.MimeType.JSON); }
 // #175 (Jerin, 24 Sep 2026): "need the below auto-refresh going fwd * 6AM * 1PM * 6PM".
 // Bump TRIGGER_PLAN_ to change the schedule; the next refresh re-installs it by itself.
-var TRIGGER_PLAN_ = '6-13-18 IST';
+var TRIGGER_PLAN_ = '6-13-18 IST + botwatch hourly';   // #288b
 function setupDailyTriggers() {
   ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'refreshDashboardData') ScriptApp.deleteTrigger(t); });
   [6, 13, 18].forEach(function (h) {
     ScriptApp.newTrigger('refreshDashboardData').timeBased().atHour(h).everyDays(1).inTimezone('Asia/Kolkata').create();
   });
   Logger.log('#175 triggers set: 6 AM, 1 PM and 6 PM IST');
+  // #288b (Jerin, 4 Nov 2026): *"It should be 3 hours after the first miss - right?"* - and he was right.
+  // Riding on the refresh meant the CHECK only happened at 6 AM / 1 PM / 6 PM, so a stop at 18:30 went
+  // unreported until the next afternoon: the threshold was 3 hours but the TELLING could be 18. Its own
+  // hourly clock fixes that, and HOURLY is exactly right - the bot itself only checks in hourly, so a miss
+  // cannot be observed on a finer grid than that. Worst case is now 3-4 working hours, not 18.
+  // 🚨 Safe here: the delete above only ever removes refreshDashboardData triggers, never this one.
+  ensureBotWatchClock_();   // #288c
 }
+// #288b: this exists only to BE a trigger handler - Apps Script cannot point a trigger at a private
+// (trailing-underscore) function, and orBotWatch_ is private. It does nothing else.
+function botWatchTick() { orBotWatch_(); }
 function setupTwiceDailyTrigger() { setupDailyTriggers(); }   // old name kept: it is in the editor's Run list
 // Installs the plan on the first run after it changes, so nobody has to find it in the Run menu.
 // Apps Script cannot read back the HOUR of an existing trigger, so a Script Property is the only way to tell
 // whether what is installed matches what we intend. Idempotent - it does the work once per plan change.
+// #288c (Jerin, 4 Nov 2026): *"Set-up a new hourly check? 30 mins away from the Opening request schedule."*
+// The bot checks in at :05 past the hour IST, so the watchdog aims for :35 and never reads the state in the
+// middle of a bot run.
+// ⚠ Apps Script clock triggers are APPROXIMATE - nearMinute is plus-or-minus 15 minutes - so :35 really
+//   means somewhere in :20-:50. That still never collides with :05, which is all the offset has to achieve.
+//   If this build refuses nearMinute on an hourly trigger it falls back to a plain hourly one: a watchdog at
+//   an awkward minute is worth far more than no watchdog.
+// U0001f511 IDEMPOTENT, and it touches ONLY its own trigger - never the refresh ones - so it is safe to call from
+//   anywhere, a web request included, and harmless if it runs a hundred times. That is what lets the BOT's
+//   own hourly call switch the watchdog on instead of waiting for a refresh (his catch: the bootstrap must
+//   not depend on the very thing the watchdog exists to outlive).
+function ensureBotWatchClock_() {
+  try {
+    var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'botWatchTick'; });
+    if (has) return false;
+    try { ScriptApp.newTrigger('botWatchTick').timeBased().everyHours(1).nearMinute(35).inTimezone('Asia/Kolkata').create(); }
+    catch (e1) { ScriptApp.newTrigger('botWatchTick').timeBased().everyHours(1).create(); Logger.log('#288c nearMinute refused, plain hourly: ' + e1); }
+    Logger.log('#288c botWatchTick clock installed');
+    return true;
+  } catch (e) { Logger.log('#288c clock install FAILED: ' + e); return false; }
+}
 function ensureTriggerPlan_() {
   try {
     var props = PropertiesService.getScriptProperties();
