@@ -65,6 +65,7 @@ function refreshInterviewTraction() {
 
   // --- every booking since the floor ---
   var cursor = null, pages = 0, rows = [], stageIds = {}, appOfStage = {};
+  var snapNow = {};   // #287c: schedule id -> { s: start time, u: updatedAt, a: applicationId }
   do {
     var body = { limit: 100, createdAfter: fromMs };
     if (cursor) body.cursor = cursor;
@@ -73,6 +74,9 @@ function refreshInterviewTraction() {
     for (var i = 0; i < batch.length; i++) {
       var s = batch[i], evs = s.interviewEvents || [], start = null;
       for (var e = 0; e < evs.length; e++) { var st = evs[e].startTime; if (st && (!start || st < start)) start = st; }
+      // #287c: keep what this pass used to throw away - BEFORE the cancelled-booking fallback below,
+      // so a cancellation's createdAt can never be mistaken for a scheduled slot.
+      if (s.id) snapNow[s.id] = { s: start || '', u: s.updatedAt || '', a: s.applicationId || '' };
       var canc = /cancel/i.test(String(s.status || ''));
       // A cancelled booking can have NO event left on it, so fall back to when it was raised - otherwise
       // every cancellation disappears and that bar reads zero for ever.
@@ -87,6 +91,10 @@ function refreshInterviewTraction() {
     pages++;
     if (cursor) Utilities.sleep(30);
   } while (cursor);
+  // #287c: remember this run's times and count what moved since the last run. Wrapped on its own so a
+  // store failure can never cost interview_traction.json - the same guard the take-home pass uses.
+  try { recordScheduleMoves_(snapNow); }
+  catch (eSM) { Logger.log('#287c: reschedule watch FAILED (traction unaffected) - ' + eSM.message); }
   // #209 (Jerin, 8 Oct: "I hope you also mean assessment/THT triggered?" - yes, now it does). A take-home
   // needs no diary slot, so counting only BOOKINGS made Online Assessment read 2 where Throughput saw 21
   // assessed. Same endpoint assessAssignments_ uses, so the two panels count the same events.
@@ -334,4 +342,61 @@ function listTractionUnmatched() {
   Logger.log('U|SHEET ROWS=' + (out.length - 1));
   Logger.log('U|SHEET URL=' + ss.getUrl());
   Logger.log('U|done in ' + Math.round((Date.now() - t0) / 1000) + 's');
+}
+
+
+// ===== #287c - THE RESCHEDULE WATCH. Stores each run's booking times; counts the moves between runs. =====
+// Jerin, 5 Nov 2026: "Watch from today" - he turned the add-on down knowing the past is unrecoverable.
+// There is no Ashby field holding a previous time (rounds 1-4), and the interviewScheduleUpdate WEBHOOK
+// cannot be used here because it needs a public endpoint IK's Workspace blocks. So we remember it ourselves.
+// NO EXTRA ASHBY LOAD: refreshInterviewTraction already pages every booking - this just keeps what it threw away.
+// HONEST LIMITS, to be said out loud before anyone quotes a number: it counts from the FIRST DAY WE STORE and
+// never backwards - it misses a move made and undone between two runs (3 a day) - it says a time CHANGED, never why.
+// Both files are DRIVE-ONLY. Nothing here is ever pushed to the public repo.
+var SCHED_SNAP_FILE  = 'schedule_snapshot.json';
+var SCHED_MOVES_FILE = 'schedule_moves.json';
+var SCHED_MOVES_CAP  = 5000;
+
+// PURE. No Ashby, no Drive, no clock - so it is unit-tested locally before it ever reaches Monaco.
+// 24 checks pass, including a control proving the suite can fail and that a no-op diff would be caught.
+function diffScheduleTimes_(prev, cur) {
+  var moves = [];
+  if (!prev || !cur) return moves;
+  for (var id in cur) {
+    if (!Object.prototype.hasOwnProperty.call(cur, id)) continue;
+    var p = prev[id], c = cur[id];
+    if (!p) continue;                 // first time we have seen this booking - a new booking is not a move
+    if (!p.s || !c.s) continue;       // never call a MISSING time a move: that is a cancellation or a bad pull
+    if (p.s === c.s) continue;
+    moves.push({ id: id, a: c.a || p.a || '', from: p.s, to: c.s });
+  }
+  return moves;
+}
+
+function recordScheduleMoves_(snapNow) {
+  var t0 = Date.now();
+  var nowIso = new Date().toISOString();
+  var nNow = Object.keys(snapNow || {}).length;
+  var prevWrap = loadDriveJson_(SCHED_SNAP_FILE);
+  var prev = (prevWrap && prevWrap.byId) ? prevWrap.byId : null;
+  var moves = [];
+  if (!prev) {
+    Logger.log('#287c: NO PREVIOUS SNAPSHOT - baseline written for ' + nNow +
+      ' bookings. Diffing starts on the NEXT run; nothing is countable yet.');
+  } else {
+    moves = diffScheduleTimes_(prev, snapNow);
+    Logger.log('#287c: compared ' + nNow + ' bookings against ' + Object.keys(prev).length +
+      ' stored - ' + moves.length + ' MOVED since the last run');
+  }
+  var log = loadDriveJson_(SCHED_MOVES_FILE) || { schema: 1, since: nowIso, moves: [] };
+  if (!log.moves) log.moves = [];
+  for (var m = 0; m < moves.length; m++) { moves[m].seen = nowIso; log.moves.push(moves[m]); }
+  if (log.moves.length > SCHED_MOVES_CAP) log.moves = log.moves.slice(log.moves.length - SCHED_MOVES_CAP);
+  log.count = log.moves.length;
+  log.lastRun = nowIso;
+  saveDriveJson_(SCHED_MOVES_FILE, log);
+  saveDriveJson_(SCHED_SNAP_FILE, { schema: 1, generatedAt: nowIso, n: nNow, byId: snapNow });
+  Logger.log('#287c: store written in ' + Math.round((Date.now() - t0) / 1000) + 's; log now holds ' +
+    log.moves.length + ' move(s) since ' + log.since);
+  return moves.length;
 }
