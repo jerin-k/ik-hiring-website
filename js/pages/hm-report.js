@@ -1381,7 +1381,7 @@ export function initHmFilters(data) {
         total: toRow('Total', aggTP(allList)),
         expandAll: expandAllOn('hmLevels'),   // #189d: was hard-coded true by #188
 
-        overallLabel: A ? 'R1/OA → late' : 'R1 → Doc',
+        overallLabel: A ? 'R1/R0-OA → late' : 'R1 → Doc',
         labels: A ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
       });

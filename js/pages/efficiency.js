@@ -1548,7 +1548,7 @@ export function initEfficiencyFilters(data) {
         addedCols, hiredCol,
         total: toRow('Total', allJids),
         expandAll: expandAll(),
-        overallLabel: spanQ ? 'R1/OA \u2192 late' : 'R1 \u2192 Doc',
+        overallLabel: spanQ ? 'R1/R0-OA \u2192 late' : 'R1 \u2192 Doc',
         labels: asJ2 ? undefined
           : { inN: 'entered the stage', outN: 'left the stage (any reason)', none: 'nobody entered this stage' }
       });
