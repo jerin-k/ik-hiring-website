@@ -1549,3 +1549,62 @@ function probe284Setup() {
   } while (cur2 && q < 20);
   Logger.log('people already on that job: ' + n);
 }
+
+
+// ===== #287p (4 Nov 2026) — READ-ONLY: is ANY endpoint willing to hand back interview-schedule history? =====
+// U0001f5e3 Jerin: "Activity history will have the previous schedule against a round, though not tagged as
+//    reschedule. Can you check?" He is right that the app shows it; this asks whether anything can COUNT it.
+// U0001f6a8 TWO INVENTED CONTROL ENDPOINTS are in the list on purpose. An endpoint that answers EXACTLY like the
+//    controls is absent. One that answers DIFFERENTLY - 403, 400, a complaint about the payload - EXISTS and is
+//    telling us something. Without the controls a 404 means nothing at all (the 403-vs-404 rule).
+// ✅ Every call is a READ. Nothing is written, nothing is created.
+function probe288Reschedule() {
+  var auth = 'Basic ' + Utilities.base64Encode(getAshbyApiKey_() + ':');
+  var post = function (ep, body) {
+    return UrlFetchApp.fetch(ASHBY_API_BASE + ep, { method: 'post', contentType: 'application/json',
+      headers: { Authorization: auth }, payload: JSON.stringify(body), muteHttpExceptions: true });
+  };
+  // ROUND 3 (#287p) - THE TEST THAT CAN ACTUALLY FAIL.
+  // Jerin named a booking he knows was MOVED: Shashwata Bhowmik, Program Advisor - India (197).
+  // Rounds 1-2 could not tell "no history exists" from "these samples were never rescheduled". This one can:
+  // if the earlier slot is anywhere in the API, it is on THIS application.
+  var APP = '472ca49c-fc45-4cb1-b83c-d1fad8eddadc';
+  var out = [];
+  // does interviewSchedule.list accept an applicationId filter at all? informative either way
+  var r1 = post('/interviewSchedule.list', { applicationId: APP, limit: 50 });
+  out.push('filter-by-applicationId -> HTTP ' + r1.getResponseCode() + ' ' + r1.getContentText().substring(0, 110).replace(/\s+/g, ' '));
+  var found = [];
+  try {
+    var j1 = JSON.parse(r1.getContentText());
+    (j1.results || []).forEach(function (s) { if (s.applicationId === APP) found.push(s); });
+  } catch (e) {}
+  // fall back to scanning recent schedules
+  if (!found.length) {
+    var cursor = null, pages = 0;
+    do {
+      var b = { limit: 100, createdAfter: Date.parse('2026-09-01T00:00:00Z') };
+      if (cursor) b.cursor = cursor;
+      var rr = post('/interviewSchedule.list', b);
+      var jj = JSON.parse(rr.getContentText());
+      (jj.results || []).forEach(function (s) { if (s.applicationId === APP) found.push(s); });
+      cursor = (jj.moreDataAvailable && jj.nextCursor) ? jj.nextCursor : null;
+      pages++;
+    } while (cursor && pages < 25 && !found.length);
+    out.push('scanned ' + pages + ' pages of interviewSchedule.list');
+  }
+  out.push('schedules on that application: ' + found.length);
+  found.forEach(function (s) {
+    var evs = s.interviewEvents || [];
+    out.push('--- schedule ' + String(s.id).slice(0, 8) + ' status=' + s.status + ' createdAt=' + s.createdAt);
+    out.push('    EMBEDDED events: ' + evs.length);
+    evs.forEach(function (e) { out.push('      ' + String(e.id).slice(0, 8) + '  start=' + e.startTime + '  status=' + (e.status || '?')); });
+    var r2 = post('/interviewEvent.list', { interviewScheduleId: s.id });
+    var ev2 = [];
+    try { ev2 = (JSON.parse(r2.getContentText()).results || []); } catch (e) {}
+    out.push('    interviewEvent.list HTTP ' + r2.getResponseCode() + ' returned ' + ev2.length);
+    ev2.forEach(function (e) { out.push('      ' + String(e.id).slice(0, 8) + '  start=' + e.startTime + '  status=' + (e.status || '?')); });
+    if (ev2.length > evs.length) out.push('    <<< MORE THAN EMBEDDED - THE EARLIER SLOT IS REACHABLE');
+    Utilities.sleep(300);
+  });
+  Logger.log('#287p ROUND 3 - a booking Jerin says WAS moved\n' + out.join('\n'));
+}
