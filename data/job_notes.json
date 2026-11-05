@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-05T07:07:34.911Z",
+  "updatedAt": "2026-11-05T07:16:15.533Z",
   "notes": {
     "19982198": {
       "text": "HE : 0 , R1 - 1",
@@ -68,9 +68,9 @@
       "at": "2026-11-05T07:07:34.911Z"
     },
     "a6729ee8": {
-      "text": "HE : 6 , R1 : 4",
-      "by": "Deepti",
-      "at": "2026-10-30T07:07:26.507Z"
+      "text": "HE : 6 , R1 : 4\n27 HE, R1` - 16, 3 mrudung",
+      "by": "Gopu",
+      "at": "2026-11-05T07:16:15.533Z"
     },
     "a9747a0f": {
       "text": "No active pipeline , awaiting joining for Divyanshu",
