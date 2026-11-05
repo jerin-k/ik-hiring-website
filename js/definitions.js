@@ -161,14 +161,14 @@ export const DEFINITIONS = {
   'interview-traction': {
     summary: 'How Interview Traction is counted',
     intro: 'Every interview <strong>booked</strong> in Ashby, placed on the day it was scheduled for, sorted by what happened at it. A bar&rsquo;s height is that period&rsquo;s total, and the figure above it is the same total.',
-    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Latest: interviews booked for days still ahead are shown, in their own colour &middot; 20 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 7 Oct 2026. Interviews booked for days still ahead are shown in their own colour &middot; 20 Oct 2026. What the Rescheduled / Cancelled bar really counts, corrected &middot; 5 Nov 2026.',
     groups: [
       {
         heading: 'The four outcomes, and one that is not an outcome yet',
         items: [
           ['Select', 'The candidate reached a <strong>later stage</strong> after that interview.'],
           ['Reject', 'The candidate was <strong>archived</strong> without going further.'],
-          ['Rescheduled / Cancelled', 'The booking was cancelled, or moved to another day. A <strong>no-show is recorded the same way</strong>, so it is counted here.'],
+          ['Rescheduled / Cancelled', 'Bookings Ashby marks <strong>cancelled</strong>. &#128681; <strong>Despite the name, a move is not counted here</strong> &mdash; unless the recruiter cancelled and booked again, changing the time on an existing booking leaves no trace in this figure. A <strong>no-show is recorded as a cancellation</strong> by Ashby, so it sits here too. One colour therefore holds up to three different things, and they cannot be told apart.'],
           ['Awaiting outcome', 'The interview <strong>happened</strong> and nothing has been decided yet. These change colour as decisions are made.'],
           ['Booked, not yet held', 'An interview in the diary for a day that <strong>has not arrived</strong>. It is kept apart from Awaiting outcome on purpose: one is waiting for a decision, the other has not taken place, and counting them together would make the first look bigger than it is.'],
         ]
@@ -192,7 +192,7 @@ export const DEFINITIONS = {
     warnings: [
         ['These numbers are rebuilt on a different clock', 'They come from a <strong>separate job</strong> to the rest of the page, on its own schedule, so the two times in the header can be hours apart &mdash; and <strong>either one can be the newer</strong>. The header names both: <em>Data as of</em> is the headline figures, <em>stage data</em> is this panel.'],
       ['On Recruiter Efficiency, an interview needs a recruiter on the application', 'This panel is built from the recruiter named on the <strong>candidate&rsquo;s application</strong>. An interview whose application names nobody belongs to no recruiter, so it <strong>cannot appear on this tab</strong> &mdash; while it still counts in full on Hiring Manager and Overall Efficiency. <strong>The two tabs will therefore not agree, by design.</strong> How many are affected is printed above the charts for the period you are looking at, because it changes with every refresh. Older months are affected far more than recent ones: the habit of naming a recruiter took hold during Q3.'],
-      ['Rescheduled only counts from 7 October 2026', 'When an interview is moved, Ashby <strong>overwrites the original time</strong> and keeps no record of the old one, so moves made before this panel existed cannot be recovered. Cancellations are complete back to 1 July.'],
+      ['This bar does not count rescheduling', 'The name says <strong>Rescheduled / Cancelled</strong>, but nothing in it tracks an interview being <strong>moved</strong>. Ashby <strong>overwrites the original time</strong> and keeps no record of the old one, so a move can only ever appear here as a cancellation followed by a fresh booking. &#128273; From <strong>5 November 2026</strong> the dashboard keeps its own record of every booking&rsquo;s time at each refresh, so genuine moves are being collected from that date onwards &mdash; they are <strong>not on this chart yet</strong>. Nothing before 5 November 2026 can be recovered. Cancellations are complete back to 1 July.'],
       ['The most recent days look heavy on Awaiting outcome', 'Nothing is wrong &mdash; those decisions have not been made yet.'],
       ['Days ahead will look empty of outcomes', 'They are, and that is the point: nothing has happened there yet. A day past today shows only what is booked, and fills in with real outcomes as those interviews are held.'],
       ['Do not add the rounds together', 'One candidate doing R1, R2 and R3 appears in all three charts. The rounds are separate questions, not parts of a total.'],
