@@ -48,8 +48,18 @@ export function remarkCell(o) {
 // they were on the page, for a change that touches one cell.
 export function closeRemarkEditor(cell, onClosed) {
   const job8 = cell.dataset.job8 || '';
+  // #292 (Jerin, 5 Nov 2026): 🗣 "the 'more' is not working. Instead while clicking on the text, the edit opens up."
+  // 🚨 THE REBUILD TWO LINES DOWN DROPS `jn-rtrunc`, and nothing measured the cell again - so a remark whose
+  // editor had been opened ONCE lost its "more" for good. After that the only thing left to click was the
+  // clipped text, which IS the edit button, so it reopened the editor: exactly what he saw.
+  // 🔑 Why the usual safety net missed it: `wireRemarks` re-measures from a listener on the TBODY, and Cancel,
+  // Save and Done all `stopPropagation()` before calling this - so that listener never ran on a close.
+  // 🔑 Fixed HERE because this is the ONE place a cell is rebuilt back into a remark, so both Hiring Manager
+  // and Overall Efficiency get it from one edit (Rule 3). Grab the tbody BEFORE the swap: `cell` is detached by it.
+  const body = cell.closest('tbody') || cell.parentElement;
   cell.className = 'jn-cell jn-rem';
   cell.outerHTML = remarkCell({ job8 });
+  if (body) requestAnimationFrame(() => markRemarkOverflow(body));
   if (typeof onClosed === 'function') onClosed();
 }
 
