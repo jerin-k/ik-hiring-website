@@ -1,7 +1,7 @@
 // ===== run210 - KEEP THIS FIRST IN THE FILE. The Run picker cannot be driven, so the function that runs is
 // whichever comes first here; run210 fires RUN210_FN on a one-off trigger (30 min, not the editor 6) and
 // asserts the refreshDashboardData clock triggers are untouched. Point RUN210_FN, open this file, press Run.
-var RUN210_FN = 'run228cApply';   // #240: read-only Ashby probe. Park back on run228cApply when done   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
+var RUN210_FN = 'probe287Final';   // #240: read-only Ashby probe. Park back on run228cApply when done   // #222: pointed deliberately at the read-only probe (was rebuildStageRollupsNow)
 function run210() {
   var before = 0, after = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshDashboardData') before++; });
@@ -1607,4 +1607,89 @@ function probe288Reschedule() {
     Utilities.sleep(300);
   });
   Logger.log('#287p ROUND 3 - a booking Jerin says WAS moved\n' + out.join('\n'));
+}
+
+// ===== #287p ROUND 4 - THE LAST THREE UNTESTED ENDPOINTS. Read-only, writes nothing. =====
+// Rounds 1-3 settled that no schedule-history / versions / activity-feed endpoint exists and that
+// interviewEvent.list holds only the CURRENT slot. Three things were never tried; this is them.
+// THE 403-vs-404 RULE: the two invented controls are probed and printed FIRST, every run. Without them a
+// 404 below means nothing. Do not add a filter that can skip them.
+// SAFETY: .list and .info ONLY. Never a create/update/set - an empty body can still WRITE (opening.create did).
+// NOTE: written without a single backslash on purpose, so it survives being injected as a template literal.
+function probe287Final() {
+  var NL = String.fromCharCode(10);
+  var auth = 'Basic ' + Utilities.base64Encode(getAshbyApiKey_() + ':');
+  var post = function (ep, body) {
+    return UrlFetchApp.fetch(ASHBY_API_BASE + ep, {
+      method: 'post', contentType: 'application/json', headers: { Authorization: auth },
+      payload: JSON.stringify(body || {}), muteHttpExceptions: true
+    });
+  };
+  // Shashwata Bhowmik's schedule - the booking Jerin himself says was MOVED from 2 Nov to 3 Nov.
+  // So the OLD slot is a date we already know: anything on 2026-11-02 in a payload IS the earlier time.
+  var SCHED = '73876d66-8272-4f5e-a4b6-1c91c2b116ce';
+  var OLD_DAY = '2026-11-02';
+  var out = [], texts = {}, order = [];
+  var say = function (label, r) {
+    var t = r.getContentText();
+    texts[label] = t; order.push(label);
+    out.push(label + '  ->  HTTP ' + r.getResponseCode() + '  ' + t.substring(0, 300));
+    Utilities.sleep(250);
+    return t;
+  };
+
+  out.push('=== YARDSTICKS (a 404 below means nothing except against these) ===');
+  say('KNOWN GOOD /job.list', post('/job.list', { limit: 1 }));
+  say('CONTROL 1 /auditLog.zzNotARealEndpoint', post('/auditLog.zzNotARealEndpoint', {}));
+  say('CONTROL 2 /zzAlsoNotReal.atAll', post('/zzAlsoNotReal.atAll', {}));
+
+  out.push('=== TARGET 1: auditLog.list - 404 = absent; audit_logs_not_enabled = THE DOOR EXISTS ===');
+  say('/auditLog.list (empty body)', post('/auditLog.list', {}));
+  say('/auditLog.list (limit 5)', post('/auditLog.list', { limit: 5 }));
+
+  out.push('=== TARGET 2: version.list - documented, never read ===');
+  say('/version.list', post('/version.list', {}));
+
+  out.push('=== TARGET 3: interviewSchedule.info on the REAL moved booking ===');
+  say('/interviewSchedule.info {id}', post('/interviewSchedule.info', { id: SCHED }));
+  say('/interviewSchedule.info {interviewScheduleId}', post('/interviewSchedule.info', { interviewScheduleId: SCHED }));
+
+  out.push('=== THE TEST THAT CAN FAIL: is the old 2 Nov slot anywhere in any reply? ===');
+  var keysSeen = {}, stamps = {}, oldHits = [];
+  var isStamp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}T');
+  var walk = function (o, path) {
+    if (o === null || o === undefined) return;
+    if (typeof o === 'string') {
+      if (isStamp.test(o)) stamps[o] = true;
+      if (o.indexOf(OLD_DAY) >= 0) oldHits.push(path + ' = ' + o);
+      return;
+    }
+    if (typeof o !== 'object') return;
+    if (Object.prototype.toString.call(o) === '[object Array]') {
+      for (var i = 0; i < o.length; i++) walk(o[i], path + '[' + i + ']');
+      return;
+    }
+    for (var k in o) {
+      if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
+      keysSeen[k] = true;
+      walk(o[k], path + '.' + k);
+    }
+  };
+  for (var n = 0; n < order.length; n++) {
+    try { walk(JSON.parse(texts[order[n]]), '[' + order[n] + ']'); } catch (e) {}
+  }
+  var suspicious = [], kk = Object.keys(keysSeen);
+  var smells = new RegExp('previous|original|prior|old|history|version|changed|reschedul|former|was', 'i');
+  for (var j = 0; j < kk.length; j++) { if (smells.test(kk[j])) suspicious.push(kk[j]); }
+  var st = Object.keys(stamps).sort();
+  out.push('distinct field names across every reply : ' + kk.length);
+  out.push('fields whose NAME suggests a past value : ' + (suspicious.length ? suspicious.join(', ') : 'NONE'));
+  out.push('every timestamp returned (' + st.length + ') : ' + st.join('  '));
+  out.push('>>> occurrences of the known OLD day ' + OLD_DAY + ' : ' + oldHits.length);
+  for (var h = 0; h < oldHits.length; h++) { out.push('      ' + oldHits[h]); }
+  out.push(oldHits.length
+    ? '>>> THE EARLIER SLOT IS REACHABLE - countable with no add-on.'
+    : '>>> the old slot is in NO reply. Consistent with rounds 1-3: Ashby overwrites it.');
+
+  Logger.log('#287p ROUND 4 - auditLog.list, version.list, interviewSchedule.info' + NL + out.join(NL));
 }
