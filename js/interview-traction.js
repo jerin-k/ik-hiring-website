@@ -36,12 +36,23 @@ const NSLOT = SERIES.length;
 // 🚨 TWO grace periods, his call (5 Nov 2026). A meeting gets 2 business days; Online Assessment is a test
 // SENT OUT rather than attended, so it gets 7. Measured the day this shipped: a flat 2 would have called 79
 // assessments no-shows, the split calls 57 - and 22 assessments correctly stay Awaiting, still inside their week.
-const NOSHOW_DAYS = { 'Online Assessment': 7 };
+// #293 (Jerin, 5 Nov 2026): keyed on the STAGE KEY, never on the name. Ashby renamed this stage to
+// "R0 - Online Assessment"; a grace period keyed on the old words would have silently dropped back to 2.
+const NOSHOW_DAYS_BY_KEY = { oa: 7 };
 const NOSHOW_DEFAULT = 2;
+// Live round label -> stage key, published beside the data (#293). Set at mount; the three tabs mount this
+// module with the SAME data, so one module-level map is safe.
+// ⚠ LEGACY, delete once no published file can predate #293: a file with no `roundKeyOf` falls back to the
+// names as they were, so the panel keeps working for the few minutes a cached old file can still be served.
+let ROUND_KEY_OF = {};
+const LEGACY_KEY_OF = { 'TA Screen':'taScreen', 'HM Review':'hmReview', 'Online Assessment':'oa',
+  'R1':'r1', 'R2':'r2', 'R3':'r3', 'R4':'r4', 'R5':'r5',
+  'Reference Check':'refCheck', 'Document Submission':'docSub', 'Offer':'offer' };
+const roundKey = r => ROUND_KEY_OF[r] || LEGACY_KEY_OF[r] || null;
 // Business days = Mon-Fri. There is NO holiday calendar, and the definitions block says so rather than
 // letting a reader assume one. A FUNCTION of todayKey(), so a tab left open overnight ages with the clock.
 function staleAwaiting(day, round) {
-  const want = NOSHOW_DAYS[round] || NOSHOW_DEFAULT;
+  const want = NOSHOW_DAYS_BY_KEY[roundKey(round)] || NOSHOW_DEFAULT;
   let c = 0, d = new Date(day + 'T00:00:00Z');
   const today = new Date(todayKey() + 'T00:00:00Z');
   while (c < want) { d = new Date(d.getTime() + 86400000); const w = d.getUTCDay(); if (w !== 0 && w !== 6) c++; }
@@ -85,11 +96,14 @@ function horizonOf(tr, scope, only) {
   return max;
 }
 // Jerin, 7 Oct: "keep Online assessment, R1 to R5 ticked by default".
-const DEFAULT_ROUNDS = ['Online Assessment', 'R1', 'R2', 'R3', 'R4', 'R5'];
+// #293: by STAGE KEY, so his choice survives a rename in Ashby.
+const DEFAULT_ROUND_KEYS = ['oa', 'r1', 'r2', 'r3', 'r4', 'r5'];
 // #289a (Jerin, 5 Nov 2026): "Lets limit this page to show the below round ... Rest can be ommitted."
 // HM Review, Reference Check, Document Submission and Offer held 1, 0, 1 and 0 decisions in four months.
 // The DATA still carries them - this hides them from the panel, it does not stop the pipeline emitting them.
-const PANEL_ROUNDS = ['TA Screen', 'Online Assessment', 'R1', 'R2', 'R3', 'R4', 'R5'];
+// #293: by STAGE KEY. A hard-coded list of NAMES beside a model that follows Ashby is exactly the
+// mismatch that would have made a renamed round vanish from this panel without erroring.
+const PANEL_ROUND_KEYS = ['taScreen', 'oa', 'r1', 'r2', 'r3', 'r4', 'r5'];
 const DAY_WINDOW = 30;   // "lets show the last 30 days in the range" (Jerin, 7 Oct)
 
 const pad2 = n => (n < 10 ? '0' : '') + n;
@@ -431,8 +445,10 @@ export function mountInterviewTraction(host, data, getScope, opts) {
       It is written by the stage-history job; the next run will fill this in.</p>`;
     return () => {};
   }
-  const rounds = (tr.rounds || []).filter(r => PANEL_ROUNDS.includes(r));   // #289a
-  const sel = new Set(DEFAULT_ROUNDS.filter(r => rounds.includes(r)));
+  // #293: the panel learns which label is which stage from the pipeline, and never keeps names of its own.
+  ROUND_KEY_OF = tr.roundKeyOf || {};
+  const rounds = (tr.rounds || []).filter(r => PANEL_ROUND_KEYS.includes(roundKey(r)));   // #289a, #293
+  const sel = new Set(rounds.filter(r => DEFAULT_ROUND_KEYS.includes(roundKey(r))));
   const allQ = (opts && opts.quarters) || [];
   const onQuarters = (opts && opts.onQuarters) || (() => {});
   const qSel = new Set(allQ.slice(-2));            // the two most recent, ticked to begin with
