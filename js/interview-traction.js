@@ -17,6 +17,10 @@ const SERIES = [
   { key: 'Select',                  col: 'var(--it-sel)' },
   { key: 'Reject',                  col: 'var(--it-rej)' },
   { key: 'Rescheduled / Cancelled', col: 'var(--it-can)' },
+  // #289b (Jerin, 5 Nov 2026): an interview still showing no result after its grace period is a No Show.
+  // Its colour is a RELATIVE of --it-can, not a new hue, because both mean the interview produced nothing -
+  // the same reasoning that gave --it-ahead a relative of --it-pen.
+  { key: 'No Show',                 col: 'var(--it-nos)' },
   { key: 'Awaiting outcome',        col: 'var(--it-pen)' },
   // #245 (Jerin, 20 Oct 2026, option A): interviews already in the diary for a day that has not arrived.
   // \ud83d\udea8 ITS OWN SLOT, NEVER FOLDED INTO AWAITING OUTCOME. "Awaiting outcome" means HELD, no decision yet;
@@ -29,9 +33,32 @@ const SERIES = [
 // \u26a0 `addInto` tolerates a FOUR-long input on purpose: the data file's day arrays are [s,r,c,p], with no
 // fifth element, and `v[4]` on them is undefined.
 const NSLOT = SERIES.length;
+// 🚨 TWO grace periods, his call (5 Nov 2026). A meeting gets 2 business days; Online Assessment is a test
+// SENT OUT rather than attended, so it gets 7. Measured the day this shipped: a flat 2 would have called 79
+// assessments no-shows, the split calls 57 - and 22 assessments correctly stay Awaiting, still inside their week.
+const NOSHOW_DAYS = { 'Online Assessment': 7 };
+const NOSHOW_DEFAULT = 2;
+// Business days = Mon-Fri. There is NO holiday calendar, and the definitions block says so rather than
+// letting a reader assume one. A FUNCTION of todayKey(), so a tab left open overnight ages with the clock.
+function staleAwaiting(day, round) {
+  const want = NOSHOW_DAYS[round] || NOSHOW_DEFAULT;
+  let c = 0, d = new Date(day + 'T00:00:00Z');
+  const today = new Date(todayKey() + 'T00:00:00Z');
+  while (c < want) { d = new Date(d.getTime() + 86400000); const w = d.getUTCDay(); if (w !== 0 && w !== 6) c++; }
+  return d.getTime() <= today.getTime();
+}
 const zeroSlots = () => new Array(NSLOT).fill(0);
 const slotSum = (v) => { let t = 0; for (let i = 0; i < NSLOT; i++) t += (v[i] || 0); return t; };
 const addInto = (c, v) => { for (let i = 0; i < NSLOT; i++) c[i] += (v[i] || 0); };
+// 🚨 THE RAW DAY ARRAY IS [select, reject, cancelled, awaiting] AND ITS 4th ELEMENT NO LONGER MAPS TO SLOT 3.
+// Since #289b the awaiting count splits BY AGE into No Show (3) and Awaiting outcome (4), so a raw array put
+// through addInto would land every awaiting interview in No Show. addInto still merges already-mapped slot
+// arrays (weeks, months, role tallies); this is the ONLY door raw data comes through.
+const addRaw = (c, v, day, round) => {
+  c[0] += v[0] || 0; c[1] += v[1] || 0; c[2] += v[2] || 0;
+  const aw = v[3] || 0;
+  if (aw) c[staleAwaiting(day, round) ? 3 : 4] += aw;
+};
 // Today, as the store writes its day keys. A FUNCTION, not a const: this module is loaded once and a tab
 // left open overnight would otherwise keep yesterday's idea of "not yet held".
 function todayKey() {
@@ -41,10 +68,13 @@ function todayKey() {
 // The furthest day anything is booked on, or null. Mirrors Momentum's horizon (#232), including which
 // store it reads - the Recruiter tab's own store is a SUBSET, so reading the job store there would open
 // columns that tab can never fill.
-function horizonOf(tr, scope) {
+// #289c (Jerin, 5 Nov 2026): pass `only` and this answers for ONE round. It used to take a single maximum
+// across every job and every round, so one TA Screen booking on 17 Nov drew twelve empty days onto Online
+// Assessment, R3, R4 and R5 - rounds with nothing booked ahead at all.
+function horizonOf(tr, scope, only) {
   let max = null;
   const scan = (days) => { if (days) for (const d in days) if (!max || d > max) max = d; };
-  const walkRounds = (byRound) => { for (const r in byRound) scan(byRound[r]); };
+  const walkRounds = (byRound) => { for (const r in byRound) { if (only && r !== only) continue; scan(byRound[r]); } };
   if (scope.byRecruiter) {
     const byRec = tr.byRecJobRoundDay || {};
     for (const rec in byRec) for (const j8 in byRec[rec]) walkRounds(byRec[rec][j8]);
@@ -56,6 +86,10 @@ function horizonOf(tr, scope) {
 }
 // Jerin, 7 Oct: "keep Online assessment, R1 to R5 ticked by default".
 const DEFAULT_ROUNDS = ['Online Assessment', 'R1', 'R2', 'R3', 'R4', 'R5'];
+// #289a (Jerin, 5 Nov 2026): "Lets limit this page to show the below round ... Rest can be ommitted."
+// HM Review, Reference Check, Document Submission and Offer held 1, 0, 1 and 0 decisions in four months.
+// The DATA still carries them - this hides them from the panel, it does not stop the pipeline emitting them.
+const PANEL_ROUNDS = ['TA Screen', 'Online Assessment', 'R1', 'R2', 'R3', 'R4', 'R5'];
 const DAY_WINDOW = 30;   // "lets show the last 30 days in the range" (Jerin, 7 Oct)
 
 const pad2 = n => (n < 10 ? '0' : '') + n;
@@ -113,7 +147,7 @@ function daysForRound(tr, round, scope, jobOut) {
         // 🔑 THE SAME future-day rule as the bar, two lines up. The role tally is per OUTCOME, so it has to
         // split exactly where the bar splits, or a slice would name roles that are not in it.
         if (d > todayKey()) jc[NSLOT - 1] += (v[0] || 0) + (v[1] || 0) + (v[2] || 0) + (v[3] || 0);
-        else addInto(jc, v);
+        else addRaw(jc, v, d, round);
       }
       // #245: THE WHOLE of a future day goes to "booked, not yet held" - not just its awaiting count.
       // Nothing dated after today has happened, so no part of it is an outcome. Measured 19 Oct 2026: all
@@ -122,7 +156,7 @@ function daysForRound(tr, round, scope, jobOut) {
       // \ud83d\udd11 Read from todayKey() rather than from `scope`: gapNote builds a cut-down scope of its own, and
       // a key it forgot to copy would silently turn this rule off there (the same trap as #228a's spread).
       if (d > todayKey()) c[NSLOT - 1] += v[0] + v[1] + v[2] + v[3];
-      else addInto(c, v);
+      else addRaw(c, v, d, round);
     }
   };
   if (scope.byRecruiter) {
@@ -397,7 +431,7 @@ export function mountInterviewTraction(host, data, getScope, opts) {
       It is written by the stage-history job; the next run will fill this in.</p>`;
     return () => {};
   }
-  const rounds = tr.rounds || [];
+  const rounds = (tr.rounds || []).filter(r => PANEL_ROUNDS.includes(r));   // #289a
   const sel = new Set(DEFAULT_ROUNDS.filter(r => rounds.includes(r)));
   const allQ = (opts && opts.quarters) || [];
   const onQuarters = (opts && opts.onQuarters) || (() => {});
@@ -530,8 +564,15 @@ export function mountInterviewTraction(host, data, getScope, opts) {
     if (aheadKey) aheadKey.hidden = !(scope.to > today);
     let html = gapNote(tr, picked, scope), hidden = 0;
     const blocks = picked.map(r => {
+      // #289c: EACH CHART ENDS AT ITS OWN LAST BOOKING. Nothing is hidden - a round still draws every day it
+      // has - but a round with nothing ahead now stops at today instead of following the furthest booking
+      // anywhere on the panel. The panel-wide `scope` above still governs gapNote and the ahead key.
+      const hz = horizonOf(tr, raw, r);
+      const lim = (hz && hz > today) ? hz : today;
+      const sc = { ...raw, to: raw.to > lim ? lim : raw.to };
+      if (sc.from > sc.to) return { r, slots: [], tot: 0 };
       const jobMap = {};   // #291c: filled by the same traversal that builds the bars
-      const slots = slotsFor(daysForRound(tr, r, scope, jobMap), state.view, scope, jobMap);
+      const slots = slotsFor(daysForRound(tr, r, sc, jobMap), state.view, sc, jobMap);
       let tot = 0;
       slots.forEach(s => { tot += slotSum(s.v); });
       return { r, slots, tot };

@@ -2413,6 +2413,11 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
      A desaturated slate-blue - a RELATIVE of --it-pen rather than a new hue, because it is the same
      candidates one step earlier, but clearly darker so "booked" never reads as "awaiting outcome". */
   --it-ahead: #6f8ba6;
+  /* #289b (Jerin, 5 Nov 2026): an interview still showing no result after its grace period. A DEEPER,
+     browner relative of --it-can, by the same reasoning that made --it-ahead a relative of --it-pen: a
+     no-show and a cancellation both mean the interview produced nothing, so they belong to one family -
+     but it must never be mistaken for Reject (#b45a72), which is a real decision taken about a candidate. */
+  --it-nos: #9c6a44;
   /* #206c: the trend line. A GREY, deliberately - it is not a fifth outcome, and giving it a hue would
      put a colour on the chart that means nothing in the legend above it. */
   --it-trend: #8b94a7;
