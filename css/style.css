@@ -2557,13 +2557,18 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   font-weight: 600; padding-bottom: 0.125rem;
 }
 .tb-cols .tb-sep { border-left: 2px solid var(--border); }
-/* The cell is count-led: the figure leads and anything under it recedes. 🔑 Row padding (0.5rem) is bigger
-   than the gap inside a cell, so the lines group as ONE thing — that, not height alone, is what fixed
-   "Bit of a clutter with 3 numbers in a cell" (Jerin, 6 Nov). */
-.tb-cols td.tb-num { padding-top: 0.5rem; padding-bottom: 0.5rem; line-height: 1.1; }
-.tb-c { display: block; font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+/* 🔑 THE THROUGHPUT GRID'S PROPORTIONS, INVERTED — his call, 6 Nov 2026: *"The numbers are looking oddly
+   big... Can we use the font proportions from Throughput table? But inversed"*.
+   Throughput runs its lead figure at 0.75rem/400 with a 0.6875rem/600 figure beside it: BIG AND LIGHT over
+   SMALL AND BOLD. Inverted means the same two sizes with the weights swapped, so the count leads on weight
+   instead of on size. It was 1rem/600, which next to a 0.75rem Total positions column made the row read
+   unevenly — that mismatch was the real fault, so Total positions now takes the same treatment.
+   ⚠ Row padding still beats the gap inside a cell, which is what keeps three lines reading as one group
+   once the money lines arrive (#294). */
+.tb-cols td.tb-num { padding-top: 0.375rem; padding-bottom: 0.375rem; line-height: 1.15; }
+.tb-c { display: block; font-size: 0.75rem; font-weight: 600; }
 /* A zero is noise in a table this wide, so it recedes. Declared AFTER .tb-c, which it shares a cell with. */
-.tb-z { font-size: 0.8125rem; font-weight: 400; color: #c3cadb; }
+.tb-z { font-size: 0.6875rem; font-weight: 400; color: #c3cadb; }
 
 /* The distribution bar. 🔑 THE TABLE COMPUTES, THE BAR READS — same rows, so they cannot drift. */
 .tb-chart {

@@ -398,7 +398,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
   const nums = (r) => {
     const by = {};
     (r.types || []).forEach((t) => { by[t.key] = t.total; });
-    return `<td class="tb-num">${r.total}</td>`
+    return `<td class="tb-num"><span class="tb-c">${r.total}</span></td>`
       + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0)).join('')
       + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0)).join('');
   };
