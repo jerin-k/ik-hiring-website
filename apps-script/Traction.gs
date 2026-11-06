@@ -66,6 +66,7 @@ function refreshInterviewTraction() {
   // --- every booking since the floor ---
   var cursor = null, pages = 0, rows = [], stageIds = {}, appOfStage = {};
   var snapNow = {};   // #287c: schedule id -> { s: start time, u: updatedAt, a: applicationId }
+  var sidOfSched = {};   // #287: schedule id -> interviewStageId, so a MOVE can find its round
   do {
     var body = { limit: 100, createdAfter: fromMs };
     if (cursor) body.cursor = cursor;
@@ -77,6 +78,7 @@ function refreshInterviewTraction() {
       // #287c: keep what this pass used to throw away - BEFORE the cancelled-booking fallback below,
       // so a cancellation's createdAt can never be mistaken for a scheduled slot.
       if (s.id) snapNow[s.id] = { s: start || '', u: s.updatedAt || '', a: s.applicationId || '' };
+      if (s.id && s.interviewStageId) sidOfSched[s.id] = s.interviewStageId;   // #287
       var canc = /cancel/i.test(String(s.status || ''));
       // A cancelled booking can have NO event left on it, so fall back to when it was raised - otherwise
       // every cancellation disappears and that bar reads zero for ever.
@@ -85,12 +87,29 @@ function refreshInterviewTraction() {
       if (!day || day < fromDay) continue;
       if (s.interviewStageId) { stageIds[s.interviewStageId] = 1;
         if (!appOfStage[s.interviewStageId] && s.applicationId) appOfStage[s.interviewStageId] = s.applicationId; }
-      rows.push({ sid: s.interviewStageId, app: s.applicationId, d: day, canc: canc });
+      rows.push({ sid: s.interviewStageId, app: s.applicationId, d: day, canc: canc,
+                  c: s.createdAt || '' });   // #287e: WHEN IT WAS RAISED - that is what orders a rebooking
     }
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
     pages++;
     if (cursor) Utilities.sleep(30);
   } while (cursor);
+  // #287e (Jerin, 5 Nov 2026): "On cancel & rebook for the same day - lets take the latest one alone."
+  // ONE call site, and it sits HERE on purpose: these are the interview BOOKINGS alone. The take-home rows
+  // and the #222 report rows appended below are not rebookings of a cancelled slot, so they must never be
+  // the "later booking" that absorbs a cancellation.
+  var canc287eBefore = 0;
+  for (var cb = 0; cb < rows.length; cb++) if (rows[cb].canc) canc287eBefore++;
+  var col287e = collapseSameDayRebookings_(rows);
+  rows = col287e.rows;
+  var canc287eAfter = 0;
+  for (var ca = 0; ca < rows.length; ca++) if (rows[ca].canc) canc287eAfter++;
+  // BOTH SIDES ARE LOGGED EVERY RUN, because the harm side of this rule is invisible otherwise: the number
+  // that must stay large is the count of groups it LEAVES ALONE.
+  Logger.log('traction #287e: absorbed ' + col287e.absorbed + ' cancellation(s) across ' + col287e.groups +
+    ' group(s) - cancelled ' + canc287eBefore + ' -> ' + canc287eAfter + '. ' + col287e.multiGroups +
+    ' group(s) hold 2+ bookings; ' + col287e.groupsNoneCancelled + ' of those have NONE cancelled and were' +
+    ' LEFT ALONE (a blunt "keep the latest" would have wrongly collapsed every one of them).');
   // #287c: remember this run's times and count what moved since the last run. Wrapped on its own so a
   // store failure can never cost interview_traction.json - the same guard the take-home pass uses.
   try { recordScheduleMoves_(snapNow); }
@@ -131,25 +150,60 @@ function refreshInterviewTraction() {
       Logger.log('traction #222: ' + repN + ' vendor assessments added to the Online Assessment round');
     } catch (eR) { Logger.log('traction: #222 assessments failed - ' + eR.message); }
   }
+  // #287 (Jerin, 6 Nov 2026): put each MOVE back on the day it was ORIGINALLY booked for.
+  // Appended HERE, after every other source, so the #287e collapse never sees these rows.
+  try {
+    var mvRes = moveRowsForTraction_(loadDriveJson_(SCHED_MOVES_FILE), sidOfSched, fromDay, dayIST_);
+    for (var mi2 = 0; mi2 < mvRes.rows.length; mi2++) rows.push(mvRes.rows[mi2]);
+    Logger.log('traction #287: ' + mvRes.placed + ' moved interview(s) added to Rescheduled / Cancelled on ' +
+      'their ORIGINAL day; ' + mvRes.unplaced + ' could not be placed (booking no longer in the window), ' +
+      mvRes.tooOld + ' before the floor. A moved interview is now counted on BOTH days - his call, 6 Nov.');
+  } catch (eMV) { Logger.log('traction #287: move rows FAILED (traction unaffected) - ' + eMV.message); }
   Logger.log('traction: ' + rows.length + ' events (' + asgN + ' take-home), ' + pages + ' pages, ' +
     Object.keys(stageIds).length + ' stages');
 
-  // --- stage id -> round name, cached ---
+  // --- stage id -> the name Ashby calls it TODAY (#293, Jerin 5 Nov 2026: "follow Ashby") ---
+  // 🚨 THIS USED TO SAY `if (nameOf[sid]) continue;` AND THAT WAS THE BUG. A stage id already in the cache
+  // was never looked up again, so the title captured the FIRST time a stage was seen was kept for ever and
+  // a rename in Ashby never reached this panel. `R0 - Online Assessment` was live in Ashby while the
+  // published data still said `Online Assessment`.
+  // The cache is now a FALLBACK for a failed read, never a reason to skip the read.
   var props = PropertiesService.getScriptProperties();
-  var nameOf = {};
-  try { nameOf = JSON.parse(props.getProperty(TRACTION_STAGE_CACHE) || '{}'); } catch (eC) { nameOf = {}; }
-  nameOf[TRACTION_ASSESS_SID] = 'Online Assessment';   // #222: synthetic, never looked up against Ashby
-  var resolved = 0;
+  var cachedNames = {};
+  try { cachedNames = JSON.parse(props.getProperty(TRACTION_STAGE_CACHE) || '{}'); } catch (eC) { cachedNames = {}; }
+  var nameOf = {}, resolved = 0, reused = 0, renamed = 0;
   for (var sid in stageIds) {
-    if (nameOf[sid]) continue;
-    try {
-      var h = ashbyPost_('/application.listHistory', { applicationId: appOfStage[sid] });
-      var hr = h.results || h.history || [];
-      for (var k = 0; k < hr.length; k++) if (hr[k].stageId === sid) { nameOf[sid] = hr[k].title; resolved++; break; }
-    } catch (eH) { Logger.log('traction: stage lookup failed - ' + eH.message); }
+    if (sid === TRACTION_ASSESS_SID) continue;         // #222: synthetic, never looked up against Ashby
+    var liveTitle = null;
+    if (appOfStage[sid]) {
+      try {
+        var h = ashbyPost_('/application.listHistory', { applicationId: appOfStage[sid] });
+        var hr = h.results || h.history || [];
+        for (var k = 0; k < hr.length; k++) if (hr[k].stageId === sid) { liveTitle = hr[k].title; break; }
+      } catch (eH) { Logger.log('traction: stage lookup failed - ' + eH.message); }
+    }
+    if (liveTitle) {
+      resolved++;
+      if (cachedNames[sid] && cachedNames[sid] !== liveTitle) {
+        renamed++;
+        Logger.log('traction #293: stage RENAMED in Ashby - "' + cachedNames[sid] + '" is now "' + liveTitle + '"');
+      }
+      nameOf[sid] = liveTitle;
+    } else if (cachedNames[sid]) { nameOf[sid] = cachedNames[sid]; reused++; }
   }
-  if (resolved) props.setProperty(TRACTION_STAGE_CACHE, JSON.stringify(nameOf));
-  Logger.log('traction: resolved ' + resolved + ' new stage name(s), ' + Object.keys(nameOf).length + ' cached');
+  props.setProperty(TRACTION_STAGE_CACHE, JSON.stringify(nameOf));
+
+  // ONE LABEL PER STAGE KEY, and that is the whole point. Interview plans are per job, so two plans could
+  // title the same stage differently; keying the display on the stage KEY collapses them into one round
+  // instead of silently splitting it into two columns. (Measured 5 Nov 2026: this workspace runs ONE
+  // "Global Shared Interview Plan", so they agree today - this keeps them agreeing if that ever changes.)
+  var keyOfTitle = smStageKeyMap();                    // every Ashby title we recognise -> stage key
+  var lr = tractionLiveRounds_(nameOf, keyOfTitle, smTractionRounds());
+  var liveLabelOf = lr.liveLabelOf, roundsOut = lr.rounds, roundKeyOf = lr.roundKeyOf;
+  nameOf[TRACTION_ASSESS_SID] = liveLabelOf['oa'] || 'Online Assessment';   // #222, now following the rename
+  Logger.log('traction #293: ' + resolved + ' stage name(s) read from Ashby, ' + reused +
+    ' reused from cache after a failed read, ' + renamed + ' RENAMED since the last run. Rounds published: ' +
+    roundsOut.join(' | '));
 
   // --- every later booking the same candidate had, so "did they advance" works for ARCHIVED people too ---
   var laterByApp = {};
@@ -171,6 +225,11 @@ function refreshInterviewTraction() {
     if (!title) { unmapped['(unresolved stage)'] = (unmapped['(unresolved stage)'] || 0) + 1; continue; }
     var ord = TRACTION_TORD[title];
     if (!ord) { unmapped[title] = (unmapped[title] || 0) + 1; continue; }
+    // #293: the DATA is keyed by the same string the rounds list carries, resolved through the stage key.
+    // That is what makes "the list and the data keys can never disagree" true by construction rather than
+    // by luck - the luck that a stale cache was providing.
+    var rKey = keyOfTitle[title] || null;
+    var round = (rKey && liveLabelOf[rKey]) ? liveLabelOf[rKey] : title;
     var j8 = (jobOf[R.app] || '').substring(0, 8);
     // !! #206b (Jerin, 7 Oct): a booking we cannot tie to a KNOWN role is NOT counted. Measured on the
     // 74 of them: 55 were the sandbox job 'Test - Project Hello Christy - Sales PA'. The pipeline drops
@@ -179,7 +238,7 @@ function refreshInterviewTraction() {
     // the stage store has not caught up; those reappear on their own next run. Sheet: 'Interview Traction
     // - interviews with no role (#206, 7 Oct 2026)'.
     if (!j8) { noJob++; continue; }
-    var slot = ((byJob[j8] || (byJob[j8] = {}))[title] || (byJob[j8][title] = {}));
+    var slot = ((byJob[j8] || (byJob[j8] = {}))[round] || (byJob[j8][round] = {}));
     var cell = slot[R.d] || (slot[R.d] = [0, 0, 0, 0]);
     // !! ONE classification, TWO buckets. The outcome is decided once below and written to both, so the
     // recruiter view can NEVER drift from the role view - the thing Rule 3 exists to prevent. Same population
@@ -187,7 +246,7 @@ function refreshInterviewTraction() {
     var recNm = recOf[R.app] || '', rcell = null;
     if (recNm) {
       var rjob = (byRec[recNm] || (byRec[recNm] = {}));
-      var rslot = ((rjob[j8] || (rjob[j8] = {}))[title] || (rjob[j8][title] = {}));
+      var rslot = ((rjob[j8] || (rjob[j8] = {}))[round] || (rjob[j8][round] = {}));
       rcell = rslot[R.d] || (rslot[R.d] = [0, 0, 0, 0]);
     } else noRec++;
     var bump = function (i) { cell[i]++; if (rcell) rcell[i]++; };
@@ -216,7 +275,8 @@ function refreshInterviewTraction() {
     schema: TRACTION_SCHEMA,
     generatedAt: new Date().toISOString(),
     from: fromDay,
-    rounds: TRACTION_ROUNDS,
+    rounds: roundsOut,
+    roundKeyOf: roundKeyOf,   // #293: live label -> stage key, so the SITE never keys on a name
     byJobRoundDay: byJob,
     byRecJobRoundDay: byRec,
     totals: { select: tot.sel, reject: tot.rej, cancelled: tot.can, awaiting: tot.pen,
@@ -399,4 +459,113 @@ function recordScheduleMoves_(snapNow) {
   Logger.log('#287c: store written in ' + Math.round((Date.now() - t0) / 1000) + 's; log now holds ' +
     log.moves.length + ' move(s) since ' + log.since);
   return moves.length;
+}
+
+// ===== #287e (Jerin, 5 Nov 2026): a booking cancelled and rebooked for the SAME DAY counts once =====
+// He asked: "On cancel & rebook for the same day - lets take the latest one alone. Can that be done?"
+// THE RULE IS DELIBERATELY NARROW, and the measurement is why. A blunt "keep the latest" would collapse the
+// 145 groups that hold two or more bookings with NONE cancelled - two genuine interviews at one stage on one
+// day are common here - to fix the 19 that need it. Seven times more harm than good.
+// So an earlier booking is dropped ONLY when it was itself CANCELLED and a LATER-RAISED booking exists for the
+// same application + stage + day.
+// !! ORDER BY createdAt - when the booking was RAISED - never by the slot time. A rebooking is often earlier
+// in the day than the slot it replaced, so slot time gets the direction wrong.
+// !! TIES ARE LEFT ALONE: two bookings raised at the same instant cannot be ordered, so neither is dropped.
+// !! SCOPED TO INTERVIEW BOOKINGS. A take-home assignment and a #222 report assessment are not rebookings of
+// a cancelled slot, so they must never be the "later booking" that absorbs one - which is why this is called
+// on the booking rows alone, before the other two sources are appended.
+function collapseSameDayRebookings_(rows) {
+  var byGroup = {};
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var k = String(r.app) + '|' + String(r.sid) + '|' + String(r.d);
+    (byGroup[k] || (byGroup[k] = [])).push(i);
+  }
+  var drop = {}, absorbed = 0, groups = 0, multi = 0, noneCanc = 0;
+  for (var k2 in byGroup) {
+    var idx = byGroup[k2];
+    if (idx.length < 2) continue;
+    multi++;
+    var latest = '', anyCanc = false;
+    for (var a = 0; a < idx.length; a++) {
+      var c = rows[idx[a]].c || '';
+      if (c > latest) latest = c;
+      if (rows[idx[a]].canc) anyCanc = true;
+    }
+    if (!anyCanc) { noneCanc++; continue; }
+    var hit = 0;
+    for (var b = 0; b < idx.length; b++) {
+      var row = rows[idx[b]];
+      if (!row.canc) continue;
+      var mine = row.c || '';
+      if (mine && latest && mine < latest) { drop[idx[b]] = 1; hit++; }
+    }
+    if (hit) { absorbed += hit; groups++; }
+  }
+  var out = [];
+  for (var z = 0; z < rows.length; z++) if (!drop[z]) out.push(rows[z]);
+  return { rows: out, absorbed: absorbed, groups: groups, multiGroups: multi, groupsNoneCancelled: noneCanc };
+}
+
+
+// ===== #293 (Jerin, 5 Nov 2026): the round names follow Ashby =====================================
+// Given the titles resolved from Ashby this run, decide ONE displayed label per stage KEY and build the
+// published rounds list in model order.
+// 🔑 WHY A KEY AND NOT A TITLE. Interview plans are per job, so two plans could title the same stage
+// differently; keying on the stage KEY collapses them into one round instead of silently splitting one
+// round into two columns. (Measured 5 Nov 2026: this workspace runs ONE "Global Shared Interview Plan",
+// so they agree today - this keeps them agreeing if that ever stops being true.)
+// 🚨 THE LIST AND THE DATA KEYS COME OUT OF THE SAME PLACE ON PURPOSE. Before this, the data was keyed by
+// the cached Ashby title while the list came from the model's own static labels, and they matched only
+// because the cache never refreshed. Clearing that cache would have made the Online Assessment chart
+// VANISH - no error, just not drawn. Both now derive from `liveLabelOf`, so they cannot drift apart.
+// ⚠ A round the model knows but Ashby was not read for keeps OUR word for it, so the list never loses a
+// round just because nothing was booked in it this run.
+function tractionLiveRounds_(nameOf, keyOfTitle, staticRounds) {
+  var liveLabelOf = {}, rounds = [], roundKeyOf = {}, sid, k, i, sk, lbl;
+  for (sid in nameOf) {
+    k = keyOfTitle[nameOf[sid]];
+    if (k && !liveLabelOf[k]) liveLabelOf[k] = nameOf[sid];
+  }
+  for (i = 0; i < staticRounds.length; i++) {
+    sk = keyOfTitle[staticRounds[i]] || null;
+    lbl = (sk && liveLabelOf[sk]) ? liveLabelOf[sk] : staticRounds[i];
+    if (sk) liveLabelOf[sk] = lbl;
+    rounds.push(lbl);
+    roundKeyOf[lbl] = sk;
+  }
+  return { liveLabelOf: liveLabelOf, rounds: rounds, roundKeyOf: roundKeyOf };
+}
+
+
+// ===== #287 (Jerin, 6 Nov 2026): a MOVED interview counts on the day it was ORIGINALLY booked for =====
+// 🗣 He was shown the cost and took it: *"This is ok. And no note is required."*
+// A booking moved from Thursday to Friday sits in FRIDAY's bar, because that is when it now happens, and
+// Thursday's bar never knew it existed. This puts it back on THURSDAY as a Rescheduled / Cancelled event,
+// which is where he looked for it.
+// 🚨 THE COST HE OWNS, AND IT MUST STAY SAYABLE: that one interview is then counted on BOTH days, so
+// `bookings` double-counts every move. The stack still sums to `bookings` EXACTLY - what changes is that
+// `bookings` is no longer the number of DISTINCT interviews. Measured the day it shipped: 5 moves against
+// ~3,000 bookings. 🔑 If that ratio ever stops being small, this is the decision to revisit.
+// !! THE ROUND COMES FROM A JOIN, NOT FROM THE STORE. The snapshot keeps only {start, updatedAt,
+// applicationId}; the round is recovered by joining the move's SCHEDULE ID against the booking list this run
+// already walked. 🚨 Do NOT "fix" this by putting the stage into the snapshot - changing what is stored
+// forces a NEW BASELINE and would report a move for every booking at once (#287d).
+// !! A move whose booking has left the window cannot be placed. It is COUNTED AS UNPLACED and logged, never
+// guessed into a round.
+function moveRowsForTraction_(log, sidOfSched, fromDay, dayOf) {
+  var out = [], placed = 0, unplaced = 0, tooOld = 0;
+  var mv = (log && log.moves) || [];
+  for (var i = 0; i < mv.length; i++) {
+    var m = mv[i];
+    if (!m || !m.id || !m.from) { unplaced++; continue; }
+    var sid = sidOfSched[m.id];
+    if (!sid) { unplaced++; continue; }
+    var d = dayOf(m.from);
+    if (!d) { unplaced++; continue; }
+    if (d < fromDay) { tooOld++; continue; }
+    out.push({ sid: sid, app: m.a || '', d: d, canc: true, mv: true });
+    placed++;
+  }
+  return { rows: out, placed: placed, unplaced: unplaced, tooOld: tooOld };
 }
