@@ -8,8 +8,11 @@
 //   key/titles[]  internal key, and EVERY Ashby title meaning it   STAGE_KEY_MAP, TRACTION_TORD
 //   label         short display label                              STAGE_LABELS, TIS_STAGES
 //   roundLabel    long label where one is used, else null          TRACTION_ROUNDS
-//                 (deliberately differs: 'Online Assessment' vs label 'OA' - two vocabularies
-//                  are on screen today, so the model carries both rather than silently picking)
+//                 (deliberately differs: roundLabel is the LONG name, label is the SHORT one that has
+//                  to fit a 50px table column, so the model carries both rather than silently picking.
+//                  #293, Jerin 6 Nov 2026: the short one is 'R0-OA' - Ashby renamed the stage to
+//                  'R0 - Online Assessment', and R0-OA keeps the familiar OA while gaining Ashby's own
+//                  R0, so the row finally reads R0, R1, R2... in order. MEASURED: it costs no width.)
 //   assess        counted by Assess.gs                             ASSESS_ORDER
 //   round         is an interview round                            ASSESS_ROUND_POOL
 //   added         measured by people ADDED, not assessed           ASSESS_ADDED_210
@@ -37,7 +40,7 @@ function stageModel_() {
     assess:true, round:false, added:true, evaluation:false, tis:true, rec:'ta', recMapped:true, tp:'ta', late:false, beyondR1:false },
   { key:'hmReview', titles:['HM Review'], label:'HM Review', roundLabel:'HM Review',
     assess:true, round:false, added:true, evaluation:false, tis:true, rec:'hm', recMapped:true, tp:'hm', late:false, beyondR1:false },
-  { key:'oa', titles:['Online Assessment','OA','R0 - Online Assessment'], label:'OA', roundLabel:'Online Assessment',
+  { key:'oa', titles:['Online Assessment','OA','R0 - Online Assessment'], label:'R0-OA', roundLabel:'Online Assessment',
     assess:true, round:true, added:false, evaluation:true, tis:true, rec:'oa', recMapped:true, tp:'oa', late:false, beyondR1:false },
   { key:'r1', titles:['R1'], label:'R1', roundLabel:'R1',
     assess:true, round:true, added:false, evaluation:true, tis:true, rec:'r1', recMapped:true, tp:'r1', late:false, beyondR1:false },
@@ -147,6 +150,9 @@ function smPublish() {
 // stage-time.js / hm-report.js / efficiency.js, BEFORE any of them was switched to the model.
 // NEVER regenerate this from the model. It has value only because it was taken from the code as
 // it behaved before the change. Rebuilt from the thing it checks, it stops being a check.
+// ✏️ CHANGED BY HAND ONCE, 6 Nov 2026 (#293): the `oa` label 'OA' -> 'R0-OA', in TIS_STAGES and
+// STAGE_LABELS. A label change BREAKS this test by design, and the two entries were edited
+// deliberately rather than the test bypassed. Everything else here is still the 16 Oct capture.
 function stageBaseline_() {
   return {
     STAGE_KEY_MAP: { 'App Review':'appReview', 'Application Review':'appReview', 'Hello Christy':'helloChristy',
@@ -168,11 +174,11 @@ function stageBaseline_() {
       'Online Assessment':5, 'OA':5, 'R1':6, 'R2':7, 'R3':8, 'R4':9, 'R5':10, 'Reference Check':11,
       'Document Submission':12, 'Offer':13 },
     TIS_STAGES: [['appReview','App Review'],['helloChristy','Hello Christy'],['taScreen','TA Screen'],
-      ['hmReview','HM Review'],['oa','OA'],['r1','R1'],['r2','R2'],['r3','R3'],['r4','R4'],['r5','R5'],
+      ['hmReview','HM Review'],['oa','R0-OA'],['r1','R1'],['r2','R2'],['r3','R3'],['r4','R4'],['r5','R5'],
       ['refCheck','Ref Check'],['docSub','Doc Sub'],['offer','Offer']],
     STAGES_ORDER: ['appReview','helloChristy','taScreen','hmReview','oa','r1','r2','r3','r4','r5','refCheck','docSub','offer','hired'],
     STAGE_LABELS: { appReview:'App Review', helloChristy:'Hello Christy', taScreen:'TA Screen', hmReview:'HM Review',
-      oa:'OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', refCheck:'Ref Check', docSub:'Doc Sub', offer:'Offer', hired:'Hired' },
+      oa:'R0-OA', r1:'R1', r2:'R2', r3:'R3', r4:'R4', r5:'R5', refCheck:'Ref Check', docSub:'Doc Sub', offer:'Offer', hired:'Hired' },
     TP_TO_STAGE: { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' },
     TP_TO_SK: { app:'appReview', hc:'helloChristy', ta:'taScreen', hm:'hmReview', oa:'oa', r1:'r1', r2:'r2', r3:'r3', r4:'r4', r5:'r5', rc:'refCheck', ds:'docSub', offer:'offer' }
   };
