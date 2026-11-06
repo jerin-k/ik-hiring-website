@@ -87,7 +87,7 @@ export function levelChooser(id, keys) {
  * Recruiter and Topic, Type & Budget offers Job and Type, and neither ever shows a tick that moves nothing
  * [[feedback_filters-must-change-data]]. The "Show levels" label itself carries no key, so it follows the group.
  */
-export function showLevels(id, want) {
+export function showLevels(id, want, withExpandAll) {
   const box = document.getElementById(id);
   if (!box) return;
   const keys = Array.isArray(want) ? want : null;
@@ -96,7 +96,12 @@ export function showLevels(id, want) {
     const k = e.dataset.lvOpt;
     e.style.display = (on && (!keys || !k || keys.indexOf(k) >= 0)) ? '' : 'none';
   });
-  box.querySelectorAll('[data-part="xa"]').forEach((e) => { e.style.display = on ? 'none' : ''; });
+  // #280b (6 Nov 2026): a panel may now ask for BOTH. Type & Budget has a Job level AND wants the bulk
+  // open, and the tick was already here — `levelChooser` has always rendered it; this line was hiding it.
+  // ⚠ `withExpandAll` is undefined everywhere else, so every other panel keeps the #189d behaviour exactly.
+  box.querySelectorAll('[data-part="xa"]').forEach((e) => {
+    e.style.display = (on && !withExpandAll) ? 'none' : '';
+  });
 }
 
 /**

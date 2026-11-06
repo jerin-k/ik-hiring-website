@@ -28,7 +28,7 @@ import { defsBlock } from './definitions.js';
 import { budgetOf, publishBudget, loadNotes, notesLoadedAt } from './job-notes.js';
 // #280: the Department ➔ Job ➔ Type levels hang off the tab's EXISTING "Show levels" ticks, never a new
 // control — #188 settled that (a depth picker was rejected in favour of per-level toggles).
-import { levelsOn, showLevels } from './tree-levels.js';
+import { levelsOn, showLevels, expandAllOn } from './tree-levels.js';
 
 /** What a row shows when the field has not been filled in. Shown, never dropped, so the total still adds up. */
 export const NO_ROLE_TYPE = '(role type not set)';
@@ -40,16 +40,31 @@ export const NO_JOB = '(job not named)';
 /** The two role types that are raised WITH a budget — the Req Bot asks for one only for these (#244c). */
 export const BUDGET_ROLE_TYPES = new Set(['Replacement', 'Anticipation Of Exit']);
 
-/** Filled status, in the order the columns read. `state` on an opening row is one of exactly these three. */
-const STATES = ['joined', 'open', 'missed'];
+/**
+ * Where a position stands, in the order the columns read, and in the site's OWN words (Jerin, 6 Nov 2026:
+ * *"Use nomenclatures we have already used in teh site. Like Delta instead of Open and so on."*).
+ * 🔑 `Total positions − Joined − Joining pipeline = Delta` now reads across every row here exactly as it
+ *    does on Position Fulfilment.
+ * 🚨 MISSED IS NOT A COLUMN ANY MORE and must not come back as one. Delta means "not joined, and nobody
+ *    closing against it", so a missed position is ALREADY inside Delta — carrying both would count it twice.
+ *    That also puts this tab back in line with #182e, which took Missed off every other table while this one
+ *    kept it. Q3 2026 is the proof: old Open 2 + Missed 9 = Delta 11.
+ * ⚠ `jp` is NOT the Joining Pipeline card on Position Fulfilment. That one counts PEOPLE, is live, and
+ *    includes anyone with no opening attached; this counts POSITIONS somebody is closing against. The two
+ *    will not match and neither is wrong — the definitions block says so.
+ */
+const STATES = ['joined', 'jp', 'delta'];
 
-/** The three colours the Fulfilment charts already use, so a bar here means what a bar there means. */
-const STATE_COLOUR = { joined: '#398AA2', open: '#4E6BA6', missed: '#D8B5BE' };
-const STATE_LABEL = { joined: 'Filled', open: 'Open', missed: 'Missed' };
+/** The Fulfilment chart's own three colours, so a bar here means what a bar there means (`FULFIL_COLORS`). */
+const STATE_COLOUR = { joined: '#1E7590', jp: '#9fb3d6', delta: '#D8B5BE' };
+const STATE_LABEL = { joined: 'Joined', jp: 'Joining pipeline', delta: 'Delta' };
+/** On a number rather than a filled chip: eleven columns of pills was most of this table's weight. */
+const STATE_INK = { joined: 'var(--green)', jp: 'var(--orange)', delta: '' };
 
 /** #280. The class is only a handle for the toggle to find — the look is inline, because `.caret` is styled at
  *  its use site in `hm-report.js` and has no rule in `style.css` (CLAUDE.md Rule 12: grep before trusting one). */
 const CARET = '<span class="tb-caret" style="display:inline-block;width:0.875rem;color:var(--muted)">\u25b8</span>';
+const CARET_OPEN = '<span class="tb-caret" style="display:inline-block;width:0.875rem;color:var(--muted)">\u25be</span>';
 const CARET_GAP = '<span style="display:inline-block;width:0.875rem"></span>';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
@@ -96,7 +111,7 @@ export function typeBudgetIndex(data, sel, jobOk) {
 
   rows.forEach((r) => {
     if (!take(r)) return;
-    const st = STATES.indexOf(r.state) >= 0 ? r.state : null;
+    const st = stateOf(r);
     const ji = jobIndex[r.jobId8] || {};
     const dept = ji.department || NO_DEPT;
     const job = ji.title || NO_JOB;
@@ -122,7 +137,17 @@ export function typeBudgetIndex(data, sel, jobOk) {
     source
   };
 
-  function blank() { return { total: 0, joined: 0, open: 0, missed: 0 }; }
+  function blank() { return { total: 0, joined: 0, jp: 0, delta: 0 }; }
+  /**
+   * One position, one bucket. `jpTied` is how many people in closing name this opening on their offer
+   * (#157), so a position with one or more of them is in the pipeline; everything that is neither joined
+   * nor in the pipeline — still open, or closed as carry forward — lands in Delta.
+   */
+  function stateOf(r) {
+    if (r.state === 'joined') return 'joined';
+    if (r.state !== 'missed' && (r.jpTied || 0) > 0) return 'jp';
+    return 'delta';
+  }
   function add(t, st) { t.total++; if (st) t[st]++; }
 
   /** Count one position at all three levels at once, so a level can never disagree with the one above it. */
@@ -225,10 +250,13 @@ export function mountTypeBudget(host, data, getScope) {
     // belong to a department and have no type level at all — a tick that moves nothing is a bug (Rule 13).
     // It is re-asserted on every render, so switching the rail inside this sub-tab keeps the ticks honest.
     const lvId = scope.levelsId;
-    if (lvId) showLevels(lvId, active === 'budget' ? ['job'] : ['job', 'type']);
-    const LV = lvId ? levelsOn(lvId) : { job: true, type: true };
-    if (active === 'role') body.innerHTML = rolePanel(ix, LV);
-    else if (active === 'emp') body.innerHTML = empPanel(ix, LV);
+    // #280b: Type is a row of COLUMNS now, not a level, so Job is the only level left to offer — and the
+    // Expand all tick comes out of hiding, which is what he asked for ("i need a Expan All tick box").
+    if (lvId) showLevels(lvId, ['job'], true);
+    const LV = lvId ? levelsOn(lvId) : { job: true };
+    const expandAll = lvId ? expandAllOn(lvId) : false;
+    if (active === 'role') body.innerHTML = rolePanel(ix, LV, expandAll);
+    else if (active === 'emp') body.innerHTML = empPanel(ix, LV, expandAll);
     else {
       // 🔑 A starting budget belongs to ONE department in ONE quarter, so the cell is only editable when a
       //    single whole quarter is selected. Over a range or several quarters there is no one key to write
@@ -304,12 +332,12 @@ function cards(totals) {
   return `<div class="cards">
     <div class="card"><div class="label">Total Positions</div><div class="value">${totals.total}</div>
       <div class="sub">opened in this period</div></div>
-    <div class="card"><div class="label">Filled</div><div class="value" style="color:var(--green)">${totals.joined}</div>
+    <div class="card"><div class="label">Joined</div><div class="value" style="color:var(--green)">${totals.joined}</div>
       <div class="sub">someone moved to Hired</div></div>
-    <div class="card"><div class="label">Open</div><div class="value" style="color:var(--blue)">${totals.open}</div>
+    <div class="card"><div class="label">Joining Pipeline</div><div class="value" style="color:var(--orange)">${totals.jp}</div>
+      <div class="sub">somebody closing against it</div></div>
+    <div class="card"><div class="label">Delta</div><div class="value">${totals.delta}</div>
       <div class="sub">still to fill</div></div>
-    <div class="card"><div class="label">Missed</div><div class="value">${totals.missed}</div>
-      <div class="sub">carried forward unfilled</div></div>
   </div>`;
 }
 
@@ -339,49 +367,65 @@ function barChart(rows, axisLabel) {
 }
 
 /**
- * The Department ➔ Job ➔ Type table (#280, option B — Jerin, 22 Oct 2026: *"I'd lean B"*).
+ * Department ➔ Job, with the TYPE as COLUMNS (#280b — Jerin, 6 Nov 2026).
  *
- * 🔑 IT RENDERS, IT DOES NOT COUNT. Every figure on every row — including a department's own type split, which
- * is what shows when the Job level is unticked — was added up in `typeBudgetIndex`. This function sums nothing,
- * so no row can disagree with the row above it, or with the bar chart beside it (CLAUDE.md Rule 3).
- * 🔑 The levels are the tab's EXISTING "Show levels" ticks (#188, never a new control). Unticking Job re-hangs
- * the type rows on the department; unticking Type stops the tree at the job; unticking both leaves a plain
- * department table. ⚠ THE FIRST COLUMN'S HEADER FOLLOWS THE TICKS, so it can never name a level that is not
- * on screen — the one thing the Fulfilment tables' static "Department / Job / Recruiter / Topic" cannot do.
- * ⚠ Indentation is one caret-width per level, in rem, so a child's label lines up under its parent's.
+ * 🚨 TYPE USED TO BE THE THIRD LEVEL OF A TREE AND IS NOW A ROW OF COLUMNS. That was the whole point: his
+ * complaint was *"If i have to understand the the new/replacement spluit in a department - no way of figuring
+ * that, as that differentiation is at role level"* — as a nested level it could only be read by opening every
+ * job and adding the leaves up by hand. As columns, a department's split reads straight off its own row.
+ * ⚠ So the **Type** level tick no longer moves anything here and is NOT offered (Rule 13); see `render()`.
+ *
+ * 🔑 IT RENDERS, IT DOES NOT COUNT. Every figure — including a department's own type split — was counted in
+ * `typeBudgetIndex`. This function looks up and prints; it sums nothing, so no row can disagree with the row
+ * above it or with the bar chart beside it (CLAUDE.md Rule 3).
+ * ⚠ The first column's header follows the Job tick, so it never names a level that is not on screen.
+ * ⚠ `totals` must arrive carrying its own `types` array, or the total row's type columns read zero while its
+ *    Total positions reads the real figure — the kind of silent disagreement Rule 3 exists to stop.
  */
-function typeTreeTable(tree, typeLabel, totals, LV) {
-  const head = ['Department', LV.job ? 'Job' : null, LV.type ? typeLabel : null].filter(Boolean).join(' / ');
-  const nums = (r) => `<td>${r.total}</td>${STATES.map((s) => `<td>${r[s]}</td>`).join('')}`;
+function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
+  const head = LV.job ? 'Department / Job' : 'Department';
   const ind = (n) => CARET_GAP.repeat(n);
+
+  /** One figure, with room under it for the money this table does not have a source for yet (#294). */
+  const cell = (n, ink, first) =>
+    `<td class="tb-num${first ? ' tb-sep' : ''}">`
+    + (n ? `<span class="tb-c"${ink ? ` style="color:${ink}"` : ''}>${n}</span>`
+         : '<span class="tb-c tb-z">0</span>')
+    + '</td>';
+
+  /** A row's figures, in the order the headers read. It LOOKS UP, it never adds: every number here was
+   *  counted in `typeBudgetIndex`, so a job row cannot disagree with its department (Rule 3). */
+  const nums = (r) => {
+    const by = {};
+    (r.types || []).forEach((t) => { by[t.key] = t.total; });
+    return `<td class="tb-num">${r.total}</td>`
+      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0)).join('')
+      + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0)).join('');
+  };
+
   let html = '';
   tree.forEach((d, gi) => {
-    const kids = LV.job ? d.jobs : (LV.type ? d.types : []);
-    const opens = kids.length > 0;
-    html += `<tr class="tb-l1 dept-header" data-g="${gi}"${opens ? ' data-exp="0" style="cursor:pointer"' : ''}>`
-      + `<td>${opens ? CARET : CARET_GAP}${esc(d.key)}</td>${nums(d)}</tr>`;
-    if (LV.job) {
-      d.jobs.forEach((j, ji) => {
-        const leaf = LV.type ? j.types : [];
-        const jid = `${gi}.${ji}`;
-        html += `<tr class="tb-l2" data-g="${gi}" data-j="${jid}"${leaf.length ? ' data-exp="0"' : ''}`
-          + ` style="display:none${leaf.length ? ';cursor:pointer' : ''}">`
-          + `<td>${ind(1)}${leaf.length ? CARET : CARET_GAP}${esc(j.key)}</td>${nums(j)}</tr>`;
-        leaf.forEach((t) => {
-          html += `<tr class="tb-l3 lv-topic" data-g="${gi}" data-j="${jid}" style="display:none">`
-            + `<td>${ind(2)}${CARET_GAP}${esc(t.key)}</td>${nums(t)}</tr>`;
-        });
-      });
-    } else if (LV.type) {
-      d.types.forEach((t) => {
-        html += `<tr class="tb-l3 lv-topic" data-g="${gi}" style="display:none">`
-          + `<td>${ind(1)}${CARET_GAP}${esc(t.key)}</td>${nums(t)}</tr>`;
-      });
-    }
+    const opens = LV.job && d.jobs.length > 0;
+    const open = opens && expandAll;
+    html += `<tr class="tb-l1 dept-header" data-g="${gi}"`
+      + (opens ? ` data-exp="${open ? 1 : 0}" style="cursor:pointer"` : '') + '>'
+      + `<td>${opens ? (open ? CARET_OPEN : CARET) : CARET_GAP}${esc(d.key)}</td>${nums(d)}</tr>`;
+    if (LV.job) d.jobs.forEach((j) => {
+      html += `<tr class="tb-l2" data-g="${gi}" style="display:${open ? '' : 'none'}">`
+        + `<td>${ind(1)}${CARET_GAP}${esc(j.key)}</td>${nums(j)}</tr>`;
+    });
   });
-  return `<div class="scroll-table"><table class="tb-table">
-    <thead><tr><th>${esc(head)}</th><th>Total positions</th>
-      ${STATES.map((s) => `<th>${STATE_LABEL[s]}</th>`).join('')}</tr></thead>
+
+  return `<div class="scroll-table"><table class="tb-table tb-cols">
+    <thead>
+      <tr class="tb-grp"><th></th><th></th>
+        <th class="tb-sep" colspan="${typeOrder.length}">Why the position exists</th>
+        <th class="tb-sep" colspan="${STATES.length}">Where it stands</th></tr>
+      <tr><th>${esc(head)}</th><th>Total positions</th>
+        ${typeOrder.map((t, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${esc(t)}</th>`).join('')}
+        ${STATES.map((st, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${STATE_LABEL[st]}</th>`).join('')}
+      </tr>
+    </thead>
     <tbody>
       ${html}
       ${tree.length ? `<tr class="tb-tot-row"><td>Total</td>${nums(totals)}</tr>` : ''}
@@ -391,18 +435,16 @@ function typeTreeTable(tree, typeLabel, totals, LV) {
 
 /** The heading and the ONE line of live state above a tree table: what opens, and nothing else — above a table
  *  there is live state only, and "click to drill in" is the sanctioned case. */
-function treeHead(typeLabel, LV) {
-  const hint = LV.job ? 'Click a department to open the jobs inside it.'
-    : (LV.type ? `Click a department to open its ${typeLabel.toLowerCase()} split.` : '');
+function treeHead(LV) {
   return '<h3 class="subsection-title">Where those positions sit</h3>'
-    + (hint ? `<p class="sub-note">${esc(hint)}</p>` : '');
+    + (LV.job ? '<p class="sub-note">Click a department to open the roles inside it.</p>' : '');
 }
 
 function emptyNote(what) {
   return `<p class="sub-note">No positions were opened in this period, so there is nothing to split by ${esc(what)}.</p>`;
 }
 
-function rolePanel(ix, LV) {
+function rolePanel(ix, LV, expandAll) {
   const n = ix.roleRows.length;
   // ⚠ A dated, measured note is honest; a live count inside explanation text goes stale within a day and
   // nothing tells you (CLAUDE.md Rule 6). This one is computed from what is on screen, so it cannot.
@@ -415,13 +457,14 @@ function rolePanel(ix, LV) {
     <p class="sub-note">Why each position exists, against whether it has been filled.</p>
     ${cards(ix.totals)}
     ${n ? barChart(ix.roleRows, 'Positions') : ''}
-    ${n ? treeHead('Role type', LV) : ''}
-    ${n ? typeTreeTable(ix.roleTree, 'Role type', ix.totals, LV) : emptyNote('role type')}
+    ${n ? treeHead(LV) : ''}
+    ${n ? typeColumnTable(ix.roleTree, ix.roleRows.map((r) => r.key),
+            Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll) : emptyNote('role type')}
     ${fallback}
     ${defsBlock('tb-roletype')}`;
 }
 
-function empPanel(ix, LV) {
+function empPanel(ix, LV, expandAll) {
   const n = ix.empRows.length;
   const unknown = ix.empRows.find((r) => r.key === NO_EMP_TYPE);
   // The gap is worth naming on screen, because it is the one thing that makes this table misleading.
@@ -433,8 +476,9 @@ function empPanel(ix, LV) {
     <p class="sub-note">What kind of contract each position is, against whether it has been filled.</p>
     ${cards(ix.totals)}
     ${n ? barChart(ix.empRows, 'Positions') : ''}
-    ${n ? treeHead('Contract type', LV) : ''}
-    ${n ? typeTreeTable(ix.empTree, 'Contract type', ix.totals, LV) : emptyNote('contract type')}
+    ${n ? treeHead(LV) : ''}
+    ${n ? typeColumnTable(ix.empTree, ix.empRows.map((r) => r.key),
+            Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll) : emptyNote('contract type')}
     ${note}
     ${defsBlock('tb-emptype')}`;
 }

@@ -2544,6 +2544,27 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .tb-budget th:not(:first-child), .tb-budget td:not(:first-child) { width: 10rem; }
 .tb-tot-row td { font-weight: 650; background: var(--accent-light); }
 
+/* #280b (6 Nov 2026) — the Role / Contract type table: ONE COLUMN PER TYPE, the status columns beside them.
+   🚨 `table-layout: auto` on purpose. Nine numeric columns at the shared 7rem would need 80rem and the panel
+   has about 68, so the fixed layout sent it scrolling sideways — "Table needs to fit inside panel" (Jerin).
+   Letting the browser size them keeps it in, measured at 1440 with every department open. */
+.tb-cols { table-layout: auto; }
+.tb-cols th:first-child, .tb-cols td:first-child { width: 14rem; }
+.tb-cols th:not(:first-child), .tb-cols td:not(:first-child) { width: auto; }
+.tb-cols th.tb-tight { white-space: normal; font-size: 0.6875rem; line-height: 1.2; min-width: 4rem; }
+.tb-cols .tb-grp th {
+  font-size: 0.625rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
+  font-weight: 600; padding-bottom: 0.125rem;
+}
+.tb-cols .tb-sep { border-left: 2px solid var(--border); }
+/* The cell is count-led: the figure leads and anything under it recedes. 🔑 Row padding (0.5rem) is bigger
+   than the gap inside a cell, so the lines group as ONE thing — that, not height alone, is what fixed
+   "Bit of a clutter with 3 numbers in a cell" (Jerin, 6 Nov). */
+.tb-cols td.tb-num { padding-top: 0.5rem; padding-bottom: 0.5rem; line-height: 1.1; }
+.tb-c { display: block; font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+/* A zero is noise in a table this wide, so it recedes. Declared AFTER .tb-c, which it shares a cell with. */
+.tb-z { font-size: 0.8125rem; font-weight: 400; color: #c3cadb; }
+
 /* The distribution bar. 🔑 THE TABLE COMPUTES, THE BAR READS — same rows, so they cannot drift. */
 .tb-chart {
   background: var(--card); border: 1px solid var(--border); border-radius: 0.625rem;

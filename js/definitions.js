@@ -1097,25 +1097,27 @@ export const DEFINITIONS = {
   // ===== #269 — the Type & Budget sub-tab, on Hiring Manager and Overall Efficiency =====
   'tb-roletype': {
     summary: 'What each role type and status counts',
-    intro: 'One row per <strong>position</strong>, counted in the quarter the position was opened, nested <strong>department &rarr; job &rarr; role type</strong>. <strong>Total = Filled + Open + Missed</strong>, always.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026.',
+    intro: 'One row per <strong>department</strong>, opening to one row per <strong>role</strong>, counted in the quarter the position was opened. Each role type has its own column, so a department&rsquo;s split reads straight off its own row. <strong>Total positions &minus; Joined &minus; Joining pipeline = Delta</strong> reads across every row, exactly as it does on Position Fulfilment.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
         items: [
           ['Department', 'The department the position&rsquo;s job sits in. The top level of the table &mdash; everything underneath a department adds up to it.'],
           ['Job', 'The job the position was opened on. Two jobs that share a title stay two rows, because the rows are kept by job, not by name.'],
-          ['Role type', 'Why the position exists, as the recruitment team set it when the position was raised: <em>New</em>, <em>Replacement</em>, <em>Anticipation Of Exit</em>, <em>Buffer</em> or <em>As per AOP</em>.'],
-          ['Total positions', 'Positions opened inside the period shown above. Filled plus Open plus Missed.'],
-          ['Filled', 'Someone was moved to <em>Hired</em> against this position.'],
-          ['Open', 'Still to fill.'],
-          ['Missed', 'Carried forward to a later quarter without being filled.'],
+          ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
+          ['New &middot; Replacement &middot; As per AOP &middot; Anticipation Of Exit &middot; Buffer', 'Why the position exists, as the recruitment team set it when the position was raised. One column each, and they add up to Total positions.'],
+          ['Joined', 'Someone was moved to <em>Hired</em> against this position.'],
+          ['Joining pipeline', 'Somebody is in Ref Check, Documentation or Offer against this position.'],
+          ['Delta', 'Everything else &mdash; still to fill, and positions carried forward without being filled.'],
         ]
       },
     ],
     warnings: [
-      ['Filled is the same count Position Fulfilment calls Joined', 'Two names, one number &mdash; both count <strong>positions</strong> someone was hired into, in the quarter the position was opened. Neither is the count of <strong>people</strong> who started, which is what the Joiners list shows.'],
-      ['Show levels decides how far the table splits, never what it counts', 'Untick <em>Job</em> and each department&rsquo;s role types hang straight off the department; untick <em>Type</em> and the table stops at the job. Total stays the same figure throughout &mdash; the ticks change the split, not the count.'],
+      ['Joining pipeline here counts positions, not people', 'A position with somebody closing against it. The <em>Joining Pipeline</em> card on Position Fulfilment counts <strong>people</strong>, is live rather than tied to the quarter, and includes anyone with no opening attached &mdash; so the two will not match, and neither is wrong.'],
+      ['Missed has no column of its own, and is not missing', 'A position carried forward without being filled sits inside <strong>Delta</strong>, because Delta means &ldquo;not joined, and nobody closing against it&rdquo;. Giving it a column as well would count it twice.'],
+      ['Joined is the same count Position Fulfilment calls Joined', 'One number, one name now &mdash; <strong>positions</strong> someone was hired into, in the quarter the position was opened. It is not the count of <strong>people</strong> who started, which is what the Joiners list shows.'],
+      ['Show levels decides how far the table splits, never what it counts', 'Untick <em>Job</em> and the table stops at the department; tick <em>Expand all</em> to open every department at once. Total stays the same figure throughout &mdash; the ticks change the split, not the count.'],
       ['&ldquo;As per AOP&rdquo; is a real category, not a blank', 'It means the position was in the Annual Operating Plan. It is one of five choices the team picks from when raising a position, so a large count here is planned headcount rather than unanswered questions.'],
       ['Where the role type is read from', 'The field on the position in Ashby. Where that is empty it falls back to the third part of the position&rsquo;s name, which is how the team has always written it. A line under the table says how many of each.'],
     ]
@@ -1123,23 +1125,23 @@ export const DEFINITIONS = {
 
   'tb-emptype': {
     summary: 'Where contract type comes from, and what a blank row means',
-    intro: 'The same positions as the Role Type panel, nested <strong>department &rarr; job &rarr; contract type</strong> and split by <strong>what kind of contract</strong> each one is.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026.',
+    intro: 'The same positions as the Role Type panel and the same shape &mdash; one row per <strong>department</strong>, opening to one row per <strong>role</strong> &mdash; split by <strong>what kind of contract</strong> each position is, one column per contract type.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
         items: [
           ['Department', 'The department the position&rsquo;s job sits in. The top level of the table &mdash; everything underneath a department adds up to it.'],
           ['Job', 'The job the position was opened on. Two jobs that share a title stay two rows, because the rows are kept by job, not by name.'],
-          ['Contract type', 'Full time, part time, fixed term, contract or intern, read from the position itself in Ashby.'],
-          ['Total positions', 'Positions opened inside the period shown above. Filled plus Open plus Missed.'],
-          ['Filled, Open, Missed', 'Exactly as on the Role Type panel.'],
+          ['One column per contract type', 'Full time, part time, fixed term, contract or intern, read from the position itself in Ashby. They add up to Total positions.'],
+          ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
+          ['Joined, Joining pipeline, Delta', 'Exactly as on the Role Type panel, and they read across the same way.'],
         ]
       },
     ],
     warnings: [
       ['A blank row is shown, never dropped', 'Any position with no contract type is gathered into its own row so the rows still add up to Total. If that row is large, the field has not been filled in on those positions.'],
-      ['Show levels decides how far the table splits, never what it counts', 'Exactly as on the Role Type panel: the ticks change how far down the positions are split, not how many there are.'],
+      ['Show levels decides how far the table splits, never what it counts', 'Exactly as on the Role Type panel: untick <em>Job</em> to stop at the department, tick <em>Expand all</em> to open every one. The ticks change the split, not the count.'],
       ['The values are the full ones', 'The data holds <em>PTC - Direct</em> and <em>FTC - Direct</em>, not the shorter PTC and FTC.'],
     ]
   },
