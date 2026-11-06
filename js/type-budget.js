@@ -416,7 +416,14 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
     });
   });
 
+  // 🚨 A COLGROUP, not per-cell widths. `table-layout: fixed` takes its column widths from the table's FIRST
+  // ROW, and ours is the group header — two plain cells and two colspans — so per-cell widths were simply
+  // ignored and the label column ballooned to 649px while the figures were squeezed to 28. The colgroup is
+  // the only way to state widths for a fixed table whose first row spans columns.
+  const cols = '<colgroup><col style="width:26.5rem">'
+    + '<col style="width:5.25rem">'.repeat(1 + typeOrder.length + STATES.length) + '</colgroup>';
   return `<div class="scroll-table"><table class="tb-table tb-cols">
+    ${cols}
     <thead>
       <tr class="tb-grp"><th></th><th></th>
         <th class="tb-sep" colspan="${typeOrder.length}">Why the position exists</th>

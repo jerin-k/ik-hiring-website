@@ -2548,10 +2548,16 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    🚨 `table-layout: auto` on purpose. Nine numeric columns at the shared 7rem would need 80rem and the panel
    has about 68, so the fixed layout sent it scrolling sideways — "Table needs to fit inside panel" (Jerin).
    Letting the browser size them keeps it in, measured at 1440 with every department open. */
-.tb-cols { table-layout: auto; }
-.tb-cols th:first-child, .tb-cols td:first-child { width: 14rem; }
-.tb-cols th:not(:first-child), .tb-cols td:not(:first-child) { width: auto; }
-.tb-cols th.tb-tight { white-space: normal; font-size: 0.6875rem; line-height: 1.2; min-width: 4rem; }
+/* 🔑 FIXED LAYOUT, AND THE WIDTH GOES TO THE NAMES (Jerin, 6 Nov: *"The role names running to 2 rows is
+   unecessary. Rather reduce the width of the number columns, and let the title rows run into 2 rows"*).
+   ⚠ `auto` did the opposite of what it looked like it would: it sized each number column to fit its HEADER
+   on one line, so "Anticipation Of Exit" took a wide column while "Part Time Instructor - Embedded Software
+   Engineering (US)" wrapped. Fixed widths put the space where the reading happens and let the headers wrap
+   instead — they hold three digits, which needs nothing like the room the words do. */
+.tb-cols { table-layout: fixed; }
+/* ⚠ The widths live in the table's own <colgroup>, not here: a fixed table takes them from its first row,
+   and ours spans columns. Setting them per cell looked right and did nothing. */
+.tb-cols th.tb-tight { white-space: normal; font-size: 0.6875rem; line-height: 1.2; min-width: 0; }
 .tb-cols .tb-grp th {
   font-size: 0.625rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
   font-weight: 600; padding-bottom: 0.125rem;
