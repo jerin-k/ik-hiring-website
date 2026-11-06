@@ -1100,7 +1100,10 @@ export function initHmFilters(data) {
       + `<td class="jn-cell jn-sum">${totals.drop ? `${totals.drop} dropped` : '<span class="zero">—</span>'}</td><td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
-    wireTree(body, true);   // #189d: the level chooser IS the expand control on this table (#188)
+    // 6 Nov 2026: it reads the tick like every other tree. It was hard-coded open on the reasoning that the
+    // level chooser was this table's expand control — it is not, it changes which levels EXIST, and this
+    // table could not be collapsed at all. 144 rows on arrival.
+    wireTree(body, expandAllOn('hmLevels'));
     wireJobNotes(body);   // #150
     markRemarkOverflow(body);   // #252b: only a genuinely clipped remark gets a "more"
     wirePriority(body);         // #252f: the P0/P1/P2 select saves through the same store

@@ -53,10 +53,18 @@ export function levelsOn(id) {
 // ⚠ The tick defaults to ON, exactly as the old checkbox did, so nothing on screen changes until somebody
 // unticks it. #188 did not change the default view and neither does this.
 
-/** Is "Expand all" ticked for this control? Defaults to true, matching the box #188 removed. */
+/**
+ * Is "Expand all" ticked for this control?
+ * 🚨 DEFAULTS TO **OFF** since 6 Nov 2026 (Jerin: *"Keep all collapsed?"* ➔ *"Yes, both"*). It defaulted to
+ * ON from #189d, matching the box #188 removed, which meant every tree on the site opened fully on arrival —
+ * Panelists at 231 rows, Position Fulfilment at 144. A table you have to collapse before you can read it is
+ * the wrong way round; this makes opening a department the deliberate act.
+ * ⚠ EVERY tree on the site reads this one value per tab, so flipping it moved all of them at once. That is
+ * why `showLevels` now always shows the tick: a tree driven by a control you cannot see is worse than either.
+ */
 export function expandAllOn(id) {
   const s = state[id] || (state[id] = allOn());
-  return s.xa !== false;
+  return s.xa === true;
 }
 
 /**
@@ -87,7 +95,7 @@ export function levelChooser(id, keys) {
  * Recruiter and Topic, Type & Budget offers Job and Type, and neither ever shows a tick that moves nothing
  * [[feedback_filters-must-change-data]]. The "Show levels" label itself carries no key, so it follows the group.
  */
-export function showLevels(id, want, withExpandAll) {
+export function showLevels(id, want) {
   const box = document.getElementById(id);
   if (!box) return;
   const keys = Array.isArray(want) ? want : null;
@@ -96,12 +104,11 @@ export function showLevels(id, want, withExpandAll) {
     const k = e.dataset.lvOpt;
     e.style.display = (on && (!keys || !k || keys.indexOf(k) >= 0)) ? '' : 'none';
   });
-  // #280b (6 Nov 2026): a panel may now ask for BOTH. Type & Budget has a Job level AND wants the bulk
-  // open, and the tick was already here — `levelChooser` has always rendered it; this line was hiding it.
-  // ⚠ `withExpandAll` is undefined everywhere else, so every other panel keeps the #189d behaviour exactly.
-  box.querySelectorAll('[data-part="xa"]').forEach((e) => {
-    e.style.display = (on && !withExpandAll) ? 'none' : '';
-  });
+  // 🚨 THE TICK IS ALWAYS SHOWN (6 Nov 2026). #189d hid it on any panel that had levels, on the reasoning
+  // that the level chooser WAS that panel's expand control. It never was: Position Fulfilment was simply
+  // hard-wired open and could not be collapsed at all. Now that every tree reads `expandAllOn`, hiding the
+  // tick would leave a tree driven by a control nobody can see [[feedback_filters-must-change-data]].
+  box.querySelectorAll('[data-part="xa"]').forEach((e) => { e.style.display = ''; });
 }
 
 /**

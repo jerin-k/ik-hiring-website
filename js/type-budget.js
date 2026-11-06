@@ -252,7 +252,7 @@ export function mountTypeBudget(host, data, getScope) {
     const lvId = scope.levelsId;
     // #280b: Type is a row of COLUMNS now, not a level, so Job is the only level left to offer — and the
     // Expand all tick comes out of hiding, which is what he asked for ("i need a Expan All tick box").
-    if (lvId) showLevels(lvId, ['job'], true);
+    if (lvId) showLevels(lvId, ['job']);
     const LV = lvId ? levelsOn(lvId) : { job: true };
     const expandAll = lvId ? expandAllOn(lvId) : false;
     if (active === 'role') body.innerHTML = rolePanel(ix, LV, expandAll);

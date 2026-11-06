@@ -484,7 +484,8 @@ export function initEfficiencyFilters(data) {
   // #188: on Position Fulfilment a ticked level is drawn open — the chooser IS the expand control there.
   // #189d: every OTHER panel reads the "Expand all" tick again. #188 hard-coded this to true, which left eight
   // trees on this tab permanently open with no way to close them, under a chooser that moved none of them.
-  const expandAll = () => activeTab === 'fulfilment' || expandAllOn('effLevels');
+  // 6 Nov 2026: Position Fulfilment used to force `true` here, so it alone could never be collapsed.
+  const expandAll = () => expandAllOn('effLevels');
 
   // ONE quarter, for the job trees the activity panels hang their period data off.
   // 🚨 #120 (14 Sep 2026): this fell through to TODAY's quarter whenever EITHER dropdown read "All", so Year: All with
