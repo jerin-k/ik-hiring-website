@@ -322,6 +322,30 @@ function openingCustomFieldByTitle_(o, re) {
   }
   return null;
 }
+/**
+ * #294 (6 Nov 2026) - the opening's own budget, as a NUMBER, or null.
+ * 🚨 IT NEEDS ITS OWN READER. The field is a CURRENCY, and its value is an OBJECT -
+ *    { value: 1877000, currencyCode: 'INR' } - measured that day on IK-533 and IK-525. Put through
+ *    openingCustomFieldByTitle_ it comes back as the string "[object Object]", which is worse than empty
+ *    because it looks like data. A bare number and a digit string are read too, in case the shape moves.
+ * ⚠ The title is "Budget for the Role"; /budget/i is the only one of the twelve opening field titles it
+ *    matches, so the loose regex cannot collide (the #269a measurement covers this).
+ * 🔑 The run log counts what this found. If it reports 0 the shape has changed and the column simply stays
+ *    empty - nothing else on the dashboard is wrong.
+ */
+function openingBudget_(o) {
+  var cfs = (o.latestVersion && o.latestVersion.customFields) || [];
+  for (var i = 0; i < cfs.length; i++) {
+    var t = cfs[i].title || cfs[i].name || '';
+    if (!/budget/i.test(t)) continue;
+    var v = cfs[i].value;
+    if (v && typeof v === 'object' && !(v instanceof Array) && v.value != null) v = v.value;
+    if (v instanceof Array && v.length === 1) v = v[0];
+    var n = Number(v);
+    return (isFinite(n) && n > 0) ? n : null;
+  }
+  return null;
+}
 function jobCustomFieldByTitle_(job, re) {
   var cfs = job.customFields || [];
   for (var i = 0; i < cfs.length; i++) {
@@ -849,7 +873,12 @@ function refreshDashboardData() {
     // MEASURED 20 Oct by probe269Fields over 2,683 openings: an opening carries only TWELVE distinct
     //   custom-field titles, and neither 'role type' nor 'employment type' is a substring of any other,
     //   so these loose regexes cannot collide. Employment Type sits on 2,667 of them; Role Type on 874.
-    // There is NO budget field on ANY opening - 0 of 2,683 - so nothing budget-shaped is read here.
+    // 🚨 THE OLD LINE HERE SAID "There is NO budget field on ANY opening - 0 of 2,683 - so nothing
+    //   budget-shaped is read here." That was measured on 20 Oct, the DAY the field became compulsory, so it
+    //   was a snapshot of the moment before anyone could fill one in. RE-MEASURED 6 Nov 2026: 7 openings
+    //   carry one, all Replacement or Anticipation Of Exit, raised 12 Oct-3 Nov. #294 reads it from here on.
+    //   Rule 5: re-measure before repeating a claim that something is empty.
+    var oBudget = openingBudget_(o);
     var oRoleType = openingCustomFieldByTitle_(o, /role type/i);
     var oEmpType = openingCustomFieldByTitle_(o, /employment type/i);
     // The FIELD is the truth; the opening NAME is the fallback, because #159 puts the role type in the
@@ -898,6 +927,7 @@ function refreshDashboardData() {
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
         quarter: q, day: dOpen || null, state: cls, topic: oTopic, complexity: oComplexity, jpTied: 0,
         roleType: oRoleType || null, roleTypeSource: oRoleTypeSrc, empType: oEmpType || null,
+        budget: oBudget,
         name: String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').trim(),
         ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
@@ -970,6 +1000,9 @@ function refreshDashboardData() {
   // jobs - exactly as Total does. Sum it per job, never across the whole array.
   openingRows.forEach(function (r) { r.jpTied = jpTiedByOpening8_[r.openingId] || 0; });
   openingTopicStats.jpTied = Object.keys(jpTiedByOpening8_).length;
+  // #294: how many of the emitted rows carry a budget. A zero here means the field's shape moved, not that
+  // the money is gone - check openingBudget_ against one opening in Ashby before changing anything else.
+  openingTopicStats.withBudget = openingRows.filter(function (r) { return r.budget != null; }).length;
   Logger.log('#157 openings from ' + OPENING_ROWS_FROM + ': ' + openingTopicStats.scoped + ' scoped, '
     + openingTopicStats.withTopic + ' with a topic | SME ' + openingTopicStats.sme + ' of which '
     + openingTopicStats.smeWithTopic + ' with a topic | openings carrying a live linked offer: '
