@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-06T07:18:20.624Z",
+  "updatedAt": "2026-11-06T09:58:58.783Z",
   "notes": {
     "19982198": {
       "text": "R3 - 1 ( TBS)\nCan we revisit JT as R1 post HE test instead of DJ?",
@@ -163,9 +163,9 @@
       "at": "2026-11-05T10:54:11.073Z"
     },
     "8cb01d31": {
-      "text": "HM review : 2\nR1: 2",
-      "by": "Rijo",
-      "at": "2026-11-05T10:54:39.078Z"
+      "text": "R1 - 6",
+      "by": "Gopu",
+      "at": "2026-11-06T09:58:58.782Z"
     }
   },
   "priorities": {
