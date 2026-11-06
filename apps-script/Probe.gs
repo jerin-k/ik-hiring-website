@@ -1693,3 +1693,153 @@ function probe287Final() {
 
   Logger.log('#287p ROUND 4 - auditLog.list, version.list, interviewSchedule.info' + NL + out.join(NL));
 }
+
+
+// ===== #289: WHY excludedNoRole (135) and listTractionUnmatched (70) DISAGREE. Read-only. =====
+// Jerin, 5 Nov 2026: "Do it now, than leave it hanging." - and he named the answer in the same breath:
+// "you are to check Interview booking, assessment trigger & assignment trigger ... right?" Yes. Traction
+// builds rows from THREE sources, and noJob++ counts unresolved rows across all three - while
+// listTractionUnmatched walks only /interviewSchedule.list. This counts the exclusions PER SOURCE.
+// SAFETY: list endpoints only. Writes nothing, creates no sheet, touches no trigger.
+function probe289Sources() {
+  var NL = String.fromCharCode(10);
+  var fromDay = reportFloorDay_(), fromMs = new Date(fromDay + 'T00:00:00+05:30').getTime();
+  var SE = loadDriveJson_('stage_events.json') || {};
+  var jobOf = {};
+  for (var id in SE) jobOf[id] = SE[id].j || null;
+  var AA = loadDriveJson_('archived_apps.json') || [];
+  if (Object.prototype.toString.call(AA) !== '[object Array]') AA = AA.apps || [];
+  for (var a = 0; a < AA.length; a++) { var r0 = AA[a]; if (r0 && r0.id && !jobOf[r0.id]) jobOf[r0.id] = r0.j || null; }
+  var nameOf = {};
+  try { nameOf = JSON.parse(PropertiesService.getScriptProperties().getProperty(TRACTION_STAGE_CACHE) || '{}'); } catch (e) {}
+  nameOf[TRACTION_ASSESS_SID] = 'Online Assessment';
+
+  var rows = [];
+  var cursor = null, pages = 0;
+  do {
+    var body = { limit: 100, createdAfter: fromMs };
+    if (cursor) body.cursor = cursor;
+    var resp = ashbyPost_('/interviewSchedule.list', body);
+    var batch = resp.results || [];
+    for (var i = 0; i < batch.length; i++) {
+      var s = batch[i], evs = s.interviewEvents || [], start = null;
+      for (var e = 0; e < evs.length; e++) { var st = evs[e].startTime; if (st && (!start || st < start)) start = st; }
+      var canc = /cancel/i.test(String(s.status || ''));
+      if (!start) { if (canc && s.createdAt) start = s.createdAt; else continue; }
+      var day = dayIST_(start);
+      if (!day || day < fromDay) continue;
+      rows.push({ src: 'booking', sid: s.interviewStageId, app: s.applicationId });
+    }
+    cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
+    pages++;
+    if (cursor) Utilities.sleep(30);
+  } while (cursor);
+
+  try {
+    var asg = ashbyListAll_('/takeHomeAssignment.list');
+    for (var t = 0; t < asg.length; t++) {
+      var T = asg[t];
+      if (!T.applicationId || !T.createdAt || !T.interviewStageId) continue;
+      var td = dayIST_(T.createdAt);
+      if (!td || td < fromDay) continue;
+      rows.push({ src: 'takehome', sid: T.interviewStageId, app: T.applicationId });
+    }
+  } catch (eA) { Logger.log('S|takeHomeAssignment.list FAILED - ' + eA.message); }
+
+  if (ASSESS_USE_REPORT) {
+    try {
+      var rep = assessReportAssessments_();
+      for (var rApp in rep.byApp) {
+        var ds = rep.byApp[rApp] || [];
+        for (var d2 = 0; d2 < ds.length; d2++) {
+          if (!ds[d2] || ds[d2] < fromDay) continue;
+          rows.push({ src: 'assessment', sid: TRACTION_ASSESS_SID, app: rApp });
+        }
+      }
+    } catch (eR) { Logger.log('S|assessment report FAILED - ' + eR.message); }
+  }
+
+  var total = { booking: 0, takehome: 0, assessment: 0 };
+  var noJob = { booking: 0, takehome: 0, assessment: 0 };
+  var appsNo = { booking: {}, takehome: {}, assessment: {} };
+  var dropStage = 0;
+  for (var q = 0; q < rows.length; q++) {
+    var R = rows[q], title = nameOf[R.sid];
+    if (!title || !TRACTION_TORD[title]) { dropStage++; continue; }
+    total[R.src]++;
+    var j8 = (jobOf[R.app] || '').substring(0, 8);
+    if (!j8) { noJob[R.src]++; appsNo[R.src][R.app] = 1; }
+  }
+  var sum = noJob.booking + noJob.takehome + noJob.assessment;
+  var out = [];
+  out.push('rows built: ' + rows.length + ' | dropped for an unmapped stage: ' + dropStage);
+  out.push('source | rows counted | NO ROLE | distinct applications');
+  ['booking', 'takehome', 'assessment'].forEach(function (k) {
+    out.push(k + ' | ' + total[k] + ' | ' + noJob[k] + ' | ' + Object.keys(appsNo[k]).length);
+  });
+  out.push('TOTAL NO ROLE across all three = ' + sum + ' <- what excludedNoRole counts');
+  out.push('bookings alone = ' + noJob.booking + ' <- what listTractionUnmatched reports');
+  out.push('so the gap is ' + (sum - noJob.booking) + ', from take-home and assessment rows');
+  Logger.log('S|#289 no-role BY SOURCE' + NL + out.join(NL));
+}
+
+
+// ===== #287e: HOW MANY CANCELLATIONS ARE REALLY A SAME-DAY REBOOKING? Read-only. =====
+// Jerin, 5 Nov 2026: "On cancel & rebook for the same day - lets take the latest one alone. Can that be done?"
+// Yes - but it changes a LIVE number, so measure the size before touching it.
+//   A  cancellations that would be ABSORBED: a cancelled booking with a LATER booking for the same
+//      application + stage + day. These are the ones that would stop being counted.
+//   B  groups holding 2+ bookings where NONE is cancelled - the case a blunt "latest wins" would wrongly
+//      collapse, and the reason the rule must test for a cancellation rather than just take the last.
+// SAFETY: one list endpoint. Writes nothing, creates nothing, touches no trigger.
+function probe287e() {
+  var NL = String.fromCharCode(10);
+  var fromDay = reportFloorDay_(), fromMs = new Date(fromDay + 'T00:00:00+05:30').getTime();
+  var nameOf = {};
+  try { nameOf = JSON.parse(PropertiesService.getScriptProperties().getProperty(TRACTION_STAGE_CACHE) || '{}'); } catch (e) {}
+  var groups = {}, total = 0, cancelled = 0, cursor = null;
+  do {
+    var body = { limit: 100, createdAfter: fromMs };
+    if (cursor) body.cursor = cursor;
+    var resp = ashbyPost_('/interviewSchedule.list', body);
+    var batch = resp.results || [];
+    for (var i = 0; i < batch.length; i++) {
+      var s = batch[i], evs = s.interviewEvents || [], start = null;
+      for (var e = 0; e < evs.length; e++) { var st = evs[e].startTime; if (st && (!start || st < start)) start = st; }
+      var canc = /cancel/i.test(String(s.status || ''));
+      if (!start) { if (canc && s.createdAt) start = s.createdAt; else continue; }
+      var day = dayIST_(start);
+      if (!day || day < fromDay) continue;
+      var title = nameOf[s.interviewStageId];
+      if (!title || !TRACTION_TORD[title]) continue;
+      total++; if (canc) cancelled++;
+      var k = s.applicationId + '|' + s.interviewStageId + '|' + day;
+      (groups[k] || (groups[k] = [])).push({ canc: canc, made: s.createdAt || '' });
+    }
+    cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
+    if (cursor) Utilities.sleep(30);
+  } while (cursor);
+
+  var absorbed = 0, groupsHit = {}, riskGroups = 0, multi = 0;
+  for (var k2 in groups) {
+    var g = groups[k2];
+    if (g.length < 2) continue;
+    multi++;
+    var latest = '';
+    for (var a = 0; a < g.length; a++) if (g[a].made > latest) latest = g[a].made;
+    for (var b = 0; b < g.length; b++) {
+      if (g[b].canc && g[b].made < latest) { absorbed++; groupsHit[k2] = 1; }
+    }
+    var liveN = 0;
+    for (var c = 0; c < g.length; c++) if (!g[c].canc) liveN++;
+    if (liveN >= 2) riskGroups++;
+  }
+  var out = [];
+  out.push('bookings counted (same filters as the chart): ' + total);
+  out.push('cancelled today: ' + cancelled);
+  out.push('groups (person + stage + day) holding MORE THAN ONE booking: ' + multi);
+  out.push('A. cancellations that would be ABSORBED by the rule: ' + absorbed + ' (' + (cancelled ? Math.round(1000 * absorbed / cancelled) / 10 : 0) + ' percent of all cancellations)');
+  out.push('   groups affected: ' + Object.keys(groupsHit).length);
+  out.push('B. groups with 2+ bookings and NONE cancelled: ' + riskGroups + ' <- a blunt latest-wins would wrongly collapse these');
+  Logger.log('E|#287e same-day rebooking' + NL + out.join(NL));
+}
