@@ -145,12 +145,17 @@ export function typeBudgetIndex(data, sel, jobOk) {
     const job = ji.title || NO_JOB;
 
     const bud = Number(r.budget) > 0 ? Number(r.budget) : 0;
-    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud);
-    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud);
+    // #294: what the offer against this position actually cost (Total CTC Yearly, his choice 10 Nov 2026).
+    const oamt = Number(r.offerAmt) > 0 ? Number(r.offerAmt) : 0;
+    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud, oamt);
+    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud, oamt);
 
     totals.total++;
     if (st) totals[st]++;
     if (bud > 0) { totals.bSum += bud; totals.bN++; }
+    if (oamt > 0) totals.oSum += oamt;
+    if (st === 'joined') { if (bud > 0) totals.jB += bud; if (oamt > 0) totals.jO += oamt; else totals.jMiss++; }
+    else if (st === 'jp') { if (bud > 0) totals.pB += bud; if (oamt > 0) totals.pO += oamt; else totals.pMiss++; }
     source[r.roleTypeSource === 'field' ? 'field' : (r.roleTypeSource === 'name' ? 'name' : 'none')]++;
   });
 
@@ -170,7 +175,11 @@ export function typeBudgetIndex(data, sel, jobOk) {
   // 🚨 `bSum`/`bN` ride along with the counts so a level can never disagree with the one above it.
   //    `bN` is the number of positions that CARRY a budget, which is NOT `total`: a position raised without
   //    one must not drag the average down, so it is outside both the sum and the divisor.
-  function blank() { return { total: 0, joined: 0, jp: 0, delta: 0, bSum: 0, bN: 0 }; }
+  // 🔑 `jB/jO/jMiss` and `pB/pO/pMiss` are the money of the JOINED and the PIPELINE positions on this row:
+  //    the budget those positions were given, what their offers actually cost, and how many of them have no
+  //    offer amount at all. That last count is what stops a Delta being printed over an unknown (see below).
+  function blank() { return { total: 0, joined: 0, jp: 0, delta: 0, bSum: 0, bN: 0, oSum: 0,
+    jB: 0, jO: 0, jMiss: 0, pB: 0, pO: 0, pMiss: 0 }; }
   /**
    * One position, one bucket. `jpTied` is how many people in closing name this opening on their offer
    * (#157), so a position with one or more of them is in the pipeline; everything that is neither joined
@@ -181,22 +190,28 @@ export function typeBudgetIndex(data, sel, jobOk) {
     if (r.state !== 'missed' && (r.jpTied || 0) > 0) return 'jp';
     return 'delta';
   }
-  function add(t, st, bud) {
+  function add(t, st, bud, oamt) {
     t.total++;
     if (st) t[st]++;
     // A budget of 0 is not a budget. `openingBudget_` publishes the field only where Ashby holds a figure.
     if (bud > 0) { t.bSum += bud; t.bN++; }
+    if (oamt > 0) t.oSum += oamt;
+    // 🚨 A FILLED OR CLOSING POSITION WITH NO OFFER AMOUNT IS COUNTED, NOT IGNORED. Somebody joined against
+    //    it, so money WAS spent; we simply do not know how much. `jMiss`/`pMiss` carry that ignorance up the
+    //    tree so the renderer can refuse to print a Delta that would silently assume zero.
+    if (st === 'joined') { if (bud > 0) t.jB += bud; if (oamt > 0) t.jO += oamt; else t.jMiss++; }
+    else if (st === 'jp') { if (bud > 0) t.pB += bud; if (oamt > 0) t.pO += oamt; else t.pMiss++; }
   }
 
   /** Count one position at all three levels at once, so a level can never disagree with the one above it. */
-  function plant(tree, dept, job, job8, type, st, bud) {
+  function plant(tree, dept, job, job8, type, st, bud, oamt) {
     const d = tree[dept] || (tree[dept] = Object.assign({ key: dept, jobs: {} }, blank()));
-    add(d, st, bud);
+    add(d, st, bud, oamt);
     // Keyed on the job ID, never the title: two jobs can share a title and must stay two rows.
     const j = d.jobs[job8] || (d.jobs[job8] = Object.assign({ key: job, job8, types: {} }, blank()));
-    add(j, st, bud);
+    add(j, st, bud, oamt);
     const t = j.types[type] || (j.types[type] = Object.assign({ key: type }, blank()));
-    add(t, st, bud);
+    add(t, st, bud, oamt);
   }
 
   // Biggest first; the catch-all sits LAST however big it is, because it is a gap marker, not a type.
@@ -230,6 +245,7 @@ export function typeBudgetIndex(data, sel, jobOk) {
       //    merged row comes through with an empty average and stops agreeing with the rows it was built from.
       x.bSum += t.bSum || 0;
       x.bN += t.bN || 0;
+      ['oSum', 'jB', 'jO', 'jMiss', 'pB', 'pO', 'pMiss'].forEach((f) => { x[f] += t[f] || 0; });
     }));
     return order(Object.values(bag), catchAll);
   }
@@ -450,22 +466,71 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
       + '</td>';
   };
 
-  /** One figure, with room under it for the money this table does not have a source for yet (#294). */
-  const cell = (n, ink, first) =>
+  /**
+   * One figure, with its own money under it and, on Joined and Joining pipeline, how far that money ran
+   * over the budget of those same positions (#294, his decisions 12 and 14).
+   *
+   * 🗣 Decision 16: *"Bit of a clutter with 3 numbers in a cell... improve the design inside the cell"*. The
+   *    three lines are told apart by STEPPING THE SIZES HARD (count 0.75rem/600, money 0.6875rem muted,
+   *    marker 0.5625rem) and by the row's padding beating the gap inside the cell, so they group as one.
+   * 🗣 Decision 15: the marker is #c798a5 and SMALLER, not bigger — *"retain the color & go smaller"*. It is
+   *    a glance, not a figure to read. Do not buy legibility back with a size bump; he rejected that.
+   */
+  const cell = (n, ink, first, money, marker) =>
     `<td class="tb-num${first ? ' tb-sep' : ''}">`
     + (n ? `<span class="tb-c"${ink ? ` style="color:${ink}"` : ''}>${n}</span>`
          : '<span class="tb-c tb-z">0</span>')
+    + (withB && money ? `<span class="tb-m">${money}</span>` : '')
+    + (withB && marker ? `<span class="tb-mk">${marker}</span>` : '')
     + '</td>';
+
+  /** Over or under the budget of the SAME positions: + is over, − is under. Blank where they had no budget. */
+  const over = (spent, budgeted) => {
+    if (!(budgeted > 0) || !(spent > 0)) return '';
+    const d = spent - budgeted;
+    if (d === 0) return '';
+    return (d > 0 ? '+' : '\u2212') + inrShort(Math.abs(d));
+  };
+
+  /**
+   * The money Delta: what was planned, less what the joined and closing positions actually cost.
+   *
+   * 🔒 HIS CALL, 10 Nov 2026 — *"Yes, dash it"*: it appears ONLY on a row that HAS a budget. With a budget
+   *    recorded on a small minority of positions, "planned" is zero nearly everywhere, and planned-minus-spent
+   *    would print a large negative on row after row that READS as overspending when the truth is that nobody
+   *    entered a budget. That is CLAUDE.md Rule 4 — a heading over a number that does not mean what it says.
+   * 🚨 AND IT DASHES WHILE ANY FILLED OR CLOSING POSITION ON THE ROW HAS NO OFFER AMOUNT (`jMiss`/`pMiss`).
+   *    You cannot state what is left of a budget while one of the things spent against it is unknown —
+   *    printing planned-minus-the-rest would silently assume that position cost nothing. An SME position is
+   *    the standing case: SME offers are priced per session and carry no annual figure at all.
+   * ⚠ NEVER CLAMPED (his decision 13, *"Can go to negative; will show as overshooting"*) — the same rule as
+   *   the count Delta, and for the same reason. Do not put a Math.max(0, …) here.
+   */
+  const deltaMoney = (r) => {
+    if (!(r.bSum > 0)) return '';
+    if ((r.jMiss || 0) + (r.pMiss || 0) > 0) return '';
+    return inrShort(r.bSum - (r.jO || 0) - (r.pO || 0));
+  };
 
   /** A row's figures, in the order the headers read. It LOOKS UP, it never adds: every number here was
    *  counted in `typeBudgetIndex`, so a job row cannot disagree with its department (Rule 3). */
   const nums = (r, isRole) => {
-    const by = {};
-    (r.types || []).forEach((t) => { by[t.key] = t.total; });
+    const by = {}, byB = {};
+    // 🔑 The type columns carry the BUDGET of that type's positions — the planned side, as his decision 12
+    //    says: role-type columns and the average come from the opening, the actuals from the offer.
+    (r.types || []).forEach((t) => { by[t.key] = t.total; byB[t.key] = t.bSum || 0; });
+    const money = {
+      total: inrShort(r.bSum || 0),
+      joined: inrShort(r.jO || 0),
+      jp: inrShort(r.pO || 0),
+      delta: deltaMoney(r)
+    };
+    const mark = { joined: over(r.jO || 0, r.jB || 0), jp: over(r.pO || 0, r.pB || 0), delta: '' };
     return budCell(r, isRole)
-      + `<td class="tb-num"><span class="tb-c">${r.total}</span></td>`
-      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0)).join('')
-      + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0)).join('');
+      + `<td class="tb-num"><span class="tb-c">${r.total}</span>`
+      + (withB && money.total ? `<span class="tb-m">${money.total}</span>` : '') + '</td>'
+      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0, inrShort(byB[t] || 0), '')).join('')
+      + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0, money[st], mark[st])).join('');
   };
 
   let html = '';

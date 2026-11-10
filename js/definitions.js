@@ -1098,7 +1098,7 @@ export const DEFINITIONS = {
   'tb-roletype': {
     summary: 'What each role type and status counts',
     intro: 'One row per <strong>department</strong>, opening to one row per <strong>role</strong>, counted in the quarter the position was opened. Each role type has its own column, so a department&rsquo;s split reads straight off its own row. <strong>Total positions &minus; Joined &minus; Joining pipeline = Delta</strong> reads across every row, exactly as it does on Position Fulfilment.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column 10 Nov 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column and the money under each count 10 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -1109,12 +1109,16 @@ export const DEFINITIONS = {
           ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
           ['New &middot; Replacement &middot; As per AOP &middot; Anticipation Of Exit &middot; Buffer', 'Why the position exists, as the recruitment team set it when the position was raised. One column each, and they add up to Total positions.'],
           ['Joined', 'Someone was moved to <em>Hired</em> against this position.'],
+          ['The money under each count', 'With <em>Budget</em> ticked, every count carries a money figure underneath it. Under <strong>Total positions</strong> and under each role type it is the <strong>budget</strong> those positions were given when they were raised. Under <strong>Joined</strong> and <strong>Joining pipeline</strong> it is what those people&rsquo;s offers actually come to &mdash; the Total CTC Yearly on the offer. Under <strong>Delta</strong> it is the budget less those two actuals.'],
           ['Joining pipeline', 'Somebody is in Ref Check, Documentation or Offer against this position.'],
           ['Delta', 'Everything else &mdash; still to fill, and positions carried forward without being filled.'],
         ]
       },
     ],
     warnings: [
+      ['The small pink figure is how far an offer ran over its budget', 'It sits under Joined and Joining pipeline and compares those offers against the budget of <strong>those same positions</strong>. A plus means the offers came to more than was budgeted, a minus less. It is absent where those positions carry no budget, because there is nothing to compare against.'],
+      ['The money Delta is blank unless it can be worked out honestly', 'It appears only where the row <strong>has a budget</strong>: without one, &ldquo;budget less spending&rdquo; would print a large negative on row after row and read as overspending, when the truth is that no budget was recorded. It is also blank while any <strong>filled or closing position on the row has no offer figure</strong> &mdash; you cannot say what is left of a budget while one of the things spent against it is unknown. A negative figure is real overspending and is never rounded up to zero.'],
+      ['A role paid per session shows no money', 'Subject matter expert offers are priced per teaching session, not as a yearly package, so they carry no yearly figure at all. Those rows show a dash rather than a zero, and they are not averaged in with salaried roles &mdash; an hourly fee and a yearly salary are different things.'],
       ['A position raised without a budget is not in the average', 'The average is taken over the positions on that row that <strong>carry</strong> a figure, not over every position in the role. A role where nobody has entered one shows a dash rather than a zero. So the column answers &ldquo;what is a budgeted position in this role worth?&rdquo; &mdash; not &ldquo;what has this role been given in total?&rdquo;, and the figure does not move when a position is raised with the budget left blank.'],
       ['Only new positions carry one, and nothing was backfilled', 'The budget is asked for when a position is raised, so positions opened before the field was in use have none and will not gain one. Expect the column to fill in gradually rather than all at once.'],
       ['Untick <em>Budget</em> to put the column away', 'It sits beside <em>Job</em> and <em>Expand all</em> and is on by default. It adds the column and takes it away; it changes no count.'],
@@ -1130,7 +1134,7 @@ export const DEFINITIONS = {
   'tb-emptype': {
     summary: 'Where contract type comes from, and what a blank row means',
     intro: 'The same positions as the Role Type panel and the same shape &mdash; one row per <strong>department</strong>, opening to one row per <strong>role</strong> &mdash; split by <strong>what kind of contract</strong> each position is, one column per contract type.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column 10 Nov 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column and the money under each count 10 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -1141,10 +1145,14 @@ export const DEFINITIONS = {
           ['One column per contract type', 'Full time, part time, fixed term, contract or intern, read from the position itself in Ashby. They add up to Total positions.'],
           ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
           ['Joined, Joining pipeline, Delta', 'Exactly as on the Role Type panel, and they read across the same way.'],
+          ['The money under each count', 'With <em>Budget</em> ticked, every count carries a money figure underneath it. Under <strong>Total positions</strong> and under each role type it is the <strong>budget</strong> those positions were given when they were raised. Under <strong>Joined</strong> and <strong>Joining pipeline</strong> it is what those people&rsquo;s offers actually come to &mdash; the Total CTC Yearly on the offer. Under <strong>Delta</strong> it is the budget less those two actuals.'],
         ]
       },
     ],
     warnings: [
+      ['The small pink figure is how far an offer ran over its budget', 'It sits under Joined and Joining pipeline and compares those offers against the budget of <strong>those same positions</strong>. A plus means the offers came to more than was budgeted, a minus less. It is absent where those positions carry no budget, because there is nothing to compare against.'],
+      ['The money Delta is blank unless it can be worked out honestly', 'It appears only where the row <strong>has a budget</strong>: without one, &ldquo;budget less spending&rdquo; would print a large negative on row after row and read as overspending, when the truth is that no budget was recorded. It is also blank while any <strong>filled or closing position on the row has no offer figure</strong> &mdash; you cannot say what is left of a budget while one of the things spent against it is unknown. A negative figure is real overspending and is never rounded up to zero.'],
+      ['A role paid per session shows no money', 'Subject matter expert offers are priced per teaching session, not as a yearly package, so they carry no yearly figure at all. Those rows show a dash rather than a zero, and they are not averaged in with salaried roles &mdash; an hourly fee and a yearly salary are different things.'],
       ['A position raised without a budget is not in the average', 'Exactly as on the Role Type panel: the average covers the positions on that row that <strong>carry</strong> a figure, not every position in the role, and a role where nobody entered one shows a dash rather than a zero. Positions opened before the field was in use have none and will not gain one.'],
       ['A blank row is shown, never dropped', 'Any position with no contract type is gathered into its own row so the rows still add up to Total. If that row is large, the field has not been filled in on those positions.'],
       ['Show levels decides how far the table splits, never what it counts', 'Exactly as on the Role Type panel: untick <em>Job</em> to stop at the department, tick <em>Expand all</em> to open every one. The ticks change the split, not the count.'],

@@ -2604,6 +2604,22 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   font-size: 0.6875rem; font-weight: 600; color: var(--text);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+/* #294 — the money under a count, and the over/under marker under Joined and Joining pipeline.
+   🗣 His decision 16: three numbers in one cell read as clutter when they are a similar size AND the gap
+   inside the cell matches the gap between rows. Both had to change: step the sizes hard, and let the row's
+   padding (0.625rem) beat the gap inside the cell (0.1875rem) so the lines group as one figure.
+   🗣 His decision 15: the marker is two shades lighter than --red and SMALLER, never bigger — "retain the
+   color & go smaller". It is a glance, not a figure to read. A size bump was offered and rejected. */
+.tb-cols td.tb-num { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+.tb-m {
+  display: block; margin-top: 0.1875rem; font-size: 0.6875rem; font-weight: 400;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.tb-mk {
+  display: block; margin-top: 0.0625rem; font-size: 0.5625rem; font-weight: 600;
+  color: #c798a5; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
 /* Not a missing figure — a figure that would mean nothing at this level. It must not read as an empty cell. */
 .tb-dash { color: #c3cadb; font-size: 0.75rem; }
 
