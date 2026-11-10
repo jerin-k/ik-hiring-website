@@ -31,6 +31,16 @@ const ROLE_TYPES = ['New', 'Replacement', 'Anticipation Of Exit', 'As per AOP', 
 // "Replacement of, if applicable" field, which is why the wording stays the same for both.
 const NEEDS_REPLACED_NAME = ['Replacement', 'Anticipation Of Exit'];
 const needsReplacedName = (t) => NEEDS_REPLACED_NAME.includes(String(t || ''));
+// 294 (Jerin, 6 Nov 2026): 🗣 *"In opening creation (via req bot), budget should reflect & be mandatory for
+// all types of roles. Currently, its only for replacement & AOE"*.
+// 🚨 SO THE BUDGET AND THE REPLACED NAME NO LONGER SHARE A GATE. #244c deliberately gave them ONE gate
+//    "so they cannot drift apart" — that was right when both were asked for the same two Role Types, and it
+//    is exactly what had to be undone: a budget belongs on every opening, a replaced person only where
+//    somebody is being replaced. Two gates now, each saying what it means.
+// ⚠ Ashby takes it in the opening's **"Budget for role"** field (he named it; it reads that since Nov 2026,
+//   and the pipeline matches the title loosely so the rename did not break the read).
+// 🔑 NOTHING IS RETROSPECTIVE and he accepts that: openings already raised stay blank for ever.
+const needsBudget = (t) => !!String(t || '').trim();
 const COMPLEXITIES = ['Normal', 'Complex', 'Uber Complex'];
 // A topic this short or this generic cannot tell two openings on one job apart - ask rather than accept it.
 const VAGUE = /^(ai|ml|tech|technology|general|misc|others?|na|n\/a|tbd|tbc|any|role|instructor|sme|trainer|-+)$/i;
@@ -195,12 +205,15 @@ function evaluate(d, ctx) {
   if (ghost.length) block(`Not an active Ashby user, so they cannot own the opening: ${ghost.join(', ')}.`);
   if (noName.length) many(noName, (n) => `Say who opening ${n} replaces.`, (l) => `Say who openings ${l} replace.`);
   // 244c revised (Jerin, 20 Oct 2026): \ud83d\udde3 *"The replacement of, and budget should be made mandatory - not if you
-  // kow bro!"* \u2014 BOTH are now Submit blockers. The earlier reading took its cue from Ashby's own field label
-  // ("Only if applicable") and made this a question; his point is that on a Replacement or an Anticipation Of
-  // Exit the requester DOES know, so asking nicely just produces blanks. Same gate as the name beside it, so
-  // the two cannot drift apart.
+  // kow bro!"* \u2014 BOTH are Submit blockers. The earlier reading took its cue from Ashby's own field label
+  // ("Only if applicable") and made this a question; his point is that the requester DOES know, so asking
+  // nicely just produces blanks.
+  // 294 (Jerin, 6 Nov 2026): \ud83d\udde3 *"budget should reflect & be mandatory for ALL types of roles"* \u2014 so the
+  // budget blocker no longer shares the name's gate. A row with a Role Type and no budget cannot be submitted,
+  // whatever that Role Type is. \u26a0 A row with no Role Type yet is caught by `noType` above, not here, so it
+  // does not collect two complaints for one empty line.
   const noBudget = [];
-  r.rows.forEach((x, i) => { if (needsReplacedName(x.roleType) && !x.budget) noBudget.push(i + 1); });
+  r.rows.forEach((x, i) => { if (needsBudget(x.roleType) && !x.budget) noBudget.push(i + 1); });
   if (noBudget.length) many(noBudget, (n) => `Give the budget on opening ${n}.`,
     (l) => `Give the budget on openings ${l}.`);
   const who = [];
@@ -737,15 +750,20 @@ export async function mountOpeningRequests(root, backend) {
           <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select>
           <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
             value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}></div>`;
-        if (!needsReplacedName(x.roleType)) return head;
-        // 244c: the budget sits beside the name on the SAME sub-line, because both are asked for exactly
-        // the same two Role Types. One gate (needsReplacedName) decides both, so they cannot drift apart.
-        return head + `<div class="or-op-sub two"><div><label for="orrep${i}">Replacing whom?</label>
+        // 294: the BUDGET is asked on every Role Type; the replaced NAME only where somebody is replaced.
+        // Two gates, so the sub-line is two columns on a Replacement / Anticipation Of Exit and one elsewhere.
+        const wantsName = needsReplacedName(x.roleType);
+        const wantsBudget = needsBudget(x.roleType);
+        if (!wantsName && !wantsBudget) return head;   // no Role Type picked yet — ask nothing
+        const nameCell = wantsName
+          ? `<div><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
-            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>
-          <div><label for="orbud${i}">Budget</label>
+            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>` : '';
+        const budCell = wantsBudget
+          ? `<div><label for="orbud${i}">Budget</label>
           <input id="orbud${i}" class="or-in${x.budget ? '' : ' bad'}" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
-            value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div></div>`;
+            value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div>` : '';
+        return head + `<div class="or-op-sub ${wantsName && wantsBudget ? 'two' : 'one'}">${nameCell}${budCell}</div>`;
       };
       const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
       return `<div class="or-f wide"><span>How many openings</span>
@@ -1075,7 +1093,9 @@ export async function mountOpeningRequests(root, backend) {
       if (!rows[i]) return;
       rows[i] = Object.assign({}, rows[i], { [el.dataset.rf]: el.value });
       // a name left behind on a line no longer set to Replacement never travels
-      if (el.dataset.rf === 'roleType' && !needsReplacedName(el.value)) { rows[i].replacementOf = ''; rows[i].budget = ''; }
+      // 294: changing the Role Type clears the replaced NAME when it no longer applies, but KEEPS the budget
+      // — every Role Type is asked for one now, so wiping it would delete a figure the requester just typed.
+      if (el.dataset.rf === 'roleType' && !needsReplacedName(el.value)) { rows[i].replacementOf = ''; }
       S.draft.rows = rows; render(); revealNext();   // #112i
     }));
     // 112l: the topic is TEXT, so it takes the same treatment as the replacement name — commit on every keystroke and
