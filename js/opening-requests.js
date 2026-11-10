@@ -749,21 +749,18 @@ export async function mountOpeningRequests(root, backend) {
           <select class="or-in" data-row="${i}" data-rf="recruiter" aria-label="Opening ${n} recruiter"${dis}>${opt(S.recruiters.map(u => u.name), x.recruiter, 'Recruiter…')}</select>
           <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select>
           <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
-            value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}></div>`;
-        // 294: the BUDGET is asked on every Role Type; the replaced NAME only where somebody is replaced.
-        // Two gates, so the sub-line is two columns on a Replacement / Anticipation Of Exit and one elsewhere.
-        const wantsName = needsReplacedName(x.roleType);
-        const wantsBudget = needsBudget(x.roleType);
-        if (!wantsName && !wantsBudget) return head;   // no Role Type picked yet — ask nothing
-        const nameCell = wantsName
-          ? `<div><label for="orrep${i}">Replacing whom?</label>
+            value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}>
+          <input class="or-in${x.budget ? '' : ' bad'}" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
+            value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div>`;
+        // 294 revised (Jerin, 11 Nov 2026): \ud83d\udde3 *"Rather make it a 5 item line. And the second line to show
+        // up only for replacment name"*. \ud83d\udd11 THE BUDGET IS THE FIFTH FIELD ON THE MAIN LINE, not a sub-line.
+        // It is asked on every Role Type, so giving it a whole second row spent a row on one short number for
+        // every opening. The sub-line now earns its place: it appears ONLY where somebody is being replaced,
+        // carrying the one field that genuinely does not fit \u2014 a person's full name.
+        if (!needsReplacedName(x.roleType)) return head;
+        return head + `<div class="or-op-sub one"><div><label for="orrep${i}">Replacing whom?</label>
           <input id="orrep${i}" class="or-in${x.replacementOf ? '' : ' bad'}" type="text" maxlength="80" data-rrep="${i}"
-            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div>` : '';
-        const budCell = wantsBudget
-          ? `<div><label for="orbud${i}">Budget</label>
-          <input id="orbud${i}" class="or-in${x.budget ? '' : ' bad'}" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
-            value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div>` : '';
-        return head + `<div class="or-op-sub ${wantsName && wantsBudget ? 'two' : 'one'}">${nameCell}${budCell}</div>`;
+            value="${esc(typed(i, 'replacementOf', x.replacementOf))}" placeholder="name of the person being replaced"${dis}></div></div>`;
       };
       const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
       return `<div class="or-f wide"><span>How many openings</span>
@@ -772,7 +769,7 @@ export async function mountOpeningRequests(root, backend) {
           type="button" data-n="1" aria-label="One more opening"${locked || rws.length >= 25 ? ' disabled' : ''}>+</button></span>
         <span class="or-note">Each line below is one real opening in Ashby.</span></div>
       <div class="or-f wide"><span>The openings</span><div class="or-mix">
-        <div class="or-op-head"><span>#</span><span>Role Type</span><span>Recruiter</span><span>Sourcer</span><span>Topic</span></div>
+        <div class="or-op-head"><span>#</span><span>Role Type</span><span>Recruiter</span><span>Sourcer</span><span>Topic</span><span>Budget</span></div>
         ${rws.map(line).join('')}
         <div class="or-mix-total"><b>${rws.length} opening${rws.length === 1 ? '' : 's'}</b><span>${parts || 'Pick a Role Type on each line'}</span></div>
       </div>${note(ev.notes.roleType)}${note(ev.notes.topic)}</div>`;
