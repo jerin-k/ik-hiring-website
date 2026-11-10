@@ -2592,6 +2592,21 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 .tb-tot { font-size: 0.6875rem; font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; }
 .tb-axis { border-top: 1px solid var(--border-light); margin-top: 0.75rem; padding-top: 0.375rem; font-size: 0.625rem; color: var(--muted); text-align: center; }
 
+/* #294 (10 Nov 2026) — the Avg budget column. His decisions: a money figure beside the role name, an
+   AVERAGE per position, on role rows only, and the figure alone with no note about its coverage.
+   🔑 The boxed figure is the mock's own treatment: a light dashed outline, so a cell that holds money reads
+   as a figure somebody entered rather than as another count. A department's dash is quiet on purpose. */
+.tb-cols th.tb-tight, .tb-cols td.tb-bud { vertical-align: middle; }
+.tb-cols td.tb-bud { text-align: center; padding-top: 0.375rem; padding-bottom: 0.375rem; }
+.tb-budbox {
+  display: inline-block; min-width: 4.25rem; padding: 0.0625rem 0.25rem;
+  border: 0.0625rem dashed #c3cadb; border-radius: 0.1875rem;
+  font-size: 0.6875rem; font-weight: 600; color: var(--text);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Not a missing figure — a figure that would mean nothing at this level. It must not read as an empty cell. */
+.tb-dash { color: #c3cadb; font-size: 0.75rem; }
+
 /* A cell with no figure anywhere in the source. Deliberately empty, never a zero. */
 .tb-none { color: var(--muted); font-style: italic; font-size: 0.6875rem; }
 .tb-flag {

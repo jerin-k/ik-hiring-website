@@ -1098,13 +1098,14 @@ export const DEFINITIONS = {
   'tb-roletype': {
     summary: 'What each role type and status counts',
     intro: 'One row per <strong>department</strong>, opening to one row per <strong>role</strong>, counted in the quarter the position was opened. Each role type has its own column, so a department&rsquo;s split reads straight off its own row. <strong>Total positions &minus; Joined &minus; Joining pipeline = Delta</strong> reads across every row, exactly as it does on Position Fulfilment.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column 10 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
         items: [
           ['Department', 'The department the position&rsquo;s job sits in. The top level of the table &mdash; everything underneath a department adds up to it.'],
           ['Job', 'The job the position was opened on. Two jobs that share a title stay two rows, because the rows are kept by job, not by name.'],
+          ['Avg budget per position', 'What <strong>one position</strong> in that role is budgeted at on average &mdash; never the role&rsquo;s total. It is the figure the recruitment team entered on the position in Ashby when the role was raised. It sits against <strong>roles only</strong>: a department is a mix of roles, so one blended average across it would not describe any position in it, and the cell is left as a dash. Open a department to see its roles.'],
           ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
           ['New &middot; Replacement &middot; As per AOP &middot; Anticipation Of Exit &middot; Buffer', 'Why the position exists, as the recruitment team set it when the position was raised. One column each, and they add up to Total positions.'],
           ['Joined', 'Someone was moved to <em>Hired</em> against this position.'],
@@ -1114,6 +1115,9 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A position raised without a budget is not in the average', 'The average is taken over the positions on that row that <strong>carry</strong> a figure, not over every position in the role. A role where nobody has entered one shows a dash rather than a zero. So the column answers &ldquo;what is a budgeted position in this role worth?&rdquo; &mdash; not &ldquo;what has this role been given in total?&rdquo;, and the figure does not move when a position is raised with the budget left blank.'],
+      ['Only new positions carry one, and nothing was backfilled', 'The budget is asked for when a position is raised, so positions opened before the field was in use have none and will not gain one. Expect the column to fill in gradually rather than all at once.'],
+      ['Untick <em>Budget</em> to put the column away', 'It sits beside <em>Job</em> and <em>Expand all</em> and is on by default. It adds the column and takes it away; it changes no count.'],
       ['Joining pipeline here counts positions, not people', 'A position with somebody closing against it. The <em>Joining Pipeline</em> card on Position Fulfilment counts <strong>people</strong>, is live rather than tied to the quarter, and includes anyone with no opening attached &mdash; so the two will not match, and neither is wrong.'],
       ['Missed has no column of its own, and is not missing', 'A position carried forward without being filled sits inside <strong>Delta</strong>, because Delta means &ldquo;not joined, and nobody closing against it&rdquo;. Giving it a column as well would count it twice.'],
       ['Joined is the same count Position Fulfilment calls Joined', 'One number, one name now &mdash; <strong>positions</strong> someone was hired into, in the quarter the position was opened. It is not the count of <strong>people</strong> who started, which is what the Joiners list shows.'],
@@ -1126,13 +1130,14 @@ export const DEFINITIONS = {
   'tb-emptype': {
     summary: 'Where contract type comes from, and what a blank row means',
     intro: 'The same positions as the Role Type panel and the same shape &mdash; one row per <strong>department</strong>, opening to one row per <strong>role</strong> &mdash; split by <strong>what kind of contract</strong> each position is, one column per contract type.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column 10 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
         items: [
           ['Department', 'The department the position&rsquo;s job sits in. The top level of the table &mdash; everything underneath a department adds up to it.'],
           ['Job', 'The job the position was opened on. Two jobs that share a title stay two rows, because the rows are kept by job, not by name.'],
+          ['Avg budget per position', 'What <strong>one position</strong> in that role is budgeted at on average &mdash; never the role&rsquo;s total. It is the figure the recruitment team entered on the position in Ashby when the role was raised. It sits against <strong>roles only</strong>: a department is a mix of roles, so one blended average across it would not describe any position in it, and the cell is left as a dash. Open a department to see its roles.'],
           ['One column per contract type', 'Full time, part time, fixed term, contract or intern, read from the position itself in Ashby. They add up to Total positions.'],
           ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
           ['Joined, Joining pipeline, Delta', 'Exactly as on the Role Type panel, and they read across the same way.'],
@@ -1140,6 +1145,7 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
+      ['A position raised without a budget is not in the average', 'Exactly as on the Role Type panel: the average covers the positions on that row that <strong>carry</strong> a figure, not every position in the role, and a role where nobody entered one shows a dash rather than a zero. Positions opened before the field was in use have none and will not gain one.'],
       ['A blank row is shown, never dropped', 'Any position with no contract type is gathered into its own row so the rows still add up to Total. If that row is large, the field has not been filled in on those positions.'],
       ['Show levels decides how far the table splits, never what it counts', 'Exactly as on the Role Type panel: untick <em>Job</em> to stop at the department, tick <em>Expand all</em> to open every one. The ticks change the split, not the count.'],
       ['The values are the full ones', 'The data holds <em>PTC - Direct</em> and <em>FTC - Direct</em>, not the shorter PTC and FTC.'],

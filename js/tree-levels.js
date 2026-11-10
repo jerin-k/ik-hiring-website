@@ -22,6 +22,10 @@ export const LEVELS = [
   // #280 (26 Oct 2026): Type & Budget runs Department ➔ Job ➔ Type, so it needs a level the Fulfilment tables
   // do not have. It is offered ONLY where it moves something — `showLevels` now takes the keys (see below).
   { key: 'type', label: 'Type' },
+  // #294 (10 Nov 2026): the Avg budget column on Type & Budget is a TICK, not a fork — Jerin, 6 Nov:
+  // *"But also with a tick box to include or not"*, and *"Merged in"* rather than a separate strip.
+  // ⚠ ON by default, like every other level, which is what he asked for.
+  { key: 'bud', label: 'Budget' },
 ];
 
 const state = {};   // { [id]: {job,rec,top} } — per tab, for the life of the page

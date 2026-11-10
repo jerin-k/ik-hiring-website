@@ -71,6 +71,34 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /**
+ * A rupee figure in Indian units, short enough for a narrow column: ₹18.95L, ₹1.25Cr, ₹8,400.
+ * 🔑 Lakh and crore, not millions — the figures are entered in rupees by an India-based team.
+ * ⚠ Trailing `.00` is dropped so a round figure reads ₹12L rather than ₹12.00L.
+ */
+export function inrShort(v) {
+  const n = Number(v);
+  if (!isFinite(n) || n === 0) return '';
+  const sign = n < 0 ? '\u2212' : '';
+  const a = Math.abs(n);
+  if (a >= 1e7) return sign + '\u20b9' + (a / 1e7).toFixed(2).replace(/\.00$/, '') + 'Cr';
+  if (a >= 1e5) return sign + '\u20b9' + (a / 1e5).toFixed(2).replace(/\.00$/, '') + 'L';
+  return sign + '\u20b9' + Math.round(a).toLocaleString('en-IN');
+}
+
+/**
+ * The average budget of ONE position on this row, or null where no position on it carries a budget.
+ *
+ * 🗣 Jerin, 6 Nov 2026: *"Budget per role should be avg"* — never the sum.
+ * 🚨 THE DIVISOR IS `bN`, THE POSITIONS THAT CARRY A BUDGET — not `total`. Dividing by every position would
+ *    quietly report a smaller figure than any budget actually entered, which is worse than showing nothing:
+ *    a role with one budgeted position out of four would read a quarter of the real figure.
+ * ⚠ So this is the average of what EXISTS, and a row where nothing has been entered shows a dash.
+ */
+export function avgBudget(o) {
+  return (o && o.bN > 0) ? Math.round(o.bSum / o.bN) : null;
+}
+
+/**
  * Group the positions of the selected period three ways.
  *
  * @param {object} data  the dashboard payload
@@ -116,11 +144,13 @@ export function typeBudgetIndex(data, sel, jobOk) {
     const dept = ji.department || NO_DEPT;
     const job = ji.title || NO_JOB;
 
-    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st);
-    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st);
+    const bud = Number(r.budget) > 0 ? Number(r.budget) : 0;
+    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud);
+    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud);
 
     totals.total++;
     if (st) totals[st]++;
+    if (bud > 0) { totals.bSum += bud; totals.bN++; }
     source[r.roleTypeSource === 'field' ? 'field' : (r.roleTypeSource === 'name' ? 'name' : 'none')]++;
   });
 
@@ -137,7 +167,10 @@ export function typeBudgetIndex(data, sel, jobOk) {
     source
   };
 
-  function blank() { return { total: 0, joined: 0, jp: 0, delta: 0 }; }
+  // 🚨 `bSum`/`bN` ride along with the counts so a level can never disagree with the one above it.
+  //    `bN` is the number of positions that CARRY a budget, which is NOT `total`: a position raised without
+  //    one must not drag the average down, so it is outside both the sum and the divisor.
+  function blank() { return { total: 0, joined: 0, jp: 0, delta: 0, bSum: 0, bN: 0 }; }
   /**
    * One position, one bucket. `jpTied` is how many people in closing name this opening on their offer
    * (#157), so a position with one or more of them is in the pipeline; everything that is neither joined
@@ -148,17 +181,22 @@ export function typeBudgetIndex(data, sel, jobOk) {
     if (r.state !== 'missed' && (r.jpTied || 0) > 0) return 'jp';
     return 'delta';
   }
-  function add(t, st) { t.total++; if (st) t[st]++; }
+  function add(t, st, bud) {
+    t.total++;
+    if (st) t[st]++;
+    // A budget of 0 is not a budget. `openingBudget_` publishes the field only where Ashby holds a figure.
+    if (bud > 0) { t.bSum += bud; t.bN++; }
+  }
 
   /** Count one position at all three levels at once, so a level can never disagree with the one above it. */
-  function plant(tree, dept, job, job8, type, st) {
+  function plant(tree, dept, job, job8, type, st, bud) {
     const d = tree[dept] || (tree[dept] = Object.assign({ key: dept, jobs: {} }, blank()));
-    add(d, st);
+    add(d, st, bud);
     // Keyed on the job ID, never the title: two jobs can share a title and must stay two rows.
     const j = d.jobs[job8] || (d.jobs[job8] = Object.assign({ key: job, job8, types: {} }, blank()));
-    add(j, st);
+    add(j, st, bud);
     const t = j.types[type] || (j.types[type] = Object.assign({ key: type }, blank()));
-    add(t, st);
+    add(t, st, bud);
   }
 
   // Biggest first; the catch-all sits LAST however big it is, because it is a gap marker, not a type.
@@ -188,6 +226,10 @@ export function typeBudgetIndex(data, sel, jobOk) {
       const x = bag[t.key] || (bag[t.key] = Object.assign({ key: t.key }, blank()));
       x.total += t.total;
       STATES.forEach((s) => { x[s] += t[s]; });
+      // 🚨 MERGE THE MONEY HALF TOO. Summing only the counts is the `mergeByRecruiter` bug of #280: the
+      //    merged row comes through with an empty average and stops agreeing with the rows it was built from.
+      x.bSum += t.bSum || 0;
+      x.bN += t.bN || 0;
     }));
     return order(Object.values(bag), catchAll);
   }
@@ -252,8 +294,10 @@ export function mountTypeBudget(host, data, getScope) {
     const lvId = scope.levelsId;
     // #280b: Type is a row of COLUMNS now, not a level, so Job is the only level left to offer — and the
     // Expand all tick comes out of hiding, which is what he asked for ("i need a Expan All tick box").
-    if (lvId) showLevels(lvId, ['job']);
-    const LV = lvId ? levelsOn(lvId) : { job: true };
+    // #294: Budget joins Job as a tick this panel actually reads. It is offered here and NOWHERE else —
+    // no other table has a money column, and a tick that moves nothing is a bug (Rule 13).
+    if (lvId) showLevels(lvId, ['job', 'bud']);
+    const LV = lvId ? levelsOn(lvId) : { job: true, bud: true };
     const expandAll = lvId ? expandAllOn(lvId) : false;
     if (active === 'role') body.innerHTML = rolePanel(ix, LV, expandAll);
     else if (active === 'emp') body.innerHTML = empPanel(ix, LV, expandAll);
@@ -382,9 +426,29 @@ function barChart(rows, axisLabel) {
  * ⚠ `totals` must arrive carrying its own `types` array, or the total row's type columns read zero while its
  *    Total positions reads the real figure — the kind of silent disagreement Rule 3 exists to stop.
  */
-function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
+function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
   const head = LV.job ? 'Department / Job' : 'Department';
   const ind = (n) => CARET_GAP.repeat(n);
+
+  /**
+   * The Avg budget cell (#294, 10 Nov 2026).
+   * 🗣 Jerin, 6 Nov: *"Need a budget per role, right next to the Job name"* ➔ it is the FIRST figure on the
+   *    row, before Total positions, and *"Thats needed only against roles bro"* ➔ a figure on ROLE rows only.
+   * 🚨 A DEPARTMENT AND THE TOTAL ROW SHOW A DASH ON PURPOSE, not because the figure is missing: a department
+   *    is a mix of roles, so one blended average across it would not describe any position in it. Do not
+   *    "fix" this by averaging the averages.
+   * 🔒 HIS CALL, 10 Nov 2026: the column does NOT say how few positions carry a budget. Asked directly
+   *    whether it should disclose its own coverage, he chose *"Just the average"*. The rule is in the
+   *    definitions block instead, where a rule belongs and no live count can go stale (Rule 6).
+   */
+  const budCell = (o, isRole) => {
+    if (!withB) return '';
+    const v = isRole ? avgBudget(o) : null;
+    return '<td class="tb-bud">'
+      + (v === null ? '<span class="tb-dash">\u2014</span>'
+                    : `<span class="tb-budbox">${inrShort(v)}</span>`)
+      + '</td>';
+  };
 
   /** One figure, with room under it for the money this table does not have a source for yet (#294). */
   const cell = (n, ink, first) =>
@@ -395,10 +459,11 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
 
   /** A row's figures, in the order the headers read. It LOOKS UP, it never adds: every number here was
    *  counted in `typeBudgetIndex`, so a job row cannot disagree with its department (Rule 3). */
-  const nums = (r) => {
+  const nums = (r, isRole) => {
     const by = {};
     (r.types || []).forEach((t) => { by[t.key] = t.total; });
-    return `<td class="tb-num"><span class="tb-c">${r.total}</span></td>`
+    return budCell(r, isRole)
+      + `<td class="tb-num"><span class="tb-c">${r.total}</span></td>`
       + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0)).join('')
       + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0)).join('');
   };
@@ -409,10 +474,10 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
     const open = opens && expandAll;
     html += `<tr class="tb-l1 dept-header" data-g="${gi}"`
       + (opens ? ` data-exp="${open ? 1 : 0}" style="cursor:pointer"` : '') + '>'
-      + `<td>${opens ? (open ? CARET_OPEN : CARET) : CARET_GAP}${esc(d.key)}</td>${nums(d)}</tr>`;
+      + `<td>${opens ? (open ? CARET_OPEN : CARET) : CARET_GAP}${esc(d.key)}</td>${nums(d, false)}</tr>`;
     if (LV.job) d.jobs.forEach((j) => {
       html += `<tr class="tb-l2" data-g="${gi}" style="display:${open ? '' : 'none'}">`
-        + `<td>${ind(1)}${CARET_GAP}${esc(j.key)}</td>${nums(j)}</tr>`;
+        + `<td>${ind(1)}${CARET_GAP}${esc(j.key)}</td>${nums(j, true)}</tr>`;
     });
   });
 
@@ -420,22 +485,29 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll) {
   // ROW, and ours is the group header — two plain cells and two colspans — so per-cell widths were simply
   // ignored and the label column ballooned to 649px while the figures were squeezed to 28. The colgroup is
   // the only way to state widths for a fixed table whose first row spans columns.
+  // ⚠ The Avg budget column has to come out of SOMEWHERE: "Table needs to fit inside panel" is binding
+  //   (Jerin, 6 Nov), and #19 of that round settled where the room comes from — *"Rather reduce the width of
+  //   the number columns"*. They hold three digits, so 4.625rem is ample and the names keep their 26.5rem.
+  // 📏 MEASURED at 1440 on both panels, 10 Nov: 4.75rem overflowed the panel by 10px; 4.625rem gives
+  //   1074px in a 1076px box with 0 of 42 role names wrapping — the same figures #19 settled on.
+  const numW = withB ? '4.625rem' : '5.25rem';
   const cols = '<colgroup><col style="width:26.5rem">'
-    + '<col style="width:5.25rem">'.repeat(1 + typeOrder.length + STATES.length) + '</colgroup>';
+    + (withB ? '<col style="width:6rem">' : '')
+    + `<col style="width:${numW}">`.repeat(1 + typeOrder.length + STATES.length) + '</colgroup>';
   return `<div class="scroll-table"><table class="tb-table tb-cols">
     ${cols}
     <thead>
-      <tr class="tb-grp"><th></th><th></th>
+      <tr class="tb-grp"><th></th>${withB ? '<th></th>' : ''}<th></th>
         <th class="tb-sep" colspan="${typeOrder.length}">Why the position exists</th>
         <th class="tb-sep" colspan="${STATES.length}">Where it stands</th></tr>
-      <tr><th>${esc(head)}</th><th>Total positions</th>
+      <tr><th>${esc(head)}</th>${withB ? '<th class="tb-tight">Avg budget<br>per position</th>' : ''}<th>Total positions</th>
         ${typeOrder.map((t, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${esc(t)}</th>`).join('')}
         ${STATES.map((st, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${STATE_LABEL[st]}</th>`).join('')}
       </tr>
     </thead>
     <tbody>
       ${html}
-      ${tree.length ? `<tr class="tb-tot-row"><td>Total</td>${nums(totals)}</tr>` : ''}
+      ${tree.length ? `<tr class="tb-tot-row"><td>Total</td>${nums(totals, false)}</tr>` : ''}
     </tbody>
   </table></div>`;
 }
@@ -466,7 +538,7 @@ function rolePanel(ix, LV, expandAll) {
     ${n ? barChart(ix.roleRows, 'Positions') : ''}
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.roleTree, ix.roleRows.map((r) => r.key),
-            Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll) : emptyNote('role type')}
+            Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll, LV.bud !== false) : emptyNote('role type')}
     ${fallback}
     ${defsBlock('tb-roletype')}`;
 }
@@ -485,7 +557,7 @@ function empPanel(ix, LV, expandAll) {
     ${n ? barChart(ix.empRows, 'Positions') : ''}
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.empTree, ix.empRows.map((r) => r.key),
-            Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll) : emptyNote('contract type')}
+            Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll, LV.bud !== false) : emptyNote('contract type')}
     ${note}
     ${defsBlock('tb-emptype')}`;
 }
