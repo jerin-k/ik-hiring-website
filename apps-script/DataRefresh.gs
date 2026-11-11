@@ -346,6 +346,44 @@ function openingBudget_(o) {
   }
   return null;
 }
+/**
+ * #294 / #280b (10 Nov 2026) - the OFFER's headline amount, as { amt, cur }, or null.
+ *
+ * Jerin chose the figure on 10 Nov 2026: "Total CTC Yearly" - fixed plus performance bonus, NOT
+ *    "Fixed Annual CTC Number", which on a sampled Program Advisor offer read Rs 7.90L against Rs 11.45L.
+ *    His design compares this against the opening's own "Budget for the Role".
+ *
+ * THE TITLE MATCH IS ANCHORED ON PURPOSE. An offer carries about twenty money fields and several of the
+ *    titles nest: "Total CTC Yearly" / "Total CTC Yearly Words" / "Total CTC Monthly" / "Total Gross
+ *    Yearly". A loose /total.*ctc/i would take the WORDS field - a string like "Nine Lakh Fifty Thousand" -
+ *    and Number() it to NaN, or take the MONTHLY figure and under-report by twelve. Exact title only.
+ *
+ * ZERO IS ABSENT, exactly as openingBudget_ treats it, and here it is load-bearing rather than tidy:
+ *    SME offers are priced PER SESSION (India / USA Session Hourly Fee) and carry NO annual figure. Five of
+ *    six SME offers sampled on 10 Nov have no Total CTC Yearly field at all - but the sixth HAS it, set to
+ *    0, alongside a zero Fixed CTC and a zero Monthly Service Fee. A present zero would read as a real
+ *    amount and drag every average that touched it towards nothing.
+ *
+ * The currency travels with the figure. Everything sampled was INR, but a Retention Bonus came back USD
+ *   and a Performance Incentive 'XXX', so the code must never assume. The caller sums ONE currency and
+ *   counts what it skipped - a silently mixed total is the worst outcome available here.
+ */
+function offerAmount_(o) {
+  var vers = (o && o.latestVersion) ? [o.latestVersion] : [];
+  for (var vi = 0; vi < vers.length; vi++) {
+    var cfs = (vers[vi] && vers[vi].customFields) || [];
+    for (var i = 0; i < cfs.length; i++) {
+      var t = String(cfs[i].title || cfs[i].name || '').trim();
+      if (!/^total\s*ctc\s*yearly$/i.test(t)) continue;
+      var v = cfs[i].value, cur = null;
+      if (v && typeof v === 'object' && !(v instanceof Array)) { cur = v.currencyCode || null; v = v.value; }
+      if (v instanceof Array && v.length === 1) v = v[0];
+      var n = Number(v);
+      return (isFinite(n) && n > 0) ? { amt: n, cur: cur || 'INR' } : null;
+    }
+  }
+  return null;
+}
 function jobCustomFieldByTitle_(job, re) {
   var cfs = job.customFields || [];
   for (var i = 0; i < cfs.length; i++) {
@@ -543,6 +581,7 @@ function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
       // the re-insert so nothing downstream of appMap sees it either.
       if (jobId && excludedJobIds_[jobId]) { if (o.applicationId && appMap[o.applicationId]) delete appMap[o.applicationId]; continue; }
       var accepted = (o.acceptanceStatus === 'Accepted');
+      var oAmt = offerAmount_(o);   // #294: Total CTC Yearly, his choice of figure (10 Nov 2026)
       var startDateStr = (o.latestVersion && o.latestVersion.startDate) ? o.latestVersion.startDate : null;
       var startMs = startDateStr ? new Date(startDateStr).getTime() : 0;
       var pending = accepted && startMs > nowMs;
@@ -603,6 +642,7 @@ function fetchAndProcessOffers_(startTime, appMap, excludedJobIds_) {
         startDate: startDateStr ? startDateStr.substring(0, 10) : null, accepted: accepted, joiningPending: pending, offerOpeningId: (o.latestVersion && o.latestVersion.openingId) || null, offerStatus: o.offerStatus || null, acceptanceStatus: o.acceptanceStatus || null,
         offerCreatedAt: firstCreated ? String(firstCreated).substring(0, 10) : null,
         offerOpeningIdAny: anyOpening || null, verN: vers.length,
+        offerAmt: oAmt ? oAmt.amt : null, offerCur: oAmt ? oAmt.cur : null,
         lateEntryAt: lateEntry ? String(lateEntry).substring(0, 10) : null });
     }
     cursor = (resp.moreDataAvailable && resp.nextCursor) ? resp.nextCursor : null;
@@ -1000,6 +1040,40 @@ function refreshDashboardData() {
   // jobs - exactly as Total does. Sum it per job, never across the whole array.
   openingRows.forEach(function (r) { r.jpTied = jpTiedByOpening8_[r.openingId] || 0; });
   openingTopicStats.jpTied = Object.keys(jpTiedByOpening8_).length;
+
+  // ===== #294 (10 Nov 2026) - WHAT THE OFFER AGAINST THIS POSITION IS WORTH =====
+  // His decision 12: "From the offer - Joined & Joining Pending", and "Taken from the respective
+  //    opening" for the planned side. So the ACTUAL money hangs off the offer and is attached to the
+  //    position the offer names - the same join jpTied makes directly above, by opening id.
+  // ONE OFFER PER POSITION, NOT A SUM. A position can carry a declined offer AND the replacement that
+  //    followed it; adding them would bill the position twice. Preference order: the ACCEPTED offer, else
+  //    a live one. A declined / rejected / cancelled offer, and an offer whose candidate is ARCHIVED, are
+  //    both skipped - the same two tests jpTied uses, for the same reason (#184).
+  // NO closedAt TEST HERE, unlike jpTied. A JOINED position is closed by Ashby the moment it is filled,
+  //   so skipping closed openings would drop exactly the money his Joined column is asking for.
+  // ONE CURRENCY ONLY. Anything that is not INR is counted and left out rather than added in.
+  var offerAmtByOpening8_ = {}, amtSkippedCur = 0, amtNoLink = 0;
+  offerResult.events.forEach(function (e) {
+    if (!e.offerAmt) return;
+    if (e.offerStatus && /declin|reject|cancel/i.test(e.offerStatus)) return;
+    if (e.appStatus === 'Archived') return;
+    var link = e.offerOpeningId || e.offerOpeningIdAny;
+    if (!link) { amtNoLink++; return; }
+    if (e.offerCur && e.offerCur !== 'INR') { amtSkippedCur++; return; }
+    var k = String(link).substring(0, 8);
+    var cur = offerAmtByOpening8_[k];
+    if (!cur || (e.accepted && !cur.accepted)) offerAmtByOpening8_[k] = { amt: e.offerAmt, accepted: !!e.accepted };
+  });
+  openingRows.forEach(function (r) {
+    var hit = offerAmtByOpening8_[r.openingId];
+    r.offerAmt = hit ? hit.amt : null;
+  });
+  openingTopicStats.withOfferAmt = openingRows.filter(function (r) { return r.offerAmt != null; }).length;
+  Logger.log('#294 offer amounts (Total CTC Yearly): ' + Object.keys(offerAmtByOpening8_).length
+    + ' positions priced | rows carrying one: ' + openingTopicStats.withOfferAmt
+    + ' | offers with an amount but no opening link: ' + amtNoLink
+    + ' | skipped, not INR: ' + amtSkippedCur
+    + ' | if "positions priced" is 0 the field title moved - check offerAmount_ against one offer in Ashby');
   // #294: how many of the emitted rows carry a budget. A zero here means the field's shape moved, not that
   // the money is gone - check openingBudget_ against one opening in Ashby before changing anything else.
   openingTopicStats.withBudget = openingRows.filter(function (r) { return r.budget != null; }).length;
