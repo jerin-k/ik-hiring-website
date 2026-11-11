@@ -629,8 +629,50 @@ function empPanel(ix, LV, expandAll) {
 
 function budgetPanel(ix, oneQ, LV) {
   const canCarry = ix.deptRows.reduce((s, d) => s + d.canCarryBudget, 0);
-  const none = '<span class="tb-none">not held anywhere</span>';
+  const dash = '<span class="tb-none">&mdash;</span>';
   const inr = (v) => (v === '' || v == null) ? '' : Number(v).toLocaleString('en-IN');
+
+  /**
+   * THE THREE LEDGER COLUMNS. Every figure here is LOOKED UP, never re-added: `typeBudgetIndex` already
+   * accumulated it onto the department, the job and the type, so a job row cannot disagree with its
+   * department and this table cannot disagree with Role Type beside it (CLAUDE.md Rule 3).
+   *
+   * `added`   the budget the REPLACEMENT and ANTICIPATION OF EXIT positions were given — the only two role
+   *           types a budget is ever asked for, which is what the column name says.
+   * `spent`   what the offers against this row's positions actually come to (Total CTC Yearly).
+   * `unknown` how many FILLED or CLOSING positions have no offer figure at all. It is what stops a Delta
+   *           being printed over a gap.
+   */
+  const added = (r) => (r.types || []).reduce((n, t) => n + (BUDGET_ROLE_TYPES.has(t.key) ? (t.bSum || 0) : 0), 0);
+  const spent = (r) => r.oSum || 0;
+  const unknown = (r) => (r.jMiss || 0) + (r.pMiss || 0);
+
+  /**
+   * Delta = Starting point + Added &minus; Spent, or NOTHING.
+   *
+   * 🚨 TWO GUARDS, the same two the money Delta on Role Type uses, for the same reasons:
+   *    1. No starting point ⇒ no Delta. "What is left" of a budget nobody has stated is not a number; printed
+   *       anyway it would read as a large overspend on every untouched department.
+   *    2. A filled or closing position with no offer figure ⇒ no Delta. You cannot say what is left while one
+   *       of the things spent against it is unknown — and SME positions are the standing case, priced per
+   *       session with no annual figure at all.
+   * ⚠ NEVER CLAMPED. A negative Delta is real overspending and is shown as it is. Do not put a Math.max(0, …)
+   *   here; that rule is settled across every table on this site.
+   */
+  const delta = (r, start) => {
+    if (!(start > 0)) return null;
+    if (unknown(r) > 0) return null;
+    return start + added(r) - spent(r);
+  };
+  /** A money cell: the figure, or a dash where it cannot honestly be stated. */
+  const money = (v) => (v === null || !(Math.abs(v) > 0)) ? dash : inrShort(v);
+  /** The department's typed starting point as a NUMBER, or 0. One quarter only — see render(). */
+  const startOf = (dept) => {
+    if (!oneQ) return 0;
+    const b = budgetOf(dept, oneQ);
+    const n = b ? Number(b.amount) : 0;
+    return isFinite(n) && n > 0 ? n : 0;
+  };
   // The one cell that can hold a figure. Editable only against a single whole quarter — see render().
   const startCell = (dept) => {
     if (!oneQ) return '<span class="tb-none">pick one quarter</span>';
@@ -647,15 +689,16 @@ function budgetPanel(ix, oneQ, LV) {
     <p class="sub-note">Positions opened in this period, by department. Amounts in rupees.${
       LV.job ? ' Click a department to open the jobs inside it.' : ''}</p>
     <div class="tb-flag">
-      <b>The three money columns here have never been connected to a source, which is why they are empty.</b>
-      <b>It is not that the money is missing.</b> A position's budget, and what the offers against it actually
-      cost, are both in the data now &mdash; and both are shown on the <b>Role Type</b> and <b>Emp Type</b>
-      pages beside this one. This page simply does not read them yet. A budget is asked for only when a position
-      is raised as a <b>Replacement</b> or <b>Anticipation Of Exit</b> &mdash; ${canCarry} of
-      ${ix.totals.total} here &mdash; and only since 20 Oct 2026, so it fills in gradually as new positions are
-      raised rather than all at once. An empty cell is not a zero.
+      <b>Added and Spent now read the real figures</b> &mdash; the budget those positions were given, and what
+      their offers actually come to. <b>Delta appears only where it can be worked out honestly:</b> it needs a
+      starting point from you, and it stays blank while any filled or closing position on the row has no offer
+      figure, because you cannot say what is left of a budget while something spent against it is unknown.
+      A budget is asked for only when a position is raised as a <b>Replacement</b> or
+      <b>Anticipation Of Exit</b> &mdash; ${canCarry} of ${ix.totals.total} here &mdash; and only since
+      20 Oct 2026, so Added fills in gradually as new positions are raised rather than all at once.
+      An empty cell is not a zero.
       ${oneQ ? `<br><b>Starting point is yours to type</b> &mdash; digits only, saved against ${esc(oneQ)}.
-        Delta stays empty until the two middle columns have a source.`
+        Type one and the Delta beside it appears.`
              : '<br><b>Pick a single quarter above to type a starting point</b> &mdash; a budget is saved against one quarter, so a range has no single place to file it.'}
     </div>
     <div class="scroll-table"><table class="tb-table tb-budget">
@@ -665,21 +708,36 @@ function budgetPanel(ix, oneQ, LV) {
       <tbody>
         ${ix.deptRows.map((d, gi) => {
           const opens = LV.job && d.jobs.length > 0;
-          // 🔑 A job row shows POSITIONS and nothing else. A starting budget is saved against one department in
-          //    one quarter, so there is no key to file a job's figure against — a dash, never an empty box that
-          //    looks typeable. The money columns stay the department's.
+          const start = startOf(d.key);
+          // 🔑 A JOB ROW NOW CARRIES ITS OWN Added and Spent — they are sums of that job's own positions and
+          //    mean exactly what they say. Only Starting point and Delta stay the DEPARTMENT's: a budget is
+          //    saved against one department in one quarter, so a job has no key to file a figure against, and
+          //    a Delta without a starting point is not a number. Withholding a figure this panel can state
+          //    would be the mirror of showing one it cannot.
           return `<tr class="tb-l1 dept-header" data-g="${gi}"${opens ? ' data-exp="0" style="cursor:pointer"' : ''}>`
             + `<td>${opens ? CARET : CARET_GAP}${esc(d.key)}</td><td>${d.total}</td>`
-            + `<td>${startCell(d.key)}</td><td>${none}</td><td>${none}</td>`
-            + `<td><span class="tb-none">&mdash;</span></td></tr>`
+            + `<td>${startCell(d.key)}</td>`
+            + `<td>${money(added(d))}</td><td>${money(spent(d))}</td>`
+            + `<td>${money(delta(d, start))}</td></tr>`
             + (LV.job ? d.jobs.map((j) => `<tr class="tb-l2" data-g="${gi}" style="display:none">`
               + `<td>${CARET_GAP}${CARET_GAP}${esc(j.key)}</td><td>${j.total}</td>`
-              + `<td><span class="tb-none">&mdash;</span></td><td>${none}</td><td>${none}</td>`
-              + `<td><span class="tb-none">&mdash;</span></td></tr>`).join('') : '');
+              + `<td>${dash}</td><td>${money(added(j))}</td><td>${money(spent(j))}</td>`
+              + `<td>${dash}</td></tr>`).join('') : '');
         }).join('')}
-        ${ix.deptRows.length ? `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td>
-          <td><span class="tb-none">&mdash;</span></td><td><span class="tb-none">&mdash;</span></td>
-          <td><span class="tb-none">&mdash;</span></td><td><span class="tb-none">&mdash;</span></td></tr>` : ''}
+        ${ix.deptRows.length ? (() => {
+          // The Total row adds up the DEPARTMENT rows, which is safe: every position has exactly one
+          // department, so the parts close the whole. Its Delta carries BOTH guards over the whole table —
+          // one department missing a starting point, or one unknown offer anywhere, and it dashes.
+          const tStart = ix.deptRows.reduce((n, d) => n + (startOf(d.key) || 0), 0);
+          const tAdded = ix.deptRows.reduce((n, d) => n + added(d), 0);
+          const tSpent = ix.deptRows.reduce((n, d) => n + spent(d), 0);
+          const tUnknown = ix.deptRows.reduce((n, d) => n + unknown(d), 0);
+          const everyDeptHasAStart = ix.deptRows.every((d) => (startOf(d.key) || 0) > 0);
+          const tDelta = (everyDeptHasAStart && tUnknown === 0) ? tStart + tAdded - tSpent : null;
+          return `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td>
+          <td>${tStart > 0 ? inrShort(tStart) : dash}</td><td>${money(tAdded)}</td>
+          <td>${money(tSpent)}</td><td>${money(tDelta)}</td></tr>`;
+        })() : ''}
       </tbody>
     </table></div>
     ${ix.deptRows.length ? '' : emptyNote('department')}

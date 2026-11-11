@@ -1161,9 +1161,9 @@ export const DEFINITIONS = {
   },
 
   'tb-budget': {
-    summary: 'How the budget ledger adds up, and why its money columns are empty',
+    summary: 'How the budget ledger adds up, and when a figure is left blank',
     intro: 'One row per <strong>department</strong>, with the jobs inside it underneath when <em>Job</em> is ticked. <strong>Delta = Starting point + Added &minus; Spent</strong>.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the job level 26 Oct 2026; what this page says about the money corrected 11 Nov 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the job level 26 Oct 2026; the three money columns wired to the real figures 11 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -1171,16 +1171,17 @@ export const DEFINITIONS = {
           ['Department / Job', 'Departments at the top level, the jobs inside them underneath. Click a department to open it.'],
           ['Positions', 'Positions opened inside the period shown above, for this department &mdash; or for one job on a job row.'],
           ['Starting point', 'The budget the department began the period with. Nothing in Ashby holds this, so it is typed in here.'],
-          ['Added from Replacement / Anticipation', 'The budget freed up by the people being replaced, added together for the department.'],
-          ['Spent on new &amp; replacement offers', 'What the offers made in the period cost, added together for the department.'],
-          ['Delta', 'What is left. A negative figure means more has been committed than was available, and is shown as it is.'],
+          ['Added from Replacement / Anticipation', 'The budget those positions were given when they were raised, added together. It covers <strong>Replacement</strong> and <strong>Anticipation Of Exit</strong> positions only, because those are the only two kinds a budget is ever asked for. A job row shows its own figure; it is a sum of that job&rsquo;s positions and nothing is apportioned.'],
+          ['Spent on new &amp; replacement offers', 'What the offers against these positions actually come to &mdash; the <em>Total CTC Yearly</em> on each offer, added together. It counts every position on the row, not only the ones that carried a budget, because every offer spends money. <strong>Positions whose cost is not recorded are simply absent from it</strong>, which is why the Delta beside it goes blank rather than reading too healthy.'],
+          ['Delta', 'Starting point plus Added, less Spent &mdash; what is left. <strong>A negative figure means more has been committed than was available, and is shown as it is, never rounded up to zero.</strong> It appears only on a department row, and only when it can be worked out honestly &mdash; see the two notes below.'],
         ]
       },
     ],
     warnings: [
-      ['An empty cell is not a zero', 'The three calculated columns on this page have never been connected to a source, so they stay empty rather than showing a misleading nought. <strong>This is not the same as the money being missing</strong> &mdash; see the next note.'],
-      ['The money columns belong to the department, so a job row shows a dash', 'A starting budget is saved against one department and one quarter, and there is no key to file a job&rsquo;s share against. A job row therefore gives its positions and nothing else &mdash; a dash, rather than a box that looks typeable.'],
-      ['The money does exist &mdash; it is shown on the other two pages', 'A position&rsquo;s budget is read from the figure the recruitment team entered on it in Ashby, and what an offer costs is read from the Total CTC Yearly on the offer. Both are already shown under the counts on <em>Role Type</em> and <em>Emp Type</em>. Connecting them to the three columns here is work that has not been done, not a gap in the data. <strong>An earlier version of this note said the figures were not held anywhere; that stopped being true in November 2026.</strong>'],
+      ['An empty cell is not a zero', 'A blank in a money column means the figure cannot honestly be stated, not that it is nought. Added is blank where no position on the row was raised as a Replacement or Anticipation Of Exit, or where none of them carries a budget yet. Spent is blank where no offer against the row has a recorded cost.'],
+      ['Starting point and Delta are the department&rsquo;s; Added and Spent are not', 'A starting budget is saved against one department in one quarter, so there is no key to file a job&rsquo;s share against &mdash; a job row shows a dash there, rather than a box that looks typeable, and no Delta. <strong>Added and Spent do appear on a job row</strong>, because each is a straight sum of that job&rsquo;s own positions with nothing apportioned.'],
+      ['Delta stays blank unless it can be worked out honestly', 'Two things stop it. <strong>Without a starting point there is nothing to subtract from</strong>, and printing budget-less-spending anyway would read as a large overspend on every department nobody has typed a figure for. And <strong>while any filled or closing position on the row has no offer figure, what has been spent is unknown</strong> &mdash; stating what is left would quietly assume that position cost nothing. A role paid per session is the standing case: subject matter experts carry no yearly figure at all. On the Total row both tests are applied across the whole table, so one gap anywhere leaves it blank.'],
+      ['The same figures appear on the other two pages', 'A position&rsquo;s budget and what its offers cost are also shown under the counts on <em>Role Type</em> and <em>Emp Type</em>. They are read from one place and simply displayed twice, so the two pages cannot drift apart.'],
     ]
   },
 
