@@ -111,6 +111,74 @@ export function moneyParts(v, cur) {
   return { sign, sym: CUR_SYM[code] || code, num, code };
 }
 
+/**
+ * #280b's LAST PIECE — his three choices, settled 11 Nov 2026 and confirmed against a worked table:
+ *   **As per Ashby** · **All in INR** · **All in USD**
+ *
+ * 🗣 His rule, in his words: *"When we mention everything in rupees, if the cell already has in $s - no
+ *    action needed. And vice versa."* ➡ each "all in" choice leaves alone anything already in that
+ *    currency and converts only the rest.
+ * 🔑 **As per Ashby needs no rate at all** — it shows each figure in the currency Ashby recorded. It is the
+ *    default, and while everything on record is rupees it looks exactly like *All in INR*. That is correct,
+ *    not broken; the two come apart the day a dollar figure appears.
+ * 🚨 **THE RATE IS TYPED, NOT FETCHED.** Two people with different numbers in the box read different figures
+ *    off the same table. Nothing here pretends to be a market rate, and a converted figure is the reader's
+ *    own working.
+ * 🚨 **WITHOUT A RATE, ANYTHING NEEDING CONVERSION DASHES** rather than guess — the same refusal the money
+ *    Delta makes. Figures already in the chosen currency keep showing.
+ */
+const MODES = [
+  { id: 'ashby', label: 'As per Ashby' },
+  { id: 'INR', label: 'All in INR' },
+  { id: 'USD', label: 'All in USD' }
+];
+let curMode = 'ashby';
+let curRate = null;                       // rupees per ONE dollar — how an India-based team quotes it
+const DASH_MIXED = '<span class="tb-dash" title="These positions are not all in one currency, so they cannot be added up. Choose All in INR or All in USD to convert them.">\u2014</span>';
+const DASH_RATE  = '<span class="tb-dash" title="Type how many rupees make one dollar to convert this figure.">\u2014</span>';
+
+/** What the money columns are currently showing. Exported so a test can read it without scraping the page. */
+export function curState() { return { mode: curMode, rate: curRate }; }
+
+/** One amount from one currency to another, or null where this pair cannot be converted. */
+function conv(v, from, to) {
+  if (from === to) return v;
+  if (!(curRate > 0)) return null;
+  if (from === 'INR' && to === 'USD') return v / curRate;
+  if (from === 'USD' && to === 'INR') return v * curRate;
+  return null;                            // one typed rate is not a rate table
+}
+
+/**
+ * A figure built from a per-currency split, shown the way the viewer asked.
+ * 🔑 This is why the splits exist: converting each part and adding them is the only way a mixed row can
+ *    appear at all in an "all in one currency" view.
+ */
+function fromBy(by) {
+  const codes = Object.keys(by || {}).filter((c) => by[c]);
+  if (!codes.length) return '';
+  if (curMode === 'ashby') {
+    return codes.length > 1 ? DASH_MIXED : moneyHTML(by[codes[0]], codes[0]);
+  }
+  let total = 0;
+  for (const c of codes) {
+    const v = conv(by[c], c, curMode);
+    if (v === null) return DASH_RATE;
+    total += v;
+  }
+  return moneyHTML(total, curMode);
+}
+
+/** The same, for a figure that is already one number in one currency (a Delta, an average, a difference). */
+function fromOne(v, code) {
+  if (!(Math.abs(Number(v)) > 0)) return '';
+  if (code === MIXED) return DASH_MIXED;
+  const from = code || 'INR';
+  if (curMode === 'ashby') return moneyHTML(v, from);
+  const c = conv(v, from, curMode);
+  return c === null ? DASH_RATE : moneyHTML(c, curMode);
+}
+
 /** A money figure as HTML, with the currency symbol in its own element beside the number. */
 export function moneyHTML(v, cur) {
   const p = moneyParts(v, cur);
@@ -202,8 +270,10 @@ export function typeBudgetIndex(data, sel, jobOk) {
 
     totals.total++;
     if (st) totals[st]++;
-    if (bud > 0) { totals.bSum += bud; totals.bN++; noteCur(totals, 'bCur', bCur); }
-    if (oamt > 0) { totals.oSum += oamt; noteCur(totals, 'oCur', oCur); }
+    if (bud > 0) { totals.bSum += bud; totals.bN++; noteCur(totals, 'bCur', bCur); into(totals.bBy, bCur, bud); }
+    if (oamt > 0) { totals.oSum += oamt; noteCur(totals, 'oCur', oCur); into(totals.oBy, oCur, oamt); }
+    if (st === 'joined' && oamt > 0) into(totals.jOBy, oCur, oamt);
+    else if (st === 'jp' && oamt > 0) into(totals.pOBy, oCur, oamt);
     if (st === 'joined') { if (bud > 0) totals.jB += bud; if (oamt > 0) totals.jO += oamt; else totals.jMiss++; }
     else if (st === 'jp') { if (bud > 0) totals.pB += bud; if (oamt > 0) totals.pO += oamt; else totals.pMiss++; }
     source[r.roleTypeSource === 'field' ? 'field' : (r.roleTypeSource === 'name' ? 'name' : 'none')]++;
@@ -241,7 +311,15 @@ export function typeBudgetIndex(data, sel, jobOk) {
     // 🚨 WHICH CURRENCY this row's budget and offer sums are in. One code while every contributing position
     //    agrees, 'MIXED' the moment two disagree, null while nothing has contributed. A sum whose parts are
     //    in different currencies is not a figure, and the renderer refuses to print one.
-    bCur: null, oCur: null }; }
+    bCur: null, oCur: null,
+    // 🔑 ...AND THE SAME MONEY SPLIT BY CURRENCY: { INR: 1200000, USD: 20000 }. The scalars above are what a
+    //    single-currency row shows as it stands; these are what lets "all in rupees" or "all in dollars"
+    //    convert each part at the typed rate and add them up. Without them a mixed row could only ever dash,
+    //    even in a view whose whole purpose is to put everything in one currency.
+    bBy: {}, oBy: {}, jOBy: {}, pOBy: {} }; }
+
+  /** Add an amount into a row's per-currency split. */
+  function into(map, c, v) { if (c && v > 0) map[c] = (map[c] || 0) + v; }
 
   /** Learn a row's currency, or mark it mixed. Once mixed it stays mixed. */
   function noteCur(t, key, c) {
@@ -263,19 +341,19 @@ export function typeBudgetIndex(data, sel, jobOk) {
     t.total++;
     if (st) t[st]++;
     // A budget of 0 is not a budget. `openingBudget_` publishes the field only where Ashby holds a figure.
-    if (bud > 0) { t.bSum += bud; t.bN++; noteCur(t, 'bCur', bCur); }
-    if (oamt > 0) { t.oSum += oamt; noteCur(t, 'oCur', oCur); }
+    if (bud > 0) { t.bSum += bud; t.bN++; noteCur(t, 'bCur', bCur); into(t.bBy, bCur, bud); }
+    if (oamt > 0) { t.oSum += oamt; noteCur(t, 'oCur', oCur); into(t.oBy, oCur, oamt); }
     // 🚨 A FILLED OR CLOSING POSITION WITH NO OFFER AMOUNT IS COUNTED, NOT IGNORED. Somebody joined against
     //    it, so money WAS spent; we simply do not know how much. `jMiss`/`pMiss` carry that ignorance up the
     //    tree so the renderer can refuse to print a Delta that would silently assume zero.
     if (st === 'joined') {
       if (bud > 0) t.jB += bud;
-      if (oamt > 0) t.jO += oamt; else t.jMiss++;
+      if (oamt > 0) { t.jO += oamt; into(t.jOBy, oCur, oamt); } else t.jMiss++;
       // only a position carrying BOTH can say anything about over or under budget
       if (bud > 0 && oamt > 0) { t.jBm += bud; t.jOm += oamt; t.jN++; }
     } else if (st === 'jp') {
       if (bud > 0) t.pB += bud;
-      if (oamt > 0) t.pO += oamt; else t.pMiss++;
+      if (oamt > 0) { t.pO += oamt; into(t.pOBy, oCur, oamt); } else t.pMiss++;
       if (bud > 0 && oamt > 0) { t.pBm += bud; t.pOm += oamt; t.pN++; }
     }
   }
@@ -310,6 +388,9 @@ export function typeBudgetIndex(data, sel, jobOk) {
     }), NO_DEPT);
   }
 
+  /** Merge two per-currency splits. */
+  function mergeBy(a, b) { Object.keys(b || {}).forEach((c) => { a[c] = (a[c] || 0) + b[c]; }); return a; }
+
   /** Add a set of per-job type splits into one row per type. Safe to sum: every position has exactly one job
    *  and one type, so the merged rows still close the level above them (the same argument as `mergeByRecruiter`). */
   function roll(jobs, catchAll) {
@@ -322,7 +403,14 @@ export function typeBudgetIndex(data, sel, jobOk) {
       //    merged row comes through with an empty average and stops agreeing with the rows it was built from.
       x.bSum += t.bSum || 0;
       x.bN += t.bN || 0;
-      ['oSum', 'jB', 'jO', 'jMiss', 'pB', 'pO', 'pMiss'].forEach((f) => { x[f] += t[f] || 0; });
+      // 🚨 EVERY money field, not a hand-picked few. The matched-pair sums (`jBm`…) were added for the
+      //    over/under marker and the per-currency splits for the flip; both were invisible here at first,
+      //    and a field missing from this list comes through as 0 on a merged row with nothing failing.
+      ['oSum', 'jB', 'jO', 'jMiss', 'pB', 'pO', 'pMiss',
+       'jBm', 'jOm', 'jN', 'pBm', 'pOm', 'pN'].forEach((f) => { x[f] += t[f] || 0; });
+      ['bBy', 'oBy', 'jOBy', 'pOBy'].forEach((f) => { mergeBy(x[f], t[f]); });
+      noteCur(x, 'bCur', t.bCur);
+      noteCur(x, 'oCur', t.oCur);
     }));
     return order(Object.values(bag), catchAll);
   }
@@ -356,18 +444,72 @@ export function mountTypeBudget(host, data, getScope) {
   ];
   let active = 'role';
 
+  /**
+   * His three choices, in the rail beside the sections. It sits here and not in the page's filter row
+   * because Type & Budget is the only place on the site that shows money, and a control offered where it
+   * moves nothing is a bug (Rule 13). Being outside `tb-body`, a re-render of the table never rebuilds it,
+   * so the rate box cannot lose what you are typing.
+   */
+  const curBox = () => {
+    const needsRate = curMode !== 'ashby';
+    const note = curMode === 'ashby'
+      ? 'Each figure in the currency Ashby recorded against it. No rate needed.'
+      : (curRate > 0
+          ? `Anything not already in ${curMode === 'INR' ? 'rupees' : 'dollars'} is converted at your own rate of \u20b9${esc(String(curRate))} to one $. Not a live rate.`
+          : 'Type how many rupees make one dollar. Figures already in this currency show as they are; the rest wait for a rate.');
+    return `<div class="tb-cur">
+      <span class="tb-cur-lab">Show money in</span>
+      <select class="tb-cur-sel" aria-label="Which currency to show money in">
+        ${MODES.map((m) => `<option value="${m.id}"${m.id === curMode ? ' selected' : ''}>${esc(m.label)}</option>`).join('')}
+      </select>
+      ${needsRate ? `<input class="tb-cur-rate${curRate > 0 ? '' : ' tb-cur-need'}" type="text"
+        inputmode="decimal" maxlength="12" value="${curRate > 0 ? esc(String(curRate)) : ''}"
+        placeholder="rupees per 1 $" aria-label="How many rupees make one US dollar">` : ''}
+      <span class="tb-cur-note">${note}</span>
+    </div>`;
+  };
+
   host.innerHTML = `
     <div class="tb-nest">
       <nav class="tb-rail" aria-label="Type and Budget sections">
         <div class="tb-rail-head">Type &amp; Budget</div>
         ${SECTIONS.map((s) => `<button type="button" class="subtab-chip${s.id === active ? ' active' : ''}"
           data-tb="${s.id}">${esc(s.label)}</button>`).join('')}
+        <div class="tb-cur-slot">${curBox()}</div>
       </nav>
       <div class="tb-body"></div>
     </div>`;
 
   const rail = host.querySelector('.tb-rail');
   const body = host.querySelector('.tb-body');
+
+  /** Repaint the control in place. It is outside `tb-body`, so `render()` never touches it. */
+  const paintCur = () => {
+    const slot = rail.querySelector('.tb-cur-slot');
+    if (slot) slot.innerHTML = curBox();
+  };
+
+  /**
+   * 🔑 A filter that moves no number is a bug (Rule 13), so both the choice and the rate re-render.
+   * ⚠ Junk or a non-positive rate is NOT kept: it clears, the box says it needs one, and anything that
+   *   would have to be converted dashes. A figure from an unreadable rate is worse than no figure.
+   */
+  rail.addEventListener('change', (e) => {
+    const sel = e.target.closest('.tb-cur-sel');
+    const rt = e.target.closest('.tb-cur-rate');
+    if (sel) {
+      if (sel.value === curMode || !MODES.some((m) => m.id === sel.value)) return;
+      curMode = sel.value;
+      if (curMode === 'ashby') curRate = null;
+    } else if (rt) {
+      const n = Number(String(rt.value).replace(/,/g, '').trim());
+      const next = (isFinite(n) && n > 0) ? n : null;
+      if (next === curRate) return;
+      curRate = next;
+    } else return;
+    paintCur();
+    render();
+  });
 
   rail.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tb]');
@@ -539,7 +681,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     const v = isRole ? avgBudget(o) : null;
     return '<td class="tb-bud">'
       + (v === null ? '<span class="tb-dash">\u2014</span>'
-                    : `<span class="tb-budbox">${moneyHTML(v, o.bCur)}</span>`)
+                    : `<span class="tb-budbox">${fromOne(v, o.bCur)}</span>`)
       + '</td>';
   };
 
@@ -576,7 +718,9 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     if (bCur && oCur && bCur !== oCur) return '';
     const d = spent - budgeted;
     if (d === 0) return '';
-    return (d > 0 ? '+' : '\u2212') + moneyHTML(Math.abs(d), oCur || bCur);
+    const m = fromOne(Math.abs(d), oCur || bCur);
+    if (!m || /tb-dash/.test(m)) return '';
+    return (d > 0 ? '+' : '\u2212') + m;
   };
 
   /**
@@ -600,7 +744,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     //    cannot be subtracted, and neither can a mixed sum. Dash rather than invent a conversion.
     if (r.bCur === MIXED || r.oCur === MIXED) return '';
     if (r.bCur && r.oCur && r.bCur !== r.oCur) return '';
-    return moneyHTML(r.bSum - (r.jO || 0) - (r.pO || 0), r.bCur);
+    return fromOne(r.bSum - (r.jO || 0) - (r.pO || 0), r.bCur);
   };
 
   /** A row's figures, in the order the headers read. It LOOKS UP, it never adds: every number here was
@@ -610,11 +754,11 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     // 🔑 The type columns carry the BUDGET of that type's positions — the planned side, as his decision 12
     //    says: role-type columns and the average come from the opening, the actuals from the offer.
     //    Each type carries its OWN currency, so one column can read $ while the next reads ₹.
-    (r.types || []).forEach((t) => { by[t.key] = t.total; byB[t.key] = t.bSum || 0; byC[t.key] = t.bCur; });
+    (r.types || []).forEach((t) => { by[t.key] = t.total; byB[t.key] = t.bBy || {}; byC[t.key] = t.bCur; });
     const money = {
-      total: moneyHTML(r.bSum || 0, r.bCur),
-      joined: moneyHTML(r.jO || 0, r.oCur),
-      jp: moneyHTML(r.pO || 0, r.oCur),
+      total: fromBy(r.bBy),
+      joined: fromBy(r.jOBy),
+      jp: fromBy(r.pOBy),
       delta: deltaMoney(r)
     };
     const mark = { joined: over(r.jOm || 0, r.jBm || 0, r.bCur, r.oCur),
@@ -622,7 +766,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     return budCell(r, isRole)
       + `<td class="tb-num"><span class="tb-c">${r.total}</span>`
       + (withB && money.total ? `<span class="tb-m">${money.total}</span>` : '') + '</td>'
-      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0, moneyHTML(byB[t] || 0, byC[t]), '')).join('')
+      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0, fromBy(byB[t]), '')).join('')
       + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0, money[st], mark[st])).join('');
   };
 
@@ -737,6 +881,15 @@ function budgetPanel(ix, oneQ, LV) {
    *           being printed over a gap.
    */
   const added = (r) => (r.types || []).reduce((n, t) => n + (BUDGET_ROLE_TYPES.has(t.key) ? (t.bSum || 0) : 0), 0);
+  /** The same figure kept split by currency, so it can be shown in whichever one the viewer picked. */
+  const addedBy = (r) => {
+    const m = {};
+    (r.types || []).forEach((t) => {
+      if (!BUDGET_ROLE_TYPES.has(t.key)) return;
+      Object.keys(t.bBy || {}).forEach((c) => { m[c] = (m[c] || 0) + t.bBy[c]; });
+    });
+    return m;
+  };
   const spent = (r) => r.oSum || 0;
   const unknown = (r) => (r.jMiss || 0) + (r.pMiss || 0);
 
@@ -762,7 +915,12 @@ function budgetPanel(ix, oneQ, LV) {
     return start + added(r) - spent(r);
   };
   /** A money cell: the figure, or a dash where it cannot honestly be stated. */
-  const money = (v, cur) => (v === null || !(Math.abs(v) > 0)) ? dash : moneyHTML(v, cur);
+  const money = (v, cur) => {
+    if (v === null || !(Math.abs(Number(v)) > 0)) return dash;
+    return fromOne(v, cur) || dash;
+  };
+  /** A ledger cell built from a per-currency split. */
+  const moneySplit = (by) => fromBy(by) || dash;
   /** The department's typed starting point as a NUMBER, or 0. One quarter only — see render(). */
   const startOf = (dept) => {
     if (!oneQ) return 0;
@@ -772,6 +930,11 @@ function budgetPanel(ix, oneQ, LV) {
   };
   // The one cell that can hold a figure. Editable only against a single whole quarter — see render().
   const startCell = (dept) => {
+    // 🚨 A figure typed here is SAVED IN RUPEES for everyone, and `job_notes.json` records nothing about
+    //    currency. While the page is showing dollars, a number typed into this box would be stored as
+    //    rupees and silently wrong — so it is not offered. Rupees and "as per Ashby" both show this figure
+    //    as what it actually is, so both are fine.
+    if (curMode === 'USD') return '<span class="tb-none">rupees only \u2014 switch the view back to type</span>';
     if (!oneQ) return '<span class="tb-none">pick one quarter</span>';
     const b = budgetOf(dept, oneQ);
     const val = b ? inr(b.amount) : '';
@@ -814,11 +977,11 @@ function budgetPanel(ix, oneQ, LV) {
           return `<tr class="tb-l1 dept-header" data-g="${gi}"${opens ? ' data-exp="0" style="cursor:pointer"' : ''}>`
             + `<td>${opens ? CARET : CARET_GAP}${esc(d.key)}</td><td>${d.total}</td>`
             + `<td>${startCell(d.key)}</td>`
-            + `<td>${money(added(d), d.bCur)}</td><td>${money(spent(d), d.oCur)}</td>`
-            + `<td>${money(delta(d, start), d.bCur)}</td></tr>`
+            + `<td>${moneySplit(addedBy(d))}</td><td>${moneySplit(d.oBy)}</td>`
+            + `<td>${money(delta(d, start), 'INR')}</td></tr>`
             + (LV.job ? d.jobs.map((j) => `<tr class="tb-l2" data-g="${gi}" style="display:none">`
               + `<td>${CARET_GAP}${CARET_GAP}${esc(j.key)}</td><td>${j.total}</td>`
-              + `<td>${dash}</td><td>${money(added(j), j.bCur)}</td><td>${money(spent(j), j.oCur)}</td>`
+              + `<td>${dash}</td><td>${moneySplit(addedBy(j))}</td><td>${moneySplit(j.oBy)}</td>`
               + `<td>${dash}</td></tr>`).join('') : '');
         }).join('')}
         ${ix.deptRows.length ? (() => {
@@ -828,14 +991,19 @@ function budgetPanel(ix, oneQ, LV) {
           const tStart = ix.deptRows.reduce((n, d) => n + (startOf(d.key) || 0), 0);
           const tAdded = ix.deptRows.reduce((n, d) => n + added(d), 0);
           const tSpent = ix.deptRows.reduce((n, d) => n + spent(d), 0);
+          const merge = (get) => ix.deptRows.reduce((m, d) => {
+            const b = get(d) || {};
+            Object.keys(b).forEach((c) => { m[c] = (m[c] || 0) + b[c]; });
+            return m;
+          }, {});
           const tUnknown = ix.deptRows.reduce((n, d) => n + unknown(d), 0);
           // one currency across the whole table, or MIXED — the same rule a single row follows
           const tCur = (k) => ix.deptRows.reduce((c, d) => !d[k] ? c : (c === null ? d[k] : (c === d[k] ? c : MIXED)), null);
           const everyDeptHasAStart = ix.deptRows.every((d) => (startOf(d.key) || 0) > 0);
           const tDelta = (everyDeptHasAStart && tUnknown === 0) ? tStart + tAdded - tSpent : null;
           return `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td>
-          <td>${tStart > 0 ? moneyHTML(tStart, 'INR') : dash}</td><td>${money(tAdded, tCur('bCur'))}</td>
-          <td>${money(tSpent, tCur('oCur'))}</td><td>${money(tDelta, tCur('bCur'))}</td></tr>`;
+          <td>${tStart > 0 ? (fromOne(tStart, 'INR') || dash) : dash}</td><td>${moneySplit(merge(addedBy))}</td>
+          <td>${moneySplit(merge((d) => d.oBy))}</td><td>${money(tDelta, 'INR')}</td></tr>`;
         })() : ''}
       </tbody>
     </table></div>
