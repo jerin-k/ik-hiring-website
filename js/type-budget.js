@@ -943,7 +943,10 @@ function budgetPanel(ix, oneQ, LV) {
     //    currency. While the page is showing dollars, a number typed into this box would be stored as
     //    rupees and silently wrong — so it is not offered. Rupees and "as per Ashby" both show this figure
     //    as what it actually is, so both are fine.
-    if (curMode === 'USD') return '<span class="tb-none">rupees only \u2014 switch the view back to type</span>';
+    // #280c (12 Nov 2026): this used to carry the whole sentence, nowrap, in a 144px column - it needed ~207px and
+    //    overlapped the next column on every department row at 800px. The marker is short and the reason now
+    //    goes in `.tb-flag` above the table, which is what the `!oneQ` case on the next line already does.
+    if (curMode === 'USD') return '<span class="tb-none">rupees only</span>';
     if (!oneQ) return '<span class="tb-none">pick one quarter</span>';
     const b = budgetOf(dept, oneQ);
     const val = b ? inr(b.amount) : '';
@@ -966,7 +969,9 @@ function budgetPanel(ix, oneQ, LV) {
       <b>Anticipation Of Exit</b> &mdash; ${canCarry} of ${ix.totals.total} here &mdash; and only since
       20 Oct 2026, so Added fills in gradually as new positions are raised rather than all at once.
       An empty cell is not a zero.
-      ${oneQ ? `<br><b>Starting point is yours to type</b> &mdash; digits only, saved against ${esc(oneQ)}.
+      ${curMode === 'USD'
+        ? '<br><b>Starting point is typed in rupees</b> &mdash; so the box is not offered while the page is showing dollars, because a number typed here is saved in rupees for everyone. Switch <em>Show money in</em> back to <em>As per Ashby</em> or <em>All in INR</em> to type one.'
+        : oneQ ? `<br><b>Starting point is yours to type</b> &mdash; digits only, saved against ${esc(oneQ)}.
         Type one and the Delta beside it appears.`
              : '<br><b>Pick a single quarter above to type a starting point</b> &mdash; a budget is saved against one quarter, so a range has no single place to file it.'}
     </div>
