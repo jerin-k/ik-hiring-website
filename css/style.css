@@ -2576,6 +2576,23 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 /* A zero is noise in a table this wide, so it recedes. Declared AFTER .tb-c, which it shares a cell with. */
 .tb-z { font-size: 0.6875rem; font-weight: 400; color: #c3cadb; }
 
+/* #280d (12 Nov 2026, his call: *"Yes, widen it"*). The money line under a count could sit 1-3px PAST its
+   column - three figures in the rupee views, two in dollars, measured at 800px.
+   🚨 THE COLUMN ITSELF CANNOT GROW, and that is not a preference: *"Table needs to fit inside panel"* is
+   binding (Jerin, 6 Nov) and #19 of that round put the spare room into the NAMES, not the figures. Measured
+   at 1440 with the Budget tick on: the table is 1074px inside a 1074px box and does not scroll sideways, and
+   4.75rem number columns already overflowed it by 10px. Widening 9 columns would push it ~30px over.
+   🔑 So the room comes from the CELL PADDING, which costs the table NO width at all - the same move
+   `table.metrics.wide-fulfil` above already makes for the same reason.
+   📏 0.75rem -> 0.375rem each side takes a 45px cell to 56px. ⚠ **0.5rem was tried first and left only
+   4-5px spare, which is ONE digit** - and a Delta grows as budgets are entered, so it would come back. 0.375rem
+   leaves ~9px, and the gap between two figures is still 0.75rem; `table.metrics.wide-fulfil` above goes tighter
+   still, at 0.3125rem. ⚠ Scoped to `.tb-cols`, so the Budget ledger - its own 10rem columns, never
+   overflowed - is untouched. */
+.tb-cols th:not(:first-child), .tb-cols td:not(:first-child) {
+  padding-left: 0.375rem; padding-right: 0.375rem;
+}
+
 /* The distribution bar. 🔑 THE TABLE COMPUTES, THE BAR READS — same rows, so they cannot drift. */
 .tb-chart {
   background: var(--card); border: 1px solid var(--border); border-radius: 0.625rem;
