@@ -660,8 +660,15 @@ function barChart(rows, axisLabel) {
  * ⚠ The first column's header follows the Job tick, so it never names a level that is not on screen.
  * ⚠ `totals` must arrive carrying its own `types` array, or the total row's type columns read zero while its
  *    Total positions reads the real figure — the kind of silent disagreement Rule 3 exists to stop.
+ *
+ * 🚨 `groupLabel` IS THE CAPTION OVER THE TYPE COLUMNS, AND EVERY CALLER MUST PASS IT (#296, 12 Nov 2026).
+ *    It was hard-coded to *"Why the position exists"* — the ROLE type question — and the Emp Type panel, which
+ *    shares this function, therefore captioned its CONTRACT-type columns with it and contradicted its own
+ *    sub-note. ⚠ **Deliberately no default:** a default is what made the wrong caption silent, so a caller
+ *    that forgets prints `undefined` where anyone can see it. 🗣 Jerin: *"only 1 sub tab is fixed dude.
+ *    What about the rest 2?"*
  */
-function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
+function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLabel) {
   const head = LV.job ? 'Department / Job' : 'Department';
   const ind = (n) => CARET_GAP.repeat(n);
 
@@ -800,7 +807,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     ${cols}
     <thead>
       <tr class="tb-grp"><th></th>${withB ? '<th></th>' : ''}<th></th>
-        <th class="tb-sep" colspan="${typeOrder.length}">Why the position exists</th>
+        <th class="tb-sep" colspan="${typeOrder.length}">${esc(groupLabel)}</th>
         <th class="tb-sep" colspan="${STATES.length}">Where it stands</th></tr>
       <tr><th>${esc(head)}</th>${withB ? '<th class="tb-tight">Avg budget<br>per position</th>' : ''}<th>Total positions</th>
         ${typeOrder.map((t, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${esc(t)}</th>`).join('')}
@@ -840,7 +847,8 @@ function rolePanel(ix, LV, expandAll) {
     ${n ? barChart(ix.roleRows, 'Positions') : ''}
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.roleTree, ix.roleRows.map((r) => r.key),
-            Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll, LV.bud !== false) : emptyNote('role type')}
+            Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll, LV.bud !== false,
+            'Why the position exists') : emptyNote('role type')}
     ${fallback}
     ${defsBlock('tb-roletype')}`;
 }
@@ -859,7 +867,8 @@ function empPanel(ix, LV, expandAll) {
     ${n ? barChart(ix.empRows, 'Positions') : ''}
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.empTree, ix.empRows.map((r) => r.key),
-            Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll, LV.bud !== false) : emptyNote('contract type')}
+            Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll, LV.bud !== false,
+            'What kind of contract it is') : emptyNote('contract type')}
     ${note}
     ${defsBlock('tb-emptype')}`;
 }
