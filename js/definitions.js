@@ -1161,9 +1161,9 @@ export const DEFINITIONS = {
   },
 
   'tb-budget': {
-    summary: 'How the budget ledger adds up, and why it is empty',
+    summary: 'How the budget ledger adds up, and why its money columns are empty',
     intro: 'One row per <strong>department</strong>, with the jobs inside it underneath when <em>Job</em> is ticked. <strong>Delta = Starting point + Added &minus; Spent</strong>.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the job level 26 Oct 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the job level 26 Oct 2026; what this page says about the money corrected 11 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -1178,9 +1178,9 @@ export const DEFINITIONS = {
       },
     ],
     warnings: [
-      ['An empty cell is not a zero', 'No position in Ashby carries a budget figure, so the three calculated columns have nothing to add up. They stay empty rather than showing a misleading nought.'],
+      ['An empty cell is not a zero', 'The three calculated columns on this page have never been connected to a source, so they stay empty rather than showing a misleading nought. <strong>This is not the same as the money being missing</strong> &mdash; see the next note.'],
       ['The money columns belong to the department, so a job row shows a dash', 'A starting budget is saved against one department and one quarter, and there is no key to file a job&rsquo;s share against. A job row therefore gives its positions and nothing else &mdash; a dash, rather than a box that looks typeable.'],
-      ['What an offer costs is not held anywhere the dashboard reads', 'So the Spent column cannot be filled from today&rsquo;s data at all, even once budgets start being entered.'],
+      ['The money does exist &mdash; it is shown on the other two pages', 'A position&rsquo;s budget is read from the figure the recruitment team entered on it in Ashby, and what an offer costs is read from the Total CTC Yearly on the offer. Both are already shown under the counts on <em>Role Type</em> and <em>Emp Type</em>. Connecting them to the three columns here is work that has not been done, not a gap in the data. <strong>An earlier version of this note said the figures were not held anywhere; that stopped being true in November 2026.</strong>'],
     ]
   },
 

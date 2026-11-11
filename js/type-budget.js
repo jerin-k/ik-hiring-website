@@ -647,11 +647,13 @@ function budgetPanel(ix, oneQ, LV) {
     <p class="sub-note">Positions opened in this period, by department. Amounts in rupees.${
       LV.job ? ' Click a department to open the jobs inside it.' : ''}</p>
     <div class="tb-flag">
-      <b>No position in Ashby carries a budget figure today, so the three money columns are empty on purpose.</b>
-      Measured 20 Oct 2026 across every position in the workspace. A budget is asked for only when a position is
-      raised as a <b>Replacement</b> or <b>Anticipation Of Exit</b> &mdash; ${canCarry} of ${ix.totals.total} here
-      &mdash; and that was made compulsory only on 20 Oct, so positions raised before then have none.
-      <b>What an offer costs is not held anywhere the dashboard can read.</b> An empty cell is not a zero.
+      <b>The three money columns here have never been connected to a source, which is why they are empty.</b>
+      <b>It is not that the money is missing.</b> A position's budget, and what the offers against it actually
+      cost, are both in the data now &mdash; and both are shown on the <b>Role Type</b> and <b>Emp Type</b>
+      pages beside this one. This page simply does not read them yet. A budget is asked for only when a position
+      is raised as a <b>Replacement</b> or <b>Anticipation Of Exit</b> &mdash; ${canCarry} of
+      ${ix.totals.total} here &mdash; and only since 20 Oct 2026, so it fills in gradually as new positions are
+      raised rather than all at once. An empty cell is not a zero.
       ${oneQ ? `<br><b>Starting point is yours to type</b> &mdash; digits only, saved against ${esc(oneQ)}.
         Delta stays empty until the two middle columns have a source.`
              : '<br><b>Pick a single quarter above to type a starting point</b> &mdash; a budget is saved against one quarter, so a range has no single place to file it.'}
