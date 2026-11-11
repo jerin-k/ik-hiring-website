@@ -1110,6 +1110,7 @@ export const DEFINITIONS = {
           ['New &middot; Replacement &middot; As per AOP &middot; Anticipation Of Exit &middot; Buffer', 'Why the position exists, as the recruitment team set it when the position was raised. One column each, and they add up to Total positions.'],
           ['Joined', 'Someone was moved to <em>Hired</em> against this position.'],
           ['The money under each count', 'With <em>Budget</em> ticked, every count carries a money figure underneath it. Under <strong>Total positions</strong> and under each role type it is the <strong>budget</strong> those positions were given when they were raised. Under <strong>Joined</strong> and <strong>Joining pipeline</strong> it is what those people&rsquo;s offers actually come to &mdash; the Total CTC Yearly on the offer. Under <strong>Delta</strong> it is the budget less those two actuals.'],
+          ['The currency symbol is read from the figure, not assumed', 'Every amount now carries the currency Ashby recorded against it, and the symbol beside each figure is that currency &mdash; so one row can read &#8377; while another reads $. <strong>Where the amounts on a row are not all in one currency they cannot be added together, and the figure is left as a dash rather than summed.</strong> Everything on record today is in rupees, so that is what you will see; the point is that it is now stated by the data rather than taken for granted.'],
           ['Joining pipeline', 'Somebody is in Ref Check, Documentation or Offer against this position.'],
           ['Delta', 'Everything else &mdash; still to fill, and positions carried forward without being filled.'],
         ]
@@ -1146,6 +1147,7 @@ export const DEFINITIONS = {
           ['Total positions', 'Positions opened inside the period shown above. Joined plus Joining pipeline plus Delta.'],
           ['Joined, Joining pipeline, Delta', 'Exactly as on the Role Type panel, and they read across the same way.'],
           ['The money under each count', 'With <em>Budget</em> ticked, every count carries a money figure underneath it. Under <strong>Total positions</strong> and under each role type it is the <strong>budget</strong> those positions were given when they were raised. Under <strong>Joined</strong> and <strong>Joining pipeline</strong> it is what those people&rsquo;s offers actually come to &mdash; the Total CTC Yearly on the offer. Under <strong>Delta</strong> it is the budget less those two actuals.'],
+          ['The currency symbol is read from the figure, not assumed', 'Every amount now carries the currency Ashby recorded against it, and the symbol beside each figure is that currency &mdash; so one row can read &#8377; while another reads $. <strong>Where the amounts on a row are not all in one currency they cannot be added together, and the figure is left as a dash rather than summed.</strong> Everything on record today is in rupees, so that is what you will see; the point is that it is now stated by the data rather than taken for granted.'],
         ]
       },
     ],

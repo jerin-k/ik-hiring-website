@@ -2620,6 +2620,18 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   color: #c798a5; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
+/* #280b (Jerin, 11 Nov 2026) — "add Currency symbol as a separate text beside the currency cells".
+   It is its own element because it is READ from the data per row, not glued on by the formatter, so one row
+   can read ₹ while the next reads $. Held a step back from the number: the figure is what you read, the
+   symbol is what tells you what it is. ⚠ It must NOT be tabular — a currency sign in a numeric-width slot
+   sits oddly against the digits beside it. */
+.tb-sym {
+  font-variant-numeric: normal; opacity: 0.7; font-weight: inherit;
+}
+/* ⚠ NO padding or margin here, deliberately. A 1.35px gap looked better and made the money text wider, which
+   at 800px tipped two more negative Delta figures into being clipped — measured against a control build of
+   what was live, which clipped one. The opacity and the non-tabular rendering separate it well enough. */
+
 /* Not a missing figure — a figure that would mean nothing at this level. It must not read as an empty cell. */
 .tb-dash { color: #c3cadb; font-size: 0.75rem; }
 

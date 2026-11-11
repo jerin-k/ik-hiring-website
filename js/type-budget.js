@@ -75,6 +75,51 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
  * 🔑 Lakh and crore, not millions — the figures are entered in rupees by an India-based team.
  * ⚠ Trailing `.00` is dropped so a round figure reads ₹12L rather than ₹12.00L.
  */
+/**
+ * #280b (Jerin, 11 Nov 2026): *"add Currency symbol as a separate text beside the currency cells"*.
+ *
+ * 🔑 THE SYMBOL IS READ FROM THE DATA, NOT ASSUMED. Until 11 Nov the ₹ was glued on by `inrShort`
+ *    whatever the figure actually was; a dollar budget would have been drawn as rupees without a murmur.
+ *    The pipeline now publishes `budgetCur` / `offerCur` on every row (web app V85) — measured on the
+ *    23:54 run: 105 offers and 7 budgets, every one INR. **So the rupee is now recorded, not guessed.**
+ * 🚨 A SUM ACROSS TWO CURRENCIES IS NOT A NUMBER. Where a row's figures are not all one currency the
+ *    total is meaningless, so it dashes rather than add rupees to dollars — the same refusal the money
+ *    Delta makes. It cannot happen while everything is INR; it is here so the first dollar cannot break it.
+ * ⚠ Lakh and crore are a RUPEE convention. Anything else counts in thousands and millions.
+ */
+const CUR_SYM = { INR: '\u20b9', USD: '$', EUR: '\u20ac', GBP: '\u00a3', AED: 'AED', SGD: 'S$', CAD: 'C$', AUD: 'A$' };
+const MIXED = 'MIXED';
+
+/** The pieces of a money figure: its sign, its symbol and its number, kept apart so the cell can show them apart. */
+export function moneyParts(v, cur) {
+  const n = Number(v);
+  if (!isFinite(n) || n === 0) return null;
+  if (cur === MIXED) return { mixed: true };
+  const code = cur || 'INR';
+  const sign = n < 0 ? '\u2212' : '';
+  const a = Math.abs(n);
+  let num;
+  if (code === 'INR') {
+    if (a >= 1e7) num = (a / 1e7).toFixed(2).replace(/\.00$/, '') + 'Cr';
+    else if (a >= 1e5) num = (a / 1e5).toFixed(2).replace(/\.00$/, '') + 'L';
+    else num = Math.round(a).toLocaleString('en-IN');
+  } else {
+    if (a >= 1e6) num = (a / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
+    else if (a >= 1e3) num = (a / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    else num = Math.round(a).toLocaleString('en-US');
+  }
+  return { sign, sym: CUR_SYM[code] || code, num, code };
+}
+
+/** A money figure as HTML, with the currency symbol in its own element beside the number. */
+export function moneyHTML(v, cur) {
+  const p = moneyParts(v, cur);
+  if (!p) return '';
+  if (p.mixed) return '<span class="tb-dash" title="These positions are not all in one currency, so they cannot be added up.">\u2014</span>';
+  return p.sign + '<span class="tb-sym">' + p.sym + '</span>' + p.num;
+}
+
+/** Rupees only, as plain text. Kept for anywhere a bare string is needed rather than markup. */
 export function inrShort(v) {
   const n = Number(v);
   if (!isFinite(n) || n === 0) return '';
@@ -147,13 +192,18 @@ export function typeBudgetIndex(data, sel, jobOk) {
     const bud = Number(r.budget) > 0 ? Number(r.budget) : 0;
     // #294: what the offer against this position actually cost (Total CTC Yearly, his choice 10 Nov 2026).
     const oamt = Number(r.offerAmt) > 0 ? Number(r.offerAmt) : 0;
-    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud, oamt);
-    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud, oamt);
+    // #280b: the currency Ashby recorded against each figure. Defaulting to INR where the field is absent
+    //   keeps rows published before V85 readable; it is the one place an assumption survives, and it is
+    //   confined to figures that predate the pipeline carrying the code at all.
+    const bCur = bud > 0 ? (r.budgetCur || 'INR') : null;
+    const oCur = oamt > 0 ? (r.offerCur || 'INR') : null;
+    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud, oamt, bCur, oCur);
+    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud, oamt, bCur, oCur);
 
     totals.total++;
     if (st) totals[st]++;
-    if (bud > 0) { totals.bSum += bud; totals.bN++; }
-    if (oamt > 0) totals.oSum += oamt;
+    if (bud > 0) { totals.bSum += bud; totals.bN++; noteCur(totals, 'bCur', bCur); }
+    if (oamt > 0) { totals.oSum += oamt; noteCur(totals, 'oCur', oCur); }
     if (st === 'joined') { if (bud > 0) totals.jB += bud; if (oamt > 0) totals.jO += oamt; else totals.jMiss++; }
     else if (st === 'jp') { if (bud > 0) totals.pB += bud; if (oamt > 0) totals.pO += oamt; else totals.pMiss++; }
     source[r.roleTypeSource === 'field' ? 'field' : (r.roleTypeSource === 'name' ? 'name' : 'none')]++;
@@ -187,7 +237,18 @@ export function typeBudgetIndex(data, sel, jobOk) {
     //    the marker read +₹6.92Cr, of which ₹6.92Cr was simply unbudgeted, not overspent. Jerin saw it on
     //    screen. `jBm`/`jOm` are the budget and the offers of the positions that carry BOTH, which is the
     //    only pair whose difference means "over or under budget". Same guard family as the money Delta.
-    jBm: 0, jOm: 0, jN: 0, pBm: 0, pOm: 0, pN: 0 }; }
+    jBm: 0, jOm: 0, jN: 0, pBm: 0, pOm: 0, pN: 0,
+    // 🚨 WHICH CURRENCY this row's budget and offer sums are in. One code while every contributing position
+    //    agrees, 'MIXED' the moment two disagree, null while nothing has contributed. A sum whose parts are
+    //    in different currencies is not a figure, and the renderer refuses to print one.
+    bCur: null, oCur: null }; }
+
+  /** Learn a row's currency, or mark it mixed. Once mixed it stays mixed. */
+  function noteCur(t, key, c) {
+    if (!c) return;
+    if (t[key] === null) t[key] = c;
+    else if (t[key] !== c) t[key] = 'MIXED';
+  }
   /**
    * One position, one bucket. `jpTied` is how many people in closing name this opening on their offer
    * (#157), so a position with one or more of them is in the pipeline; everything that is neither joined
@@ -198,12 +259,12 @@ export function typeBudgetIndex(data, sel, jobOk) {
     if (r.state !== 'missed' && (r.jpTied || 0) > 0) return 'jp';
     return 'delta';
   }
-  function add(t, st, bud, oamt) {
+  function add(t, st, bud, oamt, bCur, oCur) {
     t.total++;
     if (st) t[st]++;
     // A budget of 0 is not a budget. `openingBudget_` publishes the field only where Ashby holds a figure.
-    if (bud > 0) { t.bSum += bud; t.bN++; }
-    if (oamt > 0) t.oSum += oamt;
+    if (bud > 0) { t.bSum += bud; t.bN++; noteCur(t, 'bCur', bCur); }
+    if (oamt > 0) { t.oSum += oamt; noteCur(t, 'oCur', oCur); }
     // 🚨 A FILLED OR CLOSING POSITION WITH NO OFFER AMOUNT IS COUNTED, NOT IGNORED. Somebody joined against
     //    it, so money WAS spent; we simply do not know how much. `jMiss`/`pMiss` carry that ignorance up the
     //    tree so the renderer can refuse to print a Delta that would silently assume zero.
@@ -220,14 +281,14 @@ export function typeBudgetIndex(data, sel, jobOk) {
   }
 
   /** Count one position at all three levels at once, so a level can never disagree with the one above it. */
-  function plant(tree, dept, job, job8, type, st, bud, oamt) {
+  function plant(tree, dept, job, job8, type, st, bud, oamt, bCur, oCur) {
     const d = tree[dept] || (tree[dept] = Object.assign({ key: dept, jobs: {} }, blank()));
-    add(d, st, bud, oamt);
+    add(d, st, bud, oamt, bCur, oCur);
     // Keyed on the job ID, never the title: two jobs can share a title and must stay two rows.
     const j = d.jobs[job8] || (d.jobs[job8] = Object.assign({ key: job, job8, types: {} }, blank()));
-    add(j, st, bud, oamt);
+    add(j, st, bud, oamt, bCur, oCur);
     const t = j.types[type] || (j.types[type] = Object.assign({ key: type }, blank()));
-    add(t, st, bud, oamt);
+    add(t, st, bud, oamt, bCur, oCur);
   }
 
   // Biggest first; the catch-all sits LAST however big it is, because it is a gap marker, not a type.
@@ -478,7 +539,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     const v = isRole ? avgBudget(o) : null;
     return '<td class="tb-bud">'
       + (v === null ? '<span class="tb-dash">\u2014</span>'
-                    : `<span class="tb-budbox">${inrShort(v)}</span>`)
+                    : `<span class="tb-budbox">${moneyHTML(v, o.bCur)}</span>`)
       + '</td>';
   };
 
@@ -507,11 +568,15 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
    *    against only the recorded budgets reports unbudgeted spend as overspend, which is what it did until
    *    11 Nov 2026.
    */
-  const over = (spent, budgeted) => {
+  const over = (spent, budgeted, bCur, oCur) => {
     if (!(budgeted > 0) || !(spent > 0)) return '';
+    // 🚨 Two different currencies cannot be subtracted from one another, and a mixed sum is not a figure
+    //    at all. Either way there is nothing honest to print.
+    if (bCur === MIXED || oCur === MIXED) return '';
+    if (bCur && oCur && bCur !== oCur) return '';
     const d = spent - budgeted;
     if (d === 0) return '';
-    return (d > 0 ? '+' : '\u2212') + inrShort(Math.abs(d));
+    return (d > 0 ? '+' : '\u2212') + moneyHTML(Math.abs(d), oCur || bCur);
   };
 
   /**
@@ -531,27 +596,33 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
   const deltaMoney = (r) => {
     if (!(r.bSum > 0)) return '';
     if ((r.jMiss || 0) + (r.pMiss || 0) > 0) return '';
-    return inrShort(r.bSum - (r.jO || 0) - (r.pO || 0));
+    // 🚨 A THIRD GUARD, for the same reason as the other two: budget and spending in different currencies
+    //    cannot be subtracted, and neither can a mixed sum. Dash rather than invent a conversion.
+    if (r.bCur === MIXED || r.oCur === MIXED) return '';
+    if (r.bCur && r.oCur && r.bCur !== r.oCur) return '';
+    return moneyHTML(r.bSum - (r.jO || 0) - (r.pO || 0), r.bCur);
   };
 
   /** A row's figures, in the order the headers read. It LOOKS UP, it never adds: every number here was
    *  counted in `typeBudgetIndex`, so a job row cannot disagree with its department (Rule 3). */
   const nums = (r, isRole) => {
-    const by = {}, byB = {};
+    const by = {}, byB = {}, byC = {};
     // 🔑 The type columns carry the BUDGET of that type's positions — the planned side, as his decision 12
     //    says: role-type columns and the average come from the opening, the actuals from the offer.
-    (r.types || []).forEach((t) => { by[t.key] = t.total; byB[t.key] = t.bSum || 0; });
+    //    Each type carries its OWN currency, so one column can read $ while the next reads ₹.
+    (r.types || []).forEach((t) => { by[t.key] = t.total; byB[t.key] = t.bSum || 0; byC[t.key] = t.bCur; });
     const money = {
-      total: inrShort(r.bSum || 0),
-      joined: inrShort(r.jO || 0),
-      jp: inrShort(r.pO || 0),
+      total: moneyHTML(r.bSum || 0, r.bCur),
+      joined: moneyHTML(r.jO || 0, r.oCur),
+      jp: moneyHTML(r.pO || 0, r.oCur),
       delta: deltaMoney(r)
     };
-    const mark = { joined: over(r.jOm || 0, r.jBm || 0), jp: over(r.pOm || 0, r.pBm || 0), delta: '' };
+    const mark = { joined: over(r.jOm || 0, r.jBm || 0, r.bCur, r.oCur),
+                   jp: over(r.pOm || 0, r.pBm || 0, r.bCur, r.oCur), delta: '' };
     return budCell(r, isRole)
       + `<td class="tb-num"><span class="tb-c">${r.total}</span>`
       + (withB && money.total ? `<span class="tb-m">${money.total}</span>` : '') + '</td>'
-      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0, inrShort(byB[t] || 0), '')).join('')
+      + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0, moneyHTML(byB[t] || 0, byC[t]), '')).join('')
       + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0, money[st], mark[st])).join('');
   };
 
@@ -684,10 +755,14 @@ function budgetPanel(ix, oneQ, LV) {
   const delta = (r, start) => {
     if (!(start > 0)) return null;
     if (unknown(r) > 0) return null;
+    // 🚨 The starting point is typed in RUPEES. Adding a dollar budget to it, or subtracting dollar
+    //    spending from it, would be arithmetic across two currencies — so it dashes instead.
+    if (r.bCur === MIXED || r.oCur === MIXED) return null;
+    if ((r.bCur && r.bCur !== 'INR') || (r.oCur && r.oCur !== 'INR')) return null;
     return start + added(r) - spent(r);
   };
   /** A money cell: the figure, or a dash where it cannot honestly be stated. */
-  const money = (v) => (v === null || !(Math.abs(v) > 0)) ? dash : inrShort(v);
+  const money = (v, cur) => (v === null || !(Math.abs(v) > 0)) ? dash : moneyHTML(v, cur);
   /** The department's typed starting point as a NUMBER, or 0. One quarter only — see render(). */
   const startOf = (dept) => {
     if (!oneQ) return 0;
@@ -739,11 +814,11 @@ function budgetPanel(ix, oneQ, LV) {
           return `<tr class="tb-l1 dept-header" data-g="${gi}"${opens ? ' data-exp="0" style="cursor:pointer"' : ''}>`
             + `<td>${opens ? CARET : CARET_GAP}${esc(d.key)}</td><td>${d.total}</td>`
             + `<td>${startCell(d.key)}</td>`
-            + `<td>${money(added(d))}</td><td>${money(spent(d))}</td>`
-            + `<td>${money(delta(d, start))}</td></tr>`
+            + `<td>${money(added(d), d.bCur)}</td><td>${money(spent(d), d.oCur)}</td>`
+            + `<td>${money(delta(d, start), d.bCur)}</td></tr>`
             + (LV.job ? d.jobs.map((j) => `<tr class="tb-l2" data-g="${gi}" style="display:none">`
               + `<td>${CARET_GAP}${CARET_GAP}${esc(j.key)}</td><td>${j.total}</td>`
-              + `<td>${dash}</td><td>${money(added(j))}</td><td>${money(spent(j))}</td>`
+              + `<td>${dash}</td><td>${money(added(j), j.bCur)}</td><td>${money(spent(j), j.oCur)}</td>`
               + `<td>${dash}</td></tr>`).join('') : '');
         }).join('')}
         ${ix.deptRows.length ? (() => {
@@ -754,11 +829,13 @@ function budgetPanel(ix, oneQ, LV) {
           const tAdded = ix.deptRows.reduce((n, d) => n + added(d), 0);
           const tSpent = ix.deptRows.reduce((n, d) => n + spent(d), 0);
           const tUnknown = ix.deptRows.reduce((n, d) => n + unknown(d), 0);
+          // one currency across the whole table, or MIXED — the same rule a single row follows
+          const tCur = (k) => ix.deptRows.reduce((c, d) => !d[k] ? c : (c === null ? d[k] : (c === d[k] ? c : MIXED)), null);
           const everyDeptHasAStart = ix.deptRows.every((d) => (startOf(d.key) || 0) > 0);
           const tDelta = (everyDeptHasAStart && tUnknown === 0) ? tStart + tAdded - tSpent : null;
           return `<tr class="tb-tot-row"><td>Total</td><td>${ix.totals.total}</td>
-          <td>${tStart > 0 ? inrShort(tStart) : dash}</td><td>${money(tAdded)}</td>
-          <td>${money(tSpent)}</td><td>${money(tDelta)}</td></tr>`;
+          <td>${tStart > 0 ? moneyHTML(tStart, 'INR') : dash}</td><td>${money(tAdded, tCur('bCur'))}</td>
+          <td>${money(tSpent, tCur('oCur'))}</td><td>${money(tDelta, tCur('bCur'))}</td></tr>`;
         })() : ''}
       </tbody>
     </table></div>
