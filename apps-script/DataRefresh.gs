@@ -338,11 +338,11 @@ function openingBudget_(o) {
   for (var i = 0; i < cfs.length; i++) {
     var t = cfs[i].title || cfs[i].name || '';
     if (!/budget/i.test(t)) continue;
-    var v = cfs[i].value;
-    if (v && typeof v === 'object' && !(v instanceof Array) && v.value != null) v = v.value;
+    var v = cfs[i].value, cur = null;
+    if (v && typeof v === 'object' && !(v instanceof Array)) { cur = v.currencyCode || null; v = v.value; }
     if (v instanceof Array && v.length === 1) v = v[0];
     var n = Number(v);
-    return (isFinite(n) && n > 0) ? n : null;
+    return (isFinite(n) && n > 0) ? { amt: n, cur: cur || 'INR' } : null;
   }
   return null;
 }
@@ -967,7 +967,7 @@ function refreshDashboardData() {
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
         quarter: q, day: dOpen || null, state: cls, topic: oTopic, complexity: oComplexity, jpTied: 0,
         roleType: oRoleType || null, roleTypeSource: oRoleTypeSrc, empType: oEmpType || null,
-        budget: oBudget,
+        budget: oBudget ? oBudget.amt : null, budgetCur: oBudget ? oBudget.cur : null,
         name: String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').trim(),
         ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
@@ -1062,11 +1062,14 @@ function refreshDashboardData() {
     if (e.offerCur && e.offerCur !== 'INR') { amtSkippedCur++; return; }
     var k = String(link).substring(0, 8);
     var cur = offerAmtByOpening8_[k];
-    if (!cur || (e.accepted && !cur.accepted)) offerAmtByOpening8_[k] = { amt: e.offerAmt, accepted: !!e.accepted };
+    if (!cur || (e.accepted && !cur.accepted)) {
+      offerAmtByOpening8_[k] = { amt: e.offerAmt, cur: e.offerCur || 'INR', accepted: !!e.accepted };
+    }
   });
   openingRows.forEach(function (r) {
     var hit = offerAmtByOpening8_[r.openingId];
     r.offerAmt = hit ? hit.amt : null;
+    r.offerCur = hit ? hit.cur : null;
   });
   openingTopicStats.withOfferAmt = openingRows.filter(function (r) { return r.offerAmt != null; }).length;
   Logger.log('#294 offer amounts (Total CTC Yearly): ' + Object.keys(offerAmtByOpening8_).length
@@ -1077,6 +1080,14 @@ function refreshDashboardData() {
   // #294: how many of the emitted rows carry a budget. A zero here means the field's shape moved, not that
   // the money is gone - check openingBudget_ against one opening in Ashby before changing anything else.
   openingTopicStats.withBudget = openingRows.filter(function (r) { return r.budget != null; }).length;
+  // #280b: what currencies are actually in play. A budget entered in anything but INR is shown as rupees by
+  //   today's site, so this line is how that is noticed BEFORE the screen can tell them apart.
+  var curTally = {};
+  openingRows.forEach(function (r) {
+    if (r.budgetCur) curTally['budget ' + r.budgetCur] = (curTally['budget ' + r.budgetCur] || 0) + 1;
+    if (r.offerCur) curTally['offer ' + r.offerCur] = (curTally['offer ' + r.offerCur] || 0) + 1;
+  });
+  Logger.log('#280b currencies on the published rows: ' + JSON.stringify(curTally));
   Logger.log('#157 openings from ' + OPENING_ROWS_FROM + ': ' + openingTopicStats.scoped + ' scoped, '
     + openingTopicStats.withTopic + ' with a topic | SME ' + openingTopicStats.sme + ' of which '
     + openingTopicStats.smeWithTopic + ' with a topic | openings carrying a live linked offer: '
