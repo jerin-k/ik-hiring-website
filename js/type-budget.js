@@ -179,7 +179,15 @@ export function typeBudgetIndex(data, sel, jobOk) {
   //    the budget those positions were given, what their offers actually cost, and how many of them have no
   //    offer amount at all. That last count is what stops a Delta being printed over an unknown (see below).
   function blank() { return { total: 0, joined: 0, jp: 0, delta: 0, bSum: 0, bN: 0, oSum: 0,
-    jB: 0, jO: 0, jMiss: 0, pB: 0, pO: 0, pMiss: 0 }; }
+    jB: 0, jO: 0, jMiss: 0, pB: 0, pO: 0, pMiss: 0,
+    // 🚨 THE OVER/UNDER MARKER MUST COMPARE LIKE WITH LIKE. `jB`/`jO` are NOT a fair pair: `jO` is the
+    //    offers of EVERY joined position while `jB` is the budget of only those that have one, so their
+    //    difference counts offers on positions nobody ever budgeted for as "overspend". Measured 11 Nov 2026
+    //    on Q4: 64 joined positions, offers ₹6.95Cr, and exactly ONE of them carrying a budget (₹3.60L) —
+    //    the marker read +₹6.92Cr, of which ₹6.92Cr was simply unbudgeted, not overspent. Jerin saw it on
+    //    screen. `jBm`/`jOm` are the budget and the offers of the positions that carry BOTH, which is the
+    //    only pair whose difference means "over or under budget". Same guard family as the money Delta.
+    jBm: 0, jOm: 0, jN: 0, pBm: 0, pOm: 0, pN: 0 }; }
   /**
    * One position, one bucket. `jpTied` is how many people in closing name this opening on their offer
    * (#157), so a position with one or more of them is in the pipeline; everything that is neither joined
@@ -199,8 +207,16 @@ export function typeBudgetIndex(data, sel, jobOk) {
     // 🚨 A FILLED OR CLOSING POSITION WITH NO OFFER AMOUNT IS COUNTED, NOT IGNORED. Somebody joined against
     //    it, so money WAS spent; we simply do not know how much. `jMiss`/`pMiss` carry that ignorance up the
     //    tree so the renderer can refuse to print a Delta that would silently assume zero.
-    if (st === 'joined') { if (bud > 0) t.jB += bud; if (oamt > 0) t.jO += oamt; else t.jMiss++; }
-    else if (st === 'jp') { if (bud > 0) t.pB += bud; if (oamt > 0) t.pO += oamt; else t.pMiss++; }
+    if (st === 'joined') {
+      if (bud > 0) t.jB += bud;
+      if (oamt > 0) t.jO += oamt; else t.jMiss++;
+      // only a position carrying BOTH can say anything about over or under budget
+      if (bud > 0 && oamt > 0) { t.jBm += bud; t.jOm += oamt; t.jN++; }
+    } else if (st === 'jp') {
+      if (bud > 0) t.pB += bud;
+      if (oamt > 0) t.pO += oamt; else t.pMiss++;
+      if (bud > 0 && oamt > 0) { t.pBm += bud; t.pOm += oamt; t.pN++; }
+    }
   }
 
   /** Count one position at all three levels at once, so a level can never disagree with the one above it. */
@@ -484,7 +500,13 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
     + (withB && marker ? `<span class="tb-mk">${marker}</span>` : '')
     + '</td>';
 
-  /** Over or under the budget of the SAME positions: + is over, − is under. Blank where they had no budget. */
+  /**
+   * Over or under budget, across ONLY the positions that carry both a budget and an offer figure.
+   * + is over, − is under, and it is blank where no position on the row carries both.
+   * 🚨 Do not feed this `jO`/`jB` again — see the note on `jBm` in `blank()`. Comparing all the offers
+   *    against only the recorded budgets reports unbudgeted spend as overspend, which is what it did until
+   *    11 Nov 2026.
+   */
   const over = (spent, budgeted) => {
     if (!(budgeted > 0) || !(spent > 0)) return '';
     const d = spent - budgeted;
@@ -525,7 +547,7 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB) {
       jp: inrShort(r.pO || 0),
       delta: deltaMoney(r)
     };
-    const mark = { joined: over(r.jO || 0, r.jB || 0), jp: over(r.pO || 0, r.pB || 0), delta: '' };
+    const mark = { joined: over(r.jOm || 0, r.jBm || 0), jp: over(r.pOm || 0, r.pBm || 0), delta: '' };
     return budCell(r, isRole)
       + `<td class="tb-num"><span class="tb-c">${r.total}</span>`
       + (withB && money.total ? `<span class="tb-m">${money.total}</span>` : '') + '</td>'
