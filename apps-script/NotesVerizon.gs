@@ -27,7 +27,7 @@ var NVZ_FILE_IDS   = ['1zBRrRvVn7taDibUPIscu9oX_Y3jWIZ-0',   // fractal-verizon-
                       '1T0NhTTiGwP5ZFSU2rDLEAVWmKkYNVtm4',   // part 2 of 4
                       '1KiXDoydgLlD_61h1vVnmrN1yuVbrfoLH',   // part 3 of 4
                       '1a1carpuHqSgriDIONb_EQAnYGpgPffxe'];  // part 4 of 4 - PRIVATE, jerin@IK My Drive, owner only
-var NVZ_MODE       = 'run';       // 'dry' | 'run'
+var NVZ_MODE       = 'dry';       // 'dry' | 'run'
 var NVZ_JOBS       = ['Principal- AI Engineering (Verizon)',             // no space before the hyphen
                       'Associate Director - AI Engineering (Verizon)'];
 var NVZ_SINCE_MS   = Date.UTC(2026, 10, 10);   // both jobs were created 11 Nov 2026
