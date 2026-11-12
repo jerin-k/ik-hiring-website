@@ -464,11 +464,19 @@ export async function mountOpeningRequests(root, backend) {
   // The person raising it is only the default recruiter on the FIRST line - the rest are theirs to set deliberately.
   function orRow(recruiter) { return { roleType: '', recruiter: recruiter || '', sourcer: '', replacementOf: '', budget: '' }; }
 
+  // 297b (Jerin, 12 Nov 2026) - his option B: ONE currency for the whole request, because a request is for one
+  // job in one location. ⚠ These two must match `OR_CURS` / `OR_CUR_SYM` on the server, which whitelists what
+  // it is sent; a value not in this list is stored as INR rather than trusted.
+  const CURS = [['INR', '\u20b9', 'Rupees (INR)'], ['USD', '$', 'US dollars (USD)']];
+  const curSym = (c) => (CURS.find(x => x[0] === c) || CURS[0])[1];
+  const curName = (c) => (CURS.find(x => x[0] === c) || CURS[0])[2];
+  const curOf = (d) => (CURS.some(x => x[0] === d.budgetCur) ? d.budgetCur : 'INR');
+
   function newDraft() {
     const mine = S.recruiters.find(x => x.email === S.me.email);
     return { jobId: '', rows: [orRow(mine ? mine.name : '')], employmentType: '', levelPick: '',
              complexity: '', topic: '', openDate: todayIST(), note: '',
-             team: '', location: '', description: '' };
+             team: '', location: '', description: '', budgetCur: 'INR' };   // 297b
   }
 
   function startNew() {
@@ -750,8 +758,10 @@ export async function mountOpeningRequests(root, backend) {
           <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select>
           <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
             value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}>
+          <span class="or-bud"><span class="or-cur-sym" aria-hidden="true">${curSym(curOf(d))}</span>
           <input class="or-in${x.budget ? '' : ' bad'}" type="text" inputmode="numeric" maxlength="12" data-rbud="${i}"
-            value="${esc(typed(i, 'budget', x.budget))}" placeholder="e.g. 2500000" aria-label="Opening ${n} budget in rupees"${dis}></div>`;
+            value="${esc(typed(i, 'budget', x.budget))}" placeholder="${curOf(d) === 'USD' ? 'e.g. 135000' : 'e.g. 2500000'}"
+            aria-label="Opening ${n} budget in ${curName(curOf(d))}"${dis}></span></div>`;
         // 294 revised (Jerin, 11 Nov 2026): \ud83d\udde3 *"Rather make it a 5 item line. And the second line to show
         // up only for replacment name"*. \ud83d\udd11 THE BUDGET IS THE FIFTH FIELD ON THE MAIN LINE, not a sub-line.
         // It is asked on every Role Type, so giving it a whole second row spent a row on one short number for
@@ -769,6 +779,10 @@ export async function mountOpeningRequests(root, backend) {
           type="button" data-n="1" aria-label="One more opening"${locked || rws.length >= 25 ? ' disabled' : ''}>+</button></span>
         <span class="or-note">Each line below is one real opening in Ashby.</span></div>
       <div class="or-f wide"><span>The openings</span><div class="or-mix">
+        <div class="or-cur-bar"><label for="or-cur"><b>Budgets on this request are in</b></label>
+          <select id="or-cur" data-cur${locked ? ' disabled' : ''}>${CURS.map(c =>
+            `<option value="${c[0]}"${curOf(d) === c[0] ? ' selected' : ''}>${esc(c[2])}</option>`).join('')}</select>
+          <span class="or-note">the amount boxes below follow it</span></div>
         <div class="or-op-head"><span>#</span><span>Role Type</span><span>Recruiter</span><span>Sourcer</span><span>Topic</span><span>Budget</span></div>
         ${rws.map(line).join('')}
         <div class="or-mix-total"><b>${rws.length} opening${rws.length === 1 ? '' : 's'}</b><span>${parts || 'Pick a Role Type on each line'}</span></div>
@@ -1000,7 +1014,8 @@ export async function mountOpeningRequests(root, backend) {
     const d = Object.assign(newDraft(), {
       jobId: x.jobId, employmentType: x.employmentType,
       complexity: x.complexity, topic: x.topic, openDate: x.openDate,
-      note: x.note, team: x.team, location: x.location, description: x.description });
+      note: x.note, team: x.team, location: x.location, description: x.description,
+      budgetCur: x.budgetCur || 'INR' });   // 297b - a sent-back request comes back in the currency it was raised in
     d.rows = rowsOf(x);   // 170b - and this is what rebuilds the lines for a request saved before it
     // a Level the requester had to pick (a Tech or NonTech job with none in Ashby) comes back picked
     if (evaluate(d, ctx()).levelPicked) d.levelPick = x.levelSet || '';
@@ -1098,6 +1113,11 @@ export async function mountOpeningRequests(root, backend) {
     // 112l: the topic is TEXT, so it takes the same treatment as the replacement name — commit on every keystroke and
     // put the caret back after the re-render. On the shared [data-row] change handler it would only commit on blur AND
     // lose the caret, because that handler re-renders.
+    // 297b: changing the currency re-renders, so every amount box's symbol, placeholder and spoken label follow it.
+    root.querySelectorAll('[data-cur]').forEach(el => el.addEventListener('change', () => {
+      S.draft.budgetCur = CURS.some(c => c[0] === el.value) ? el.value : 'INR';
+      render();
+    }));
     root.querySelectorAll('[data-rtop]').forEach(el => el.addEventListener('input', () => {
       const i = Number(el.dataset.rtop), pos = el.selectionStart, rows = (S.draft.rows || []).slice();
       if (!rows[i]) return;
@@ -1284,6 +1304,7 @@ export async function mountOpeningRequests(root, backend) {
       // 112l: `topic` is now DERIVED from the rows, the way recruiter/roleType already are — the server still
       // requires one, older readers still find one, and a mixed request reads "Agentic AI, System Design +1 more".
       complexity: d.complexity, topic: ev.topic, openDate: d.openDate,
+      budgetCur: curOf(d),   // 297b - whitelisted here AND again on the server, because this reaches Ashby
       // 170b: `rows` IS the request - one entry per opening. count, roleType, recruiter, sourcer and replacementOf are
       // sent as well, but ONLY so an older reader still finds them; the server derives them again from the rows
       // (orNormalize_), so a stale value here can never become the record.

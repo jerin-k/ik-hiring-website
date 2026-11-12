@@ -300,6 +300,17 @@ textarea.or-in { resize: vertical; padding-top: 0.5rem; }
 .or-op-n { font-weight: 700; color: var(--or-faint); font-size: 0.8125rem; text-align: center; }
 /* a select is shorter than a text input here, so the lines stay compact enough to read five at a glance */
 .or-op-row select.or-in { min-height: 2.125rem; padding-top: 0; padding-bottom: 0; }
+/* 297b: one currency for the whole request, stated above the lines, with its symbol inside every amount box.
+   ⚠ The symbol is decorative (aria-hidden) - the spoken label on each input names the currency in words. */
+.or-cur-bar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem 0.875rem;
+  background: var(--or-teal-bg); border-bottom: 1px solid #cfe4eb; color: var(--or-teal-ink); font-size: 0.8125rem; }
+.or-cur-bar select { min-height: 1.875rem; padding: 0 0.5rem; border-radius: 0.4375rem; border: 1px solid #a9ccd6;
+  background: var(--or-card); color: var(--or-teal-ink); font: inherit; font-weight: 650; }
+.or-cur-bar .or-note { color: var(--or-teal-ink); opacity: 0.85; }
+.or-bud { position: relative; display: block; min-width: 0; }
+.or-bud .or-cur-sym { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%);
+  color: var(--or-muted); font-weight: 650; pointer-events: none; }
+.or-bud input.or-in { padding-left: 1.5rem; }
 .or-op-sub { padding: 0.375rem 0.875rem 0.5rem 3.125rem; background: #fbfcfe; border-top: 1px dashed var(--or-border); }
 .or-op-sub label { display: block; font-size: 0.71875rem; color: var(--or-amber); font-weight: 600; margin-bottom: 0.1875rem; }
 /* 244c: the name and the budget are asked for on the same two Role Types, so they share one sub-line.
