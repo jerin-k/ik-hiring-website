@@ -951,7 +951,10 @@ export async function mountOpeningRequests(root, backend) {
   // Who can do what next on a saved request. Approvers decide while it waits; the requester revises once it is sent back.
   function decisionHtml(x) {
     if (S.busy) return '<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-typing">Saving…</div></div>';
-    const err = S.error ? `<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-bad">${esc(S.error)}</div></div>` : '';
+    const err = S.error ? `<div class="or-row"><span class="or-av c">C</span><div class="or-bub or-bad">${esc(S.error)}</div></div>` : ''
+      // 298a: a SAVE WITH NOTHING IN IT is not an error and must not read like one, but it must not be silent
+      // either - the recruiter pressed Save and deserves to know why nobody was told.
+      + (S.notice ? `<div class="or-row"><span class="or-av c">C</span><div class="or-bub">${esc(S.notice)}</div></div>` : '');
     if (x.status === 'For approval' && S.me.isApprover && S.editing === x.id) {
       return `<div class="or-divider">Edit, then approve</div>${err}
         <div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b></div>
@@ -968,7 +971,17 @@ export async function mountOpeningRequests(root, backend) {
             <button type="button" class="or-b x" data-act="sendback-go">${ico('back')}Send back</button></div>` : ''}
         </div>`;
     }
-    if (x.status === 'For approval') return `<div class="or-divider">Waiting for Jerin or Gopu</div>`;
+    // 298a (Jerin, 13 Nov 2026): 🗣 *"what if the recruiter want something else changed? Better if they revise
+    // in the site no?"* — the person who RAISED it can change it while it is still waiting, instead of having to
+    // ask an approver to send it back first. ⚠ Approvers never reach this branch: theirs is the decision block
+    // above, which already has its own Edit. Same button and same path as a send-back revision, so an approver
+    // sees the change list in the same place either way — only the word in Slack differs (Edited / Resubmitted).
+    if (x.status === 'For approval') {
+      const mine = x.requesterEmail === S.me.email;
+      return `<div class="or-divider">Waiting for Jerin or Gopu</div>${mine ? `${err}
+        <div class="or-btns"><button type="button" class="or-b p" data-act="revise"${S.dataReady ? '' : ' disabled'} title="${S.dataReady ? '' : 'The job list is still loading'}">${ico('pen')}Revise</button></div>
+        <p class="or-small or-muted">You can still change this. They are told what you changed, and it stays ${esc(x.id)}.</p>` : ''}`;
+    }
     if (x.status === 'Sent back' && x.requesterEmail === S.me.email) {
       return `${err}<div class="or-btns"><button type="button" class="or-b p" data-act="revise"${S.dataReady ? '' : ' disabled'} title="${S.dataReady ? '' : 'The job list is still loading'}">${ico('pen')}Revise and resubmit</button></div>`;
     }
@@ -1140,7 +1153,7 @@ export async function mountOpeningRequests(root, backend) {
     act('approve', () => decide('approve', ''));
     act('sendback', () => { S.sendingBack = true; render(); const n = root.querySelector('#orNote'); if (n) { n.focus({ preventScroll: true }); bringIntoView(n); } });
     act('sendback-go', () => { const n = String((root.querySelector('#orNote') || {}).value || '').trim(); if (n) decide('sendback', n); });
-    act('revise', () => { if (!S.dataReady) return; revise(S.requests.find(r => r.id === S.active)); });
+    act('revise', () => { if (!S.dataReady) return; S.notice = ''; revise(S.requests.find(r => r.id === S.active)); });
     act('edit', () => {
       if (!S.dataReady) return;            // 201e: an approver's edit opens the same form, so it waits too
       const x = S.requests.find(r => r.id === S.active);
@@ -1330,10 +1343,12 @@ export async function mountOpeningRequests(root, backend) {
     catch (e) { S.busy = false; S.error = `Couldn't save: ${e && e.message || e}. Nothing was sent.`; render(); return; }
     S.busy = false;
     if (!saved || !saved.ok) { S.error = `Not sent: ${(saved && saved.message) || 'the server refused it'}.`; render(); return; }
+    // 298a: the server refuses to post a no-change edit. Say so plainly and do NOT play the "sent" state.
+    S.notice = saved.unchanged ? (saved.message || 'Nothing changed, so nothing was sent.') : '';
     const was = S.requests.findIndex(r => r.id === saved.request.id);
     if (was >= 0) S.requests.splice(was, 1);
     S.requests.unshift(saved.request);
-    S.submitted = true;
+    S.submitted = !saved.unchanged;
     S.active = saved.request.id;
     render();
   }
