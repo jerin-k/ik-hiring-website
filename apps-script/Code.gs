@@ -928,8 +928,19 @@ var OR_COLS = ['id', 'createdAt', 'status', 'requesterEmail', 'requesterName', '
   // different people's work. `count`, `mix`, `roleType`, `recruiter`, `sourcer` and `replacementOf` are still written,
   // DERIVED from these rows (orDerive_), so every older reader keeps getting the answer it has always read.
   // 🚨 NOT the same column as `openings` above, which is what was actually MADE in Ashby.
-  'rows'];
+  'rows',
+  // 297b (Jerin, 12 Nov 2026) - ONE currency for the whole request, his option B. A request is for one job in
+  // one location, so the currency belongs to the REQUEST and not to each opening. Appended at the END like
+  // every column before it, so rows already saved keep their places and read '' (which orNormalize_ reads
+  // as INR - what every figure on record actually is).
+  'budgetCur'];
 var OR_JSON = { answers: 1, checks: 1, transcript: 1, edits: 1, mix: 1, openings: 1, rows: 1 };
+
+// 297b: the currencies offered, and their symbols. ⚠ ONE home - the window offers the same two and the
+// robot reads this list. A third currency is added HERE, not in three places.
+var OR_CURS = ['INR', 'USD'];
+var OR_CUR_SYM = { INR: '\u20b9', USD: '$' };
+var OR_CUR_NAME = { INR: 'rupees', USD: 'US dollars' };
 var OR_NUM = { count: 1, pts: 1 };
 // 112a: what an approver may change, in the order a change list reads. Name and Points each follow from the fields above
 // them (recruiter + topic, job + level + complexity), so they change on their own and are listed because they are what
@@ -940,7 +951,8 @@ var OR_NUM = { count: 1, pts: 1 };
 var OR_EDIT = [['jobTitle', 'Job'], ['count', 'How many'], ['rows', 'Openings'], ['team', 'Team'], ['location', 'Location'],
   ['employmentType', 'Employment Type'], ['levelSet', 'Job Level'], ['complexity', 'Role Complexity'],
   ['topic', 'Topic'], ['openDate', 'Open date'],
-  ['description', 'Description'], ['name', 'Name'], ['pts', 'Points each']];
+  ['description', 'Description'], ['name', 'Name'], ['pts', 'Points each'],
+  ['budgetCur', 'Budget currency']];   // 297b
 var OR_EDIT_ALSO = ['jobId', 'department', 'levelNow', 'tier', 'quarter', 'mix',
   'roleType', 'recruiter', 'sourcer', 'replacementOf'];
 
@@ -1081,11 +1093,41 @@ function orDerive_(rows) {
 // The window's own rowEdits() is the same rule; this one is what gets RECORDED.
 var OR_ROW_LABELS = [['roleType', 'Role Type'], ['recruiter', 'recruiter'], ['sourcer', 'sourcer'], ['replacementOf', 'replaces'], ['budget', 'budget']];
 
+/**
+ * 297b - THE ONE PLACE A REQUEST'S MONEY IS FORMATTED.
+ * 🚨 Written because this drifted once already: #244c added the budget to `orRowLine_` and NOT to the card,
+ *    so a budget appeared in Slack only when an approver CHANGED it and never when it was first proposed
+ *    (#297a). Two copies of one line is how that happens.
+ * ⚠ No `toLocaleString` with a locale argument - grouping is done by hand so the output cannot depend on what
+ *    the Apps Script runtime supports. Indian grouping is last three then pairs; US grouping is threes.
+ */
+function orMoney_(v, cur) {
+  // ⚠ Leading zeros stripped ENTIRELY, so "0" and "000" come back as nothing rather than as a figure of zero:
+  //   a zero budget means "not set" here, which is what `inrShort` on the site already does. Caught by a test.
+  var n = String(v == null ? '' : v).replace(/[^0-9]/g, '').replace(/^0+/, '');
+  if (!n) return '';
+  var code = String(cur || 'INR').toUpperCase();
+  if (OR_CURS.indexOf(code) < 0) code = 'INR';
+  var grouped;
+  if (code === 'INR') {
+    var tail = n.slice(-3), head = n.slice(0, -3), parts = [];
+    while (head.length > 2) { parts.unshift(head.slice(-2)); head = head.slice(0, -2); }
+    if (head) parts.unshift(head);
+    grouped = parts.length ? parts.join(',') + ',' + tail : tail;
+  } else {
+    grouped = n.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  return (OR_CUR_SYM[code] || '') + grouped;
+}
+
 function orRowLine_(r) {
   return (r.roleType || '(no Role Type)') + ' — ' + (r.recruiter || '(no recruiter)')
     + (r.topic ? ', ' + r.topic : '')   // 112l
     + (r.sourcer ? ', sourced by ' + r.sourcer : '') + (r.replacementOf ? ', replacing ' + r.replacementOf : '')
-    + (r.budget ? ', budget ' + r.budget : '');   // 244c
+    // 244c. ⚠ Deliberately the BARE number: this line is a diff an approver reads, where exactness beats
+    // prettiness, and a row carries no currency of its own (297b made it request-level). Its twin in
+    // `orSlackCard_` adds the symbol via orMoney_.
+    + (r.budget ? ', budget ' + r.budget : '');
 }
 
 function orRowEdits_(a, b) {
@@ -1108,6 +1150,11 @@ function orNormalize_(p) {
   p = p || {};
   var rows = orRows_(p);
   p.rows = rows;
+  // 297b: WHITELIST, not trust. This value reaches Ashby and then every money column on the dashboard, so a
+  // free-text currency from the window would be a wrong figure rather than a wrong label. Anything
+  // unrecognised becomes INR, deliberately: every budget and every offer on record today is in rupees.
+  p.budgetCur = OR_CURS.indexOf(String(p.budgetCur || '').toUpperCase()) < 0
+    ? 'INR' : String(p.budgetCur).toUpperCase();
   var d = orDerive_(rows);
   Object.keys(d).forEach(function (k) { p[k] = d[k]; });
   return p;
@@ -1591,6 +1638,58 @@ function orSlackVal_(v, max) {
 }
 function orSlackQuote_(s) { return String(s).split('\n').map(function (l) { return '> ' + orSlackEsc_(l); }).join('\n'); }
 // The request in full: every field of Ashby's Create Opening plus the score, then what the checks and questions turned up.
+/**
+ * 297b SELF-TEST — run it from the editor; it writes NOTHING and posts NOTHING.
+ * 🔑 It exists for two reasons: it proves the save committed (a new non-underscore name appears in the Run
+ *    picker only after the SERVER has parsed the file — a reload proves nothing), and it exercises the card
+ *    builder on a request that has money in it, which no live request does yet.
+ */
+function test297b() {
+  var fails = [], checks = 0;
+  function eq(got, want, what) {
+    checks++;
+    if (String(got) !== String(want)) fails.push(what + ': got ' + JSON.stringify(String(got)) + ', wanted ' + JSON.stringify(String(want)));
+  }
+  // the money formatter
+  eq(orMoney_(2500000, 'INR'), '\u20b925,00,000', 'INR lakhs grouping');
+  eq(orMoney_(10000000, 'INR'), '\u20b91,00,00,000', 'INR crore grouping');
+  eq(orMoney_(135000, 'USD'), '$135,000', 'USD grouping');
+  eq(orMoney_('25,00,000', 'INR'), '\u20b925,00,000', 'commas in the input are ignored');
+  eq(orMoney_(0, 'INR'), '', 'a zero budget shows nothing');
+  eq(orMoney_('', 'USD'), '', 'an empty budget shows nothing');
+  eq(orMoney_(5000, 'EUR'), '\u20b95,000', 'an unknown currency falls back to INR');
+  // the whitelist
+  eq(orNormalize_({ budgetCur: 'usd' }).budgetCur, 'USD', 'lower case is accepted');
+  eq(orNormalize_({ budgetCur: 'GBP' }).budgetCur, 'INR', 'an unoffered currency becomes INR');
+  eq(orNormalize_({}).budgetCur, 'INR', 'no currency becomes INR');
+  eq(orNormalize_({ budgetCur: '<script>' }).budgetCur, 'INR', 'junk becomes INR');
+  // the card: the budget must now APPEAR, with its symbol, and the currency stated once
+  var rq = { id: 'OR-TEST', name: 'IK-000 - Tester - New - NA', jobTitle: 'Program Advisor - US (AI Programs)',
+    team: 'US Business', location: 'Remote - USA', openDate: '2026-11-12', quarter: '2026-Q4',
+    description: 'self-test only', employmentType: 'FullTime', complexity: 'Regular', topic: 'NA',
+    levelNow: 'L4', levelSet: 'L4', tier: 'Regular', pts: 12, note: '', budgetCur: 'USD',
+    rows: [{ roleType: 'New', recruiter: 'Tester', sourcer: '', topic: 'NA', replacementOf: '', budget: '135000' },
+           { roleType: 'Replacement', recruiter: 'Tester', sourcer: '', topic: 'NA', replacementOf: 'Someone', budget: '128000' }] };
+  var card = orSlackCard_(rq);
+  eq(card.indexOf('budget $135,000') > -1, true, 'opening 1 shows its budget in dollars');
+  eq(card.indexOf('budget $128,000') > -1, true, 'opening 2 shows its budget in dollars');
+  eq(card.indexOf('budgets in US dollars') > -1, true, 'the currency is stated once above the openings');
+  var rqInr = JSON.parse(JSON.stringify(rq)); rqInr.budgetCur = 'INR';
+  var cardInr = orSlackCard_(rqInr);
+  eq(cardInr.indexOf('budget \u20b91,35,000') > -1, true, 'the same figure reads as rupees when the request says INR');
+  eq(cardInr.indexOf('budgets in rupees') > -1, true, 'rupees stated once');
+  // and a request with NO budget must not grow an empty currency line
+  var rqBare = JSON.parse(JSON.stringify(rq));
+  rqBare.rows.forEach(function (r) { r.budget = ''; });
+  eq(orSlackCard_(rqBare).indexOf('budgets in') === -1, true, 'no budgets means no currency line');
+
+  Logger.log('test297b | ' + checks + ' checks, ' + fails.length + ' FAILED');
+  fails.forEach(function (f) { Logger.log('  FAIL  ' + f); });
+  Logger.log('--- the card as an approver would see it (USD) ---');
+  Logger.log(card);
+  return { checks: checks, failed: fails.length, fails: fails };
+}
+
 function orSlackCard_(rq) {
   var n = Number(rq.count) || 1, pts = Number(rq.pts) || 0;
   var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rq.openDate || '')), qm = /^(\d{4})-Q(\d)$/.exec(String(rq.quarter || ''));
@@ -1620,15 +1719,23 @@ function orSlackCard_(rq) {
   });
   Object.keys(ans).forEach(function (k) { if (ans[k]) worth.push(orSlackEsc_(asked[k] || k) + '. Answer: _' + orSlackEsc_(ans[k]) + '_'); });
   if (rq.revises) worth.push('Revises ' + orSlackEsc_(rq.revises) + ', which was sent back');
+  // 297a/297b: the request's currency, stated ONCE above the openings, with each budget carrying its symbol.
+  var cur = String(rq.budgetCur || 'INR').toUpperCase();
+  if (OR_CURS.indexOf(cur) < 0) cur = 'INR';
+  var curName = OR_CUR_NAME[cur] || cur;
+  var anyBudget = rows170.some(function (r) { return !!r.budget; });
   var name = orSlackEsc_(String(rq.name || '').replace(/`/g, "'"));
   return ['*Opening name:* `' + name + '` × ' + n,
     '', '*The opening*', li('Job', orSlackVal_(rq.jobTitle)), li('How many', String(n)), li('Team', orSlackVal_(rq.team)),
     li('Location', orSlackVal_(rq.location)), li('Open date', date), li('Description', orSlackVal_(line(rq.description), 600)),
-    '', '*The openings*'].concat(rows170.map(function (r, i) {
+    '', '*The openings*' + (anyBudget ? ' · budgets in ' + orSlackEsc_(curName) : '')].concat(rows170.map(function (r, i) {
       return '• *' + (i + 1) + '.* ' + orSlackEsc_(r.roleType || '(no Role Type)') + ' — ' + orSlackEsc_(r.recruiter || '(no recruiter)')
         + (r.topic ? ', ' + orSlackEsc_(r.topic) : '')   // 112l
         + (r.sourcer ? ', sourced by ' + orSlackEsc_(r.sourcer) : '')
-        + (r.replacementOf ? ', replacing ' + orSlackEsc_(r.replacementOf) : '');
+        + (r.replacementOf ? ', replacing ' + orSlackEsc_(r.replacementOf) : '')
+        // 297a (Jerin, 12 Nov 2026): the budget was CAPTURED and never shown here, so approvers were signing
+        // off a figure they could not see. ⚠ Its twin is `orRowLine_`; both take the money from orMoney_.
+        + (r.budget ? ', budget ' + orSlackEsc_(orMoney_(r.budget, cur)) : '');
     }), [
     '', '*Ashby fields*', li('Employment Type', orSlackVal_(rq.employmentType)), li('Role Complexity', orSlackVal_(rq.complexity)),
     li('Specialization/Topic', orSlackVal_(rq.topic)), li('Job Level', level),
