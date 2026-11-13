@@ -1310,7 +1310,14 @@ function orDiff_(old, p) {
     // raw JSON in an approver's change list would be unreadable.
     if (k === 'rows') { var nr = JSON.stringify(orRows_(p)); if (nr !== JSON.stringify(orRows_(old))) set.rows = nr; return; }
     var nv = OR_NUM[k] ? String(k === 'count' ? parseInt(p[k], 10) : (Number(p[k]) || 0)) : String(p[k] == null ? '' : p[k]).trim();
-    if (nv !== String(old[k])) set[k] = nv;
+    // 298a — 🚨 COMPARE LIKE WITH LIKE. The new value is TRIMMED above and the stored one was not, so any job
+    // whose Ashby title carries a trailing space (several do) reported a phantom *Job* change on EVERY revision:
+    //   from "Associate Director - AI Engineering " ➔ to "Associate Director - AI Engineering".
+    // ⚠ It is invisible in Slack, which truncates both sides to the same prefix, and it defeated the
+    //    no-change guard outright — a request always looked changed, so a save with nothing in it still posted.
+    // Measured in the harness, 13 Nov 2026, not reasoned about.
+    var ov = OR_NUM[k] ? String(old[k]) : String(old[k] == null ? '' : old[k]).trim();
+    if (nv !== ov) set[k] = nv;
   });
   OR_EDIT.forEach(function (f) {
     if (set[f[0]] == null) return;
@@ -1339,10 +1346,24 @@ function orResubmit(id, p) {
     if (r < 0) return { ok: false, message: id + ' was not found' };
     var old = orRowObj_(head, v[r]);
     if (old.requesterEmail !== me.email) return { ok: false, message: 'only ' + old.requesterName + ', who raised ' + id + ', can resubmit it' };
-    if (old.status !== 'Sent back') return { ok: false, message: id + ' is ' + old.status + ', so it cannot be resubmitted' };
+    // 298a (Jerin, 13 Nov 2026): 🗣 *"Better if they revise in the site no?"* — the person who RAISED a request
+    // may now revise it while it is still waiting, not only after an approver sends it back. The
+    // requester-only guard above is untouched; this is the only widening.
+    // 🔑 Which of the two it was decides the WORDING everywhere below: "Resubmitted" means it came back from a
+    //    send-back, "Edited" means it was changed before anyone had decided. Approvers read the difference.
+    var wasSentBack = old.status === 'Sent back';
+    if (!wasSentBack && old.status !== 'For approval') {
+      return { ok: false, message: id + ' is ' + old.status + ', so it can no longer be changed here' };
+    }
     var d = orDiff_(old, p), set = d.set, edits = d.edits, now = new Date().toISOString();
     var note = String(p.note || '').trim().slice(0, 1000);
     if (note !== old.note) { set.note = note; edits.push({ field: 'Note', from: old.note, to: note }); }
+    // 298a: opening the editor and saving nothing must NOT post to Slack. A send-back still goes through with
+    // no changes — that is a real act, it moves the request back to For approval — but a request that is
+    // already waiting has nowhere to move, so a no-change save would be pure noise in the approvers' thread.
+    if (!wasSentBack && !edits.length) {
+      return { ok: true, request: old, unchanged: true, message: 'Nothing changed, so nothing was sent.' };
+    }
     set.checks = JSON.stringify(Array.isArray(p.checks) ? p.checks.slice(0, 40).map(function (x) { return String(x).slice(0, 300); }) : []);
     set.answers = JSON.stringify((p.answers && typeof p.answers === 'object') ? p.answers : {});
     set.freeOpening = String(p.freeOpening || '');
@@ -1350,16 +1371,18 @@ function orResubmit(id, p) {
     var tr = old.transcript.concat((Array.isArray(p.transcript) ? p.transcript : []).slice(0, 60).map(function (m) {
       return { who: m && m.who === 'me' ? 'me' : 'claude', at: String((m && m.at) || now), text: String((m && m.text) || '').slice(0, 1000) };
     }));
+    var verb = wasSentBack ? 'Resubmitted' : 'Edited';
     tr.push({ who: 'me', at: now, resubmit: true, edits: edits,
-      text: edits.length ? 'Resubmitted with ' + edits.length + ' change' + (edits.length === 1 ? '' : 's') + '.' : 'Resubmitted with no changes.' });
-    tr.push({ who: 'claude', at: now, text: 'Back with Jerin and Gopu for approval, still as ' + id + '. '
+      text: edits.length ? verb + ' with ' + edits.length + ' change' + (edits.length === 1 ? '' : 's') + '.' : verb + ' with no changes.' });
+    tr.push({ who: 'claude', at: now, text: (wasSentBack ? 'Back with Jerin and Gopu for approval, still as ' + id + '. '
+        : 'Still with Jerin and Gopu as ' + id + ', now showing your change. ')
       + (slackOn ? 'They have been tagged in the same Slack thread.' : 'Slack is off for now, so they will see it here.') });
     set.transcript = JSON.stringify(tr);
     set.status = 'For approval'; set.decidedBy = ''; set.decidedAt = ''; set.decisionNote = ''; set.updatedAt = now;
     Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
     SpreadsheetApp.flush();
     var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
-    if (slackOn && rq.slackTs) orSlackResubmit_(rq, edits);
+    if (slackOn && rq.slackTs) orSlackResubmit_(rq, edits, wasSentBack);
     else if (slackOn) {   // raised while Slack was off: its thread starts now
       rq.slackTs = orSlackNew_(rq);
       if (rq.slackTs) sh.getRange(r + 1, col.slackTs + 1).setNumberFormat('@').setValue(rq.slackTs);
@@ -1760,11 +1783,20 @@ function orSlackChange_(x) {
 }
 // 112e: a resubmission goes back into the request's own thread: the first message is brought up to date (the number of
 // openings or the job may have changed), the approvers are tagged with what changed, and the request in full follows.
-function orSlackResubmit_(rq, edits) {
+/**
+ * 298a: the same thread entry for both routes, with the VERB telling them apart.
+ * ⚠ `wasSentBack` is PASSED IN, not read off `rq.status` — by the time this runs the status has already been
+ *    set to 'For approval', so the request can no longer say which of the two it was.
+ * 🔑 An edit still TAGS the approvers. They may have read the request already and be about to approve it, and
+ *    approving something that changed after you read it is the fault worth avoiding; a no-change save never
+ *    gets this far (see orResubmit), so the ping always means something really moved.
+ */
+function orSlackResubmit_(rq, edits, wasSentBack) {
   try {
     var k = edits.length;
     orSlackUpdate_(rq.slackTs, orSlackTop_(rq));
-    orSlackPost_('*Resubmitted* by ' + orSlackEsc_(rq.requesterName) + ' · ' + (k ? k + ' change' + (k === 1 ? '' : 's') : 'no changes')
+    orSlackPost_('*' + (wasSentBack ? 'Resubmitted' : 'Edited') + '* by ' + orSlackEsc_(rq.requesterName) + ' · '
+      + (k ? k + ' change' + (k === 1 ? '' : 's') : 'no changes')
       + ' · *For approval* ' + OR_APPROVERS.map(function (a) { return orSlackAt_(a[0], a[1]); }).join(' ')
       + edits.map(orSlackChange_).join(''), rq.slackTs);
     orSlackPost_(orSlackCard_(rq), rq.slackTs);
