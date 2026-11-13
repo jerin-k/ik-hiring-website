@@ -23,17 +23,14 @@
  * NEVER from here: triggerRefreshNow() / setupDailyTriggers() - they delete the live triggers.
  */
 
-var NVZ_FILE_IDS   = ['1zBRrRvVn7taDibUPIscu9oX_Y3jWIZ-0',   // fractal-verizon-ashby-notes-part-1-of-4-2026-11-11.json
-                      '1T0NhTTiGwP5ZFSU2rDLEAVWmKkYNVtm4',   // part 2 of 4
-                      '1KiXDoydgLlD_61h1vVnmrN1yuVbrfoLH',   // part 3 of 4
-                      '1a1carpuHqSgriDIONb_EQAnYGpgPffxe'];  // part 4 of 4 - PRIVATE, jerin@IK My Drive, owner only
+var NVZ_FILE_IDS   = ['1HlNA6ZJadVyjz6N8T43LfL-vNxEiFI-j'];  // batch 2, 12 Nov 2026 (42 people) - PRIVATE, jerin@IK My Drive; batch 1's 4 files were binned 12 Nov
 var NVZ_MODE       = 'dry';       // 'dry' | 'run'
 var NVZ_JOBS       = ['Principal- AI Engineering (Verizon)',             // no space before the hyphen
                       'Associate Director - AI Engineering (Verizon)'];
 var NVZ_SINCE_MS   = Date.UTC(2026, 10, 10);   // both jobs were created 11 Nov 2026
 var NVZ_MARK       = 'Fractal / Verizon sourcing';  // every note's first line starts with this
-var NVZ_EXP_PEOPLE = 665;         // payload signature, counted locally before upload
-var NVZ_EXP_CHARS  = 581079;      //   (build-summary.txt, 11 Nov 2026); a mismatch makes the run refuse
+var NVZ_EXP_PEOPLE = 42;          // payload signature, counted locally before upload
+var NVZ_EXP_CHARS  = 35231;       //   (batch2-summary.txt, 12 Nov 2026; batch 1 was 665 / 581079); a mismatch makes the run refuse
 var NVZ_IDX_KEY    = 'NVZ_IDX';
 var NVZ_VER_KEY    = 'NVZ_VER';
 var NVZ_MAX_MS     = 4.5 * 60 * 1000;
