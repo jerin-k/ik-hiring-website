@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-13T06:14:42.892Z",
+  "updatedAt": "2026-11-13T07:24:29.428Z",
   "notes": {
     "19982198": {
       "text": "R3 - 1 ( TBS)\nCan we revisit JT as R1 post HE test instead of DJ?",
@@ -78,9 +78,9 @@
       "at": "2026-11-13T06:12:30.477Z"
     },
     "4078cca1": {
-      "text": "HE - 7 , R1 - 4\nAyush Mishra rejected at JT level",
+      "text": "HE - 3 , R1 - 5 , R2 - 2\nAyush Mishra rejected at JT level",
       "by": "Deepti",
-      "at": "2026-11-06T07:18:20.623Z"
+      "at": "2026-11-13T07:24:29.428Z"
     },
     "cfc5ab55": {
       "text": "Closed",
