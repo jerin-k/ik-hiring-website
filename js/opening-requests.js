@@ -942,9 +942,16 @@ export async function mountOpeningRequests(root, backend) {
         return `<div class="or-row"><span class="or-av j">${esc(initials(m.name))}</span><div><div class="or-who"><b>${esc(m.name)}</b> · ${esc(niceStamp(m.at))}</div><div class="or-bub">${said}</div></div></div>`;
       }
       // 112e: a resubmission shows what the requester changed, old ➔ new
-      if (m.who === 'me') return `<div class="or-row me"><div class="or-bub">${m.resubmit && m.edits && m.edits.length
-        ? `Resubmitted with ${m.edits.length} change${m.edits.length === 1 ? '' : 's'}.<ul class="or-edits">${m.edits.map(editLi).join('')}</ul>`
-        : esc(m.text)}</div><span class="or-av r">${esc(initials(x.requesterName))}</span></div>`;
+      // 298b: WHO made the change, and the SERVER's own wording for it.
+      // 🚨 Both were wrong before. The avatar always used x.requesterName, so an APPROVER's change was credited
+      //    on screen to whoever raised the request. And the text was hard-coded "Resubmitted with N changes"
+      //    while the server had already decided the verb — so a change made after creation read "Resubmitted"
+      //    here and "Changed after creation" everywhere else. One fact, two wordings.
+      // `m.by` is absent on entries written before today, and falls back to exactly the old behaviour.
+      if (m.who === 'me') { const by = m.by || x.requesterName;
+        return `<div class="or-row me"><div class="or-bub">${m.resubmit && m.edits && m.edits.length
+        ? `${esc(m.text || `Resubmitted with ${m.edits.length} change${m.edits.length === 1 ? '' : 's'}.`)}<ul class="or-edits">${m.edits.map(editLi).join('')}</ul>`
+        : esc(m.text)}</div><span class="or-av r" title="${esc(by)}">${esc(initials(by))}</span></div>`; }
       // the first message carried the form: show the request in its place — as submitted, or as approved after an edit
       const body = carded ? esc(m.text) : (nEd
         ? `The request as approved: ${esc(x.requesterName)}'s draft with the ${nEd} change${nEd === 1 ? '' : 's'} ${esc(x.decidedBy)} made, listed below.`
@@ -1010,10 +1017,16 @@ export async function mountOpeningRequests(root, backend) {
     // Ashby — so an approved figure never changes behind an approver's back. ⚠ Requester only, like the waiting
     // branch above; an approver who wants to change it asks the recruiter, or edits it in Ashby.
     if (x.status === 'Created') {
+      // 298b (Jerin, 17 Nov 2026): 🗣 *"Yes, add it for approvers"*. This was requester-only, copied from the
+      // waiting branch above — but THERE an approver has their own Edit & approve, and here they had nothing at
+      // all: once a request reached Created, an approver could not change it by any route, and he is the person
+      // most likely to want a budget corrected afterwards. ⚠ The server allows exactly this and no more, and it
+      // was widened FIRST — a button the server refuses is worse than no button.
       const mine = x.requesterEmail === S.me.email;
-      return `<div class="or-divider">Created in Ashby</div>${err}${openingsHtml(x)}${mine ? `
+      const canRevise = mine || S.me.isApprover;
+      return `<div class="or-divider">Created in Ashby</div>${err}${openingsHtml(x)}${canRevise ? `
         <div class="or-btns"><button type="button" class="or-b p" data-act="revise"${S.dataReady ? '' : ' disabled'} title="${S.dataReady ? '' : 'The job list is still loading'}">${ico('pen')}Revise</button></div>
-        <p class="or-small or-muted">Need to change something? These openings stay exactly as they are until Jerin or Gopu approve the change — then I put it into Ashby for you. The open date and the recruiter can't change here.</p>` : ''}`;
+        <p class="or-small or-muted">Need to change something? These openings stay exactly as they are until ${mine ? 'Jerin or Gopu approve the change' : 'the change is approved'} — then I put it into Ashby for you. The open date and the recruiter can't change here.</p>` : ''}`;
     }
     return err;
   }
