@@ -716,6 +716,10 @@ export async function mountOpeningRequests(root, backend) {
   function formHtml(ev, edit) {
     const d = S.draft, locked = !!S.asking || S.busy || S.submitted;
     const dis = locked ? ' disabled' : '';
+    // 298b: this draft is revising a request whose openings ALREADY EXIST in Ashby. Three things cannot follow
+    // them, and each says WHY on screen rather than just going grey — a control that refuses silently is the
+    // same fault as one that moves no number. The server refuses all three too; this is so nobody is surprised.
+    const made = !!(d && d.revisedStatus === 'Created');
     const job = S.jobById[d.jobId];
     // A value already saved on a request stays selectable even when it is no longer in the list — someone who has
     // since left, or (after 170c) a sourcer picked from the old wider list. Without this the <option> simply would not
@@ -754,7 +758,9 @@ export async function mountOpeningRequests(root, backend) {
           ? `<span class="or-in ro auto">As per AOP</span>`
           : `<select class="or-in" data-row="${i}" data-rf="roleType" aria-label="Opening ${n} Role Type"${dis}>${opt(roleTypes, x.roleType, 'Role Type…')}</select>`;
         const head = `<div class="or-op-row"><span class="or-op-n">${n}</span>${rt}
-          <select class="or-in" data-row="${i}" data-rf="recruiter" aria-label="Opening ${n} recruiter"${dis}>${opt(S.recruiters.map(u => u.name), x.recruiter, 'Recruiter…')}</select>
+          ${made
+            ? `<span class="or-in ro" title="The opening already exists in Ashby">${esc(x.recruiter || '—')}</span>`
+            : `<select class="or-in" data-row="${i}" data-rf="recruiter" aria-label="Opening ${n} recruiter"${dis}>${opt(S.recruiters.map(u => u.name), x.recruiter, 'Recruiter…')}</select>`}
           <select class="or-in" data-row="${i}" data-rf="sourcer" aria-label="Opening ${n} sourcer"${dis}>${opt(S.recruiters.map(u => u.name), x.sourcer, 'No sourcer')}</select>
           <input class="or-in${x.topic ? '' : ' bad'}" type="text" maxlength="60" data-rtop="${i}"
             value="${esc(typed(i, 'topic', x.topic))}" placeholder="e.g. Agentic AI" aria-label="Opening ${n} topic"${dis}>
@@ -774,10 +780,13 @@ export async function mountOpeningRequests(root, backend) {
       };
       const parts = mixOrder(ev.mix).filter(t => ev.mix[t] > 0).map(t => `${esc(t)} ${ev.mix[t]}`).join(' · ');
       return `<div class="or-f wide"><span>How many openings</span>
-        <span class="or-step" style="width:max-content"><button type="button" data-n="-1" aria-label="One fewer opening"${locked || rws.length <= 1 ? ' disabled' : ''}>−</button><input
+        ${made
+          ? `<span class="or-in ro" style="width:max-content">${rws.length}</span>
+             <span class="or-note">Can't change this now — these openings already exist in Ashby. Another opening has to be raised as its own request.</span>`
+          : `<span class="or-step" style="width:max-content"><button type="button" data-n="-1" aria-label="One fewer opening"${locked || rws.length <= 1 ? ' disabled' : ''}>−</button><input
           class="or-step-n" type="number" min="1" max="25" inputmode="numeric" data-n-input value="${rws.length}" aria-label="How many openings"${locked ? ' disabled' : ''}><button
           type="button" data-n="1" aria-label="One more opening"${locked || rws.length >= 25 ? ' disabled' : ''}>+</button></span>
-        <span class="or-note">Each line below is one real opening in Ashby.</span></div>
+        <span class="or-note">Each line below is one real opening in Ashby.</span>`}</div>
       <div class="or-f wide"><span>The openings</span><div class="or-mix">
         <div class="or-cur-bar"><label for="or-cur"><b>Budgets on this request are in</b></label>
           <select id="or-cur" data-cur${locked ? ' disabled' : ''}>${CURS.map(c =>
@@ -786,6 +795,7 @@ export async function mountOpeningRequests(root, backend) {
         <div class="or-op-head"><span>#</span><span>Role Type</span><span>Recruiter</span><span>Sourcer</span><span>Topic</span><span>Budget</span></div>
         ${rws.map(line).join('')}
         <div class="or-mix-total"><b>${rws.length} opening${rws.length === 1 ? '' : 's'}</b><span>${parts || 'Pick a Role Type on each line'}</span></div>
+        ${made ? `<span class="or-note">The recruiter is fixed because the opening exists: changing it in Ashby would leave the new person showing no role until somebody re-added them by hand. Ask Jerin or Gopu to move it there. Everything else on these lines can change.</span>` : ''}
       </div>${note(ev.notes.roleType)}${note(ev.notes.topic)}</div>`;
     })();
     const state = nBlock ? `${nBlock} thing${nBlock === 1 ? '' : 's'} still needed`
@@ -830,7 +840,9 @@ export async function mountOpeningRequests(root, backend) {
               <label class="or-f"><span>Job Level (in Ashby)</span>${levelField}${note(ev.notes.level)}</label>
               <label class="or-f"><span>Role Complexity</span><select class="or-in" data-f="complexity"${dis}>${opt(complexities, d.complexity, 'Pick one…')}</select>
                 <span class="or-note${job && d.complexity && d.complexity === job.complexity ? ' auto' : ''}">${job && d.complexity && d.complexity === job.complexity ? 'As set on the job in Ashby. Change it if this opening differs.' : 'Pick one; a blank would score as Normal'}</span></label>
-              <label class="or-f"><span>Open date</span><input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}</label>
+              <label class="or-f"><span>Open date</span>${made
+                ? `<span class="or-in ro">${esc(d.openDate)}</span><span class="or-note">Can't change this now — Ashby only takes the open date on the opening's own screen, so it has to be changed there by a person.</span>`
+                : `<input class="or-in" type="date" min="${FIRST_DAY}" data-f="openDate" value="${esc(d.openDate)}"${dis}>${note(ev.notes.openDate)}`}</label>
               <label class="or-f wide"><span>Description (optional)</span><input class="or-in" type="text" maxlength="120" data-f="description" value="${esc(d.description)}" placeholder="Shown on the opening in Ashby"${dis}></label>
               ${edit ? '' : `<label class="or-f wide"><span>Note to approvers</span><textarea class="or-in" rows="2" maxlength="600" data-f="note" placeholder="Why now, cohort dates, anything they should know"${dis}>${esc(d.note)}</textarea></label>`}
             </div></div>
@@ -993,7 +1005,16 @@ export async function mountOpeningRequests(root, backend) {
         <div class="or-row"><span class="or-av c">C</span><div><div class="or-who"><b>Claude</b></div>
           <div class="or-bub">I create ${n === 1 ? 'this opening' : `these ${n} openings`} in Ashby in my next working session, then mark this Created and list ${n === 1 ? 'it' : 'them'} here.</div></div></div>`;
     }
-    if (x.status === 'Created') return `<div class="or-divider">Created in Ashby</div>${err}${openingsHtml(x)}`;
+    // 298b (Jerin, 17 Nov 2026): 🗣 *"Yes, re-approve"*. The requester can change a request AFTER its openings
+    // exist. It goes back for approval, and only once it is approved again does the robot put the change into
+    // Ashby — so an approved figure never changes behind an approver's back. ⚠ Requester only, like the waiting
+    // branch above; an approver who wants to change it asks the recruiter, or edits it in Ashby.
+    if (x.status === 'Created') {
+      const mine = x.requesterEmail === S.me.email;
+      return `<div class="or-divider">Created in Ashby</div>${err}${openingsHtml(x)}${mine ? `
+        <div class="or-btns"><button type="button" class="or-b p" data-act="revise"${S.dataReady ? '' : ' disabled'} title="${S.dataReady ? '' : 'The job list is still loading'}">${ico('pen')}Revise</button></div>
+        <p class="or-small or-muted">Need to change something? These openings stay exactly as they are until Jerin or Gopu approve the change — then I put it into Ashby for you. The open date and the recruiter can't change here.</p>` : ''}`;
+    }
     return err;
   }
 
@@ -1053,9 +1074,18 @@ export async function mountOpeningRequests(root, backend) {
 
   function revise(x) {
     S.active = 'draft'; S.submitted = false; S.asking = null; S.answers = {}; S.error = '';
-    S.draft = Object.assign(draftFrom(x), { openDate: x.openDate >= todayIST() ? x.openDate : todayIST(), revises: x.id });
+    // 298b (Jerin, 17 Nov 2026): a request whose openings ALREADY EXIST keeps its open date EXACTLY.
+    // 🚨 The old line pushed a past open date forward to today ALL BY ITSELF. Harmless while nothing existed in
+    // Ashby - but the server now refuses a changed open date on a Created request, so every revision of an
+    // older one would have been refused before the recruiter touched a single field.
+    const made = x.status === 'Created';
+    S.draft = Object.assign(draftFrom(x), {
+      openDate: made ? x.openDate : (x.openDate >= todayIST() ? x.openDate : todayIST()),
+      revises: x.id, revisedStatus: x.status });
     S.thread = [{ who: 'claude', at: new Date().toISOString(), form: true,
-      text: `Here's ${x.id} again to revise.${x.decisionNote ? ` ${x.decidedBy} said: "${x.decisionNote}"` : ''} Change what's needed and submit. It goes back for approval as ${x.id}, in the same thread.` }];
+      text: made
+        ? `Here's ${x.id} again. Its openings are already in Ashby, so they stay exactly as they are until Jerin or Gopu approve this change — then I put it into Ashby for you. The open date and the recruiter can't change now; everything else can.`
+        : `Here's ${x.id} again to revise.${x.decisionNote ? ` ${x.decidedBy} said: "${x.decisionNote}"` : ''} Change what's needed and submit. It goes back for approval as ${x.id}, in the same thread.` }];
     render();
   }
 
