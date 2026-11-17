@@ -86,6 +86,8 @@ function doGet(e) {
   // above: a GET that returns JSON, running as the signed-in viewer — so orUser_()'s approver gate still decides.
   //   ?action=orQueue     -> the approved requests still waiting to be created
   //   ?action=orCreated&id=OR-007&openings=<json array>&note=...  -> record what was made
+  //   ?action=orEdited&id=OR-007&note=...  -> 298b: record that an APPROVED CHANGE is now in Ashby on the
+  //     openings that request already made. Separate from orCreated on purpose: see orMarkEdited.
   // 🚨 Never widen these past orUser_(). They read and write the private requests Sheet.
   // 256 (Jerin, 19 Oct 2026): "set a routine to create this every Qtr, on the 15th of the first month
   // of the Qtr - to my Email." The routine runs on his Mac and cannot send mail itself; MailApp here
@@ -117,11 +119,17 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(po)).setMimeType(ContentService.MimeType.JSON);
   }
 
-  if (action === 'orQueue' || action === 'orCreated') {
+  if (action === 'orQueue' || action === 'orCreated' || action === 'orEdited') {
     var out;
     try {
       if (action === 'orQueue') {
         out = orQueue();
+      } else if (action === 'orEdited') {
+        // 298b: no openings array here - the openings are already recorded on the request, and re-sending
+        // them is how a duplicate gets in. The id and a short note are all this takes.
+        var eid = String((e.parameter && e.parameter.id) || '');
+        out = !eid ? { ok: false, message: 'no request id was given' }
+            : orMarkEdited(eid, String((e.parameter && e.parameter.note) || ''));
       } else {
         var rid = String((e.parameter && e.parameter.id) || '');
         var raw = String((e.parameter && e.parameter.openings) || '[]');
@@ -1330,6 +1338,41 @@ function orDiff_(old, p) {
 // 112e (Jerin, 22 Sep: "for send back cases, dont create a new sequence number" · "Send back can be retained in the same thread,
 // both in the site & in Slack"): the person who raised a sent-back request revises it IN PLACE — the same OR number, row and
 // Slack thread — and it goes back to Jerin and Gopu. Held to the same checks as a new request; each change is recorded old ➔ new.
+// 298b (Jerin, 17 Nov 2026): what cannot follow an opening that ALREADY EXISTS in Ashby. Each one is a
+// MEASURED limit rather than a policy, and each says WHY - a control that refuses silently is the same fault
+// as one that moves no number.
+//  - the OPEN DATE is UI-only: `opening.update` returns success and changes NOTHING (measured 6-10 Sep 2026),
+//    so the robot cannot honour it however it is asked. It is out of scope by his own word too:
+//    🗣 "One Date neednt be changed".
+//  - the RECRUITER means the opening's native Recruiter role. `hiringTeam.addMember` does work, but Ashby's
+//    UI then shows that person as "No Roles" until a human re-adds them (measured 10 Sep 2026), so he chose
+//    🗣 "Block that field" over a field that half-works.
+//  - HOW MANY openings cannot change: one more means `opening.create`, which is UI-only and WRITES ON AN
+//    EMPTY BODY - it has already cost two stray openings.
+// 🔑 These apply ONLY after creation. While a request is still waiting (#298a) nothing exists in Ashby yet,
+//    so all three are freely editable then, and that difference is the whole point of this function.
+function orAfterCreatedRefusals_(old, p) {
+  var was = orRows_(old), now = orRows_(p);
+  if (String(p.openDate || '') !== String(old.openDate || '')) {
+    return 'the open date cannot be changed once the openings exist \u2014 Ashby only takes it on screen, so it has '
+      + 'to be changed in Job \u2794 Openings by a person. Everything else on this request can still be changed.';
+  }
+  if (now.length !== was.length) {
+    return 'the number of openings cannot be changed once they exist in Ashby \u2014 ' + old.id + ' made '
+      + was.length + '. Another opening has to be raised as its own request.';
+  }
+  var moved = [];
+  for (var i = 0; i < was.length; i++) {
+    if (String(was[i].recruiter || '') !== String(now[i].recruiter || '')) moved.push(i + 1);
+  }
+  if (moved.length) {
+    return 'the recruiter cannot be changed once the opening exists \u2014 Ashby would show the new person as '
+      + '"No Roles" until someone re-added them by hand, so it has to be done in Ashby (opening '
+      + moved.join(', ') + ').';
+  }
+  return '';
+}
+
 function orResubmit(id, p) {
   var me = orUser_();
   if (!me.allowed) return { ok: false, message: 'This account is not on the Recruitment Team list.' };
@@ -1345,15 +1388,36 @@ function orResubmit(id, p) {
     for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
     if (r < 0) return { ok: false, message: id + ' was not found' };
     var old = orRowObj_(head, v[r]);
-    if (old.requesterEmail !== me.email) return { ok: false, message: 'only ' + old.requesterName + ', who raised ' + id + ', can resubmit it' };
+    // 298b (Jerin, 17 Nov 2026): 🗣 *"Yes, add it for approvers"*. An APPROVER may revise a request whose
+    // openings ALREADY EXIST. Until now the only ways in were the requester (this guard) and an approver DURING
+    // approval (orEditApprove) - so the moment a request reached Created, an approver had NO route at all, and
+    // he is the person most likely to want a budget corrected afterwards.
+    // 🚨 Deliberately NARROW: approvers only, and only once the request is Created. While it is still waiting an
+    //    approver uses Edit & approve, which already exists and is a different thing.
+    var byRequester = old.requesterEmail === me.email;
+    if (!byRequester && !(me.isApprover && old.status === 'Created')) {
+      return { ok: false, message: 'only ' + old.requesterName + ', who raised ' + id
+        + ', can change it \u2014 or Jerin or Gopu, once its openings are in Ashby' };
+    }
     // 298a (Jerin, 13 Nov 2026): 🗣 *"Better if they revise in the site no?"* — the person who RAISED a request
     // may now revise it while it is still waiting, not only after an approver sends it back. The
     // requester-only guard above is untouched; this is the only widening.
     // 🔑 Which of the two it was decides the WORDING everywhere below: "Resubmitted" means it came back from a
     //    send-back, "Edited" means it was changed before anyone had decided. Approvers read the difference.
     var wasSentBack = old.status === 'Sent back';
-    if (!wasSentBack && old.status !== 'For approval') {
+    // 298b (Jerin, 17 Nov 2026): 🗣 *"Yes, re-approve"* - a request whose openings ALREADY EXIST in Ashby can
+    // be revised too. It goes BACK FOR APPROVAL and the ROBOT applies the change to those openings once it is
+    // approved again, so an approved figure can never change behind an approver's back. The budget is the one
+    // editable field never measured for writing by API, and the robot already types a budget into Ashby's
+    // SCREEN at creation time - which is why routing it this way puts no unproven payload shape anywhere.
+    // 🔑 `fulfilledAt` survives this save and is what tells orQueue to hand the robot an EDIT job.
+    var afterCreated = old.status === 'Created';
+    if (!wasSentBack && !afterCreated && old.status !== 'For approval') {
       return { ok: false, message: id + ' is ' + old.status + ', so it can no longer be changed here' };
+    }
+    if (afterCreated) {
+      var refused = orAfterCreatedRefusals_(old, p);
+      if (refused) return { ok: false, message: refused };
     }
     var d = orDiff_(old, p), set = d.set, edits = d.edits, now = new Date().toISOString();
     var note = String(p.note || '').trim().slice(0, 1000);
@@ -1371,10 +1435,19 @@ function orResubmit(id, p) {
     var tr = old.transcript.concat((Array.isArray(p.transcript) ? p.transcript : []).slice(0, 60).map(function (m) {
       return { who: m && m.who === 'me' ? 'me' : 'claude', at: String((m && m.at) || now), text: String((m && m.text) || '').slice(0, 1000) };
     }));
-    var verb = wasSentBack ? 'Resubmitted' : 'Edited';
-    tr.push({ who: 'me', at: now, resubmit: true, edits: edits,
+    // 298b: a THIRD verb. An approver must read this differently from both the others - what they are being
+    // asked to approve is a change to openings that are already live in Ashby, not to a request on paper.
+    var verb = wasSentBack ? 'Resubmitted' : (afterCreated ? 'Changed after creation' : 'Edited');
+    // 298b: WHO made the change is now recorded on the entry. 🚨 The thread renders a `who:'me'` message with the
+    // REQUESTER's initials, always - so without this an APPROVER's change would be credited on screen to the
+    // person who raised the request. A change attributed to the wrong person is worse than no button.
+    var mineU = null;
+    orAshbyUsers_().forEach(function (u) { if (u.email === me.email) mineU = u; });
+    var byName = byRequester ? old.requesterName : (mineU ? mineU.name : me.email);
+    tr.push({ who: 'me', at: now, resubmit: true, edits: edits, by: byName,
       text: edits.length ? verb + ' with ' + edits.length + ' change' + (edits.length === 1 ? '' : 's') + '.' : verb + ' with no changes.' });
     tr.push({ who: 'claude', at: now, text: (wasSentBack ? 'Back with Jerin and Gopu for approval, still as ' + id + '. '
+        : afterCreated ? 'Back with Jerin and Gopu as ' + id + '. The openings are already in Ashby and stay exactly as they are until this is approved; the change is put into Ashby for you after that. '
         : 'Still with Jerin and Gopu as ' + id + ', now showing your change. ')
       + (slackOn ? 'They have been tagged in the same Slack thread.' : 'Slack is off for now, so they will see it here.') });
     set.transcript = JSON.stringify(tr);
@@ -1382,7 +1455,7 @@ function orResubmit(id, p) {
     Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
     SpreadsheetApp.flush();
     var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
-    if (slackOn && rq.slackTs) orSlackResubmit_(rq, edits, wasSentBack);
+    if (slackOn && rq.slackTs) orSlackResubmit_(rq, edits, wasSentBack, byName, verb);
     else if (slackOn) {   // raised while Slack was off: its thread starts now
       rq.slackTs = orSlackNew_(rq);
       if (rq.slackTs) sh.getRange(r + 1, col.slackTs + 1).setNumberFormat('@').setValue(rq.slackTs);
@@ -1487,9 +1560,25 @@ function orQueue() {
         // open date and role type, so the remainder cannot be worked out by looking at Ashby. These three fields are
         // what let a run resume a half-finished request instead of duplicating it.
         qmeta.push({ id: rq.id, slackTs: rq.slackTs || '' });   // #288: the thread to speak in, never sent to the bot
-        out.push({ id: rq.id, name: rq.name, rows: rws,
+        // 298b (Jerin, 17 Nov 2026): a re-approved request whose openings ALREADY EXIST is an EDIT job, never
+        // a creation, and it says so EXPLICITLY. `fulfilledAt` is set the moment a request first reaches
+        // Created, so it is the one field that tells the two apart.
+        // v It is deliberately NOT inferred from `remaining`: this flow has already been bitten once by a
+        //   part-finished request coming back looking fresh and having its openings made a SECOND time
+        //   (OR-010, 5 Oct 2026, the bug the resume fields below exist to close).
+        var isEdit = !!String(rq.fulfilledAt || '');
+        out.push({ id: rq.id, name: rq.name, rows: rws, action: isEdit ? 'edit' : 'create',
           created: made, createdCount: made.length, remaining: Math.max(0, rws.length - made.length),
           count: rq.count, mix: rq.mix, recruiter: rq.recruiter, sourcer: rq.sourcer,
+          // 297b, FIXED 17 Nov 2026. The currency was never sent to the robot. The window collected it, the
+          // Sheet stored it and the Slack card printed it - but THIS payload is the robot's only read path, so
+          // it saw `budgetCur` missing, followed its own rule for a missing currency ("leave the currency
+          // button alone, it reads INR") and would have recorded a DOLLAR figure as rupees: about 88x too
+          // small, and nobody would have questioned it.
+          // 🚨 A THIRD SILENT WHITELIST. This project knows about OR_COLS and orRow_; this list drops a field
+          //    just as quietly, and it is the one the robot reads. Add a field the robot needs HERE too.
+          // ✅ Nothing was wrong in Ashby: no real request had carried a currency yet when this was found.
+          budgetCur: rq.budgetCur || 'INR',
           roleType: rq.roleType, employmentType: rq.employmentType, complexity: rq.complexity, topic: rq.topic,
           levelSet: rq.levelSet, openDate: rq.openDate, replacementOf: rq.replacementOf, description: rq.description,
           team: rq.team, location: rq.location,
@@ -1527,6 +1616,12 @@ function orMarkCreated(id, openings, note) {
     if (r < 0) return { ok: false, message: id + ' was not found' };
     var status = String(v[r][col.status]);
     if (status !== 'Approved') return { ok: false, message: id + ' is ' + status + ', and only an Approved request can be created' };
+    // 298b: a request that has already been created and is Approved AGAIN is a revision of live openings, not
+    // a creation. Recording new openings against it would be the OR-010 duplicate all over again.
+    if (String(v[r][col.fulfilledAt] || '')) {
+      return { ok: false, message: id + ' was already created, so this is a change to openings that exist \u2014 '
+        + 'record it with orEdited, which touches no opening ids' };
+    }
     var old = orRowObj_(head, v[r]);
     // Openings already recorded on this request are kept; the same Ashby id is never recorded twice.
     var have = {}, all = [];
@@ -1559,12 +1654,69 @@ function orMarkCreated(id, openings, note) {
   }
 }
 
+// 298b (Jerin, 17 Nov 2026): 🗣 *"Yes, re-approve"*. The counterpart to orMarkCreated, for a request whose
+// openings ALREADY EXIST. The robot calls it once it has put the APPROVED change into Ashby, and the request
+// goes back to Created.
+// 🚨 IT TAKES NO OPENINGS ARRAY, deliberately. The openings are already recorded on the request; re-sending
+//    them is exactly how a duplicate gets in, and there is nothing here to add.
+// 🚨 The two paths cannot be taken for each other: orMarkCreated refuses a request that has already been
+//    created, and this refuses one that never was.
+function orMarkEdited(id, note) {
+  var me = orUser_();
+  if (!me.allowed || !me.isApprover) return { ok: false, message: 'only Jerin or Gopu can record a change to an opening' };
+  note = String(note || '').trim().slice(0, 600);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = orSheet_(), v = sh.getDataRange().getValues(), head = v[0].map(String), col = {};
+    head.forEach(function (k, i) { col[k] = i; });
+    var r = -1;
+    for (var i = 1; i < v.length; i++) if (String(v[i][col.id]) === String(id)) { r = i; break; }
+    if (r < 0) return { ok: false, message: id + ' was not found' };
+    var status = String(v[r][col.status]);
+    if (status !== 'Approved') return { ok: false, message: id + ' is ' + status + ', and only an approved change can be put into Ashby' };
+    if (!String(v[r][col.fulfilledAt] || '')) {
+      return { ok: false, message: id + ' has never been created, so there is nothing to change \u2014 record a creation with orCreated' };
+    }
+    var old = orRowObj_(head, v[r]);
+    var all = old.openings || [];
+    if (!all.length) return { ok: false, message: id + ' has no openings recorded against it, so there is nothing to change' };
+    var now = new Date().toISOString();
+    var tr = [];
+    try { tr = JSON.parse(v[r][col.transcript] || '[]'); } catch (e) { tr = []; }
+    tr.push({ who: 'claude', at: now, openings: all,
+      text: 'The approved change is now in Ashby on ' + all.length + ' opening' + (all.length === 1 ? '' : 's') + ': '
+        + all.map(function (o) { return o.name || o.id; }).join(', ') + '.' + (note ? ' ' + note : '') });
+    // 🔑 fulfilledBy / fulfilledAt are NOT touched: they record when this request was first created, which is
+    //    what makes them a reliable create-or-edit discriminator for every later revision.
+    var set = { status: 'Created', transcript: JSON.stringify(tr), updatedAt: now };
+    Object.keys(set).forEach(function (k) { if (col[k] != null) sh.getRange(r + 1, col[k] + 1).setNumberFormat('@').setValue(set[k]); });
+    SpreadsheetApp.flush();
+    var rq = orRowObj_(head, sh.getRange(r + 1, 1, 1, head.length).getValues()[0]);
+    if (rq.slackTs) orSlackPost_(orSlackEdited_(rq, all, note), rq.slackTs);
+    return { ok: true, request: rq, openings: all.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function orSlackCreated_(rq, all, want, done, note) {
   var lines = all.map(function (o) { return '> ' + (o.url ? '<' + o.url + '|' + orSlackEsc_(o.name || o.id) + '>' : orSlackEsc_(o.name || o.id))
     + (o.state ? ' · ' + orSlackEsc_(o.state) : ''); });
   // ⚠ The status used to be glued straight onto the top line with no newline, which is why it read
   //   "Open the requestCreated in Ashby". It lives inside orSlackTop_ now, so there is one place to get it right.
   return orSlackTop_(rq, done ? { done: true } : { n: all.length, want: want })
+    + '\n' + lines.join('\n')
+    + (note ? '\n' + orSlackQuote_(note) : '');
+}
+
+// 298b: the one message that closes a change to openings that already existed. It does NOT reuse
+// orSlackCreated_'s headline, because "Created in Ashby" would be wrong twice over - nothing was created, and
+// the thread already said that once.
+function orSlackEdited_(rq, all, note) {
+  var lines = all.map(function (o) { return '> ' + (o.url ? '<' + o.url + '|' + orSlackEsc_(o.name || o.id) + '>' : orSlackEsc_(o.name || o.id)); });
+  return '*' + orSlackEsc_(rq.id) + '* \u2014 the approved change is now in Ashby on ' + all.length
+    + ' opening' + (all.length === 1 ? '' : 's') + '.'
     + '\n' + lines.join('\n')
     + (note ? '\n' + orSlackQuote_(note) : '');
 }
@@ -1791,11 +1943,15 @@ function orSlackChange_(x) {
  *    approving something that changed after you read it is the fault worth avoiding; a no-change save never
  *    gets this far (see orResubmit), so the ping always means something really moved.
  */
-function orSlackResubmit_(rq, edits, wasSentBack) {
+// 298b: `byName` and `verb` are PASSED, not worked out here.
+// 🚨 Two things were wrong without them. Slack said "Edited" while the window said "Changed after creation" - one
+//    fact, two wordings, which is the bug this file keeps teaching. And it credited `rq.requesterName`, so an
+//    APPROVER's change would have been posted under the name of whoever raised the request.
+function orSlackResubmit_(rq, edits, wasSentBack, byName, verb) {
   try {
     var k = edits.length;
     orSlackUpdate_(rq.slackTs, orSlackTop_(rq));
-    orSlackPost_('*' + (wasSentBack ? 'Resubmitted' : 'Edited') + '* by ' + orSlackEsc_(rq.requesterName) + ' · '
+    orSlackPost_('*' + (verb || (wasSentBack ? 'Resubmitted' : 'Edited')) + '* by ' + orSlackEsc_(byName || rq.requesterName) + ' · '
       + (k ? k + ' change' + (k === 1 ? '' : 's') : 'no changes')
       + ' · *For approval* ' + OR_APPROVERS.map(function (a) { return orSlackAt_(a[0], a[1]); }).join(' ')
       + edits.map(orSlackChange_).join(''), rq.slackTs);
