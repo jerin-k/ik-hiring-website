@@ -1884,16 +1884,26 @@ function orSlackCard_(rq) {
   var score = pts ? (rq.tier ? orSlackEsc_(rq.tier) + ' · ' : '') + pts + ' points each · Goal: ' + (goalLine || '+' + (pts * n)) : 'not scored';
   var line = function (v) { return String(v == null ? '' : v).replace(/\s*\n\s*/g, ' / '); };   // a line break would end the bullet
   var li = function (label, v) { return '• *' + label + ':* ' + v; };
-  var worth = [], ans = rq.answers || {}, asked = {
-    free: 'Open openings are already on this job with nobody tied to them',
+  // 297d (Jerin, 17 Nov 2026): 🗣 *"bring back the three check answers, and leave the revises line out"* —
+  // exactly that, and nothing else. #200 removed the *Worth knowing* block on his word (🗣 "seems to be adding no
+  // value") and it turned out to be the ONLY thing printing these three answers, so they went too. He had meant
+  // the block, not them: they are the three things that would make an approver say no.
+  // 🚨 THE OTHER TWO THINGS THAT BLOCK CARRIED STAY OUT, deliberately:
+  //    · the `fix:`/`q:`/`info:` notes — he did not ask for them back;
+  //    · "Revises OR-0NN, which was sent back" — superseded by #298a, which posts *Resubmitted* / *Edited* /
+  //      *Changed after creation* into the thread WITH the change list, saying the same thing and more.
+  //    Both are still stored on the request (`checks`, `revises`), so either can come back in one line.
+  // ⚠ Why this cannot bring back the ugliness that got the block cut: these three answers are PER REQUEST, not
+  //    per opening, so there is no way for them to degenerate into the paragraph of ("NA") repeated 25 times.
+  // 🔑 The old code built all three kinds into `worth` and then THREW IT AWAY — dead code that looked live since
+  //    6 Oct. It is gone now rather than left computing into a void.
+  var ans = rq.answers || {}, asked = {
+    free: 'Open openings already on this job with nobody tied to them',
     drop: 'People dropped on this job this quarter',
     dup: 'Another request on this job is in progress' };
-  (Array.isArray(rq.checks) ? rq.checks : []).forEach(function (c) {
-    var m = /^(fix|q|info): (.*)$/.exec(String(c));
-    if (m) worth.push(orSlackEsc_(m[2]));
-  });
-  Object.keys(ans).forEach(function (k) { if (ans[k]) worth.push(orSlackEsc_(asked[k] || k) + '. Answer: _' + orSlackEsc_(ans[k]) + '_'); });
-  if (rq.revises) worth.push('Revises ' + orSlackEsc_(rq.revises) + ', which was sent back');
+  // Keyed off `asked`, not off `answers`, so the three always read in the same order.
+  var flags = Object.keys(asked).filter(function (k) { return ans[k]; }).map(function (k) {
+    return '• ' + orSlackEsc_(asked[k]) + ' — _' + orSlackEsc_(String(ans[k])) + '_'; });
   // 297a/297b: the request's currency, stated ONCE above the openings, with each budget carrying its symbol.
   var cur = String(rq.budgetCur || 'INR').toUpperCase();
   if (OR_CURS.indexOf(cur) < 0) cur = 'INR';
@@ -1901,7 +1911,13 @@ function orSlackCard_(rq) {
   var anyBudget = rows170.some(function (r) { return !!r.budget; });
   var name = orSlackEsc_(String(rq.name || '').replace(/`/g, "'"));
   return ['*Opening name:* `' + name + '` × ' + n,
-    '', '*The opening*', li('Job', orSlackVal_(rq.jobTitle)), li('How many', String(n)), li('Team', orSlackVal_(rq.team)),
+    '', '*The opening*', li('Job', orSlackVal_(rq.jobTitle)),
+    // 297e (Jerin, 17 Nov 2026): 🗣 *"Yes, add it"*. The DEPARTMENT is captured on every request and was shown
+    // NOWHERE on this card, so the only department-shaped word an approver saw was the TEAM - which is exactly how
+    // a team typed as "Test" read to him as a department of Test (OR-060, whose stored department was US Business
+    // all along). ⚠ It sits beside Job because that is how the WINDOW's own card pairs them (`Job: <title> ·
+    // <department>`, `Team · Location`), so the two surfaces now say the same thing in the same order.
+    li('Department', orSlackVal_(rq.department)), li('How many', String(n)), li('Team', orSlackVal_(rq.team)),
     li('Location', orSlackVal_(rq.location)), li('Open date', date), li('Description', orSlackVal_(line(rq.description), 600)),
     '', '*The openings*' + (anyBudget ? ' · budgets in ' + orSlackEsc_(curName) : '')].concat(rows170.map(function (r, i) {
       return '• *' + (i + 1) + '.* ' + orSlackEsc_(r.roleType || '(no Role Type)') + ' — ' + orSlackEsc_(r.recruiter || '(no recruiter)')
@@ -1911,13 +1927,15 @@ function orSlackCard_(rq) {
         // 297a (Jerin, 12 Nov 2026): the budget was CAPTURED and never shown here, so approvers were signing
         // off a figure they could not see. ⚠ Its twin is `orRowLine_`; both take the money from orMoney_.
         + (r.budget ? ', budget ' + orSlackEsc_(orMoney_(r.budget, cur)) : '');
-    }), [
+    }), flags.length ? [''].concat(['*Before you approve*'], flags) : [], [
     '', '*Ashby fields*', li('Employment Type', orSlackVal_(rq.employmentType)), li('Role Complexity', orSlackVal_(rq.complexity)),
     li('Specialization/Topic', orSlackVal_(rq.topic)), li('Job Level', level),
     '', '*Score*', '• ' + score,
     // 200 (Jerin, 6 Oct 2026): "the 'Worth Knowing' seems to be adding no value - can be removed". It carried the
     // auto-set notes and the answers to Claude's questions, and on a 25-line request its topic line ran to a
     // paragraph of ("NA") repeated 25 times. Gone. The Note the requester wrote stays.
+    // ⚠ 297d (17 Nov 2026): the three CHECK ANSWERS came BACK, as *Before you approve* above - removing the block
+    //    had taken them with it and he had only meant the block. The notes and the revises line stay gone.
     '']).concat([li('Note', orSlackVal_(line(rq.note), 600))]).join('\n');
 }
 // Approved · Sent back (the note quoted) · Edited and approved (each change old ➔ new, the old struck through).
