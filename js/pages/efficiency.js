@@ -29,6 +29,8 @@ import { openingScores, scoreOfOpening, scoreOfDropOpening, jobScoreSpread, jobS
 import { topicIndex, hasTopicLevel } from '../opening-topics.js';   // #157
 import { recruiterOfPerson, NO_RECRUITER } from '../opening-recruiters.js';   // #187, rewritten by #192
 import { levelChooser, levelsOn, wireLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
+// #301: the SAME tick as the Hiring Manager mirror of this table - one file, so the two cannot drift (Rule 3).
+import { hideZeroTick, hideZeroOn, isZeroDelta, hiddenNote } from '../hide-zero-delta.js';
 import { jobsWithOpeningIn, offerDropRows, joiningConversionPct, jpCaseInPeriod } from '../data.js';   // #125 · #189f: one conversion formula · #237: and ONE Joining Pipeline period rule
 import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandOverlay, roleSectionTooltip, metricLegend,
          buildDumbbell, buildStageHeat, buildDayHeat,
@@ -276,6 +278,7 @@ export function renderEfficiency(data) {
       <h4 id="effFulfilCombinedHdr" style="font-size:0.6875rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin:0.875rem 0 0.375rem">Positions by department</h4>
       <div class="chart-wrap" id="effFulfilCombinedWrap" style="margin:0 0 1.125rem"><canvas id="effFulfilCombined"></canvas></div>
 
+      <div class="tp-controls">${hideZeroTick('effHideZero')}</div>
       <div class="scroll-table wide-table"><table class="metrics eff-fulfil painted-halves">
         <thead>
           <!-- #252g (Jerin, 20 Oct 2026): ONE row, ONE column per metric. The HC/Score pairs are merged and the
@@ -299,6 +302,7 @@ export function renderEfficiency(data) {
         </thead>
         <tbody id="effFulfilBody"></tbody>
       </table></div>
+      <div id="effHiddenNote"></div>
       ${defsBlock('eff-fulfilment')}
     </div>
 
@@ -1108,7 +1112,19 @@ export function initEfficiencyFilters(data) {
            + priorityCell(x)   // #252f: job rows only — priorityCell dashes a row with no job8
            + remarkCell(x);
     };
-    const rows = fulfilRows(per);
+    // #301: drop the roles with nothing left to fill. 🔑 `sp.gap` is THE Delta this table prints
+    //   (`gapCell` renders `deltaPill(x.gap)`), so the test and the cell read the same number by construction.
+    //   🚨 A department keeps its OWN figures and so does the Total - see hide-zero-delta.js for why.
+    const hideZero = hideZeroOn('effHideZero');
+    let hiddenRoles = 0;
+    const rowsAll = fulfilRows(per);
+    const rows = hideZero
+      ? rowsAll.map(d => {
+          const keep = d.jobs.filter(x => !isZeroDelta(x.sp.gap));
+          hiddenRoles += d.jobs.length - keep.length;
+          return Object.assign({}, d, { jobs: keep });
+        }).filter(d => d.jobs.length)
+      : rowsAll;
     // #157: same window as the job rows above - whole quarters when the range covers them, India-time days
     // otherwise - so the topic rows close the job row instead of being a second, drifting calculation.
     const PM = peopleMaps(per);
@@ -1263,8 +1279,14 @@ export function initEfficiencyFilters(data) {
         });
       });
     });
-    const g = sumSplits(rows.flatMap(r => r.jobs.map(x => x.sp)));
-    html += `<tr class="totals-row" style="font-weight:700"><td>Total</td>${cells({ ...g, rollup: `${rows.length} department${rows.length === 1 ? '' : 's'}`, joWho: rows.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
+    // #301: the Total is built from `rowsAll`, NOT the filtered `rows`. Hiding a finished role must not move
+    //   it - and the mirror tab proves why this matters: Hiring Manager computes its totals before the filter
+    //   and so was already right, while this one summed the visible rows and dropped Total positions 165 ➔ 133
+    //   and Joined 73 ➔ 43 the moment the tick went on. Delta was 76 either way, which is the whole argument:
+    //   a zero-Delta role moves Delta by nothing and everything else by a lot. (Rule 3 - the two tabs are
+    //   near-mirrors, so a change to one is only finished when the other reads the same.)
+    const g = sumSplits(rowsAll.flatMap(r => r.jobs.map(x => x.sp)));
+    html += `<tr class="totals-row" style="font-weight:700"><td>Total</td>${cells({ ...g, rollup: `${rowsAll.length} department${rowsAll.length === 1 ? '' : 's'}`, joWho: rowsAll.flatMap(r => r.jobs.flatMap(x => x.sp.joWho || [])) }, true)}</tr>`;
     // ⚠ 12 = 1 name + 6 number columns (Total · Joined · Joining pipeline · Offer drop · Achieved · Delta)
     //   + Who has joined + Who is joining + Who dropped + Pri + Remarks.
     //   🚨 #270 FOUND IT STALE AGAIN, AND BY ONE ALREADY: it read 10, which counts everything EXCEPT
@@ -1273,6 +1295,9 @@ export function initEfficiencyFilters(data) {
     //   PAIR. 🔑 This number is invisible unless the table is EMPTY, which is why it keeps going stale:
     //   change it WITH the header, and COUNT the header rather than trusting the arithmetic in this comment.
     body.innerHTML = html || `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:1rem">No openings in this period.</td></tr>`;
+    // #301: say what the tick is holding back. Nothing hidden ⇒ no line at all.
+    const ehz = document.getElementById('effHiddenNote');
+    if (ehz) ehz.innerHTML = hiddenNote(hiddenRoles);
     wireTreePath(body, expandAll());
     wireMoreCells(body);   // #182c: the "+N more" toggle — registered FIRST, so it is asked before the editor
     wireRemarks(body);      // #252e: the same editor the Hiring Manager tab uses. No dept count here, so no callback
@@ -2681,6 +2706,8 @@ export function initEfficiencyFilters(data) {
   wireLevels('effLevels', renderAll);   // #188
   // #122: the Stages dropdown + Hide zero-pipeline above the Throughput squares.
   msEffTpStage = makeMultiSelect(document.getElementById('effMsTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
+  // #301: re-render the whole section - the hidden-count line is written by the same pass as the rows.
+  document.getElementById('effHideZero')?.addEventListener('change', renderFulfilment);
   document.getElementById('effTpHideEmpty')?.addEventListener('change', renderThroughput);
   // #145a: the same two controls over the Pipeline table.
   msEffPipeStage = makeMultiSelect(document.getElementById('effMsPipeStage'), 'Stages', PIPE_KEYS.map(k => PIPE_LABELS[k]), renderPipeline);

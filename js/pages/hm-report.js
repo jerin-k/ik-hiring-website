@@ -15,6 +15,8 @@ import { topicIndex, hasTopicLevel, deptHasTopics, NO_TOPIC } from '../opening-t
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
 import { recruiterIndex, recruiterOfPerson, closeToJob, hasRecruiterLevel, NO_RECRUITER } from '../opening-recruiters.js';   // #187
 import { levelChooser, levelsOn, wireLevels, syncLevels, mergeByRecruiter, expandAllOn, showLevels } from '../tree-levels.js';   // #188 · #189d: expandAllOn/showLevels
+// #301: ONE tick for every table with a Delta - the control, the test and the hidden-count line all live there.
+import { hideZeroTick, hideZeroOn, isZeroDelta, hiddenNote } from '../hide-zero-delta.js';
 import { jobFilterOptions, matchesJob as matchesJobBase, jobLookup, peopleJobIds, livePeopleJobIds, PEOPLE_TABS } from '../job-filter.js';   // #172c · #290d
 import { reportingYears, reportingQuarters, selectionQuarters, fillQuarterSelect, selectCurrentQuarter, setDateBounds, keepDatesInBounds,
          rangeOf, inRange, rangeText, rangeTouchesQuarter, coversQuarters, sumDayFields, hasDayData,
@@ -477,10 +479,12 @@ export function renderHmReport(data) {
 
       <h3 class="subsection-title">Department Summary</h3>
       <p class="sub-note">Click a department to see its roles.</p>
+      <div class="tp-controls">${hideZeroTick('hm1HideZero')}</div>
       <div class="scroll-table"><table class="hm-summary painted-halves">
         <thead><tr><th style="min-width:15rem">Department / Job / Recruiter / Topic</th><th>Total positions</th><th>Joined</th><th>Joining pipeline</th><th>Offer drop</th><th>Achieved</th><th>Delta</th><th class="jn-th">Who has joined</th><th class="jn-th">Who is joining</th><th class="jn-th">Who dropped</th><th class="pri-th">Pri</th><th class="jn-th">Remarks</th></tr></thead>
         <tbody id="hm1Body"></tbody>
       </table></div>
+      <div id="hm1HiddenNote"></div>
       ${defsBlock('hm-positions')}
     </div>
 
@@ -984,10 +988,24 @@ export function initHmFilters(data) {
         + jnWhoCell({ jpWho: [] }) + dropCell(t) + `<td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"><span class="zero">&mdash;</span></td></tr>`;
     }).join('');
 
+    // #301: read the tick once per render, and count what it takes so the table can say so on screen.
+    // 🚨 THE TOTALS, THE CARDS AND THE CHART ABOVE ARE NOT FILTERED. A finished role contributes 0 to Delta,
+    //    so removing it would not move Delta by one position - but it WOULD drop its Joined, and a Joined
+    //    figure that falls when you tick a box reads as joiners going missing. See hide-zero-delta.js.
+    const hideZero = hideZeroOn('hm1HideZero');
+    let hiddenRoles = 0;
     let html = '';
     deptArr.forEach((D, gi) => {
       // #252f: P0 to the top WITHIN this department; title order is kept as the tie-break.
-      const jobs2 = [...D.jobs].sort(byPriorityThen((a, b) => a.title.localeCompare(b.title)));
+      // #301: drop the roles with nothing left to fill. 🚨 The JOB rows go and their recruiter/topic children
+      //   go with them, because they are emitted inside this loop - there is no orphan left behind.
+      //   ⚠ `deltaOf` is this tab's ONE definition of Delta (#189f), so the test and the cell cannot disagree.
+      const jobsAll = [...D.jobs].sort(byPriorityThen((a, b) => a.title.localeCompare(b.title)));
+      const jobs2 = hideZero ? jobsAll.filter(j => !isZeroDelta(deltaOf(j))) : jobsAll;
+      hiddenRoles += jobsAll.length - jobs2.length;
+      // A department whose every role is finished has nothing left to show, so the department row goes too -
+      // otherwise the tick leaves a page of parent rows that open onto nothing.
+      if (hideZero && !jobs2.length) return;
       const withNote = jobs2.filter(j => (noteOf(j.job8) || {}).text).length;
       // #188 / #157: a department only LOOKS clickable when the chosen levels actually give it children. With
       // Job and Recruiter both off, a department with no topic level has nothing under it — a caret there would
@@ -1100,6 +1118,9 @@ export function initHmFilters(data) {
       + `<td class="jn-cell jn-sum">${totals.drop ? `${totals.drop} dropped` : '<span class="zero">—</span>'}</td><td class="pri-cell"><span class="zero">&mdash;</span></td><td class="jn-cell"></td></tr>`;
     const body = document.getElementById('hm1Body');
     body.innerHTML = html;
+    // #301: say what is not on screen. Live state above/below a table is the sanctioned case (CLAUDE.md).
+    const hz = document.getElementById('hm1HiddenNote');
+    if (hz) hz.innerHTML = hiddenNote(hiddenRoles);
     // 6 Nov 2026: it reads the tick like every other tree. It was hard-coded open on the reasoning that the
     // level chooser was this table's expand control — it is not, it changes which levels EXIST, and this
     // table could not be collapsed at all. 144 rows on arrival.
@@ -1907,6 +1928,9 @@ export function initHmFilters(data) {
   msHmJpQ = makeMultiSelect(document.getElementById('hmJpQ'), 'Quarter',
     jpQuarterOptions([data.joiningPendingCases, dropRows(data)]),
     () => { renderJoiningPending(); renderJPDrops(); });   // #274: one control, BOTH tables
+  // #301: Position-Fulfilment-local listener. It re-renders the WHOLE section, not just the tbody, because
+  //   the hidden-count line under the table is written by the same pass.
+  document.getElementById('hm1HideZero')?.addEventListener('change', renderSection1);
   // Throughput-local listeners — #122: a Stages dropdown (nothing picked = all 13) replaced the row of tick-boxes.
   msHmTpStage = makeMultiSelect(document.getElementById('msHmTpStage'), 'Stages', TP_KEYS.map(k => TP_LABELS[k]), renderThroughput);
   document.getElementById('hm2HideEmpty')?.addEventListener('change', renderThroughput);
