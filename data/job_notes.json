@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-19T11:19:09.507Z",
+  "updatedAt": "2026-11-19T11:19:11.058Z",
   "notes": {
     "19982198": {
       "text": "Closed",
@@ -153,9 +153,9 @@
       "at": "2026-11-19T11:14:18.093Z"
     },
     "8cb01d31": {
-      "text": "R1 - 6",
-      "by": "Gopu",
-      "at": "2026-11-06T10:01:49.605Z"
+      "text": "R3 - Hassan \nR2 - Vaibhav & Sumukh (Assignment)\nR1 - 4\n5 profiles shared for review",
+      "by": "Tina",
+      "at": "2026-11-19T11:19:11.057Z"
     },
     "e2b1a6be": {
       "text": "R1- 7 , Assignment - 2 , R2 - 1",
@@ -229,10 +229,10 @@
       "by": "Rijo",
       "at": "2026-10-29T10:44:53.692Z"
     },
-    "cdfc5562": {
+    "3c1dbb02": {
       "pri": "P0",
       "by": "Gopu",
-      "at": "2026-11-19T11:19:09.507Z"
+      "at": "2026-11-19T11:19:06.684Z"
     }
   },
   "budgets": {}
