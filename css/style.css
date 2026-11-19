@@ -2750,8 +2750,17 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
 }
 .tb-flag b { font-weight: 650; }
 
-@media (max-width: 46.125rem) {
-  .tb-rail { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; }
+/* #299b (Jerin, 19 Nov 2026): → **"Yes, move it"**. Below the width where the table and the side menu both
+   fit, the menu goes ABOVE the table and hands it the whole panel.
+   📏 THE THRESHOLD IS MEASURED, not picked: the table is 1226px, the rail 130 and the gap 18, so side by side
+   needs 1374px of nest, and the nest is the window less 50px of page padding — 1424px of window. Below that,
+   stacking is the only way the table fits at all; stacked, it needs only 1226 + 50 = ~1277px.
+   ⚠ THIS BLOCK WAS ALREADY HERE at 46.125rem for phones. It is RAISED rather than copied — a second block
+   with the same declarations is how two breakpoints drift apart.
+   ⚠ `rem` inside a MEDIA QUERY is 16px, never the root's 90%, so 89rem is 1424px and the old 46.125rem was
+   738px. Getting that wrong would have put the switch at 1282 and left a dead band where it still scrolled. */
+@media (max-width: 89rem) {
+  .tb-rail { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .tb-rail-head { width: 100%; }
   .tb-rail .subtab-chip { width: auto; }
 }
