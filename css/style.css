@@ -2517,9 +2517,33 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    🚨 Deliberately NOT reusing `.hm-summary`: its column widths are keyed by column NUMBER to Position
       Fulfilment's eleven columns, so a six-column table under that class is silently mis-sized.
    🔑 Side menu + content per the house rule, so it stacks on a narrow window instead of crushing the table. */
-.tb-nest { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; }
+/* #299b (Jerin, 19 Nov 2026): 🗣 *"the table is now scrolling. Need it to fit inside the panel. Pls fix.
+   Its ok if the panel width is increases."* — #299's names column took the table past the width the rest of
+   the page sits in, and a reporting table may scroll sideways but he would rather see the whole thing.
+
+   📏 MEASURED, not guessed (19 Nov, root font 14.4px): the table is **1226px** of declared column widths
+   (382 names + 86 Avg budget + 9 × 67 figures + 158 names-being-replaced). The page's `.container` caps at
+   87.5rem = 1260px and spends 50px on padding, so the nest gets 1210px and the rail+gap take 184 of it,
+   leaving the table **1026px**. That is the ~200px shortfall, and no column trim of a sane size closes it.
+
+   🔑 SO THE PANEL BREAKS OUT OF THE CONTAINER instead, centred, and never wider than the window allows.
+   `min()` is what keeps it honest: on a wide screen it takes the 96rem it needs, and on a narrow one it
+   collapses back to the window and the box scrolls as before rather than pushing the PAGE sideways.
+   ⚠ Scoped to `.tb-nest`, so no other tab's width moves. The columns themselves are untouched — #294
+   measured those at 1440 and they still hold. */
+.tb-nest {
+  display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start;
+  width: min(100vw - 3.5rem, 96rem);
+  margin-left: calc(50% - min(100vw - 3.5rem, 96rem) / 2);
+}
+
 .tb-rail {
-  flex: 0 0 11.5rem; display: flex; flex-direction: column; gap: 0.1875rem;
+  /* #299b: 11.5rem ➔ 9rem. The rail gives up 2.5rem so the table clears 1226px on a 1440 screen without
+     touching a single column width (#294 measured those; they stand). 📏 9rem = 130px still holds
+     "TYPE & BUDGET" and the widest chip, "Role Type".
+     ⚠ It must be set HERE, in the `flex` shorthand: a later `flex-basis` rule loses to this one, which is
+     exactly what a first attempt did - the nest widened and the rail did not budge. */
+  flex: 0 0 9rem; display: flex; flex-direction: column; gap: 0.1875rem;
   background: #eef1f7; border: 1px solid var(--border); border-radius: 0.625rem; padding: 0.5rem;
 }
 .tb-rail-head {
