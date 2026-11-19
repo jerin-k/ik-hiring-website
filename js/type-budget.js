@@ -29,6 +29,9 @@ import { budgetOf, publishBudget, loadNotes, notesLoadedAt } from './job-notes.j
 // #280: the Department ➔ Job ➔ Type levels hang off the tab's EXISTING "Show levels" ticks, never a new
 // control — #188 settled that (a depth picker was rejected in favour of per-level toggles).
 import { levelsOn, showLevels, expandAllOn } from './tree-levels.js';
+// #299 (Jerin, 19 Nov 2026): the people each replacement position is for, folded behind "+N more".
+// 🚨 ONE renderer for every people-in-a-cell column on this site. NEVER copy it - its own header says why.
+import { jnWhoCell, moreClick } from './people-list-cell.js';
 
 /** What a row shows when the field has not been filled in. Shown, never dropped, so the total still adds up. */
 export const NO_ROLE_TYPE = '(role type not set)';
@@ -265,10 +268,24 @@ export function typeBudgetIndex(data, sel, jobOk) {
     //   confined to figures that predate the pipeline carrying the code at all.
     const bCur = bud > 0 ? (r.budgetCur || 'INR') : null;
     const oCur = oamt > 0 ? (r.offerCur || 'INR') : null;
-    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud, oamt, bCur, oCur);
-    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud, oamt, bCur, oCur);
+    // #299: the person this position replaces, with the budget raised for it. 🔑 GATED ON THE NAME, not on
+    //   the role type: the Ashby field is "Replacement of, if applicable", so a name means somebody is being
+    //   replaced whatever the type column says - and gating on the type would silently drop one.
+    const rep = String(r.replOf || '').trim();
+    // 🚨 "NA" IS A VALUE, NOT A BLANK, and it is the majority. The request robot writes the literal string
+    //   "NA" into the Ashby field on every opening where nobody is being replaced - MEASURED 19 Nov 2026: of the
+    //   50 openings carrying a value, 26 are exactly "NA" and only 24 name a person. Shown raw, the column would
+    //   read "NA" down more than half its rows, which LOOKS like data.
+    // ⚠ The real home of this guard is the pipeline, which should not publish a placeholder at all. This is a
+    //   backstop so a bad publish shows an empty cell rather than a column of "NA" - if it ever starts doing
+    //   work, fix `openingReplacedName_` in DataRefresh.gs rather than widening the list here.
+    const repl = (rep && !/^(na|n\/a|nil|none|not applicable|-|\u2014)$/i.test(rep))
+      ? { candidate: rep, b: bud || null, c: bCur } : null;
+    plant(role, dept, job, r.jobId8, r.roleType || NO_ROLE_TYPE, st, bud, oamt, bCur, oCur, repl);
+    plant(emp, dept, job, r.jobId8, r.empType || NO_EMP_TYPE, st, bud, oamt, bCur, oCur, repl);
 
     totals.total++;
+    if (repl) totals.repl.push(repl);
     if (st) totals[st]++;
     if (bud > 0) { totals.bSum += bud; totals.bN++; noteCur(totals, 'bCur', bCur); into(totals.bBy, bCur, bud); }
     if (oamt > 0) { totals.oSum += oamt; noteCur(totals, 'oCur', oCur); into(totals.oBy, oCur, oamt); }
@@ -299,6 +316,9 @@ export function typeBudgetIndex(data, sel, jobOk) {
   //    the budget those positions were given, what their offers actually cost, and how many of them have no
   //    offer amount at all. That last count is what stops a Delta being printed over an unknown (see below).
   function blank() { return { total: 0, joined: 0, jp: 0, delta: 0, bSum: 0, bN: 0, oSum: 0,
+    // #299: who this row's positions replace - one entry per opening that names somebody, carried at EVERY
+    //   level the same way every count here is, so a department can never disagree with the jobs inside it.
+    repl: [],
     jB: 0, jO: 0, jMiss: 0, pB: 0, pO: 0, pMiss: 0,
     // 🚨 THE OVER/UNDER MARKER MUST COMPARE LIKE WITH LIKE. `jB`/`jO` are NOT a fair pair: `jO` is the
     //    offers of EVERY joined position while `jB` is the budget of only those that have one, so their
@@ -359,12 +379,16 @@ export function typeBudgetIndex(data, sel, jobOk) {
   }
 
   /** Count one position at all three levels at once, so a level can never disagree with the one above it. */
-  function plant(tree, dept, job, job8, type, st, bud, oamt, bCur, oCur) {
+  function plant(tree, dept, job, job8, type, st, bud, oamt, bCur, oCur, repl) {
     const d = tree[dept] || (tree[dept] = Object.assign({ key: dept, jobs: {} }, blank()));
     add(d, st, bud, oamt, bCur, oCur);
+    if (repl) d.repl.push(repl);
     // Keyed on the job ID, never the title: two jobs can share a title and must stay two rows.
     const j = d.jobs[job8] || (d.jobs[job8] = Object.assign({ key: job, job8, types: {} }, blank()));
     add(j, st, bud, oamt, bCur, oCur);
+    if (repl) j.repl.push(repl);
+    // ⚠ The TYPE node deliberately gets none: the column is one per ROW, and a per-type copy would be read
+    //   by nothing while doubling what `roll()` has to carry.
     const t = j.types[type] || (j.types[type] = Object.assign({ key: type }, blank()));
     add(t, st, bud, oamt, bCur, oCur);
   }
@@ -566,6 +590,10 @@ export function mountTypeBudget(host, data, getScope) {
   // pretends to open. The Budget panel's department rows use the same listener and the same data attributes.
   body.addEventListener('click', (e) => {
     if (e.target.closest('input')) return;          // typing a budget figure must not collapse its department
+    // 🚨 #193a's rule, and this table is the exact shape that broke then: the TREE owns this handler, so a
+    //   click on "+N more" inside a department row would toggle the DEPARTMENT and the names would never open.
+    //   Ask FIRST whether the click belongs to a people cell, and stop if it does.
+    if (moreClick(e)) return;
     const tr = e.target.closest('tr[data-exp]');
     if (!tr) return;
     // ⚠ A HIDDEN ROW DOES NOT TOGGLE. A person cannot click one, but `.click()` from a script can, and opening a
@@ -668,7 +696,7 @@ function barChart(rows, axisLabel) {
  *    that forgets prints `undefined` where anyone can see it. 🗣 Jerin: *"only 1 sub tab is fixed dude.
  *    What about the rest 2?"*
  */
-function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLabel) {
+function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLabel, withRepl) {
   const head = LV.job ? 'Department / Job' : 'Department';
   const ind = (n) => CARET_GAP.repeat(n);
 
@@ -756,6 +784,29 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLab
 
   /** A row's figures, in the order the headers read. It LOOKS UP, it never adds: every number here was
    *  counted in `typeBudgetIndex`, so a job row cannot disagree with its department (Rule 3). */
+  /**
+   * #299 (Jerin, 19 Nov 2026) - WHO each replacement is for, with that position's budget beside the name.
+   * 🗣 *"add a replacement column at the end of this table, with Replacement Names listed & the budget
+   *    against it. Use the 'More' approach, so that the cell height doesnt go too high."*
+   *
+   * 🔑 It calls `jnWhoCell`, the ONE people-in-a-cell renderer this site has, so this column folds, opens
+   *    and lines up exactly as "Who is joining" and "Who dropped" already do - and a change to the fold
+   *    reaches all three at once instead of drifting.
+   * 🚨 EVERY ROW NAMES ITS OWN PEOPLE, departments and the Total included - deliberately NOT the "a parent
+   *    row gives a count" rule the Offer-drop column uses. There the count was the only thing a parent could
+   *    add; here the Replacement column already prints that very count a few cells to the left, so a count
+   *    would repeat its neighbour and say nothing new.
+   * ⚠ A position with no budget shows a DASH, never a blank and never a zero - "not stated" and "nothing"
+   *    are different facts, and most replacements carry no figure yet.
+   * ⚠ Only the ROLE-type panel passes `withRepl`. The contract-type panel shares this function and has no
+   *    replacement column at all, so a default here would print the names under the wrong question (#296).
+   */
+  const replCell = (r) => {
+    if (!withRepl) return '';
+    return jnWhoCell(r, { list: r.repl || [], dateOf: () => null,
+      tagOf: (c) => (c.b ? fromOne(c.b, c.c) : '<span class="tb-dash">\u2014</span>') });
+  };
+
   const nums = (r, isRole) => {
     const by = {}, byB = {}, byC = {};
     // 🔑 The type columns carry the BUDGET of that type's positions — the planned side, as his decision 12
@@ -774,7 +825,8 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLab
       + `<td class="tb-num"><span class="tb-c">${r.total}</span>`
       + (withB && money.total ? `<span class="tb-m">${money.total}</span>` : '') + '</td>'
       + typeOrder.map((t, i) => cell(by[t] || 0, '', i === 0, fromBy(byB[t]), '')).join('')
-      + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0, money[st], mark[st])).join('');
+      + STATES.map((st, i) => cell(r[st], STATE_INK[st], i === 0, money[st], mark[st])).join('')
+      + replCell(r);
   };
 
   let html = '';
@@ -802,16 +854,21 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLab
   const numW = withB ? '4.625rem' : '5.25rem';
   const cols = '<colgroup><col style="width:26.5rem">'
     + (withB ? '<col style="width:6rem">' : '')
-    + `<col style="width:${numW}">`.repeat(1 + typeOrder.length + STATES.length) + '</colgroup>';
+    + `<col style="width:${numW}">`.repeat(1 + typeOrder.length + STATES.length)
+    // #299: the one cell on the row that holds WORDS, so it gets room for a name with its money under it.
+    // ⚠ It takes the table past the panel's width and the box scrolls sideways - sanctioned for a reporting
+    //   table (CLAUDE.md), and the alternative was squeezing columns #294 had already measured to the edge.
+    + (withRepl ? '<col style="width:11rem">' : '') + '</colgroup>';
   return `<div class="scroll-table"><table class="tb-table tb-cols">
     ${cols}
     <thead>
       <tr class="tb-grp"><th></th>${withB ? '<th></th>' : ''}<th></th>
         <th class="tb-sep" colspan="${typeOrder.length}">${esc(groupLabel)}</th>
-        <th class="tb-sep" colspan="${STATES.length}">Where it stands</th></tr>
+        <th class="tb-sep" colspan="${STATES.length}">Where it stands</th>${withRepl ? '<th class="tb-sep"></th>' : ''}</tr>
       <tr><th>${esc(head)}</th>${withB ? '<th class="tb-tight">Avg budget<br>per position</th>' : ''}<th>Total positions</th>
         ${typeOrder.map((t, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${esc(t)}</th>`).join('')}
         ${STATES.map((st, i) => `<th class="tb-tight${i === 0 ? ' tb-sep' : ''}">${STATE_LABEL[st]}</th>`).join('')}
+        ${withRepl ? '<th class="tb-tight tb-sep">Who is being replaced</th>' : ''}
       </tr>
     </thead>
     <tbody>
@@ -848,7 +905,7 @@ function rolePanel(ix, LV, expandAll) {
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.roleTree, ix.roleRows.map((r) => r.key),
             Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll, LV.bud !== false,
-            'Why the position exists') : emptyNote('role type')}
+            'Why the position exists', true) : emptyNote('role type')}
     ${fallback}
     ${defsBlock('tb-roletype')}`;
 }
@@ -868,7 +925,7 @@ function empPanel(ix, LV, expandAll) {
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.empTree, ix.empRows.map((r) => r.key),
             Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll, LV.bud !== false,
-            'What kind of contract it is') : emptyNote('contract type')}
+            'What kind of contract it is', false) : emptyNote('contract type')}
     ${note}
     ${defsBlock('tb-emptype')}`;
 }

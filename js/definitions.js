@@ -1098,7 +1098,7 @@ export const DEFINITIONS = {
   'tb-roletype': {
     summary: 'What each role type and status counts',
     intro: 'One row per <strong>department</strong>, opening to one row per <strong>role</strong>, counted in the quarter the position was opened. Each role type has its own column, so a department&rsquo;s split reads straight off its own row. <strong>Total positions &minus; Joined &minus; Joining pipeline = Delta</strong> reads across every row, exactly as it does on Position Fulfilment.',
-    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column and the money under each count 10 Nov 2026.',
+    confirmed: 'Settled with Jerin &middot; 20 Oct 2026; the department and job levels 26 Oct 2026; the type columns and these three status columns 6 Nov 2026; the Avg budget column and the money under each count 10 Nov 2026; the Who is being replaced column 19 Nov 2026.',
     groups: [
       {
         heading: 'The columns',
@@ -1116,6 +1116,7 @@ export const DEFINITIONS = {
           ['A row mixing two currencies', 'Under <em>As per Ashby</em> it cannot be added up at all and shows a dash. Under either <em>all in</em> choice each part is converted and then added, so it does show. <strong>The starting point you type on the Budget page is always in rupees</strong>, so that box is not offered while the page is showing dollars.'],
           ['Joining pipeline', 'Somebody is in Ref Check, Documentation or Offer against this position.'],
           ['Delta', 'Everything else &mdash; still to fill, and positions carried forward without being filled.'],
+          ['Who is being replaced', 'The people the positions on that row are replacing, with the budget raised for each of those positions beside the name. Two names, then <em>+N more</em>. &#128273; The name is the one entered on the position in Ashby when the role was raised, so it comes from the <strong>same record</strong> as the Replacement count a few cells to its left and the two cannot disagree. A position whose budget was never entered shows a dash rather than a zero. Every row names its own people, a department and the Total included &mdash; the count already sits in the Replacement column, so repeating it here would say nothing.'],
         ]
       },
     ],
@@ -1125,6 +1126,7 @@ export const DEFINITIONS = {
       ['A role paid per session shows no money', 'Subject matter expert offers are priced per teaching session, not as a yearly package, so they carry no yearly figure at all. Those rows show a dash rather than a zero, and they are not averaged in with salaried roles &mdash; an hourly fee and a yearly salary are different things.'],
       ['A position raised without a budget is not in the average', 'The average is taken over the positions on that row that <strong>carry</strong> a figure, not over every position in the role. A role where nobody has entered one shows a dash rather than a zero. So the column answers &ldquo;what is a budgeted position in this role worth?&rdquo; &mdash; not &ldquo;what has this role been given in total?&rdquo;, and the figure does not move when a position is raised with the budget left blank.'],
       ['Only new positions carry one, and nothing was backfilled', 'The budget is asked for when a position is raised, so positions opened before the field was in use have none and will not gain one. Expect the column to fill in gradually rather than all at once.'],
+      ['A name appears only where one was entered on the position', 'The question is asked when a position is raised as a <strong>Replacement</strong> or an <strong>Anticipation Of Exit</strong>, so positions opened before it was in use carry no name and will not gain one. &#9888; An empty cell therefore means <strong>nobody was named on that position</strong> &mdash; not that nobody is being replaced. Like the budget, expect it to fill in gradually.'],
       ['Untick <em>Budget</em> to put the column away', 'It sits beside <em>Job</em> and <em>Expand all</em> and is on by default. It adds the column and takes it away; it changes no count.'],
       ['Joining pipeline here counts positions, not people', 'A position with somebody closing against it. The <em>Joining Pipeline</em> card on Position Fulfilment counts <strong>people</strong>, is live rather than tied to the quarter, and includes anyone with no opening attached &mdash; so the two will not match, and neither is wrong.'],
       ['Missed has no column of its own, and is not missing', 'A position carried forward without being filled sits inside <strong>Delta</strong>, because Delta means &ldquo;not joined, and nobody closing against it&rdquo;. Giving it a column as well would count it twice.'],

@@ -2593,6 +2593,45 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
   padding-left: 0.375rem; padding-right: 0.375rem;
 }
 
+/* #299 (19 Nov 2026) - the "Who is being replaced" cell holds WORDS, so it has to escape the numeric column
+   rules this table sets for everything that is not the first column.
+   🚨 `.tb-table td:not(:first-child)` (center, nowrap, 7rem) is (0,2,1) - the SAME specificity as the
+   unscoped `td.jn-cell.jn-cell` people-cell rule ~600 lines above, and it comes LATER in the file, so it was
+   winning: the names came out centred on one line. `.tb-cols td.jn-cell.jn-cell` is (0,3,1) and settles it.
+   ⚠ This is CLAUDE.md Rule 12 in its other direction - the class DID exist and DID style something; it was
+   simply being overridden. Grep for what else claims the same cell before adding a rule or an !important. */
+.tb-cols td.jn-cell.jn-cell {
+  text-align: left; white-space: normal; vertical-align: top;
+  padding-top: 0.5rem; padding-bottom: 0.5rem;
+}
+
+/* #299 (Jerin, 19 Nov 2026) - FREEZE THE DEPARTMENT / JOB COLUMN. He asked for this before shipping the
+   names column, and for a good reason: that column takes the table past its panel, so reading a name meant
+   scrolling right and losing the role the name belonged to.
+   🔑 COPIED, NOT INVENTED - `table.metrics` and `.vel-table` already freeze a first column exactly this
+   way. CLAUDE.md #247: grep for an existing freeze (including the page modules' own <style> blocks) before
+   building a second one.
+   📏 MEASURED ON THE UNEDITED BUILD FIRST: `position: static`, and the cell scrolled 387px out of view.
+   So this rule does the work; it is not decorating something that already happened (#247's other half).
+   🚨 OPAQUE EXPLICITLY, NOT `background: inherit`. `table.metrics` can use inherit because its rows carry
+   their own colour; these rows carry none, so inherit resolves to transparent and the figures would scroll
+   straight THROUGH the frozen cell.
+   🚨 THE EDGE IS AN INSET SHADOW, NOT A BORDER (#197d). Under `border-collapse: collapse` the borders
+   belong to the TABLE, not the cell, so a cell that lifts off to stick leaves them behind and the page shows
+   through the gap - the "transparent when frozen" he reported three times. An inset shadow is painted inside
+   the cell and travels with it. */
+.tb-cols th:first-child,
+.tb-cols td:first-child { position: sticky; left: 0; z-index: 2; background: var(--card); }
+.tb-cols thead th:first-child { z-index: 5; background: var(--navy); }
+.tb-cols tbody td:first-child { box-shadow: inset -2px 0 0 var(--border); }
+.tb-cols tbody tr.tb-tot-row td:first-child { background: var(--accent-light); }
+/* 🚨 #263b's bug would land here for the same reason it landed there: `tr:hover td` is (0,1,2) while the
+   rules above are (0,2,1) and (0,3,3), so hover would light every cell on the row EXCEPT the one the eye is
+   actually on. Two selectors so the whole row ends one colour, and this ⚠ MUST STAY LAST in the block - it
+   ties with the Total-row rule on specificity and wins only by coming after it. */
+.tb-cols tbody tr:hover > td,
+.tb-cols tbody tr:hover > td:first-child { background: #f8fafc; }
+
 /* The distribution bar. 🔑 THE TABLE COMPUTES, THE BAR READS — same rows, so they cannot drift. */
 .tb-chart {
   background: var(--card); border: 1px solid var(--border); border-radius: 0.625rem;
