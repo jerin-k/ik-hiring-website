@@ -285,7 +285,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
    below it. The recess is what does the "inside this page" job, so the selected sub-tab only needs to be
    WHITE — it does not have to shout.
    ⚠ The negative margins cancel .container's 24px/28px padding so the band meets the nav edge-to-edge.
-   .container is max-width 1400, so above that width the band stops there while the nav keeps going. */
+   .container is max-width 100rem = 1440px (#299d; it read "1400" from before the root font went to 90%),
+   so above that width the band stops there while the nav keeps going. */
 .subtab-band {
   /* #214 (Jerin, 8 Oct 2026 - option B): the 12 Overall Efficiency sub-tabs needed 1,274px against a 1,190px
      band and wrapped onto a second row, stranding Interview Traction and Panelists. The gap and the chip
@@ -644,10 +645,25 @@ table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overfl
 
 /* ===== Container ===== */
 .container {
-  max-width: 87.5rem;
+  /* #299d (Jerin, 19 Nov 2026): 🗣 *"Panel is not aligning with the filter panel. Please fix."*
+     🔑 #299b had widened the Type & Budget PANEL ALONE, by letting it break out of this container. It fitted
+     the table and it was wrong: the panel then hung past the filter strip above it, which is what he saw.
+     The width belongs HERE, on the page, so the filter strip, every panel and every table share one left and
+     right edge again. The break-out is gone with it.
+     📏 87.5rem ➔ 100rem = 1440px (root font is 90%, so 1rem = 14.4px here - NOT the 16px a media query uses).
+     Less the 3.5rem of padding that leaves 1389.6px of content, and the widest thing on the site is the Type
+     & Budget table beside its menu: 1226 + 130 + 18 = 1374px. 15px to spare, measured.
+     ⚠ Every tab gets wider, which is the point - a page with one content width cannot misalign with itself. */
+  /* ⚠ `min(...)` not a bare 100rem: at exactly 1440 a bare cap makes the page fill the window and the first
+     filter chip touches the glass. 2rem of guaranteed gutter keeps the margin the page has always had. */
+  max-width: min(100rem, calc(100vw - 2rem));
   margin: 0 auto;
   padding: 0 1.75rem 1.5rem;
 }
+/* 📏 #299d: below the width where the Type & Budget menu sits BESIDE its table (92rem = 1472px in a media
+   query's 16px rem), the side padding comes in so the table still clears 1226px. At 1280 that is the
+   difference between 1200px of content - which scrolls - and 1229px, which does not. */
+
 
 /* ===== Section Titles ===== */
 .section-title {
@@ -783,6 +799,18 @@ table.jp td.c-dept .pl-dept { white-space: nowrap; overflow: hidden; text-overfl
    and lands at 1310, overhanging the container and giving the page a horizontal scrollbar.
    ⚠ `.page-content` is the one element every page renders into, which is why this can be said once. */
 .page-content { margin-left: -1.75rem; margin-right: -1.75rem; }
+
+/* ⚠ #299d: this block MUST sit AFTER `.page-content` and `.wide-table` above - it ties with them on
+   specificity and wins only on order. Placed up beside `.container` first, it did nothing and the page
+   still touched the glass at 1280. */
+@media (max-width: 92rem) {
+  .container { padding-left: 0.75rem; padding-right: 0.75rem; }
+  /* 🚨 THE NEGATIVE MARGIN MUST MOVE WITH THE PADDING. `.page-content` (and `.wide-table`) pull back out by
+     exactly the container's padding so a table can reach the panel edge. Left at -1.75rem over a 0.75rem
+     padding they over-pull by 14.4px and eat the whole gutter — measured: the page read 0→1280 at a 1280
+     window, touching the glass on both sides, which is the thing #299d set out to stop. */
+  .page-content, .scroll-table.wide-table { margin-left: -0.75rem; margin-right: -0.75rem; }
+}
 .page-content .scroll-table.wide-table { margin-left: 0; margin-right: 0; }
 
 
@@ -2517,25 +2545,10 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    🚨 Deliberately NOT reusing `.hm-summary`: its column widths are keyed by column NUMBER to Position
       Fulfilment's eleven columns, so a six-column table under that class is silently mis-sized.
    🔑 Side menu + content per the house rule, so it stacks on a narrow window instead of crushing the table. */
-/* #299b (Jerin, 19 Nov 2026): 🗣 *"the table is now scrolling. Need it to fit inside the panel. Pls fix.
-   Its ok if the panel width is increases."* — #299's names column took the table past the width the rest of
-   the page sits in, and a reporting table may scroll sideways but he would rather see the whole thing.
-
-   📏 MEASURED, not guessed (19 Nov, root font 14.4px): the table is **1226px** of declared column widths
-   (382 names + 86 Avg budget + 9 × 67 figures + 158 names-being-replaced). The page's `.container` caps at
-   87.5rem = 1260px and spends 50px on padding, so the nest gets 1210px and the rail+gap take 184 of it,
-   leaving the table **1026px**. That is the ~200px shortfall, and no column trim of a sane size closes it.
-
-   🔑 SO THE PANEL BREAKS OUT OF THE CONTAINER instead, centred, and never wider than the window allows.
-   `min()` is what keeps it honest: on a wide screen it takes the 96rem it needs, and on a narrow one it
-   collapses back to the window and the box scrolls as before rather than pushing the PAGE sideways.
-   ⚠ Scoped to `.tb-nest`, so no other tab's width moves. The columns themselves are untouched — #294
-   measured those at 1440 and they still hold. */
-.tb-nest {
-  display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start;
-  width: min(100vw - 3.5rem, 96rem);
-  margin-left: calc(50% - min(100vw - 3.5rem, 96rem) / 2);
-}
+/* ⚠ #299d: this deliberately has NO width of its own any more. #299b gave it a break-out so the table would
+   fit, and that is exactly what left it hanging past the filter strip. The width now lives on `.container`,
+   where every other panel on the page gets it too. Do not re-add a width here. */
+.tb-nest { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; }
 
 .tb-rail {
   /* #299b: 11.5rem ➔ 9rem. The rail gives up 2.5rem so the table clears 1226px on a 1440 screen without
@@ -2757,9 +2770,11 @@ table.metrics.eff-fulfil td.jn-cell { width: 8rem; min-width: 8rem; max-width: 8
    stacking is the only way the table fits at all; stacked, it needs only 1226 + 50 = ~1277px.
    ⚠ THIS BLOCK WAS ALREADY HERE at 46.125rem for phones. It is RAISED rather than copied — a second block
    with the same declarations is how two breakpoints drift apart.
-   ⚠ `rem` inside a MEDIA QUERY is 16px, never the root's 90%, so 89rem is 1424px and the old 46.125rem was
-   738px. Getting that wrong would have put the switch at 1282 and left a dead band where it still scrolled. */
-@media (max-width: 89rem) {
+   ⚠ `rem` inside a MEDIA QUERY is 16px, never the root's 90%, so 92rem is 1472px and the old 46.125rem was
+   738px. Getting that wrong would have put the switch at 1325 and left a dead band where it still scrolled.
+   ⚠ #299d moved it 89rem ➔ 92rem: with the page now capped at 1440px the side-by-side case has 15px of slack
+   above the switch instead of 0.6px, which is the difference between fitting and fitting by luck. */
+@media (max-width: 92rem) {
   .tb-rail { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .tb-rail-head { width: 100%; }
   .tb-rail .subtab-chip { width: auto; }
