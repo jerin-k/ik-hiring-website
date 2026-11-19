@@ -29,6 +29,8 @@ import { HBAR, hbarHeight, CONV_PAD, drawConvColumn, roleBandDatasets, roleBandO
 import { jobFilterOptions, matchesJob, peopleJobIds, livePeopleJobIds, PEOPLE_TABS } from '../job-filter.js';   // #172c · #290d
 import { mountInterviewTraction } from '../interview-traction.js';   // #228a: the SAME module HM and Overall Efficiency mount
 import { deltaPill } from '../delta-cell.js';   // #218: the Delta pill - one home, same on all three tabs
+// #301: the same tick the other three tables use - one file, one label, one rule.
+import { hideZeroTick, hideZeroOn, isZeroDelta, hiddenNote } from '../hide-zero-delta.js';
 
 const POD_ORDER = [...POD_OPTIONS, 'Unassigned'];
 
@@ -169,6 +171,7 @@ const fulfilBlockHtml = (T, i) => `
       <thead>${fulfilHeadHtml(T)}</thead>
       <tbody id="fulfilBody-${T.key}"></tbody>
     </table></div>
+    <div id="fulfilHidden-${T.key}"></div>
   </div>`;
 
 // ===== DROP (unified, 2026-08-26) =====
@@ -718,6 +721,7 @@ export function renderRecruiter(data) {
          heading. Every block - heading, header row, chart and body - is generated from FULFIL_TABLES, so
          the five can never drift apart the way three hand-written <thead>s did. -->
     <div class="rec-panel" data-panel="fulfilment">
+      <div class="tp-controls">${hideZeroTick('recHideZero')}</div>
       ${FULFIL_TABLES.map(fulfilBlockHtml).join('')}
       ${fulfilPanelBlockHtml()}
       <p class="sub-note" id="recFulfilStray" style="color:var(--orange);display:none"></p>
@@ -1611,7 +1615,15 @@ export function initRecruiterFilters(baseData) {
     // and Capacity Utilisation is OUTPUT over capacity - what was delivered against what could have been.
     // ⚠ The colour sense is the opposite of a load metric: past 100% is over-delivery (good); under 70% is
     // under-use, which is the thing worth acting on.
+    // #301: how many roles each table is holding back. fulfilRows returns HTML, so the count rides out here
+    //   and the note is written beside the body that was just filled.
+    const hiddenByTable = {};
     function fulfilRows(gs, T) {
+      // #301: read the tick once per table and count what it takes, so each table can say so under itself.
+      // 🚨 The pod rows, the recruiter rows, the totals and the CHART are NOT filtered - see
+      //    hide-zero-delta.js. Only the role rows go.
+      const hideZero = hideZeroOn('recHideZero');
+      let hiddenRoles = 0;
       const q = selQuarter();
       const LV = levelsOn('recLevels');   // #189e: which levels this render is built from
       // #179a: the counting rule is the TABLE'S, declared per pod in FULFIL_TABLES. 'hire' = Joined only,
@@ -2241,6 +2253,15 @@ export function initRecruiterFilters(baseData) {
                 jv.joUnder = belowJo.size; jv.joWho = (jv.joWho || []).filter(x => !belowJo.has(x));
                 jv.jpUnder = belowJp.size; jv.jpWho = (jv.jpWho || []).filter(x => !belowJp.has(x));
               }
+              // #301: hide the roles with nothing left to fill.
+              // 🚨 DELIBERATELY AFTER `roleAch.push` above: the Fulfilment chart bands a recruiter's
+              //    Achieved by role from that array, and a chart that quietly lost its finished roles would
+              //    understate the very work it is drawing (Rule 3 - this chart has been on the wrong basis
+              //    twice already). The recruiter row above and the totals keep every role too.
+              // 🔑 `gHC` is the heads Delta THIS row prints, so the test and the cell are one number.
+              // ⚠ Returning here drops this job's TOPIC rows with it - they are emitted below, inside this
+              //    same iteration, so no topic is left hanging under a role that is not on screen.
+              if (hideZero && isZeroDelta(jv.gHC)) { hiddenRoles++; return; }
               jv.roleRow = true; jv.job8 = j8t;   // #267: this is the one row level a priority belongs to
               html += `<tr class="lvl-stage"${tops && tops.length ? ` data-job8="${j8t}" data-key="${tKey}" data-exp="0" style="display:none;cursor:pointer"` : ' style="display:none"'} data-pod="${pi}" data-parent-rec="${rk}">
                 <td style="padding-left:3.25rem;color:var(--muted)">${tops && tops.length ? CARET : ''}${m.title || '(untitled)'}<span style="font-size:0.625rem;margin-left:0.375rem;color:var(--muted)">${jobScoreCaption(jobScoreSpread(j8t, m, q, openingScores(data)), m.level, `${m.level || ''}${m.complexity ? ' · ' + m.complexity : ''}${(m.level || m.complexity) ? ` · ${sc}pt` : ' · not scored'}`)}</span></td>${cells(jv, false)}</tr>`;
@@ -2283,6 +2304,7 @@ export function initRecruiterFilters(baseData) {
       // #272: the Total row is ALWAYS the last row of its table — holdTable() relies on that to pin it to the
       // bottom edge, and table-sort.js re-appends it after every sort for the same reason.
       fulfilTotals[T.key] = tableAgg;
+      hiddenByTable[T.key] = hiddenRoles;   // #301
       return html + totalsRowHtml(tableAgg, 'Total', `${tableRecs} recruiter${tableRecs === 1 ? '' : 's'}`);
     }
 
@@ -2310,6 +2332,9 @@ export function initRecruiterFilters(baseData) {
       const body = document.getElementById('fulfilBody-' + T.key);
       if (!body) return;
       body.innerHTML = gs.length ? fulfilRows(gs, T) : '';
+      // #301: each table says what IT is not showing. Nothing hidden ⇒ no line.
+      const hz = document.getElementById('fulfilHidden-' + T.key);
+      if (hz) hz.innerHTML = hiddenNote(hiddenByTable[T.key] || 0);
       if (gs.length) { wireVelTree(body); wireMoreCells(body); }   // #182c: the "+N more" toggle on the people columns
     });
     // ===== #272: the panel total — the five tables' own totals added =====
@@ -4365,6 +4390,9 @@ export function initRecruiterFilters(baseData) {
   // #145b: the Pipeline panel's own pair. #147c adopts `.tp-controls` into the frozen filter row and shows
   // it only while this sub-tab is the one on screen, so no page module has to manage that.
   msRecPipeStage = makeMultiSelect(document.getElementById('recMsPipeStage'), 'Stages', PIPE_KEYS.map(k => PIPE_LABELS[k]), renderRecPipeline);
+  // #301: one tick for all five Fulfilment tables - re-render the whole tab, since each table's
+  //   hidden-count line is written by the same pass that fills its body.
+  document.getElementById('recHideZero')?.addEventListener('change', renderAll);
   document.getElementById('recPipeHideEmpty')?.addEventListener('change', renderRecPipeline);
   msPod = makeMultiSelect(document.getElementById('msPod'), 'Pod', POD_OPTIONS, renderAll);
   msRec = makeMultiSelect(document.getElementById('msRec'), 'Recruiter', allRecs.map(r => r.name).sort((a, b) => a.localeCompare(b)), renderAll);

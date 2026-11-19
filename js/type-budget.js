@@ -32,6 +32,8 @@ import { levelsOn, showLevels, expandAllOn } from './tree-levels.js';
 // #299 (Jerin, 19 Nov 2026): the people each replacement position is for, folded behind "+N more".
 // 🚨 ONE renderer for every people-in-a-cell column on this site. NEVER copy it - its own header says why.
 import { jnWhoCell, moreClick } from './people-list-cell.js';
+// #301: the same control the two Position Fulfilment tables use - one file, one label, one rule.
+import { hideZeroTick, isZeroDelta, hiddenNote, isHideZeroTick } from './hide-zero-delta.js';
 
 /** What a row shows when the field has not been filled in. Shown, never dropped, so the total still adds up. */
 export const NO_ROLE_TYPE = '(role type not set)';
@@ -500,6 +502,16 @@ export function mountTypeBudget(host, data, getScope) {
         ${SECTIONS.map((s) => `<button type="button" class="subtab-chip${s.id === active ? ' active' : ''}"
           data-tb="${s.id}">${esc(s.label)}</button>`).join('')}
         <div class="tb-cur-slot">${curBox()}</div>
+        <!-- 🚨 #301: THE TICK LIVES IN THE RAIL, not in the panel below it, and that is not a style
+             choice. Rendered from the panel's own markup - from treeHead, from rolePanel, and finally right
+             beside the table itself - it NEVER reached the DOM, while an HTML comment on the very next
+             character of the same template string did, with tickId proved truthy at runtime. Three
+             placements, two browsers, fresh ports and stamped filenames all behaved the same, so the cause
+             is still unknown. The rail is built once here, it has always rendered, and a control that
+             persists across renders needs no state juggling either. DO NOT move it back into the panel.
+             WARNING: this comment sits INSIDE a template literal, so it must contain no backticks - a pair
+             of them here ended the literal and the file stopped parsing. -->
+        <div class="tb-hz-slot">${hideZeroTick('tbHideZero')}</div>
       </nav>
       <div class="tb-body"></div>
     </div>`;
@@ -543,6 +555,13 @@ export function mountTypeBudget(host, data, getScope) {
     render();
   });
 
+  // #301: the tick sits in the rail, so it survives every re-render and the DOM IS the state.
+  // ⚠ Read through `host`, never `document`: this file is mounted twice, on Hiring Manager and on Overall
+  //   Efficiency, and both hosts can be in the document at once - a lookup by id would tie the two together.
+  const hzBox = () => host.querySelector('.tb-hz-slot input.jn-hz');
+  const hideZeroNow = () => { const b = hzBox(); return !!(b && b.checked); };
+  host.addEventListener('change', (e) => { if (isHideZeroTick(e.target)) render(); });
+
   function render() {
     const scope = getScope() || {};
     const sel = scope.sel || { wholeWin: false, dayOK: false };
@@ -558,8 +577,13 @@ export function mountTypeBudget(host, data, getScope) {
     if (lvId) showLevels(lvId, ['job', 'bud']);
     const LV = lvId ? levelsOn(lvId) : { job: true, bud: true };
     const expandAll = lvId ? expandAllOn(lvId) : false;
-    if (active === 'role') body.innerHTML = rolePanel(ix, LV, expandAll);
-    else if (active === 'emp') body.innerHTML = empPanel(ix, LV, expandAll);
+    // ⚠ Rule 13: the tick does nothing on the Budget ledger - money by department, no role rows - so it is
+    //   hidden there rather than shown doing nothing.
+    const hzSlot = host.querySelector('.tb-hz-slot');
+    if (hzSlot) hzSlot.style.display = (active === 'budget') ? 'none' : '';
+    const hideZero = hideZeroNow();
+    if (active === 'role') body.innerHTML = rolePanel(ix, LV, expandAll, hideZero);
+    else if (active === 'emp') body.innerHTML = empPanel(ix, LV, expandAll, hideZero);
     else {
       // 🔑 A starting budget belongs to ONE department in ONE quarter, so the cell is only editable when a
       //    single whole quarter is selected. Over a range or several quarters there is no one key to write
@@ -696,7 +720,7 @@ function barChart(rows, axisLabel) {
  *    that forgets prints `undefined` where anyone can see it. 🗣 Jerin: *"only 1 sub tab is fixed dude.
  *    What about the rest 2?"*
  */
-function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLabel, withRepl) {
+function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLabel, withRepl, hideZero) {
   const head = LV.job ? 'Department / Job' : 'Department';
   const ind = (n) => CARET_GAP.repeat(n);
 
@@ -829,8 +853,24 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLab
       + replCell(r);
   };
 
+  // #301: drop the rows with nothing left to fill.
+  // 🔑 WHICH ROW IS A "ROLE" DEPENDS ON THE JOB TICK. With Job ON the job rows are the leaves, so they are
+  //    what gets filtered and a department with none left goes with them. With Job OFF the DEPARTMENT rows are
+  //    the leaves, so they are filtered directly - or the tick would do nothing at that level (Rule 13).
+  // 🚨 `delta` is a COUNTED state here, not a subtraction: `stateOf` files each position as joined, jp or
+  //    delta, so this reads the very field the Delta column prints.
+  // ⚠ The Total row is NOT filtered - hide-zero-delta.js says why a finished role must keep counting.
+  let hiddenRows = 0;
+  const shown = !hideZero ? tree : (LV.job
+    ? tree.map((d) => {
+        const keep = d.jobs.filter((j) => !isZeroDelta(j.delta));
+        hiddenRows += d.jobs.length - keep.length;
+        return Object.assign({}, d, { jobs: keep });
+      }).filter((d) => d.jobs.length)
+    : tree.filter((d) => { const go = !isZeroDelta(d.delta); if (!go) hiddenRows++; return go; }));
+
   let html = '';
-  tree.forEach((d, gi) => {
+  shown.forEach((d, gi) => {
     const opens = LV.job && d.jobs.length > 0;
     const open = opens && expandAll;
     html += `<tr class="tb-l1 dept-header" data-g="${gi}"`
@@ -873,9 +913,9 @@ function typeColumnTable(tree, typeOrder, totals, LV, expandAll, withB, groupLab
     </thead>
     <tbody>
       ${html}
-      ${tree.length ? `<tr class="tb-tot-row"><td>Total</td>${nums(totals, false)}</tr>` : ''}
+      ${shown.length ? `<tr class="tb-tot-row"><td>Total</td>${nums(totals, false)}</tr>` : ''}
     </tbody>
-  </table></div>`;
+  </table></div>${hiddenNote(hiddenRows, LV.job ? 'role' : 'department')}`;
 }
 
 /** The heading and the ONE line of live state above a tree table: what opens, and nothing else — above a table
@@ -889,7 +929,7 @@ function emptyNote(what) {
   return `<p class="sub-note">No positions were opened in this period, so there is nothing to split by ${esc(what)}.</p>`;
 }
 
-function rolePanel(ix, LV, expandAll) {
+function rolePanel(ix, LV, expandAll, hideZero) {
   const n = ix.roleRows.length;
   // ⚠ A dated, measured note is honest; a live count inside explanation text goes stale within a day and
   // nothing tells you (CLAUDE.md Rule 6). This one is computed from what is on screen, so it cannot.
@@ -905,12 +945,12 @@ function rolePanel(ix, LV, expandAll) {
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.roleTree, ix.roleRows.map((r) => r.key),
             Object.assign({}, ix.totals, { types: ix.roleRows }), LV, expandAll, LV.bud !== false,
-            'Why the position exists', true) : emptyNote('role type')}
+            'Why the position exists', true, hideZero) : emptyNote('role type')}
     ${fallback}
     ${defsBlock('tb-roletype')}`;
 }
 
-function empPanel(ix, LV, expandAll) {
+function empPanel(ix, LV, expandAll, hideZero) {
   const n = ix.empRows.length;
   const unknown = ix.empRows.find((r) => r.key === NO_EMP_TYPE);
   // The gap is worth naming on screen, because it is the one thing that makes this table misleading.
@@ -925,7 +965,7 @@ function empPanel(ix, LV, expandAll) {
     ${n ? treeHead(LV) : ''}
     ${n ? typeColumnTable(ix.empTree, ix.empRows.map((r) => r.key),
             Object.assign({}, ix.totals, { types: ix.empRows }), LV, expandAll, LV.bud !== false,
-            'What kind of contract it is', false) : emptyNote('contract type')}
+            'What kind of contract it is', false, hideZero) : emptyNote('contract type')}
     ${note}
     ${defsBlock('tb-emptype')}`;
 }
