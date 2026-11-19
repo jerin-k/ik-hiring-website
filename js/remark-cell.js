@@ -136,7 +136,16 @@ export function priorityCell(o) {
   if (!job8) return '<td class="pri-cell"><span class="zero">—</span></td>';
   const p = priorityOf(job8);
   const cur = p ? (p.pri || '') : '';
-  const opts = ['<option value=""></option>'].concat(
+  // #300 (Jerin, 19 Nov 2026): 🗣 *"Need a clear all for Priority selection"* → **"Label the blank"**.
+  // 🔑 THE BLANK ENTRY ALWAYS WORKED - picking it unsets the priority and the server deletes the key. It
+  //    simply had NO TEXT, so the dropdown opened on an empty line that read as nothing rather than as "none".
+  // 🚨 A <select> SHOWS THE SELECTED OPTION'S TEXT, so whatever goes here is also what an unset cell reads
+  //    on the table - this is not only a dropdown change. An em dash is the right word because it is the one
+  //    this site already uses for "nothing here", and because `priorityReadCell` (Recruiter Efficiency, read
+  //    only) ALREADY renders a dash for an unset priority. Before this, the same role read "—" on one tab and
+  //    blank on the other; now all three agree.
+  // ⚠ The VALUE stays "", so the sort, the save and the whitelist are untouched - only the display moves.
+  const opts = ['<option value="">\u2014</option>'].concat(
     PRIORITIES.map(v => `<option value="${v}"${v === cur ? ' selected' : ''}>${v}</option>`)).join('');
   return `<td class="pri-cell${p && p.unsaved ? ' jn-unsaved' : ''}" data-job8="${esc(job8)}">`
     + `<select class="prisel" data-jn-pri="1" aria-label="Priority for this role" title="Priority — P0 is most urgent">${opts}</select></td>`;
