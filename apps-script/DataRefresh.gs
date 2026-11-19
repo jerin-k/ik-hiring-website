@@ -333,6 +333,33 @@ function openingCustomFieldByTitle_(o, re) {
  * 🔑 The run log counts what this found. If it reports 0 the shape has changed and the column simply stays
  *    empty - nothing else on the dashboard is wrong.
  */
+/**
+ * #299 (19 Nov 2026) - WHO this opening replaces, as a trimmed string, or null.
+ * 'NA' IS A VALUE, NOT A BLANK, and it is the majority. The request robot writes the literal string 'NA'
+ *    into this field on every opening where nobody is being replaced. MEASURED 19 Nov 2026: of 50 openings
+ *    carrying a value, 26 are exactly 'NA' and only 24 name a person. Published raw, the dashboard column
+ *    would read 'NA' down more than half its rows, which LOOKS like data.
+ * The title is 'Replacement of, if applicable'. Matched EXACTLY first and loosely second - the V9 work-log
+ *    column mix-up is what taught us to try the exact header before a regex.
+ * The run log counts what this found. If it reports 0 the field has moved and the column simply stays
+ *    empty; nothing else on the dashboard is wrong.
+ */
+function openingReplacedName_(o) {
+  var cfs = (o.latestVersion && o.latestVersion.customFields) || [];
+  var loose = null;
+  for (var i = 0; i < cfs.length; i++) {
+    var t = String(cfs[i].title || cfs[i].name || '');
+    var exact = (t === 'Replacement of, if applicable');
+    if (!exact && !/replacement of/i.test(t)) continue;
+    var v = cfs[i].value;
+    if (v instanceof Array && v.length === 1) v = v[0];
+    v = (v === '' || v == null) ? '' : String(v).trim();
+    if (/^(na|n\/a|nil|none|not applicable|-|\u2014)$/i.test(v)) v = '';
+    if (exact) return v || null;
+    if (!loose && v) loose = v;
+  }
+  return loose;
+}
 function openingBudget_(o) {
   var cfs = (o.latestVersion && o.latestVersion.customFields) || [];
   for (var i = 0; i < cfs.length; i++) {
@@ -919,6 +946,7 @@ function refreshDashboardData() {
     //   carry one, all Replacement or Anticipation Of Exit, raised 12 Oct-3 Nov. #294 reads it from here on.
     //   Rule 5: re-measure before repeating a claim that something is empty.
     var oBudget = openingBudget_(o);
+    var oReplOf = openingReplacedName_(o);   // #299
     var oRoleType = openingCustomFieldByTitle_(o, /role type/i);
     var oEmpType = openingCustomFieldByTitle_(o, /employment type/i);
     // The FIELD is the truth; the opening NAME is the fallback, because #159 puts the role type in the
@@ -967,7 +995,7 @@ function refreshDashboardData() {
       if (oInScope) openingRows.push({ openingId: String(o.id || '').substring(0, 8), jobId8: j8,
         quarter: q, day: dOpen || null, state: cls, topic: oTopic, complexity: oComplexity, jpTied: 0,
         roleType: oRoleType || null, roleTypeSource: oRoleTypeSrc, empType: oEmpType || null,
-        budget: oBudget ? oBudget.amt : null, budgetCur: oBudget ? oBudget.cur : null,
+        budget: oBudget ? oBudget.amt : null, budgetCur: oBudget ? oBudget.cur : null, replOf: oReplOf,
         name: String(o.identifier || (o.latestVersion && (o.latestVersion.identifier || o.latestVersion.name)) || o.name || '').trim(),
         ownerIds: oOwnerIds, share: oOwnerIds.length ? Math.round((1 / oOwnerIds.length) * 10000) / 10000 : 0 });
     });
@@ -1079,6 +1107,7 @@ function refreshDashboardData() {
     + ' | if "positions priced" is 0 the field title moved - check offerAmount_ against one offer in Ashby');
   // #294: how many of the emitted rows carry a budget. A zero here means the field's shape moved, not that
   // the money is gone - check openingBudget_ against one opening in Ashby before changing anything else.
+  openingTopicStats.withReplacedName = openingRows.filter(function (r) { return !!r.replOf; }).length;
   openingTopicStats.withBudget = openingRows.filter(function (r) { return r.budget != null; }).length;
   // #280b: what currencies are actually in play. A budget entered in anything but INR is shown as rupees by
   //   today's site, so this line is how that is noticed BEFORE the screen can tell them apart.
