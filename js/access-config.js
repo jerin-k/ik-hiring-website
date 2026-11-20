@@ -5,6 +5,7 @@
 // signed-in admin. mcfile=access tells the server which file to write (metric_config.json is the default).
 // Confirm-by-read: poll data/access.json until it matches (server never needs to message back). See Code.gs.
 
+import { privateDataOn, privateJson } from './private-data.js';   // #10f: the private copy, when the switch is on
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/access.json';
 const WEBAPP_URL = 'https://script.google.com/a/macros/interviewkickstart.com/s/AKfycbxI6L89uE35GBRMNVRcjEHhvt6iWRTNO2J3C0JYn_hKdepYA80lCXe7TvFvriYb2XFHtQ/exec';
 const PUBLISH_CHUNK = 1500;
@@ -19,6 +20,7 @@ const INVITES_RAW = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website
 // Who was sent an invite and when: {email: {at, by, count}}. Through the contents API (the raw CDN lags up to 5 minutes),
 // falling back to raw. No file yet means nobody has been invited.
 export async function fetchInvites() {
+  if (privateDataOn()) { try { return ((await privateJson('access_invites.json')) || {}).invites || {}; } catch (e) { return {}; } }   // #10f
   try { const r = await fetch(INVITES_API + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) return (await r.json()).invites || {}; } catch (e) { }
   try { const r = await fetch(INVITES_RAW + '?cb=' + Date.now()); if (r.ok) return (await r.json()).invites || {}; } catch (e) { }
   return {};
@@ -76,8 +78,9 @@ export async function publishAccess(payload) {
   for (let i = 0; i < 16; i++) {
     await new Promise(r => setTimeout(r, 2500));
     let live = null;
-    try { const r = await fetch(CONFIRM_API + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) live = await r.json(); } catch (e) { }
-    if (!live) { try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) live = await r.json(); } catch (e) { } }
+    if (privateDataOn()) { try { live = await privateJson('access.json'); } catch (e) { } }   // #10f
+    if (!privateDataOn()) try { const r = await fetch(CONFIRM_API + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) live = await r.json(); } catch (e) { }
+    if (!live && !privateDataOn()) { try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) live = await r.json(); } catch (e) { } }
     if (live && sameAccess(live, payload)) { try { w.close(); } catch (e) { } return { ok: true }; }
   }
   return { ok: false, reason: "Couldn't confirm the publish — check the popup for an error (sign-in/not-authorized), or use Download. Your edits are kept locally." };

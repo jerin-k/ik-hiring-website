@@ -59,6 +59,7 @@ export function getStoredUser() {
 export function signOut() {
   currentUser = null;
   sessionStorage.removeItem('user');
+  sessionStorage.removeItem('ik_data_pass');   // #10f: the data service's pass goes with the person it was issued to
   google.accounts.id.disableAutoSelect();
   window.location.reload();
 }

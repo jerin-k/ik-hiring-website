@@ -8,6 +8,7 @@
 // First-run safety: if a browser already has local config and has never synced, that local config is PRESERVED
 // as an unpublished draft (marked dirty) rather than being overwritten — no data loss on rollout.
 
+import { privateDataOn, privateJson } from './private-data.js';   // #10f: the private copy, when the switch is on
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/metric_config.json';
 const LOCAL_URL = '/data/metric_config.json';
 // #111b: confirm-by-read must NOT use LIVE_URL. raw.githubusercontent ignores the ?cb cache-buster and serves the old
@@ -34,8 +35,9 @@ function validCfg(c) { return c && typeof c === 'object' && (c.pods || c.capacit
 // Fetch server config (with degradation ladder) and hydrate the runtime keys. Call once, before rendering.
 export async function loadMetricConfig() {
   let cfg = null;
-  try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
-  if (!cfg) { try { const r = await fetch(LOCAL_URL + '?t=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { } }
+  if (privateDataOn()) { try { cfg = await privateJson('metric_config.json'); } catch (e) { /* the last-known-good below */ } }   // #10f
+  if (!privateDataOn()) try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
+  if (!cfg && !privateDataOn()) { try { const r = await fetch(LOCAL_URL + '?t=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { } }
   if (!validCfg(cfg)) cfg = readLS(CACHE_LS, null);   // last-known-good
   if (!validCfg(cfg)) return { cfg: null, meta: getMeta(), dirty: isDirty() };  // nothing yet → readers use their built-in defaults
 
@@ -112,7 +114,7 @@ const PUBLISH_CHUNK = 1500;   // chars of base64url per GET (URL stays well unde
 // behind is not a conflict, and refusing on it would block legitimate publishes.
 async function serverMovedSinceLoad() {
   let live = null;
-  try { const r = await fetch(LIVE_URL + '?cb=' + Date.now(), { cache: 'no-store' }); if (r.ok) live = await r.json(); }
+  try { if (privateDataOn()) live = await privateJson('metric_config.json'); else { const r = await fetch(LIVE_URL + '?cb=' + Date.now(), { cache: 'no-store' }); if (r.ok) live = await r.json(); } }   // #10f
   catch (e) { return { checked: false }; }                       // offline — fall back to the server's own guard
   if (!validCfg(live) || !live.updatedAt) return { checked: true, moved: false };   // nothing published yet: a first publish is fine
   const loaded = (getMeta() || {}).updatedAt || '';
@@ -169,6 +171,7 @@ export async function publishConfig(payloadOverride) {
 // #111b: read the published config without the raw CDN's 5-minute lag; fall back to LIVE_URL if the API refuses
 // (its unauthenticated limit is 60 requests an hour per IP — one publish uses at most 24).
 export async function fetchFreshConfig() {
+  if (privateDataOn()) { try { return await privateJson('metric_config.json'); } catch (e) { return null; } }   // #10f
   try {
     const r = await fetch(CONFIRM_URL + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' });
     if (r.ok) return await r.json();

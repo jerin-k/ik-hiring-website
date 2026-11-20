@@ -1,5 +1,6 @@
 // Live source of truth = data/access.json on GitHub (CDN-fast, picks up admin publishes immediately),
 // falling back to the Vercel-served local copy if the fetch fails.
+import { privateDataOn, privateJson } from './private-data.js';   // #10f: the private copy, when the switch is on
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/access.json';
 const LOCAL_URL = '/data/access.json';
 // #118 (14 Sep 2026): read the GitHub contents API FIRST. raw.githubusercontent ignores ?cb and served the previous access file
@@ -11,9 +12,12 @@ let accessConfig = null;
 
 export async function loadAccessConfig() {
   let cfg = null;
-  try { const r = await fetch(API_URL + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
-  if (!cfg) { try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ } }
-  if (!cfg) { try { const r = await fetch(LOCAL_URL + '?t=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { } }
+  // #10f: the access list is itself behind the lock. A person the service refuses gets no list, which reads as
+  // role 'none' two lines down — the same "no access" screen an unlisted person has always seen.
+  if (privateDataOn()) { try { cfg = await privateJson('access.json'); } catch (e) { /* role none */ } }
+  if (!privateDataOn()) try { const r = await fetch(API_URL + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ }
+  if (!cfg && !privateDataOn()) { try { const r = await fetch(LIVE_URL + '?cb=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { /* fall through */ } }
+  if (!cfg && !privateDataOn()) { try { const r = await fetch(LOCAL_URL + '?t=' + Date.now()); if (r.ok) cfg = await r.json(); } catch (e) { } }
   accessConfig = cfg || { defaultRole: 'none', users: [] };
   return accessConfig;
 }

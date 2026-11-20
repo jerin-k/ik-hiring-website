@@ -1,4 +1,5 @@
 import { adoptStageLists } from './stage-lists.js';   // #240b: the stage lists come from the pipeline
+import { privateDataOn, privateJson } from './private-data.js';   // #10f: the private copy, when the switch is on
 const LIVE_DATA_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/dashboard.json';
 const LOCAL_DATA_URL = '/data/dashboard.json';
 const LIVE_ROLLUPS_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/stage_rollups.json';
@@ -11,13 +12,14 @@ const LOCAL_TRACTION_URL = '/data/interview_traction.json';
 let dashboardData = null;
 
 export async function loadDashboardData() {
-  try {
+  if (privateDataOn()) dashboardData = await privateJson('dashboard.json');   // #10f: never the public copy
+  if (!privateDataOn()) try {
     const res = await fetch(LIVE_DATA_URL);
     if (res.ok) dashboardData = await res.json();
   } catch (e) {
     console.warn('Live data fetch failed, using local fallback:', e.message);
   }
-  if (!dashboardData) {
+  if (!dashboardData && !privateDataOn()) {
     const res = await fetch(LOCAL_DATA_URL + '?t=' + Date.now());
     dashboardData = await res.json();
   }
@@ -45,18 +47,21 @@ export async function loadDashboardData() {
 }
 
 async function loadStageRollups_() {
+  if (privateDataOn()) { try { return await privateJson('stage_rollups.json'); } catch (e) { return null; } }   // #10f
   try { const r = await fetch(LIVE_ROLLUPS_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   try { const r = await fetch(LOCAL_ROLLUPS_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   return null;
 }
 
 async function loadInterviewTraction_() {
+  if (privateDataOn()) { try { return await privateJson('interview_traction.json'); } catch (e) { return null; } }   // #10f
   try { const r = await fetch(LIVE_TRACTION_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   try { const r = await fetch(LOCAL_TRACTION_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   return null;
 }
 
 async function loadHireLinks_() {
+  if (privateDataOn()) { try { return await privateJson('hire_links.json'); } catch (e) { return null; } }   // #10f
   try { const r = await fetch(LIVE_HIRE_LINKS_URL); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   try { const r = await fetch(LOCAL_HIRE_LINKS_URL + '?t=' + Date.now()); if (r.ok) return await r.json(); } catch (e) { /* optional */ }
   return null;

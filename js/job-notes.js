@@ -11,6 +11,7 @@
 // digit run, and the editor shows a standing caution line. That is a guard, not a guarantee — the wording in
 // front of the user is what keeps candidate data out of it.
 
+import { privateDataOn, privateJson } from './private-data.js';   // #10f: the private copy, when the switch is on
 const LIVE_URL = 'https://raw.githubusercontent.com/jerin-k/ik-hiring-website/main/data/job_notes.json';
 const LOCAL_URL = '/data/job_notes.json';
 // #152: confirm-by-read must NOT use LIVE_URL. raw.githubusercontent caches for five minutes and IGNORES the
@@ -119,11 +120,11 @@ export async function loadNotes() {
       return true;
     }
   }
-  for (const url of [LIVE_URL + '?cb=' + Date.now(), LOCAL_URL]) {
+  for (const url of (privateDataOn() ? ['the private copy'] : [LIVE_URL + '?cb=' + Date.now(), LOCAL_URL])) {   // #10f
     try {
-      const r = await fetch(url, { cache: 'no-store' });
-      if (!r.ok) continue;
-      const j = await r.json();
+      const r = privateDataOn() ? null : await fetch(url, { cache: 'no-store' });
+      if (r && !r.ok) continue;
+      const j = r ? await r.json() : await privateJson('job_notes.json');
       published = (j && j.notes) || {};
       pubPri = (j && j.priorities) || {};   // #252f
       pubBud = (j && j.budgets) || {};      // #269d
@@ -309,6 +310,7 @@ const b64url = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).
 // a fallback if the API refuses — its unauthenticated limit is 60 requests an hour per address, and one save
 // spends at most ten.
 async function fetchFresh() {
+  if (privateDataOn()) { try { return await privateJson('job_notes.json'); } catch (e) { return null; } }   // #10f
   try {
     const r = await fetch(CONFIRM_URL + '&cb=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' });
     if (r.ok) return await r.json();
