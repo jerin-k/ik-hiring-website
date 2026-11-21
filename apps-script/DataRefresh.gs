@@ -1977,14 +1977,16 @@ var ROLLUP_WINDOW_DAYS = 120;     // velocity days kept in the rollup (frontend 
 // the closing passes (ToFU, assessed, the push, Interview Traction), which themselves take 5 to 8 minutes.
 // The worklist had grown from 1,864 to about 2,660 since 14 Oct, and Ashby swings between 0.26 and 0.94 seconds
 // per candidate from one run to the next.
-// So: (1) the LOOP stops at 20 minutes, which leaves 10 for the closing passes. (2) A cut-off pass re-arms
+// So: (1) the LOOP stops at 17 minutes, which leaves 13 for the closing passes AND the traction pass that follows
+// the publish (#302b, 21 Nov 2026: it was 20, and a loop that FINISHED at 19.8 min was killed at 30:00, seconds
+// before the traction file was written - a loop that completes is not a cut-off, so nothing re-armed). (2) A cut-off pass re-arms
 // ITSELF a minute later instead of waiting for the schedule.
 // SAFE BY CONSTRUCTION: the one-off trigger has its OWN handler name, so clearing it can never touch the three
 // scheduled refreshStageHistory triggers. It is delete-then-create, and every run clears it on the way in, so
 // spent one-offs cannot pile up against the 20-trigger ceiling. Only the CUTOFF path re-arms, and at most
 // HIST_MAX_RESUMES times in a row, so it cannot spin; past that the next scheduled run resumes, as before.
 // HIST_TIMEOUT_MS above is left alone on purpose: backfillArchivedLateStage still reads it.
-var HIST_LOOP_CUTOFF_MS = 1200000;   // 20 minutes
+var HIST_LOOP_CUTOFF_MS = 1020000;   // 17 minutes (#302b) - do NOT raise it without re-running pending/302-stage-history/harness.js
 var HIST_MAX_RESUMES = 3;
 var HIST_IS_RESUME = false;          // true only inside resumeStageHistory_, so a SCHEDULED run always counts from 0
 function resumeStageHistory_() { HIST_IS_RESUME = true; refreshStageHistory(); }
