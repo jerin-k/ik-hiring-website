@@ -1625,8 +1625,49 @@ function wipeData() {
 
 // ===== GITHUB PUSH =====
 
+// ===== #10g / #10h (Jerin, 20-21 Nov 2026 - "Keep Vercel, split"): EVERY PUBLISHED DATA FILE ALSO GOES TO PRIVATE STORAGE =====
+// WHY. The sign-in guarded the screen, not the data: every data file was a public download from GitHub. The data
+// is moving to a private Cloud Storage bucket, handed out by a small service that checks the Google sign-in
+// (cloudrun-data/ in the project-root repo). Until switch-over BOTH copies are written, so nothing live changes
+// and the two can be compared file by file.
+// HOW. One hook at the top of pushFileToGitHub_, so every writer is covered by construction - the two scheduled
+// jobs (dashboard.json, stage_rollups.json, interview_traction.json) and the web app's four (metric_config,
+// access, access_invites, job_notes). It saves as the SCRIPT OWNER (his choice, 20 Nov): no key, no secret -
+// ScriptApp.getOAuthToken() carries the storage scope that appsscript.json now lists.
+// SAME RULE AS #271b: this copy must NEVER be able to stop the live push. It is wrapped, it returns false,
+//    and a failure is named in each job's final summary line - an execution that says Completed is not an
+//    execution that did the work.
+// ONLY data/<name>.json goes to the bucket. The synced script source passes through pushFileToGitHub_ too
+//    and must never land there.
+var PRIVATE_BUCKET = 'ik-talent-hiring-data';
+var PRIVATE_COPY_FAILURES_ = [];
+function savePrivateCopy_(repoPath, jsonStr) {
+  var m = /^data\/([a-z][a-z0-9_]{0,60}\.json)$/.exec(String(repoPath || ''));
+  if (!m) return null;                                   // not a data file: nothing to do, and not a failure
+  try {
+    var r = UrlFetchApp.fetch('https://storage.googleapis.com/upload/storage/v1/b/' + PRIVATE_BUCKET + '/o?uploadType=media&name=' + encodeURIComponent(m[1]), {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      payload: Utilities.newBlob(String(jsonStr), 'application/json').getBytes(),   // UTF-8 bytes, the same bytes GitHub gets
+      headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() } });
+    if (r.getResponseCode() === 200) { Logger.log('private copy saved: ' + m[1] + ' (' + String(jsonStr).length + ' chars)'); return true; }
+    PRIVATE_COPY_FAILURES_.push(m[1]);
+    Logger.log('PRIVATE COPY FAILED - ' + m[1] + ' - HTTP ' + r.getResponseCode() + ' - ' + String(r.getContentText()).substring(0, 200) + ' - the GitHub push still runs');
+    return false;
+  } catch (e) {
+    PRIVATE_COPY_FAILURES_.push(m[1]);
+    Logger.log('PRIVATE COPY FAILED - ' + m[1] + ' - ' + e.message + ' - the GitHub push still runs');
+    return false;
+  }
+}
+function privateCopyNote_() {
+  return PRIVATE_COPY_FAILURES_.length
+    ? ' | PRIVATE COPY FAILED for ' + PRIVATE_COPY_FAILURES_.length + ': ' + PRIVATE_COPY_FAILURES_.join(', ')
+    : '';
+}
+
 function pushToGitHub_(jsonStr) { pushFileToGitHub_('data/dashboard.json', jsonStr, 'Update dashboard data'); }
 function pushFileToGitHub_(repoPath, jsonStr, msg) {
+  savePrivateCopy_(repoPath, jsonStr);   // #10g: FIRST, and before the token check below - it must keep working after the GitHub push is retired
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty('GITHUB_TOKEN'), repo = props.getProperty('GITHUB_REPO');
   if (!token || !repo) { Logger.log('GitHub push skipped: token/repo not set'); return; }
@@ -1681,9 +1722,9 @@ function saveDriveBackupTo_(folderId, name, obj) {
 // Appended to each job's final summary line, so the one line a human actually reads cannot say a clean
 // "done" while a backup quietly failed.
 function driveBackupNote_() {
-  return DRIVE_BACKUP_FAILURES_.length
+  return (DRIVE_BACKUP_FAILURES_.length
     ? ' | DRIVE BACKUP FAILED for ' + DRIVE_BACKUP_FAILURES_.length + ': ' + DRIVE_BACKUP_FAILURES_.join(', ')
-    : '';
+    : '') + privateCopyNote_();   // #10g: the private copy's failures ride on the same summary line
 }
 function saveDriveJson_(name, obj) {
   var folder = DriveApp.getFolderById(DASHBOARD_FOLDER_ID);
@@ -1929,8 +1970,35 @@ function backfillArchivedLateStage() {
 var HIST_TIMEOUT_MS = 1500000;    // 25-min safety cutoff
 var ROLLUP_WINDOW_DAYS = 120;     // velocity days kept in the rollup (frontend shows <=30)
 
+// ===== #302 (Jerin, 20 Nov 2026): A CUT-OFF PASS PICKS ITSELF UP, AND THE LOOP LEAVES ROOM FOR THE CLOSING PASSES =====
+// MEASURED on the Executions page, 14-20 Nov 2026: 6 of 21 scheduled runs published nothing. Five reached the
+// 25-minute cutoff, saved a cursor and stopped until the NEXT SCHEDULED run, hours later - and the Executions
+// page calls that "Completed". One finished its loop at about 23 minutes and was killed by Google at 30, inside
+// the closing passes (ToFU, assessed, the push, Interview Traction), which themselves take 5 to 8 minutes.
+// The worklist had grown from 1,864 to about 2,660 since 14 Oct, and Ashby swings between 0.26 and 0.94 seconds
+// per candidate from one run to the next.
+// So: (1) the LOOP stops at 20 minutes, which leaves 10 for the closing passes. (2) A cut-off pass re-arms
+// ITSELF a minute later instead of waiting for the schedule.
+// SAFE BY CONSTRUCTION: the one-off trigger has its OWN handler name, so clearing it can never touch the three
+// scheduled refreshStageHistory triggers. It is delete-then-create, and every run clears it on the way in, so
+// spent one-offs cannot pile up against the 20-trigger ceiling. Only the CUTOFF path re-arms, and at most
+// HIST_MAX_RESUMES times in a row, so it cannot spin; past that the next scheduled run resumes, as before.
+// HIST_TIMEOUT_MS above is left alone on purpose: backfillArchivedLateStage still reads it.
+var HIST_LOOP_CUTOFF_MS = 1200000;   // 20 minutes
+var HIST_MAX_RESUMES = 3;
+var HIST_IS_RESUME = false;          // true only inside resumeStageHistory_, so a SCHEDULED run always counts from 0
+function resumeStageHistory_() { HIST_IS_RESUME = true; refreshStageHistory(); }
+function histClearResumeTriggers_() {
+  try {
+    ScriptApp.getProjectTriggers().forEach(function (tr) {
+      if (tr.getHandlerFunction() === 'resumeStageHistory_') ScriptApp.deleteTrigger(tr);
+    });
+  } catch (e) { Logger.log('#302 could not clear the continuation trigger: ' + e.message); }
+}
+
 function refreshStageHistory() {
   var startTime = Date.now();
+  histClearResumeTriggers_();   // #302: the one-off that just fired, or a stray one - never more than one alive
   stageRegisterSync_();     // #240d: must run BEFORE the overrides, so a new stage can be corrected too
   applyStageOverrides_();   // #240c: this job builds the assessed rollups, so it needs them too
   Logger.log('=== stage-history accumulator ===');
@@ -1945,10 +2013,20 @@ function refreshStageHistory() {
   // an unmapped title is skipped outright, so without this a renamed stage just quietly stops counting.
   var unmappedHist = {};
   for (; i < scoped.length; i++) {
-    if (Date.now() - startTime > HIST_TIMEOUT_MS) {
+    if (Date.now() - startTime > HIST_LOOP_CUTOFF_MS) {
       saveDriveJson_('stage_events.json', events);
-      saveDriveJson_('stage_history_state.json', { cursor: i, scopedCount: scoped.length });
-      Logger.log('TIME CUTOFF at ' + i + '/' + scoped.length + ' — resume next run (' + pulled + ' pulled this run)');
+      // #302: count this continuation BEFORE arming it, and arm only once the cursor is safely on Drive. If either
+      // save throws, the run dies loudly with nothing armed, exactly as before - never a chain that is not counted.
+      var resumesSoFar = HIST_IS_RESUME ? (state.resumes || 0) : 0, canRearm = resumesSoFar < HIST_MAX_RESUMES, rearmNote;
+      saveDriveJson_('stage_history_state.json', { cursor: i, scopedCount: scoped.length, resumes: resumesSoFar + (canRearm ? 1 : 0) });
+      if (canRearm) {
+        try {
+          histClearResumeTriggers_();
+          ScriptApp.newTrigger('resumeStageHistory_').timeBased().after(60000).create();
+          rearmNote = ' - RE-ARMED, continuing in about a minute (continuation ' + (resumesSoFar + 1) + ' of ' + HIST_MAX_RESUMES + ')';
+        } catch (eR) { rearmNote = ' - could NOT re-arm (' + eR.message + '), so the next SCHEDULED run resumes'; }
+      } else { rearmNote = ' - NOT re-armed (' + HIST_MAX_RESUMES + ' continuations in a row already), so the next SCHEDULED run resumes'; }
+      Logger.log('TIME CUTOFF at ' + i + '/' + scoped.length + ' (' + pulled + ' pulled this run)' + rearmNote);
       return;
     }
     var a = scoped[i];
